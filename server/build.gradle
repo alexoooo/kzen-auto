@@ -1,0 +1,50 @@
+buildscript {
+//    ext {
+//        springBootVersion = '2.0.1.RELEASE'
+//    }
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+//        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
+//        classpath("org.jetbrains.kotlin:kotlin-allopen:${kotlinVersion}")
+    }
+}
+
+apply plugin: 'kotlin-platform-jvm'
+//apply plugin: 'application'
+//apply plugin: 'maven'
+
+//apply plugin: 'kotlin-spring'
+//apply plugin: 'org.springframework.boot'
+//apply plugin: 'io.spring.dependency-management'
+
+
+dependencies {
+    expectedBy project(':common')
+
+    compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: kotlinVersion
+    compile("org.jetbrains.kotlin:kotlin-reflect")
+
+    compile group: 'tech.kzen.lib', name: 'kzen-lib-jvm', version: '0.0.1'
+
+    testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test', version: kotlinVersion
+    testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test-junit', version: kotlinVersion
+}
+
+
+compileKotlin {
+    targetCompatibility = javaVersion
+    sourceCompatibility = javaVersion
+    kotlinOptions {
+        freeCompilerArgs = ["-Xjsr305=strict"]
+        jvmTarget = javaVersion
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        freeCompilerArgs = ["-Xjsr305=strict"]
+        jvmTarget = javaVersion
+    }
+}
