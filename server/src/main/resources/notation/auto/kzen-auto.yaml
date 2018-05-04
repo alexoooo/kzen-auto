@@ -1,0 +1,46 @@
+
+###########################################################
+
+ReactWrapper:
+  abstract: true
+  class: tech.kzen.api.ReactWrapper
+
+
+ContainerComponent:
+  abstract: true
+  is: ChildContainer
+  class: tech.kzen.react.ContainerComponent.Wrapper
+
+
+HelloComponent:
+  abstract: true
+  is: ParentPointer
+  class: tech.kzen.react.HelloComponent.Wrapper
+  meta:
+    parent: ContainerComponent
+    name: String
+
+
+###########################################################
+
+root:
+  is: ContainerComponent
+
+
+helloFoo:
+  is: HelloComponent
+  parent: root
+  name: foo
+
+
+subContainer:
+  is: ContainerComponent
+  parent: root
+
+
+subHelloBar:
+  is: HelloComponent
+  parent: subContainer
+  name: "Sub - Bar"
+
+

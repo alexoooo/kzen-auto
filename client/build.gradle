@@ -2,18 +2,29 @@ apply plugin: 'kotlin-platform-js'
 apply plugin: 'kotlin-dce-js'
 apply plugin: 'com.moowork.node'
 
-dependencies {
-    def kotlinxHtmlVersion = "0.6.9"
+//repositories {
+//    maven { url "http://dl.bintray.com/kotlin/kotlin-dev" }
+//    maven { url "http://dl.bintray.com/kotlinx/kotlinx" }
+//    maven { url "http://dl.bintray.com/hypnosphi/kotlin-wrappers" }
+//}
 
+dependencies {
     expectedBy project(':common')
 
     compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-js', version: kotlinVersion
     compile "org.jetbrains.kotlinx:kotlinx-html-js:${kotlinxHtmlVersion}"
 
-    compile group: 'tech.kzen.lib', name: 'kzen-lib-js', version: '0.0.1'
+    compile group: 'tech.kzen.lib', name: 'kzen-lib-js', version: kzenLibVersion
+
+//    compile "org.jetbrains:kotlin-react:0.0.3-kotlin-1.1.50-eap-18"
+//    compile "org.jetbrains:kotlin-react-dom:0.0.5-kotlin-1.1.50-eap-18"
+//    compile "org.jetbrains:kotlin-react:$reactVersion"
+//    compile "org.jetbrains:kotlin-react-dom:$reactDomVersion"
+//    compile "org.jetbrains:kotlin-styled:$kotlinStyledVersion"
 
     testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test-js', version: kotlinVersion
 }
+
 
 node {
     download true

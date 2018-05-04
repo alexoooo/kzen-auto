@@ -5,11 +5,6 @@ buildscript {
             url 'https://plugins.gradle.org/m2/'
         }
         mavenCentral()
-
-//        maven {
-//            url 'file:///~/repo/'
-//        }
-//        mavenLocal()
     }
     dependencies {
         classpath group: 'org.jetbrains.kotlin', name: 'kotlin-gradle-plugin', version: kotlinVersion
@@ -25,8 +20,13 @@ subprojects {
         mavenLocal()
         jcenter()
         maven {
-//            url 'https://github.com/alexoooo/kzen-repo/tree/master/artifacts'
             url 'https://raw.githubusercontent.com/alexoooo/kzen-repo/master/artifacts'
         }
+        maven {
+            url 'http://dl.bintray.com/kotlin/kotlin-js-wrappers'
+        }
+
+//        maven { url 'http://dl.bintray.com/kotlin/kotlin-eap-1.2' }
+//        maven { url "https://kotlin.bintray.com/kotlinx" }
     }
 }
