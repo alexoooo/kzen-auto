@@ -1,10 +1,10 @@
 # kzen-auto
 Office automation
 
-Dev mode:
-> > ./gradlew -t client:watch
+Dev mode (two processes for client refresh, and server from IDE):
+> > ./gradlew -t kzen-auto-js:watch
 >
-> > cd client && yarn run start 
+> > cd kzen-auto-js && yarn run start
 >
 > > run KzenAutoApp from IDE
 

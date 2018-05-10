@@ -1,1 +1,1 @@
-include 'client', 'common', 'server'
+include 'kzen-auto-common', 'kzen-auto-js', 'kzen-auto-jvm'
