@@ -17,6 +17,9 @@ HelloComponent:
   is: ParentPointer
   class: tech.kzen.auto.client.objects.HelloComponent.Wrapper
   meta:
+    objectName:
+      is: String
+      by: ObjectNameParameterDefiner
     parent: ContainerComponent
     name: String
 
@@ -41,6 +44,6 @@ subContainer:
 subHelloBar:
   is: HelloComponent
   parent: subContainer
-  name: "Sub - foo"
+  name: "Sub - bar"
 
 

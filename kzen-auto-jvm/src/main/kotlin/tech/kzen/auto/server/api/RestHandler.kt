@@ -8,24 +8,21 @@ import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
-import tech.kzen.auto.server.notation.ClasspathNotationSourceX
-import tech.kzen.auto.server.notation.FallbackNotationSourceX
-import tech.kzen.auto.server.notation.FileNotationSourceX
-import tech.kzen.auto.server.notation.GradleNotationSourceX
+import tech.kzen.lib.common.edit.EditParameterCommand
+import tech.kzen.lib.common.edit.ProjectAggregate
+import tech.kzen.lib.common.notation.format.YamlNotationParser
 import tech.kzen.lib.common.notation.model.ProjectPath
-import tech.kzen.lib.common.notation.read.flat.source.FallbackNotationSource
+import tech.kzen.lib.common.notation.io.flat.media.FallbackNotationMedia
+import tech.kzen.lib.common.notation.model.PackageNotation
+import tech.kzen.lib.common.notation.model.ProjectNotation
 import tech.kzen.lib.common.notation.scan.LiteralNotationScanner
 import tech.kzen.lib.common.notation.scan.NotationScanner
 import tech.kzen.lib.common.util.IoUtils
-import tech.kzen.lib.server.notation.ClasspathNotationSource
-import tech.kzen.lib.server.notation.DirectoryNotationScanner
-import tech.kzen.lib.server.notation.FileNotationSource
-import tech.kzen.lib.server.notation.GradleNotationSource
+import tech.kzen.lib.server.notation.*
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.logging.Logger
 
 
 @Component
@@ -52,12 +49,19 @@ class RestHandler {
     }
 
 
+    private val notationMedia = FallbackNotationMedia(listOf(
+            GradleNotationMedia(FileNotationMedia()),
+            ClasspathNotationMedia()))
+
+    private val notationScanner: NotationScanner = LiteralNotationScanner(listOf(
+            "notation/base/kzen-base.yaml",
+            "notation/auto/kzen-auto.yaml"))
+
+    private val yamlParser = YamlNotationParser()
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun scan(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val notationScanner: NotationScanner = LiteralNotationScanner(listOf(
-                "notation/base/kzen-base.yaml",
-                "notation/auto/kzen-auto.yaml"))
-
         val projectPaths = runBlocking {
             notationScanner.scan()
         }
@@ -72,16 +76,12 @@ class RestHandler {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun notation(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val notationSource = FallbackNotationSourceX(listOf(
-                GradleNotationSourceX(FileNotationSourceX()),
-                ClasspathNotationSourceX()))
-
         val notationPrefix = "/notation/"
         val requestSuffix = serverRequest.path().substring(notationPrefix.length)
 
         val notationPath = ProjectPath(requestSuffix)
         val notationBytes = runBlocking {
-            notationSource.read(notationPath)
+            notationMedia.read(notationPath)
         }
 
         val notationText = IoUtils.utf8ToString(notationBytes)
@@ -89,6 +89,56 @@ class RestHandler {
         return ServerResponse
                 .ok()
                 .body(Mono.just(notationText))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun commandEditParameter(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val objectName = serverRequest.queryParam("object")
+                .orElseThrow { IllegalArgumentException("object name required") }
+
+        val parameterPath = serverRequest.queryParam("parameter")
+                .orElseThrow { IllegalArgumentException("parameter path required") }
+
+        val valueYaml = serverRequest.queryParam("value")
+                .orElseThrow { IllegalArgumentException("parameter value required") }
+
+        runBlocking {
+            val packageBytes = mutableMapOf<ProjectPath, ByteArray>()
+            val packages = mutableMapOf<ProjectPath, PackageNotation>()
+            for (projectPath in notationScanner.scan()) {
+                val body = notationMedia.read(projectPath)
+                packageBytes[projectPath] = body
+
+                val packageNotation = yamlParser.parse(body)
+                packages[projectPath] = packageNotation
+            }
+            val projectNotation = ProjectNotation(packages)
+
+            val project = ProjectAggregate(projectNotation)
+
+            val value = yamlParser.parseParameter(valueYaml)
+
+            val event = project.apply(EditParameterCommand(
+                    objectName, parameterPath, value))
+
+            val updatedNotation = event.state
+
+            for (updatedPackage in updatedNotation.packages) {
+                if (packages[updatedPackage.key] == updatedPackage.value) {
+                    continue
+                }
+
+                val previousBody = packageBytes[updatedPackage.key]!!
+                val updatedBody = yamlParser.deparse(updatedPackage.value, previousBody)
+
+                notationMedia.write(updatedPackage.key, updatedBody)
+            }
+        }
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just("success"))
     }
 
 
