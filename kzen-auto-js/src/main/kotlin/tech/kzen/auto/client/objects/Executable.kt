@@ -1,5 +1,5 @@
 package tech.kzen.auto.client.objects
 
-interface Executable<I, out T> {
+interface Executable<in I, out T> {
     fun execute(input: I): T
 }

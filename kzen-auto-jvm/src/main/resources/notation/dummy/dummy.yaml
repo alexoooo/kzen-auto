@@ -1,0 +1,8 @@
+sayHi:
+  is: "LogAction"
+  message: "Hi! ggg"
+sayBye:
+  is: "LogAction"
+  message: "Bye!"
+new-action-name:
+  is: "LogAction"

@@ -15,6 +15,7 @@ class RestApi(
 
         GET("/notation/**", counterHandler::notation)
 
+        GET("/command/add", counterHandler::commandAddObject)
         GET("/command/edit", counterHandler::commandEditParameter)
 
         GET("/", counterHandler::resource)

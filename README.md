@@ -2,11 +2,12 @@
 Office automation
 
 Dev mode (two processes for client refresh, and server from IDE):
+> > run KzenAutoApp from IDE
+>
 > > ./gradlew -t kzen-auto-js:watch
 >
 > > cd kzen-auto-js && yarn run start
->
-> > run KzenAutoApp from IDE
+
 
 Dist:
 > ./gradlew assemble

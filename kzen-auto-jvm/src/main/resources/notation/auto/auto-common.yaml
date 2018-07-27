@@ -1,0 +1,21 @@
+
+
+###########################################################
+
+
+Action:
+  abstract: true
+  class: tech.kzen.auto.common.api.AutoAction
+
+
+###########################################################
+
+LogAction:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.client.objects.action.LogAction
+  message: "default message"
+  meta:
+    message: String
+
+
