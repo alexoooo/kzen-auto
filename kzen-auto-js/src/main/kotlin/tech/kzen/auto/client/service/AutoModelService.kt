@@ -5,6 +5,7 @@ import tech.kzen.auto.client.rest.RestNotationScanner
 import tech.kzen.lib.common.context.ObjectGraph
 import tech.kzen.lib.common.context.ObjectGraphCreator
 import tech.kzen.lib.common.context.ObjectGraphDefiner
+import tech.kzen.lib.common.metadata.model.GraphMetadata
 import tech.kzen.lib.common.metadata.read.NotationMetadataReader
 import tech.kzen.lib.common.notation.format.YamlNotationParser
 import tech.kzen.lib.common.notation.io.NotationIo
@@ -82,9 +83,15 @@ object AutoModelService {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun graph(projectNotation: ProjectNotation): ObjectGraph {
-        val graphMetadata = notationMetadataReader.read(projectNotation)
+    fun metadata(projectNotation: ProjectNotation): GraphMetadata {
+        return notationMetadataReader.read(projectNotation)
+    }
 
+
+    fun graph(
+            projectNotation: ProjectNotation,
+            graphMetadata: GraphMetadata = metadata(projectNotation)
+    ): ObjectGraph {
         val graphDefinition = ObjectGraphDefiner.define(
                 projectNotation, graphMetadata)
 

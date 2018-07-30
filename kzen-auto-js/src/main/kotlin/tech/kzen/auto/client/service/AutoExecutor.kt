@@ -9,12 +9,12 @@ class AutoExecutor(
 //        private val projectNotation: ProjectNotation
         private val objectGraph: ObjectGraph
 ) {
-    companion object {
-        fun of(projectNotation: ProjectNotation): AutoExecutor {
-            val graph = AutoModelService.graph(projectNotation)
-            return AutoExecutor(graph)
-        }
-    }
+//    companion object {
+//        fun of(projectNotation: ProjectNotation): AutoExecutor {
+//            val graph = AutoModelService.graph(projectNotation)
+//            return AutoExecutor(graph)
+//        }
+//    }
 
     fun run(actionName: String) {
 //        val graph = AutoModelService.graph(projectNotation)

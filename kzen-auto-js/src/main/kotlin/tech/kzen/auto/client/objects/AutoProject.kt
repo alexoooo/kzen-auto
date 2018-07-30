@@ -12,6 +12,8 @@ import tech.kzen.auto.client.service.AutoModelService
 import tech.kzen.auto.client.ui.ActionController
 import tech.kzen.auto.client.ui.ActionCreator
 import tech.kzen.auto.client.util.async
+import tech.kzen.lib.common.metadata.model.GraphMetadata
+import tech.kzen.lib.common.metadata.model.ObjectMetadata
 import tech.kzen.lib.common.notation.model.*
 
 
@@ -20,6 +22,7 @@ class AutoProject: RComponent<RProps, AutoProject.State>() {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
             var notation: ProjectNotation?,
+            var metadata: GraphMetadata?,
             var executor: AutoExecutor?
     ) : RState
 
@@ -56,10 +59,14 @@ class AutoProject: RComponent<RProps, AutoProject.State>() {
 
         async {
             val projectNotation = AutoModelService.projectNotation()
-            val autoExecutor = AutoExecutor.of(projectNotation)
+
+            val graphMetadata = AutoModelService.metadata(projectNotation)
+            val objectGraph = AutoModelService.graph(projectNotation, graphMetadata)
+            val autoExecutor = AutoExecutor(objectGraph)
 
             setState {
                 notation = projectNotation
+                metadata = graphMetadata
                 executor = autoExecutor
             }
         }
@@ -91,9 +98,10 @@ class AutoProject: RComponent<RProps, AutoProject.State>() {
                 }
                 else {
                     +"Action sequence:"
+                    val graphMetadata = state.metadata!!
 
                     for (e in projectPackage.objects) {
-                        renderAction(e.key, e.value)
+                        renderAction(e.key, projectNotation, graphMetadata)
 
                         pre {
                             +"|\n"
@@ -123,12 +131,18 @@ class AutoProject: RComponent<RProps, AutoProject.State>() {
 
     private fun RBuilder.renderAction(
             objectName: String,
-            objectNotation: ObjectNotation
+            projectNotation: ProjectNotation,
+            graphMetadata: GraphMetadata
+//            objectNotation: ObjectNotation,
+//            objectMetadata: ObjectMetadata
     ) {
         child(ActionController::class) {
             attrs {
                 name = objectName
-                notation = objectNotation
+//                notation = objectNotation
+//                metadata = objectMetadata
+                notation = projectNotation
+                metadata = graphMetadata
                 executor = state.executor!!
             }
         }

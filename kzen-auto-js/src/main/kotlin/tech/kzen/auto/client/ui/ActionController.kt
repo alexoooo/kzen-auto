@@ -11,6 +11,8 @@ import react.dom.input
 import tech.kzen.auto.client.service.AutoExecutor
 import tech.kzen.auto.client.service.AutoModelService
 import tech.kzen.auto.common.api.AutoAction
+import tech.kzen.lib.common.metadata.model.GraphMetadata
+import tech.kzen.lib.common.metadata.model.ObjectMetadata
 import tech.kzen.lib.common.notation.model.ObjectNotation
 import tech.kzen.lib.common.notation.model.ParameterNotation
 import tech.kzen.lib.common.notation.model.ProjectNotation
@@ -23,7 +25,8 @@ class ActionController(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var name: String,
-            var notation: ObjectNotation,
+            var notation: ProjectNotation,
+            var metadata: GraphMetadata,
             var executor: AutoExecutor
     ) : RProps
 
@@ -36,18 +39,23 @@ class ActionController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        val objectMetadata = props.metadata.objectMetadata[props.name]!!
 //        val objectNotation = props.notation.coalesce[props.name]!!
 
         div(classes = "actionController") {
             +"[ ${props.name} ]"
 
-            for (e in props.notation.parameters) {
+            for (e in objectMetadata.parameters) {
+                val value =
+                        props.notation.transitiveParameter(props.name, e.key)
+                        ?: continue
+
                 if (e.key == "is") {
                     continue
                 }
 
                 div(classes = "child") {
-                    renderParameter(e.key, e.value)
+                    renderParameter(e.key, value)
                 }
             }
 

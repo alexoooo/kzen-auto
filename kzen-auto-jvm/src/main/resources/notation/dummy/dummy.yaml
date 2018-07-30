@@ -1,8 +1,12 @@
 sayHi:
   is: "LogAction"
-  message: "Hi! ggg"
+  message: "a"
 sayBye:
   is: "LogAction"
-  message: "Bye!"
+  message: "bb"
 new-action-name:
   is: "LogAction"
+  message: "ccc"
+foo:
+  is: "LogAction"
+  message: "kkkkk"
