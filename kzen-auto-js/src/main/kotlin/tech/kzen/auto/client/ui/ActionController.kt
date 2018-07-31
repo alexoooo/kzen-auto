@@ -1,15 +1,17 @@
 package tech.kzen.auto.client.ui
 
 import kotlinx.html.InputType
+import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
-import react.RBuilder
-import react.RComponent
-import react.RProps
-import react.RState
+import org.w3c.dom.HTMLInputElement
+import react.*
 import react.dom.div
+import react.dom.hr
 import react.dom.input
+import tech.kzen.auto.client.rest.RestCommandApi
 import tech.kzen.auto.client.service.AutoExecutor
 import tech.kzen.auto.client.service.AutoModelService
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.api.AutoAction
 import tech.kzen.lib.common.metadata.model.GraphMetadata
 import tech.kzen.lib.common.metadata.model.ObjectMetadata
@@ -21,7 +23,7 @@ import tech.kzen.lib.common.notation.model.ScalarParameterNotation
 
 class ActionController(
         props: ActionController.Props
-): RComponent<ActionController.Props, RState>(props) {
+): RComponent<ActionController.Props, ActionController.State>(props) {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var name: String,
@@ -31,9 +33,67 @@ class ActionController(
     ) : RProps
 
 
+    class State(
+            var name: String
+    ) : RState
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: ActionController.Props) {
+        name = props.name
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRun() {
         props.executor.run(props.name)
+    }
+
+
+    private fun onNameChange(newValue: String) {
+        setState {
+            name = newValue
+        }
+    }
+
+
+    private fun onRename() {
+        val rest = RestCommandApi()
+        async {
+            rest.rename(props.name, state.name)
+        }
+    }
+
+
+    private fun onRemove() {
+        val rest = RestCommandApi()
+        async {
+            rest.remove(props.name)
+        }
+    }
+
+
+    private fun onShiftUp() {
+        val packagePath = props.notation.findPackage(props.name)
+        val packageNotation = props.notation.packages[packagePath]!!
+        val index = packageNotation.indexOf(props.name)
+
+        val rest = RestCommandApi()
+        async {
+            rest.shift(props.name, index - 1)
+        }
+    }
+
+
+    private fun onShiftDown() {
+        val packagePath = props.notation.findPackage(props.name)
+        val packageNotation = props.notation.packages[packagePath]!!
+        val index = packageNotation.indexOf(props.name)
+
+        val rest = RestCommandApi()
+        async {
+            rest.shift(props.name, index + 1)
+        }
     }
 
 
@@ -43,7 +103,32 @@ class ActionController(
 //        val objectNotation = props.notation.coalesce[props.name]!!
 
         div(classes = "actionController") {
-            +"[ ${props.name} ]"
+
+            div {
+                +("Name: ")
+
+                input(type = InputType.text) {
+                    attrs {
+                        value = state.name
+
+                        onChangeFunction = {
+                            val target = it.target as HTMLInputElement
+                            onNameChange(target.value)
+                        }
+                    }
+                }
+
+                input (type = InputType.button) {
+                    attrs {
+                        value = "Rename"
+                        onClickFunction = {
+                            onRename()
+                        }
+                    }
+                }
+            }
+
+            hr {}
 
             for (e in objectMetadata.parameters) {
                 val value =
@@ -59,10 +144,39 @@ class ActionController(
                 }
             }
 
+            hr {}
+
             input (type = InputType.button) {
                 attrs {
                     value = "Run"
                     onClickFunction = { onRun() }
+                }
+            }
+
+            input (type = InputType.button) {
+                attrs {
+                    value = "Shift Up"
+                    onClickFunction = {
+                        onShiftUp()
+                    }
+                }
+            }
+
+            input (type = InputType.button) {
+                attrs {
+                    value = "Shift Down"
+                    onClickFunction = {
+                        onShiftDown()
+                    }
+                }
+            }
+
+            input (type = InputType.button) {
+                attrs {
+                    value = "Remove"
+                    onClickFunction = {
+                        onRemove()
+                    }
                 }
             }
         }

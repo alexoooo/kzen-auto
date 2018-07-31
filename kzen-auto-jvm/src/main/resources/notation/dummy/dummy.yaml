@@ -1,12 +1,6 @@
-sayHi:
+MablexAction_Foo:
   is: "LogAction"
-  message: "a"
-sayBye:
+  message: "MABL kkkkk"
+new-fooooo:
   is: "LogAction"
-  message: "bb"
-new-action-name:
-  is: "LogAction"
-  message: "ccc"
-foo:
-  is: "LogAction"
-  message: "kkkkk"
+  message: "default message"

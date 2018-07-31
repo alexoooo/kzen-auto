@@ -74,7 +74,7 @@ class ParameterEditor(
 
             input (type = InputType.button) {
                 attrs {
-                    value = "Save"
+                    value = "Edit"
                     onClickFunction = {
                         onSubmit()
                     }

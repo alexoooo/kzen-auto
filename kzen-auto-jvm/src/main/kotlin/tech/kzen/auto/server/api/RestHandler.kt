@@ -3,15 +3,13 @@ package tech.kzen.auto.server.api
 import kotlinx.coroutines.experimental.runBlocking
 import com.google.common.io.MoreFiles
 import com.google.common.io.Resources
+import com.google.common.primitives.Ints
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
-import tech.kzen.lib.common.edit.AddObjectCommand
-import tech.kzen.lib.common.edit.EditParameterCommand
-import tech.kzen.lib.common.edit.ProjectAggregate
-import tech.kzen.lib.common.edit.ProjectCommand
+import tech.kzen.lib.common.edit.*
 import tech.kzen.lib.common.notation.format.YamlNotationParser
 import tech.kzen.lib.common.notation.io.flat.media.FallbackNotationMedia
 import tech.kzen.lib.common.notation.model.*
@@ -27,6 +25,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.*
 
 
 @Component
@@ -100,13 +99,16 @@ class RestHandler {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun commandEditParameter(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val objectName = serverRequest.queryParam("name")
+        val objectName: String = serverRequest
+                .queryParam("name")
                 .orElseThrow { IllegalArgumentException("object name required") }
 
-        val parameterPath = serverRequest.queryParam("parameter")
+        val parameterPath: String = serverRequest
+                .queryParam("parameter")
                 .orElseThrow { IllegalArgumentException("parameter path required") }
 
-        val valueYaml = serverRequest.queryParam("value")
+        val valueYaml: String = serverRequest
+                .queryParam("value")
                 .orElseThrow { IllegalArgumentException("parameter value required") }
 
         val value = yamlParser.parseParameter(valueYaml)
@@ -123,13 +125,16 @@ class RestHandler {
 
 
     fun commandAddObject(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val objectName = serverRequest.queryParam("name")
+        val objectName: String = serverRequest
+                .queryParam("name")
                 .orElseThrow { IllegalArgumentException("object name required") }
 
-        val objectType = serverRequest.queryParam("type")
+        val objectType: String = serverRequest
+                .queryParam("type")
                 .orElseThrow { IllegalArgumentException("object type (parent) required") }
 
-        val projectPath = serverRequest.queryParam("path")
+        val projectPath: String = serverRequest
+                .queryParam("path")
                 .orElseThrow { IllegalArgumentException("project path required") }
 
         val notation = ObjectNotation(mapOf(
@@ -146,6 +151,61 @@ class RestHandler {
     }
 
 
+    fun commandRemoveObject(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val objectName: String = serverRequest
+                .queryParam("name")
+                .orElseThrow { IllegalArgumentException("object name required") }
+
+        val command = RemoveObjectCommand(objectName)
+
+        applyCommand(command)
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just("success"))
+    }
+
+
+    fun commandShiftObject(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val objectName: String = serverRequest
+                .queryParam("name")
+                .orElseThrow { IllegalArgumentException("object name required") }
+
+        val indexInPackage: Int = serverRequest
+                .queryParam("index")
+                .flatMap { Optional.ofNullable(Ints.tryParse(it)) }
+                .orElseThrow { IllegalArgumentException("index number required") }
+
+        val command = ShiftObjectCommand(objectName, indexInPackage)
+
+        applyCommand(command)
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just("success"))
+    }
+
+
+    fun commandRenameObject(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val objectName: String = serverRequest
+                .queryParam("name")
+                .orElseThrow { IllegalArgumentException("object name required") }
+
+        val newName = serverRequest
+                .queryParam("to")
+                .orElseThrow { IllegalArgumentException("to name required") }
+
+        val command = RenameObjectCommand(objectName, newName)
+
+        applyCommand(command)
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just("success"))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun applyCommand(command: ProjectCommand) {
         runBlocking {
             val packageBytes = mutableMapOf<ProjectPath, ByteArray>()
@@ -166,7 +226,8 @@ class RestHandler {
             val updatedNotation = event.state
 
             for (updatedPackage in updatedNotation.packages) {
-                if (packages[updatedPackage.key] == updatedPackage.value) {
+                if (packages.containsKey(updatedPackage.key) &&
+                        updatedPackage.value.equalsInOrder(packages[updatedPackage.key]!!)) {
                     continue
                 }
 
@@ -176,7 +237,6 @@ class RestHandler {
                 notationMedia.write(updatedPackage.key, updatedBody)
             }
         }
-
     }
 
 

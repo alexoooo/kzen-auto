@@ -17,6 +17,9 @@ class RestApi(
 
         GET("/command/add", counterHandler::commandAddObject)
         GET("/command/edit", counterHandler::commandEditParameter)
+        GET("/command/remove", counterHandler::commandRemoveObject)
+        GET("/command/shift", counterHandler::commandShiftObject)
+        GET("/command/rename", counterHandler::commandRenameObject)
 
         GET("/", counterHandler::resource)
         GET("/**", counterHandler::resource)
