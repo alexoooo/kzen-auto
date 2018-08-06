@@ -11,16 +11,14 @@ import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
 import tech.kzen.lib.common.edit.*
 import tech.kzen.lib.common.notation.format.YamlNotationParser
-import tech.kzen.lib.common.notation.io.flat.media.FallbackNotationMedia
+import tech.kzen.lib.common.notation.io.NotationMedia
+import tech.kzen.lib.common.notation.io.common.MultiNotationMedia
 import tech.kzen.lib.common.notation.model.*
-import tech.kzen.lib.common.notation.scan.LiteralNotationScanner
-import tech.kzen.lib.common.notation.scan.MultiNotationScanner
-import tech.kzen.lib.common.notation.scan.NotationScanner
+import tech.kzen.lib.common.notation.repo.NotationRepository
+import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.IoUtils
 import tech.kzen.lib.server.notation.*
 import tech.kzen.lib.server.notation.locate.GradleLocator
-import tech.kzen.lib.server.notation.scan.ClasspathNotationScanner
-import tech.kzen.lib.server.notation.scan.DirectoryNotationScanner
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -53,29 +51,39 @@ class RestHandler {
 
 
     private val fileLocator = GradleLocator()
+    private val fileMedia = FileNotationMedia(fileLocator)
 
-    private val notationMedia = FallbackNotationMedia(listOf(
-            FileNotationMedia(fileLocator),
-            ClasspathNotationMedia()))
+    private val classpathMedia = ClasspathNotationMedia()
 
-    private val notationScanner: NotationScanner = MultiNotationScanner(listOf(
-        ClasspathNotationScanner(),
-        DirectoryNotationScanner(fileLocator)))
+    private val notationMedia: NotationMedia = MultiNotationMedia(listOf(
+            fileMedia, classpathMedia))
+
+//    private val notationScanner: NotationScanner = MultiNotationScanner(listOf(
+//        ClasspathNotationScanner(media = classpathMedia),
+//        DirectoryNotationScanner(fileLocator, fileMedia)))
 
     private val yamlParser = YamlNotationParser()
+
+    private val repository = NotationRepository(
+            notationMedia,
+            yamlParser)
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun scan(serverRequest: ServerRequest): Mono<ServerResponse> {
         val projectPaths = runBlocking {
-            notationScanner.scan()
+            notationMedia.scan()
         }
-//        call.respondText(gson.toJson(projectPaths), ContentType.Application.Json)
+
+        val asMap = mutableMapOf<String, String>()
+
+        for (e in projectPaths) {
+            asMap[e.key.relativeLocation] = e.value.encode()
+        }
 
         return ServerResponse
                 .ok()
-//                .body(Mono.just("Foo: ..."))
-                .body(Mono.just(projectPaths))
+                .body(Mono.just(asMap))
     }
 
 
@@ -91,9 +99,14 @@ class RestHandler {
 
         val notationText = IoUtils.utf8ToString(notationBytes)
 
-        return ServerResponse
-                .ok()
-                .body(Mono.just(notationText))
+        val responseBuilder = ServerResponse.ok()
+
+        return if (notationText.isEmpty()) {
+            responseBuilder.build()
+        }
+        else {
+            responseBuilder.body(Mono.just(notationText))
+        }
     }
 
 
@@ -116,38 +129,37 @@ class RestHandler {
         val command = EditParameterCommand(
                 objectName, parameterPath, value)
 
-        applyCommand(command)
+        val digest = applyCommand(command)
 
         return ServerResponse
                 .ok()
-                .body(Mono.just("success"))
+                .body(Mono.just(digest.encode()))
     }
 
 
     fun commandAddObject(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val objectName: String = serverRequest
-                .queryParam("name")
-                .orElseThrow { IllegalArgumentException("object name required") }
-
-        val objectType: String = serverRequest
-                .queryParam("type")
-                .orElseThrow { IllegalArgumentException("object type (parent) required") }
-
         val projectPath: String = serverRequest
                 .queryParam("path")
                 .orElseThrow { IllegalArgumentException("project path required") }
 
-        val notation = ObjectNotation(mapOf(
-                ParameterConventions.isParameter to ScalarParameterNotation(objectType)))
+        val objectName: String = serverRequest
+                .queryParam("name")
+                .orElseThrow { IllegalArgumentException("object name required") }
+
+        val objectBody: String = serverRequest
+                .queryParam("body")
+                .orElseThrow { IllegalArgumentException("object body required") }
+
+        val notation = yamlParser.parseObject(objectBody)
 
         val command = AddObjectCommand(
                 ProjectPath(projectPath), objectName, notation)
 
-        applyCommand(command)
+        val digest = applyCommand(command)
 
         return ServerResponse
                 .ok()
-                .body(Mono.just("success"))
+                .body(Mono.just(digest.encode()))
     }
 
 
@@ -158,11 +170,11 @@ class RestHandler {
 
         val command = RemoveObjectCommand(objectName)
 
-        applyCommand(command)
+        val digest = applyCommand(command)
 
         return ServerResponse
                 .ok()
-                .body(Mono.just("success"))
+                .body(Mono.just(digest.encode()))
     }
 
 
@@ -178,11 +190,11 @@ class RestHandler {
 
         val command = ShiftObjectCommand(objectName, indexInPackage)
 
-        applyCommand(command)
+        val digest = applyCommand(command)
 
         return ServerResponse
                 .ok()
-                .body(Mono.just("success"))
+                .body(Mono.just(digest.encode()))
     }
 
 
@@ -197,45 +209,19 @@ class RestHandler {
 
         val command = RenameObjectCommand(objectName, newName)
 
-        applyCommand(command)
+        val digest = applyCommand(command)
 
         return ServerResponse
                 .ok()
-                .body(Mono.just("success"))
+                .body(Mono.just(digest.encode()))
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun applyCommand(command: ProjectCommand) {
-        runBlocking {
-            val packageBytes = mutableMapOf<ProjectPath, ByteArray>()
-            val packages = mutableMapOf<ProjectPath, PackageNotation>()
-            for (projectPath in notationScanner.scan()) {
-                val body = notationMedia.read(projectPath)
-                packageBytes[projectPath] = body
-
-                val packageNotation = yamlParser.parse(body)
-                packages[projectPath] = packageNotation
-            }
-            val projectNotation = ProjectNotation(packages)
-
-            val project = ProjectAggregate(projectNotation)
-
-            val event = project.apply(command)
-
-            val updatedNotation = event.state
-
-            for (updatedPackage in updatedNotation.packages) {
-                if (packages.containsKey(updatedPackage.key) &&
-                        updatedPackage.value.equalsInOrder(packages[updatedPackage.key]!!)) {
-                    continue
-                }
-
-                val previousBody = packageBytes[updatedPackage.key]!!
-                val updatedBody = yamlParser.deparse(updatedPackage.value, previousBody)
-
-                notationMedia.write(updatedPackage.key, updatedBody)
-            }
+    fun applyCommand(command: ProjectCommand): Digest {
+        return runBlocking {
+            repository.apply(command)
+            repository.digest()
         }
     }
 

@@ -7,23 +7,26 @@ import react.dom.br
 import react.dom.div
 import react.dom.input
 import react.dom.pre
-import tech.kzen.auto.client.service.AutoExecutor
-import tech.kzen.auto.client.service.AutoModelService
+import tech.kzen.auto.client.service.*
 import tech.kzen.auto.client.ui.ActionController
 import tech.kzen.auto.client.ui.ActionCreator
 import tech.kzen.auto.client.util.async
 import tech.kzen.lib.common.metadata.model.GraphMetadata
-import tech.kzen.lib.common.metadata.model.ObjectMetadata
 import tech.kzen.lib.common.notation.model.*
 
 
 @Suppress("unused")
-class AutoProject: RComponent<RProps, AutoProject.State>() {
+class AutoProject: RComponent<RProps, AutoProject.State>(), ModelManager.Subscriber {
+    //-----------------------------------------------------------------------------------------------------------------
+    // todo: manage dynamically
+    val projectPath = ProjectPath("notation/dummy/dummy.yaml")
+
+
     //-----------------------------------------------------------------------------------------------------------------
     class State(
             var notation: ProjectNotation?,
-            var metadata: GraphMetadata?,
-            var executor: AutoExecutor?
+            var metadata: GraphMetadata?/*,
+            var executor: AutoExecutor?*/
     ) : RState
 
 
@@ -36,39 +39,34 @@ class AutoProject: RComponent<RProps, AutoProject.State>() {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var mounted = false
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        mounted = true
-        loadData()
+//        println("AutoProject - Subscribed")
+        AutoContext.modelManager.subscribe(this)
     }
 
 
     override fun componentWillUnmount() {
-        mounted = false
+//        println("AutoProject - Un-subscribed")
+        AutoContext.modelManager.unsubscribe(this)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun loadData() {
-        if (! mounted) {
-            return
-        }
+    override fun handle(autoModel: ProjectModel) {
+        println("AutoProject - && handled - ${autoModel.projectNotation.packages[projectPath]!!.objects.keys}")
 
-        async {
-            val projectNotation = AutoModelService.projectNotation()
-
-            val graphMetadata = AutoModelService.metadata(projectNotation)
-            val objectGraph = AutoModelService.graph(projectNotation, graphMetadata)
-            val autoExecutor = AutoExecutor(objectGraph)
-
+//        async {
             setState {
-                notation = projectNotation
-                metadata = graphMetadata
-                executor = autoExecutor
+                notation = autoModel.projectNotation
+                metadata = autoModel.graphMetadata
             }
+//        }
+    }
+
+
+    private fun onReload() {
+        async {
+            AutoContext.modelManager.refresh()
         }
     }
 
@@ -76,6 +74,7 @@ class AutoProject: RComponent<RProps, AutoProject.State>() {
     private fun onRunAll() {
 
     }
+
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
@@ -85,10 +84,7 @@ class AutoProject: RComponent<RProps, AutoProject.State>() {
                 +"Loading..."
             }
             else {
-                println("!! Available packages: ${projectNotation.packages.keys}")
-
-                // todo: manage dynamically
-                val projectPath = ProjectPath("notation/dummy/dummy.yaml")
+                println("AutoProject - Available packages: ${projectNotation.packages.keys}")
 
                 val projectPackage: PackageNotation? =
                         projectNotation.packages[projectPath]
@@ -97,6 +93,8 @@ class AutoProject: RComponent<RProps, AutoProject.State>() {
                     +"Please provide project package"
                 }
                 else {
+                    println("AutoProject - the package - ${projectPackage.objects.keys}")
+
                     +"Action sequence:"
                     val graphMetadata = state.metadata!!
 
@@ -122,6 +120,7 @@ class AutoProject: RComponent<RProps, AutoProject.State>() {
 
                     div {
                         renderRunAll()
+                        renderRefresh()
                     }
                 }
             }
@@ -137,13 +136,15 @@ class AutoProject: RComponent<RProps, AutoProject.State>() {
 //            objectMetadata: ObjectMetadata
     ) {
         child(ActionController::class) {
+            key = objectName
+
             attrs {
                 name = objectName
 //                notation = objectNotation
 //                metadata = objectMetadata
                 notation = projectNotation
                 metadata = graphMetadata
-                executor = state.executor!!
+//                executor = state.executor!!
             }
         }
     }
@@ -154,6 +155,16 @@ class AutoProject: RComponent<RProps, AutoProject.State>() {
             attrs {
                 value = "Run All"
                 onClickFunction = { onRunAll() }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderRefresh() {
+        input (type = InputType.button) {
+            attrs {
+                value = "Refresh"
+                onClickFunction = { onReload() }
             }
         }
     }

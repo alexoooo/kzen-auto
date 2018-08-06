@@ -6,8 +6,10 @@ import kotlinx.html.js.onClickFunction
 import org.w3c.dom.HTMLInputElement
 import react.*
 import react.dom.*
-import tech.kzen.auto.client.rest.RestCommandApi
+import tech.kzen.auto.client.service.AutoContext
+import tech.kzen.auto.client.service.RestClient
 import tech.kzen.auto.client.util.async
+import tech.kzen.lib.common.edit.AddObjectCommand
 import tech.kzen.lib.common.notation.model.ParameterConventions
 import tech.kzen.lib.common.notation.model.ProjectNotation
 import tech.kzen.lib.common.notation.model.ProjectPath
@@ -61,10 +63,11 @@ class ActionCreator(
     private fun onSubmit() {
 //        console.log("ParameterEditor.onSubmit")
 
-        val rest = RestCommandApi()
-
         async {
-            rest.add(state.name, state.type, props.path)
+            AutoContext.commandBus.apply(AddObjectCommand.ofParent(
+                    props.path,
+                    state.name,
+                    state.type))
         }
     }
 

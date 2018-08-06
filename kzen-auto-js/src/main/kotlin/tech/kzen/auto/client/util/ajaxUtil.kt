@@ -12,7 +12,7 @@ external fun encodeURIComponent(str: String): String
 
 
 suspend fun httpGet(url: String): String = suspendCoroutine { c ->
-    console.log("^^^ httpGet", url)
+//    console.log("^^^ httpGet", url)
 
     val xhr = XMLHttpRequest()
     xhr.onreadystatechange = {

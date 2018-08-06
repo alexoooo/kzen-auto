@@ -8,14 +8,12 @@ import react.*
 import react.dom.div
 import react.dom.hr
 import react.dom.input
-import tech.kzen.auto.client.rest.RestCommandApi
-import tech.kzen.auto.client.service.AutoExecutor
-import tech.kzen.auto.client.service.AutoModelService
+import tech.kzen.auto.client.service.AutoContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.common.api.AutoAction
+import tech.kzen.lib.common.edit.RemoveObjectCommand
+import tech.kzen.lib.common.edit.RenameObjectCommand
+import tech.kzen.lib.common.edit.ShiftObjectCommand
 import tech.kzen.lib.common.metadata.model.GraphMetadata
-import tech.kzen.lib.common.metadata.model.ObjectMetadata
-import tech.kzen.lib.common.notation.model.ObjectNotation
 import tech.kzen.lib.common.notation.model.ParameterNotation
 import tech.kzen.lib.common.notation.model.ProjectNotation
 import tech.kzen.lib.common.notation.model.ScalarParameterNotation
@@ -28,8 +26,8 @@ class ActionController(
     class Props(
             var name: String,
             var notation: ProjectNotation,
-            var metadata: GraphMetadata,
-            var executor: AutoExecutor
+            var metadata: GraphMetadata/*,
+            var executor: AutoExecutor*/
     ) : RProps
 
 
@@ -46,7 +44,8 @@ class ActionController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRun() {
-        props.executor.run(props.name)
+        TODO()
+//        props.executor.run(props.name)
     }
 
 
@@ -58,17 +57,17 @@ class ActionController(
 
 
     private fun onRename() {
-        val rest = RestCommandApi()
         async {
-            rest.rename(props.name, state.name)
+            AutoContext.commandBus.apply(RenameObjectCommand(
+                    props.name, state.name))
         }
     }
 
 
     private fun onRemove() {
-        val rest = RestCommandApi()
         async {
-            rest.remove(props.name)
+            AutoContext.commandBus.apply(RemoveObjectCommand(
+                    props.name))
         }
     }
 
@@ -78,9 +77,9 @@ class ActionController(
         val packageNotation = props.notation.packages[packagePath]!!
         val index = packageNotation.indexOf(props.name)
 
-        val rest = RestCommandApi()
         async {
-            rest.shift(props.name, index - 1)
+            AutoContext.commandBus.apply(ShiftObjectCommand(
+                    props.name, index - 1))
         }
     }
 
@@ -90,9 +89,9 @@ class ActionController(
         val packageNotation = props.notation.packages[packagePath]!!
         val index = packageNotation.indexOf(props.name)
 
-        val rest = RestCommandApi()
         async {
-            rest.shift(props.name, index + 1)
+            AutoContext.commandBus.apply(ShiftObjectCommand(
+                    props.name, index + 1))
         }
     }
 

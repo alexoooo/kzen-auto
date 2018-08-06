@@ -1,6 +1,4 @@
-MablexAction_Foo:
+new-action-name:
   is: "LogAction"
-  message: "MABL kkkkk"
-new-fooooo:
+dsfdsfsd-test:
   is: "LogAction"
-  message: "default message"

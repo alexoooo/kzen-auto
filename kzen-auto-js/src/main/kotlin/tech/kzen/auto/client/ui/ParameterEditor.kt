@@ -8,8 +8,11 @@ import org.w3c.dom.HTMLInputElement
 import react.*
 import react.dom.div
 import react.dom.input
-import tech.kzen.auto.client.rest.RestCommandApi
+import tech.kzen.auto.client.service.AutoContext
+import tech.kzen.auto.client.service.RestClient
 import tech.kzen.auto.client.util.async
+import tech.kzen.lib.common.edit.EditParameterCommand
+import tech.kzen.lib.common.notation.model.ScalarParameterNotation
 
 
 @Suppress("unused")
@@ -48,10 +51,11 @@ class ParameterEditor(
     private fun onSubmit() {
         console.log("ParameterEditor.onSubmit")
 
-        val rest = RestCommandApi()
-
         async {
-            rest.edit(props.objectName, props.parameterPath, state.value)
+            AutoContext.commandBus.apply(EditParameterCommand(
+                    props.objectName,
+                    props.parameterPath,
+                    ScalarParameterNotation(state.value)))
         }
     }
 
