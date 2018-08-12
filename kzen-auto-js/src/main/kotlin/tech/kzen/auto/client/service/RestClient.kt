@@ -100,4 +100,14 @@ class RestClient(
         val digest = httpGet("$baseUrl/command/rename?name=$encodedName&to=$encodedNewName")
         return Digest.decode(digest)
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun performAction(
+            objectName: String
+    ) {
+        val encodedName = encodeURIComponent(objectName)
+
+        httpGet("$baseUrl/action/perform?name=$encodedName")
+    }
 }

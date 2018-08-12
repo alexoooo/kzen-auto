@@ -8,7 +8,7 @@ import react.*
 import react.dom.div
 import react.dom.hr
 import react.dom.input
-import tech.kzen.auto.client.service.AutoContext
+import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.lib.common.edit.RemoveObjectCommand
 import tech.kzen.lib.common.edit.RenameObjectCommand
@@ -44,7 +44,9 @@ class ActionController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRun() {
-        TODO()
+        async {
+            ClientContext.restClient.performAction(props.name)
+        }
 //        props.executor.run(props.name)
     }
 
@@ -58,7 +60,7 @@ class ActionController(
 
     private fun onRename() {
         async {
-            AutoContext.commandBus.apply(RenameObjectCommand(
+            ClientContext.commandBus.apply(RenameObjectCommand(
                     props.name, state.name))
         }
     }
@@ -66,7 +68,7 @@ class ActionController(
 
     private fun onRemove() {
         async {
-            AutoContext.commandBus.apply(RemoveObjectCommand(
+            ClientContext.commandBus.apply(RemoveObjectCommand(
                     props.name))
         }
     }
@@ -78,7 +80,7 @@ class ActionController(
         val index = packageNotation.indexOf(props.name)
 
         async {
-            AutoContext.commandBus.apply(ShiftObjectCommand(
+            ClientContext.commandBus.apply(ShiftObjectCommand(
                     props.name, index - 1))
         }
     }
@@ -90,7 +92,7 @@ class ActionController(
         val index = packageNotation.indexOf(props.name)
 
         async {
-            AutoContext.commandBus.apply(ShiftObjectCommand(
+            ClientContext.commandBus.apply(ShiftObjectCommand(
                     props.name, index + 1))
         }
     }

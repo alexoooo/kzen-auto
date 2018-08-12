@@ -1,4 +1,9 @@
+"Open Chrome":
+  is: OpenBrowser
+"Go to Google":
+  is: GoTo
+  location: "https://www.yahoo.com/"
 new-action-name:
-  is: "LogAction"
-dsfdsfsd-test:
-  is: "LogAction"
+  is: GoTo
+"Close Chrome":
+  is: CloseBrowser

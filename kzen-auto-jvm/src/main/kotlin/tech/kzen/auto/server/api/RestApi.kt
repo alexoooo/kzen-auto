@@ -21,6 +21,11 @@ class RestApi(
         GET("/command/shift", counterHandler::commandShiftObject)
         GET("/command/rename", counterHandler::commandRenameObject)
 
+        GET("/action/perform", counterHandler::actionPerform)
+
+        // provide value from client
+//        GET("/action/submit", counterHandler::actionSubmit)
+
         GET("/", counterHandler::resource)
         GET("/**", counterHandler::resource)
     }

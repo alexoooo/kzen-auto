@@ -6,8 +6,7 @@ import kotlinx.html.js.onClickFunction
 import org.w3c.dom.HTMLInputElement
 import react.*
 import react.dom.*
-import tech.kzen.auto.client.service.AutoContext
-import tech.kzen.auto.client.service.RestClient
+import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.lib.common.edit.AddObjectCommand
 import tech.kzen.lib.common.notation.model.ParameterConventions
@@ -64,7 +63,7 @@ class ActionCreator(
 //        console.log("ParameterEditor.onSubmit")
 
         async {
-            AutoContext.commandBus.apply(AddObjectCommand.ofParent(
+            ClientContext.commandBus.apply(AddObjectCommand.ofParent(
                     props.path,
                     state.name,
                     state.type))

@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.service
 
+import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.metadata.read.NotationMetadataReader
 import tech.kzen.lib.common.notation.format.YamlNotationParser
 import tech.kzen.lib.common.notation.io.NotationMedia
@@ -9,22 +10,22 @@ import tech.kzen.lib.common.notation.repo.NotationRepository
 import tech.kzen.lib.platform.ModuleRegistry
 
 
-object AutoContext {
+object ClientContext {
     //-----------------------------------------------------------------------------------------------------------------
     val restClient = RestClient("")
 
     val restNotationMedia: NotationMedia = RestNotationMedia(restClient)
-    val clientNotationMedia = MapNotationMedia()
+    val notationMediaCache = MapNotationMedia()
 
     val notationParser: NotationParser = YamlNotationParser()
 
     val notationMetadataReader = NotationMetadataReader()
 
     val clientRepository = NotationRepository(
-            clientNotationMedia, notationParser)
+            notationMediaCache, notationParser)
 
     val modelManager = ModelManager(
-            clientNotationMedia,
+            notationMediaCache,
             clientRepository,
             restNotationMedia,
             notationMetadataReader)

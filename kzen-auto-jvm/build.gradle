@@ -29,6 +29,8 @@ dependencies {
     compile('com.fasterxml.jackson.module:jackson-module-kotlin')
     compile "com.google.guava:guava:25.0-jre"
 
+    compile group: 'org.seleniumhq.selenium', name: 'selenium-java', version: '3.14.0'
+
     compile group: 'tech.kzen.lib', name: 'kzen-lib-jvm', version: kzenLibVersion
 
     testCompile('org.springframework.boot:spring-boot-starter-test')

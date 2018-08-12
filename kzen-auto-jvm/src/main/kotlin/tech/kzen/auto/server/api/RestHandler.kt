@@ -9,6 +9,10 @@ import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
+import tech.kzen.auto.common.api.AutoAction
+import tech.kzen.auto.server.service.ServerContext
+import tech.kzen.lib.common.context.ObjectGraphCreator
+import tech.kzen.lib.common.context.ObjectGraphDefiner
 import tech.kzen.lib.common.edit.*
 import tech.kzen.lib.common.notation.format.YamlNotationParser
 import tech.kzen.lib.common.notation.io.NotationMedia
@@ -46,33 +50,15 @@ class RestHandler {
         val allowedExtensions = listOf(
                 "html",
                 "js",
-                "css")
+                "css",
+                "ico")
     }
-
-
-    private val fileLocator = GradleLocator()
-    private val fileMedia = FileNotationMedia(fileLocator)
-
-    private val classpathMedia = ClasspathNotationMedia()
-
-    private val notationMedia: NotationMedia = MultiNotationMedia(listOf(
-            fileMedia, classpathMedia))
-
-//    private val notationScanner: NotationScanner = MultiNotationScanner(listOf(
-//        ClasspathNotationScanner(media = classpathMedia),
-//        DirectoryNotationScanner(fileLocator, fileMedia)))
-
-    private val yamlParser = YamlNotationParser()
-
-    private val repository = NotationRepository(
-            notationMedia,
-            yamlParser)
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun scan(serverRequest: ServerRequest): Mono<ServerResponse> {
         val projectPaths = runBlocking {
-            notationMedia.scan()
+            ServerContext.notationMedia.scan()
         }
 
         val asMap = mutableMapOf<String, String>()
@@ -94,7 +80,7 @@ class RestHandler {
 
         val notationPath = ProjectPath(requestSuffix)
         val notationBytes = runBlocking {
-            notationMedia.read(notationPath)
+            ServerContext.notationMedia.read(notationPath)
         }
 
         val notationText = IoUtils.utf8ToString(notationBytes)
@@ -124,16 +110,10 @@ class RestHandler {
                 .queryParam("value")
                 .orElseThrow { IllegalArgumentException("parameter value required") }
 
-        val value = yamlParser.parseParameter(valueYaml)
+        val value = ServerContext.yamlParser.parseParameter(valueYaml)
 
-        val command = EditParameterCommand(
-                objectName, parameterPath, value)
-
-        val digest = applyCommand(command)
-
-        return ServerResponse
-                .ok()
-                .body(Mono.just(digest.encode()))
+        return applyAndDigest(
+                EditParameterCommand(objectName, parameterPath, value))
     }
 
 
@@ -150,16 +130,10 @@ class RestHandler {
                 .queryParam("body")
                 .orElseThrow { IllegalArgumentException("object body required") }
 
-        val notation = yamlParser.parseObject(objectBody)
+        val notation = ServerContext.yamlParser.parseObject(objectBody)
 
-        val command = AddObjectCommand(
-                ProjectPath(projectPath), objectName, notation)
-
-        val digest = applyCommand(command)
-
-        return ServerResponse
-                .ok()
-                .body(Mono.just(digest.encode()))
+        return applyAndDigest(
+                AddObjectCommand(ProjectPath(projectPath), objectName, notation))
     }
 
 
@@ -168,13 +142,8 @@ class RestHandler {
                 .queryParam("name")
                 .orElseThrow { IllegalArgumentException("object name required") }
 
-        val command = RemoveObjectCommand(objectName)
-
-        val digest = applyCommand(command)
-
-        return ServerResponse
-                .ok()
-                .body(Mono.just(digest.encode()))
+        return applyAndDigest(
+                RemoveObjectCommand(objectName))
     }
 
 
@@ -188,13 +157,8 @@ class RestHandler {
                 .flatMap { Optional.ofNullable(Ints.tryParse(it)) }
                 .orElseThrow { IllegalArgumentException("index number required") }
 
-        val command = ShiftObjectCommand(objectName, indexInPackage)
-
-        val digest = applyCommand(command)
-
-        return ServerResponse
-                .ok()
-                .body(Mono.just(digest.encode()))
+        return applyAndDigest(
+                ShiftObjectCommand(objectName, indexInPackage))
     }
 
 
@@ -207,8 +171,12 @@ class RestHandler {
                 .queryParam("to")
                 .orElseThrow { IllegalArgumentException("to name required") }
 
-        val command = RenameObjectCommand(objectName, newName)
+        return applyAndDigest(
+                RenameObjectCommand(objectName, newName))
+    }
 
+
+    fun applyAndDigest(command: ProjectCommand): Mono<ServerResponse> {
         val digest = applyCommand(command)
 
         return ServerResponse
@@ -217,12 +185,43 @@ class RestHandler {
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
     fun applyCommand(command: ProjectCommand): Digest {
         return runBlocking {
-            repository.apply(command)
-            repository.digest()
+            val event = ServerContext.repository.apply(command)
+
+            // TODO: consolidate with CommandBus
+            ServerContext.modelManager.onEvent(event)
+
+            ServerContext.repository.digest()
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun actionPerform(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val objectName: String = serverRequest
+                .queryParam("name")
+                .orElseThrow { IllegalArgumentException("object name required") }
+
+        runBlocking {
+            val projectModel = ServerContext.modelManager.projectModel()
+
+            val graphDefinition = ObjectGraphDefiner.define(
+                    projectModel.projectNotation, projectModel.graphMetadata)
+
+            val objectGraph = ObjectGraphCreator.createGraph(
+                    graphDefinition, projectModel.graphMetadata)
+
+            val instance = objectGraph.get(objectName)
+
+            val action = instance as AutoAction
+
+            action.perform()
+        }
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just("success"))
     }
 
 

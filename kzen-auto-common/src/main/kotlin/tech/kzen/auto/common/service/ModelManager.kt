@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.service
+package tech.kzen.auto.common.service
 
 import tech.kzen.lib.common.edit.ProjectEvent
 import tech.kzen.lib.common.metadata.read.NotationMetadataReader
@@ -10,9 +10,9 @@ import tech.kzen.lib.common.util.Digest
 
 
 class ModelManager(
-        private var clientNotationMedia: MapNotationMedia,
-        private var clientRepository: NotationRepository,
-        private var restNotationMedia: NotationMedia,
+        private var notationMediaCache: MapNotationMedia,
+        private var notationRepository: NotationRepository,
+        private var notationMedia: NotationMedia,
         private var notationMetadataReader: NotationMetadataReader
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -44,15 +44,7 @@ class ModelManager(
     private suspend fun publish() {
         println("ModelManager - Publishing - start")
 
-        val allNotation = clientRepository.notation()
-
-        val projectNotation = projectNotation(allNotation)
-
-        val metadata = notationMetadataReader.read(projectNotation)
-
-        mostRecent = ProjectModel(
-                projectNotation,
-                metadata)
+        mostRecent = readModel()
 
         println("ModelManager - Publishing")
         for (subscriber in subscribers) {
@@ -63,7 +55,7 @@ class ModelManager(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun autoNotation(): ProjectNotation {
-        val allNotation = clientRepository.notation()
+        val allNotation = notationRepository.notation()
 
         return allNotation.filterPaths {
             it.relativeLocation.startsWith("notation/base/") ||
@@ -82,17 +74,39 @@ class ModelManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    suspend fun projectModel(): ProjectModel {
+        if (mostRecent == null) {
+            mostRecent = readModel()
+        }
+        return mostRecent!!
+    }
+
+
+    private suspend fun readModel(): ProjectModel {
+        val allNotation = notationRepository.notation()
+
+        val projectNotation = projectNotation(allNotation)
+
+        val metadata = notationMetadataReader.read(projectNotation)
+
+        return ProjectModel(
+                projectNotation,
+                metadata)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     suspend fun refresh() {
         println("ModelManager - Refreshing - ${mostRecent == null}")
 
-        val restScan = restNotationMedia.scan()
-        val clientScan = clientNotationMedia.scan()
+        val restScan = notationMedia.scan()
+        val clientScan = notationMediaCache.scan()
 
         println("ModelManager - Refreshing - got scan - ${restScan.keys} vs ${clientScan.keys}")
 
         var changed = false
         for (dangling in clientScan.keys.minus(restScan.keys)) {
-            clientNotationMedia.delete(dangling)
+            notationMediaCache.delete(dangling)
             changed = true
         }
 
@@ -103,18 +117,18 @@ class ModelManager(
             if (clientDigest != e.value) {
                 println("ModelManager - Saving - ${e.key}")
 
-                val body = restNotationMedia.read(e.key)
+                val body = notationMedia.read(e.key)
 
                 println("ModelManager - read - ${body.size}")
 
-                clientNotationMedia.write(e.key, body)
+                notationMediaCache.write(e.key, body)
                 changed = true
             }
         }
 
         println("ModelManager - Refreshing check - $changed - ${mostRecent == null}")
         if (changed || mostRecent == null) {
-            clientRepository.clearCache()
+            notationRepository.clearCache()
             publish()
         }
     }

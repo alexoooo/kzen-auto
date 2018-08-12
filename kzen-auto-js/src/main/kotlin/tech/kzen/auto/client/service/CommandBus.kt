@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.service
 
+import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.edit.*
 import tech.kzen.lib.common.notation.io.NotationParser
 import tech.kzen.lib.common.notation.repo.NotationRepository

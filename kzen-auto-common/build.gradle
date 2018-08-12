@@ -2,6 +2,11 @@ apply plugin: 'kotlin-platform-common'
 
 dependencies {
     compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-common', version: kotlinVersion
+
+
+    compile group: 'tech.kzen.lib', name: 'kzen-lib-common', version: kzenLibVersion
+    
+
     testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test-common', version: kotlinVersion
     testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test-annotations-common', version: kotlinVersion
 }

@@ -11,6 +11,8 @@ import tech.kzen.auto.client.service.*
 import tech.kzen.auto.client.ui.ActionController
 import tech.kzen.auto.client.ui.ActionCreator
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.auto.common.service.ProjectModel
 import tech.kzen.lib.common.metadata.model.GraphMetadata
 import tech.kzen.lib.common.notation.model.*
 
@@ -41,13 +43,13 @@ class AutoProject: RComponent<RProps, AutoProject.State>(), ModelManager.Subscri
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
 //        println("AutoProject - Subscribed")
-        AutoContext.modelManager.subscribe(this)
+        ClientContext.modelManager.subscribe(this)
     }
 
 
     override fun componentWillUnmount() {
 //        println("AutoProject - Un-subscribed")
-        AutoContext.modelManager.unsubscribe(this)
+        ClientContext.modelManager.unsubscribe(this)
     }
 
 
@@ -66,7 +68,7 @@ class AutoProject: RComponent<RProps, AutoProject.State>(), ModelManager.Subscri
 
     private fun onReload() {
         async {
-            AutoContext.modelManager.refresh()
+            ClientContext.modelManager.refresh()
         }
     }
 

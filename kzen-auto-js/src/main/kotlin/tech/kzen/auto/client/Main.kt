@@ -2,7 +2,7 @@ package tech.kzen.auto.client
 
 import react.dom.render
 import tech.kzen.auto.client.objects.ReactWrapper
-import tech.kzen.auto.client.service.AutoContext
+import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.lib.common.context.ObjectGraphCreator
 import tech.kzen.lib.common.context.ObjectGraphDefiner
@@ -13,7 +13,7 @@ import kotlin.browser.window
 
 
 fun main(args: Array<String>) {
-    val context = AutoContext
+    val context = ClientContext
 
     context.init()
 
