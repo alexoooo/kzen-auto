@@ -32,6 +32,35 @@ GoTo:
     location: String
 
 
+LeftClick:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.LeftClick
+  xpath: ""
+  meta:
+    xpath: String
+
+
+FormSubmit:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.FormSubmit
+  xpath: ""
+  meta:
+    xpath: String
+
+
+SendKeys:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.SendKeys
+  xpath: ""
+  text: ""
+  meta:
+    xpath: String
+    text: String
+
+
 ###########################################################
 
 
