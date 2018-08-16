@@ -1,14 +1,18 @@
 "Open Chrome":
   is: OpenBrowser
+
 "Go to Google":
   is: GoTo
   location: "https://www.google.com/"
+
 "Enter search terms":
   is: SendKeys
   xpath: '//*[@id="lst-ib"]'
-  text: "goat yoga"
+  text: "foo bar"
+
 "Click search":
   is: FormSubmit
   xpath: '//*[@name="btnK"]'
+
 "Close Chrome":
   is: CloseBrowser

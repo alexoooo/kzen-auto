@@ -14,6 +14,7 @@ import tech.kzen.lib.common.edit.RemoveObjectCommand
 import tech.kzen.lib.common.edit.RenameObjectCommand
 import tech.kzen.lib.common.edit.ShiftObjectCommand
 import tech.kzen.lib.common.metadata.model.GraphMetadata
+import tech.kzen.lib.common.notation.model.ParameterConventions
 import tech.kzen.lib.common.notation.model.ParameterNotation
 import tech.kzen.lib.common.notation.model.ProjectNotation
 import tech.kzen.lib.common.notation.model.ScalarParameterNotation
@@ -129,23 +130,22 @@ class ActionController(
                 }
             }
 
-            hr {}
+            hr(classes = "actionSeparator") {}
+
+            val parent = props.notation.getString(props.name, ParameterConventions.isParameter)
+            +parent
 
             for (e in objectMetadata.parameters) {
                 val value =
                         props.notation.transitiveParameter(props.name, e.key)
                         ?: continue
 
-                if (e.key == "is") {
-                    continue
-                }
-
                 div(classes = "child") {
                     renderParameter(e.key, value)
                 }
             }
 
-            hr {}
+            hr(classes = "actionSeparator") {}
 
             input (type = InputType.button) {
                 attrs {

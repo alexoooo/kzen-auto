@@ -67,8 +67,10 @@ class ModelManager(
     private fun projectNotation(allNotation: ProjectNotation): ProjectNotation {
         return allNotation.filterPaths {
             it.relativeLocation.startsWith("notation/base/") ||
-                    (! it.relativeLocation.startsWith("notation/auto/") ||
-                            it.relativeLocation.endsWith("auto-common.yaml"))
+//                    (! it.relativeLocation.startsWith("notation/auto/") ||
+//                            it.relativeLocation.endsWith("auto-common.yaml") ||
+//                            it.relativeLocation.endsWith("auto-browser.yaml"))
+                    ! it.relativeLocation.startsWith("notation/auto/")
         }
     }
 

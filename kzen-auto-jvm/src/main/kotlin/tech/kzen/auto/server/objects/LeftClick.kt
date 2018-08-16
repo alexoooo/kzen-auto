@@ -6,6 +6,7 @@ import tech.kzen.auto.common.api.AutoAction
 import tech.kzen.auto.server.service.ServerContext
 
 
+@Suppress("unused")
 class LeftClick(
         var xpath: String
 ) : AutoAction {

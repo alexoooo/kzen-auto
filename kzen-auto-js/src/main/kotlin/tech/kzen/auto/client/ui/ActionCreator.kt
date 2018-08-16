@@ -75,7 +75,7 @@ class ActionCreator(
     override fun RBuilder.render() {
         fieldSet {
             legend {
-                +"Add New Action"
+                +"Add New Step"
             }
 
 

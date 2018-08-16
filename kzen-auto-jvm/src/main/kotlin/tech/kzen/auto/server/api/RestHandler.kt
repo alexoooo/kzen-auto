@@ -51,6 +51,8 @@ class RestHandler {
                 "html",
                 "js",
                 "css",
+                "svg",
+                "png",
                 "ico")
     }
 

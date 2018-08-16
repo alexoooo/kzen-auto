@@ -3,10 +3,7 @@ package tech.kzen.auto.client.objects
 import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
 import react.*
-import react.dom.br
-import react.dom.div
-import react.dom.input
-import react.dom.pre
+import react.dom.*
 import tech.kzen.auto.client.service.*
 import tech.kzen.auto.client.ui.ActionController
 import tech.kzen.auto.client.ui.ActionCreator
@@ -15,6 +12,7 @@ import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.common.service.ProjectModel
 import tech.kzen.lib.common.metadata.model.GraphMetadata
 import tech.kzen.lib.common.notation.model.*
+
 
 
 @Suppress("unused")
@@ -80,50 +78,54 @@ class AutoProject: RComponent<RProps, AutoProject.State>(), ModelManager.Subscri
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        div(classes = "child") {
-            val projectNotation = state.notation
-            if (projectNotation == null) {
-                +"Loading..."
+        val projectNotation = state.notation
+        if (projectNotation == null) {
+            +"Loading..."
+        }
+        else {
+            println("AutoProject - Available packages: ${projectNotation.packages.keys}")
+
+            val projectPackage: PackageNotation? =
+                    projectNotation.packages[projectPath]
+
+            if (projectPackage == null) {
+                +"Please provide project package"
             }
             else {
-                println("AutoProject - Available packages: ${projectNotation.packages.keys}")
+                println("AutoProject - the package - ${projectPackage.objects.keys}")
 
-                val projectPackage: PackageNotation? =
-                        projectNotation.packages[projectPath]
+                div(classes = "child") {
+                    h3 {
+                        +"Steps:"
+                    }
 
-                if (projectPackage == null) {
-                    +"Please provide project package"
-                }
-                else {
-                    println("AutoProject - the package - ${projectPackage.objects.keys}")
-
-                    +"Action sequence:"
                     val graphMetadata = state.metadata!!
 
-                    for (e in projectPackage.objects) {
-                        renderAction(e.key, projectNotation, graphMetadata)
+                    div(classes = "actionColumn") {
+                        for (e in projectPackage.objects) {
+                            renderAction(e.key, projectNotation, graphMetadata)
 
-                        pre {
-                            +"|\n"
-                            +"V"
+                            img(src = "arrow-pointing-down.png", classes = "downArrow") {}
                         }
-                    }
 
-                    div {
-                        child(ActionCreator::class) {
-                            attrs {
-                                notation = projectNotation
-                                path = projectPath
+                            child(ActionCreator::class) {
+                                attrs {
+                                    notation = projectNotation
+                                    path = projectPath
+                                }
                             }
-                        }
                     }
 
+
+                    // TODO: compensate for footer
                     br {}
+                    br {}
+                    br {}
+                }
 
-                    div {
-                        renderRunAll()
-                        renderRefresh()
-                    }
+                div(classes = "footer") {
+                    renderRunAll()
+                    renderRefresh()
                 }
             }
         }
