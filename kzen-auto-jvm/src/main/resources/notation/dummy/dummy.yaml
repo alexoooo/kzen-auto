@@ -8,11 +8,12 @@
 "Enter search terms":
   is: SendKeys
   xpath: '//*[@id="lst-ib"]'
-  text: "foo bar"
+  text: "Funny Goat"
 
-"Click search":
-  is: FormSubmit
-  xpath: '//*[@name="btnK"]'
+"Click Away":
+  is: LeftClick
+  xpath: '//*[@id="lga"]'
 
-"Close Chrome":
-  is: CloseBrowser
+"I'm Feeling Lucky":
+  is: LeftClick
+  xpath: '//*[@name="btnI"]'

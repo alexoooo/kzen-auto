@@ -4,14 +4,43 @@ package tech.kzen.auto.common.exec
 data class ExecutionModel(
         val frames: MutableList<ExecutionFrame>
 ) {
-    fun rename(from: String, to: String): ExecutionModel {
-        val renamed = mutableListOf<ExecutionFrame>()
+    //-----------------------------------------------------------------------------------------------------------------
+    fun rename(from: String, to: String): Boolean {
+        var renamedAny = false
 
         for (frame in frames) {
-            val renamedFrame = frame.rename(from, to)
-            renamed.add(renamedFrame)
+            val renamed = frame.rename(from, to)
+
+            renamedAny = renamedAny || renamed
         }
 
-        return ExecutionModel(renamed)
+        return renamedAny
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun findLast(
+            objectName: String
+    ): ExecutionFrame? =
+        frames.findLast {
+            it.contains(objectName)
+        }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun next(): String? {
+        if (frames.isEmpty()) {
+            return null
+        }
+
+        val lastFrame = frames.last()
+
+        for (e in lastFrame.values) {
+            if (e.value == ExecutionStatus.Pending) {
+                return e.key
+            }
+        }
+
+        return null
     }
 }

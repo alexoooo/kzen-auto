@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.service
 
+import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.metadata.read.NotationMetadataReader
 import tech.kzen.lib.common.notation.format.YamlNotationParser
@@ -36,12 +37,17 @@ object ClientContext {
             restClient,
             notationParser)
 
+    val executionManager = ExecutionManager()
+
 
     //-----------------------------------------------------------------------------------------------------------------
     fun init() {
         val kzenAutoJs = js("require('kzen-auto-js.js')")
 //        console.log("kzenAutoJs", kzenAutoJs)
         ModuleRegistry.add(kzenAutoJs)
+
+
+        modelManager.subscribe(executionManager)
     }
 
 

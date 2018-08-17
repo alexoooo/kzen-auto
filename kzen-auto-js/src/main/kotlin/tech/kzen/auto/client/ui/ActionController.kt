@@ -10,6 +10,7 @@ import react.dom.hr
 import react.dom.input
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.lib.common.edit.RemoveObjectCommand
 import tech.kzen.lib.common.edit.RenameObjectCommand
 import tech.kzen.lib.common.edit.ShiftObjectCommand
@@ -27,8 +28,10 @@ class ActionController(
     class Props(
             var name: String,
             var notation: ProjectNotation,
-            var metadata: GraphMetadata/*,
-            var executor: AutoExecutor*/
+            var metadata: GraphMetadata,
+
+            var status: ExecutionStatus?,
+            var next: Boolean
     ) : RProps
 
 
@@ -46,7 +49,18 @@ class ActionController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRun() {
         async {
-            ClientContext.restClient.performAction(props.name)
+            var success = false
+
+            try {
+                ClientContext.restClient.performAction(props.name)
+                success = true
+            }
+            catch (e: Exception) {
+                println("#$%#$%#$ got exception: $e")
+            }
+
+            // TODO: factor out and consolidate
+            ClientContext.executionManager.onExecution(props.name, success)
         }
 //        props.executor.run(props.name)
     }
@@ -132,8 +146,19 @@ class ActionController(
 
             hr(classes = "actionSeparator") {}
 
-            val parent = props.notation.getString(props.name, ParameterConventions.isParameter)
-            +parent
+            div {
+                val parent = props.notation.getString(props.name, ParameterConventions.isParameter)
+                +parent
+
+                if (props.status != null) {
+                    +" [${props.status}]"
+                }
+
+                if (props.next) {
+                    +" [NEXT]"
+                }
+            }
+
 
             for (e in objectMetadata.parameters) {
                 val value =

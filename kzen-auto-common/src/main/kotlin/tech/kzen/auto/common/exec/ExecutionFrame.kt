@@ -5,17 +5,24 @@ import tech.kzen.lib.common.notation.model.ProjectPath
 
 data class ExecutionFrame(
         val path: ProjectPath,
-        var current: String,
-        var status: ExecutionStatus
+        val values: MutableMap<String, ExecutionStatus>
 ) {
-    fun rename(from: String, to: String): ExecutionFrame {
-        if (current != from) {
-            return this
+    fun contains(objectName: String): Boolean {
+        return values.containsKey(objectName)
+    }
+
+
+    fun rename(from: String, to: String): Boolean {
+//        if (current == from) {
+//            current = to
+//        }
+
+        val value = values.remove(from)
+        if (value != null) {
+            values[to] = value
+            return true
         }
 
-        return ExecutionFrame(
-                path,
-                to,
-                status)
+        return false
     }
 }

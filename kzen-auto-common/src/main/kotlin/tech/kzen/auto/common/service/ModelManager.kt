@@ -17,7 +17,7 @@ class ModelManager(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     interface Subscriber {
-        fun handle(autoModel: ProjectModel)
+        fun handleModel(autoModel: ProjectModel, event: ProjectEvent?)
     }
 
 
@@ -31,7 +31,7 @@ class ModelManager(
         subscribers.add(subscriber)
 
         if (mostRecent != null) {
-            subscriber.handle(mostRecent!!)
+            subscriber.handleModel(mostRecent!!, null)
         }
     }
 
@@ -41,14 +41,14 @@ class ModelManager(
     }
 
 
-    private suspend fun publish() {
+    private suspend fun publish(event: ProjectEvent?) {
         println("ModelManager - Publishing - start")
 
         mostRecent = readModel()
 
         println("ModelManager - Publishing")
         for (subscriber in subscribers) {
-            subscriber.handle(mostRecent!!)
+            subscriber.handleModel(mostRecent!!, event)
         }
     }
 
@@ -131,13 +131,13 @@ class ModelManager(
         println("ModelManager - Refreshing check - $changed - ${mostRecent == null}")
         if (changed || mostRecent == null) {
             notationRepository.clearCache()
-            publish()
+            publish(null)
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun onEvent(event: ProjectEvent) {
-        publish()
+        publish(event)
     }
 }
