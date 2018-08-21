@@ -49,6 +49,9 @@ class ActionController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRun() {
         async {
+            // TODO: factor out and consolidate
+            ClientContext.executionManager.willExecute(props.name)
+
             var success = false
 
             try {
@@ -59,8 +62,7 @@ class ActionController(
                 println("#$%#$%#$ got exception: $e")
             }
 
-            // TODO: factor out and consolidate
-            ClientContext.executionManager.onExecution(props.name, success)
+            ClientContext.executionManager.didExecute(props.name, success)
         }
 //        props.executor.run(props.name)
     }
@@ -118,7 +120,10 @@ class ActionController(
         val objectMetadata = props.metadata.objectMetadata[props.name]!!
 //        val objectNotation = props.notation.coalesce[props.name]!!
 
-        div(classes = "actionController") {
+        val stateClass = "exec${props.status?.name ?: "None"}"
+        val nextClass = if (props.next) "execNext" else ""
+
+        div(classes = "actionController $stateClass $nextClass") {
 
             div {
                 +("Name: ")
@@ -149,14 +154,6 @@ class ActionController(
             div {
                 val parent = props.notation.getString(props.name, ParameterConventions.isParameter)
                 +parent
-
-                if (props.status != null) {
-                    +" [${props.status}]"
-                }
-
-                if (props.next) {
-                    +" [NEXT]"
-                }
             }
 
 

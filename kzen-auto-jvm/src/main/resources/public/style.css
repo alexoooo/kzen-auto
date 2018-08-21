@@ -49,6 +49,7 @@
     width: 20em;
 }
 
+
 .actionController {
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
     padding: 0.5em;
@@ -59,17 +60,23 @@
 
 }
 
-.execNext {
-
+.execPending {
+    background-color: rgb(225, 225, 225);
 }
 
 .execRunning {
-
+    background-color: yellow;
 }
 
 .execSuccess {
-
+    background-color: green;
 }
 
-.execFail {
+.execFailed {
+    background-color: red;
+}
+
+
+.execNext {
+    background-color: gold;
 }

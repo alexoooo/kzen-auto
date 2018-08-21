@@ -8,7 +8,7 @@
 "Enter search terms":
   is: SendKeys
   xpath: '//*[@id="lst-ib"]'
-  text: "Funny Goat"
+  text: "Goat Funny"
 
 "Click Away":
   is: LeftClick
@@ -17,3 +17,6 @@
 "I'm Feeling Lucky":
   is: LeftClick
   xpath: '//*[@name="btnI"]'
+
+new-action-name:
+  is: CloseBrowser

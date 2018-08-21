@@ -89,16 +89,12 @@ class ExecutionManager
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun willExecute(objectName: String) {
+        updateStatus(objectName, ExecutionStatus.Running)
+    }
 
 
-    fun onExecution(objectName: String, success: Boolean) {
-
-
-        val existingFrame = model.findLast(objectName)
-
-        val upsertFrame = existingFrame
-                ?: model.frames.last()
-
+    fun didExecute(objectName: String, success: Boolean) {
         val status =
                 if (success) {
                     ExecutionStatus.Success
@@ -107,29 +103,18 @@ class ExecutionManager
                     ExecutionStatus.Failed
                 }
 
+        updateStatus(objectName, status)
+    }
+
+
+    private fun updateStatus(objectName: String, status: ExecutionStatus) {
+        val existingFrame = model.findLast(objectName)
+
+        val upsertFrame = existingFrame
+                ?: model.frames.last()
+
         upsertFrame.values[objectName] = status
 
         publish()
-
-//        if (upsertFrame.current == objectName) {
-//            if (success) {
-//                val packageNotation = projectModel!!.projectNotation.packages[upsertFrame.path]!!
-//
-//                val index = packageNotation.indexOf(objectName)
-//                val nextIndex = index + 1
-//
-//                if (nextIndex >= packageNotation.objects.size) {
-//                    upsertFrame.status = ExecutionStatus.Done
-//                }
-//                else {
-//                    val nextName = packageNotation.nameAt(nextIndex)
-//                    upsertFrame.current = nextName
-//                    upsertFrame.status = ExecutionStatus.Pending
-//                }
-//            }
-//            else {
-//                upsertFrame.status = ExecutionStatus.Failed
-//            }
-//        }
     }
 }

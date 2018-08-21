@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects
 
 import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
+import kotlinx.coroutines.experimental.*
 import react.*
 import react.dom.*
 import tech.kzen.auto.client.service.*
@@ -35,7 +36,8 @@ class AutoProject:
             var notation: ProjectNotation?,
             var metadata: GraphMetadata?,
             var execution: ExecutionModel?,
-            var runningAll: Boolean
+            var runningAll: Boolean,
+            var pending: Boolean = false
     ) : RState
 
 
@@ -62,79 +64,151 @@ class AutoProject:
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun handleModel(autoModel: ProjectModel, event: ProjectEvent?) {
-        println("AutoProject - && handled - ${autoModel.projectNotation.packages[projectPath]!!.objects.keys}")
+    override fun componentDidUpdate(prevProps: RProps, prevState: AutoProject.State, snapshot: Any) {
+        console.log("AutoProject componentDidUpdate", state, prevState)
 
-//        async {
-            setState {
-                notation = autoModel.projectNotation
-                metadata = autoModel.graphMetadata
-            }
-//        }
-    }
-
-
-    override fun handleExecution(executionModel: ExecutionModel) {
-        setState {
-            execution = executionModel
+        if (state.execution == null ||
+                ! state.runningAll
+        ) {
+            return
         }
 
-        println("&&&&&&&&&&&&&&&&&&& state.runningAll: ${state.runningAll}")
-        val next = executionModel.next()
-//        if (state.runningAll) {
-        if (next != null) {
+        // only look at transition from pending to non-pending state?
+        if (state.pending /*|| ! prevState.pending*/) {
+//            console.log("AutoProject PENDING", state.pending, prevState.pending)
+            return
+        }
 
-            println("&&&&&&&&&&&&&&&&&&& next: $next")
-//
-//            if (next != null) {
-                async {
-                    var success = false
+        val next = state.execution!!.next()
+                ?: return
 
-                    try {
-                        ClientContext.restClient.performAction(next)
-                        success = true
-                    }
-                    catch (e: Exception) {
-                        println("#$%#$%#$ got exception: $e")
-                    }
+        setState {
+            pending = true
+        }
 
-                    // TODO: factor out and consolidate
-                    ClientContext.executionManager.onExecution(next, success)
+        async {
+            println("AutoProject #!@#!@#!@#!@ running next")
+
+            // TODO: factor out and consolidate
+            ClientContext.executionManager.willExecute(next)
+
+            delay(250)
+
+            var success = false
+            try {
+                ClientContext.restClient.performAction(next)
+                success = true
+            }
+            catch (e: Exception) {
+                println("#$%#$%#$ got exception: $e")
+
+                setState {
+                    runningAll = false
                 }
+            }
+
+            ClientContext.executionManager.didExecute(next, success)
+
+//            setState {
+//                pending = false
 //            }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onReload() {
-        async {
-            ClientContext.modelManager.refresh()
+    override fun handleModel(autoModel: ProjectModel, event: ProjectEvent?) {
+        println("AutoProject - && handled - ${autoModel.projectNotation.packages[projectPath]!!.objects.keys}")
+
+        setState {
+            notation = autoModel.projectNotation
+            metadata = autoModel.graphMetadata
+            pending = false
         }
     }
 
 
-    private fun onReset() {
+    override fun handleExecution(executionModel: ExecutionModel) {
+        val next = executionModel.next()
+
+        val nextRunning =
+                if (next == null) {
+                    false
+                }
+                else {
+                    executionModel.containsStatus(ExecutionStatus.Running)
+                }
+
+        setState {
+            execution = executionModel
+            pending = nextRunning
+        }
+
+//        println("&&&&&&&&&&&&&&&&&&& state.runningAll: ${state.runningAll}")
+//        val next = executionModel.next()
+////        if (state.runningAll) {
+//        if (next != null) {
+//
+////            println("&&&&&&&&&&&&&&&&&&& next: $next")
+////
+////            if (next != null) {
+//                async {
+//                    var success = false
+//
+//                    try {
+//                        ClientContext.restClient.performAction(next)
+//                        success = true
+//                    }
+//                    catch (e: Exception) {
+//                        println("#$%#$%#$ got exception: $e")
+//                    }
+//
+//                    // TODO: factor out and consolidate
+//                    ClientContext.executionManager.onExecution(next, success)
+//                }
+////            }
+//        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onRefresh() {
+        async {
+            ClientContext.modelManager.refresh()
+            ClientContext.executionManager.reset()
+        }
+    }
+
+
+    private fun onClear() {
         setState {
             runningAll = false
+            pending = false
         }
 
         ClientContext.executionManager.reset()
+        executionStateToFreshStart()
     }
 
 
     private fun onRunAll() {
+        executionStateToFreshStart()
+
         setState {
             runningAll = true
+            pending = false
         }
+    }
 
+
+    private fun executionStateToFreshStart() {
         val projectModel = ProjectModel(
                 state.notation!!,
                 state.metadata!!)
 
         ClientContext.executionManager.start(projectPath, projectModel)
     }
+
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -246,7 +320,7 @@ class AutoProject:
         input (type = InputType.button) {
             attrs {
                 value = "Reset"
-                onClickFunction = { onReset() }
+                onClickFunction = { onClear() }
             }
         }
     }
@@ -255,8 +329,8 @@ class AutoProject:
     private fun RBuilder.renderRefresh() {
         input (type = InputType.button) {
             attrs {
-                value = "Refresh"
-                onClickFunction = { onReload() }
+                value = "Clear"
+                onClickFunction = { onRefresh() }
             }
         }
     }
