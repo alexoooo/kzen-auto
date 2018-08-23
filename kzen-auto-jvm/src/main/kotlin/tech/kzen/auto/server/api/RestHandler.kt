@@ -28,6 +28,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import java.util.stream.Collectors
 
 
 @Component
@@ -37,15 +38,7 @@ class RestHandler {
         val classPathRoots = listOf(
                 URI("classpath:/public/"))
 
-        val resourceDirectories = listOf<Path>(
-                // TODO: dynamically discover these
-                // IntelliJ and typical commandline working dir is project root
-                Paths.get("kzen-auto-jvm/src/main/resources/public/"),
-                Paths.get("kzen-auto-js/build/dist/"),
-
-                // Eclipse and Gradle default active working directory is the module
-                Paths.get("src/main/resources/public/"),
-                Paths.get("../kzen-auto-js/build/dist/"))
+        val resourceDirectories = discoverResourceDirectories()
 
         val allowedExtensions = listOf(
                 "html",
@@ -54,6 +47,44 @@ class RestHandler {
                 "svg",
                 "png",
                 "ico")
+
+
+        private const val jvmSuffix = "-jvm"
+
+        private fun discoverResourceDirectories(): List<Path> {
+            val builder = mutableListOf<Path>()
+
+            // TODO: consolidate with GradleLocator?
+
+            val projectRoot =
+                    if (Files.exists(Paths.get("src"))) {
+                        ".."
+                    }
+                    else {
+                        "."
+                    }
+
+            val projectName = Files.list(Paths.get(projectRoot)).use { files ->
+                val list = files.collect(Collectors.toList())
+
+                val jvmModule = list.firstOrNull({ it.fileName.toString().endsWith(jvmSuffix)})
+                        ?: throw IllegalStateException("No -jvm module: - $list")
+
+                val filename = jvmModule.fileName.toString()
+
+                filename.substring(0 until filename.length - jvmSuffix.length)
+            }
+
+            // IntelliJ and typical commandline working dir is project root
+            builder.add(Paths.get("$projectName-jvm/src/main/resources/public/"))
+            builder.add(Paths.get("$projectName-js/build/dist/"))
+
+            // Eclipse and Gradle default active working directory is the module
+            builder.add(Paths.get("src/main/resources/public/"))
+            builder.add(Paths.get("../$projectName-js/build/dist/"))
+
+            return builder
+        }
     }
 
 
@@ -120,8 +151,9 @@ class RestHandler {
 
 
     fun commandAddObject(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val projectPath: String = serverRequest
+        val projectPath: ProjectPath = serverRequest
                 .queryParam("path")
+                .map { ProjectPath(it) }
                 .orElseThrow { IllegalArgumentException("project path required") }
 
         val objectName: String = serverRequest
@@ -135,7 +167,7 @@ class RestHandler {
         val notation = ServerContext.yamlParser.parseObject(objectBody)
 
         return applyAndDigest(
-                AddObjectCommand(ProjectPath(projectPath), objectName, notation))
+                AddObjectCommand(projectPath, objectName, notation))
     }
 
 
@@ -175,6 +207,28 @@ class RestHandler {
 
         return applyAndDigest(
                 RenameObjectCommand(objectName, newName))
+    }
+
+
+    fun commandCreatePackge(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val projectPath: ProjectPath = serverRequest
+                .queryParam("path")
+                .map { ProjectPath(it) }
+                .orElseThrow { IllegalArgumentException("project path required") }
+
+        return applyAndDigest(
+                CreatePackageCommand(projectPath = projectPath))
+    }
+
+
+    fun commandDeletePackge(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val projectPath: ProjectPath = serverRequest
+                .queryParam("path")
+                .map { ProjectPath(it) }
+                .orElseThrow { IllegalArgumentException("project path required") }
+
+        return applyAndDigest(
+                DeletePackageCommand(projectPath = projectPath))
     }
 
 

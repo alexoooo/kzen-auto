@@ -53,6 +53,7 @@ class RestClient(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     suspend fun addCommand(
             projectPath: ProjectPath,
             objectName: String,
@@ -98,6 +99,28 @@ class RestClient(
         val encodedNewName = encodeURIComponent(newName)
 
         val digest = httpGet("$baseUrl/command/rename?name=$encodedName&to=$encodedNewName")
+        return Digest.decode(digest)
+    }
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun createPackage(
+            projectPath: ProjectPath
+    ): Digest {
+        val encodedPath = encodeURIComponent(projectPath.relativeLocation)
+
+        val digest = httpGet("$baseUrl/command/create?path=$encodedPath")
+        return Digest.decode(digest)
+    }
+
+
+    suspend fun deletePackage(
+            projectPath: ProjectPath
+    ): Digest {
+        val encodedPath = encodeURIComponent(projectPath.relativeLocation)
+
+        val digest = httpGet("$baseUrl/command/delete?path=$encodedPath")
         return Digest.decode(digest)
     }
 

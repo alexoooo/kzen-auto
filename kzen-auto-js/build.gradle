@@ -13,7 +13,7 @@ dependencies {
 
     compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-js', version: kotlinVersion
     compile "org.jetbrains.kotlinx:kotlinx-html-js:${kotlinxHtmlVersion}"
-    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.22.5'
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core-js:0.22.5'
 
     compile group: 'tech.kzen.lib', name: 'kzen-lib-js', version: kzenLibVersion
 

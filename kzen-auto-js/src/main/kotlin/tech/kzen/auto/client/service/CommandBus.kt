@@ -34,10 +34,12 @@ class CommandBus(
 
     private suspend fun applyRest(command: ProjectCommand): Digest =
         when (command) {
-            is EditParameterCommand -> {
-                val deparsed = notationParser.deparseParameter(command.parameterValue)
-                restClient.editCommand(command.objectName, command.parameterPath, deparsed)
-            }
+            is CreatePackageCommand ->
+                restClient.createPackage(command.projectPath)
+
+            is DeletePackageCommand ->
+                restClient.deletePackage(command.projectPath)
+
 
             is AddObjectCommand -> {
                 val deparsed = notationParser.deparseObject(command.body)
@@ -52,6 +54,13 @@ class CommandBus(
 
             is RenameObjectCommand ->
                 restClient.renameCommand(command.objectName, command.newName)
+
+
+            is EditParameterCommand -> {
+                val deparsed = notationParser.deparseParameter(command.parameterValue)
+                restClient.editCommand(command.objectName, command.parameterPath, deparsed)
+            }
+
 
             else ->
                 throw UnsupportedOperationException("Unknown: $command")

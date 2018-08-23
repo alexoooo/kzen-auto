@@ -8,6 +8,7 @@ enum class OperatingSystem(
     OsX("mac"),
     Linux("linux");
 
+
     companion object {
         private fun find(osName: String): OperatingSystem {
             for (operatingSystemName in values()) {

@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.service.webdriver.model
 
 
-enum class SystemArchitecture(
+enum class CpuArchitecture(
         val osArchitecture: String
 ) {
     X86_64("64bit"),
@@ -14,7 +14,7 @@ enum class SystemArchitecture(
         private val architectureArmNames = listOf("arm", "armv41")
 
 
-        private fun find(currentArchitecture: String): SystemArchitecture {
+        private fun find(currentArchitecture: String): CpuArchitecture {
             var result = X86_32
 
             if (architecture64bitNames.contains(currentArchitecture)) {
@@ -29,7 +29,7 @@ enum class SystemArchitecture(
         }
 
 
-        fun get(): SystemArchitecture {
+        fun get(): CpuArchitecture {
             val currentArchitecture = System.getProperties().getProperty("os.arch")
 
             return find(currentArchitecture)

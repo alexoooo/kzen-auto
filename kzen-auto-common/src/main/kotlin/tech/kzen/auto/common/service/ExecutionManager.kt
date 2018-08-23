@@ -71,18 +71,21 @@ class ExecutionManager
 
 
     fun start(main: ProjectPath, projectModel: ProjectModel) {
-        val packageNotation = projectModel.projectNotation.packages[main]!!
+        model.frames.clear()
 
         val values = mutableMapOf<String, ExecutionStatus>()
 
-        for (e in packageNotation.objects) {
-            values[e.key] = ExecutionStatus.Pending
+        val packageNotation = projectModel.projectNotation.packages[main]
+
+        if (packageNotation != null) {
+            for (e in packageNotation.objects) {
+                values[e.key] = ExecutionStatus.Pending
+            }
+
+            val frame = ExecutionFrame(main, values)
+
+            model.frames.add(frame)
         }
-
-        val frame = ExecutionFrame(main, values)
-
-        model.frames.clear()
-        model.frames.add(frame)
 
         publish()
     }

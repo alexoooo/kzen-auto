@@ -6,8 +6,6 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.lib.common.context.ObjectGraphCreator
 import tech.kzen.lib.common.context.ObjectGraphDefiner
-//import tech.kzen.auto.client.objects.ReactWrapper
-//import tech.kzen.lib.client.notation.RestNotationSource
 import kotlin.browser.document
 import kotlin.browser.window
 

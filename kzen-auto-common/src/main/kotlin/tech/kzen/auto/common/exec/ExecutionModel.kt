@@ -46,8 +46,11 @@ data class ExecutionModel(
         val lastFrame = frames.last()
 
         for (e in lastFrame.values) {
-            if (e.value == ExecutionStatus.Pending ||
-                    e.value == ExecutionStatus.Failed) {
+            if (e.value == ExecutionStatus.Failed) {
+                return null
+            }
+
+            if (e.value == ExecutionStatus.Pending) {
                 return e.key
             }
         }

@@ -11,9 +11,11 @@ import tech.kzen.auto.client.ui.ActionCreator
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionStatus
+import tech.kzen.auto.common.notation.NotationConventions
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.common.service.ProjectModel
+import tech.kzen.lib.common.edit.CreatePackageCommand
 import tech.kzen.lib.common.edit.ProjectEvent
 import tech.kzen.lib.common.metadata.model.GraphMetadata
 import tech.kzen.lib.common.notation.model.*
@@ -26,11 +28,6 @@ class AutoProject:
         ModelManager.Subscriber,
         ExecutionManager.Subscriber
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    // todo: manage dynamically
-    val projectPath = ProjectPath("notation/dummy/dummy.yaml")
-
-
     //-----------------------------------------------------------------------------------------------------------------
     class State(
             var notation: ProjectNotation?,
@@ -67,9 +64,26 @@ class AutoProject:
     override fun componentDidUpdate(prevProps: RProps, prevState: AutoProject.State, snapshot: Any) {
         console.log("AutoProject componentDidUpdate", state, prevState)
 
-        if (state.execution == null ||
-                ! state.runningAll
-        ) {
+        if (state.notation != null &&
+                state.notation!!.packages[NotationConventions.mainPath] == null &&
+                (prevState.notation == null || prevState.notation!!.packages[NotationConventions.mainPath] != null)) {
+            async {
+                createMain()
+            }
+            return
+        }
+
+        if (state.execution == null) {
+            return
+        }
+
+        if (state.execution!!.frames.isEmpty()) {
+            console.log("!@#!#!@#!@#!@  starting execution")
+            executionStateToFreshStart()
+            return
+        }
+
+        if (! state.runningAll) {
             return
         }
 
@@ -87,38 +101,42 @@ class AutoProject:
         }
 
         async {
-            println("AutoProject #!@#!@#!@#!@ running next")
-
-            // TODO: factor out and consolidate
-            ClientContext.executionManager.willExecute(next)
-
-            delay(250)
-
-            var success = false
-            try {
-                ClientContext.restClient.performAction(next)
-                success = true
-            }
-            catch (e: Exception) {
-                println("#$%#$%#$ got exception: $e")
-
-                setState {
-                    runningAll = false
-                }
-            }
-
-            ClientContext.executionManager.didExecute(next, success)
-
-//            setState {
-//                pending = false
-//            }
+            runNext(next)
         }
+    }
+
+
+    private suspend fun createMain() {
+        ClientContext.commandBus.apply(CreatePackageCommand(NotationConventions.mainPath))
+    }
+
+    private suspend fun runNext(next: String) {
+        // TODO: factor out and consolidate
+        ClientContext.executionManager.willExecute(next)
+
+        delay(250)
+
+        var success = false
+        try {
+            ClientContext.restClient.performAction(next)
+            success = true
+        }
+        catch (e: Exception) {
+            println("#$%#$%#$ got exception: $e")
+
+            setState {
+                runningAll = false
+            }
+        }
+
+        ClientContext.executionManager.didExecute(next, success)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun handleModel(autoModel: ProjectModel, event: ProjectEvent?) {
-        println("AutoProject - && handled - ${autoModel.projectNotation.packages[projectPath]!!.objects.keys}")
+        println("AutoProject - && handled - " +
+                "${autoModel.projectNotation.packages[NotationConventions.mainPath]?.objects?.keys}")
 
         setState {
             notation = autoModel.projectNotation
@@ -143,31 +161,6 @@ class AutoProject:
             execution = executionModel
             pending = nextRunning
         }
-
-//        println("&&&&&&&&&&&&&&&&&&& state.runningAll: ${state.runningAll}")
-//        val next = executionModel.next()
-////        if (state.runningAll) {
-//        if (next != null) {
-//
-////            println("&&&&&&&&&&&&&&&&&&& next: $next")
-////
-////            if (next != null) {
-//                async {
-//                    var success = false
-//
-//                    try {
-//                        ClientContext.restClient.performAction(next)
-//                        success = true
-//                    }
-//                    catch (e: Exception) {
-//                        println("#$%#$%#$ got exception: $e")
-//                    }
-//
-//                    // TODO: factor out and consolidate
-//                    ClientContext.executionManager.onExecution(next, success)
-//                }
-////            }
-//        }
     }
 
 
@@ -206,7 +199,7 @@ class AutoProject:
                 state.notation!!,
                 state.metadata!!)
 
-        ClientContext.executionManager.start(projectPath, projectModel)
+        ClientContext.executionManager.start(NotationConventions.mainPath, projectModel)
     }
 
 
@@ -221,69 +214,64 @@ class AutoProject:
             println("AutoProject - Available packages: ${projectNotation.packages.keys}")
 
             val projectPackage: PackageNotation? =
-                    projectNotation.packages[projectPath]
+                    projectNotation.packages[NotationConventions.mainPath]
 
             if (projectPackage == null) {
-                +"Please provide project package"
+                +"Initializing empty project..."
             }
             else {
                 println("AutoProject - the package - ${projectPackage.objects.keys}")
 
                 div(classes = "child") {
-                    h3 {
-                        +"Steps:"
-                    }
-
-                    val graphMetadata = state.metadata!!
-
-                    div(classes = "actionColumn") {
-
-                        val next = state.execution?.next()
-
-                        for (e in projectPackage.objects) {
-
-                            val status: ExecutionStatus? =
-                                    state.execution?.frames?.lastOrNull()?.values?.get(e.key)
-
-                            renderAction(
-                                    e.key,
-                                    projectNotation,
-                                    graphMetadata,
-                                    status,
-                                    next == e.key)
-
-                            img(src = "arrow-pointing-down.png", classes = "downArrow") {}
-                        }
-
-                        child(ActionCreator::class) {
-                            attrs {
-                                notation = projectNotation
-                                path = projectPath
-                            }
-                        }
-                    }
-
-
-                    // TODO: compensate for footer
-                    br {}
-                    br {}
-                    br {}
+                    steps(projectNotation, projectPackage)
                 }
 
-                div(classes = "footer") {
-                    renderRunAll()
-                    renderReset()
-
-                    +" | "
-
-                    renderRefresh()
-                }
+                footer()
             }
         }
     }
 
 
-    private fun RBuilder.renderAction(
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.steps(
+            projectNotation: ProjectNotation,
+            projectPackage: PackageNotation
+    ) {
+        h3 {
+            +"Steps:"
+        }
+
+        val graphMetadata = state.metadata!!
+
+        div(classes = "actionColumn") {
+
+            val next = state.execution?.next()
+
+            for (e in projectPackage.objects) {
+
+                val status: ExecutionStatus? =
+                        state.execution?.frames?.lastOrNull()?.values?.get(e.key)
+
+                action(
+                        e.key,
+                        projectNotation,
+                        graphMetadata,
+                        status,
+                        next == e.key)
+
+                img(src = "arrow-pointing-down.png", classes = "downArrow") {}
+            }
+
+            child(ActionCreator::class) {
+                attrs {
+                    notation = projectNotation
+                    path = NotationConventions.mainPath
+                }
+            }
+        }
+    }
+
+    private fun RBuilder.action(
             objectName: String,
             projectNotation: ProjectNotation,
             graphMetadata: GraphMetadata,
@@ -306,7 +294,26 @@ class AutoProject:
     }
 
 
-    private fun RBuilder.renderRunAll() {
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.footer() {
+        // TODO: compensate for footer
+        br {}
+        br {}
+        br {}
+
+
+        div(classes = "footer") {
+            runAll()
+            reset()
+
+            +" | "
+
+            refresh()
+        }
+    }
+
+
+    private fun RBuilder.runAll() {
         input (type = InputType.button) {
             attrs {
                 value = "Run All"
@@ -316,20 +323,20 @@ class AutoProject:
     }
 
 
-    private fun RBuilder.renderReset() {
+    private fun RBuilder.reset() {
         input (type = InputType.button) {
             attrs {
-                value = "Reset"
+                value = "Clear"
                 onClickFunction = { onClear() }
             }
         }
     }
 
 
-    private fun RBuilder.renderRefresh() {
+    private fun RBuilder.refresh() {
         input (type = InputType.button) {
             attrs {
-                value = "Clear"
+                value = "Reload"
                 onClickFunction = { onRefresh() }
             }
         }

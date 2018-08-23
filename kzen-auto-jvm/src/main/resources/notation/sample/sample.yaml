@@ -17,6 +17,3 @@
 "I'm Feeling Lucky":
   is: LeftClick
   xpath: '//*[@name="btnI"]'
-
-new-action-name:
-  is: CloseBrowser

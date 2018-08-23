@@ -6,11 +6,11 @@ import java.net.URI
 data class WebDriverOption(
         val browserLauncher: BrowserLauncher,
         val operationSystem: OperatingSystem,
-        val systemArchitecture: SystemArchitecture,
+        val cpuArchitecture: CpuArchitecture,
         val version: String,
         val download: URI
 ) {
     fun key(): String {
-        return "${browserLauncher}_${operationSystem}_${systemArchitecture}_$version"
+        return "${browserLauncher}_${operationSystem}_${cpuArchitecture}_$version"
     }
 }

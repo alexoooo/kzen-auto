@@ -3,7 +3,7 @@ package tech.kzen.auto.server.service
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
-import tech.kzen.auto.server.service.webdriver.WebDriverSelection
+import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
 import tech.kzen.lib.common.metadata.read.NotationMetadataReader
 import tech.kzen.lib.common.notation.format.YamlNotationParser
 import tech.kzen.lib.common.notation.io.NotationMedia
@@ -44,7 +44,7 @@ object ServerContext {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    val webDriverRepo = WebDriverSelection()
+    val webDriverRepo = WebDriverOptionDao()
     val webDriverInstaller = WebDriverInstaller()
     val webDriverContext = WebDriverContext()
 }
