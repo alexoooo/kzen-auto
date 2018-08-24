@@ -67,21 +67,31 @@ class RestHandler {
             val projectName = Files.list(Paths.get(projectRoot)).use { files ->
                 val list = files.collect(Collectors.toList())
 
-                val jvmModule = list.firstOrNull({ it.fileName.toString().endsWith(jvmSuffix)})
-                        ?: throw IllegalStateException("No -jvm module: - $list")
+                val jvmModule = list.firstOrNull { it.fileName.toString().endsWith(jvmSuffix)}
+                if (jvmModule == null) {
+                    // ?: throw IllegalStateException("No -jvm module: - $list")
+                    jvmModule
+                }
+                else {
 
-                val filename = jvmModule.fileName.toString()
+                    val filename = jvmModule.fileName.toString()
 
-                filename.substring(0 until filename.length - jvmSuffix.length)
+                    filename.substring(0 until filename.length - jvmSuffix.length)
+                }
             }
 
-            // IntelliJ and typical commandline working dir is project root
-            builder.add(Paths.get("$projectName-jvm/src/main/resources/public/"))
-            builder.add(Paths.get("$projectName-js/build/dist/"))
+            if (projectName != null) {
+                // IntelliJ and typical commandline working dir is project root
+                builder.add(Paths.get("$projectName-jvm/src/main/resources/public/"))
+                builder.add(Paths.get("$projectName-js/build/dist/"))
 
-            // Eclipse and Gradle default active working directory is the module
-            builder.add(Paths.get("src/main/resources/public/"))
-            builder.add(Paths.get("../$projectName-js/build/dist/"))
+                // Eclipse and Gradle default active working directory is the module
+                builder.add(Paths.get("src/main/resources/public/"))
+                builder.add(Paths.get("../$projectName-js/build/dist/"))
+            }
+            else {
+                builder.add(Paths.get("static/"))
+            }
 
             return builder
         }
@@ -327,9 +337,12 @@ class RestHandler {
         for (root in classPathRoots) {
             try {
                 val resourceLocation: URI = root.resolve(relativePath.toString())
-                val resourceUrl = Resources.getResource(resourceLocation.path)
+                val relativeResource = resourceLocation.path.substring(1)
+
+                println("%%%%% looking at resource: $relativeResource")
+                val resourceUrl = Resources.getResource(relativeResource)
                 val body = Resources.toByteArray(resourceUrl)
-                println("%%%%% read resource: ${resourceLocation.path}")
+                println("%%%%% read resource: relativePath")
                 return body
             }
             catch (ignored: Exception) {}

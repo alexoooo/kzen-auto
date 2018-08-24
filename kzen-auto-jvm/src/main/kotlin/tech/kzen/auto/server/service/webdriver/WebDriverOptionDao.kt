@@ -25,6 +25,13 @@ class WebDriverOptionDao {
             ),
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
+                    OperatingSystem.Windows,
+                    CpuArchitecture.X86_64,
+                    "2.41",
+                    URI("https://chromedriver.storage.googleapis.com/2.41/chromedriver_win32.zip")
+            ),
+            WebDriverOption(
+                    BrowserLauncher.GoogleChrome,
                     OperatingSystem.OsX,
                     CpuArchitecture.X86_64,
                     "2.41",

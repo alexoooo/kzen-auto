@@ -105,7 +105,15 @@ class WebDriverInstaller {
         }
 
         val binaryPath = findBinary(destinationDir, launcher)
-        Files.setPosixFilePermissions(binaryPath, executablePermissions)
+
+        try {
+            Files.setPosixFilePermissions(binaryPath, executablePermissions)
+        }
+        catch (e: UnsupportedOperationException) {
+            // https://stackoverflow.com/questions/14415960/java-lang-unsupportedoperationexception-posixpermissions-not-supported-as-in
+            val asFile = binaryPath.toFile()
+            asFile.setExecutable(true)
+        }
     }
 
 

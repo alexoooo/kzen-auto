@@ -9,11 +9,13 @@ import tech.kzen.lib.common.notation.io.NotationParser
 import tech.kzen.lib.common.notation.io.common.MapNotationMedia
 import tech.kzen.lib.common.notation.repo.NotationRepository
 import tech.kzen.lib.platform.ModuleRegistry
+import kotlin.browser.window
 
 
 object ClientContext {
     //-----------------------------------------------------------------------------------------------------------------
-    val restClient = RestClient("")
+    val baseUrl = window.location.pathname.substringBeforeLast("/")
+    val restClient = RestClient(baseUrl)
 
     val restNotationMedia: NotationMedia = RestNotationMedia(restClient)
     val notationMediaCache = MapNotationMedia()

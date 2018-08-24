@@ -23,13 +23,13 @@ dependencies {
 
     compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: kotlinVersion
     compile("org.jetbrains.kotlin:kotlin-reflect")
-    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.22.5'
+    compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesCoreVersion"
 
     compile('org.springframework.boot:spring-boot-starter-webflux')
     compile('com.fasterxml.jackson.module:jackson-module-kotlin')
-    compile "com.google.guava:guava:25.0-jre"
+    compile "com.google.guava:guava:$guavaVersion"
 
-    compile group: 'org.seleniumhq.selenium', name: 'selenium-java', version: '3.14.0'
+    compile group: 'org.seleniumhq.selenium', name: 'selenium-java', version: seleniumVersion
 
     compile group: 'tech.kzen.lib', name: 'kzen-lib-jvm', version: kzenLibVersion
 
@@ -57,7 +57,7 @@ compileTestKotlin {
 
 
 processResources {
-    from ('../client/build/dist/') {
+    from ('../kzen-auto-js/build/dist/') {
         into 'public'
     }
 }
