@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.service
 
 import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.auto.server.notation.BootNotationMedia
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
 import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
@@ -24,10 +25,11 @@ object ServerContext {
     val fileLocator = GradleLocator()
     val fileMedia = FileNotationMedia(fileLocator)
 
-    val classpathMedia = ClasspathNotationMedia()
+//    val classpathMedia = ClasspathNotationMedia()
+    val bootMedia = BootNotationMedia()
 
     val notationMedia: NotationMedia = MultiNotationMedia(listOf(
-            fileMedia, classpathMedia))
+            fileMedia, bootMedia))
 
     val yamlParser = YamlNotationParser()
 

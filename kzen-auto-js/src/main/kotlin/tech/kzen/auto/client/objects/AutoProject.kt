@@ -11,13 +11,14 @@ import tech.kzen.auto.client.ui.ActionCreator
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionStatus
-import tech.kzen.auto.common.notation.NotationConventions
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.common.service.ProjectModel
 import tech.kzen.lib.common.edit.CreatePackageCommand
+import tech.kzen.lib.common.edit.ProjectCommand
 import tech.kzen.lib.common.edit.ProjectEvent
 import tech.kzen.lib.common.metadata.model.GraphMetadata
+import tech.kzen.lib.common.notation.NotationConventions
 import tech.kzen.lib.common.notation.model.*
 
 
@@ -26,7 +27,8 @@ import tech.kzen.lib.common.notation.model.*
 class AutoProject:
         RComponent<RProps, AutoProject.State>(),
         ModelManager.Subscriber,
-        ExecutionManager.Subscriber
+        ExecutionManager.Subscriber,
+        CommandBus.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
@@ -34,7 +36,8 @@ class AutoProject:
             var metadata: GraphMetadata?,
             var execution: ExecutionModel?,
             var runningAll: Boolean,
-            var pending: Boolean = false
+            var pending: Boolean = false,
+            var commandError: String?
     ) : RState
 
 
@@ -51,6 +54,7 @@ class AutoProject:
 //        println("AutoProject - Subscribed")
         ClientContext.modelManager.subscribe(this)
         ClientContext.executionManager.subscribe(this)
+        ClientContext.commandBus.observe(this)
     }
 
 
@@ -58,6 +62,7 @@ class AutoProject:
 //        println("AutoProject - Un-subscribed")
         ClientContext.modelManager.unsubscribe(this)
         ClientContext.executionManager.unsubscribe(this)
+        ClientContext.commandBus.unobserve(this)
     }
 
 
@@ -165,6 +170,24 @@ class AutoProject:
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun onCommandSuccess(command: ProjectCommand, event: ProjectEvent) {
+        console.log("%%%%%%% onCommandSuccess", command, event)
+
+        setState {
+            commandError = null
+        }
+    }
+
+
+    override fun onCommandFailedInClient(command: ProjectCommand, cause: Throwable) {
+        console.log("%%%%%%% onCommandFailedInClient", command, cause)
+        setState {
+            commandError = "${cause.message}"
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun onRefresh() {
         async {
             ClientContext.modelManager.refresh()
@@ -206,6 +229,11 @@ class AutoProject:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        console.log("^^^^ state.commandError", state.commandError)
+        if (state.commandError != null) {
+            +"!! ERROR: ${state.commandError}"
+        }
+
         val projectNotation = state.notation
         if (projectNotation == null) {
             +"Loading..."

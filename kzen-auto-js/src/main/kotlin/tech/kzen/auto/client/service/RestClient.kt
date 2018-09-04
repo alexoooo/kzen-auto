@@ -16,12 +16,12 @@ class RestClient(
 
         val builder = mutableMapOf<ProjectPath, Digest>()
         // NB: using transform just to iterate the Json, is there a better way to do this?
-        JSON.parse<Json>(scanText, { key: String, value: Any? ->
+        JSON.parse<Json>(scanText) { key: String, value: Any? ->
             if (value is String) {
                 builder[ProjectPath(key)] = Digest.decode(value)
             }
             null
-        })
+        }
         return builder
     }
 

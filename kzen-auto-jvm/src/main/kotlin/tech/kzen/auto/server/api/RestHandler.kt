@@ -73,7 +73,6 @@ class RestHandler {
                     jvmModule
                 }
                 else {
-
                     val filename = jvmModule.fileName.toString()
 
                     filename.substring(0 until filename.length - jvmSuffix.length)
