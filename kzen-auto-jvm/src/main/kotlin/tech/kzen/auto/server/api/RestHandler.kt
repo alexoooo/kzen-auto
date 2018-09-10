@@ -128,7 +128,6 @@ class RestHandler {
         val notationText = IoUtils.utf8ToString(notationBytes)
 
         val responseBuilder = ServerResponse.ok()
-
         return if (notationText.isEmpty()) {
             responseBuilder.build()
         }
@@ -316,9 +315,13 @@ class RestHandler {
                         .notFound()
                         .build()
 
-        return ServerResponse
-                .ok()
-                .body(Mono.just(bytes))
+        val responseBuilder = ServerResponse.ok()
+        return if (bytes.isEmpty()) {
+            responseBuilder.build()
+        }
+        else {
+            responseBuilder.body(Mono.just(bytes))
+        }
     }
 
 

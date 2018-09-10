@@ -5,13 +5,16 @@ import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
 import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.get
 import react.*
 import react.dom.div
 import react.dom.input
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.lib.common.edit.EditParameterCommand
 import tech.kzen.lib.common.notation.model.ScalarParameterNotation
+import kotlin.browser.window
 
 
 @Suppress("unused")
@@ -28,7 +31,8 @@ class ParameterEditor(
 
 
     class State(
-            var value: String
+            var value: String,
+            var submitDebounce: (Unit) -> Unit
     ) : RState
 
 
@@ -36,6 +40,11 @@ class ParameterEditor(
     override fun State.init(props: Props) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
         value = props.value
+
+        submitDebounce = lodash.debounce<Unit, Unit>({
+//            console.log("debounce")
+            onSubmit()
+        }, 650)
     }
 
 
@@ -44,12 +53,20 @@ class ParameterEditor(
         setState {
             value = newValue
         }
+
+        console.log("onValueChange")
+        state.submitDebounce.invoke(Unit)
     }
 
 
     private fun onSubmit() {
-        console.log("ParameterEditor.onSubmit")
+//        console.log("ParameterEditor.onSubmit")
 
+        editParameter()
+    }
+
+
+    private fun editParameter() {
         async {
             ClientContext.commandBus.apply(EditParameterCommand(
                     props.objectName,
@@ -75,14 +92,14 @@ class ParameterEditor(
                 }
             }
 
-            input (type = InputType.button) {
-                attrs {
-                    value = "Edit"
-                    onClickFunction = {
-                        onSubmit()
-                    }
-                }
-            }
+//            input (type = InputType.button) {
+//                attrs {
+//                    value = "Edit"
+//                    onClickFunction = {
+//                        onSubmit()
+//                    }
+//                }
+//            }
         }
     }
 }
