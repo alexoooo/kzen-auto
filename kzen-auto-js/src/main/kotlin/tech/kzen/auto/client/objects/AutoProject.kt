@@ -35,8 +35,8 @@ class AutoProject:
             var notation: ProjectNotation?,
             var metadata: GraphMetadata?,
             var execution: ExecutionModel?,
-            var runningAll: Boolean,
-            var pending: Boolean = false,
+//            var runningAll: Boolean,
+//            var pending: Boolean = false,
             var commandError: String?
     ) : RState
 
@@ -52,9 +52,11 @@ class AutoProject:
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
 //        println("AutoProject - Subscribed")
-        ClientContext.modelManager.subscribe(this)
-        ClientContext.executionManager.subscribe(this)
-        ClientContext.commandBus.observe(this)
+        async {
+            ClientContext.modelManager.subscribe(this)
+            ClientContext.executionManager.subscribe(this)
+            ClientContext.commandBus.observe(this)
+        }
     }
 
 
@@ -84,30 +86,32 @@ class AutoProject:
 
         if (state.execution!!.frames.isEmpty()) {
             console.log("!@#!#!@#!@#!@  starting execution")
-            executionStateToFreshStart()
+            async {
+                executionStateToFreshStart()
+            }
             return
         }
 
-        if (! state.runningAll) {
-            return
-        }
-
-        // only look at transition from pending to non-pending state?
-        if (state.pending /*|| ! prevState.pending*/) {
-//            console.log("AutoProject PENDING", state.pending, prevState.pending)
-            return
-        }
-
-        val next = state.execution!!.next()
-                ?: return
-
-        setState {
-            pending = true
-        }
-
-        async {
-            runNext(next)
-        }
+//        if (! state.runningAll) {
+//            return
+//        }
+//
+//        // only look at transition from pending to non-pending state?
+//        if (state.pending /*|| ! prevState.pending*/) {
+////            console.log("AutoProject PENDING", state.pending, prevState.pending)
+//            return
+//        }
+//
+//        val next = state.execution!!.next()
+//                ?: return
+//
+//        setState {
+//            pending = true
+//        }
+//
+//        async {
+//            runNext(next)
+//        }
     }
 
 
@@ -115,56 +119,60 @@ class AutoProject:
         ClientContext.commandBus.apply(CreatePackageCommand(NotationConventions.mainPath))
     }
 
-    private suspend fun runNext(next: String) {
-        // TODO: factor out and consolidate
-        ClientContext.executionManager.willExecute(next)
-
-        delay(250)
-
-        var success = false
-        try {
-            ClientContext.restClient.performAction(next)
-            success = true
-        }
-        catch (e: Exception) {
-            println("#$%#$%#$ got exception: $e")
-
-            setState {
-                runningAll = false
-            }
-        }
-
-        ClientContext.executionManager.didExecute(next, success)
-    }
+//    private suspend fun runNext(next: String) {
+//        // TODO: factor out and consolidate
+//        ClientContext.executionManager.willExecute(next)
+//
+//        delay(250)
+//
+//        var success = false
+//        try {
+//            ClientContext.restClient.performAction(next)
+//            success = true
+//        }
+//        catch (e: Exception) {
+//            println("#$%#$%#$ got exception: $e")
+//
+//            setState {
+//                runningAll = false
+//            }
+//        }
+//
+//        ClientContext.executionManager.didExecute(next, success)
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun handleModel(autoModel: ProjectModel, event: ProjectEvent?) {
+    override suspend fun handleModel(autoModel: ProjectModel, event: ProjectEvent?) {
         println("AutoProject - && handled - " +
                 "${autoModel.projectNotation.packages[NotationConventions.mainPath]?.objects?.keys}")
 
         setState {
             notation = autoModel.projectNotation
             metadata = autoModel.graphMetadata
-            pending = false
+//            pending = false
         }
     }
 
 
-    override fun handleExecution(executionModel: ExecutionModel) {
-        val next = executionModel.next()
 
-        val nextRunning =
-                if (next == null) {
-                    false
-                }
-                else {
-                    executionModel.containsStatus(ExecutionStatus.Running)
-                }
+    override suspend fun beforeExecution(executionModel: ExecutionModel) {}
+
+
+    override suspend fun afterExecution(executionModel: ExecutionModel) {
+//        val next = executionModel.next()
+//
+//        val nextRunning =
+//                if (next == null) {
+//                    false
+//                }
+//                else {
+//                    executionModel.containsStatus(ExecutionStatus.Running)
+//                }
 
         setState {
             execution = executionModel
-            pending = nextRunning
+//            pending = nextRunning
         }
     }
 
@@ -189,6 +197,8 @@ class AutoProject:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRefresh() {
+        ClientContext.executionLoop.pause()
+
         async {
             ClientContext.modelManager.refresh()
             ClientContext.executionManager.reset()
@@ -197,27 +207,38 @@ class AutoProject:
 
 
     private fun onClear() {
-        setState {
-            runningAll = false
-            pending = false
-        }
+        ClientContext.executionLoop.pause()
 
-        ClientContext.executionManager.reset()
-        executionStateToFreshStart()
+//        setState {
+//            pending = false
+//        }
+
+        async {
+            ClientContext.executionManager.reset()
+            executionStateToFreshStart()
+        }
     }
 
 
     private fun onRunAll() {
-        executionStateToFreshStart()
+        async {
+            println("AutoProject | onRunAll")
 
-        setState {
-            runningAll = true
-            pending = false
+            executionStateToFreshStart()
+
+            println("AutoProject | after executionStateToFreshStart")
+
+            ClientContext.executionLoop.run()
+
+//            setState {
+////                runningAll = true
+//                pending = false
+//            }
         }
     }
 
 
-    private fun executionStateToFreshStart() {
+    private suspend fun executionStateToFreshStart() {
         val projectModel = ProjectModel(
                 state.notation!!,
                 state.metadata!!)
@@ -272,11 +293,9 @@ class AutoProject:
         val graphMetadata = state.metadata!!
 
         div(classes = "actionColumn") {
-
             val next = state.execution?.next()
 
             for (e in projectPackage.objects) {
-
                 val status: ExecutionStatus? =
                         state.execution?.frames?.lastOrNull()?.values?.get(e.key)
 
@@ -298,6 +317,7 @@ class AutoProject:
             }
         }
     }
+
 
     private fun RBuilder.action(
             objectName: String,

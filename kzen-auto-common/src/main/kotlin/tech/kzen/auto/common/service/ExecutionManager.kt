@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.service
 
+import kotlinx.coroutines.experimental.delay
 import tech.kzen.auto.common.exec.ExecutionFrame
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionStatus
@@ -8,12 +9,13 @@ import tech.kzen.lib.common.edit.ProjectEvent
 import tech.kzen.lib.common.notation.model.ProjectPath
 
 
-class ExecutionManager
-    : ModelManager.Subscriber
-{
+class ExecutionManager(
+        private val actionExecutor: ActionExecutor
+) : ModelManager.Subscriber {
     //-----------------------------------------------------------------------------------------------------------------
     interface Subscriber {
-        fun handleExecution(executionModel: ExecutionModel)
+        suspend fun beforeExecution(executionModel: ExecutionModel)
+        suspend fun afterExecution(executionModel: ExecutionModel)
     }
 
 
@@ -24,9 +26,9 @@ class ExecutionManager
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun subscribe(subscriber: Subscriber) {
+    suspend fun subscribe(subscriber: Subscriber) {
         subscribers.add(subscriber)
-        subscriber.handleExecution(model)
+        subscriber.afterExecution(model)
     }
 
 
@@ -35,15 +37,21 @@ class ExecutionManager
     }
 
 
-    private fun publish() {
+    private suspend fun publishAfterExecution() {
         for (subscriber in subscribers) {
-            subscriber.handleExecution(model)
+            subscriber.afterExecution(model)
+        }
+    }
+
+    private suspend fun publishBeforeExecution() {
+        for (subscriber in subscribers) {
+            subscriber.beforeExecution(model)
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun handleModel(autoModel: ProjectModel, event: ProjectEvent?) {
+    override suspend fun handleModel(projectModel: ProjectModel, event: ProjectEvent?) {
         if (event == null) {
             return
         }
@@ -57,20 +65,20 @@ class ExecutionManager
         }
 
         if (changed) {
-            publish()
+            publishAfterExecution()
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun reset() {
+    suspend fun reset() {
         model.frames.clear()
 
-        publish()
+        publishAfterExecution()
     }
 
 
-    fun start(main: ProjectPath, projectModel: ProjectModel) {
+    suspend fun start(main: ProjectPath, projectModel: ProjectModel) {
         model.frames.clear()
 
         val values = mutableMapOf<String, ExecutionStatus>()
@@ -87,17 +95,17 @@ class ExecutionManager
             model.frames.add(frame)
         }
 
-        publish()
+        publishAfterExecution()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun willExecute(objectName: String) {
+    suspend fun willExecute(objectName: String) {
         updateStatus(objectName, ExecutionStatus.Running)
     }
 
 
-    fun didExecute(objectName: String, success: Boolean) {
+    suspend fun didExecute(objectName: String, success: Boolean) {
         val status =
                 if (success) {
                     ExecutionStatus.Success
@@ -110,7 +118,7 @@ class ExecutionManager
     }
 
 
-    private fun updateStatus(objectName: String, status: ExecutionStatus) {
+    private suspend fun updateStatus(objectName: String, status: ExecutionStatus) {
         val existingFrame = model.findLast(objectName)
 
         val upsertFrame = existingFrame
@@ -118,6 +126,44 @@ class ExecutionManager
 
         upsertFrame.values[objectName] = status
 
-        publish()
+        publishAfterExecution()
+    }
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun isExecuting(): Boolean =
+        model.containsStatus(ExecutionStatus.Running)
+
+
+    suspend fun execute(
+            objectName: String,
+            delayMillis: Int = 0
+    ): Boolean {
+        if (delayMillis > 0) {
+            println("ExecutionManager | %%%% delay($delayMillis)")
+            delay(delayMillis)
+        }
+        willExecute(objectName)
+
+        publishBeforeExecution()
+
+        if (delayMillis > 0) {
+            println("ExecutionManager | delay($delayMillis)")
+            delay(delayMillis)
+        }
+
+        var success = false
+        try {
+            actionExecutor.execute(objectName)
+            success = true
+        }
+        catch (e: Exception) {
+            println("#$%#$%#$ got exception: $e")
+        }
+
+        didExecute(objectName, success)
+
+        return success
     }
 }

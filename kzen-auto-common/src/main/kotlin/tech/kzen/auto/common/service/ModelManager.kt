@@ -17,7 +17,7 @@ class ModelManager(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     interface Subscriber {
-        fun handleModel(autoModel: ProjectModel, event: ProjectEvent?)
+        suspend fun handleModel(autoModel: ProjectModel, event: ProjectEvent?)
     }
 
 
@@ -27,12 +27,14 @@ class ModelManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun subscribe(subscriber: Subscriber) {
+    suspend fun subscribe(subscriber: Subscriber) {
         subscribers.add(subscriber)
 
-        if (mostRecent != null) {
-            subscriber.handleModel(mostRecent!!, null)
-        }
+//        if (mostRecent != null) {
+//            subscriber.handleModel(mostRecent!!, null)
+//        }
+
+        subscriber.handleModel(projectModel(), null)
     }
 
 

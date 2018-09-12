@@ -11,7 +11,10 @@ import react.dom.div
 import react.dom.input
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.client.wrap.DebounceFunction
 import tech.kzen.auto.client.wrap.lodash
+import tech.kzen.auto.common.exec.ExecutionModel
+import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.lib.common.edit.EditParameterCommand
 import tech.kzen.lib.common.notation.model.ScalarParameterNotation
 import kotlin.browser.window
@@ -20,8 +23,10 @@ import kotlin.browser.window
 @Suppress("unused")
 class ParameterEditor(
         props: ParameterEditor.Props
-) : RComponent<ParameterEditor.Props, ParameterEditor.State>(props) {
-
+) :
+        RComponent<ParameterEditor.Props, ParameterEditor.State>(props),
+        ExecutionManager.Subscriber
+{
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var objectName: String,
@@ -32,7 +37,9 @@ class ParameterEditor(
 
     class State(
             var value: String,
-            var submitDebounce: (Unit) -> Unit
+//            var submitDebounce: (Unit) -> Unit
+            var submitDebounce: DebounceFunction,
+            var pending: Boolean
     ) : RState
 
 
@@ -41,10 +48,44 @@ class ParameterEditor(
 //        console.log("ParameterEditor | State.init - ${props.name}")
         value = props.value
 
-        submitDebounce = lodash.debounce<Unit, Unit>({
-//            console.log("debounce")
-            onSubmit()
-        }, 650)
+        submitDebounce = lodash.debounce({
+            editParameterCommandAsync()
+        }, 1000)
+
+        pending = false
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun componentDidMount() {
+        async {
+            ClientContext.executionManager.subscribe(this)
+        }
+    }
+
+
+    override fun componentWillUnmount() {
+        ClientContext.executionManager.unsubscribe(this)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun beforeExecution(executionModel: ExecutionModel) {
+        flush()
+    }
+
+
+    override suspend fun afterExecution(executionModel: ExecutionModel) {}
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun flush() {
+        println("ParameterEditor | flush")
+
+        state.submitDebounce.cancel()
+        if (state.pending) {
+            editParameterCommand()
+        }
     }
 
 
@@ -52,26 +93,35 @@ class ParameterEditor(
     private fun onValueChange(newValue: String) {
         setState {
             value = newValue
+            pending = true
         }
 
-        console.log("onValueChange")
-        state.submitDebounce.invoke(Unit)
+//        console.log("onValueChange")
+
+        state.submitDebounce.apply()
     }
 
 
     private fun onSubmit() {
-//        console.log("ParameterEditor.onSubmit")
-
-        editParameter()
+        editParameterCommandAsync()
     }
 
 
-    private fun editParameter() {
+    private fun editParameterCommandAsync() {
         async {
-            ClientContext.commandBus.apply(EditParameterCommand(
-                    props.objectName,
-                    props.parameterPath,
-                    ScalarParameterNotation(state.value)))
+            editParameterCommand()
+        }
+    }
+
+
+    private suspend fun editParameterCommand() {
+        ClientContext.commandBus.apply(EditParameterCommand(
+                props.objectName,
+                props.parameterPath,
+                ScalarParameterNotation(state.value)))
+
+        setState {
+            pending = false
         }
     }
 

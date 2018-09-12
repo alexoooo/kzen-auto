@@ -14,8 +14,9 @@ class CommandBus(
         private val notationParser: NotationParser
 ) {
     //-----------------------------------------------------------------------------------------------------------------
+    // TODO: observer vs subscriber?
     interface Observer {
-        //    fun onCommandRequest(command: ProjectCommand)
+//    fun onCommandRequest(command: ProjectCommand)
 //
 //    fun onCommandAppliedInClient(command: ProjectCommand, event: ProjectEvent)
         fun onCommandFailedInClient(command: ProjectCommand, cause: Throwable)

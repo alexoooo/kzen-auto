@@ -10,9 +10,26 @@ import kotlin.browser.window
 ////external val lodash: Lodash
 ////
 ////
+
 external interface Lodash {
-    fun <K,V> debounce(functionToDebounce: (K) -> V, debounceMillis: Int): (K) -> V
+//    fun <K,V> debounce(functionToDebounce: (K) -> V, debounceMillis: Int): (K) -> V
+
+    fun debounce(
+            functionToDebounce: () -> Unit,
+            debounceMillis: Int
+    ): DebounceFunction
 }
+
+
+// https://stackoverflow.com/questions/50557507/debounce-check-if-the-debounce-is-pending
+external interface DebounceFunction {
+//    fun invoke()
+    fun apply()
+
+    fun cancel()
+    fun flush()
+}
+
 
 //val lodash = window.get("_")
 

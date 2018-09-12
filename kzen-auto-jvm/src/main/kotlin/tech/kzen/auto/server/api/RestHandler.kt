@@ -253,7 +253,7 @@ class RestHandler {
         return runBlocking {
             val event = ServerContext.repository.apply(command)
 
-            // TODO: consolidate with CommandBus
+            // TODO: consolidate with CommandBus?
             ServerContext.modelManager.onEvent(event)
 
             ServerContext.repository.digest()

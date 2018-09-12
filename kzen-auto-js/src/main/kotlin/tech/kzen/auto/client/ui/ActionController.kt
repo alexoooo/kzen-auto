@@ -49,22 +49,8 @@ class ActionController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRun() {
         async {
-            // TODO: factor out and consolidate
-            ClientContext.executionManager.willExecute(props.name)
-
-            var success = false
-
-            try {
-                ClientContext.restClient.performAction(props.name)
-                success = true
-            }
-            catch (e: Exception) {
-                println("#$%#$%#$ got exception: $e")
-            }
-
-            ClientContext.executionManager.didExecute(props.name, success)
+            ClientContext.executionManager.execute(props.name)
         }
-//        props.executor.run(props.name)
     }
 
 

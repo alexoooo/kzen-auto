@@ -1,5 +1,7 @@
 package tech.kzen.auto.client.service
 
+import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.service.ExecutionLoop
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.metadata.read.NotationMetadataReader
@@ -39,7 +41,14 @@ object ClientContext {
             restClient,
             notationParser)
 
-    val executionManager = ExecutionManager()
+    val restExecutor = RestActionExecutor(
+            restClient)
+
+    val executionManager = ExecutionManager(
+            restExecutor)
+
+    val executionLoop = ExecutionLoop(
+            executionManager)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -48,8 +57,10 @@ object ClientContext {
 //        console.log("kzenAutoJs", kzenAutoJs)
         ModuleRegistry.add(kzenAutoJs)
 
-
-        modelManager.subscribe(executionManager)
+        async {
+            modelManager.subscribe(executionManager)
+            executionManager.subscribe(executionLoop)
+        }
     }
 
 
