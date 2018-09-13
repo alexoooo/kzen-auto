@@ -10,6 +10,7 @@ import react.dom.hr
 import react.dom.input
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
+//import tech.kzen.auto.client.wrap.materialButton
 import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.lib.common.edit.RemoveObjectCommand
 import tech.kzen.lib.common.edit.RenameObjectCommand
@@ -154,6 +155,12 @@ class ActionController(
             }
 
             hr(classes = "actionSeparator") {}
+
+
+//            materialButton {
+//                +"Foo"
+//            }
+
 
             input (type = InputType.button) {
                 attrs {

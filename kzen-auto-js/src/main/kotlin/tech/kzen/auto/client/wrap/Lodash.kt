@@ -1,8 +1,10 @@
 //@file:JsModule("lodash")
 package tech.kzen.auto.client.wrap
 
-import org.w3c.dom.get
-import kotlin.browser.window
+
+@JsModule("lodash")
+@JsNonModule
+external val lodash: Lodash
 
 //
 //
@@ -17,12 +19,12 @@ external interface Lodash {
     fun debounce(
             functionToDebounce: () -> Unit,
             debounceMillis: Int
-    ): DebounceFunction
+    ): FunctionWithDebounce
 }
 
 
 // https://stackoverflow.com/questions/50557507/debounce-check-if-the-debounce-is-pending
-external interface DebounceFunction {
+external interface FunctionWithDebounce {
 //    fun invoke()
     fun apply()
 
@@ -35,5 +37,5 @@ external interface DebounceFunction {
 
 // https://medium.com/@ralf.stuckert/getting-started-with-kotlin-react-part-ii-9dda64c9b0c8
 //val lodash: dynamic = window.get("_")
-val lodash: Lodash = window.get("_")
+//val lodash: Lodash = window.get("_")
 

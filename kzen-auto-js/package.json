@@ -3,7 +3,8 @@
   "dependencies": {
     "react": "16.4.2",
     "react-dom": "16.4.2",
-    "lodash": "4.17.10"
+    "lodash": "4.17.10",
+    "@material-ui/core": "3.0.3"
   },
   "devDependencies": {
     "browser-sync": "2.23.6",

@@ -3,21 +3,18 @@ package tech.kzen.auto.client.ui
 
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
-import kotlinx.html.js.onClickFunction
 import org.w3c.dom.HTMLInputElement
-import org.w3c.dom.get
 import react.*
 import react.dom.div
 import react.dom.input
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.DebounceFunction
+import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.lib.common.edit.EditParameterCommand
 import tech.kzen.lib.common.notation.model.ScalarParameterNotation
-import kotlin.browser.window
 
 
 @Suppress("unused")
@@ -38,7 +35,7 @@ class ParameterEditor(
     class State(
             var value: String,
 //            var submitDebounce: (Unit) -> Unit
-            var submitDebounce: DebounceFunction,
+            var submitDebounce: FunctionWithDebounce,
             var pending: Boolean
     ) : RState
 
