@@ -10,7 +10,8 @@ import react.dom.hr
 import react.dom.input
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-//import tech.kzen.auto.client.wrap.materialButton
+import tech.kzen.auto.client.wrap.ButtonStyle
+import tech.kzen.auto.client.wrap.MaterialButton
 import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.lib.common.edit.RemoveObjectCommand
 import tech.kzen.lib.common.edit.RenameObjectCommand
@@ -160,6 +161,23 @@ class ActionController(
 //            materialButton {
 //                +"Foo"
 //            }
+
+//            button {
+//                +"foo"
+//            }
+
+//            console.log("MaterialButton::class", MaterialButton::class, MaterialButton())
+
+            child(MaterialButton::class) {
+                attrs {
+                    this.variant = "raised"
+                    this.style = ButtonStyle("#f47421", "#FFFFFF")
+                }
+//
+                +"Foo"
+//
+////                handler()
+            }
 
 
             input (type = InputType.button) {

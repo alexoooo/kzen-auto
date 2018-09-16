@@ -1,11 +1,11 @@
-//package tech.kzen.auto.client.wrap
-//
-//import kotlinx.html.CommonAttributeGroupFacade
-//import org.w3c.dom.events.Event
-//import react.RBuilder
-//import react.RHandler
-//import react.RProps
-//
+package tech.kzen.auto.client.wrap
+
+import kotlinx.html.CommonAttributeGroupFacade
+import org.w3c.dom.events.Event
+import react.RBuilder
+import react.RHandler
+import react.RProps
+
 //fun RBuilder.materialButton(handler: RHandler<MaterialButtonProps>) = child(MaterialButton::class) {
 //    attrs {
 //        this.variant = "raised"
@@ -13,8 +13,8 @@
 //    }
 //    handler()
 //}
-//
-//class ButtonStyle(val backgroundColor: String, val color: String)
+
+class ButtonStyle(val backgroundColor: String, val color: String)
 //
 //fun RBuilder.materialTextField(handler: RHandler<MaterialTextFieldProps>) = child(MaterialTextField::class) {
 //    attrs { margin = "normal" }

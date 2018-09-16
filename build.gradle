@@ -25,6 +25,9 @@ subprojects {
         maven {
             url 'http://dl.bintray.com/kotlin/kotlin-js-wrappers'
         }
+//        maven {
+//            url 'https://jitpack.io'
+//        }
 
 //        maven { url 'http://dl.bintray.com/kotlin/kotlin-eap-1.2' }
 //        maven { url "https://kotlin.bintray.com/kotlinx" }

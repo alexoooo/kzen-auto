@@ -17,6 +17,9 @@ dependencies {
 
     compile group: 'tech.kzen.lib', name: 'kzen-lib-js', version: kzenLibVersion
 
+//    compile group: 'com.github.rivasdiaz', name: 'kotlin-rmwc', version: '8e9666dfc8'
+    // com.github.rivasdiaz:kotlin-rmwc:8e9666dfc8
+
     compile "org.jetbrains:kotlin-react:$reactVersion"
     compile "org.jetbrains:kotlin-react-dom:$reactDomVersion"
 //    compile "org.jetbrains:kotlin-styled:$kotlinStyledVersion"
@@ -34,13 +37,13 @@ compileKotlin2Js {
         metaInfo = true
         sourceMap = true
         sourceMapEmbedSources = 'always'
-        moduleKind = 'umd'
+        moduleKind = 'commonjs'
         main = 'tech.kzen.auto.client.Main'
     }
 }
 
 compileTestKotlin2Js {
-    kotlinOptions.moduleKind = 'umd'
+    kotlinOptions.moduleKind = 'commonjs'
 }
 
 // Downloads JS dependencies:

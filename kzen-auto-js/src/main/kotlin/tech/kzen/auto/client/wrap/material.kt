@@ -1,25 +1,23 @@
-////@file:JsModule("@material-ui/core")
-//package tech.kzen.auto.client.wrap
-//
-//import org.w3c.dom.events.Event
-//import react.*
-//
-//
-//@JsModule("@material-ui/core")
-//@JsNonModule
-//@JsName("Button")
-//external class MaterialButton : Component<MaterialButtonProps, RState> {
-//    override fun render(): ReactElement?
-//}
-//
-//external interface MaterialButtonProps : RProps {
-//    var id: String
-//    var variant: String
-//    var color: String
-//    var style: ButtonStyle
-//    var onClick: () -> Unit
-//}
-//
+@file:JsModule("@material-ui/core")
+package tech.kzen.auto.client.wrap
+
+import org.w3c.dom.events.Event
+import react.*
+
+
+@JsName("Button")
+external class MaterialButton : Component<MaterialButtonProps, RState> {
+    override fun render(): ReactElement?
+}
+
+external interface MaterialButtonProps : RProps {
+    var id: String
+    var variant: String
+    var color: String
+    var style: ButtonStyle
+    var onClick: () -> Unit
+}
+
 //@JsName("TextField")
 //external class MaterialTextField : Component<MaterialTextFieldProps, RState> {
 //    override fun render(): ReactElement?
