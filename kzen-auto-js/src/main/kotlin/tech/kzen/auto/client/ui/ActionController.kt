@@ -3,15 +3,13 @@ package tech.kzen.auto.client.ui
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
+import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
 import react.*
-import react.dom.div
-import react.dom.hr
-import react.dom.input
+import react.dom.*
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.ButtonStyle
-import tech.kzen.auto.client.wrap.MaterialButton
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.lib.common.edit.RemoveObjectCommand
 import tech.kzen.lib.common.edit.RenameObjectCommand
@@ -21,6 +19,7 @@ import tech.kzen.lib.common.notation.model.ParameterConventions
 import tech.kzen.lib.common.notation.model.ParameterNotation
 import tech.kzen.lib.common.notation.model.ProjectNotation
 import tech.kzen.lib.common.notation.model.ScalarParameterNotation
+import kotlin.js.json
 
 
 class ActionController(
@@ -111,6 +110,41 @@ class ActionController(
         val stateClass = "exec${props.status?.name ?: "None"}"
         val nextClass = if (props.next) "execNext" else ""
 
+        child(MaterialCard::class) {
+            attrs {
+//                classes = "$stateClass $nextClass"
+//                classes = json(
+//                        "root" to "$stateClass $nextClass")
+
+
+//                className = "$stateClass $nextClass"
+
+                // WORKS!!
+                style = json(
+                        "backgroundColor" to "yellow"
+                )
+
+//                raised = true
+            }
+
+
+            child(MaterialCardContent::class) {
+                child(MaterialTypography::class) {
+                    +"bbbbb!!"
+                }
+            }
+            child(MaterialCardActions::class) {
+                child(MaterialButton::class) {
+                    attrs {
+                        size = "small"
+                    }
+
+                    +"Foo"
+                }
+            }
+        }
+
+
         div(classes = "actionController $stateClass $nextClass") {
 
             div {
@@ -158,59 +192,74 @@ class ActionController(
             hr(classes = "actionSeparator") {}
 
 
-//            materialButton {
-//                +"Foo"
-//            }
-
-//            button {
-//                +"foo"
-//            }
-
-//            console.log("MaterialButton::class", MaterialButton::class, MaterialButton())
-
-            child(MaterialButton::class) {
+            span {
                 attrs {
-                    this.variant = "raised"
-                    this.style = ButtonStyle("#f47421", "#FFFFFF")
+                    title = "Run"
                 }
-//
-                +"Foo"
-//
-////                handler()
-            }
 
+                child(MaterialButton::class) {
+                    attrs {
+                        variant = "outlined"
+                        size = "small"
 
-            input (type = InputType.button) {
-                attrs {
-                    value = "Run"
-                    onClickFunction = { onRun() }
-                }
-            }
-
-            input (type = InputType.button) {
-                attrs {
-                    value = "Shift Up"
-                    onClickFunction = {
-                        onShiftUp()
+                        onClick = { onRun() }
                     }
+
+                    child(PlayArrowIcon::class) {}
                 }
             }
 
-            input (type = InputType.button) {
+
+            span {
                 attrs {
-                    value = "Shift Down"
-                    onClickFunction = {
-                        onShiftDown()
+                    title = "Shift up"
+                }
+
+                child(MaterialButton::class) {
+                    attrs {
+                        variant = "outlined"
+                        size = "small"
+
+                        onClick = { onShiftUp() }
                     }
+
+                    child(KeyboardArrowUpIcon::class) {}
                 }
             }
 
-            input (type = InputType.button) {
+
+            span {
                 attrs {
-                    value = "Remove"
-                    onClickFunction = {
-                        onRemove()
+                    title = "Shift down"
+                }
+
+                child(MaterialButton::class) {
+                    attrs {
+                        variant = "outlined"
+                        size = "small"
+
+                        onClick = { onShiftDown() }
                     }
+
+                    child(KeyboardArrowDownIcon::class) {}
+                }
+            }
+
+
+            span {
+                attrs {
+                    title = "Remove"
+                }
+
+                child(MaterialButton::class) {
+                    attrs {
+                        variant = "outlined"
+                        size = "small"
+
+                        onClick = { onRemove() }
+                    }
+
+                    child(DeleteIcon::class) {}
                 }
             }
         }

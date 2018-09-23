@@ -40,24 +40,9 @@ module.exports = {
             name: 'vendor',
             filename: 'vendor.bundle.js'
         }),
-//        new HtmlWebpackPlugin({
-//            chunks: ['vendor', 'main'],
-//            chunksSortMode: 'manual',
-////            minify: {
-////                removeAttributeQuotes: false,
-////                collapseWhitespace: false,
-////                html5: false,
-////                minifyCSS: false,
-////                minifyJS: false,
-////                minifyURLs: false,
-////                removeComments: false,
-////                removeEmptyAttributes: false
-////            },
-//            hash: false
-//        }),
         new BrowserSyncPlugin({
             host: 'localhost',
-            port: 8080,
+            port: 8081,
             server: {
                 baseDir: ['./build/dist']
             }

@@ -3,7 +3,10 @@ package tech.kzen.auto.client.wrap
 
 import org.w3c.dom.events.Event
 import react.*
+import kotlin.js.Json
 
+
+// also see: https://github.com/rivasdiaz/kotlin-rmwc
 
 @JsName("Button")
 external class MaterialButton : Component<MaterialButtonProps, RState> {
@@ -15,8 +18,52 @@ external interface MaterialButtonProps : RProps {
     var variant: String
     var color: String
     var style: ButtonStyle
+    var size: String
     var onClick: () -> Unit
 }
+
+
+
+
+@JsName("Typography")
+external class MaterialTypography : Component<RProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+
+
+@JsName("Card")
+external class MaterialCard : Component<CardProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+
+external interface CardProps : RProps {
+    var style: Json
+    var classes: Json
+
+    var className: String
+
+    var raised: Boolean
+}
+
+
+
+
+
+@JsName("CardContent")
+external class MaterialCardContent : Component<RProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("CardActions")
+external class MaterialCardActions : Component<RProps, RState> {
+    override fun render(): ReactElement?
+}
+
 
 //@JsName("TextField")
 //external class MaterialTextField : Component<MaterialTextFieldProps, RState> {
