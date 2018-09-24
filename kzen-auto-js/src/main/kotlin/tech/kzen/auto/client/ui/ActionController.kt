@@ -1,5 +1,9 @@
 package tech.kzen.auto.client.ui
 
+import kotlinx.css.CSSBuilder
+import kotlinx.css.Color
+import kotlinx.css.padding
+import kotlinx.css.px
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
@@ -7,6 +11,8 @@ import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
 import react.*
 import react.dom.*
+import styled.css
+import styled.styledDiv
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
@@ -110,156 +116,158 @@ class ActionController(
         val stateClass = "exec${props.status?.name ?: "None"}"
         val nextClass = if (props.next) "execNext" else ""
 
+        val reactStyles = reactStyle {
+            val statusColor = when (props.status) {
+                ExecutionStatus.Pending ->
+                    Color("rgb(225, 225, 225)")
+
+                ExecutionStatus.Running ->
+                    Color.yellow
+
+                ExecutionStatus.Success ->
+                    Color.green
+
+                ExecutionStatus.Failed ->
+                    Color.red
+
+                null -> null
+            }
+
+            if (props.next) {
+                backgroundColor = Color.gold
+            }
+            else if (statusColor != null) {
+                backgroundColor = statusColor
+            }
+        }
+
+
         child(MaterialCard::class) {
             attrs {
-//                classes = "$stateClass $nextClass"
-//                classes = json(
-//                        "root" to "$stateClass $nextClass")
-
-
-//                className = "$stateClass $nextClass"
-
-                // WORKS!!
-                style = json(
-                        "backgroundColor" to "yellow"
-                )
-
-//                raised = true
+                style = reactStyles
             }
 
 
             child(MaterialCardContent::class) {
                 child(MaterialTypography::class) {
-                    +"bbbbb!!"
+//                    +("Name: ")
+
+                    input(type = InputType.text) {
+                        attrs {
+                            value = state.name
+
+                            onChangeFunction = {
+                                val target = it.target as HTMLInputElement
+                                onNameChange(target.value)
+                            }
+                        }
+                    }
+
+                    input (type = InputType.button) {
+                        attrs {
+                            value = "Rename"
+                            onClickFunction = {
+                                onRename()
+                            }
+                        }
+                    }
+
+                    div {
+                        val parent = props.notation.getString(props.name, ParameterConventions.isParameter)
+                        +parent
+                    }
+                }
+
+
+                child(MaterialTypography::class) {
+//                    hr(classes = "actionSeparator") {}
+
+
+                    for (e in objectMetadata.parameters) {
+                        val value =
+                                props.notation.transitiveParameter(props.name, e.key)
+                                        ?: continue
+
+                        div(classes = "child") {
+                            renderParameter(e.key, value)
+                        }
+                    }
+
+//                    hr(classes = "actionSeparator") {}
                 }
             }
+
+
             child(MaterialCardActions::class) {
-                child(MaterialButton::class) {
+                span {
                     attrs {
-                        size = "small"
+                        title = "Run"
                     }
 
-                    +"Foo"
-                }
-            }
-        }
+                    child(MaterialButton::class) {
+                        attrs {
+                            variant = "outlined"
+                            size = "small"
 
-
-        div(classes = "actionController $stateClass $nextClass") {
-
-            div {
-                +("Name: ")
-
-                input(type = InputType.text) {
-                    attrs {
-                        value = state.name
-
-                        onChangeFunction = {
-                            val target = it.target as HTMLInputElement
-                            onNameChange(target.value)
+                            onClick = { onRun() }
                         }
+
+                        child(PlayArrowIcon::class) {}
                     }
                 }
 
-                input (type = InputType.button) {
+
+                span {
                     attrs {
-                        value = "Rename"
-                        onClickFunction = {
-                            onRename()
+                        title = "Shift up"
+                    }
+
+                    child(MaterialButton::class) {
+                        attrs {
+                            variant = "outlined"
+                            size = "small"
+
+                            onClick = { onShiftUp() }
                         }
+
+                        child(KeyboardArrowUpIcon::class) {}
                     }
                 }
-            }
-
-            hr(classes = "actionSeparator") {}
-
-            div {
-                val parent = props.notation.getString(props.name, ParameterConventions.isParameter)
-                +parent
-            }
 
 
-            for (e in objectMetadata.parameters) {
-                val value =
-                        props.notation.transitiveParameter(props.name, e.key)
-                        ?: continue
-
-                div(classes = "child") {
-                    renderParameter(e.key, value)
-                }
-            }
-
-            hr(classes = "actionSeparator") {}
-
-
-            span {
-                attrs {
-                    title = "Run"
-                }
-
-                child(MaterialButton::class) {
+                span {
                     attrs {
-                        variant = "outlined"
-                        size = "small"
-
-                        onClick = { onRun() }
+                        title = "Shift down"
                     }
 
-                    child(PlayArrowIcon::class) {}
+                    child(MaterialButton::class) {
+                        attrs {
+                            variant = "outlined"
+                            size = "small"
+
+                            onClick = { onShiftDown() }
+                        }
+
+                        child(KeyboardArrowDownIcon::class) {}
+                    }
                 }
-            }
 
 
-            span {
-                attrs {
-                    title = "Shift up"
-                }
-
-                child(MaterialButton::class) {
+                span {
                     attrs {
-                        variant = "outlined"
-                        size = "small"
-
-                        onClick = { onShiftUp() }
+                        title = "Remove"
                     }
 
-                    child(KeyboardArrowUpIcon::class) {}
-                }
-            }
+                    child(MaterialButton::class) {
+                        attrs {
+                            variant = "outlined"
+                            size = "small"
 
+                            onClick = { onRemove() }
+                        }
 
-            span {
-                attrs {
-                    title = "Shift down"
-                }
-
-                child(MaterialButton::class) {
-                    attrs {
-                        variant = "outlined"
-                        size = "small"
-
-                        onClick = { onShiftDown() }
+                        child(DeleteIcon::class) {}
                     }
-
-                    child(KeyboardArrowDownIcon::class) {}
-                }
-            }
-
-
-            span {
-                attrs {
-                    title = "Remove"
-                }
-
-                child(MaterialButton::class) {
-                    attrs {
-                        variant = "outlined"
-                        size = "small"
-
-                        onClick = { onRemove() }
-                    }
-
-                    child(DeleteIcon::class) {}
                 }
             }
         }

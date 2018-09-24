@@ -22,7 +22,7 @@ dependencies {
 
     compile "org.jetbrains:kotlin-react:$reactVersion"
     compile "org.jetbrains:kotlin-react-dom:$reactDomVersion"
-//    compile "org.jetbrains:kotlin-styled:$kotlinStyledVersion"
+    compile "org.jetbrains:kotlin-styled:$kotlinStyledVersion"
 
     testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test-js', version: kotlinVersion
 }
