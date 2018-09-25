@@ -1,8 +1,8 @@
 {
   "name": "client",
   "dependencies": {
-    "react": "16.4.2",
-    "react-dom": "16.4.2",
+    "react": "16.5.2",
+    "react-dom": "16.5.2",
     "lodash": "4.17.10",
     "@material-ui/core": "3.0.3",
     "@material-ui/icons": "3.0.1",

@@ -24,6 +24,25 @@ external interface MaterialButtonProps : RProps {
 
 
 
+@JsName("IconButton")
+external class MaterialIconButton : Component<MaterialIconButtonProps, RState> {
+    override fun render(): ReactElement?
+}
+
+external interface MaterialIconButtonProps : RProps {
+    var id: String
+    var variant: String
+    var color: String
+
+//    var style: ButtonStyle
+    var style: Json
+
+    var size: String
+    var onClick: () -> Unit
+}
+
+
+
 
 @JsName("Typography")
 external class MaterialTypography : Component<RProps, RState> {
@@ -42,9 +61,9 @@ external class MaterialCard : Component<CardProps, RState> {
 
 external interface CardProps : RProps {
     var style: Json
-    var classes: Json
 
-    var className: String
+//    var classes: Json
+//    var className: String
 
     var raised: Boolean
 }
@@ -65,21 +84,21 @@ external class MaterialCardActions : Component<RProps, RState> {
 }
 
 
-//@JsName("TextField")
-//external class MaterialTextField : Component<MaterialTextFieldProps, RState> {
-//    override fun render(): ReactElement?
-//}
-//
-//external interface MaterialTextFieldProps : RProps {
-//    var onChange: (e: Event) -> Unit
-//    var id: String
-//    var value: String
-//    var label: String
-//    var rows: Int
-//    var multiline: Boolean
-//    var fullWidth: Boolean
-//    var margin: String
-//}
+@JsName("TextField")
+external class MaterialTextField : Component<MaterialTextFieldProps, RState> {
+    override fun render(): ReactElement?
+}
+
+external interface MaterialTextFieldProps : RProps {
+    var onChange: (e: Event) -> Unit
+    var id: String
+    var value: String
+    var label: String
+    var rows: Int
+    var multiline: Boolean
+    var fullWidth: Boolean
+    var margin: String
+}
 //
 //
 //@JsName("FormControl")

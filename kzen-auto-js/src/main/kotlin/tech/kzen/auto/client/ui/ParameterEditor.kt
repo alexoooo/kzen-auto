@@ -10,6 +10,7 @@ import react.dom.input
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
+import tech.kzen.auto.client.wrap.MaterialTextField
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.service.ExecutionManager
@@ -125,28 +126,18 @@ class ParameterEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        div {
-            +("[${props.parameterPath}]: ")
+        child(MaterialTextField::class) {
+            attrs {
+                fullWidth = true
 
-            input (type = InputType.text) {
-                attrs {
-                    value = state.value
+                label = props.parameterPath
+                value = state.value
 
-                    onChangeFunction = {
-                        val target = it.target as HTMLInputElement
-                        onValueChange(target.value)
-                    }
+                onChange = {
+                    val target = it.target as HTMLInputElement
+                    onValueChange(target.value)
                 }
             }
-
-//            input (type = InputType.button) {
-//                attrs {
-//                    value = "Edit"
-//                    onClickFunction = {
-//                        onSubmit()
-//                    }
-//                }
-//            }
         }
     }
 }

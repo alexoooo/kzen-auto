@@ -3,12 +3,20 @@ package tech.kzen.auto.client.objects
 import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
 import kotlinx.coroutines.experimental.*
+import kotlinx.css.Display
+import kotlinx.css.LinearDimension
+import kotlinx.css.em
 import react.*
 import react.dom.*
+import styled.css
+import styled.styledDiv
+import styled.styledSamp
+import styled.styledSpan
 import tech.kzen.auto.client.service.*
 import tech.kzen.auto.client.ui.ActionController
 import tech.kzen.auto.client.ui.ActionCreator
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.client.wrap.ArrowDownwardIcon
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.auto.common.service.ExecutionManager
@@ -306,7 +314,21 @@ class AutoProject:
                         status,
                         next == e.key)
 
-                img(src = "arrow-pointing-down.png", classes = "downArrow") {}
+                styledDiv {
+                    css {
+                        marginLeft = LinearDimension.auto
+                        marginRight = LinearDimension.auto
+                        display = Display.block
+
+                        height = 2.em
+                        marginTop =  0.5.em
+                        marginBottom = 0.5.em
+                    }
+
+                    child(ArrowDownwardIcon::class) {}
+                }
+
+//                img(src = "arrow-pointing-down.png", classes = "downArrow") {}
             }
 
             child(ActionCreator::class) {

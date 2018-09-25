@@ -1,9 +1,6 @@
 package tech.kzen.auto.client.ui
 
-import kotlinx.css.CSSBuilder
-import kotlinx.css.Color
-import kotlinx.css.padding
-import kotlinx.css.px
+import kotlinx.css.*
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
@@ -30,7 +27,7 @@ import kotlin.js.json
 
 class ActionController(
         props: ActionController.Props
-): RComponent<ActionController.Props, ActionController.State>(props) {
+): RComponent<ActionController.Props, RState>(props) {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var name: String,
@@ -42,15 +39,15 @@ class ActionController(
     ) : RProps
 
 
-    class State(
-            var name: String
-    ) : RState
+//    class State(
+//            var name: String
+//    ) : RState
 
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: ActionController.Props) {
-        name = props.name
-    }
+//
+//    //-----------------------------------------------------------------------------------------------------------------
+//    override fun State.init(props: ActionController.Props) {
+//        name = props.name
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -61,19 +58,19 @@ class ActionController(
     }
 
 
-    private fun onNameChange(newValue: String) {
-        setState {
-            name = newValue
-        }
-    }
-
-
-    private fun onRename() {
-        async {
-            ClientContext.commandBus.apply(RenameObjectCommand(
-                    props.name, state.name))
-        }
-    }
+//    private fun onNameChange(newValue: String) {
+//        setState {
+//            name = newValue
+//        }
+//    }
+//
+//
+//    private fun onRename() {
+//        async {
+//            ClientContext.commandBus.apply(RenameObjectCommand(
+//                    props.name, state.name))
+//        }
+//    }
 
 
     private fun onRemove() {
@@ -111,10 +108,6 @@ class ActionController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val objectMetadata = props.metadata.objectMetadata[props.name]!!
-//        val objectNotation = props.notation.coalesce[props.name]!!
-
-        val stateClass = "exec${props.status?.name ?: "None"}"
-        val nextClass = if (props.next) "execNext" else ""
 
         val reactStyles = reactStyle {
             val statusColor = when (props.status) {
@@ -149,51 +142,37 @@ class ActionController(
 
 
             child(MaterialCardContent::class) {
-                child(MaterialTypography::class) {
-//                    +("Name: ")
-
-                    input(type = InputType.text) {
+                div {
+                    child(NameEditor::class) {
                         attrs {
-                            value = state.name
-
-                            onChangeFunction = {
-                                val target = it.target as HTMLInputElement
-                                onNameChange(target.value)
-                            }
+                            objectName = props.name
                         }
                     }
 
-                    input (type = InputType.button) {
-                        attrs {
-                            value = "Rename"
-                            onClickFunction = {
-                                onRename()
-                            }
-                        }
-                    }
-
-                    div {
-                        val parent = props.notation.getString(props.name, ParameterConventions.isParameter)
-                        +parent
-                    }
+//                    div {
+//                        val parent = props.notation.getString(props.name, ParameterConventions.isParameter)
+//                        +parent
+//                    }
                 }
 
-
-                child(MaterialTypography::class) {
-//                    hr(classes = "actionSeparator") {}
-
+                styledDiv {
+                    css {
+                        marginBottom = (-1.5).em
+                    }
 
                     for (e in objectMetadata.parameters) {
                         val value =
                                 props.notation.transitiveParameter(props.name, e.key)
                                         ?: continue
 
-                        div(classes = "child") {
+                        styledDiv {
+                            css {
+                                marginBottom = 0.5.em
+                            }
+
                             renderParameter(e.key, value)
                         }
                     }
-
-//                    hr(classes = "actionSeparator") {}
                 }
             }
 
@@ -204,12 +183,9 @@ class ActionController(
                         title = "Run"
                     }
 
-                    child(MaterialButton::class) {
+                    child(MaterialIconButton::class) {
                         attrs {
-                            variant = "outlined"
-                            size = "small"
-
-                            onClick = { onRun() }
+                            onClick = ::onRun
                         }
 
                         child(PlayArrowIcon::class) {}
@@ -222,12 +198,9 @@ class ActionController(
                         title = "Shift up"
                     }
 
-                    child(MaterialButton::class) {
+                    child(MaterialIconButton::class) {
                         attrs {
-                            variant = "outlined"
-                            size = "small"
-
-                            onClick = { onShiftUp() }
+                            onClick = ::onShiftUp
                         }
 
                         child(KeyboardArrowUpIcon::class) {}
@@ -240,12 +213,9 @@ class ActionController(
                         title = "Shift down"
                     }
 
-                    child(MaterialButton::class) {
+                    child(MaterialIconButton::class) {
                         attrs {
-                            variant = "outlined"
-                            size = "small"
-
-                            onClick = { onShiftDown() }
+                            onClick = ::onShiftDown
                         }
 
                         child(KeyboardArrowDownIcon::class) {}
@@ -258,12 +228,12 @@ class ActionController(
                         title = "Remove"
                     }
 
-                    child(MaterialButton::class) {
+                    child(MaterialIconButton::class) {
                         attrs {
-                            variant = "outlined"
-                            size = "small"
+//                            variant = "outlined"
+//                            size = "small"
 
-                            onClick = { onRemove() }
+                            onClick = ::onRemove
                         }
 
                         child(DeleteIcon::class) {}
