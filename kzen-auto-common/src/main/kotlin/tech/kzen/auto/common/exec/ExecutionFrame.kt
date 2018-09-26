@@ -13,16 +13,33 @@ data class ExecutionFrame(
 
 
     fun rename(from: String, to: String): Boolean {
-//        if (current == from) {
-//            current = to
-//        }
-
-        val value = values.remove(from)
-        if (value != null) {
-            values[to] = value
-            return true
+        if (! values.containsKey(from)) {
+            return false
         }
 
-        return false
+        val renamed = mutableMapOf<String, ExecutionStatus>()
+        for (e in values) {
+            val key =
+                    if (e.key == from)
+                        to
+                    else
+                        e.key
+
+            renamed[key] = e.value
+        }
+
+        values.clear()
+        values.putAll(renamed)
+
+        return true
+//        val value = values.remove(from)
+//        if (value != null) {
+////            println("!@!@! ExecutionFrame - $from -> $to | $value")
+//
+//            values[to] = value
+//            return true
+//        }
+//
+//        return false
     }
 }

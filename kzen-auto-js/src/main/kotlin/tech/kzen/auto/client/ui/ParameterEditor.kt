@@ -1,12 +1,8 @@
 package tech.kzen.auto.client.ui
 
 
-import kotlinx.html.InputType
-import kotlinx.html.js.onChangeFunction
 import org.w3c.dom.HTMLInputElement
 import react.*
-import react.dom.div
-import react.dom.input
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
@@ -78,7 +74,7 @@ class ParameterEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun flush() {
-        println("ParameterEditor | flush")
+//        println("ParameterEditor | flush")
 
         state.submitDebounce.cancel()
         if (state.pending) {

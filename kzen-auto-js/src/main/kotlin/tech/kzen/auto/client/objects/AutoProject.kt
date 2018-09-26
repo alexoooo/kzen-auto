@@ -1,22 +1,24 @@
 package tech.kzen.auto.client.objects
 
-import kotlinx.html.InputType
-import kotlinx.html.js.onClickFunction
-import kotlinx.coroutines.experimental.*
 import kotlinx.css.Display
 import kotlinx.css.LinearDimension
 import kotlinx.css.em
+import kotlinx.html.InputType
+import kotlinx.html.js.onClickFunction
 import react.*
-import react.dom.*
+import react.dom.br
+import react.dom.div
+import react.dom.h3
+import react.dom.input
 import styled.css
 import styled.styledDiv
-import styled.styledSamp
-import styled.styledSpan
-import tech.kzen.auto.client.service.*
+import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.ui.ActionController
 import tech.kzen.auto.client.ui.ActionCreator
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.ArrowDownwardIcon
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.auto.common.service.ExecutionManager
@@ -27,7 +29,8 @@ import tech.kzen.lib.common.edit.ProjectCommand
 import tech.kzen.lib.common.edit.ProjectEvent
 import tech.kzen.lib.common.metadata.model.GraphMetadata
 import tech.kzen.lib.common.notation.NotationConventions
-import tech.kzen.lib.common.notation.model.*
+import tech.kzen.lib.common.notation.model.PackageNotation
+import tech.kzen.lib.common.notation.model.ProjectNotation
 
 
 
@@ -99,55 +102,12 @@ class AutoProject:
             }
             return
         }
-
-//        if (! state.runningAll) {
-//            return
-//        }
-//
-//        // only look at transition from pending to non-pending state?
-//        if (state.pending /*|| ! prevState.pending*/) {
-////            console.log("AutoProject PENDING", state.pending, prevState.pending)
-//            return
-//        }
-//
-//        val next = state.execution!!.next()
-//                ?: return
-//
-//        setState {
-//            pending = true
-//        }
-//
-//        async {
-//            runNext(next)
-//        }
     }
 
 
     private suspend fun createMain() {
         ClientContext.commandBus.apply(CreatePackageCommand(NotationConventions.mainPath))
     }
-
-//    private suspend fun runNext(next: String) {
-//        // TODO: factor out and consolidate
-//        ClientContext.executionManager.willExecute(next)
-//
-//        delay(250)
-//
-//        var success = false
-//        try {
-//            ClientContext.restClient.performAction(next)
-//            success = true
-//        }
-//        catch (e: Exception) {
-//            println("#$%#$%#$ got exception: $e")
-//
-//            setState {
-//                runningAll = false
-//            }
-//        }
-//
-//        ClientContext.executionManager.didExecute(next, success)
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -168,19 +128,8 @@ class AutoProject:
 
 
     override suspend fun afterExecution(executionModel: ExecutionModel) {
-//        val next = executionModel.next()
-//
-//        val nextRunning =
-//                if (next == null) {
-//                    false
-//                }
-//                else {
-//                    executionModel.containsStatus(ExecutionStatus.Running)
-//                }
-
         setState {
             execution = executionModel
-//            pending = nextRunning
         }
     }
 
@@ -217,10 +166,6 @@ class AutoProject:
     private fun onClear() {
         ClientContext.executionLoop.pause()
 
-//        setState {
-//            pending = false
-//        }
-
         async {
             ClientContext.executionManager.reset()
             executionStateToFreshStart()
@@ -230,18 +175,13 @@ class AutoProject:
 
     private fun onRunAll() {
         async {
-            println("AutoProject | onRunAll")
+//            println("AutoProject | onRunAll")
 
             executionStateToFreshStart()
 
-            println("AutoProject | after executionStateToFreshStart")
+//            println("AutoProject | after executionStateToFreshStart")
 
             ClientContext.executionLoop.run()
-
-//            setState {
-////                runningAll = true
-//                pending = false
-//            }
         }
     }
 
@@ -258,7 +198,7 @@ class AutoProject:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        console.log("^^^^ state.commandError", state.commandError)
+//        console.log("^^^^ state.commandError", state.commandError)
         if (state.commandError != null) {
             +"!! ERROR: ${state.commandError}"
         }
@@ -268,7 +208,7 @@ class AutoProject:
             +"Loading..."
         }
         else {
-            println("AutoProject - Available packages: ${projectNotation.packages.keys}")
+//            println("AutoProject - Available packages: ${projectNotation.packages.keys}")
 
             val projectPackage: PackageNotation? =
                     projectNotation.packages[NotationConventions.mainPath]
@@ -295,7 +235,7 @@ class AutoProject:
             projectPackage: PackageNotation
     ) {
         h3 {
-            +"Steps:"
+            +"Steps (${projectPackage.objects.size}): "
         }
 
         val graphMetadata = state.metadata!!
@@ -320,12 +260,19 @@ class AutoProject:
                         marginRight = LinearDimension.auto
                         display = Display.block
 
-                        height = 2.em
+                        width = 3.em
+//                        height = 2.em
                         marginTop =  0.5.em
                         marginBottom = 0.5.em
                     }
 
-                    child(ArrowDownwardIcon::class) {}
+                    child(ArrowDownwardIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                fontSize = 3.em
+                            }
+                        }
+                    }
                 }
 
 //                img(src = "arrow-pointing-down.png", classes = "downArrow") {}

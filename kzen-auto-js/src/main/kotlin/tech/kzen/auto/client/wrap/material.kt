@@ -2,7 +2,11 @@
 package tech.kzen.auto.client.wrap
 
 import org.w3c.dom.events.Event
-import react.*
+import org.w3c.dom.events.KeyboardEvent
+import react.Component
+import react.RProps
+import react.RState
+import react.ReactElement
 import kotlin.js.Json
 
 
@@ -30,14 +34,15 @@ external class MaterialIconButton : Component<MaterialIconButtonProps, RState> {
 }
 
 external interface MaterialIconButtonProps : RProps {
-    var id: String
-    var variant: String
-    var color: String
+//    var id: String
+//    var variant: String
 
-//    var style: ButtonStyle
+    var disabled: Boolean
+
+//    var size: String
+    var color: String
     var style: Json
 
-    var size: String
     var onClick: () -> Unit
 }
 
@@ -91,6 +96,12 @@ external class MaterialTextField : Component<MaterialTextFieldProps, RState> {
 
 external interface MaterialTextFieldProps : RProps {
     var onChange: (e: Event) -> Unit
+
+    var onKeyDown: (e: KeyboardEvent) -> Unit
+    var onKeyPress: (e: KeyboardEvent) -> Unit
+
+    var autoFocus: Boolean
+
     var id: String
     var value: String
     var label: String

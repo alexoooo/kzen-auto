@@ -1,27 +1,19 @@
 package tech.kzen.auto.client.ui
 
+import kotlinx.coroutines.experimental.delay
 import kotlinx.css.*
-import kotlinx.html.InputType
-import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
-import kotlinx.html.style
 import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.events.KeyboardEvent
 import react.*
-import react.dom.h2
-import react.dom.input
-import react.dom.span
 import styled.css
 import styled.styledDiv
 import styled.styledH2
-import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.lib.common.edit.RenameObjectCommand
-import tech.kzen.lib.common.metadata.model.GraphMetadata
-import tech.kzen.lib.common.notation.model.ProjectNotation
 
 
 @Suppress("unused")
@@ -38,27 +30,59 @@ class NameEditor(
 
     class State(
             var editing: Boolean,
-            var value: String
+            var objectName: String,
+            var saving: Boolean
     ) : RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun NameEditor.State.init(props: NameEditor.Props) {
-//        console.log("ParameterEditor | State.init - ${props.name}")
-        value = props.objectName
-
-//        submitDebounce = lodash.debounce({
-//            editParameterCommandAsync()
-//        }, 1000)
+//        console.log("NameEditor | State.init - ${props.objectName}", Date.now())
+        objectName = props.objectName
 
         editing = false
+        saving = false
+    }
+
+
+
+    override fun componentDidUpdate(prevProps: Props, prevState: State, snapshot: Any) {
+        if (state.saving && ! prevState.saving) {
+            saveAsync()
+        }
+    }
+
+
+    private fun saveAsync() {
+         async {
+             // NB: not sure why this is necessary, without it state.saving doesn't show
+             delay(1)
+
+             ClientContext.commandBus.apply(RenameObjectCommand(
+                    props.objectName, state.objectName))
+
+             // NB: no need to set saving = false, the component will un-mount
+        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun handleEnterAndEscape(event: KeyboardEvent) {
+//        console.log("event.key: ${event.key}", event)
+
+        when {
+            event.key == "Enter" -> onRename()
+            event.key == "Escape" -> onCancel()
+            else -> return
+        }
+
+        event.preventDefault()
+    }
+
+
     private fun onNameChange(newValue: String) {
         setState {
-            value = newValue
+            objectName = newValue
         }
     }
 
@@ -71,10 +95,18 @@ class NameEditor(
 
 
     private fun onRename() {
-        async {
-            ClientContext.commandBus.apply(RenameObjectCommand(
-                    props.objectName, state.value))
+        if (! isModified()) {
+            return
         }
+
+//        console.log("$$$$$$$$$ NameEditor onRename", Date.now())
+//        async {
+//            console.log("$$$$$$$$$ NameEditor onRename - async", Date.now())
+            setState {
+                editing = false
+                saving = true
+            }
+//        }
     }
 
 
@@ -86,91 +118,115 @@ class NameEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun isModified(): Boolean {
+        return props.objectName != state.objectName
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        if (state.editing) {
+//        console.log("$$$$$$$$$ NameEditor render !! state.saving: ", props, state, Date.now())
 
-            styledDiv {
-                css {
-                    display = Display.inlineBlock
-                    width = LinearDimension("calc(100% - 4em)")
-                }
+//        +"3.5"
+        styledDiv {
+            css {
+                height = 3.5.em
+//                backgroundColor = Color.red
+            }
 
-                child(MaterialTextField::class) {
-                    attrs {
-                        label = "Name"
-                        fullWidth = true
+            if (state.editing) {
+                renderEditor()
+            }
+            else {
+                renderReader()
+            }
+        }
+    }
 
-                        value = state.value
 
-                        onChange = {
-                            val target = it.target as HTMLInputElement
-                            onNameChange(target.value)
-                        }
-                    }
+    private fun RBuilder.renderReader() {
+        styledH2 {
+            css {
+                marginTop = 0.px
+                //paddingTop = 5.px
+//                marginBottom = 10.px
+                cursor = Cursor.pointer
+            }
+
+            attrs {
+                title = "Edit name"
+
+                onClickFunction = {
+                    onEdit()
                 }
             }
 
-//            input(type = InputType.text) {
-//                attrs {
-//                    value = state.value
-//
-//                    onChangeFunction = {
-//                        val target = it.target as HTMLInputElement
-//                        onNameChange(target.value)
-//                    }
-//                }
-//            }
 
-            styledDiv {
-                css {
-//                    display = Display.inlineBlock
-//                    width = 3.em
-                    float = kotlinx.css.Float.right
-                }
+            if (state.saving) {
+                +state.objectName
+            }
+            else {
+                +props.objectName
+            }
+        }
+    }
 
-                child(MaterialIconButton::class) {
-                    attrs {
-                        style = reactStyle {
-                            width = 1.5.em
-                        }
 
-                        onClick = ::onCancel
+    private fun RBuilder.renderEditor() {
+        styledDiv {
+            css {
+                display = Display.inlineBlock
+                width = LinearDimension("calc(100% - 4em)")
+            }
+
+            child(MaterialTextField::class) {
+                attrs {
+                    label = "Name"
+                    fullWidth = true
+                    autoFocus = true
+
+                    value = state.objectName
+
+                    onChange = {
+                        val target = it.target as HTMLInputElement
+                        onNameChange(target.value)
                     }
 
-                    child(CancelIcon::class) {}
-                }
-
-                child(MaterialIconButton::class) {
-                    attrs {
-                        style = reactStyle {
-                            width = 1.5.em
-                            marginRight = (-0.5).em
-                        }
-
-                        onClick = ::onRename
-                    }
-
-                    child(SaveIcon::class) {}
+                    onKeyDown = ::handleEnterAndEscape
                 }
             }
         }
-        else {
-            styledH2 {
-                css {
-                    marginTop = 9.px
-                    marginBottom = 10.px
-                    cursor = Cursor.pointer
-                }
 
+        styledDiv {
+            css {
+                float = kotlinx.css.Float.right
+            }
+
+            child(MaterialIconButton::class) {
                 attrs {
-                    title = "Edit name"
-
-                    onClickFunction = {
-                        onEdit()
+                    style = reactStyle {
+                        marginLeft = (-3).em
                     }
+
+                    onClick = ::onCancel
                 }
 
-                +props.objectName
+                child(CancelIcon::class) {}
+            }
+
+            child(MaterialIconButton::class) {
+                attrs {
+                    style = reactStyle {
+                        marginLeft = (-0.5).em
+                        marginRight = (-1).em
+                    }
+
+                    onClick = ::onRename
+
+                    disabled = ! isModified()
+                }
+
+                child(SaveIcon::class) {}
             }
         }
     }
