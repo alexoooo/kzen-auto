@@ -6,6 +6,18 @@ ReactWrapper:
   class: tech.kzen.auto.client.objects.ReactWrapper
 
 
+ActionWrapper:
+  abstract: true
+  class: tech.kzen.auto.client.objects.ActionWrapper
+
+
+
+#"Action~§·Wrapper":
+#  abstract: true
+#  class: tech.kzen.auto.common.api.AutoAction
+
+
+
 ###########################################################
 
 
@@ -14,45 +26,14 @@ AutoProject:
   class: tech.kzen.auto.client.objects.AutoProject.Wrapper
 
 
-
-#ContainerComponent:
-#  abstract: true
-#  is: ChildContainer
-#  class: tech.kzen.auto.client.objects.ContainerComponent.Wrapper
-#
-#
-#HelloComponent:
-#  abstract: true
-#  is: ParentPointer
-#  class: tech.kzen.auto.client.objects.HelloComponent.Wrapper
-#  meta:
-#    objectName:
-#      is: String
-#      by: ObjectNameParameterDefiner
-#    parent: ContainerComponent
-#    name: String
+ActionController:
+  abstract: true
+  is: ActionWrapper
+  class: tech.kzen.auto.client.objects.action.ActionController.Wrapper
 
 
 ###########################################################
 
 root:
   is: AutoProject
-
-
-#helloFoo:
-#  is: HelloComponent
-#  parent: root
-#  name: foo
-#
-#
-#subContainer:
-#  is: ContainerComponent
-#  parent: root
-#
-#
-#subHelloBar:
-#  is: HelloComponent
-#  parent: subContainer
-#  name: "Sub - bar"
-
 

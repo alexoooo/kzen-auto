@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.ui
+package tech.kzen.auto.client.objects.action
 
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
@@ -17,8 +17,9 @@ import tech.kzen.lib.common.notation.model.ProjectPath
 @Suppress("unused")
 class ActionCreator(
         props: ActionCreator.Props
-) : RComponent<ActionCreator.Props, ActionCreator.State>(props) {
-
+) :
+        RComponent<ActionCreator.Props, ActionCreator.State>(props)
+{
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var notation: ProjectNotation,

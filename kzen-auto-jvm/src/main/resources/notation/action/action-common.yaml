@@ -12,21 +12,21 @@ Action:
 ###########################################################
 
 
-LogAction:
-  abstract: true
-  is: Action
-  class: tech.kzen.auto.client.objects.action.LogAction
-  message: "default message"
-  meta:
-    message: String
-
-
 PrintlnAction:
   abstract: true
   is: Action
-  class: tech.kzen.auto.server.objects.PrintlnAction
+  class: tech.kzen.auto.common.objects.PrintlnAction
   message: "default message"
   meta:
     message: String
+
+
+#PrintlnAction:
+#  abstract: true
+#  is: Action
+#  class: tech.kzen.auto.server.objects.PrintlnAction
+#  message: "default message"
+#  meta:
+#    message: String
 
 

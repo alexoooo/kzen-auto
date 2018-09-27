@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.ui
+package tech.kzen.auto.client.objects.action
 
 
 import org.w3c.dom.HTMLInputElement

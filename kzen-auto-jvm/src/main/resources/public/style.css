@@ -34,6 +34,7 @@
     border-top: 1px solid rgba(0, 0, 0, 0.1);
     border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
+/*
 
 .downArrow {
     margin-left: auto;
@@ -44,6 +45,7 @@
     margin-top: 0.5em;
     margin-bottom: 0.5em;
 }
+*/
 
 .actionColumn {
     width: 20em;
@@ -56,6 +58,7 @@
 }
 
 
+/*
 .execNone {
 
 }
@@ -75,6 +78,7 @@
 .execFailed {
     background-color: red;
 }
+*/
 
 
 .execNext {

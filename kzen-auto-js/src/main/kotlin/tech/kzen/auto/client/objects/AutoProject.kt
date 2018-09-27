@@ -6,16 +6,14 @@ import kotlinx.css.em
 import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
 import react.*
-import react.dom.br
-import react.dom.div
-import react.dom.h3
-import react.dom.input
+import react.dom.*
 import styled.css
 import styled.styledDiv
+import tech.kzen.auto.client.objects.action.ActionController
+import tech.kzen.auto.client.objects.action.ActionCreator
+import tech.kzen.auto.client.objects.action.ActionWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
-import tech.kzen.auto.client.ui.ActionController
-import tech.kzen.auto.client.ui.ActionCreator
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.ArrowDownwardIcon
 import tech.kzen.auto.client.wrap.reactStyle
@@ -35,7 +33,7 @@ import tech.kzen.lib.common.notation.model.ProjectNotation
 
 
 @Suppress("unused")
-class AutoProject:
+class AutoProject :
         RComponent<RProps, AutoProject.State>(),
         ModelManager.Subscriber,
         ExecutionManager.Subscriber,
@@ -235,7 +233,7 @@ class AutoProject:
             projectPackage: PackageNotation
     ) {
         h3 {
-            +"Steps (${projectPackage.objects.size}): "
+            +"Steps (${projectPackage.objects.size}):"
         }
 
         val graphMetadata = state.metadata!!
@@ -295,17 +293,26 @@ class AutoProject:
             executionStatus: ExecutionStatus?,
             nextToExecute: Boolean
     ) {
-        child(ActionController::class) {
+        val actionUiWrapper: ActionWrapper =
+                ActionController.Wrapper()
+
+
+        span {
             key = objectName
 
-            attrs {
-                name = objectName
 
-                notation = projectNotation
-                metadata = graphMetadata
 
-                status = executionStatus
-                next = nextToExecute
+
+            child(ActionController::class) {
+                attrs {
+                    name = objectName
+
+                    notation = projectNotation
+                    metadata = graphMetadata
+
+                    status = executionStatus
+                    next = nextToExecute
+                }
             }
         }
     }
@@ -313,6 +320,8 @@ class AutoProject:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.footer() {
+        +"!!!!!oo"
+
         // TODO: compensate for footer
         br {}
         br {}

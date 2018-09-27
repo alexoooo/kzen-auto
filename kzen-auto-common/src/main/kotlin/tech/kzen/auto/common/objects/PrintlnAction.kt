@@ -1,12 +1,12 @@
-package tech.kzen.auto.client.objects.action
+package tech.kzen.auto.common.objects
 
 import tech.kzen.auto.common.api.AutoAction
 
 
-class LogAction(
+class PrintlnAction(
         val message: String
 ): AutoAction {
     override fun perform() {
-        println("Log: $message")
+        println("PrintlnAction: $message")
     }
 }

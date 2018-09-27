@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.ui
+package tech.kzen.auto.client.objects.action
 
 import kotlinx.coroutines.experimental.delay
 import kotlinx.css.*

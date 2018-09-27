@@ -1,13 +1,11 @@
-package tech.kzen.auto.client.ui
+package tech.kzen.auto.client.objects.action
 
-import kotlinx.css.*
-import kotlinx.html.InputType
-import kotlinx.html.js.onChangeFunction
-import kotlinx.html.js.onClickFunction
+import kotlinx.css.Color
+import kotlinx.css.em
 import kotlinx.html.title
-import org.w3c.dom.HTMLInputElement
 import react.*
-import react.dom.*
+import react.dom.div
+import react.dom.span
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.service.ClientContext
@@ -15,14 +13,13 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.lib.common.edit.RemoveObjectCommand
-import tech.kzen.lib.common.edit.RenameObjectCommand
 import tech.kzen.lib.common.edit.ShiftObjectCommand
 import tech.kzen.lib.common.metadata.model.GraphMetadata
-import tech.kzen.lib.common.notation.model.ParameterConventions
+import tech.kzen.lib.common.metadata.model.ParameterMetadata
 import tech.kzen.lib.common.notation.model.ParameterNotation
 import tech.kzen.lib.common.notation.model.ProjectNotation
 import tech.kzen.lib.common.notation.model.ScalarParameterNotation
-import kotlin.js.json
+import tech.kzen.lib.platform.ClassNames
 
 
 class ActionController(
@@ -39,15 +36,43 @@ class ActionController(
     ) : RProps
 
 
-//    class State(
-//            var name: String
-//    ) : RState
+    @Suppress("unused")
+    class Wrapper: ActionWrapper {
+        override fun priority(): Int {
+            return 0
+        }
 
-//
-//    //-----------------------------------------------------------------------------------------------------------------
-//    override fun State.init(props: ActionController.Props) {
-//        name = props.name
-//    }
+
+        override fun isApplicableTo(
+                objectName: String,
+                projectNotation: ProjectNotation,
+                graphMetadata: GraphMetadata
+        ): Boolean {
+            return true
+        }
+
+
+        override fun RBuilder.render(
+                objectName: String,
+                projectNotation: ProjectNotation,
+                graphMetadata: GraphMetadata,
+                executionStatus: ExecutionStatus?,
+                nextToExecute: Boolean
+        ): ReactElement {
+            return child(ActionController::class) {
+                attrs {
+                    name = objectName
+
+                    notation = projectNotation
+                    metadata = graphMetadata
+
+                    status = executionStatus
+                    next = nextToExecute
+                }
+            }
+        }
+    }
+
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -56,21 +81,6 @@ class ActionController(
             ClientContext.executionManager.execute(props.name)
         }
     }
-
-
-//    private fun onNameChange(newValue: String) {
-//        setState {
-//            name = newValue
-//        }
-//    }
-//
-//
-//    private fun onRename() {
-//        async {
-//            ClientContext.commandBus.apply(RenameObjectCommand(
-//                    props.name, state.name))
-//        }
-//    }
 
 
     private fun onRemove() {
@@ -118,7 +128,7 @@ class ActionController(
                     Color.yellow
 
                 ExecutionStatus.Success ->
-                    Color.green
+                    Color.green.lighten(50)
 
                 ExecutionStatus.Failed ->
                     Color.red
@@ -170,7 +180,7 @@ class ActionController(
                                 marginBottom = 0.5.em
                             }
 
-                            renderParameter(e.key, value)
+                            renderParameter(e.key, e.value, value)
                         }
                     }
                 }
@@ -246,11 +256,18 @@ class ActionController(
 
     private fun RBuilder.renderParameter(
             parameterName: String,
+            parameterMetadata: ParameterMetadata,
             parameterValue: ParameterNotation
     ) {
         when (parameterValue) {
             is ScalarParameterNotation -> {
-                val scalarValue = parameterValue.value
+                val scalarValue =
+                        if (parameterMetadata.type?.className == ClassNames.kotlinString) {
+                            parameterValue.value.toString()
+                        }
+                        else {
+                            parameterValue.value
+                        }
 
                 when (scalarValue) {
                     is String ->

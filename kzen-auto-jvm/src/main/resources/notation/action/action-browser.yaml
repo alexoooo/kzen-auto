@@ -18,6 +18,7 @@ GoTo:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.GoTo
+  description: "Navigate to a new URL"
   location: "https://www.google.com/"
   meta:
     location: String
