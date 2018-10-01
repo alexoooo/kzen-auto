@@ -9,11 +9,12 @@ import org.w3c.dom.events.KeyboardEvent
 import react.*
 import styled.css
 import styled.styledDiv
-import styled.styledH2
+import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.edit.RenameObjectCommand
+import tech.kzen.lib.common.notation.model.ProjectNotation
 
 
 @Suppress("unused")
@@ -24,7 +25,8 @@ class NameEditor(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var objectName: String
+            var objectName: String,
+            var notation: ProjectNotation
     ) : RProps
 
 
@@ -99,14 +101,10 @@ class NameEditor(
             return
         }
 
-//        console.log("$$$$$$$$$ NameEditor onRename", Date.now())
-//        async {
-//            console.log("$$$$$$$$$ NameEditor onRename - async", Date.now())
-            setState {
-                editing = false
-                saving = true
-            }
-//        }
+        setState {
+            editing = false
+            saving = true
+        }
     }
 
 
@@ -125,13 +123,10 @@ class NameEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-//        console.log("$$$$$$$$$ NameEditor render !! state.saving: ", props, state, Date.now())
-
-//        +"3.5"
         styledDiv {
             css {
-                height = 3.5.em
-//                backgroundColor = Color.red
+                height = ActionController.headerHeight
+                width = 100.pct
             }
 
             if (state.editing) {
@@ -145,28 +140,38 @@ class NameEditor(
 
 
     private fun RBuilder.renderReader() {
-        styledH2 {
+        styledDiv {
             css {
-                marginTop = 0.px
-                //paddingTop = 5.px
-//                marginBottom = 10.px
                 cursor = Cursor.pointer
+                height = ActionController.headerHeight
+                width = 100.pct
             }
 
             attrs {
-                title = "Edit name"
-
                 onClickFunction = {
                     onEdit()
                 }
             }
 
+            styledSpan {
+                css {
+                    width = 100.pct
+                    height = ActionController.headerHeight
 
-            if (state.saving) {
-                +state.objectName
-            }
-            else {
-                +props.objectName
+                    fontSize = LinearDimension("1.5em")
+                    fontWeight = FontWeight.bold
+                }
+
+                attrs {
+                    title = "Edit name"
+                }
+
+                if (state.saving) {
+                    +state.objectName
+                }
+                else {
+                    +props.objectName
+                }
             }
         }
     }
@@ -176,7 +181,9 @@ class NameEditor(
         styledDiv {
             css {
                 display = Display.inlineBlock
-                width = LinearDimension("calc(100% - 4em)")
+
+                width = 100.pct.minus(4.em)
+                height = ActionController.headerHeight
             }
 
             child(MaterialTextField::class) {

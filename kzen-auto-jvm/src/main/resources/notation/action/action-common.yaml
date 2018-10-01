@@ -6,6 +6,9 @@
 Action:
   abstract: true
   class: tech.kzen.auto.common.api.AutoAction
+  meta:
+    icon: String
+    description: String
 
 
 
@@ -16,6 +19,7 @@ PrintlnAction:
   abstract: true
   is: Action
   class: tech.kzen.auto.common.objects.PrintlnAction
+  icon: Message
   message: "default message"
   meta:
     message: String

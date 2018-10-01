@@ -293,35 +293,40 @@ class AutoProject :
             executionStatus: ExecutionStatus?,
             nextToExecute: Boolean
     ) {
+        // todo:
         val actionUiWrapper: ActionWrapper =
                 ActionController.Wrapper()
-
 
         span {
             key = objectName
 
+            actionUiWrapper.render(
+                    this,
+
+                    objectName,
+                    projectNotation,
+                    graphMetadata,
+                    executionStatus,
+                    nextToExecute)
 
 
-
-            child(ActionController::class) {
-                attrs {
-                    name = objectName
-
-                    notation = projectNotation
-                    metadata = graphMetadata
-
-                    status = executionStatus
-                    next = nextToExecute
-                }
-            }
+//            child(ActionController::class) {
+//                attrs {
+//                    name = objectName
+//
+//                    notation = projectNotation
+//                    metadata = graphMetadata
+//
+//                    status = executionStatus
+//                    next = nextToExecute
+//                }
+//            }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.footer() {
-        +"!!!!!oo"
-
         // TODO: compensate for footer
         br {}
         br {}

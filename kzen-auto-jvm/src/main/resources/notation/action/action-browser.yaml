@@ -6,18 +6,21 @@ OpenBrowser:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.OpenBrowser
+  icon: OpenInNew
 
 
 CloseBrowser:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.CloseBrowser
+  icon: Close
 
 
 GoTo:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.GoTo
+  icon: Http
   description: "Navigate to a new URL"
   location: "https://www.google.com/"
   meta:
@@ -28,15 +31,7 @@ LeftClick:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.LeftClick
-  xpath: ""
-  meta:
-    xpath: String
-
-
-FormSubmit:
-  abstract: true
-  is: Action
-  class: tech.kzen.auto.server.objects.FormSubmit
+  icon: TouchApp
   xpath: ""
   meta:
     xpath: String
@@ -46,8 +41,18 @@ SendKeys:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.SendKeys
+  icon: Keyboard
   xpath: ""
   text: ""
   meta:
     xpath: String
     text: String
+
+
+FormSubmit:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.FormSubmit
+  xpath: ""
+  meta:
+    xpath: String

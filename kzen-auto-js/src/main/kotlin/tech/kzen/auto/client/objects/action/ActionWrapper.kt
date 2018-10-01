@@ -18,10 +18,14 @@ interface ActionWrapper {
     ): Boolean
 
 
-    fun RBuilder.render(
+    fun render(
+            rBuilder: RBuilder,
+
             objectName: String,
+
             projectNotation: ProjectNotation,
             graphMetadata: GraphMetadata,
+
             executionStatus: ExecutionStatus?,
             nextToExecute: Boolean
     ): ReactElement

@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.action
 
-import kotlinx.css.Color
-import kotlinx.css.em
+import kotlinx.css.*
 import kotlinx.html.title
 import react.*
 import react.dom.div
@@ -24,7 +23,18 @@ import tech.kzen.lib.platform.ClassNames
 
 class ActionController(
         props: ActionController.Props
-): RComponent<ActionController.Props, RState>(props) {
+) :
+        RComponent<ActionController.Props, RState>(props)
+{
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        const val iconParameter = "icon"
+        const val descriptionParameter = "description"
+
+        val headerHeight = 3.5.em
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var name: String,
@@ -52,14 +62,15 @@ class ActionController(
         }
 
 
-        override fun RBuilder.render(
+        override fun render(
+                rBuilder: RBuilder,
                 objectName: String,
                 projectNotation: ProjectNotation,
                 graphMetadata: GraphMetadata,
                 executionStatus: ExecutionStatus?,
                 nextToExecute: Boolean
         ): ReactElement {
-            return child(ActionController::class) {
+            return rBuilder.child(ActionController::class) {
                 attrs {
                     name = objectName
 
@@ -152,18 +163,7 @@ class ActionController(
 
 
             child(MaterialCardContent::class) {
-                div {
-                    child(NameEditor::class) {
-                        attrs {
-                            objectName = props.name
-                        }
-                    }
-
-//                    div {
-//                        val parent = props.notation.getString(props.name, ParameterConventions.isParameter)
-//                        +parent
-//                    }
-                }
+                renderHeader()
 
                 styledDiv {
                     css {
@@ -247,6 +247,67 @@ class ActionController(
                         }
 
                         child(DeleteIcon::class) {}
+                    }
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderHeader() {
+        val icon = props.notation.transitiveParameter(props.name, iconParameter)?.asString()
+        val description = props.notation.transitiveParameter(props.name, descriptionParameter)?.asString() ?: ""
+
+        val iconWidth = 2.em
+
+        div {
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+
+//                    marginTop = (-1).em
+                    width = iconWidth
+                    height = headerHeight
+
+//                    backgroundColor = Color.mediumPurple
+                }
+
+                if (description.isNotEmpty()) {
+                    attrs {
+                        title = description
+                    }
+                }
+
+                if (icon != null) {
+                    styledDiv {
+                        css {
+                            float = Float.left
+                        }
+
+                        iconByName(this, icon)
+                    }
+                }
+            }
+
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+
+                    width = 100.pct.minus(iconWidth)
+                    height = headerHeight
+                }
+
+                styledDiv {
+                    css {
+                        float = Float.left
+                        width = 100.pct
+                    }
+
+                    child(NameEditor::class) {
+                        attrs {
+                            objectName = props.name
+                            notation = props.notation
+                        }
                     }
                 }
             }

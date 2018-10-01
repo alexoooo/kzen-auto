@@ -56,8 +56,51 @@ external class CancelIcon : Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 
+
+@JsName("Close")
+external class CloseIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("ArrowDownward")
 external class ArrowDownwardIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("OpenInNew")
+external class OpenInNewIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Http")
+external class HttpIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Keyboard")
+external class KeyboardIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("TouchApp")
+external class TouchAppIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Message")
+external class MessageIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Texture")
+external class TextureIcon : Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 
