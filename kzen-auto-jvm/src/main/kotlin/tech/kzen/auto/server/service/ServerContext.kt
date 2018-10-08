@@ -11,7 +11,6 @@ import tech.kzen.lib.common.notation.io.NotationMedia
 import tech.kzen.lib.common.notation.io.common.MapNotationMedia
 import tech.kzen.lib.common.notation.io.common.MultiNotationMedia
 import tech.kzen.lib.common.notation.repo.NotationRepository
-import tech.kzen.lib.server.notation.ClasspathNotationMedia
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.GradleLocator
 
@@ -25,7 +24,6 @@ object ServerContext {
     val fileLocator = GradleLocator()
     val fileMedia = FileNotationMedia(fileLocator)
 
-//    val classpathMedia = ClasspathNotationMedia()
     val bootMedia = BootNotationMedia()
 
     val notationMedia: NotationMedia = MultiNotationMedia(listOf(

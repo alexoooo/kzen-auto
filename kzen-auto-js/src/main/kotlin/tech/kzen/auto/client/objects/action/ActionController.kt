@@ -171,9 +171,14 @@ class ActionController(
                     }
 
                     for (e in objectMetadata.parameters) {
+                        if (e.key == iconParameter ||
+                                e.key == descriptionParameter) {
+                            continue
+                        }
+
                         val value =
                                 props.notation.transitiveParameter(props.name, e.key)
-                                        ?: continue
+                                ?: continue
 
                         styledDiv {
                             css {
