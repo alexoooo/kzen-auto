@@ -14,27 +14,28 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.edit.RenameObjectCommand
+import tech.kzen.lib.common.notation.model.ParameterConventions
 import tech.kzen.lib.common.notation.model.ProjectNotation
 
 
 @Suppress("unused")
 class NameEditor(
         props: NameEditor.Props
-) :
+):
         RComponent<NameEditor.Props, NameEditor.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var objectName: String,
             var notation: ProjectNotation
-    ) : RProps
+    ): RProps
 
 
     class State(
             var editing: Boolean,
             var objectName: String,
             var saving: Boolean
-    ) : RState
+    ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -56,12 +57,27 @@ class NameEditor(
 
 
     private fun saveAsync() {
-         async {
+        val adjustedName =
+                if (state.objectName.isBlank()) {
+                    NameConventions.randomDefault()
+                }
+                else {
+                    state.objectName
+                }
+
+        if (state.objectName != adjustedName) {
+            console.log("$$$$$$ saveAsync - '${state.objectName}' != '$adjustedName'")
+            setState {
+                objectName = adjustedName
+            }
+        }
+
+        async {
              // NB: not sure why this is necessary, without it state.saving doesn't show
              delay(1)
 
              ClientContext.commandBus.apply(RenameObjectCommand(
-                    props.objectName, state.objectName))
+                    props.objectName, adjustedName))
 
              // NB: no need to set saving = false, the component will un-mount
         }
@@ -98,6 +114,7 @@ class NameEditor(
 
     private fun onRename() {
         if (! isModified()) {
+            onCancel()
             return
         }
 
@@ -118,6 +135,18 @@ class NameEditor(
     //-----------------------------------------------------------------------------------------------------------------
     private fun isModified(): Boolean {
         return props.objectName != state.objectName
+    }
+
+
+    private fun title(): String {
+        val type = props.notation.getString(
+                props.objectName, ParameterConventions.isParameter)
+
+        return props
+                .notation
+                .transitiveParameter(props.objectName, "title")
+                ?.asString()
+                ?: type
     }
 
 
@@ -148,6 +177,8 @@ class NameEditor(
             }
 
             attrs {
+                title = "Edit name"
+
                 onClickFunction = {
                     onEdit()
                 }
@@ -162,15 +193,19 @@ class NameEditor(
                     fontWeight = FontWeight.bold
                 }
 
-                attrs {
-                    title = "Edit name"
-                }
+                val objectName =
+                        if (state.saving) {
+                            state.objectName
+                        }
+                        else {
+                            props.objectName
+                        }
 
-                if (state.saving) {
-                    +state.objectName
+                if (NameConventions.isDefault(objectName)) {
+                    +title()
                 }
                 else {
-                    +props.objectName
+                    +objectName
                 }
             }
         }
@@ -188,11 +223,17 @@ class NameEditor(
 
             child(MaterialTextField::class) {
                 attrs {
-                    label = "Name"
+//                    label = "Name"
                     fullWidth = true
                     autoFocus = true
 
-                    value = state.objectName
+                    value =
+                            if (NameConventions.isDefault(state.objectName)) {
+                                ""
+                            }
+                            else {
+                                state.objectName
+                            }
 
                     onChange = {
                         val target = it.target as HTMLInputElement

@@ -7,6 +7,8 @@ OpenBrowser:
   is: Action
   class: tech.kzen.auto.server.objects.OpenBrowser
   icon: OpenInNew
+  description: "Open a new browser window"
+  title: "Open browser"
 
 
 CloseBrowser:
@@ -14,6 +16,7 @@ CloseBrowser:
   is: Action
   class: tech.kzen.auto.server.objects.CloseBrowser
   icon: Close
+  title: "Close browser"
 
 
 GoTo:
@@ -22,6 +25,7 @@ GoTo:
   class: tech.kzen.auto.server.objects.GoTo
   icon: Http
   description: "Navigate to a new URL"
+  title: "Browse to URL"
   location: "https://www.google.com/"
   meta:
     location: String
@@ -32,6 +36,7 @@ LeftClick:
   is: Action
   class: tech.kzen.auto.server.objects.LeftClick
   icon: TouchApp
+  title: "Left mouse click"
   xpath: ""
   meta:
     xpath: String
@@ -42,6 +47,7 @@ SendKeys:
   is: Action
   class: tech.kzen.auto.server.objects.SendKeys
   icon: Keyboard
+  title: "Type on keyboard"
   xpath: ""
   text: ""
   meta:
@@ -53,6 +59,7 @@ FormSubmit:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.FormSubmit
+  title: "Submit a form"
   xpath: ""
   meta:
     xpath: String

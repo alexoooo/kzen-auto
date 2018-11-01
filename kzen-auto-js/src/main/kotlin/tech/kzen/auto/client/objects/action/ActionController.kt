@@ -31,7 +31,7 @@ class ActionController(
         const val iconParameter = "icon"
         const val descriptionParameter = "description"
 
-        val headerHeight = 3.5.em
+        val headerHeight = 2.5.em
     }
 
 

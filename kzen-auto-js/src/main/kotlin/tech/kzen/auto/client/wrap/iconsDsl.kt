@@ -4,6 +4,7 @@ import react.RBuilder
 import react.ReactElement
 
 
+// todo: factor out class name, e.g. to specify css like size
 fun iconByName(rBuilder: RBuilder, name: String): ReactElement? {
     return when (name) {
         "PlayArrow" ->

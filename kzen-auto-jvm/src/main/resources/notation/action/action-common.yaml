@@ -20,6 +20,7 @@ PrintlnAction:
   is: Action
   class: tech.kzen.auto.common.objects.PrintlnAction
   icon: Message
+  title: "Print line"
   message: "default message"
   meta:
     message: String

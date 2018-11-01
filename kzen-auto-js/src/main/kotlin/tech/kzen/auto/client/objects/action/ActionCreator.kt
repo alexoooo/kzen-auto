@@ -3,7 +3,6 @@ package tech.kzen.auto.client.objects.action
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
-import org.w3c.dom.HTMLInputElement
 import react.*
 import react.dom.*
 import tech.kzen.auto.client.service.ClientContext
@@ -36,7 +35,7 @@ class ActionCreator(
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
-        name = "new-action-name"
+        name = NameConventions.randomDefault()
 
         val types = actionTypes()
         if (types.isEmpty()) {
@@ -80,19 +79,19 @@ class ActionCreator(
             }
 
 
-            div {
-                +"Name: "
-                input (type = InputType.text) {
-                    attrs {
-                        value = state.name
-
-                        onChangeFunction = {
-                            val target = it.target as HTMLInputElement
-                            onNameChange(target.value)
-                        }
-                    }
-                }
-            }
+//            div {
+//                +"Name: "
+//                input (type = InputType.text) {
+//                    attrs {
+//                        value = state.name
+//
+//                        onChangeFunction = {
+//                            val target = it.target as HTMLInputElement
+//                            onNameChange(target.value)
+//                        }
+//                    }
+//                }
+//            }
 
 
             div {

@@ -1,9 +1,9 @@
 package tech.kzen.auto.server.api
 
-import kotlinx.coroutines.experimental.runBlocking
 import com.google.common.io.MoreFiles
 import com.google.common.io.Resources
 import com.google.common.primitives.Ints
+import kotlinx.coroutines.experimental.runBlocking
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
@@ -14,15 +14,9 @@ import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.context.ObjectGraphCreator
 import tech.kzen.lib.common.context.ObjectGraphDefiner
 import tech.kzen.lib.common.edit.*
-import tech.kzen.lib.common.notation.format.YamlNotationParser
-import tech.kzen.lib.common.notation.io.NotationMedia
-import tech.kzen.lib.common.notation.io.common.MultiNotationMedia
-import tech.kzen.lib.common.notation.model.*
-import tech.kzen.lib.common.notation.repo.NotationRepository
+import tech.kzen.lib.common.notation.model.ProjectPath
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.IoUtils
-import tech.kzen.lib.server.notation.*
-import tech.kzen.lib.server.notation.locate.GradleLocator
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -341,10 +335,10 @@ class RestHandler {
                 val resourceLocation: URI = root.resolve(relativePath.toString())
                 val relativeResource = resourceLocation.path.substring(1)
 
-                println("%%%%% looking at resource: $relativeResource")
+//                println("%%%%% looking at resource: $relativeResource")
                 val resourceUrl = Resources.getResource(relativeResource)
                 val body = Resources.toByteArray(resourceUrl)
-                println("%%%%% read resource: relativePath")
+//                println("%%%%% read resource: relativePath")
                 return body
             }
             catch (ignored: Exception) {}
@@ -358,7 +352,7 @@ class RestHandler {
             }
 
             val body = Files.readAllBytes(candidate)
-            println("%%%%% read file: ${candidate.toAbsolutePath()}")
+//            println("%%%%% read file: ${candidate.toAbsolutePath()}")
             return body
         }
 

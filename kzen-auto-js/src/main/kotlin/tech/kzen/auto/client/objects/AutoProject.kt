@@ -94,7 +94,7 @@ class AutoProject :
         }
 
         if (state.execution!!.frames.isEmpty()) {
-            console.log("!@#!#!@#!@#!@  starting execution")
+//            console.log("!@#!#!@#!@#!@  starting execution")
             async {
                 executionStateToFreshStart()
             }
