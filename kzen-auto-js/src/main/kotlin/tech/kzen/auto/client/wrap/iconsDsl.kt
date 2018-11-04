@@ -1,34 +1,41 @@
 package tech.kzen.auto.client.wrap
 
+import react.Component
 import react.RBuilder
+import react.RState
 import react.ReactElement
+import kotlin.reflect.KClass
 
 
-// todo: factor out class name, e.g. to specify css like size
-fun iconByName(rBuilder: RBuilder, name: String): ReactElement? {
+fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
     return when (name) {
         "PlayArrow" ->
-            rBuilder.child(PlayArrowIcon::class) {}
+            PlayArrowIcon::class
 
         "OpenInNew" ->
-            rBuilder.child(OpenInNewIcon::class) {}
+            OpenInNewIcon::class
 
         "Http" ->
-            rBuilder.child(HttpIcon::class) {}
+            HttpIcon::class
 
         "Keyboard" ->
-            rBuilder.child(KeyboardIcon::class) {}
+            KeyboardIcon::class
 
         "TouchApp" ->
-            rBuilder.child(TouchAppIcon::class) {}
+            TouchAppIcon::class
 
         "Close" ->
-            rBuilder.child(CloseIcon::class) {}
+            CloseIcon::class
 
         "Message" ->
-            rBuilder.child(MessageIcon::class) {}
+            MessageIcon::class
 
         else ->
-            rBuilder.child(TextureIcon::class) {}
+            TextureIcon::class
     }
+}
+
+
+fun RBuilder.iconByName(name: String): ReactElement? {
+    return child(iconClassForName(name)) {}
 }

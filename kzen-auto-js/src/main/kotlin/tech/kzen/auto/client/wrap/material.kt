@@ -21,8 +21,9 @@ external interface MaterialButtonProps : RProps {
     var id: String
     var variant: String
     var color: String
-    var style: ButtonStyle
+    var style: Json
     var size: String
+    var fullWidth: Boolean
     var onClick: () -> Unit
 }
 
@@ -51,6 +52,25 @@ external interface MaterialIconButtonProps : RProps {
 
 @JsName("Typography")
 external class MaterialTypography : Component<RProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+
+@JsName("AppBar")
+external class MaterialAppBar : Component<AppBarProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+external interface AppBarProps : RProps {
+    var position: String
+    var style: Json
+}
+
+
+@JsName("Toolbar")
+external class MaterialToolbar : Component<RProps, RState> {
     override fun render(): ReactElement?
 }
 

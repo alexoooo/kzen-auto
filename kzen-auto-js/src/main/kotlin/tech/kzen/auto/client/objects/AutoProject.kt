@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects
 
+import kotlinx.css.Color
 import kotlinx.css.Display
 import kotlinx.css.LinearDimension
 import kotlinx.css.em
@@ -15,8 +16,7 @@ import tech.kzen.auto.client.objects.action.ActionWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.ArrowDownwardIcon
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.auto.common.service.ExecutionManager
@@ -196,32 +196,67 @@ class AutoProject :
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-//        console.log("^^^^ state.commandError", state.commandError)
-        if (state.commandError != null) {
-            +"!! ERROR: ${state.commandError}"
-        }
+        styledDiv {
+            css {
+//                backgroundColor = Color("rgb(225, 225, 225)")
+            }
 
-        val projectNotation = state.notation
-        if (projectNotation == null) {
-            +"Loading..."
-        }
-        else {
-//            println("AutoProject - Available packages: ${projectNotation.packages.keys}")
-
-            val projectPackage: PackageNotation? =
-                    projectNotation.packages[NotationConventions.mainPath]
-
-            if (projectPackage == null) {
-                +"Initializing empty project..."
+            val projectNotation = state.notation
+            if (projectNotation == null) {
+                +"Loading..."
             }
             else {
-                println("AutoProject - the package - ${projectPackage.objects.keys}")
 
-                div(classes = "child") {
-                    steps(projectNotation, projectPackage)
+                child(MaterialAppBar::class) {
+                    attrs {
+                        position = "sticky"
+
+                        style = reactStyle {
+                            backgroundColor = Color.white
+                        }
+                    }
+
+                    child(MaterialToolbar::class) {
+                        child(MaterialTypography::class) {
+                            +"Kzen | "
+
+                            child(ActionCreator::class) {
+                                attrs {
+                                    notation = projectNotation
+                                    path = NotationConventions.mainPath
+                                }
+                            }
+                        }
+                    }
                 }
 
-                footer()
+                if (state.commandError != null) {
+                    +"!! ERROR: ${state.commandError}"
+                }
+
+                val projectPackage: PackageNotation? =
+                        projectNotation.packages[NotationConventions.mainPath]
+
+                if (projectPackage == null) {
+                    +"Initializing empty project..."
+                }
+                else {
+//                println("AutoProject - the package - ${projectPackage.objects.keys}")
+
+
+//                rgb(225, 225, 225)
+
+                    styledDiv {
+                        css {
+                            //                        marginTop = 4.em
+                            marginLeft = 1.em
+                        }
+
+                        steps(projectNotation, projectPackage)
+                    }
+
+                    footer()
+                }
             }
         }
     }
@@ -241,9 +276,34 @@ class AutoProject :
         div(classes = "actionColumn") {
             val next = state.execution?.next()
 
+            var isFirst = true
+
             for (e in projectPackage.objects) {
                 val status: ExecutionStatus? =
                         state.execution?.frames?.lastOrNull()?.values?.get(e.key)
+
+                if (! isFirst) {
+                    styledDiv {
+                        css {
+                            marginLeft = LinearDimension.auto
+                            marginRight = LinearDimension.auto
+                            display = Display.block
+
+                            width = 3.em
+//                        height = 2.em
+                            marginTop =  0.5.em
+                            marginBottom = 0.5.em
+                        }
+
+                        child(ArrowDownwardIcon::class) {
+                            attrs {
+                                style = reactStyle {
+                                    fontSize = 3.em
+                                }
+                            }
+                        }
+                    }
+                }
 
                 action(
                         e.key,
@@ -252,35 +312,7 @@ class AutoProject :
                         status,
                         next == e.key)
 
-                styledDiv {
-                    css {
-                        marginLeft = LinearDimension.auto
-                        marginRight = LinearDimension.auto
-                        display = Display.block
-
-                        width = 3.em
-//                        height = 2.em
-                        marginTop =  0.5.em
-                        marginBottom = 0.5.em
-                    }
-
-                    child(ArrowDownwardIcon::class) {
-                        attrs {
-                            style = reactStyle {
-                                fontSize = 3.em
-                            }
-                        }
-                    }
-                }
-
-//                img(src = "arrow-pointing-down.png", classes = "downArrow") {}
-            }
-
-            child(ActionCreator::class) {
-                attrs {
-                    notation = projectNotation
-                    path = NotationConventions.mainPath
-                }
+                isFirst = false
             }
         }
     }

@@ -1,12 +1,13 @@
 package tech.kzen.auto.client.objects.action
 
-import kotlinx.html.InputType
-import kotlinx.html.js.onChangeFunction
-import kotlinx.html.js.onClickFunction
+import kotlinx.coroutines.experimental.delay
+import kotlinx.css.em
 import react.*
-import react.dom.*
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.client.wrap.MaterialButton
+import tech.kzen.auto.client.wrap.iconClassForName
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.lib.common.edit.AddObjectCommand
 import tech.kzen.lib.common.notation.model.ParameterConventions
 import tech.kzen.lib.common.notation.model.ProjectNotation
@@ -35,7 +36,7 @@ class ActionCreator(
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
-        name = NameConventions.randomDefault()
+//        name = NameConventions.randomDefault()
 
         val types = actionTypes()
         if (types.isEmpty()) {
@@ -46,14 +47,15 @@ class ActionCreator(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onNameChange(newValue: String) {
-        setState {
-            name = newValue
-        }
-    }
+//    private fun onNameChange(newValue: String) {
+//        setState {
+//            name = newValue
+//        }
+//    }
 
     private fun onTypeChange(newValue: String) {
         setState {
+            name = NameConventions.randomDefault()
             type = newValue
         }
     }
@@ -63,6 +65,8 @@ class ActionCreator(
 //        console.log("ParameterEditor.onSubmit")
 
         async {
+            delay(1)
+
             ClientContext.commandBus.apply(AddObjectCommand.ofParent(
                     props.path,
                     state.name,
@@ -73,70 +77,39 @@ class ActionCreator(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        fieldSet {
-            legend {
-                +"Add New Step"
-            }
+        for (actionType in actionTypes()) {
+            child(MaterialButton::class) {
+                attrs {
+                    key = actionType
+                    variant = "outlined"
+                    size = "small"
 
-
-//            div {
-//                +"Name: "
-//                input (type = InputType.text) {
-//                    attrs {
-//                        value = state.name
-//
-//                        onChangeFunction = {
-//                            val target = it.target as HTMLInputElement
-//                            onNameChange(target.value)
-//                        }
-//                    }
-//                }
-//            }
-
-
-            div {
-                +"Type:"
-
-                br {}
-                select {
-                    attrs {
-                        value = state.type
-                        onChangeFunction = {
-                            val value: String = it.target!!.asDynamic().value as? String
-                                    ?: throw IllegalStateException("Archetype name string expected")
-
-                            onTypeChange(value)
-                        }
-
-                        // TODO: why is this necessary (or error otherwise)
-                        multiple = true
+                    onClick = {
+                        onTypeChange(actionType)
+                        onSubmit()
                     }
+                }
 
-                    for (actionType in actionTypes()) {
-                        option {
-                            attrs {
-                                value = actionType
-                                onChangeFunction = {
-                                    console.log("#!#@! option onChangeFunction", it.currentTarget)
-                                }
+                val title = props.notation
+                        .transitiveParameter(actionType, "title")
+                        ?.asString()
+                        ?: actionType
+
+                val icon = props.notation
+                        .transitiveParameter(actionType, ActionController.iconParameter)
+                        ?.asString()
+
+                if (icon != null) {
+                    child(iconClassForName(icon)) {
+                        attrs {
+                            style = reactStyle {
+                                marginRight = 0.25.em
                             }
-
-                            +actionType
                         }
                     }
                 }
-            }
 
-
-            div {
-                input (type = InputType.button) {
-                    attrs {
-                        value = "Add"
-                        onClickFunction = {
-                            onSubmit()
-                        }
-                    }
-                }
+                +title
             }
         }
     }
