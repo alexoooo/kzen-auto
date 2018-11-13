@@ -50,6 +50,8 @@ object ClientContext {
     val executionLoop = ExecutionLoop(
             executionManager)
 
+    val insertionManager = InsertionManager()
+
 
     //-----------------------------------------------------------------------------------------------------------------
     fun init() {

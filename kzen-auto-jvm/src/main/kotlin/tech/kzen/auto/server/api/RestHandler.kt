@@ -166,10 +166,15 @@ class RestHandler {
                 .queryParam("body")
                 .orElseThrow { IllegalArgumentException("object body required") }
 
+        val pathIndex: Int = serverRequest
+                .queryParam("index")
+                .map { Integer.parseInt(it) }
+                .orElseThrow { IllegalArgumentException("path index required") }
+
         val notation = ServerContext.yamlParser.parseObject(objectBody)
 
         return applyAndDigest(
-                AddObjectCommand(projectPath, objectName, notation))
+                AddObjectCommand(projectPath, objectName, notation, pathIndex))
     }
 
 

@@ -1,20 +1,20 @@
 package tech.kzen.auto.client.objects
 
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.LinearDimension
-import kotlinx.css.em
+import kotlinx.css.*
 import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
+import kotlinx.html.title
 import react.*
 import react.dom.*
 import styled.css
 import styled.styledDiv
+import styled.styledSpan
 import tech.kzen.auto.client.objects.action.ActionController
 import tech.kzen.auto.client.objects.action.ActionCreator
 import tech.kzen.auto.client.objects.action.ActionWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
+import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.exec.ExecutionModel
@@ -37,7 +37,8 @@ class AutoProject :
         RComponent<RProps, AutoProject.State>(),
         ModelManager.Subscriber,
         ExecutionManager.Subscriber,
-        CommandBus.Observer
+        CommandBus.Observer,
+        InsertionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
@@ -46,7 +47,8 @@ class AutoProject :
             var execution: ExecutionModel?,
 //            var runningAll: Boolean,
 //            var pending: Boolean = false,
-            var commandError: String?
+            var commandError: String?,
+            var creating: Boolean
     ) : RState
 
 
@@ -65,6 +67,7 @@ class AutoProject :
             ClientContext.modelManager.subscribe(this)
             ClientContext.executionManager.subscribe(this)
             ClientContext.commandBus.observe(this)
+            ClientContext.insertionManager.subscribe(this)
         }
     }
 
@@ -74,11 +77,12 @@ class AutoProject :
         ClientContext.modelManager.unsubscribe(this)
         ClientContext.executionManager.unsubscribe(this)
         ClientContext.commandBus.unobserve(this)
+        ClientContext.insertionManager.unSubscribe(this)
     }
 
 
     override fun componentDidUpdate(prevProps: RProps, prevState: AutoProject.State, snapshot: Any) {
-        console.log("AutoProject componentDidUpdate", state, prevState)
+//        console.log("AutoProject componentDidUpdate", state, prevState)
 
         if (state.notation != null &&
                 state.notation!!.packages[NotationConventions.mainPath] == null &&
@@ -134,7 +138,7 @@ class AutoProject :
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onCommandSuccess(command: ProjectCommand, event: ProjectEvent) {
-        console.log("%%%%%%% onCommandSuccess", command, event)
+//        console.log("%%%%%%% onCommandSuccess", command, event)
 
         setState {
             commandError = null
@@ -143,7 +147,7 @@ class AutoProject :
 
 
     override fun onCommandFailedInClient(command: ProjectCommand, cause: Throwable) {
-        console.log("%%%%%%% onCommandFailedInClient", command, cause)
+//        console.log("%%%%%%% onCommandFailedInClient", command, cause)
         setState {
             commandError = "${cause.message}"
         }
@@ -151,6 +155,30 @@ class AutoProject :
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun onSelected(actionName: String) {
+        setState {
+            creating = true
+        }
+    }
+
+
+    override fun onUnselected() {
+        setState {
+            creating = false
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onCreate(index: Int) {
+        async {
+            ClientContext.insertionManager.create(
+                    NotationConventions.mainPath,
+                    index)
+        }
+    }
+
+
     private fun onRefresh() {
         ClientContext.executionLoop.pause()
 
@@ -267,22 +295,51 @@ class AutoProject :
             projectNotation: ProjectNotation,
             projectPackage: PackageNotation
     ) {
-        h3 {
-            +"Steps (${projectPackage.objects.size}):"
+        if (projectPackage.objects.isEmpty()) {
+            h3 {
+                +"Empty script, please add steps using action bar (above)"
+            }
+
+            insertionPoint(0)
         }
+        else {
+            nonEmptySteps(projectNotation, projectPackage)
+        }
+    }
+
+
+    private fun RBuilder.nonEmptySteps(
+            projectNotation: ProjectNotation,
+            projectPackage: PackageNotation
+    ) {
+        insertionPoint(0)
 
         val graphMetadata = state.metadata!!
 
         div(classes = "actionColumn") {
             val next = state.execution?.next()
 
-            var isFirst = true
-
+            var index = 0
             for (e in projectPackage.objects) {
                 val status: ExecutionStatus? =
                         state.execution?.frames?.lastOrNull()?.values?.get(e.key)
 
-                if (! isFirst) {
+                action(
+                        e.key,
+                        projectNotation,
+                        graphMetadata,
+                        status,
+                        next == e.key)
+
+                if (index < projectPackage.objects.size - 1) {
+                    styledDiv {
+                        css {
+                            marginTop =  0.5.em
+                            float = Float.left
+                        }
+                        insertionPoint(index + 1)
+                    }
+
                     styledDiv {
                         css {
                             marginLeft = LinearDimension.auto
@@ -305,14 +362,37 @@ class AutoProject :
                     }
                 }
 
-                action(
-                        e.key,
-                        projectNotation,
-                        graphMetadata,
-                        status,
-                        next == e.key)
+                index++
+            }
+        }
 
-                isFirst = false
+        insertionPoint(projectPackage.objects.size)
+    }
+
+
+    private fun RBuilder.insertionPoint(index: Int) {
+        styledSpan {
+            attrs {
+                title = "Insert action here"
+            }
+
+            child(MaterialIconButton::class) {
+                attrs {
+                    style = reactStyle {
+                        if (! state.creating) {
+                            opacity = 0
+                            cursor = Cursor.default
+                        }
+
+//                    marginLeft = 1.em
+                    }
+
+                    onClick = {
+                        onCreate(index)
+                    }
+                }
+
+                child(AddCircleOutlineIcon::class) {}
             }
         }
     }

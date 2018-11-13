@@ -1,14 +1,13 @@
 package tech.kzen.auto.client.objects.action
 
-import kotlinx.coroutines.experimental.delay
+import kotlinx.css.Color
 import kotlinx.css.em
 import react.*
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.util.async
+import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.wrap.MaterialButton
 import tech.kzen.auto.client.wrap.iconClassForName
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.lib.common.edit.AddObjectCommand
 import tech.kzen.lib.common.notation.model.ParameterConventions
 import tech.kzen.lib.common.notation.model.ProjectNotation
 import tech.kzen.lib.common.notation.model.ProjectPath
@@ -17,20 +16,22 @@ import tech.kzen.lib.common.notation.model.ProjectPath
 @Suppress("unused")
 class ActionCreator(
         props: ActionCreator.Props
-) :
-        RComponent<ActionCreator.Props, ActionCreator.State>(props)
+):
+        RComponent<ActionCreator.Props, ActionCreator.State>(props),
+        InsertionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var notation: ProjectNotation,
-            var path: ProjectPath
-    ) : RProps
+            var path: ProjectPath/*,
+            var onClick: () -> Unit*/
+    ): RProps
 
 
     class State(
             var name: String,
-            var type: String
-    ) : RState
+            var type: String?
+    ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -38,40 +39,63 @@ class ActionCreator(
 //        console.log("ParameterEditor | State.init - ${props.name}")
 //        name = NameConventions.randomDefault()
 
-        val types = actionTypes()
-        if (types.isEmpty()) {
-            throw IllegalStateException("Must provide at least one action type")
-        }
-        type = types[0]
+//        val types = actionTypes()
+//        if (types.isEmpty()) {
+//            throw IllegalStateException("Must provide at least one action type")
+//        }
+//        type = types[0]
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private fun onNameChange(newValue: String) {
-//        setState {
-//            name = newValue
-//        }
-//    }
+    override fun componentDidMount() {
+        ClientContext.insertionManager.subscribe(this)
+    }
 
-    private fun onTypeChange(newValue: String) {
+
+    override fun componentWillUnmount() {
+        ClientContext.insertionManager.unSubscribe(this)
+    }
+
+
+    override fun onSelected(actionName: String) {
         setState {
             name = NameConventions.randomDefault()
-            type = newValue
+            type = actionName
         }
     }
 
 
-    private fun onSubmit() {
-//        console.log("ParameterEditor.onSubmit")
-
-        async {
-            delay(1)
-
-            ClientContext.commandBus.apply(AddObjectCommand.ofParent(
-                    props.path,
-                    state.name,
-                    state.type))
+    override fun onUnselected() {
+        setState {
+            type = null
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+//    private fun onTypeChange(newValue: String) {
+//        setState {
+//            name = NameConventions.randomDefault()
+//            type = newValue
+//        }
+//    }
+
+    private fun onUnSelect() {
+        ClientContext.insertionManager.clearSelection()
+    }
+
+
+    private fun onSelect(actionType: String) {
+        ClientContext.insertionManager.setSelected(actionType)
+//        async {
+//            delay(1)
+//
+//            ClientContext.commandBus.apply(AddObjectCommand.ofParent(
+//                    props.path,
+//                    state.name,
+//                    state.type))
+//        }
     }
 
 
@@ -85,8 +109,18 @@ class ActionCreator(
                     size = "small"
 
                     onClick = {
-                        onTypeChange(actionType)
-                        onSubmit()
+                        if (state.type == actionType) {
+                            onUnSelect()
+                        }
+                        else {
+                            onSelect(actionType)
+                        }
+                    }
+
+                    style = reactStyle {
+                        if (state.type == actionType) {
+                            backgroundColor = Color.blue.lighten(50).withAlpha(0.5)
+                        }
                     }
                 }
 

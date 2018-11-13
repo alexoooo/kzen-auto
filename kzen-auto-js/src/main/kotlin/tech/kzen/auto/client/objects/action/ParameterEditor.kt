@@ -17,7 +17,7 @@ import tech.kzen.lib.common.notation.model.ScalarParameterNotation
 @Suppress("unused")
 class ParameterEditor(
         props: ParameterEditor.Props
-) :
+):
         RComponent<ParameterEditor.Props, ParameterEditor.State>(props),
         ExecutionManager.Subscriber
 {
@@ -26,7 +26,7 @@ class ParameterEditor(
             var objectName: String,
             var parameterPath: String,
             var value: String
-    ) : RProps
+    ): RProps
 
 
     class State(
@@ -34,7 +34,7 @@ class ParameterEditor(
 //            var submitDebounce: (Unit) -> Unit
             var submitDebounce: FunctionWithDebounce,
             var pending: Boolean
-    ) : RState
+    ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------

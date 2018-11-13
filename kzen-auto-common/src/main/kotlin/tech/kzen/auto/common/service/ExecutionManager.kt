@@ -51,7 +51,7 @@ class ExecutionManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(projectModel: ProjectModel, event: ProjectEvent?) {
+    override suspend fun handleModel(autoModel: ProjectModel, event: ProjectEvent?) {
         if (event == null) {
             return
         }
@@ -142,7 +142,7 @@ class ExecutionManager(
     ): Boolean {
         if (delayMillis > 0) {
             println("ExecutionManager | %%%% delay($delayMillis)")
-            delay(delayMillis)
+            delay(delayMillis.toLong())
         }
         willExecute(objectName)
 
@@ -150,7 +150,7 @@ class ExecutionManager(
 
         if (delayMillis > 0) {
             println("ExecutionManager | delay($delayMillis)")
-            delay(delayMillis)
+            delay(delayMillis.toLong())
         }
 
         var success = false

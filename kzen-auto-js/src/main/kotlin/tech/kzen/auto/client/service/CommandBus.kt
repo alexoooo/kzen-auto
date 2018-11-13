@@ -87,30 +87,41 @@ class CommandBus(
     private suspend fun applyRest(command: ProjectCommand): Digest =
         when (command) {
             is CreatePackageCommand ->
-                restClient.createPackage(command.projectPath)
+                restClient.createPackage(
+                        command.projectPath)
+
 
             is DeletePackageCommand ->
-                restClient.deletePackage(command.projectPath)
+                restClient.deletePackage(
+                        command.projectPath)
 
 
             is AddObjectCommand -> {
                 val deparsed = notationParser.deparseObject(command.body)
-                restClient.addCommand(command.projectPath, command.objectName, deparsed)
+                restClient.addCommand(
+                        command.projectPath, command.objectName, deparsed, command.index)
             }
 
+
             is RemoveObjectCommand ->
-                restClient.removeCommand(command.objectName)
+                restClient.removeCommand(
+                        command.objectName)
+
 
             is ShiftObjectCommand ->
-                restClient.shiftCommand(command.objectName, command.indexInPackage)
+                restClient.shiftCommand(
+                        command.objectName, command.indexInPackage)
+
 
             is RenameObjectCommand ->
-                restClient.renameCommand(command.objectName, command.newName)
+                restClient.renameCommand(
+                        command.objectName, command.newName)
 
 
             is EditParameterCommand -> {
                 val deparsed = notationParser.deparseParameter(command.parameterValue)
-                restClient.editCommand(command.objectName, command.parameterPath, deparsed)
+                restClient.editCommand(
+                        command.objectName, command.parameterPath, deparsed)
             }
 
 

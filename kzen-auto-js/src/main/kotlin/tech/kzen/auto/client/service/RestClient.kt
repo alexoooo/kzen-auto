@@ -57,14 +57,18 @@ class RestClient(
     suspend fun addCommand(
             projectPath: ProjectPath,
             objectName: String,
-            deparsedBody: String
+            deparsedBody: String,
+            index: Int
     ): Digest {
         val encodedPath = encodeURIComponent(projectPath.relativeLocation)
         val encodedName = encodeURIComponent(objectName)
         val encodedBody = encodeURIComponent(deparsedBody)
 
-        val digest = httpGet(
-                "$baseUrl/command/add?path=$encodedPath&name=$encodedName&body=$encodedBody")
+        val digest = httpGet("$baseUrl/command/add" +
+                "?path=$encodedPath" +
+                "&name=$encodedName" +
+                "&body=$encodedBody" +
+                "&index=$index")
         return Digest.decode(digest)
 
     }

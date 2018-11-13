@@ -21,6 +21,12 @@ external interface IconProps : RProps {
 }
 
 
+@JsName("AddCircleOutline")
+external class AddCircleOutlineIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("Delete")
 external class DeleteIcon : Component<IconProps, RState> {
     override fun render(): ReactElement?

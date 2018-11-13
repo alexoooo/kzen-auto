@@ -297,7 +297,7 @@ class ActionController(
         val reactStyles = reactStyle {
             val statusColor = when (props.status) {
                 ExecutionStatus.Pending ->
-                    Color.blue.lighten(75)
+                    Color.blue.lighten(60)
 
                 ExecutionStatus.Running ->
                     Color.yellow
