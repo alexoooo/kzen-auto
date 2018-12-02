@@ -19,7 +19,7 @@ class ParameterEditor(
         props: ParameterEditor.Props
 ):
         RComponent<ParameterEditor.Props, ParameterEditor.State>(props),
-        ExecutionManager.Subscriber
+        ExecutionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
@@ -64,12 +64,12 @@ class ParameterEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun beforeExecution(executionModel: ExecutionModel) {
+    override suspend fun beforeExecution() {
         flush()
     }
 
 
-    override suspend fun afterExecution(executionModel: ExecutionModel) {}
+    override suspend fun onExecutionModel(executionModel: ExecutionModel) {}
 
 
     //-----------------------------------------------------------------------------------------------------------------

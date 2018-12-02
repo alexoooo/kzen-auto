@@ -4,6 +4,7 @@ import tech.kzen.auto.common.api.AutoAction
 import tech.kzen.auto.server.service.ServerContext
 
 
+@Suppress("unused")
 class GoTo(
         var location: String
 ) : AutoAction {

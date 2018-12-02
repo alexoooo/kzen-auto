@@ -6,6 +6,7 @@ import tech.kzen.auto.common.api.AutoAction
 import tech.kzen.auto.server.service.ServerContext
 
 
+@Suppress("unused")
 class SendKeys(
         var xpath: String,
         var text: String

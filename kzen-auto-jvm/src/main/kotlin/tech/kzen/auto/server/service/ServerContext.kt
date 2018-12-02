@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.service
 
+import kotlinx.coroutines.experimental.runBlocking
+import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.server.notation.BootNotationMedia
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
@@ -17,14 +19,14 @@ import tech.kzen.lib.server.notation.locate.GradleLocator
 
 object ServerContext {
     //-----------------------------------------------------------------------------------------------------------------
-    val notationMediaCache = MapNotationMedia()
-    val notationMetadataReader = NotationMetadataReader()
+    private val notationMediaCache = MapNotationMedia()
+    private val notationMetadataReader = NotationMetadataReader()
 
 
-    val fileLocator = GradleLocator()
-    val fileMedia = FileNotationMedia(fileLocator)
+    private val fileLocator = GradleLocator()
+    private val fileMedia = FileNotationMedia(fileLocator)
 
-    val bootMedia = BootNotationMedia()
+    private val bootMedia = BootNotationMedia()
 
     val notationMedia: NotationMedia = MultiNotationMedia(listOf(
             fileMedia, bootMedia))
@@ -42,9 +44,24 @@ object ServerContext {
             notationMedia,
             notationMetadataReader)
 
+    private val actionExecutor = ModelActionExecutor(modelManager)
+
+    val executionManager = ExecutionManager(
+            EmptyExecutionInitializer,
+            actionExecutor)
+
 
     //-----------------------------------------------------------------------------------------------------------------
     val webDriverRepo = WebDriverOptionDao()
     val webDriverInstaller = WebDriverInstaller()
     val webDriverContext = WebDriverContext()
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        runBlocking {
+            modelManager.observe(executionManager)
+        }
+    }
 }

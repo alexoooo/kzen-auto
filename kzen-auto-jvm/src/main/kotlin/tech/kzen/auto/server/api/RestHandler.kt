@@ -9,14 +9,18 @@ import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
+import tech.kzen.auto.common.api.ActionExecution
 import tech.kzen.auto.common.api.AutoAction
+import tech.kzen.auto.common.exec.ExecutionModel
+import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.context.ObjectGraphCreator
 import tech.kzen.lib.common.context.ObjectGraphDefiner
 import tech.kzen.lib.common.edit.*
+import tech.kzen.lib.common.notation.NotationConventions
 import tech.kzen.lib.common.notation.model.ProjectPath
 import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.common.util.IoUtils
+import tech.kzen.lib.platform.IoUtils
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -261,30 +265,74 @@ class RestHandler {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun actionModel(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val executionModel: ExecutionModel = runBlocking {
+            ServerContext.executionManager.executionModel()
+        }
+
+        val asCollection = ExecutionModel.toCollection(executionModel)
+
+//        val response = executionModel
+//                .frames
+//                .joinToString(",", "[", "]") { frame ->
+//                    val valuesResponse = frame
+//                            .values
+//                            .entries
+//                            .joinToString(",","{", "}") { entry ->
+//                                "\"${entry.key}\": \"${entry.value.name}\""
+//                            }
+//
+//                    "{\"path\": \"\"}"
+//                }
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just(asCollection))
+    }
+
+
+    fun actionStart(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val digest = runBlocking {
+            val projectModel = ServerContext.modelManager.projectModel()
+
+            ServerContext.executionManager.start(
+                    NotationConventions.mainPath, projectModel)
+        }
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just(digest.encode()))
+    }
+
+
+    fun actionReset(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val digest = runBlocking {
+            ServerContext.executionManager.reset()
+        }
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just(digest.encode()))
+    }
+
+
     fun actionPerform(serverRequest: ServerRequest): Mono<ServerResponse> {
         val objectName: String = serverRequest
                 .queryParam("name")
                 .orElseThrow { IllegalArgumentException("object name required") }
 
-        runBlocking {
-            val projectModel = ServerContext.modelManager.projectModel()
-
-            val graphDefinition = ObjectGraphDefiner.define(
-                    projectModel.projectNotation, projectModel.graphMetadata)
-
-            val objectGraph = ObjectGraphCreator.createGraph(
-                    graphDefinition, projectModel.graphMetadata)
-
-            val instance = objectGraph.get(objectName)
-
-            val action = instance as AutoAction
-
-            action.perform()
+        val execution: ActionExecution = runBlocking {
+            ServerContext.executionManager.execute(objectName)
         }
+
+        val response = "{" +
+                "\"status\": \"${execution.status}\"," +
+                "\"digest\": \"${execution.digest.encode()}\"" +
+                "}"
 
         return ServerResponse
                 .ok()
-                .body(Mono.just("success"))
+                .body(Mono.just(response))
     }
 
 

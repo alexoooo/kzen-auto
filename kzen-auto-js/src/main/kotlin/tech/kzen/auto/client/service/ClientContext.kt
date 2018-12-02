@@ -10,23 +10,23 @@ import tech.kzen.lib.common.notation.io.NotationMedia
 import tech.kzen.lib.common.notation.io.NotationParser
 import tech.kzen.lib.common.notation.io.common.MapNotationMedia
 import tech.kzen.lib.common.notation.repo.NotationRepository
-import tech.kzen.lib.platform.ModuleRegistry
+import tech.kzen.lib.platform.client.ModuleRegistry
 import kotlin.browser.window
 
 
 object ClientContext {
     //-----------------------------------------------------------------------------------------------------------------
     val baseUrl = window.location.pathname.substringBeforeLast("/")
-    val restClient = RestClient(baseUrl)
+    val restClient = ClientRestApi(baseUrl)
 
-    val restNotationMedia: NotationMedia = RestNotationMedia(restClient)
-    val notationMediaCache = MapNotationMedia()
+    private val restNotationMedia: NotationMedia = RestNotationMedia(restClient)
+    private val notationMediaCache = MapNotationMedia()
 
-    val notationParser: NotationParser = YamlNotationParser()
+    private val notationParser: NotationParser = YamlNotationParser()
 
     val notationMetadataReader = NotationMetadataReader()
 
-    val clientRepository = NotationRepository(
+    private val clientRepository = NotationRepository(
             notationMediaCache, notationParser)
 
     val modelManager = ModelManager(
@@ -41,11 +41,16 @@ object ClientContext {
             restClient,
             notationParser)
 
-    val restExecutor = RestActionExecutor(
+
+    private val restExecutionInitializer = ClientRestExecutionInitializer(
+            restClient)
+
+    private val restActionExecutor = ClientRestActionExecutor(
             restClient)
 
     val executionManager = ExecutionManager(
-            restExecutor)
+            restExecutionInitializer,
+            restActionExecutor)
 
     val executionLoop = ExecutionLoop(
             executionManager)
@@ -60,7 +65,7 @@ object ClientContext {
         ModuleRegistry.add(kzenAutoJs)
 
         async {
-            modelManager.subscribe(executionManager)
+            modelManager.observe(executionManager)
             executionManager.subscribe(executionLoop)
         }
     }

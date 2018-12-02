@@ -16,18 +16,18 @@ class ModelManager(
         private var notationMetadataReader: NotationMetadataReader
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Subscriber {
+    interface Observer {
         suspend fun handleModel(autoModel: ProjectModel, event: ProjectEvent?)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val subscribers = mutableSetOf<Subscriber>()
+    private val subscribers = mutableSetOf<Observer>()
     private var mostRecent: ProjectModel? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun subscribe(subscriber: Subscriber) {
+    suspend fun observe(subscriber: Observer) {
         subscribers.add(subscriber)
 
 //        if (mostRecent != null) {
@@ -38,7 +38,7 @@ class ModelManager(
     }
 
 
-    fun unsubscribe(subscriber: Subscriber) {
+    fun unobserve(subscriber: Observer) {
         subscribers.remove(subscriber)
     }
 

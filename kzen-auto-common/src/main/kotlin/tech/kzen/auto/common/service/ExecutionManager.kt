@@ -1,51 +1,63 @@
 package tech.kzen.auto.common.service
 
 import kotlinx.coroutines.experimental.delay
+import tech.kzen.auto.common.api.ActionExecution
 import tech.kzen.auto.common.exec.ExecutionFrame
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.lib.common.edit.ObjectRenamedEvent
 import tech.kzen.lib.common.edit.ProjectEvent
 import tech.kzen.lib.common.notation.model.ProjectPath
+import tech.kzen.lib.common.util.Digest
 
 
 class ExecutionManager(
+        private val executionInitializer: ExecutionInitializer,
         private val actionExecutor: ActionExecutor
-) : ModelManager.Subscriber {
+): ModelManager.Observer {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Subscriber {
-        suspend fun beforeExecution(executionModel: ExecutionModel)
-        suspend fun afterExecution(executionModel: ExecutionModel)
+    interface Observer {
+        suspend fun beforeExecution()
+        suspend fun onExecutionModel(executionModel: ExecutionModel)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val subscribers = mutableSetOf<Subscriber>()
-    private val model: ExecutionModel = ExecutionModel(mutableListOf())
-//    private var projectModel: ProjectModel? = null
+    private val subscribers = mutableSetOf<Observer>()
+    private var modelOrNull: ExecutionModel? = null
+
+
+    // TODO: could be lazy?
+    private suspend fun modelOrInit(): ExecutionModel {
+        if (modelOrNull == null) {
+            modelOrNull = executionInitializer.initialExecutionModel()
+        }
+        return modelOrNull!!
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun subscribe(subscriber: Subscriber) {
+    suspend fun subscribe(subscriber: Observer) {
         subscribers.add(subscriber)
-        subscriber.afterExecution(model)
+        subscriber.onExecutionModel(modelOrInit())
     }
 
 
-    fun unsubscribe(subscriber: Subscriber) {
+    fun unsubscribe(subscriber: Observer) {
         subscribers.remove(subscriber)
     }
 
 
-    private suspend fun publishAfterExecution() {
+    private suspend fun publishBeforeExecution() {
         for (subscriber in subscribers) {
-            subscriber.afterExecution(model)
+            subscriber.beforeExecution()
         }
     }
 
-    private suspend fun publishBeforeExecution() {
+
+    private suspend fun publishExecutionModel(model: ExecutionModel) {
         for (subscriber in subscribers) {
-            subscriber.beforeExecution(model)
+            subscriber.onExecutionModel(model)
         }
     }
 
@@ -56,6 +68,8 @@ class ExecutionManager(
             return
         }
 
+        val model = modelOrInit()
+
         val changed = when (event) {
             is ObjectRenamedEvent ->
                 model.rename(event.objectName, event.newName)
@@ -65,20 +79,69 @@ class ExecutionManager(
         }
 
         if (changed) {
-            publishAfterExecution()
+            publishExecutionModel(model)
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun reset() {
-        model.frames.clear()
-
-        publishAfterExecution()
+    suspend fun willExecute(objectName: String) {
+        updateStatus(objectName, ExecutionStatus.Running)
     }
 
 
-    suspend fun start(main: ProjectPath, projectModel: ProjectModel) {
+    suspend fun didExecute(objectName: String, execution: ActionExecution) {
+        updateStatus(objectName, execution.status)
+    }
+
+
+//    private suspend fun updateStatus(objectName: String, execution: ActionExecution) {
+    private suspend fun updateStatus(objectName: String, status: ExecutionStatus) {
+        val model = modelOrInit()
+        val existingFrame = model.findLast(objectName)
+
+        val upsertFrame = existingFrame
+                ?: model.frames.last()
+
+        upsertFrame.values[objectName] = status
+
+        publishExecutionModel(model)
+    }
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun isExecuting(): Boolean {
+        return modelOrInit().containsStatus(ExecutionStatus.Running)
+    }
+
+
+    suspend fun executionModel(): ExecutionModel {
+        return modelOrInit()
+    }
+
+
+    suspend fun readExecutionModel(prototype: ExecutionModel) {
+        val model = modelOrInit()
+        model.frames.clear()
+        model.frames.addAll(prototype.frames)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun reset(): Digest {
+        val model = modelOrInit()
+
+        model.frames.clear()
+
+        publishExecutionModel(model)
+
+        return model.digest()
+    }
+
+
+    suspend fun start(main: ProjectPath, projectModel: ProjectModel): Digest {
+        val model = modelOrInit()
         model.frames.clear()
 
         val values = mutableMapOf<String, ExecutionStatus>()
@@ -95,53 +158,18 @@ class ExecutionManager(
             model.frames.add(frame)
         }
 
-        publishAfterExecution()
+        publishExecutionModel(model)
+
+        return model.digest()
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    suspend fun willExecute(objectName: String) {
-        updateStatus(objectName, ExecutionStatus.Running)
-    }
-
-
-    suspend fun didExecute(objectName: String, success: Boolean) {
-        val status =
-                if (success) {
-                    ExecutionStatus.Success
-                }
-                else {
-                    ExecutionStatus.Failed
-                }
-
-        updateStatus(objectName, status)
-    }
-
-
-    private suspend fun updateStatus(objectName: String, status: ExecutionStatus) {
-        val existingFrame = model.findLast(objectName)
-
-        val upsertFrame = existingFrame
-                ?: model.frames.last()
-
-        upsertFrame.values[objectName] = status
-
-        publishAfterExecution()
-    }
-
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    fun isExecuting(): Boolean =
-        model.containsStatus(ExecutionStatus.Running)
 
 
     suspend fun execute(
             objectName: String,
             delayMillis: Int = 0
-    ): Boolean {
+    ): ActionExecution {
         if (delayMillis > 0) {
-            println("ExecutionManager | %%%% delay($delayMillis)")
+//            println("ExecutionManager | %%%% delay($delayMillis)")
             delay(delayMillis.toLong())
         }
         willExecute(objectName)
@@ -149,7 +177,7 @@ class ExecutionManager(
         publishBeforeExecution()
 
         if (delayMillis > 0) {
-            println("ExecutionManager | delay($delayMillis)")
+//            println("ExecutionManager | delay($delayMillis)")
             delay(delayMillis.toLong())
         }
 
@@ -162,8 +190,21 @@ class ExecutionManager(
             println("#$%#$%#$ got exception: $e")
         }
 
-        didExecute(objectName, success)
+        val status =
+                if (success) {
+                    ExecutionStatus.Success
+                }
+                else {
+                    ExecutionStatus.Failed
+                }
 
-        return success
+        val digest = modelOrInit().digest()
+
+        val execution = ActionExecution(
+                status, digest)
+
+        didExecute(objectName, execution)
+
+        return execution
     }
 }

@@ -6,15 +6,15 @@ import tech.kzen.lib.common.util.Digest
 
 
 class RestNotationMedia(
-        private val restClient: RestClient
+        private val restClient: ClientRestApi
 ) : NotationMedia {
     override suspend fun scan(): Map<ProjectPath, Digest> {
-        return restClient.scanQuery()
+        return restClient.scanNotationPaths()
     }
 
 
     override suspend fun read(location: ProjectPath): ByteArray {
-        return restClient.readQuery(location)
+        return restClient.readNotation(location)
     }
 
 

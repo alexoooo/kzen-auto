@@ -1,9 +1,29 @@
 package tech.kzen.auto.common.exec
 
+import tech.kzen.lib.common.util.Digest
 
+
+// TODO: should use persistent data structure
 data class ExecutionModel(
         val frames: MutableList<ExecutionFrame>
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        fun toCollection(model: ExecutionModel): List<Map<String, Any>> {
+            return model
+                    .frames
+                    .map { ExecutionFrame.toCollection(it) }
+        }
+
+
+        fun fromCollection(collection: List<Map<String, Any>>): ExecutionModel {
+            return ExecutionModel(collection
+                    .map { ExecutionFrame.fromCollection(it) }
+                    .toMutableList())
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun rename(from: String, to: String): Boolean {
         var renamedAny = false
@@ -56,5 +76,22 @@ data class ExecutionModel(
         }
 
         return null
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun digest(): Digest {
+        val digest = Digest.Streaming()
+
+        digest.addInt(frames.size)
+
+        for (frames in frames) {
+            for (e in frames.values) {
+                digest.addUtf8(e.key)
+                digest.addInt(e.value.ordinal)
+            }
+        }
+
+        return digest.digest()
     }
 }

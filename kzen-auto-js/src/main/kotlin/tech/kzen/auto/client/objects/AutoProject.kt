@@ -35,8 +35,8 @@ import tech.kzen.lib.common.notation.model.ProjectNotation
 @Suppress("unused")
 class AutoProject :
         RComponent<RProps, AutoProject.State>(),
-        ModelManager.Subscriber,
-        ExecutionManager.Subscriber,
+        ModelManager.Observer,
+        ExecutionManager.Observer,
         CommandBus.Observer,
         InsertionManager.Observer
 {
@@ -64,7 +64,7 @@ class AutoProject :
     override fun componentDidMount() {
 //        println("AutoProject - Subscribed")
         async {
-            ClientContext.modelManager.subscribe(this)
+            ClientContext.modelManager.observe(this)
             ClientContext.executionManager.subscribe(this)
             ClientContext.commandBus.observe(this)
             ClientContext.insertionManager.subscribe(this)
@@ -74,7 +74,7 @@ class AutoProject :
 
     override fun componentWillUnmount() {
 //        println("AutoProject - Un-subscribed")
-        ClientContext.modelManager.unsubscribe(this)
+        ClientContext.modelManager.unobserve(this)
         ClientContext.executionManager.unsubscribe(this)
         ClientContext.commandBus.unobserve(this)
         ClientContext.insertionManager.unSubscribe(this)
@@ -126,10 +126,10 @@ class AutoProject :
 
 
 
-    override suspend fun beforeExecution(executionModel: ExecutionModel) {}
+    override suspend fun beforeExecution() {}
 
 
-    override suspend fun afterExecution(executionModel: ExecutionModel) {
+    override suspend fun onExecutionModel(executionModel: ExecutionModel) {
         setState {
             execution = executionModel
         }
@@ -217,7 +217,17 @@ class AutoProject :
                 state.notation!!,
                 state.metadata!!)
 
-        ClientContext.executionManager.start(NotationConventions.mainPath, projectModel)
+        val expectedDigest = ClientContext.executionManager.start(
+                NotationConventions.mainPath, projectModel)
+
+        val actualDigest = ClientContext.restClient.startExecution()
+
+        console.log("^^^ executionStateToFreshStart", expectedDigest.encode(), actualDigest.encode())
+
+        if (expectedDigest != actualDigest) {
+            console.log("Digest mismatch, refreshing")
+            onRefresh()
+        }
     }
 
 

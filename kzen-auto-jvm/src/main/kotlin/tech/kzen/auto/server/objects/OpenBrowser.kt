@@ -5,6 +5,7 @@ import tech.kzen.auto.common.api.AutoAction
 import tech.kzen.auto.server.service.ServerContext
 
 
+@Suppress("unused")
 class OpenBrowser: AutoAction {
     override fun perform() {
         if (ServerContext.webDriverContext.present()) {

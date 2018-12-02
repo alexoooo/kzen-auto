@@ -10,7 +10,7 @@ import tech.kzen.lib.common.util.Digest
 class CommandBus(
         private val clientRepository: NotationRepository,
         private val modelManager: ModelManager,
-        private val restClient: RestClient,
+        private val restClient: ClientRestApi,
         private val notationParser: NotationParser
 ) {
     //-----------------------------------------------------------------------------------------------------------------

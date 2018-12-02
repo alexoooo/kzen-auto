@@ -2,17 +2,23 @@ package tech.kzen.auto.client.service
 
 import tech.kzen.auto.client.util.encodeURIComponent
 import tech.kzen.auto.client.util.httpGet
+import tech.kzen.auto.common.api.ActionExecution
+import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.exec.ExecutionModel
+import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.lib.common.notation.model.ProjectPath
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.platform.IoUtils
+import tech.kzen.lib.platform.client.ClientJsonUtils
 import kotlin.js.Json
 
 
-class RestClient(
+class ClientRestApi(
         private val baseUrl: String
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun scanQuery(): Map<ProjectPath, Digest> {
-        val scanText = httpGet("$baseUrl/scan")
+    suspend fun scanNotationPaths(): Map<ProjectPath, Digest> {
+        val scanText = httpGet("$baseUrl${CommonRestApi.scan}")
 
         val builder = mutableMapOf<ProjectPath, Digest>()
         // NB: using transform just to iterate the Json, is there a better way to do this?
@@ -26,13 +32,12 @@ class RestClient(
     }
 
 
-    suspend fun readQuery(location: ProjectPath): ByteArray {
+    suspend fun readNotation(location: ProjectPath): ByteArray {
         @Suppress("UNUSED_VARIABLE")
-        val response = httpGet("$baseUrl/notation/${location.relativeLocation}")
+        val response = httpGet("$baseUrl${CommonRestApi.notationPrefix}" +
+                location.relativeLocation)
 
-        // from kotlinx.serialization String.toUtf8Bytes
-        val blck = js("unescape(encodeURIComponent(response))")
-        return (blck as String).toList().map { it.toByte() }.toByteArray()
+        return IoUtils.stringToUtf8(response)
     }
 
 
@@ -47,8 +52,11 @@ class RestClient(
         val encodedParameter = encodeURIComponent(parameterPath)
         val encodedValue = encodeURIComponent(deparsedParameter)
 
-        val digest = httpGet(
-                "$baseUrl/command/edit?name=$encodedName&parameter=$encodedParameter&value=$encodedValue")
+        val digest = httpGet("$baseUrl${CommonRestApi.commandEdit}" +
+                "?name=$encodedName" +
+                "&parameter=$encodedParameter" +
+                "&value=$encodedValue")
+
         return Digest.decode(digest)
     }
 
@@ -64,7 +72,7 @@ class RestClient(
         val encodedName = encodeURIComponent(objectName)
         val encodedBody = encodeURIComponent(deparsedBody)
 
-        val digest = httpGet("$baseUrl/command/add" +
+        val digest = httpGet("$baseUrl${CommonRestApi.commandAdd}" +
                 "?path=$encodedPath" +
                 "&name=$encodedName" +
                 "&body=$encodedBody" +
@@ -78,7 +86,8 @@ class RestClient(
             objectName: String
     ): Digest {
         val encodedName = encodeURIComponent(objectName)
-        val digest = httpGet("$baseUrl/command/remove?name=$encodedName")
+        val digest = httpGet("$baseUrl${CommonRestApi.commandRemove}" +
+                "?name=$encodedName")
         return Digest.decode(digest)
     }
 
@@ -90,7 +99,8 @@ class RestClient(
         val encodedName = encodeURIComponent(objectName)
         val encodedIndex = encodeURIComponent(indexInPackage.toString())
 
-        val digest = httpGet("$baseUrl/command/shift?name=$encodedName&index=$encodedIndex")
+        val digest = httpGet("$baseUrl${CommonRestApi.commandShift}" +
+                "?name=$encodedName&index=$encodedIndex")
         return Digest.decode(digest)
     }
 
@@ -102,7 +112,8 @@ class RestClient(
         val encodedName = encodeURIComponent(objectName)
         val encodedNewName = encodeURIComponent(newName)
 
-        val digest = httpGet("$baseUrl/command/rename?name=$encodedName&to=$encodedNewName")
+        val digest = httpGet("$baseUrl${CommonRestApi.commandRename}" +
+                "?name=$encodedName&to=$encodedNewName")
         return Digest.decode(digest)
     }
 
@@ -114,7 +125,8 @@ class RestClient(
     ): Digest {
         val encodedPath = encodeURIComponent(projectPath.relativeLocation)
 
-        val digest = httpGet("$baseUrl/command/create?path=$encodedPath")
+        val digest = httpGet("$baseUrl${CommonRestApi.commandCreate}" +
+                "?path=$encodedPath")
         return Digest.decode(digest)
     }
 
@@ -124,17 +136,65 @@ class RestClient(
     ): Digest {
         val encodedPath = encodeURIComponent(projectPath.relativeLocation)
 
-        val digest = httpGet("$baseUrl/command/delete?path=$encodedPath")
+        val digest = httpGet("$baseUrl${CommonRestApi.commandDelete}" +
+                "?path=$encodedPath")
         return Digest.decode(digest)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    suspend fun executionModel(): ExecutionModel {
+        val responseText = httpGet("$baseUrl${CommonRestApi.actionModel}")
+
+        val responseJson = JSON.parse<Array<Json>>(responseText)
+        val responseCollection = ClientJsonUtils.toList(responseJson)
+
+//        val frames = mutableListOf<ExecutionFrame>()
+//        for (responseFrame in responseFrames) {
+//
+//            val nameToUrl = mutableMapOf<String, String>()
+//            for (property in responseFrame.getOwnPropertyNames()) {
+//                nameToUrl[property] = responseFrame[property] as String
+//            }
+//
+//            frames.add(ExecutionFrame(
+//                    ))
+//        }
+
+        @Suppress("UNCHECKED_CAST")
+        return ExecutionModel.fromCollection(responseCollection as List<Map<String, Any>>)
+    }
+
+
+    suspend fun startExecution(): Digest {
+        val responseText = httpGet("$baseUrl${CommonRestApi.actionStart}")
+        return Digest.decode(responseText)
+    }
+
+
+    suspend fun resetExecution(
+            objectName: String
+    ): Digest {
+        val responseText = httpGet("$baseUrl${CommonRestApi.actionReset}")
+        return Digest.decode(responseText)
+    }
+
+
     suspend fun performAction(
             objectName: String
-    ) {
+    ): ActionExecution {
         val encodedName = encodeURIComponent(objectName)
 
-        httpGet("$baseUrl/action/perform?name=$encodedName")
+        val responseText = httpGet("$baseUrl${CommonRestApi.actionPerform}" +
+                "?name=$encodedName")
+
+        val responseJson = JSON.parse<Json>(responseText)
+
+        val status = responseJson["status"] as String
+        val digest = responseJson["digest"] as String
+
+        return ActionExecution(
+                ExecutionStatus.valueOf(status),
+                Digest.decode(digest))
     }
 }

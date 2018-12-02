@@ -7,17 +7,17 @@ class ExecutionLoop(
         private val executionManager: ExecutionManager,
 //        private val delayMillis: Int = 1000
         private val delayMillis: Int = 0
-) : ExecutionManager.Subscriber {
+) : ExecutionManager.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     private var running: Boolean = false
     private var executionModel: ExecutionModel? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun beforeExecution(executionModel: ExecutionModel) {}
+    override suspend fun beforeExecution() {}
 
 
-    override suspend fun afterExecution(executionModel: ExecutionModel) {
+    override suspend fun onExecutionModel(executionModel: ExecutionModel) {
         this.executionModel = executionModel
 
         if (! running) {
@@ -58,7 +58,7 @@ class ExecutionLoop(
     private suspend fun run(
             next: String
     ) {
-        // NB: this will trigger ExecutionManager.Subscriber afterExecution method above
+        // NB: this will trigger ExecutionManager.Observer onExecutionModel method above
         executionManager.execute(next, delayMillis)
     }
 
