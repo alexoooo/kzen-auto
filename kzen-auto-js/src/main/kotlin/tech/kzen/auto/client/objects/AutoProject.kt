@@ -6,9 +6,7 @@ import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import react.*
 import react.dom.*
-import styled.css
-import styled.styledDiv
-import styled.styledSpan
+import styled.*
 import tech.kzen.auto.client.objects.action.ActionController
 import tech.kzen.auto.client.objects.action.ActionCreator
 import tech.kzen.auto.client.objects.action.ActionWrapper
@@ -256,12 +254,27 @@ class AutoProject :
 
                     child(MaterialToolbar::class) {
                         child(MaterialTypography::class) {
-                            +"Kzen | "
+                            styledSpan {
+                                css {
+//                                    display = Display.inlineBlock
+                                    float = Float.left
+                                }
 
-                            child(ActionCreator::class) {
-                                attrs {
-                                    notation = projectNotation
-                                    path = NotationConventions.mainPath
+                                renderLogo()
+                            }
+
+
+                            styledSpan {
+                                css {
+                                    marginLeft = 1.em
+//                                    display = Display.inlineBlock
+                                }
+
+                                child(ActionCreator::class) {
+                                    attrs {
+                                        notation = projectNotation
+                                        path = NotationConventions.mainPath
+                                    }
                                 }
                             }
                         }
@@ -280,10 +293,6 @@ class AutoProject :
                 }
                 else {
 //                println("AutoProject - the package - ${projectPackage.objects.keys}")
-
-
-//                rgb(225, 225, 225)
-
                     styledDiv {
                         css {
                             //                        marginTop = 4.em
@@ -294,6 +303,25 @@ class AutoProject :
                     }
 
                     footer()
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderLogo() {
+        styledA {
+            attrs {
+                href = "/"
+            }
+
+            styledImg(src = "logo.png") {
+                css {
+                    height = 35.px
+                }
+
+                attrs {
+                    title = "Kzen (home)"
                 }
             }
         }
@@ -449,7 +477,7 @@ class AutoProject :
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.footer() {
-        // TODO: compensate for footer
+        // TODO: switch to FAB
         br {}
         br {}
         br {}
@@ -459,9 +487,9 @@ class AutoProject :
             runAll()
             reset()
 
-            +" | "
-
-            refresh()
+//            +" | "
+//
+//            refresh()
         }
     }
 
