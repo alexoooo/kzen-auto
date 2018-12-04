@@ -13,29 +13,29 @@ class WebDriverOptionDao {
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Linux,
                     CpuArchitecture.X86_64,
-                    "2.41",
-                    URI("https://chromedriver.storage.googleapis.com/2.41/chromedriver_linux64.zip")
+                    "2.44",
+                    URI("https://chromedriver.storage.googleapis.com/2.44/chromedriver_linux64.zip")
             ),
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_32,
-                    "2.41",
-                    URI("https://chromedriver.storage.googleapis.com/2.41/chromedriver_win32.zip")
+                    "2.44",
+                    URI("https://chromedriver.storage.googleapis.com/2.44/chromedriver_win32.zip")
             ),
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_64,
-                    "2.41",
-                    URI("https://chromedriver.storage.googleapis.com/2.41/chromedriver_win32.zip")
+                    "2.44",
+                    URI("https://chromedriver.storage.googleapis.com/2.44/chromedriver_win32.zip")
             ),
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.OsX,
                     CpuArchitecture.X86_64,
-                    "2.41",
-                    URI("https://chromedriver.storage.googleapis.com/2.41/chromedriver_mac64.zip")
+                    "2.44",
+                    URI("https://chromedriver.storage.googleapis.com/2.44/chromedriver_mac64.zip")
             ))
 
 
@@ -50,7 +50,7 @@ class WebDriverOptionDao {
                     it.cpuArchitecture == architecture
         }
 
-        check(allVersions.isNotEmpty(), {"Not available: $browser / $os / $architecture"} )
+        check(allVersions.isNotEmpty()) {"Not available: $browser / $os / $architecture"}
 
         return allVersions.last()
     }

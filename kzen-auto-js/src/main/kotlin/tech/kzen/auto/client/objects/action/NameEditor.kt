@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.action
 
-import kotlinx.coroutines.experimental.delay
+import kotlinx.coroutines.delay
 import kotlinx.css.*
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.title

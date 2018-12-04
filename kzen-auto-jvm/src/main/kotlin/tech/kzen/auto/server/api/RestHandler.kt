@@ -3,7 +3,7 @@ package tech.kzen.auto.server.api
 import com.google.common.io.MoreFiles
 import com.google.common.io.Resources
 import com.google.common.primitives.Ints
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse

@@ -19,7 +19,10 @@ apply plugin: 'io.spring.dependency-management'
 
 dependencies {
     expectedBy project(':kzen-auto-common')
-    compile project(":kzen-auto-js")
+    
+    // NB: jvm module must compile before js, so that we can processResources into public (see below)
+    //      see: https://stackoverflow.com/q/53587141/1941359
+    // compile project(":kzen-auto-js")
 
     compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: kotlinVersion
     compile("org.jetbrains.kotlin:kotlin-reflect")

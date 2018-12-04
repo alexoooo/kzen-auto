@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.service
 
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.server.notation.BootNotationMedia

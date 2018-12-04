@@ -173,7 +173,7 @@ class ClientRestApi(
 
 
     suspend fun resetExecution(
-            objectName: String
+//            objectName: String
     ): Digest {
         val responseText = httpGet("$baseUrl${CommonRestApi.actionReset}")
         return Digest.decode(responseText)

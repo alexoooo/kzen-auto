@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.service
 
-import kotlinx.coroutines.experimental.delay
+import kotlinx.coroutines.delay
 import tech.kzen.auto.common.api.ActionExecution
 import tech.kzen.auto.common.exec.ExecutionFrame
 import tech.kzen.auto.common.exec.ExecutionModel

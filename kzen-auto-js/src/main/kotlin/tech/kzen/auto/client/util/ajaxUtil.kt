@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.util
 
 import org.w3c.xhr.XMLHttpRequest
-import kotlin.coroutines.experimental.*
+import kotlin.coroutines.*
 import kotlin.js.Promise
 
 
@@ -33,24 +33,24 @@ suspend fun httpGet(url: String): String = suspendCoroutine { c ->
 fun <T> async(x: suspend () -> T): Promise<T> {
     return Promise { resolve, reject ->
         x.startCoroutine(object : Continuation<T> {
-//            override fun resumeWith(result: Result<T>) {
-//                if (result.isSuccess) {
-//                    resolve(result.getOrThrow())
-//                }
-//                else {
-//                    reject(result.exceptionOrNull()!!)
-//                }
-//            }
+            override fun resumeWith(result: Result<T>) {
+                if (result.isSuccess) {
+                    resolve(result.getOrThrow())
+                }
+                else {
+                    reject(result.exceptionOrNull()!!)
+                }
+            }
 //
             override val context = EmptyCoroutineContext
 
-            override fun resume(value: T) {
-                resolve(value)
-            }
-
-            override fun resumeWithException(exception: Throwable) {
-                reject(exception)
-            }
+//            override fun resume(value: T) {
+//                resolve(value)
+//            }
+//
+//            override fun resumeWithException(exception: Throwable) {
+//                reject(exception)
+//            }
         })
     }
 }
