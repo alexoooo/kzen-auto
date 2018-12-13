@@ -52,14 +52,18 @@ object ServerContext {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private val downloadManager = DownloadManager()
+
     val webDriverRepo = WebDriverOptionDao()
-    val webDriverInstaller = WebDriverInstaller()
+    val webDriverInstaller = WebDriverInstaller(downloadManager)
     val webDriverContext = WebDriverContext()
 
 
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
+        downloadManager.initialize()
+
         runBlocking {
             modelManager.observe(executionManager)
         }

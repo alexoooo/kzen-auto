@@ -14,7 +14,7 @@ buildscript {
 
 subprojects {
     group = 'tech.kzen.auto'
-    version = '0.3.0'
+    version = '0.3.1'
 
     repositories {
         mavenLocal()
@@ -25,11 +25,5 @@ subprojects {
         maven {
             url 'http://dl.bintray.com/kotlin/kotlin-js-wrappers'
         }
-//        maven {
-//            url 'https://jitpack.io'
-//        }
-
-//        maven { url 'http://dl.bintray.com/kotlin/kotlin-eap-1.2' }
-//        maven { url "https://kotlin.bintray.com/kotlinx" }
     }
 }

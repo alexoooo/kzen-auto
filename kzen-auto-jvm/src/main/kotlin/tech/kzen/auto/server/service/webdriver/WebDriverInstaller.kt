@@ -2,6 +2,7 @@ package tech.kzen.auto.server.service.webdriver
 
 import com.google.common.io.ByteStreams
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.server.service.DownloadManager
 import tech.kzen.auto.server.service.webdriver.model.BrowserLauncher
 import tech.kzen.auto.server.service.webdriver.model.DownloadFormat
 import tech.kzen.auto.server.service.webdriver.model.WebDriverOption
@@ -16,7 +17,9 @@ import java.util.zip.ZipInputStream
 
 
 // see: https://github.com/Ardesco/selenium-standalone-server-plugin
-class WebDriverInstaller {
+class WebDriverInstaller(
+        private val downloadManager: DownloadManager
+) {
     companion object {
         private val logger = LoggerFactory.getLogger(WebDriverInstaller::class.java)!!
 
@@ -70,23 +73,9 @@ class WebDriverInstaller {
             destinationDir: Path,
             browserLauncher: BrowserLauncher
     ) {
-        val bytes = download(download)
+        val bytes = downloadManager.download(download)
         val format = DownloadFormat.parse(download)
         extract(bytes, destinationDir, format, browserLauncher)
-    }
-
-
-    private fun download(download: URI): ByteArray {
-        logger.info("downloading: {}", download)
-
-        val downloadBytes = download
-                .toURL()
-                .openStream()
-                .use { ByteStreams.toByteArray(it) }
-
-        logger.info("download complete: {}", downloadBytes.size)
-
-        return downloadBytes
     }
 
 
