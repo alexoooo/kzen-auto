@@ -8,7 +8,7 @@ import java.net.URI
 
 
 class WebDriverOptionDao {
-    val options: List<WebDriverOption> = listOf(
+    private val options: List<WebDriverOption> = listOf(
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Linux,

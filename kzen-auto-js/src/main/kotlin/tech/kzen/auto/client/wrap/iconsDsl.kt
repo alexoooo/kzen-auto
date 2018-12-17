@@ -30,6 +30,9 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "Message" ->
             MessageIcon::class
 
+        "Timer" ->
+            TimerIcon::class
+
         else ->
             TextureIcon::class
     }

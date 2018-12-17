@@ -111,4 +111,10 @@ external class TextureIcon : Component<IconProps, RState> {
 }
 
 
+@JsName("Timer")
+external class TimerIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 

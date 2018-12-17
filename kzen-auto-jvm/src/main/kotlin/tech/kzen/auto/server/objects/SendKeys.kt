@@ -10,8 +10,8 @@ import tech.kzen.auto.server.service.ServerContext
 class SendKeys(
         var xpath: String,
         var text: String
-) : AutoAction {
-    override fun perform() {
+): AutoAction {
+    override suspend fun perform() {
         // https://stackoverflow.com/questions/44455269/gmail-login-using-selenium-webdriver-in-java
 
         val driver = ServerContext.webDriverContext.get()

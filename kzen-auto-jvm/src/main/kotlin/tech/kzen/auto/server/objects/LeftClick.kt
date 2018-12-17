@@ -9,8 +9,8 @@ import tech.kzen.auto.server.service.ServerContext
 @Suppress("unused")
 class LeftClick(
         var xpath: String
-) : AutoAction {
-    override fun perform() {
+): AutoAction {
+    override suspend fun perform() {
         val driver = ServerContext.webDriverContext.get()
 
         val element: WebElement =

@@ -26,12 +26,18 @@ PrintlnAction:
     message: String
 
 
-#PrintlnAction:
+#Double:
+#  abstract: true
+#  class: kotlin.Double
+#
+#
+#SleepAction:
 #  abstract: true
 #  is: Action
-#  class: tech.kzen.auto.server.objects.PrintlnAction
-#  message: "default message"
+#  class: tech.kzen.auto.common.objects.SleepAction
+#  icon: Timer
+#  title: "Sleep"
+#  seconds: 1.0
 #  meta:
-#    message: String
-
+#    seconds: Double
 
