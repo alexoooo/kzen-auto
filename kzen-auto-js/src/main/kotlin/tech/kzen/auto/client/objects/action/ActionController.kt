@@ -14,13 +14,18 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.exec.ExecutionStatus
-import tech.kzen.lib.common.edit.RemoveObjectCommand
-import tech.kzen.lib.common.edit.ShiftObjectCommand
+import tech.kzen.lib.common.api.model.AttributeName
+import tech.kzen.lib.common.api.model.AttributePath
+import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.api.model.ObjectPath
+import tech.kzen.lib.common.metadata.model.AttributeMetadata
 import tech.kzen.lib.common.metadata.model.GraphMetadata
-import tech.kzen.lib.common.metadata.model.ParameterMetadata
-import tech.kzen.lib.common.notation.model.ParameterNotation
-import tech.kzen.lib.common.notation.model.ProjectNotation
-import tech.kzen.lib.common.notation.model.ScalarParameterNotation
+import tech.kzen.lib.common.notation.edit.RemoveObjectCommand
+import tech.kzen.lib.common.notation.edit.ShiftObjectCommand
+import tech.kzen.lib.common.notation.model.AttributeNotation
+import tech.kzen.lib.common.notation.model.GraphNotation
+import tech.kzen.lib.common.notation.model.PositionIndex
+import tech.kzen.lib.common.notation.model.ScalarAttributeNotation
 import tech.kzen.lib.platform.ClassNames
 
 
@@ -31,8 +36,8 @@ class ActionController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        const val iconParameter = "icon"
-        const val descriptionParameter = "description"
+        val iconAttribute = AttributePath.ofAttribute(AttributeName("icon"))
+        val descriptionAttribute = AttributePath.ofAttribute(AttributeName("description"))
 
         const val defaultRunIcon = "PlayArrowIcon"
         const val defaultRunDescription = "Run"
@@ -43,8 +48,8 @@ class ActionController(
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var name: String,
-            var notation: ProjectNotation,
+            var objectLocation: ObjectLocation,
+            var notation: GraphNotation,
             var metadata: GraphMetadata,
 
             var status: ExecutionStatus?,
@@ -66,8 +71,8 @@ class ActionController(
 
 
         override fun isApplicableTo(
-                objectName: String,
-                projectNotation: ProjectNotation,
+                objectName: ObjectPath,
+                projectNotation: GraphNotation,
                 graphMetadata: GraphMetadata
         ): Boolean {
             return true
@@ -76,15 +81,15 @@ class ActionController(
 
         override fun render(
                 rBuilder: RBuilder,
-                objectName: String,
-                projectNotation: ProjectNotation,
+                location: ObjectLocation,
+                projectNotation: GraphNotation,
                 graphMetadata: GraphMetadata,
                 executionStatus: ExecutionStatus?,
                 nextToExecute: Boolean
         ): ReactElement {
             return rBuilder.child(ActionController::class) {
                 attrs {
-                    name = objectName
+                    objectLocation = location
 
                     notation = projectNotation
                     metadata = graphMetadata
@@ -112,7 +117,7 @@ class ActionController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRun() {
         async {
-            ClientContext.executionManager.execute(props.name)
+            ClientContext.executionManager.execute(props.objectLocation)
         }
     }
 
@@ -120,31 +125,31 @@ class ActionController(
     private fun onRemove() {
         async {
             ClientContext.commandBus.apply(RemoveObjectCommand(
-                    props.name))
+                    props.objectLocation))
         }
     }
 
 
     private fun onShiftUp() {
-        val packagePath = props.notation.findPackage(props.name)
-        val packageNotation = props.notation.packages[packagePath]!!
-        val index = packageNotation.indexOf(props.name)
+        val packagePath = props.objectLocation.bundlePath
+        val packageNotation = props.notation.bundleNotations.values[packagePath]!!
+        val index = packageNotation.indexOf(props.objectLocation.objectPath)
 
         async {
             ClientContext.commandBus.apply(ShiftObjectCommand(
-                    props.name, index - 1))
+                    props.objectLocation, PositionIndex(index.value - 1)))
         }
     }
 
 
     private fun onShiftDown() {
-        val packagePath = props.notation.findPackage(props.name)
-        val packageNotation = props.notation.packages[packagePath]!!
-        val index = packageNotation.indexOf(props.name)
+        val packagePath = props.objectLocation.bundlePath
+        val packageNotation = props.notation.bundleNotations.values[packagePath]!!
+        val index = packageNotation.indexOf(props.objectLocation.objectPath)
 
         async {
             ClientContext.commandBus.apply(ShiftObjectCommand(
-                    props.name, index + 1))
+                    props.objectLocation, PositionIndex(index.value + 1)))
         }
     }
 
@@ -292,7 +297,7 @@ class ActionController(
 
 
     private fun RBuilder.renderCard() {
-        val objectMetadata = props.metadata.objectMetadata[props.name]!!
+        val objectMetadata = props.metadata.objectMetadata.get(props.objectLocation)
 
         val reactStyles = reactStyle {
             val statusColor = when (props.status) {
@@ -332,14 +337,17 @@ class ActionController(
                         marginBottom = (-1.5).em
                     }
 
-                    for (e in objectMetadata.parameters) {
-                        if (e.key == iconParameter ||
-                                e.key == descriptionParameter) {
+                    for (e in objectMetadata.attributes) {
+                        if (e.key == iconAttribute.attribute ||
+                                e.key == descriptionAttribute.attribute) {
                             continue
                         }
 
+                        val keyAttributePath = AttributePath.ofAttribute(e.key)
+
                         val value =
-                                props.notation.transitiveParameter(props.name, e.key)
+                                props.notation.transitiveAttribute(
+                                        props.objectLocation, keyAttributePath)
                                 ?: continue
 
                         styledDiv {
@@ -358,7 +366,7 @@ class ActionController(
 
     private fun RBuilder.renderHeader() {
         val description = props.notation
-                .transitiveParameter(props.name, descriptionParameter)
+                .transitiveAttribute(props.objectLocation, descriptionAttribute)
                 ?.asString()
                 ?: defaultRunDescription
 
@@ -406,7 +414,7 @@ class ActionController(
 
                     child(NameEditor::class) {
                         attrs {
-                            objectName = props.name
+                            objectLocation = props.objectLocation
                             notation = props.notation
                         }
                     }
@@ -418,7 +426,7 @@ class ActionController(
 
     private fun RBuilder.renderRunIcon() {
         val icon = props.notation
-                .transitiveParameter(props.name, iconParameter)
+                .transitiveAttribute(props.objectLocation, iconAttribute)
                 ?.asString()
                 ?: defaultRunIcon
 
@@ -447,37 +455,37 @@ class ActionController(
 
 
     private fun RBuilder.renderParameter(
-            parameterName: String,
-            parameterMetadata: ParameterMetadata,
-            parameterValue: ParameterNotation
+            name: AttributeName,
+            attributeMetadata: AttributeMetadata,
+            attributeValue: AttributeNotation
     ) {
-        when (parameterValue) {
-            is ScalarParameterNotation -> {
+        when (attributeValue) {
+            is ScalarAttributeNotation -> {
                 val scalarValue =
-                        if (parameterMetadata.type?.className == ClassNames.kotlinString) {
-                            parameterValue.value.toString()
+                        if (attributeMetadata.type?.className == ClassNames.kotlinString) {
+                            attributeValue.value.toString()
                         }
                         else {
-                            parameterValue.value
+                            attributeValue.value
                         }
 
                 when (scalarValue) {
                     is String ->
-                        child(ParameterEditor::class) {
+                        child(AttributeEditor::class) {
                             attrs {
-                                objectName = props.name
-                                parameterPath = parameterName
+                                objectName = props.objectLocation
+                                attributeName = name
                                 value = scalarValue
                             }
                         }
 
                     else ->
-                        +"[[ ${parameterValue.value} ]]"
+                        +"[[ ${attributeValue.value} ]]"
                 }
             }
 
             else ->
-                +"$parameterValue"
+                +"$attributeValue"
         }
     }
 }

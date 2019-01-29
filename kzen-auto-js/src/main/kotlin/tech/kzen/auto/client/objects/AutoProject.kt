@@ -20,13 +20,16 @@ import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.common.service.ProjectModel
-import tech.kzen.lib.common.edit.CreatePackageCommand
-import tech.kzen.lib.common.edit.ProjectCommand
-import tech.kzen.lib.common.edit.ProjectEvent
+import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.api.model.ObjectPath
 import tech.kzen.lib.common.metadata.model.GraphMetadata
 import tech.kzen.lib.common.notation.NotationConventions
-import tech.kzen.lib.common.notation.model.PackageNotation
-import tech.kzen.lib.common.notation.model.ProjectNotation
+import tech.kzen.lib.common.notation.edit.CreateBundleCommand
+import tech.kzen.lib.common.notation.edit.NotationCommand
+import tech.kzen.lib.common.notation.edit.NotationEvent
+import tech.kzen.lib.common.notation.model.BundleNotation
+import tech.kzen.lib.common.notation.model.GraphNotation
 
 
 
@@ -40,7 +43,7 @@ class AutoProject :
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
-            var notation: ProjectNotation?,
+            var notation: GraphNotation?,
             var metadata: GraphMetadata?,
             var execution: ExecutionModel?,
 //            var runningAll: Boolean,
@@ -83,8 +86,9 @@ class AutoProject :
 //        console.log("AutoProject componentDidUpdate", state, prevState)
 
         if (state.notation != null &&
-                state.notation!!.packages[NotationConventions.mainPath] == null &&
-                (prevState.notation == null || prevState.notation!!.packages[NotationConventions.mainPath] != null)) {
+                state.notation!!.bundleNotations.values[NotationConventions.mainPath] == null &&
+                (prevState.notation == null ||
+                        prevState.notation!!.bundleNotations.values[NotationConventions.mainPath] != null)) {
             async {
                 createMain()
             }
@@ -106,14 +110,14 @@ class AutoProject :
 
 
     private suspend fun createMain() {
-        ClientContext.commandBus.apply(CreatePackageCommand(NotationConventions.mainPath))
+        ClientContext.commandBus.apply(CreateBundleCommand(NotationConventions.mainPath))
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(autoModel: ProjectModel, event: ProjectEvent?) {
+    override suspend fun handleModel(autoModel: ProjectModel, event: NotationEvent?) {
         println("AutoProject - && handled - " +
-                "${autoModel.projectNotation.packages[NotationConventions.mainPath]?.objects?.keys}")
+                "${autoModel.projectNotation.bundleNotations.values[NotationConventions.mainPath]?.objects?.values?.keys}")
 
         setState {
             notation = autoModel.projectNotation
@@ -135,7 +139,7 @@ class AutoProject :
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onCommandSuccess(command: ProjectCommand, event: ProjectEvent) {
+    override fun onCommandSuccess(command: NotationCommand, event: NotationEvent) {
 //        console.log("%%%%%%% onCommandSuccess", command, event)
 
         setState {
@@ -144,7 +148,7 @@ class AutoProject :
     }
 
 
-    override fun onCommandFailedInClient(command: ProjectCommand, cause: Throwable) {
+    override fun onCommandFailedInClient(command: NotationCommand, cause: Throwable) {
 //        console.log("%%%%%%% onCommandFailedInClient", command, cause)
         setState {
             commandError = "${cause.message}"
@@ -153,7 +157,7 @@ class AutoProject :
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onSelected(actionName: String) {
+    override fun onSelected(action: ObjectLocation) {
         setState {
             creating = true
         }
@@ -220,7 +224,7 @@ class AutoProject :
 
         val actualDigest = ClientContext.restClient.startExecution()
 
-        console.log("^^^ executionStateToFreshStart", expectedDigest.encode(), actualDigest.encode())
+        console.log("^^^ executionStateToFreshStart", expectedDigest.asString(), actualDigest.asString())
 
         if (expectedDigest != actualDigest) {
             console.log("Digest mismatch, refreshing")
@@ -285,8 +289,8 @@ class AutoProject :
                     +"!! ERROR: ${state.commandError}"
                 }
 
-                val projectPackage: PackageNotation? =
-                        projectNotation.packages[NotationConventions.mainPath]
+                val projectPackage: BundleNotation? =
+                        projectNotation.bundleNotations.values[NotationConventions.mainPath]
 
                 if (projectPackage == null) {
                     +"Initializing empty project..."
@@ -299,7 +303,7 @@ class AutoProject :
                             marginLeft = 1.em
                         }
 
-                        steps(projectNotation, projectPackage)
+                        steps(projectNotation, projectPackage, NotationConventions.mainPath)
                     }
 
                     footer()
@@ -330,10 +334,11 @@ class AutoProject :
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.steps(
-            projectNotation: ProjectNotation,
-            projectPackage: PackageNotation
+            projectNotation: GraphNotation,
+            projectPackage: BundleNotation,
+            bundlePath: BundlePath
     ) {
-        if (projectPackage.objects.isEmpty()) {
+        if (projectPackage.objects.values.isEmpty()) {
             h3 {
                 +"Empty script, please add steps using action bar (above)"
             }
@@ -341,14 +346,15 @@ class AutoProject :
             insertionPoint(0)
         }
         else {
-            nonEmptySteps(projectNotation, projectPackage)
+            nonEmptySteps(projectNotation, projectPackage, bundlePath)
         }
     }
 
 
     private fun RBuilder.nonEmptySteps(
-            projectNotation: ProjectNotation,
-            projectPackage: PackageNotation
+            projectNotation: GraphNotation,
+            projectPackage: BundleNotation,
+            bundlePath: BundlePath
     ) {
         insertionPoint(0)
 
@@ -358,18 +364,20 @@ class AutoProject :
             val next = state.execution?.next()
 
             var index = 0
-            for (e in projectPackage.objects) {
+            for (e in projectPackage.objects.values) {
                 val status: ExecutionStatus? =
                         state.execution?.frames?.lastOrNull()?.values?.get(e.key)
 
-                action(
-                        e.key,
+                val keyLocation = ObjectLocation(bundlePath, e.key)
+
+                action(keyLocation,
                         projectNotation,
                         graphMetadata,
                         status,
-                        next == e.key)
+                        next?.bundlePath == bundlePath &&
+                                next.objectPath == e.key)
 
-                if (index < projectPackage.objects.size - 1) {
+                if (index < projectPackage.objects.values.size - 1) {
                     styledDiv {
                         css {
                             marginTop =  0.5.em
@@ -404,7 +412,7 @@ class AutoProject :
             }
         }
 
-        insertionPoint(projectPackage.objects.size)
+        insertionPoint(projectPackage.objects.values.size)
     }
 
 
@@ -437,8 +445,8 @@ class AutoProject :
 
 
     private fun RBuilder.action(
-            objectName: String,
-            projectNotation: ProjectNotation,
+            objectLocation: ObjectLocation,
+            projectNotation: GraphNotation,
             graphMetadata: GraphMetadata,
             executionStatus: ExecutionStatus?,
             nextToExecute: Boolean
@@ -448,12 +456,12 @@ class AutoProject :
                 ActionController.Wrapper()
 
         span {
-            key = objectName
+            key = objectLocation.toReference().asString()
 
             actionUiWrapper.render(
                     this,
 
-                    objectName,
+                    objectLocation,
                     projectNotation,
                     graphMetadata,
                     executionStatus,

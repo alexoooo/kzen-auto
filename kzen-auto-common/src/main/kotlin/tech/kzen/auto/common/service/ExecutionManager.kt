@@ -5,9 +5,11 @@ import tech.kzen.auto.common.api.ActionExecution
 import tech.kzen.auto.common.exec.ExecutionFrame
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionStatus
-import tech.kzen.lib.common.edit.ObjectRenamedEvent
-import tech.kzen.lib.common.edit.ProjectEvent
-import tech.kzen.lib.common.notation.model.ProjectPath
+import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.api.model.ObjectPath
+import tech.kzen.lib.common.notation.edit.NotationEvent
+import tech.kzen.lib.common.notation.edit.RenamedObjectEvent
 import tech.kzen.lib.common.util.Digest
 
 
@@ -63,7 +65,7 @@ class ExecutionManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(autoModel: ProjectModel, event: ProjectEvent?) {
+    override suspend fun handleModel(autoModel: ProjectModel, event: NotationEvent?) {
         if (event == null) {
             return
         }
@@ -71,8 +73,8 @@ class ExecutionManager(
         val model = modelOrInit()
 
         val changed = when (event) {
-            is ObjectRenamedEvent ->
-                model.rename(event.objectName, event.newName)
+            is RenamedObjectEvent ->
+                model.rename(event.objectLocation, event.newName)
 
             else ->
                 false
@@ -85,25 +87,24 @@ class ExecutionManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun willExecute(objectName: String) {
-        updateStatus(objectName, ExecutionStatus.Running)
+    suspend fun willExecute(objectLocation: ObjectLocation) {
+        updateStatus(objectLocation, ExecutionStatus.Running)
     }
 
 
-    suspend fun didExecute(objectName: String, execution: ActionExecution) {
-        updateStatus(objectName, execution.status)
+    suspend fun didExecute(objectLocation: ObjectLocation, execution: ActionExecution) {
+        updateStatus(objectLocation, execution.status)
     }
 
 
-//    private suspend fun updateStatus(objectName: String, execution: ActionExecution) {
-    private suspend fun updateStatus(objectName: String, status: ExecutionStatus) {
+    private suspend fun updateStatus(objectLocation: ObjectLocation, status: ExecutionStatus) {
         val model = modelOrInit()
-        val existingFrame = model.findLast(objectName)
+        val existingFrame = model.findLast(objectLocation)
 
         val upsertFrame = existingFrame
                 ?: model.frames.last()
 
-        upsertFrame.values[objectName] = status
+        upsertFrame.values[objectLocation.objectPath] = status
 
         publishExecutionModel(model)
     }
@@ -140,16 +141,16 @@ class ExecutionManager(
     }
 
 
-    suspend fun start(main: ProjectPath, projectModel: ProjectModel): Digest {
+    suspend fun start(main: BundlePath, projectModel: ProjectModel): Digest {
         val model = modelOrInit()
         model.frames.clear()
 
-        val values = mutableMapOf<String, ExecutionStatus>()
+        val values = mutableMapOf<ObjectPath, ExecutionStatus>()
 
-        val packageNotation = projectModel.projectNotation.packages[main]
+        val packageNotation = projectModel.projectNotation.bundleNotations.values[main]
 
         if (packageNotation != null) {
-            for (e in packageNotation.objects) {
+            for (e in packageNotation.objects.values) {
                 values[e.key] = ExecutionStatus.Pending
             }
 
@@ -165,14 +166,14 @@ class ExecutionManager(
 
 
     suspend fun execute(
-            objectName: String,
+            objectLocation: ObjectLocation,
             delayMillis: Int = 0
     ): ActionExecution {
         if (delayMillis > 0) {
 //            println("ExecutionManager | %%%% delay($delayMillis)")
             delay(delayMillis.toLong())
         }
-        willExecute(objectName)
+        willExecute(objectLocation)
 
         publishBeforeExecution()
 
@@ -183,7 +184,7 @@ class ExecutionManager(
 
         var success = false
         try {
-            actionExecutor.execute(objectName)
+            actionExecutor.execute(objectLocation)
             success = true
         }
         catch (e: Exception) {
@@ -203,7 +204,7 @@ class ExecutionManager(
         val execution = ActionExecution(
                 status, digest)
 
-        didExecute(objectName, execution)
+        didExecute(objectLocation, execution)
 
         return execution
     }

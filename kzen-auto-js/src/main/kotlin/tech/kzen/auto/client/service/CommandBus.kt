@@ -1,12 +1,13 @@
 package tech.kzen.auto.client.service
 
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.edit.*
+import tech.kzen.lib.common.notation.edit.*
 import tech.kzen.lib.common.notation.io.NotationParser
 import tech.kzen.lib.common.notation.repo.NotationRepository
 import tech.kzen.lib.common.util.Digest
 
 
+// TODO: move to lib?
 class CommandBus(
         private val clientRepository: NotationRepository,
         private val modelManager: ModelManager,
@@ -19,12 +20,13 @@ class CommandBus(
 //    fun onCommandRequest(command: ProjectCommand)
 //
 //    fun onCommandAppliedInClient(command: ProjectCommand, event: ProjectEvent)
-        fun onCommandFailedInClient(command: ProjectCommand, cause: Throwable)
-        fun onCommandSuccess(command: ProjectCommand, event: ProjectEvent)
+        fun onCommandFailedInClient(command: NotationCommand, cause: Throwable)
+        fun onCommandSuccess(command: NotationCommand, event: NotationEvent)
 
 //    fun onCommandEventHandledLocally(command: ProjectCommand, event: ProjectEvent)
 //    fun onCommandAppliedInServer(command: ProjectCommand, event: ProjectEvent)
     }
+
 
     //-----------------------------------------------------------------------------------------------------------------
     private val observers = mutableSetOf<Observer>()
@@ -39,13 +41,13 @@ class CommandBus(
     }
 
 
-    private fun onCommandFailedInClient(command: ProjectCommand, cause: Throwable) {
+    private fun onCommandFailedInClient(command: NotationCommand, cause: Throwable) {
         for (observer in observers) {
             observer.onCommandFailedInClient(command, cause)
         }
     }
 
-    private fun onCommandSuccess(command: ProjectCommand, event: ProjectEvent) {
+    private fun onCommandSuccess(command: NotationCommand, event: NotationEvent) {
         for (observer in observers) {
             observer.onCommandSuccess(command, event)
         }
@@ -53,7 +55,7 @@ class CommandBus(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun apply(command: ProjectCommand) {
+    suspend fun apply(command: NotationCommand) {
         println("CommandBus - applying command: $command")
 //        observer.onCommandRequest(command)
 
@@ -84,45 +86,88 @@ class CommandBus(
     }
 
 
-    private suspend fun applyRest(command: ProjectCommand): Digest =
+    private suspend fun applyRest(command: NotationCommand): Digest =
         when (command) {
-            is CreatePackageCommand ->
-                restClient.createPackage(
-                        command.projectPath)
+            is CreateBundleCommand ->
+                restClient.createBundle(
+                        command.bundlePath)
 
 
-            is DeletePackageCommand ->
-                restClient.deletePackage(
-                        command.projectPath)
+            is DeleteBundleCommand ->
+                restClient.deleteBundle(
+                        command.bundlePath)
 
 
             is AddObjectCommand -> {
                 val deparsed = notationParser.deparseObject(command.body)
-                restClient.addCommand(
-                        command.projectPath, command.objectName, deparsed, command.index)
+                restClient.addObject(
+                        command.objectLocation, command.indexInBundle, deparsed)
             }
 
 
             is RemoveObjectCommand ->
-                restClient.removeCommand(
-                        command.objectName)
+                restClient.removeObject(
+                        command.objectLocation)
 
 
             is ShiftObjectCommand ->
-                restClient.shiftCommand(
-                        command.objectName, command.indexInPackage)
+                restClient.shiftObject(
+                        command.objectLocation, command.newPositionInBundle)
 
 
             is RenameObjectCommand ->
-                restClient.renameCommand(
-                        command.objectName, command.newName)
+                restClient.renameObject(
+                        command.objectLocation, command.newName)
 
 
-            is EditParameterCommand -> {
-                val deparsed = notationParser.deparseParameter(command.parameterValue)
-                restClient.editCommand(
-                        command.objectName, command.parameterPath, deparsed)
+            is InsertObjectInListAttributeCommand -> {
+                val deparsed = notationParser.deparseObject(command.body)
+                restClient.insertObjectInList(
+                        command.containingObjectLocation,
+                        command.containingList,
+                        command.indexInList,
+                        command.objectName,
+                        command.positionInBundle,
+                        deparsed)
             }
+
+
+            is UpsertAttributeCommand -> {
+                val deparsed = notationParser.deparseAttribute(command.attributeNotation)
+                restClient.upsertAttribute(
+                        command.objectLocation, command.attributeName, deparsed)
+            }
+
+
+            is UpdateInAttributeCommand -> {
+                val deparsed = notationParser.deparseAttribute(command.attributeNotation)
+                restClient.updateInAttribute(
+                        command.objectLocation, command.attributePath, deparsed)
+            }
+
+
+            is InsertListItemInAttributeCommand -> {
+                val deparsed = notationParser.deparseAttribute(command.item)
+                restClient.insertListItemInAttribute(
+                        command.objectLocation, command.containingList, command.indexInList, deparsed)
+            }
+
+
+            is InsertMapEntryInAttributeCommand -> {
+                val deparsed = notationParser.deparseAttribute(command.value)
+                restClient.insertMapEntryInAttribute(
+                        command.objectLocation, command.containingMap, command.indexInMap, command.mapKey, deparsed)
+            }
+
+
+            is RemoveInAttributeCommand ->
+                restClient.removeInAttribute(
+                        command.objectLocation, command.attributePath)
+
+
+            is ShiftInAttributeCommand ->
+                restClient.shiftInAttribute(
+                        command.objectLocation, command.attributePath, command.newPosition)
 
 
             else ->

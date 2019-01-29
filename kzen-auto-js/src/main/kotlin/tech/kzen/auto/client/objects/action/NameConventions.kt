@@ -1,18 +1,19 @@
 package tech.kzen.auto.client.objects.action
 
+import tech.kzen.lib.common.api.model.ObjectName
 import kotlin.js.Date
 
 
 object NameConventions {
-    private const val defaultPrefix = "__DEFAULT__"
+    private const val defaultPrefix = "__ANON__"
 
 
-    fun isDefault(objectName: String): Boolean {
-        return objectName.startsWith(defaultPrefix)
+    fun isDefault(objectName: ObjectName): Boolean {
+        return objectName.value.startsWith(defaultPrefix)
     }
 
-    fun randomDefault(): String {
+    fun randomAnonymous(): ObjectName {
         val timestampSuffix = Date().toISOString()
-        return "$defaultPrefix$timestampSuffix"
+        return ObjectName("$defaultPrefix$timestampSuffix")
     }
 }

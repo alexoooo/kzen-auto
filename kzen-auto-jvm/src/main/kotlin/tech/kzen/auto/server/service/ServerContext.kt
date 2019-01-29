@@ -35,7 +35,8 @@ object ServerContext {
 
     val repository = NotationRepository(
             notationMedia,
-            yamlParser)
+            yamlParser,
+            notationMetadataReader)
 
 
     val modelManager = ModelManager(

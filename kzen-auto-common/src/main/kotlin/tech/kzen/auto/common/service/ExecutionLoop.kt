@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.service
 
 import tech.kzen.auto.common.exec.ExecutionModel
+import tech.kzen.lib.common.api.model.ObjectLocation
 
 
 class ExecutionLoop(
@@ -56,7 +57,7 @@ class ExecutionLoop(
 
 
     private suspend fun run(
-            next: String
+            next: ObjectLocation
     ) {
         // NB: this will trigger ExecutionManager.Observer onExecutionModel method above
         executionManager.execute(next, delayMillis)

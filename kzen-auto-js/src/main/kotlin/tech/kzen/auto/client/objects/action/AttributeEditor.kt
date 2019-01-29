@@ -10,21 +10,24 @@ import tech.kzen.auto.client.wrap.MaterialTextField
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.service.ExecutionManager
-import tech.kzen.lib.common.edit.EditParameterCommand
-import tech.kzen.lib.common.notation.model.ScalarParameterNotation
+import tech.kzen.lib.common.api.model.AttributeName
+import tech.kzen.lib.common.api.model.AttributePath
+import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.notation.edit.UpsertAttributeCommand
+import tech.kzen.lib.common.notation.model.ScalarAttributeNotation
 
 
 @Suppress("unused")
-class ParameterEditor(
-        props: ParameterEditor.Props
+class AttributeEditor(
+        props: AttributeEditor.Props
 ):
-        RComponent<ParameterEditor.Props, ParameterEditor.State>(props),
+        RComponent<AttributeEditor.Props, AttributeEditor.State>(props),
         ExecutionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var objectName: String,
-            var parameterPath: String,
+            var objectName: ObjectLocation,
+            var attributeName: AttributeName,
             var value: String
     ): RProps
 
@@ -109,10 +112,10 @@ class ParameterEditor(
 
 
     private suspend fun editParameterCommand() {
-        ClientContext.commandBus.apply(EditParameterCommand(
+        ClientContext.commandBus.apply(UpsertAttributeCommand(
                 props.objectName,
-                props.parameterPath,
-                ScalarParameterNotation(state.value)))
+                props.attributeName,
+                ScalarAttributeNotation(state.value)))
 
         setState {
             pending = false
@@ -126,7 +129,7 @@ class ParameterEditor(
             attrs {
                 fullWidth = true
 
-                label = props.parameterPath
+                label = props.attributeName.value
                 value = state.value
 
                 onChange = {

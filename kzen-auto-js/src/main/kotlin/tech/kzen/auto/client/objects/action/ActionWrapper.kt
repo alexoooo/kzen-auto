@@ -3,8 +3,10 @@ package tech.kzen.auto.client.objects.action
 import react.RBuilder
 import react.ReactElement
 import tech.kzen.auto.common.exec.ExecutionStatus
+import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.api.model.ObjectPath
 import tech.kzen.lib.common.metadata.model.GraphMetadata
-import tech.kzen.lib.common.notation.model.ProjectNotation
+import tech.kzen.lib.common.notation.model.GraphNotation
 
 
 interface ActionWrapper {
@@ -12,8 +14,8 @@ interface ActionWrapper {
 
 
     fun isApplicableTo(
-            objectName: String,
-            projectNotation: ProjectNotation,
+            objectName: ObjectPath,
+            projectNotation: GraphNotation,
             graphMetadata: GraphMetadata
     ): Boolean
 
@@ -21,9 +23,9 @@ interface ActionWrapper {
     fun render(
             rBuilder: RBuilder,
 
-            objectName: String,
+            objectLocation: ObjectLocation,
 
-            projectNotation: ProjectNotation,
+            projectNotation: GraphNotation,
             graphMetadata: GraphMetadata,
 
             executionStatus: ExecutionStatus?,

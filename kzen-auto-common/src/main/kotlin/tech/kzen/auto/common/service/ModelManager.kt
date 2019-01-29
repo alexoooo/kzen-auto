@@ -1,10 +1,10 @@
 package tech.kzen.auto.common.service
 
-import tech.kzen.lib.common.edit.ProjectEvent
 import tech.kzen.lib.common.metadata.read.NotationMetadataReader
+import tech.kzen.lib.common.notation.edit.NotationEvent
 import tech.kzen.lib.common.notation.io.NotationMedia
 import tech.kzen.lib.common.notation.io.common.MapNotationMedia
-import tech.kzen.lib.common.notation.model.ProjectNotation
+import tech.kzen.lib.common.notation.model.GraphNotation
 import tech.kzen.lib.common.notation.repo.NotationRepository
 import tech.kzen.lib.common.util.Digest
 
@@ -17,7 +17,7 @@ class ModelManager(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
-        suspend fun handleModel(autoModel: ProjectModel, event: ProjectEvent?)
+        suspend fun handleModel(autoModel: ProjectModel, event: NotationEvent?)
     }
 
 
@@ -43,7 +43,7 @@ class ModelManager(
     }
 
 
-    private suspend fun publish(event: ProjectEvent?) {
+    private suspend fun publish(event: NotationEvent?) {
         println("ModelManager - Publishing - start")
 
         mostRecent = readModel()
@@ -56,23 +56,23 @@ class ModelManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun autoNotation(): ProjectNotation {
+    suspend fun autoNotation(): GraphNotation {
         val allNotation = notationRepository.notation()
 
         return allNotation.filterPaths {
-            it.relativeLocation.startsWith("notation/base/") ||
-                    it.relativeLocation.startsWith("notation/auto/")
+            it.asRelativeFile().startsWith("notation/base/") ||
+                    it.asRelativeFile().startsWith("notation/auto/")
         }
     }
 
 
-    private fun projectNotation(allNotation: ProjectNotation): ProjectNotation {
+    private fun projectNotation(allNotation: GraphNotation): GraphNotation {
         return allNotation.filterPaths {
-            it.relativeLocation.startsWith("notation/base/") ||
+            it.asRelativeFile().startsWith("notation/base/") ||
 //                    (! it.relativeLocation.startsWith("notation/auto/") ||
 //                            it.relativeLocation.endsWith("auto-common.yaml") ||
 //                            it.relativeLocation.endsWith("auto-browser.yaml"))
-                    ! it.relativeLocation.startsWith("notation/auto/")
+                    ! it.asRelativeFile().startsWith("notation/auto/")
         }
     }
 
@@ -106,16 +106,16 @@ class ModelManager(
         val restScan = notationMedia.scan()
         val clientScan = notationMediaCache.scan()
 
-        println("ModelManager - Refreshing - got scan - ${restScan.keys} vs ${clientScan.keys}")
+        println("ModelManager - Refreshing - got scan - ${restScan.values.keys} vs ${clientScan.values.keys}")
 
         var changed = false
-        for (dangling in clientScan.keys.minus(restScan.keys)) {
+        for (dangling in clientScan.values.keys.minus(restScan.values.keys)) {
             notationMediaCache.delete(dangling)
             changed = true
         }
 
-        for (e in restScan) {
-            val clientDigest = clientScan[e.key]
+        for (e in restScan.values) {
+            val clientDigest = clientScan.values[e.key]
                     ?: Digest.zero
 
             if (clientDigest != e.value) {
@@ -139,7 +139,7 @@ class ModelManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun onEvent(event: ProjectEvent) {
+    suspend fun onEvent(event: NotationEvent) {
         publish(event)
     }
 }

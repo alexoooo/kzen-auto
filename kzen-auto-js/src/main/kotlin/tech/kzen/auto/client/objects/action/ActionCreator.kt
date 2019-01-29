@@ -8,9 +8,9 @@ import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.wrap.MaterialButton
 import tech.kzen.auto.client.wrap.iconClassForName
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.lib.common.notation.model.ParameterConventions
-import tech.kzen.lib.common.notation.model.ProjectNotation
-import tech.kzen.lib.common.notation.model.ProjectPath
+import tech.kzen.lib.common.api.model.*
+import tech.kzen.lib.common.notation.NotationConventions
+import tech.kzen.lib.common.notation.model.GraphNotation
 
 
 @Suppress("unused")
@@ -22,15 +22,14 @@ class ActionCreator(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var notation: ProjectNotation,
-            var path: ProjectPath/*,
-            var onClick: () -> Unit*/
+            var notation: GraphNotation,
+            var path: BundlePath
     ): RProps
 
 
     class State(
-            var name: String,
-            var type: String?
+            var name: ObjectName,
+            var type: ObjectLocation?
     ): RState
 
 
@@ -58,10 +57,10 @@ class ActionCreator(
     }
 
 
-    override fun onSelected(actionName: String) {
+    override fun onSelected(action: ObjectLocation) {
         setState {
-            name = NameConventions.randomDefault()
-            type = actionName
+            name = NameConventions.randomAnonymous()
+            type = action
         }
     }
 
@@ -86,7 +85,7 @@ class ActionCreator(
     }
 
 
-    private fun onSelect(actionType: String) {
+    private fun onSelect(actionType: ObjectLocation) {
         ClientContext.insertionManager.setSelected(actionType)
 //        async {
 //            delay(1)
@@ -104,7 +103,7 @@ class ActionCreator(
         for (actionType in actionTypes()) {
             child(MaterialButton::class) {
                 attrs {
-                    key = actionType
+                    key = actionType.toReference().asString()
                     variant = "outlined"
                     size = "small"
 
@@ -125,12 +124,12 @@ class ActionCreator(
                 }
 
                 val title = props.notation
-                        .transitiveParameter(actionType, "title")
+                        .transitiveAttribute(actionType, NameEditor.titleAttribute)
                         ?.asString()
-                        ?: actionType
+                        ?: actionType.objectPath.name.value
 
                 val icon = props.notation
-                        .transitiveParameter(actionType, ActionController.iconParameter)
+                        .transitiveAttribute(actionType, ActionController.iconAttribute)
                         ?.asString()
 
                 if (icon != null) {
@@ -150,11 +149,11 @@ class ActionCreator(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun actionTypes(): List<String> {
-        val actionTypes = mutableListOf<String>()
+    private fun actionTypes(): List<ObjectLocation> {
+        val actionTypes = mutableListOf<ObjectLocation>()
 
-        for (e in props.notation.coalesce) {
-            val isParameter = e.value.parameters[ParameterConventions.isParameter]
+        for (e in props.notation.coalesce.values) {
+            val isParameter = e.value.attributes[NotationConventions.isAttribute.attribute]
                     ?.asString()
                     ?: continue
 

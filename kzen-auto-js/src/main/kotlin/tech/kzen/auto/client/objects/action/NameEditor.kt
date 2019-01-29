@@ -13,9 +13,13 @@ import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.lib.common.edit.RenameObjectCommand
-import tech.kzen.lib.common.notation.model.ParameterConventions
-import tech.kzen.lib.common.notation.model.ProjectNotation
+import tech.kzen.lib.common.api.model.AttributeName
+import tech.kzen.lib.common.api.model.AttributePath
+import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.api.model.ObjectName
+import tech.kzen.lib.common.notation.NotationConventions
+import tech.kzen.lib.common.notation.edit.RenameRefactorCommand
+import tech.kzen.lib.common.notation.model.GraphNotation
 
 
 @Suppress("unused")
@@ -25,9 +29,15 @@ class NameEditor(
         RComponent<NameEditor.Props, NameEditor.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        val titleAttribute = AttributePath.ofAttribute(AttributeName("title"))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var objectName: String,
-            var notation: ProjectNotation
+            var objectLocation: ObjectLocation,
+            var notation: GraphNotation
     ): RProps
 
 
@@ -41,7 +51,7 @@ class NameEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun NameEditor.State.init(props: NameEditor.Props) {
 //        console.log("NameEditor | State.init - ${props.objectName}", Date.now())
-        objectName = props.objectName
+        objectName = props.objectLocation.objectPath.name.value
 
         editing = false
         saving = false
@@ -59,16 +69,16 @@ class NameEditor(
     private fun saveAsync() {
         val adjustedName =
                 if (state.objectName.isBlank()) {
-                    NameConventions.randomDefault()
+                    NameConventions.randomAnonymous()
                 }
                 else {
-                    state.objectName
+                    ObjectName(state.objectName)
                 }
 
-        if (state.objectName != adjustedName) {
+        if (state.objectName != adjustedName.value) {
             console.log("$$$$$$ saveAsync - '${state.objectName}' != '$adjustedName'")
             setState {
-                objectName = adjustedName
+                objectName = adjustedName.value
             }
         }
 
@@ -76,8 +86,8 @@ class NameEditor(
              // NB: not sure why this is necessary, without it state.saving doesn't show
              delay(1)
 
-             ClientContext.commandBus.apply(RenameObjectCommand(
-                    props.objectName, adjustedName))
+             ClientContext.commandBus.apply(RenameRefactorCommand(
+                    props.objectLocation, adjustedName))
 
              // NB: no need to set saving = false, the component will un-mount
         }
@@ -134,17 +144,17 @@ class NameEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun isModified(): Boolean {
-        return props.objectName != state.objectName
+        return props.objectLocation.objectPath.name.value != state.objectName
     }
 
 
     private fun title(): String {
         val type = props.notation.getString(
-                props.objectName, ParameterConventions.isParameter)
+                props.objectLocation, NotationConventions.isAttribute)
 
         return props
                 .notation
-                .transitiveParameter(props.objectName, "title")
+                .transitiveAttribute(props.objectLocation, titleAttribute)
                 ?.asString()
                 ?: type
     }
@@ -195,17 +205,17 @@ class NameEditor(
 
                 val objectName =
                         if (state.saving) {
-                            state.objectName
+                            ObjectName(state.objectName)
                         }
                         else {
-                            props.objectName
+                            props.objectLocation.objectPath.name
                         }
 
                 if (NameConventions.isDefault(objectName)) {
                     +title()
                 }
                 else {
-                    +objectName
+                    +objectName.value
                 }
             }
         }
@@ -228,7 +238,7 @@ class NameEditor(
                     autoFocus = true
 
                     value =
-                            if (NameConventions.isDefault(state.objectName)) {
+                            if (NameConventions.isDefault(ObjectName(state.objectName))) {
                                 ""
                             }
                             else {

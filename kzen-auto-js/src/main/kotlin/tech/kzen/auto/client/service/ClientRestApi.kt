@@ -6,7 +6,9 @@ import tech.kzen.auto.common.api.ActionExecution
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionStatus
-import tech.kzen.lib.common.notation.model.ProjectPath
+import tech.kzen.lib.common.api.model.*
+import tech.kzen.lib.common.notation.model.ObjectNotation
+import tech.kzen.lib.common.notation.model.PositionIndex
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.IoUtils
 import tech.kzen.lib.platform.client.ClientJsonUtils
@@ -17,128 +19,217 @@ class ClientRestApi(
         private val baseUrl: String
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun scanNotationPaths(): Map<ProjectPath, Digest> {
+    suspend fun scanNotationPaths(): BundleTree<Digest> {
         val scanText = httpGet("$baseUrl${CommonRestApi.scan}")
 
-        val builder = mutableMapOf<ProjectPath, Digest>()
+        val builder = mutableMapOf<BundlePath, Digest>()
         // NB: using transform just to iterate the Json, is there a better way to do this?
         JSON.parse<Json>(scanText) { key: String, value: Any? ->
             if (value is String) {
-                builder[ProjectPath(key)] = Digest.decode(value)
+                builder[BundlePath.parse(key)] = Digest.parse(value)
             }
             null
         }
-        return builder
+        return BundleTree(builder)
     }
 
 
-    suspend fun readNotation(location: ProjectPath): ByteArray {
+    suspend fun readNotation(location: BundlePath): ByteArray {
         @Suppress("UNUSED_VARIABLE")
         val response = httpGet("$baseUrl${CommonRestApi.notationPrefix}" +
-                location.relativeLocation)
+                location.asRelativeFile())
 
         return IoUtils.stringToUtf8(response)
     }
 
 
-
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun editCommand(
-            objectName: String,
-            parameterPath: String,
-            deparsedParameter: String
+    suspend fun createBundle(
+            projectPath: BundlePath
     ): Digest {
-        val encodedName = encodeURIComponent(objectName)
-        val encodedParameter = encodeURIComponent(parameterPath)
-        val encodedValue = encodeURIComponent(deparsedParameter)
-
-        val digest = httpGet("$baseUrl${CommonRestApi.commandEdit}" +
-                "?name=$encodedName" +
-                "&parameter=$encodedParameter" +
-                "&value=$encodedValue")
-
-        return Digest.decode(digest)
+        return getDigest(
+                CommonRestApi.commandBundleCreate,
+                CommonRestApi.paramBundlePath to projectPath.asString())
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    suspend fun addCommand(
-            projectPath: ProjectPath,
-            objectName: String,
-            deparsedBody: String,
-            index: Int
+    suspend fun deleteBundle(
+            projectPath: BundlePath
     ): Digest {
-        val encodedPath = encodeURIComponent(projectPath.relativeLocation)
-        val encodedName = encodeURIComponent(objectName)
-        val encodedBody = encodeURIComponent(deparsedBody)
-
-        val digest = httpGet("$baseUrl${CommonRestApi.commandAdd}" +
-                "?path=$encodedPath" +
-                "&name=$encodedName" +
-                "&body=$encodedBody" +
-                "&index=$index")
-        return Digest.decode(digest)
-
+        return getDigest(
+                CommonRestApi.commandBundleDelete,
+                CommonRestApi.paramBundlePath to projectPath.asRelativeFile())
     }
-
-
-    suspend fun removeCommand(
-            objectName: String
-    ): Digest {
-        val encodedName = encodeURIComponent(objectName)
-        val digest = httpGet("$baseUrl${CommonRestApi.commandRemove}" +
-                "?name=$encodedName")
-        return Digest.decode(digest)
-    }
-
-
-    suspend fun shiftCommand(
-            objectName: String,
-            indexInPackage: Int
-    ): Digest {
-        val encodedName = encodeURIComponent(objectName)
-        val encodedIndex = encodeURIComponent(indexInPackage.toString())
-
-        val digest = httpGet("$baseUrl${CommonRestApi.commandShift}" +
-                "?name=$encodedName&index=$encodedIndex")
-        return Digest.decode(digest)
-    }
-
-
-    suspend fun renameCommand(
-            objectName: String,
-            newName: String
-    ): Digest {
-        val encodedName = encodeURIComponent(objectName)
-        val encodedNewName = encodeURIComponent(newName)
-
-        val digest = httpGet("$baseUrl${CommonRestApi.commandRename}" +
-                "?name=$encodedName&to=$encodedNewName")
-        return Digest.decode(digest)
-    }
-
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun createPackage(
-            projectPath: ProjectPath
+    suspend fun addObject(
+            objectLocation: ObjectLocation,
+            indexInBundle: PositionIndex,
+            deparsedObjectNotation: String
     ): Digest {
-        val encodedPath = encodeURIComponent(projectPath.relativeLocation)
-
-        val digest = httpGet("$baseUrl${CommonRestApi.commandCreate}" +
-                "?path=$encodedPath")
-        return Digest.decode(digest)
+        return getDigest(
+                CommonRestApi.commandObjectAdd,
+                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+                CommonRestApi.paramPositionIndex to indexInBundle.asString(),
+                CommonRestApi.paramObjectNotation to deparsedObjectNotation)
     }
 
 
-    suspend fun deletePackage(
-            projectPath: ProjectPath
+    suspend fun removeObject(
+            objectLocation: ObjectLocation
     ): Digest {
-        val encodedPath = encodeURIComponent(projectPath.relativeLocation)
+        return getDigest(
+                CommonRestApi.commandObjectRemove,
+                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+    }
 
-        val digest = httpGet("$baseUrl${CommonRestApi.commandDelete}" +
-                "?path=$encodedPath")
-        return Digest.decode(digest)
+
+    suspend fun shiftObject(
+            objectLocation: ObjectLocation,
+            newPositionInBundle: PositionIndex
+    ): Digest {
+        return getDigest(
+                CommonRestApi.commandObjectShift,
+                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+                CommonRestApi.paramPositionIndex to newPositionInBundle.asString())
+    }
+
+
+    suspend fun renameObject(
+            objectLocation: ObjectLocation,
+            newName: ObjectName
+    ): Digest {
+        return getDigest(
+                CommonRestApi.commandObjectRename,
+                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+                CommonRestApi.paramObjectName to newName.value)
+    }
+
+
+    suspend fun insertObjectInList(
+            containingObjectLocation: ObjectLocation,
+            containingList: AttributePath,
+            indexInList: PositionIndex,
+            objectName: ObjectName,
+            positionInBundle: PositionIndex,
+            deparsedObjectNotation: String
+    ): Digest {
+        return getDigest(
+                CommonRestApi.commandObjectInsert,
+                CommonRestApi.paramBundlePath to containingObjectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
+                CommonRestApi.paramAttributePath to containingList.asString(),
+                CommonRestApi.paramPositionIndex to indexInList.asString(),
+                CommonRestApi.paramObjectName to objectName.value,
+                CommonRestApi.paramSecondaryPosition to positionInBundle.asString(),
+                CommonRestApi.paramObjectNotation to deparsedObjectNotation)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun upsertAttribute(
+            objectLocation: ObjectLocation,
+            attributeName: AttributeName,
+            deparsedAttributeNotation: String
+    ): Digest {
+        return getDigest(
+                CommonRestApi.commandAttributeUpsert,
+                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+                CommonRestApi.paramAttributeName to attributeName.value,
+                CommonRestApi.paramAttributeNotation to deparsedAttributeNotation)
+    }
+
+
+    suspend fun updateInAttribute(
+            objectLocation: ObjectLocation,
+            attributePath: AttributePath,
+            deparsedAttributeNotation: String
+    ): Digest {
+        return getDigest(
+                CommonRestApi.commandAttributeUpdateIn,
+                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+                CommonRestApi.paramAttributePath to attributePath.asString(),
+                CommonRestApi.paramAttributeNotation to deparsedAttributeNotation)
+    }
+
+
+    suspend fun insertListItemInAttribute(
+            objectLocation: ObjectLocation,
+            containingList: AttributePath,
+            indexInList: PositionIndex,
+            deparsedItemNotation: String
+    ): Digest {
+        return getDigest(
+                CommonRestApi.commandAttributeInsertItemIn,
+                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+                CommonRestApi.paramAttributePath to containingList.asString(),
+                CommonRestApi.paramPositionIndex to indexInList.asString(),
+                CommonRestApi.paramAttributeNotation to deparsedItemNotation)
+    }
+
+
+    suspend fun insertMapEntryInAttribute(
+            objectLocation: ObjectLocation,
+            containingMap: AttributePath,
+            indexInMap: PositionIndex,
+            mapKey: AttributeSegment,
+            deparsedValueNotation: String
+    ): Digest {
+        return getDigest(
+                CommonRestApi.commandAttributeInsertEntryIn,
+                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+                CommonRestApi.paramAttributePath to containingMap.asString(),
+                CommonRestApi.paramPositionIndex to indexInMap.asString(),
+                CommonRestApi.paramAttributeKey to mapKey.asKey(),
+                CommonRestApi.paramAttributeNotation to deparsedValueNotation)
+    }
+
+
+    suspend fun removeInAttribute(
+            objectLocation: ObjectLocation,
+            attributePath: AttributePath
+    ): Digest {
+        return getDigest(
+                CommonRestApi.commandAttributeRemoveIn,
+                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+                CommonRestApi.paramAttributePath to attributePath.asString())
+    }
+
+
+    suspend fun shiftInAttribute(
+            objectLocation: ObjectLocation,
+            attributePath: AttributePath,
+            newPosition: PositionIndex
+    ): Digest {
+        return getDigest(
+                CommonRestApi.commandAttributeShiftIn,
+                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+                CommonRestApi.paramAttributePath to attributePath.asString(),
+                CommonRestApi.paramPositionIndex to newPosition.asString())
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun refactorName(
+            objectLocation: ObjectLocation,
+            newName: ObjectName
+    ): Digest {
+        return getDigest(
+                CommonRestApi.commandAttributeRemoveIn,
+                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+                CommonRestApi.paramObjectName to newName.value)
     }
 
 
@@ -168,7 +259,7 @@ class ClientRestApi(
 
     suspend fun startExecution(): Digest {
         val responseText = httpGet("$baseUrl${CommonRestApi.actionStart}")
-        return Digest.decode(responseText)
+        return Digest.parse(responseText)
     }
 
 
@@ -176,25 +267,60 @@ class ClientRestApi(
 //            objectName: String
     ): Digest {
         val responseText = httpGet("$baseUrl${CommonRestApi.actionReset}")
-        return Digest.decode(responseText)
+        return Digest.parse(responseText)
     }
 
 
     suspend fun performAction(
-            objectName: String
+            objectLocation: ObjectLocation
     ): ActionExecution {
-        val encodedName = encodeURIComponent(objectName)
+        val responseJson = getJson(
+                CommonRestApi.actionPerform,
+                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
 
-        val responseText = httpGet("$baseUrl${CommonRestApi.actionPerform}" +
-                "?name=$encodedName")
-
-        val responseJson = JSON.parse<Json>(responseText)
-
-        val status = responseJson["status"] as String
-        val digest = responseJson["digest"] as String
+        val status = responseJson[CommonRestApi.fieldStatus] as String
+        val digest = responseJson[CommonRestApi.fieldDigest] as String
 
         return ActionExecution(
                 ExecutionStatus.valueOf(status),
-                Digest.decode(digest))
+                Digest.parse(digest))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun getDigest(
+            commandPath: String,
+            vararg parameters: Pair<String, String>
+    ): Digest {
+        val response = get(commandPath, *parameters)
+        return Digest.parse(response)
+    }
+
+
+    private suspend fun getJson(
+            commandPath: String,
+            vararg parameters: Pair<String, String>
+    ): Json {
+        val response = get(commandPath, *parameters)
+        return JSON.parse(response)
+    }
+
+
+    private suspend fun get(
+            commandPath: String,
+            vararg parameters: Pair<String, String>
+    ): String {
+        val suffix =
+                if (parameters.isEmpty()) {
+                    ""
+                }
+                else {
+                    "?" + parameters.joinToString("&") {
+                        it.first + "=" + encodeURIComponent(it.second)
+                    }
+                }
+
+        return httpGet("$baseUrl$commandPath$suffix")
     }
 }

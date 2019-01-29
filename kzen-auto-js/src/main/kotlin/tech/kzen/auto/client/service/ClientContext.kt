@@ -27,7 +27,7 @@ object ClientContext {
     val notationMetadataReader = NotationMetadataReader()
 
     private val clientRepository = NotationRepository(
-            notationMediaCache, notationParser)
+            notationMediaCache, notationParser, notationMetadataReader)
 
     val modelManager = ModelManager(
             notationMediaCache,

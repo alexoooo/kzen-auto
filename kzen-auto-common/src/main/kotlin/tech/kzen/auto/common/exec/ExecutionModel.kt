@@ -1,5 +1,7 @@
 package tech.kzen.auto.common.exec
 
+import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.api.model.ObjectName
 import tech.kzen.lib.common.util.Digest
 
 
@@ -25,11 +27,15 @@ data class ExecutionModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun rename(from: String, to: String): Boolean {
+    fun rename(from: ObjectLocation, newName: ObjectName): Boolean {
         var renamedAny = false
 
         for (frame in frames) {
-            val renamed = frame.rename(from, to)
+            if (frame.path != from.bundlePath) {
+                continue
+            }
+
+            val renamed = frame.rename(from.objectPath, newName)
 
             renamedAny = renamedAny || renamed
         }
@@ -40,10 +46,11 @@ data class ExecutionModel(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun findLast(
-            objectName: String
+            objectLocation: ObjectLocation
     ): ExecutionFrame? =
         frames.findLast {
-            it.contains(objectName)
+            it.path == objectLocation.bundlePath &&
+                    it.contains(objectLocation.objectPath)
         }
 
 
@@ -58,7 +65,7 @@ data class ExecutionModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun next(): String? {
+    fun next(): ObjectLocation? {
         if (frames.isEmpty() || containsStatus(ExecutionStatus.Running)) {
             return null
         }
@@ -71,7 +78,7 @@ data class ExecutionModel(
             }
 
             if (e.value == ExecutionStatus.Pending) {
-                return e.key
+                return ObjectLocation(lastFrame.path, e.key)
             }
         }
 
@@ -87,7 +94,7 @@ data class ExecutionModel(
 
         for (frames in frames) {
             for (e in frames.values) {
-                digest.addUtf8(e.key)
+                digest.addUtf8(e.key.asString())
                 digest.addInt(e.value.ordinal)
             }
         }

@@ -1,16 +1,15 @@
 package tech.kzen.auto.client.service
 
 import tech.kzen.auto.client.objects.action.NameConventions
-import tech.kzen.lib.common.edit.AddObjectCommand
-import tech.kzen.lib.common.notation.model.ProjectPath
+import tech.kzen.lib.common.api.model.*
+import tech.kzen.lib.common.notation.edit.AddObjectCommand
+import tech.kzen.lib.common.notation.model.PositionIndex
 
 
-class InsertionManager(
-//        private val commandBus: CommandBus
-) {
+class InsertionManager {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
-        fun onSelected(actionName: String)
+        fun onSelected(action: ObjectLocation)
         fun onUnselected()
     }
 
@@ -18,7 +17,7 @@ class InsertionManager(
     //-----------------------------------------------------------------------------------------------------------------
     private val subscribers = mutableListOf<Observer>()
 
-    private var selected: String? = null
+    private var selected: ObjectLocation? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -33,11 +32,11 @@ class InsertionManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun setSelected(actionName: String) {
-        selected = actionName
+    fun setSelected(action: ObjectLocation) {
+        selected = action
 
         for (observer in subscribers) {
-            observer.onSelected(actionName)
+            observer.onSelected(action)
         }
     }
 
@@ -51,17 +50,19 @@ class InsertionManager(
     }
 
 
-    suspend fun create(path: ProjectPath, index: Int) {
+    suspend fun create(path: BundlePath, index: Int) {
         if (selected != null) {
-            val selectedName = selected!!
+            val selectedAction = selected!!
 
             clearSelection()
 
             ClientContext.commandBus.apply(AddObjectCommand.ofParent(
-                    path,
-                    NameConventions.randomDefault(),
-                    selectedName,
-                    index))
+                    ObjectLocation(
+                            path,
+                            ObjectPath(NameConventions.randomAnonymous(), BundleNesting.root)
+                    ),
+                    PositionIndex(index),
+                    selectedAction.toReference()))
         }
     }
 
