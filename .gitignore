@@ -5,3 +5,4 @@ node_modules/
 *.iml
 .directory
 out/
+logs/

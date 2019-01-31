@@ -78,7 +78,9 @@ class BootNotationMedia(
                 continue
             }
 
-            builder.add(BundlePath.parse(innerPath))
+            val afterPrefix = innerPath.substring(prefix.length)
+
+            builder.add(BundlePath.parse(afterPrefix))
         }
 
         return builder
@@ -87,7 +89,7 @@ class BootNotationMedia(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun read(location: BundlePath): ByteArray {
-        val bytes = loader.getResource(location.asRelativeFile()).readBytes()
+        val bytes = loader.getResource(prefix + location.asRelativeFile()).readBytes()
         println("ClasspathNotationMedia - read ${bytes.size}")
         return bytes
     }

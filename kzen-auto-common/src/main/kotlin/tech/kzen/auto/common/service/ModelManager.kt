@@ -60,19 +60,16 @@ class ModelManager(
         val allNotation = notationRepository.notation()
 
         return allNotation.filterPaths {
-            it.asRelativeFile().startsWith("notation/base/") ||
-                    it.asRelativeFile().startsWith("notation/auto/")
+            it.asRelativeFile().startsWith("base/") ||
+                    it.asRelativeFile().startsWith("auto/")
         }
     }
 
 
     private fun projectNotation(allNotation: GraphNotation): GraphNotation {
         return allNotation.filterPaths {
-            it.asRelativeFile().startsWith("notation/base/") ||
-//                    (! it.relativeLocation.startsWith("notation/auto/") ||
-//                            it.relativeLocation.endsWith("auto-common.yaml") ||
-//                            it.relativeLocation.endsWith("auto-browser.yaml"))
-                    ! it.asRelativeFile().startsWith("notation/auto/")
+            it.asRelativeFile().startsWith("base/") ||
+                    ! it.asRelativeFile().startsWith("auto/")
         }
     }
 
