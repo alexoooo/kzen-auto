@@ -147,7 +147,7 @@ class ExecutionManager(
 
         val values = mutableMapOf<ObjectPath, ExecutionStatus>()
 
-        val packageNotation = projectModel.projectNotation.bundleNotations.values[main]
+        val packageNotation = projectModel.projectNotation.bundles.values[main]
 
         if (packageNotation != null) {
             for (e in packageNotation.objects.values) {

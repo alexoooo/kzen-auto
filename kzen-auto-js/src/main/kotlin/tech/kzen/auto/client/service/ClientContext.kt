@@ -20,9 +20,9 @@ object ClientContext {
     val restClient = ClientRestApi(baseUrl)
 
     private val restNotationMedia: NotationMedia = RestNotationMedia(restClient)
-    private val notationMediaCache = MapNotationMedia()
+    val notationMediaCache = MapNotationMedia()
 
-    private val notationParser: NotationParser = YamlNotationParser()
+    val notationParser: NotationParser = YamlNotationParser()
 
     val notationMetadataReader = NotationMetadataReader()
 

@@ -27,7 +27,7 @@ fun main(args: Array<String>) {
             val graphDefinition = GraphDefiner.define(autoNotation, autoMetadata)
             val autoGraph = GraphCreator.createGraph(graphDefinition, autoMetadata)
 
-            console.log("^^^ main autoGraph ^^ ", autoGraph.objects.values.keys.toString())
+//            console.log("^^^ main autoGraph ^^ ", autoGraph.objects.values.keys.toString())
             val rootLocation = ObjectLocation(
                     BundlePath.parse("auto/auto-framework.yaml"),
                     ObjectPath.parse("root"))
@@ -36,7 +36,7 @@ fun main(args: Array<String>) {
                     as? ReactWrapper
                     ?: throw IllegalStateException("Missing root object")
 
-            console.log("^^^ main rootInstance", rootInstance)
+//            console.log("^^^ main rootInstance", rootInstance)
 
 //            val commandObserverName = autoGraph
 //                    .names()

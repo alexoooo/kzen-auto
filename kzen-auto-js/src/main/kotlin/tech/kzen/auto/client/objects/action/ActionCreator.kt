@@ -87,14 +87,6 @@ class ActionCreator(
 
     private fun onSelect(actionType: ObjectLocation) {
         ClientContext.insertionManager.setSelected(actionType)
-//        async {
-//            delay(1)
-//
-//            ClientContext.commandBus.apply(AddObjectCommand.ofParent(
-//                    props.path,
-//                    state.name,
-//                    state.type))
-//        }
     }
 
 

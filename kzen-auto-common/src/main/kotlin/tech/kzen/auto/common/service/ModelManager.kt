@@ -66,7 +66,7 @@ class ModelManager(
     }
 
 
-    private fun projectNotation(allNotation: GraphNotation): GraphNotation {
+    private fun graphNotation(allNotation: GraphNotation): GraphNotation {
         return allNotation.filterPaths {
             it.asRelativeFile().startsWith("base/") ||
                     ! it.asRelativeFile().startsWith("auto/")
@@ -86,12 +86,13 @@ class ModelManager(
     private suspend fun readModel(): ProjectModel {
         val allNotation = notationRepository.notation()
 
-        val projectNotation = projectNotation(allNotation)
+        val graphNotation = graphNotation(allNotation)
+        println("^^^^^^ readModel - ${graphNotation.coalesce.values}")
 
-        val metadata = notationMetadataReader.read(projectNotation)
+        val metadata = notationMetadataReader.read(graphNotation)
 
         return ProjectModel(
-                projectNotation,
+                graphNotation,
                 metadata)
     }
 

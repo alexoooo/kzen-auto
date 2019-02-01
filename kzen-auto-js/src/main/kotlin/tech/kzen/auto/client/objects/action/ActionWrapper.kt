@@ -15,7 +15,7 @@ interface ActionWrapper {
 
     fun isApplicableTo(
             objectName: ObjectPath,
-            projectNotation: GraphNotation,
+            graphNotation: GraphNotation,
             graphMetadata: GraphMetadata
     ): Boolean
 

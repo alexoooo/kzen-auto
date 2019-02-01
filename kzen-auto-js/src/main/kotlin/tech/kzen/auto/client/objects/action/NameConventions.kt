@@ -12,8 +12,15 @@ object NameConventions {
         return objectName.value.startsWith(defaultPrefix)
     }
 
+
     fun randomAnonymous(): ObjectName {
-        val timestampSuffix = Date().toISOString()
+        // TODO: use local time zone
+
+        val timestampSuffix = Date()
+                .toISOString()
+                .replace("-", "")
+                .replace(":", "")
+                .replace(".", "_")
         return ObjectName("$defaultPrefix$timestampSuffix")
     }
 }

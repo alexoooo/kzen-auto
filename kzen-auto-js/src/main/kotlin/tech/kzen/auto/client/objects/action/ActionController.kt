@@ -72,7 +72,7 @@ class ActionController(
 
         override fun isApplicableTo(
                 objectName: ObjectPath,
-                projectNotation: GraphNotation,
+                graphNotation: GraphNotation,
                 graphMetadata: GraphMetadata
         ): Boolean {
             return true
@@ -81,7 +81,7 @@ class ActionController(
 
         override fun render(
                 rBuilder: RBuilder,
-                location: ObjectLocation,
+                objectLocation: ObjectLocation,
                 projectNotation: GraphNotation,
                 graphMetadata: GraphMetadata,
                 executionStatus: ExecutionStatus?,
@@ -89,7 +89,7 @@ class ActionController(
         ): ReactElement {
             return rBuilder.child(ActionController::class) {
                 attrs {
-                    objectLocation = location
+                    this.objectLocation = objectLocation
 
                     notation = projectNotation
                     metadata = graphMetadata
@@ -132,7 +132,7 @@ class ActionController(
 
     private fun onShiftUp() {
         val packagePath = props.objectLocation.bundlePath
-        val packageNotation = props.notation.bundleNotations.values[packagePath]!!
+        val packageNotation = props.notation.bundles.values[packagePath]!!
         val index = packageNotation.indexOf(props.objectLocation.objectPath)
 
         async {
@@ -144,7 +144,7 @@ class ActionController(
 
     private fun onShiftDown() {
         val packagePath = props.objectLocation.bundlePath
-        val packageNotation = props.notation.bundleNotations.values[packagePath]!!
+        val packageNotation = props.notation.bundles.values[packagePath]!!
         val index = packageNotation.indexOf(props.objectLocation.objectPath)
 
         async {

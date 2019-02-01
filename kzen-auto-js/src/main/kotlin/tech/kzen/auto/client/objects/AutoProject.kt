@@ -86,9 +86,9 @@ class AutoProject :
 //        console.log("AutoProject componentDidUpdate", state, prevState)
 
         if (state.notation != null &&
-                state.notation!!.bundleNotations.values[NotationConventions.mainPath] == null &&
+                state.notation!!.bundles.values[NotationConventions.mainPath] == null &&
                 (prevState.notation == null ||
-                        prevState.notation!!.bundleNotations.values[NotationConventions.mainPath] != null)) {
+                        prevState.notation!!.bundles.values[NotationConventions.mainPath] != null)) {
             async {
                 createMain()
             }
@@ -117,7 +117,7 @@ class AutoProject :
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun handleModel(autoModel: ProjectModel, event: NotationEvent?) {
         println("AutoProject - && handled - " +
-                "${autoModel.projectNotation.bundleNotations.values[NotationConventions.mainPath]?.objects?.values?.keys}")
+                "${autoModel.projectNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
 
         setState {
             notation = autoModel.projectNotation
@@ -290,7 +290,7 @@ class AutoProject :
                 }
 
                 val projectPackage: BundleNotation? =
-                        projectNotation.bundleNotations.values[NotationConventions.mainPath]
+                        projectNotation.bundles.values[NotationConventions.mainPath]
 
                 if (projectPackage == null) {
                     +"Initializing empty project..."

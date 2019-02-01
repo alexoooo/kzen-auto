@@ -51,19 +51,26 @@ class InsertionManager {
 
 
     suspend fun create(path: BundlePath, index: Int) {
-        if (selected != null) {
-            val selectedAction = selected!!
-
-            clearSelection()
-
-            ClientContext.commandBus.apply(AddObjectCommand.ofParent(
-                    ObjectLocation(
-                            path,
-                            ObjectPath(NameConventions.randomAnonymous(), BundleNesting.root)
-                    ),
-                    PositionIndex(index),
-                    selectedAction.toReference()))
+        if (selected == null) {
+            return
         }
+
+        val selectedAction = selected!!
+
+        clearSelection()
+
+        val newObjectLocation = ObjectLocation(
+                path,
+                ObjectPath(NameConventions.randomAnonymous(), BundleNesting.root))
+
+        val command = AddObjectCommand.ofParent(
+                newObjectLocation,
+                PositionIndex(index),
+                selectedAction.toReference())
+
+//        console.log("Creating: $command", command)
+
+        ClientContext.commandBus.apply(command)
     }
 
 
