@@ -8,6 +8,7 @@ import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath
+import tech.kzen.lib.common.notation.edit.AddedObjectEvent
 import tech.kzen.lib.common.notation.edit.NotationEvent
 import tech.kzen.lib.common.notation.edit.RenamedObjectEvent
 import tech.kzen.lib.common.util.Digest
@@ -75,6 +76,9 @@ class ExecutionManager(
         val changed = when (event) {
             is RenamedObjectEvent ->
                 model.rename(event.objectLocation, event.newName)
+
+            is AddedObjectEvent ->
+                model.add(event.objectLocation)
 
             else ->
                 false

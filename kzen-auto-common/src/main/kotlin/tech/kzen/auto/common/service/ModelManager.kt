@@ -87,9 +87,10 @@ class ModelManager(
         val allNotation = notationRepository.notation()
 
         val graphNotation = graphNotation(allNotation)
-        println("^^^^^^ readModel - ${graphNotation.coalesce.values}")
+//        println("^^^^^^ readModel ^^ - ${graphNotation.coalesce.values}")
 
         val metadata = notationMetadataReader.read(graphNotation)
+//        println("^^^^^^ readModel - got metadata: $metadata")
 
         return ProjectModel(
                 graphNotation,

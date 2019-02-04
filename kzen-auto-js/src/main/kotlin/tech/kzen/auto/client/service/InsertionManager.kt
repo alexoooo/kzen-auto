@@ -1,7 +1,10 @@
 package tech.kzen.auto.client.service
 
 import tech.kzen.auto.client.objects.action.NameConventions
-import tech.kzen.lib.common.api.model.*
+import tech.kzen.lib.common.api.model.BundleNesting
+import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.api.model.ObjectPath
 import tech.kzen.lib.common.notation.edit.AddObjectCommand
 import tech.kzen.lib.common.notation.model.PositionIndex
 
@@ -66,7 +69,7 @@ class InsertionManager {
         val command = AddObjectCommand.ofParent(
                 newObjectLocation,
                 PositionIndex(index),
-                selectedAction.toReference())
+                selectedAction.toReference().name)
 
 //        console.log("Creating: $command", command)
 

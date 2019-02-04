@@ -6,6 +6,7 @@
 Action:
   abstract: true
   class: tech.kzen.auto.common.api.AutoAction
+  description: "Perform action"
   meta:
     icon: String
     description: String

@@ -7,8 +7,8 @@ OpenBrowser:
   is: Action
   class: tech.kzen.auto.server.objects.OpenBrowser
   icon: OpenInNew
-  description: "Open a new browser window"
   title: "Open browser"
+  description: "Open a new browser window"
 
 
 CloseBrowser:
@@ -17,16 +17,17 @@ CloseBrowser:
   class: tech.kzen.auto.server.objects.CloseBrowser
   icon: Close
   title: "Close browser"
+  description: "Close a browser window"
 
 
 GoTo:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.GoTo
-  icon: Http
-  description: "Navigate to a new URL"
-  title: "Browse to URL"
   location: "https://www.google.com/"
+  icon: Http
+  title: "Browse to URL"
+  description: "Navigate to a new URL"
   meta:
     location: String
 

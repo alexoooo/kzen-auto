@@ -44,6 +44,20 @@ data class ExecutionModel(
     }
 
 
+    fun add(objectLocation: ObjectLocation): Boolean {
+        for (frame in frames) {
+            if (frame.path != objectLocation.bundlePath) {
+                continue
+            }
+
+            frame.add(objectLocation.objectPath)
+            return true
+        }
+
+        return false
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun findLast(
             objectLocation: ObjectLocation

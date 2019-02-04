@@ -7,7 +7,6 @@ import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.lib.common.api.model.*
-import tech.kzen.lib.common.notation.model.ObjectNotation
 import tech.kzen.lib.common.notation.model.PositionIndex
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.IoUtils
@@ -226,7 +225,7 @@ class ClientRestApi(
             newName: ObjectName
     ): Digest {
         return getDigest(
-                CommonRestApi.commandAttributeRemoveIn,
+                CommonRestApi.commandRefactorRename,
                 CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramObjectName to newName.value)

@@ -186,6 +186,10 @@ class CommandBus(
                 restClient.shiftInAttribute(
                         command.objectLocation, command.attributePath, command.newPosition)
 
+            is RenameRefactorCommand ->
+                restClient.refactorName(
+                        command.objectLocation, command.newName)
+
 
             else ->
                 throw UnsupportedOperationException("Unknown: $command")

@@ -77,4 +77,10 @@ data class ExecutionFrame(
 
         return true
     }
+
+
+    fun add(objectPath: ObjectPath) {
+        check(objectPath !in values)
+        values[objectPath] = ExecutionStatus.Pending
+    }
 }
