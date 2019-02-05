@@ -1,10 +1,9 @@
 package tech.kzen.auto.client
 
+//import tech.kzen.auto.client.service.CommandObserver
 import react.dom.render
 import tech.kzen.auto.client.objects.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.CommandBus
-//import tech.kzen.auto.client.service.CommandObserver
 import tech.kzen.auto.client.util.async
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
@@ -13,6 +12,7 @@ import tech.kzen.lib.common.context.GraphCreator
 import tech.kzen.lib.common.context.GraphDefiner
 import kotlin.browser.document
 import kotlin.browser.window
+import kotlin.dom.clear
 
 
 fun main(args: Array<String>) {
@@ -38,19 +38,12 @@ fun main(args: Array<String>) {
 
 //            console.log("^^^ main rootInstance", rootInstance)
 
-//            val commandObserverName = autoGraph
-//                    .names()
-//                    .find { autoGraph.get(it) is CommandBus.Observer }
-//            if (commandObserverName != null) {
-//                // TODO: AutoProject (root) should be here?
-//                console.log("%%%%% main - commandObserverName: $commandObserverName")
-//                val commandObserver = autoGraph.get(commandObserverName) as CommandBus.Observer
-//                ClientContext.commandBus.setObserver(commandObserver)
-//            }
+            val rootElement = document.getElementById("root")
+                    ?: throw IllegalStateException("'root' element not found")
 
-            console.log("^^^ main autoGraph", autoGraph)
+            rootElement.clear()
 
-            render(document.getElementById("root")!!) {
+            render(rootElement) {
                 rootInstance.execute(this)
             }
         }

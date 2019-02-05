@@ -3,6 +3,8 @@ package tech.kzen.auto.client.objects.action
 import kotlinx.coroutines.delay
 import kotlinx.css.*
 import kotlinx.html.js.onClickFunction
+import kotlinx.html.js.onMouseOutFunction
+import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
@@ -37,14 +39,17 @@ class NameEditor(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var objectLocation: ObjectLocation,
-            var notation: GraphNotation
+            var notation: GraphNotation,
+            var description: String,
+            var runCallback: () -> Unit
     ): RProps
 
 
     class State(
             var editing: Boolean,
             var objectName: String,
-            var saving: Boolean
+            var saving: Boolean,
+            var readerHover: Boolean
     ): RState
 
 
@@ -55,6 +60,7 @@ class NameEditor(
 
         editing = false
         saving = false
+        readerHover = false
     }
 
 
@@ -135,6 +141,20 @@ class NameEditor(
     }
 
 
+    private fun onReaderEnter() {
+        setState {
+            readerHover = true
+        }
+    }
+
+
+    private fun onReaderLeave() {
+        setState {
+            readerHover = false
+        }
+    }
+
+
     private fun onEdit() {
         setState {
             editing = true
@@ -166,12 +186,24 @@ class NameEditor(
             css {
                 height = ActionController.headerHeight
                 width = 100.pct
+
+//                backgroundColor = Color.blue
             }
 
             if (state.editing) {
                 renderEditor()
             }
             else {
+                attrs {
+                    onMouseOverFunction = {
+                        onReaderEnter()
+                    }
+
+                    onMouseOutFunction = {
+                        onReaderLeave()
+                    }
+                }
+
                 renderReader()
             }
         }
@@ -181,16 +213,21 @@ class NameEditor(
     private fun RBuilder.renderReader() {
         styledDiv {
             css {
+                display = Display.inlineBlock
+
                 cursor = Cursor.pointer
                 height = ActionController.headerHeight
-                width = 100.pct
+                width = 100.pct.minus(2.em)
+
+                marginTop = 10.px
+//                backgroundColor = Color.red
             }
 
             attrs {
-                title = "Edit name"
+                title = props.description
 
                 onClickFunction = {
-                    onEdit()
+                    props.runCallback()
                 }
             }
 
@@ -219,6 +256,34 @@ class NameEditor(
                 }
             }
         }
+
+
+        styledDiv {
+            css {
+                float = Float.right
+
+                if (! state.readerHover) {
+                    visibility = Visibility.hidden
+                }
+            }
+
+            attrs {
+                title = "Edit name"
+            }
+
+            child(MaterialIconButton::class) {
+                attrs {
+                    style = reactStyle {
+                        marginLeft = (-0.5).em
+                        marginRight = (-0.5).em
+                    }
+
+                    onClick = ::onEdit
+                }
+
+                child(EditIcon::class) {}
+            }
+        }
     }
 
 
@@ -229,6 +294,8 @@ class NameEditor(
 
                 width = 100.pct.minus(4.em)
                 height = ActionController.headerHeight
+
+                marginTop = 10.px
             }
 
             child(MaterialTextField::class) {
@@ -257,7 +324,7 @@ class NameEditor(
 
         styledDiv {
             css {
-                float = kotlinx.css.Float.right
+                float = Float.right
             }
 
             child(MaterialIconButton::class) {

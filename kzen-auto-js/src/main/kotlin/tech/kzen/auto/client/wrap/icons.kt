@@ -116,5 +116,10 @@ external class TimerIcon : Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 
+@JsName("Edit")
+external class EditIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
 
 

@@ -8,9 +8,7 @@ import tech.kzen.auto.common.exec.ExecutionStatus
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath
-import tech.kzen.lib.common.notation.edit.AddedObjectEvent
-import tech.kzen.lib.common.notation.edit.NotationEvent
-import tech.kzen.lib.common.notation.edit.RenamedObjectEvent
+import tech.kzen.lib.common.notation.edit.*
 import tech.kzen.lib.common.util.Digest
 
 
@@ -73,7 +71,32 @@ class ExecutionManager(
 
         val model = modelOrInit()
 
-        val changed = when (event) {
+        val changed = apply(model, event)
+
+        if (changed) {
+            publishExecutionModel(model)
+        }
+    }
+
+
+    private fun apply(model: ExecutionModel, event: NotationEvent): Boolean {
+        return when (event) {
+            is SingularNotationEvent ->
+                applySingular(model, event)
+
+            is CompoundNotationEvent -> {
+                var anyChanged = false
+                for (singularEvent in event.singularEvents) {
+                    anyChanged = anyChanged || applySingular(model, singularEvent)
+                }
+                return anyChanged
+            }
+        }
+    }
+
+
+    private fun applySingular(model: ExecutionModel, event: SingularNotationEvent): Boolean {
+        return when (event) {
             is RenamedObjectEvent ->
                 model.rename(event.objectLocation, event.newName)
 
@@ -82,10 +105,6 @@ class ExecutionManager(
 
             else ->
                 false
-        }
-
-        if (changed) {
-            publishExecutionModel(model)
         }
     }
 

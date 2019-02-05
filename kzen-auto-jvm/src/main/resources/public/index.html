@@ -7,10 +7,26 @@
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="stylesheet" type="text/css" href="style.css">
 
+    <link rel="stylesheet" type="text/css" href="normalize.css">
+
     <script type="text/javascript" src="vendor.bundle.js"></script>
     <script type="text/javascript" src="main.bundle.js"></script>
 </head>
-<body style="background-color: rgb(225, 225, 225)">
-    <div id="root"></div>
+<body style="background-color: rgb(240, 240, 240)">
+        <!-- rgb(230, 230, 230) -->
+        <!-- background-color: rgb(250, 250, 250) -->
+        <!-- style="background-color: rgb(225, 225, 225)" -->
+    <div id="root">
+        <div class="fade-in" style="width: 100%; height: 100%">
+            <div style="width:100px; height:100px; position:absolute; left:0; right:0; top:0; bottom:0; margin:auto;">
+                <div style="width: 50%; margin: 0 auto;">
+                    Loading...
+                    <div style="width: 50%; margin: 0 auto">
+                        <div class="rootLoader"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

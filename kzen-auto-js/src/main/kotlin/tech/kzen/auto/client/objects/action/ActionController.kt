@@ -302,7 +302,18 @@ class ActionController(
         val reactStyles = reactStyle {
             val statusColor = when (props.status) {
                 ExecutionStatus.Pending ->
-                    Color.blue.lighten(60)
+//                    Color.cyan.lighten(50)
+//                    Color.blue.lighten(60)
+//                    Color.lightBlue.darken(10)
+//                    Color.lightBlue.darken(15)
+//                    Color.lightGray
+//                    Color.white
+//                    Color("#4285f4")
+//                    Color("#4d8dfd")
+//                    Color("#5e9aff")
+                    Color("#649fff")
+//                    Color("#67a2ff")
+//                    Color("#6ea7ff")
 
                 ExecutionStatus.Running ->
                     Color.yellow
@@ -390,7 +401,7 @@ class ActionController(
                 styledDiv {
                     css {
                         float = Float.left
-                        marginTop = (-0.5).em
+                        marginTop = (-0.6).em
                         marginLeft = (-1.25).em
                     }
 
@@ -410,12 +421,17 @@ class ActionController(
                     css {
                         float = Float.left
                         width = 100.pct
+
+                        marginTop = (-10).px
                     }
 
                     child(NameEditor::class) {
                         attrs {
                             objectLocation = props.objectLocation
                             notation = props.notation
+
+                            this.description = description
+                            runCallback = ::onRun
                         }
                     }
                 }
