@@ -5,7 +5,9 @@ import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import react.*
-import react.dom.*
+import react.dom.h3
+import react.dom.input
+import react.dom.span
 import styled.*
 import tech.kzen.auto.client.objects.action.ActionController
 import tech.kzen.auto.client.objects.action.ActionCreator
@@ -22,7 +24,6 @@ import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.common.service.ProjectModel
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
-import tech.kzen.lib.common.api.model.ObjectPath
 import tech.kzen.lib.common.metadata.model.GraphMetadata
 import tech.kzen.lib.common.notation.NotationConventions
 import tech.kzen.lib.common.notation.edit.CreateBundleCommand
@@ -360,7 +361,11 @@ class AutoProject :
 
         val graphMetadata = state.metadata!!
 
-        div(classes = "actionColumn") {
+        styledDiv {
+            css {
+                width = 20.em
+            }
+
             val next = state.execution?.next()
 
             var index = 0
@@ -485,20 +490,65 @@ class AutoProject :
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.footer() {
-        // TODO: switch to FAB
-        br {}
-        br {}
-        br {}
-
-
-        div(classes = "footer") {
-            runAll()
-            reset()
-
-//            +" | "
+//        br {}
+//        br {}
+//        br {}
 //
-//            refresh()
+//        +"Foo"
+
+//                .footer {
+//                    height: 40px;
+//                    position: fixed;
+//                    bottom:0%;
+//                    width:100%;
+//                    background-color: rgba(0, 0, 0, 0.50);
+//                    opacity: 1;
+//                }
+
+        styledDiv {
+            css {
+                position = Position.fixed
+                bottom = 0.px
+                right = 0.px
+                marginRight = 2.em
+                marginBottom = 2.em
+            }
+
+            child(MaterialFab::class) {
+                attrs {
+                    // TODO
+//                    title = "Run"
+
+                    onClick = ::onRunAll
+
+                    style = reactStyle {
+                        backgroundColor = Color.yellow
+                        width = 5.em
+                        height = 5.em
+                    }
+                }
+
+                child(PlayArrowIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+                    }
+                }
+            }
         }
+
+
+        // TODO: switch to FAB
+//        br {}
+//        br {}
+//        br {}
+//
+//
+//        div(classes = "footer") {
+//            runAll()
+//            reset()
+//        }
     }
 
 

@@ -8,6 +8,9 @@ import kotlin.reflect.KClass
 
 
 fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
+    // TODO: is there a way to do this without manually writing these out?
+    //  e.g. <Icon>edit_icon</Icon> in https://codesandbox.io/s/9yp4yk6qno
+
     return when (name) {
         "PlayArrow" ->
             PlayArrowIcon::class

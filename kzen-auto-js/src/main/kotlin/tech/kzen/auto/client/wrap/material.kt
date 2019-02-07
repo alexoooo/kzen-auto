@@ -13,11 +13,11 @@ import kotlin.js.Json
 // also see: https://github.com/rivasdiaz/kotlin-rmwc
 
 @JsName("Button")
-external class MaterialButton : Component<MaterialButtonProps, RState> {
+external class MaterialButton: Component<MaterialButtonProps, RState> {
     override fun render(): ReactElement?
 }
 
-external interface MaterialButtonProps : RProps {
+external interface MaterialButtonProps: RProps {
     var id: String
     var variant: String
     var color: String
@@ -30,11 +30,11 @@ external interface MaterialButtonProps : RProps {
 
 
 @JsName("IconButton")
-external class MaterialIconButton : Component<MaterialIconButtonProps, RState> {
+external class MaterialIconButton: Component<MaterialIconButtonProps, RState> {
     override fun render(): ReactElement?
 }
 
-external interface MaterialIconButtonProps : RProps {
+external interface MaterialIconButtonProps: RProps {
 //    var id: String
 //    var variant: String
 
@@ -48,17 +48,22 @@ external interface MaterialIconButtonProps : RProps {
 }
 
 
+@JsName("Fab")
+external class MaterialFab: Component<MaterialButtonProps, RState> {
+    override fun render(): ReactElement?
+}
+
 
 
 @JsName("Typography")
-external class MaterialTypography : Component<RProps, RState> {
+external class MaterialTypography: Component<RProps, RState> {
     override fun render(): ReactElement?
 }
 
 
 
 @JsName("AppBar")
-external class MaterialAppBar : Component<AppBarProps, RState> {
+external class MaterialAppBar: Component<AppBarProps, RState> {
     override fun render(): ReactElement?
 }
 
@@ -70,7 +75,7 @@ external interface AppBarProps : RProps {
 
 
 @JsName("Toolbar")
-external class MaterialToolbar : Component<RProps, RState> {
+external class MaterialToolbar: Component<RProps, RState> {
     override fun render(): ReactElement?
 }
 
@@ -78,13 +83,13 @@ external class MaterialToolbar : Component<RProps, RState> {
 
 
 @JsName("Card")
-external class MaterialCard : Component<CardProps, RState> {
+external class MaterialCard: Component<CardProps, RState> {
     override fun render(): ReactElement?
 }
 
 
 
-external interface CardProps : RProps {
+external interface CardProps: RProps {
     var style: Json
 
 //    var classes: Json
@@ -98,23 +103,23 @@ external interface CardProps : RProps {
 
 
 @JsName("CardContent")
-external class MaterialCardContent : Component<RProps, RState> {
+external class MaterialCardContent: Component<RProps, RState> {
     override fun render(): ReactElement?
 }
 
 
 @JsName("CardActions")
-external class MaterialCardActions : Component<RProps, RState> {
+external class MaterialCardActions: Component<RProps, RState> {
     override fun render(): ReactElement?
 }
 
 
 @JsName("TextField")
-external class MaterialTextField : Component<MaterialTextFieldProps, RState> {
+external class MaterialTextField: Component<MaterialTextFieldProps, RState> {
     override fun render(): ReactElement?
 }
 
-external interface MaterialTextFieldProps : RProps {
+external interface MaterialTextFieldProps: RProps {
     var onChange: (e: Event) -> Unit
 
     var onKeyDown: (e: KeyboardEvent) -> Unit
@@ -130,8 +135,8 @@ external interface MaterialTextFieldProps : RProps {
     var fullWidth: Boolean
     var margin: String
 }
-//
-//
+
+
 //@JsName("FormControl")
 //external class MaterialFormControl : Component<MaterialFormControlProps, RState> {
 //    override fun render(): ReactElement?

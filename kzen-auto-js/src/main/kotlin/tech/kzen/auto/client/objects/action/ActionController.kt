@@ -381,7 +381,7 @@ class ActionController(
                 ?.asString()
                 ?: defaultRunDescription
 
-        val iconWidth = 2.em
+        val iconWidth = 40.px
 
         div {
             styledDiv {
@@ -446,9 +446,13 @@ class ActionController(
                 ?.asString()
                 ?: defaultRunIcon
 
+
         child(MaterialIconButton::class) {
             attrs {
                 style = reactStyle {
+                    marginLeft = 8.px
+                    width = 48.px
+                    height = 48.px
                     backgroundColor = Color("rgba(255, 255, 255, 0.5)")
                 }
 
@@ -460,8 +464,10 @@ class ActionController(
                     style = reactStyle {
                         color = Color.black
 
+                        marginTop = (-9).px
                         fontSize = 1.75.em
                         borderRadius = 20.px
+
                         backgroundColor =  Color("rgba(255, 255, 255, 0.5)")
                     }
                 }
