@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.service.webdriver
 
 import org.openqa.selenium.WebDriver
+import org.openqa.selenium.remote.UnreachableBrowserException
 
 
 class WebDriverContext {
@@ -9,6 +10,11 @@ class WebDriverContext {
 
     fun present(): Boolean {
         return webDriver != null
+    }
+
+
+    private fun clear() {
+        webDriver = null
     }
 
 
@@ -26,13 +32,19 @@ class WebDriverContext {
             return
         }
 
-        get().quit()
-        webDriver = null
+        try {
+            get().quit()
+        }
+        catch (ignored: UnreachableBrowserException) {
+            // https://stackoverflow.com/a/47936386/1941359
+        }
+
+        clear()
     }
 
 
     fun get(): WebDriver {
-        check(webDriver != null, {"WebDriver not found"})
+        check(webDriver != null) {"WebDriver missing"}
         return webDriver!!
     }
 }

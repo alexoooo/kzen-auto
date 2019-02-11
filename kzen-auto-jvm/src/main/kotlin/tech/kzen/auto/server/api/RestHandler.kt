@@ -8,9 +8,10 @@ import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
-import tech.kzen.auto.common.api.ActionExecution
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.exec.ExecutionModel
+import tech.kzen.auto.common.exec.codec.ExecutionModelEncoding
+import tech.kzen.auto.common.exec.codec.ExecutionResultResponse
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.api.model.*
 import tech.kzen.lib.common.notation.NotationConventions
@@ -121,7 +122,7 @@ class RestHandler {
             ServerContext.notationMedia.read(notationPath)
         }
 
-        val notationText = IoUtils.utf8ToString(notationBytes)
+        val notationText = IoUtils.utf8Decode(notationBytes)
 
         val responseBuilder = ServerResponse.ok()
         return if (notationText.isEmpty()) {
@@ -431,11 +432,12 @@ class RestHandler {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun actionModel(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val executionModel: ExecutionModel = runBlocking {
-            ServerContext.executionManager.executionModel()
-        }
 
-        val asCollection = ExecutionModel.toCollection(executionModel)
+        val asCollection = runBlocking {
+            val executionModel: ExecutionModel = ServerContext.executionManager.executionModel()
+
+            ExecutionModelEncoding.encode(executionModel, ServerContext.actionExecutor.actionManager())
+        }
 
         return ServerResponse
                 .ok()
@@ -477,18 +479,15 @@ class RestHandler {
 
         val objectLocation = ObjectLocation(bundlePath, objectPath)
 
-        val execution: ActionExecution = runBlocking {
+        val execution: ExecutionResultResponse = runBlocking {
             ServerContext.executionManager.execute(objectLocation)
         }
 
-        val response = "{" +
-                "\"${CommonRestApi.fieldStatus}\": \"${execution.status}\"," +
-                "\"${CommonRestApi.fieldDigest}\": \"${execution.digest.asString()}\"" +
-                "}"
+        val asCollection = ExecutionResultResponse.toCollection(execution)
 
         return ServerResponse
                 .ok()
-                .body(Mono.just(response))
+                .body(Mono.just(asCollection))
     }
 
 

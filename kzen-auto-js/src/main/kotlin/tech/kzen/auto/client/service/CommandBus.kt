@@ -73,7 +73,7 @@ class CommandBus(
         println("CommandBus - client event: $event")
 
         val bundleValue = ClientContext.notationMediaCache.read(NotationConventions.mainPath)
-        println("CommandBus - new bundle value !!: ${IoUtils.utf8ToString(bundleValue)}")
+        println("CommandBus - new bundle value !!: ${IoUtils.utf8Decode(bundleValue)}")
 
         val parsedBundle = ClientContext.notationParser.parseBundle(bundleValue)
         println("CommandBus - parsedBundle: $parsedBundle")

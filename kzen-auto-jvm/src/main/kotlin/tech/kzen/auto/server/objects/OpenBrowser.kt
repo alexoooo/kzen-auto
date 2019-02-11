@@ -3,16 +3,16 @@ package tech.kzen.auto.server.objects
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
 import tech.kzen.auto.common.api.AutoAction
+import tech.kzen.auto.common.exec.ExecutionResult
+import tech.kzen.auto.common.exec.ExecutionSuccess
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.webdriver.model.BrowserLauncher
 
 
 @Suppress("unused")
 class OpenBrowser: AutoAction {
-    override suspend fun perform() {
-        if (ServerContext.webDriverContext.present()) {
-            return
-        }
+    override suspend fun perform(): ExecutionResult {
+        closeIfAlreadyOpen()
 
         val webDriverOption = ServerContext.webDriverRepo.latest(BrowserLauncher.GoogleChrome)
         println("webDriverOption: $webDriverOption")
@@ -30,5 +30,13 @@ class OpenBrowser: AutoAction {
         val driver = ChromeDriver(chromeOptions)
 
         ServerContext.webDriverContext.set(driver)
+
+        return ExecutionSuccess.empty
+    }
+
+
+    private fun closeIfAlreadyOpen() {
+        // https://github.com/alexoooo/kzen-shell/issues/11
+        ServerContext.webDriverContext.quit()
     }
 }

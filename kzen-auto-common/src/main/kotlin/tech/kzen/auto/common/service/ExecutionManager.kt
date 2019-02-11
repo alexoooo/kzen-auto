@@ -1,20 +1,25 @@
 package tech.kzen.auto.common.service
 
 import kotlinx.coroutines.delay
-import tech.kzen.auto.common.api.ActionExecution
 import tech.kzen.auto.common.exec.ExecutionFrame
 import tech.kzen.auto.common.exec.ExecutionModel
-import tech.kzen.auto.common.exec.ExecutionStatus
+import tech.kzen.auto.common.exec.ExecutionPhase
+import tech.kzen.auto.common.exec.ExecutionState
+import tech.kzen.auto.common.exec.codec.ExecutionResultEncoding
+import tech.kzen.auto.common.exec.codec.ExecutionResultResponse
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath
+import tech.kzen.lib.common.api.model.ObjectReference
+import tech.kzen.lib.common.notation.NotationConventions
 import tech.kzen.lib.common.notation.edit.*
 import tech.kzen.lib.common.util.Digest
 
 
 class ExecutionManager(
         private val executionInitializer: ExecutionInitializer,
-        private val actionExecutor: ActionExecutor
+        private val actionExecutor: ActionExecutor,
+        private val modelManager: ModelManager
 ): ModelManager.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
@@ -111,23 +116,28 @@ class ExecutionManager(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun willExecute(objectLocation: ObjectLocation) {
-        updateStatus(objectLocation, ExecutionStatus.Running)
-    }
-
-
-    suspend fun didExecute(objectLocation: ObjectLocation, execution: ActionExecution) {
-        updateStatus(objectLocation, execution.status)
-    }
-
-
-    private suspend fun updateStatus(objectLocation: ObjectLocation, status: ExecutionStatus) {
         val model = modelOrInit()
         val existingFrame = model.findLast(objectLocation)
 
         val upsertFrame = existingFrame
                 ?: model.frames.last()
 
-        upsertFrame.values[objectLocation.objectPath] = status
+        val state = upsertFrame.states[objectLocation.objectPath]!!
+
+        upsertFrame.states[objectLocation.objectPath] = state.copy(running = true)
+
+        publishExecutionModel(model)
+    }
+
+
+    suspend fun didExecute(objectLocation: ObjectLocation, executionState: ExecutionState) {
+        val model = modelOrInit()
+        val existingFrame = model.findLast(objectLocation)
+
+        val upsertFrame = existingFrame
+                ?: model.frames.last()
+
+        upsertFrame.states[objectLocation.objectPath] = executionState
 
         publishExecutionModel(model)
     }
@@ -136,7 +146,7 @@ class ExecutionManager(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun isExecuting(): Boolean {
-        return modelOrInit().containsStatus(ExecutionStatus.Running)
+        return modelOrInit().containsStatus(ExecutionPhase.Running)
     }
 
 
@@ -168,13 +178,13 @@ class ExecutionManager(
         val model = modelOrInit()
         model.frames.clear()
 
-        val values = mutableMapOf<ObjectPath, ExecutionStatus>()
+        val values = mutableMapOf<ObjectPath, ExecutionState>()
 
-        val packageNotation = projectModel.projectNotation.bundles.values[main]
+        val packageNotation = projectModel.graphNotation.bundles.values[main]
 
         if (packageNotation != null) {
             for (e in packageNotation.objects.values) {
-                values[e.key] = ExecutionStatus.Pending
+                values[e.key] = ExecutionState.initial
             }
 
             val frame = ExecutionFrame(main, values)
@@ -191,7 +201,7 @@ class ExecutionManager(
     suspend fun execute(
             objectLocation: ObjectLocation,
             delayMillis: Int = 0
-    ): ActionExecution {
+    ): ExecutionResultResponse {
         if (delayMillis > 0) {
 //            println("ExecutionManager | %%%% delay($delayMillis)")
             delay(delayMillis.toLong())
@@ -205,30 +215,40 @@ class ExecutionManager(
             delay(delayMillis.toLong())
         }
 
-        var success = false
-        try {
-            actionExecutor.execute(objectLocation)
-            success = true
+        val response: ExecutionResultResponse = try {
+            actionExecutor.executeResponse(objectLocation)
         }
         catch (e: Exception) {
             println("#$%#$%#$ got exception: $e")
+
+            val digest = modelOrInit().digest()
+            ExecutionResultResponse(
+                    ExecutionResultEncoding(
+                            e.message ?: "Error",
+                            null,
+                            null
+                    ),
+                    digest
+            )
         }
 
-        val status =
-                if (success) {
-                    ExecutionStatus.Success
-                }
-                else {
-                    ExecutionStatus.Failed
-                }
+        val parentRef = ObjectReference.parse(
+                modelManager.autoNotation().getString(objectLocation, NotationConventions.isAttribute))
+        val parentLocation = modelManager.autoNotation().coalesce.locate(objectLocation, parentRef)
 
-        val digest = modelOrInit().digest()
+        val actionHandle = actionExecutor.actionManager().get(parentLocation)
+        val result = response.toResult(actionHandle)
 
-        val execution = ActionExecution(
-                status, digest)
+        val executionState = ExecutionState(
+                false,
+                ExecutionState.Outcome(
+                        result,
+                        response.resultEncoding.digest()
+                )
+        )
 
-        didExecute(objectLocation, execution)
+        didExecute(objectLocation, executionState)
 
-        return execution
+        return response
     }
 }

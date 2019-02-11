@@ -18,7 +18,8 @@ import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.exec.ExecutionModel
-import tech.kzen.auto.common.exec.ExecutionStatus
+import tech.kzen.auto.common.exec.ExecutionPhase
+import tech.kzen.auto.common.objects.service.ActionManager
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.common.service.ProjectModel
@@ -35,14 +36,18 @@ import tech.kzen.lib.common.notation.model.GraphNotation
 
 
 @Suppress("unused")
-class AutoProject :
-        RComponent<RProps, AutoProject.State>(),
+class AutoProject:
+        RComponent<AutoProject.Props, AutoProject.State>(),
         ModelManager.Observer,
         ExecutionManager.Observer,
         CommandBus.Observer,
         InsertionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
+    class Props(
+            var actionManager: ActionManager
+    ): RProps
+
     class State(
             var notation: GraphNotation?,
             var metadata: GraphMetadata?,
@@ -51,13 +56,19 @@ class AutoProject :
 //            var pending: Boolean = false,
             var commandError: String?,
             var creating: Boolean
-    ) : RState
+    ): RState
 
 
     @Suppress("unused")
-    class Wrapper: ReactWrapper {
+    class Wrapper(
+            private val actionManager: ActionManager
+    ): ReactWrapper {
         override fun execute(input: RBuilder): ReactElement {
-            return input.child(AutoProject::class) {}
+            return input.child(AutoProject::class) {
+                attrs {
+                    actionManager = this@Wrapper.actionManager
+                }
+            }
         }
     }
 
@@ -83,7 +94,11 @@ class AutoProject :
     }
 
 
-    override fun componentDidUpdate(prevProps: RProps, prevState: AutoProject.State, snapshot: Any) {
+    override fun componentDidUpdate(
+            prevProps: AutoProject.Props,
+            prevState: AutoProject.State,
+            snapshot: Any
+    ) {
 //        console.log("AutoProject componentDidUpdate", state, prevState)
 
         if (state.notation != null &&
@@ -118,10 +133,10 @@ class AutoProject :
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun handleModel(autoModel: ProjectModel, event: NotationEvent?) {
         println("AutoProject - && handled - " +
-                "${autoModel.projectNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
+                "${autoModel.graphNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
 
         setState {
-            notation = autoModel.projectNotation
+            notation = autoModel.graphNotation
             metadata = autoModel.graphMetadata
 //            pending = false
         }
@@ -277,6 +292,7 @@ class AutoProject :
 
                                 child(ActionCreator::class) {
                                     attrs {
+                                        actionManager = actionManager
                                         notation = projectNotation
                                         path = NotationConventions.mainPath
                                     }
@@ -370,8 +386,8 @@ class AutoProject :
 
             var index = 0
             for (e in projectPackage.objects.values) {
-                val status: ExecutionStatus? =
-                        state.execution?.frames?.lastOrNull()?.values?.get(e.key)
+                val status: ExecutionPhase? =
+                        state.execution?.frames?.lastOrNull()?.states?.get(e.key)?.phase()
 
                 val keyLocation = ObjectLocation(bundlePath, e.key)
 
@@ -453,7 +469,7 @@ class AutoProject :
             objectLocation: ObjectLocation,
             projectNotation: GraphNotation,
             graphMetadata: GraphMetadata,
-            executionStatus: ExecutionStatus?,
+            executionStatus: ExecutionPhase?,
             nextToExecute: Boolean
     ) {
         // todo:

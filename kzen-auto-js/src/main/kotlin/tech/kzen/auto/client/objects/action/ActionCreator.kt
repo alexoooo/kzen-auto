@@ -8,8 +8,10 @@ import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.wrap.MaterialButton
 import tech.kzen.auto.client.wrap.iconClassForName
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.lib.common.api.model.*
-import tech.kzen.lib.common.notation.NotationConventions
+import tech.kzen.auto.common.objects.service.ActionManager
+import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.api.model.ObjectName
 import tech.kzen.lib.common.notation.model.GraphNotation
 
 
@@ -22,6 +24,7 @@ class ActionCreator(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
+            var actionManager: ActionManager,
             var notation: GraphNotation,
             var path: BundlePath
     ): RProps
@@ -92,7 +95,7 @@ class ActionCreator(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        for (actionType in actionTypes()) {
+        for (actionType in props.actionManager.actionLocations()) {
             child(MaterialButton::class) {
                 attrs {
                     key = actionType.toReference().asString()
@@ -141,21 +144,21 @@ class ActionCreator(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun actionTypes(): List<ObjectLocation> {
-        val actionTypes = mutableListOf<ObjectLocation>()
-
-        for (e in props.notation.coalesce.values) {
-            val isParameter = e.value.attributes[NotationConventions.isAttribute.attribute]
-                    ?.asString()
-                    ?: continue
-
-            if (isParameter != "Action") {
-                continue
-            }
-
-            actionTypes.add(e.key)
-        }
-
-        return actionTypes
-    }
+//    private fun actionTypes(): List<ObjectLocation> {
+//        val actionTypes = mutableListOf<ObjectLocation>()
+//
+//        for (e in props.notation.coalesce.values) {
+//            val isParameter = e.value.attributes[NotationConventions.isAttribute.attribute]
+//                    ?.asString()
+//                    ?: continue
+//
+//            if (isParameter != "Action") {
+//                continue
+//            }
+//
+//            actionTypes.add(e.key)
+//        }
+//
+//        return actionTypes
+//    }
 }

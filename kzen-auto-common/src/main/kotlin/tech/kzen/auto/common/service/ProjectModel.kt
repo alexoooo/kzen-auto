@@ -5,5 +5,5 @@ import tech.kzen.lib.common.notation.model.GraphNotation
 
 
 data class ProjectModel(
-        val projectNotation: GraphNotation,
+        val graphNotation: GraphNotation,
         val graphMetadata: GraphMetadata)

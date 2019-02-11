@@ -7,60 +7,22 @@ import tech.kzen.lib.common.api.model.ObjectPath
 
 data class ExecutionFrame(
         val path: BundlePath,
-        val values: MutableMap<ObjectPath, ExecutionStatus>
+        val states: MutableMap<ObjectPath, ExecutionState>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private const val pathKey = "path"
-        private const val valuesKey = "values"
-
-
-        fun toCollection(frame: ExecutionFrame): Map<String, Any> {
-            val collection = mutableMapOf<String, Any>()
-
-            collection[pathKey] = frame.path.asRelativeFile()
-
-            val values = mutableMapOf<String, String>()
-            for (e in frame.values) {
-                values[e.key.asString()] = e.value.name
-            }
-            collection[valuesKey] = values
-
-            return collection
-        }
-
-
-        fun fromCollection(collection: Map<String, Any>): ExecutionFrame {
-            val relativeLocation = collection[pathKey] as String
-            val path = BundlePath.parse(relativeLocation)
-
-            val valuesMap = collection[valuesKey] as Map<*, *>
-
-            val values = mutableMapOf<ObjectPath, ExecutionStatus>()
-            for (e in valuesMap) {
-                values[ObjectPath.parse(e.key as String)] =
-                        ExecutionStatus.valueOf(e.value as String)
-            }
-
-            return ExecutionFrame(path, values)
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     fun contains(objectName: ObjectPath): Boolean {
-        return values.containsKey(objectName)
+        return states.containsKey(objectName)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun rename(from: ObjectPath, newName: ObjectName): Boolean {
-        if (! values.containsKey(from)) {
+        if (! states.containsKey(from)) {
             return false
         }
 
-        val renamed = mutableMapOf<ObjectPath, ExecutionStatus>()
-        for (e in values) {
+        val renamed = mutableMapOf<ObjectPath, ExecutionState>()
+        for (e in states) {
             val key =
                     if (e.key == from) {
                         from.copy(name = newName)
@@ -72,15 +34,15 @@ data class ExecutionFrame(
             renamed[key] = e.value
         }
 
-        values.clear()
-        values.putAll(renamed)
+        states.clear()
+        states.putAll(renamed)
 
         return true
     }
 
 
     fun add(objectPath: ObjectPath) {
-        check(objectPath !in values)
-        values[objectPath] = ExecutionStatus.Pending
+        check(objectPath !in states)
+        states[objectPath] = ExecutionState.initial
     }
 }

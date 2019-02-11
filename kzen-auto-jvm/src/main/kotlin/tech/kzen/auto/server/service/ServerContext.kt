@@ -45,11 +45,12 @@ object ServerContext {
             notationMedia,
             notationMetadataReader)
 
-    private val actionExecutor = ModelActionExecutor(modelManager)
+    val actionExecutor = ModelActionExecutor(modelManager)
 
     val executionManager = ExecutionManager(
             EmptyExecutionInitializer,
-            actionExecutor)
+            actionExecutor,
+            modelManager)
 
 
     //-----------------------------------------------------------------------------------------------------------------

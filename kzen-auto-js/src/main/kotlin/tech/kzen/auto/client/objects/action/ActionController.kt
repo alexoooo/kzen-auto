@@ -13,7 +13,7 @@ import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.exec.ExecutionStatus
+import tech.kzen.auto.common.exec.ExecutionPhase
 import tech.kzen.lib.common.api.model.AttributeName
 import tech.kzen.lib.common.api.model.AttributePath
 import tech.kzen.lib.common.api.model.ObjectLocation
@@ -52,7 +52,7 @@ class ActionController(
             var notation: GraphNotation,
             var metadata: GraphMetadata,
 
-            var status: ExecutionStatus?,
+            var status: ExecutionPhase?,
             var next: Boolean
     ): RProps
 
@@ -84,7 +84,7 @@ class ActionController(
                 objectLocation: ObjectLocation,
                 projectNotation: GraphNotation,
                 graphMetadata: GraphMetadata,
-                executionStatus: ExecutionStatus?,
+                executionStatus: ExecutionPhase?,
                 nextToExecute: Boolean
         ): ReactElement {
             return rBuilder.child(ActionController::class) {
@@ -301,7 +301,7 @@ class ActionController(
 
         val reactStyles = reactStyle {
             val statusColor = when (props.status) {
-                ExecutionStatus.Pending ->
+                ExecutionPhase.Pending ->
 //                    Color.cyan.lighten(50)
 //                    Color.blue.lighten(60)
 //                    Color.lightBlue.darken(10)
@@ -315,13 +315,13 @@ class ActionController(
 //                    Color("#67a2ff")
 //                    Color("#6ea7ff")
 
-                ExecutionStatus.Running ->
+                ExecutionPhase.Running ->
                     Color.yellow
 
-                ExecutionStatus.Success ->
+                ExecutionPhase.Success ->
                     Color.green.lighten(50)
 
-                ExecutionStatus.Failed ->
+                ExecutionPhase.Error ->
                     Color.red
 
                 null -> null

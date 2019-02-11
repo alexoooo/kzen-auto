@@ -1,6 +1,9 @@
 package tech.kzen.auto.server.service
 
 import tech.kzen.auto.common.api.AutoAction
+import tech.kzen.auto.common.exec.ExecutionResult
+import tech.kzen.auto.common.exec.codec.ExecutionResultResponse
+import tech.kzen.auto.common.objects.service.ActionManager
 import tech.kzen.auto.common.service.ActionExecutor
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.api.model.ObjectLocation
@@ -11,11 +14,15 @@ import tech.kzen.lib.common.context.GraphDefiner
 class ModelActionExecutor(
         private val modelManager: ModelManager
 ): ActionExecutor {
-    override suspend fun execute(actionLocation: ObjectLocation) {
+    override suspend fun actionManager(): ActionManager {
+        TODO()
+    }
+
+    override suspend fun executeResult(actionLocation: ObjectLocation): ExecutionResult {
         val projectModel = modelManager.projectModel()
 
         val graphDefinition = GraphDefiner.define(
-                projectModel.projectNotation, projectModel.graphMetadata)
+                projectModel.graphNotation, projectModel.graphMetadata)
 
         val objectGraph = GraphCreator.createGraph(
                 graphDefinition, projectModel.graphMetadata)
@@ -24,6 +31,11 @@ class ModelActionExecutor(
 
         val action = instance as AutoAction
 
-        action.perform()
+        return action.perform()
+    }
+
+
+    override suspend fun executeResponse(actionLocation: ObjectLocation): ExecutionResultResponse {
+        TODO()
     }
 }

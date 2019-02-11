@@ -1,9 +1,9 @@
 package tech.kzen.auto.common.exec
 
 
-enum class ExecutionStatus {
+enum class ExecutionPhase {
     Pending,
     Running,
     Success,
-    Failed
+    Error
 }

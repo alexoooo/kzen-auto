@@ -50,7 +50,8 @@ object ClientContext {
 
     val executionManager = ExecutionManager(
             restExecutionInitializer,
-            restActionExecutor)
+            restActionExecutor,
+            modelManager)
 
     val executionLoop = ExecutionLoop(
             executionManager)
