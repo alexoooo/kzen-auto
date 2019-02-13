@@ -20,10 +20,12 @@ ActionWrapper:
 
 ###########################################################
 
-
 AutoProject:
   abstract: true
   class: tech.kzen.auto.client.objects.AutoProject.Wrapper
+  actionManager: ActionManager
+  meta:
+    actionManager: ActionManager
 
 
 ActionController:

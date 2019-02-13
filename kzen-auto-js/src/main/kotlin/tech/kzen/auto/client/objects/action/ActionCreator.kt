@@ -37,16 +37,16 @@ class ActionCreator(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-//        console.log("ParameterEditor | State.init - ${props.name}")
+//    override fun State.init(props: Props) {
+//        console.log("ActionCreator | State.init - ${props.actionManager}")
 //        name = NameConventions.randomDefault()
-
+//
 //        val types = actionTypes()
 //        if (types.isEmpty()) {
 //            throw IllegalStateException("Must provide at least one action type")
 //        }
 //        type = types[0]
-    }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

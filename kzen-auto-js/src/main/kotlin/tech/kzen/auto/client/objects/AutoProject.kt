@@ -36,8 +36,10 @@ import tech.kzen.lib.common.notation.model.GraphNotation
 
 
 @Suppress("unused")
-class AutoProject:
-        RComponent<AutoProject.Props, AutoProject.State>(),
+class AutoProject(
+        props: AutoProject.Props
+):
+        RComponent<AutoProject.Props, AutoProject.State>(props),
         ModelManager.Observer,
         ExecutionManager.Observer,
         CommandBus.Observer,
@@ -64,6 +66,8 @@ class AutoProject:
             private val actionManager: ActionManager
     ): ReactWrapper {
         override fun execute(input: RBuilder): ReactElement {
+//            println("^%$^$% AutoProject - $actionManager")
+
             return input.child(AutoProject::class) {
                 attrs {
                     actionManager = this@Wrapper.actionManager
@@ -132,8 +136,8 @@ class AutoProject:
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun handleModel(autoModel: ProjectModel, event: NotationEvent?) {
-        println("AutoProject - && handled - " +
-                "${autoModel.graphNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
+//        println("AutoProject - && handled - " +
+//                "${autoModel.graphNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
 
         setState {
             notation = autoModel.graphNotation
@@ -240,7 +244,7 @@ class AutoProject:
 
         val actualDigest = ClientContext.restClient.startExecution()
 
-        console.log("^^^ executionStateToFreshStart", expectedDigest.asString(), actualDigest.asString())
+//        console.log("^^^ executionStateToFreshStart", expectedDigest.asString(), actualDigest.asString())
 
         if (expectedDigest != actualDigest) {
             console.log("Digest mismatch, refreshing")
@@ -292,7 +296,7 @@ class AutoProject:
 
                                 child(ActionCreator::class) {
                                     attrs {
-                                        actionManager = actionManager
+                                        actionManager = props.actionManager
                                         notation = projectNotation
                                         path = NotationConventions.mainPath
                                     }

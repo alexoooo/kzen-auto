@@ -61,7 +61,8 @@ class ModelManager(
 
         return allNotation.filterPaths {
             it.asRelativeFile().startsWith("base/") ||
-                    it.asRelativeFile().startsWith("auto/")
+                    it.asRelativeFile().startsWith("auto/") ||
+                    it.asRelativeFile().startsWith("action/")
         }
     }
 

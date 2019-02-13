@@ -82,9 +82,7 @@ sealed class ExecutionValue {
                 digest.addBoolean(value)
 
             is NumberExecutionValue -> {
-                val bits = value.toBits()
-                digest.addInt(bits.toInt())
-                digest.addInt((bits shr Int.SIZE_BITS).toInt())
+                digest.addDouble(value)
             }
 
             is BinaryExecutionValue ->
