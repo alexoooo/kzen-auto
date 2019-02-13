@@ -3,8 +3,8 @@ package tech.kzen.auto.client.service
 import tech.kzen.auto.client.util.encodeURIComponent
 import tech.kzen.auto.client.util.httpGet
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.exec.codec.ExecutionModelEncoding
-import tech.kzen.auto.common.exec.codec.ExecutionResultResponse
+import tech.kzen.auto.common.exec.ExecutionModel
+import tech.kzen.auto.common.exec.ExecutionResponse
 import tech.kzen.lib.common.api.model.*
 import tech.kzen.lib.common.notation.model.PositionIndex
 import tech.kzen.lib.common.util.Digest
@@ -232,14 +232,14 @@ class ClientRestApi(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun executionModel(): ExecutionModelEncoding {
+    suspend fun executionModel(): ExecutionModel {
         val responseText = httpGet("$baseUrl${CommonRestApi.actionModel}")
 
         val responseJson = JSON.parse<Array<Json>>(responseText)
         val responseCollection = ClientJsonUtils.toList(responseJson)
 
         @Suppress("UNCHECKED_CAST")
-        return ExecutionModelEncoding.fromCollection(
+        return ExecutionModel.fromCollection(
                 responseCollection as List<Map<String, Any>>)
     }
 
@@ -260,19 +260,19 @@ class ClientRestApi(
 
     suspend fun performAction(
             objectLocation: ObjectLocation
-    ): ExecutionResultResponse {
+    ): ExecutionResponse {
         val responseJson = getJson(
                 CommonRestApi.actionPerform,
                 CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
 
         @Suppress("UNCHECKED_CAST")
-        val responseCollection = ClientJsonUtils.toMap(responseJson) as Map<String, String?>
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
 
 //        val status = responseJson[CommonRestApi.fieldStatus] as String
 //        val digest = responseJson[CommonRestApi.fieldDigest] as String
 
-        return ExecutionResultResponse.fromCollection(responseCollection)
+        return ExecutionResponse.fromCollection(responseCollection)
     }
 
 

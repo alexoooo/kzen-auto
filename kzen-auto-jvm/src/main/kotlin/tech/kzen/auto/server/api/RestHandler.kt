@@ -10,8 +10,7 @@ import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.exec.ExecutionModel
-import tech.kzen.auto.common.exec.codec.ExecutionModelEncoding
-import tech.kzen.auto.common.exec.codec.ExecutionResultResponse
+import tech.kzen.auto.common.exec.ExecutionResponse
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.api.model.*
 import tech.kzen.lib.common.notation.NotationConventions
@@ -432,16 +431,13 @@ class RestHandler {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun actionModel(serverRequest: ServerRequest): Mono<ServerResponse> {
-
-        val asCollection = runBlocking {
-            val executionModel: ExecutionModel = ServerContext.executionManager.executionModel()
-
-            ExecutionModelEncoding.encode(executionModel, ServerContext.actionExecutor.actionManager())
+        val executionModel = runBlocking {
+            ServerContext.executionManager.executionModel()
         }
 
         return ServerResponse
                 .ok()
-                .body(Mono.just(asCollection))
+                .body(Mono.just(ExecutionModel.toCollection(executionModel)))
     }
 
 
@@ -479,15 +475,13 @@ class RestHandler {
 
         val objectLocation = ObjectLocation(bundlePath, objectPath)
 
-        val execution: ExecutionResultResponse = runBlocking {
+        val execution: ExecutionResponse = runBlocking {
             ServerContext.executionManager.execute(objectLocation)
         }
 
-        val asCollection = ExecutionResultResponse.toCollection(execution)
-
         return ServerResponse
                 .ok()
-                .body(Mono.just(asCollection))
+                .body(Mono.just(execution.toCollection()))
     }
 
 

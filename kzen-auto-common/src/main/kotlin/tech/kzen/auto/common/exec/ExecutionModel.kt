@@ -10,6 +10,25 @@ data class ExecutionModel(
         val frames: MutableList<ExecutionFrame>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        fun toCollection(model: ExecutionModel): List<Map<String, Any>> {
+            return model
+                    .frames
+                    .map { ExecutionFrame.toCollection(it) }
+        }
+
+
+        fun fromCollection(
+                collection: List<Map<String, Any>>
+        ): ExecutionModel {
+            return ExecutionModel(collection
+                    .map { ExecutionFrame.fromCollection(it) }
+                    .toMutableList())
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun rename(from: ObjectLocation, newName: ObjectName): Boolean {
         var renamedAny = false
 

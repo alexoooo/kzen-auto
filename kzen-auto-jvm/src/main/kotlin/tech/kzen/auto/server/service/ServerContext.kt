@@ -49,8 +49,7 @@ object ServerContext {
 
     val executionManager = ExecutionManager(
             EmptyExecutionInitializer,
-            actionExecutor,
-            modelManager)
+            actionExecutor)
 
 
     //-----------------------------------------------------------------------------------------------------------------

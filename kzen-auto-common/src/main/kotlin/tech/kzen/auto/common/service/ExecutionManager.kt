@@ -1,25 +1,17 @@
 package tech.kzen.auto.common.service
 
 import kotlinx.coroutines.delay
-import tech.kzen.auto.common.exec.ExecutionFrame
-import tech.kzen.auto.common.exec.ExecutionModel
-import tech.kzen.auto.common.exec.ExecutionPhase
-import tech.kzen.auto.common.exec.ExecutionState
-import tech.kzen.auto.common.exec.codec.ExecutionResultEncoding
-import tech.kzen.auto.common.exec.codec.ExecutionResultResponse
+import tech.kzen.auto.common.exec.*
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath
-import tech.kzen.lib.common.api.model.ObjectReference
-import tech.kzen.lib.common.notation.NotationConventions
 import tech.kzen.lib.common.notation.edit.*
 import tech.kzen.lib.common.util.Digest
 
 
 class ExecutionManager(
         private val executionInitializer: ExecutionInitializer,
-        private val actionExecutor: ActionExecutor,
-        private val modelManager: ModelManager
+        private val actionExecutor: ActionExecutor
 ): ModelManager.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
@@ -201,7 +193,7 @@ class ExecutionManager(
     suspend fun execute(
             objectLocation: ObjectLocation,
             delayMillis: Int = 0
-    ): ExecutionResultResponse {
+    ): ExecutionResponse {
         if (delayMillis > 0) {
 //            println("ExecutionManager | %%%% delay($delayMillis)")
             delay(delayMillis.toLong())
@@ -215,40 +207,36 @@ class ExecutionManager(
             delay(delayMillis.toLong())
         }
 
-        val response: ExecutionResultResponse = try {
-            actionExecutor.executeResponse(objectLocation)
+        val response: ExecutionResult = try {
+            actionExecutor.execute(objectLocation)
         }
         catch (e: Exception) {
             println("#$%#$%#$ got exception: $e")
 
-            val digest = modelOrInit().digest()
-            ExecutionResultResponse(
-                    ExecutionResultEncoding(
-                            e.message ?: "Error",
-                            null,
-                            null
-                    ),
-                    digest
-            )
+//            val digest = modelOrInit().digest()
+//            ExecutionResponse(
+//                    ,
+//                    digest
+//            )
+            ExecutionError(e.message ?: "Error")
         }
 
-        val parentRef = ObjectReference.parse(
-                modelManager.autoNotation().getString(objectLocation, NotationConventions.isAttribute))
-        val parentLocation = modelManager.autoNotation().coalesce.locate(objectLocation, parentRef)
+//        val parentRef = ObjectReference.parse(
+//                modelManager.autoNotation().getString(objectLocation, NotationConventions.isAttribute))
+//        val parentLocation = modelManager.autoNotation().coalesce.locate(objectLocation, parentRef)
+//
+//        val actionHandle = actionExecutor.actionManager().get(parentLocation)
+//        val result = response.toResult(actionHandle)
 
-        val actionHandle = actionExecutor.actionManager().get(parentLocation)
-        val result = response.toResult(actionHandle)
+        val digest = modelOrInit().digest()
 
         val executionState = ExecutionState(
                 false,
-                ExecutionState.Outcome(
-                        result,
-                        response.resultEncoding.digest()
-                )
+                response
         )
 
         didExecute(objectLocation, executionState)
 
-        return response
+        return ExecutionResponse(response, digest)
     }
 }

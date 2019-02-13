@@ -8,7 +8,6 @@ class ClientRestExecutionInitializer(
         private val clientRestApi: ClientRestApi
 ): ExecutionInitializer {
     override suspend fun initialExecutionModel(): ExecutionModel {
-        val encoding = clientRestApi.executionModel()
-        return encoding.decode()
+        return clientRestApi.executionModel()
     }
 }

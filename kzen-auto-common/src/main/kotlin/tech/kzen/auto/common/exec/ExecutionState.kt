@@ -5,19 +5,33 @@ import tech.kzen.lib.common.util.Digest
 
 data class ExecutionState(
         val running: Boolean,
-        val previous: Outcome?
+        val previous: ExecutionResult?
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val initial = ExecutionState(false, null)
+
+
+        fun toCollection(result: ExecutionState): Map<String, Any?> {
+            return mapOf(
+                    "running" to result.running,
+                    "previous" to result.previous?.let{
+                        it.toCollection()
+                    }
+            )
+        }
+
+
+        @Suppress("UNCHECKED_CAST")
+        fun fromCollection(collection: Map<String, Any?>): ExecutionState {
+            return ExecutionState(
+                    collection["running"] as Boolean,
+                    collection["previous"]?.let {
+                        ExecutionResult.fromCollection(it as Map<String, String?>)
+                    }
+            )
+        }
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    data class Outcome(
-            val result: ExecutionResult,
-            val resultDigest: Digest
-    )
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -30,7 +44,7 @@ data class ExecutionState(
             return ExecutionPhase.Pending
         }
 
-        return when (previous.result) {
+        return when (previous) {
             is ExecutionError ->
                 ExecutionPhase.Error
 
@@ -43,13 +57,13 @@ data class ExecutionState(
     fun digest(): Digest {
         val digest = Digest.Streaming()
 
-        digest.addByte(if (running) 1 else 0)
+        digest.addBoolean(running)
 
         if (previous == null) {
             digest.addMissing()
         }
         else {
-            digest.addDigest(previous.resultDigest)
+            digest.addDigest(previous.digest())
         }
 
         return digest.digest()
