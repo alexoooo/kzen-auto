@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.service
+package tech.kzen.auto.client.service.action
 
 import tech.kzen.lib.common.api.ObjectCreator
 import tech.kzen.lib.common.api.model.ObjectLocation
@@ -18,8 +18,9 @@ class ActionManagerCreator: ObjectCreator {
             objectMetadata: ObjectMetadata,
             graphInstance: GraphInstance
     ): Any {
-        println("^^^^^^ ActionManager.Creator")
-        val handlesDefinition = objectDefinition.attributeDefinitions[ActionManager.actionsAttribute] as ListAttributeDefinition
+//        println("^^^^^^ ActionManager.Creator")
+        val handlesDefinition =
+                objectDefinition.attributeDefinitions[ActionManager.actionsAttribute] as ListAttributeDefinition
 
         val handles = mutableListOf<ObjectLocation>()
 

@@ -6,6 +6,7 @@ import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
 import react.*
 import react.dom.div
+import react.dom.img
 import react.dom.span
 import styled.css
 import styled.styledDiv
@@ -14,6 +15,9 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.exec.ExecutionPhase
+import tech.kzen.auto.common.exec.ExecutionState
+import tech.kzen.auto.common.exec.ExecutionSuccess
+import tech.kzen.auto.common.exec.TextExecutionValue
 import tech.kzen.lib.common.api.model.AttributeName
 import tech.kzen.lib.common.api.model.AttributePath
 import tech.kzen.lib.common.api.model.ObjectLocation
@@ -52,7 +56,7 @@ class ActionController(
             var notation: GraphNotation,
             var metadata: GraphMetadata,
 
-            var status: ExecutionPhase?,
+            var state: ExecutionState?,
             var next: Boolean
     ): RProps
 
@@ -84,7 +88,7 @@ class ActionController(
                 objectLocation: ObjectLocation,
                 projectNotation: GraphNotation,
                 graphMetadata: GraphMetadata,
-                executionStatus: ExecutionPhase?,
+                executionState: ExecutionState?,
                 nextToExecute: Boolean
         ): ReactElement {
             return rBuilder.child(ActionController::class) {
@@ -94,7 +98,7 @@ class ActionController(
                     notation = projectNotation
                     metadata = graphMetadata
 
-                    status = executionStatus
+                    state = executionState
                     next = nextToExecute
                 }
             }
@@ -300,20 +304,9 @@ class ActionController(
         val objectMetadata = props.metadata.objectMetadata.get(props.objectLocation)
 
         val reactStyles = reactStyle {
-            val statusColor = when (props.status) {
+            val statusColor = when (props.state?.phase()) {
                 ExecutionPhase.Pending ->
-//                    Color.cyan.lighten(50)
-//                    Color.blue.lighten(60)
-//                    Color.lightBlue.darken(10)
-//                    Color.lightBlue.darken(15)
-//                    Color.lightGray
-//                    Color.white
-//                    Color("#4285f4")
-//                    Color("#4d8dfd")
-//                    Color("#5e9aff")
                     Color("#649fff")
-//                    Color("#67a2ff")
-//                    Color("#6ea7ff")
 
                 ExecutionPhase.Running ->
                     Color.yellow
@@ -368,6 +361,28 @@ class ActionController(
 
                             renderParameter(e.key, e.value, value)
                         }
+                    }
+
+//                    console.log("^^^^^ props.state - ", props.state)
+                    (props.state?.previous as? ExecutionSuccess)?.detail?.let {
+                        if (it is TextExecutionValue) {
+//                            println("got detail")
+                            img {
+                                attrs {
+//                                    width = "256px"
+                                    width = "100%"
+                                    src = "data:image/png;base64,${it.value}"
+                                }
+                            }
+                        }
+//                        if (it is BinaryExecutionValue) {
+//                            val screenshotPngBase64 = IoUtils.base64Encode(it.value)
+//                            img {
+//                                attrs {
+//                                    src = "data:image/jpeg;base64,$screenshotPngBase64"
+//                                }
+//                            }
+//                        }
                     }
                 }
             }

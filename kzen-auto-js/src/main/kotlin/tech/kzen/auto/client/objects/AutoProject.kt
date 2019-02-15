@@ -15,11 +15,11 @@ import tech.kzen.auto.client.objects.action.ActionWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.service.InsertionManager
+import tech.kzen.auto.client.service.action.ActionManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.exec.ExecutionModel
-import tech.kzen.auto.common.exec.ExecutionPhase
-import tech.kzen.auto.common.objects.service.ActionManager
+import tech.kzen.auto.common.exec.ExecutionState
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.common.service.ProjectModel
@@ -211,6 +211,7 @@ class AutoProject(
     }
 
 
+    // TODO: show on screen, or just do on load?
     private fun onClear() {
         ClientContext.executionLoop.pause()
 
@@ -390,8 +391,8 @@ class AutoProject(
 
             var index = 0
             for (e in projectPackage.objects.values) {
-                val status: ExecutionPhase? =
-                        state.execution?.frames?.lastOrNull()?.states?.get(e.key)?.phase()
+                val status: ExecutionState? =
+                        state.execution?.frames?.lastOrNull()?.states?.get(e.key)
 
                 val keyLocation = ObjectLocation(bundlePath, e.key)
 
@@ -473,7 +474,7 @@ class AutoProject(
             objectLocation: ObjectLocation,
             projectNotation: GraphNotation,
             graphMetadata: GraphMetadata,
-            executionStatus: ExecutionPhase?,
+            executionState: ExecutionState?,
             nextToExecute: Boolean
     ) {
         // todo:
@@ -489,42 +490,15 @@ class AutoProject(
                     objectLocation,
                     projectNotation,
                     graphMetadata,
-                    executionStatus,
+                    executionState,
                     nextToExecute)
-
-
-//            child(ActionController::class) {
-//                attrs {
-//                    name = objectName
-//
-//                    notation = projectNotation
-//                    metadata = graphMetadata
-//
-//                    status = executionStatus
-//                    next = nextToExecute
-//                }
-//            }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.footer() {
-//        br {}
-//        br {}
-//        br {}
-//
-//        +"Foo"
-
-//                .footer {
-//                    height: 40px;
-//                    position: fixed;
-//                    bottom:0%;
-//                    width:100%;
-//                    background-color: rgba(0, 0, 0, 0.50);
-//                    opacity: 1;
-//                }
-
+//            reset()
         styledDiv {
             css {
                 position = Position.fixed
@@ -557,18 +531,6 @@ class AutoProject(
                 }
             }
         }
-
-
-        // TODO: switch to FAB
-//        br {}
-//        br {}
-//        br {}
-//
-//
-//        div(classes = "footer") {
-//            runAll()
-//            reset()
-//        }
     }
 
 

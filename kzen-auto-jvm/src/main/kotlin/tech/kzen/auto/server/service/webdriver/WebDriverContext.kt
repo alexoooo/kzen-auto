@@ -1,11 +1,11 @@
 package tech.kzen.auto.server.service.webdriver
 
-import org.openqa.selenium.WebDriver
+import org.openqa.selenium.remote.RemoteWebDriver
 import org.openqa.selenium.remote.UnreachableBrowserException
 
 
 class WebDriverContext {
-    private var webDriver: WebDriver? = null
+    private var webDriver: RemoteWebDriver? = null
 
 
     fun present(): Boolean {
@@ -18,7 +18,7 @@ class WebDriverContext {
     }
 
 
-    fun set(webDriver: WebDriver) {
+    fun set(webDriver: RemoteWebDriver) {
         if (present()) {
             quit()
         }
@@ -43,7 +43,7 @@ class WebDriverContext {
     }
 
 
-    fun get(): WebDriver {
+    fun get(): RemoteWebDriver {
         check(webDriver != null) {"WebDriver missing"}
         return webDriver!!
     }

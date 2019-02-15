@@ -20,6 +20,21 @@ ActionWrapper:
 
 ###########################################################
 
+
+ActionManager:
+  class: tech.kzen.auto.client.service.action.ActionManager
+  definer: ActionManager.definer/Definer
+  creator: ActionManager.creator/Creator
+
+ActionManager.definer/Definer:
+  class: tech.kzen.auto.client.service.action.ActionManagerDefiner
+
+ActionManager.creator/Creator:
+  class: tech.kzen.auto.client.service.action.ActionManagerCreator
+
+
+###########################################################
+
 AutoProject:
   abstract: true
   class: tech.kzen.auto.client.objects.AutoProject.Wrapper

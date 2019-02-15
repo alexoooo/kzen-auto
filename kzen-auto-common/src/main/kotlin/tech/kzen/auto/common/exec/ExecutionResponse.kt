@@ -10,7 +10,7 @@ data class ExecutionResponse(
 ) {
     companion object {
         @Suppress("UNCHECKED_CAST")
-        fun fromCollection(collection: Map<String, Any>): ExecutionResponse {
+        fun fromCollection(collection: Map<String, Any?>): ExecutionResponse {
             return ExecutionResponse(
                     ExecutionResult.fromCollection(collection["result"] as Map<String, Any?>),
                     Digest.parse(collection[CommonRestApi.fieldDigest] as String)

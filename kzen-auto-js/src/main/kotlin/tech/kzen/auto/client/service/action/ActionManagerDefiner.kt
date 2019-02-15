@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.service
+package tech.kzen.auto.client.service.action
 
 import tech.kzen.lib.common.api.ObjectDefiner
 import tech.kzen.lib.common.api.model.ObjectLocation

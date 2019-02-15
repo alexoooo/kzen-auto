@@ -15,7 +15,7 @@ class OpenBrowser: AutoAction {
         closeIfAlreadyOpen()
 
         val webDriverOption = ServerContext.webDriverRepo.latest(BrowserLauncher.GoogleChrome)
-        println("webDriverOption: $webDriverOption")
+//        println("webDriverOption: $webDriverOption")
 
         val binary = ServerContext.webDriverInstaller.install(webDriverOption)
 
@@ -32,6 +32,11 @@ class OpenBrowser: AutoAction {
         ServerContext.webDriverContext.set(driver)
 
         return ExecutionSuccess.empty
+//        val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
+//
+//        return ExecutionSuccess(
+//                NullExecutionValue,
+//                BinaryExecutionValue(screenshotPng))
     }
 
 

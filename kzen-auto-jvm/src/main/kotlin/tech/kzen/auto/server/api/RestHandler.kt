@@ -60,13 +60,12 @@ class RestHandler {
                         "."
                     }
 
-            val projectName = Files.list(Paths.get(projectRoot)).use { files ->
+            val projectName: String? = Files.list(Paths.get(projectRoot)).use { files ->
                 val list = files.collect(Collectors.toList())
 
                 val jvmModule = list.firstOrNull { it.fileName.toString().endsWith(jvmSuffix)}
                 if (jvmModule == null) {
-                    // ?: throw IllegalStateException("No -jvm module: - $list")
-                    jvmModule
+                    null
                 }
                 else {
                     val filename = jvmModule.fileName.toString()

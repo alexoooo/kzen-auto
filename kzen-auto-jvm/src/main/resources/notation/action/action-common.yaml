@@ -25,19 +25,6 @@ Action:
 #    detail: ResultCodec
 
 
-ActionManager:
-  class: tech.kzen.auto.common.objects.service.ActionManager
-  definer: ActionManager.definer/Definer
-  creator: ActionManager.creator/Creator
-
-ActionManager.definer/Definer:
-  class: tech.kzen.auto.common.objects.service.ActionManagerDefiner
-
-ActionManager.creator/Creator:
-  class: tech.kzen.auto.common.objects.service.ActionManagerCreator
-
-
-
 ###########################################################
 
 

@@ -4,6 +4,7 @@ import tech.kzen.lib.common.util.Digest
 
 
 //---------------------------------------------------------------------------------------------------------------------
+// TODO: use {type: <enum>[, value: <nested>]}
 sealed class ExecutionValue {
     companion object {
         fun fromCollection(asCollection: Any?): ExecutionValue {

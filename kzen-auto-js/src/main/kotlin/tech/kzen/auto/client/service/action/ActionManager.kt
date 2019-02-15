@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.service
+package tech.kzen.auto.client.service.action
 
 import tech.kzen.lib.common.api.model.AttributeName
 import tech.kzen.lib.common.api.model.ObjectLocation
@@ -14,7 +14,7 @@ class ActionManager(
     companion object {
         // TODO: normalize class paths for nested classes between client and server
         const val actionParent = "Action"
-        val className = "tech.kzen.auto.common.objects.service.ActionManager"
+        val className = "tech.kzen.auto.client.service.action.ActionManager"
 
         val creatorReference = ObjectReference.parse("ActionManager.creator/Creator")
 
