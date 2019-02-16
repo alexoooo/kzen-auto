@@ -19,9 +19,9 @@ import tech.kzen.lib.common.api.model.AttributeName
 import tech.kzen.lib.common.api.model.AttributePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectName
-import tech.kzen.lib.common.notation.NotationConventions
-import tech.kzen.lib.common.notation.edit.RenameRefactorCommand
-import tech.kzen.lib.common.notation.model.GraphNotation
+import tech.kzen.lib.common.structure.notation.NotationConventions
+import tech.kzen.lib.common.structure.notation.edit.RenameRefactorCommand
+import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
 @Suppress("unused")

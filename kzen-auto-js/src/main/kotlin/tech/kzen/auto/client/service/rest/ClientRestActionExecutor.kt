@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.service
+package tech.kzen.auto.client.service.rest
 
 import tech.kzen.auto.common.exec.ExecutionResult
 import tech.kzen.auto.common.service.ActionExecutor

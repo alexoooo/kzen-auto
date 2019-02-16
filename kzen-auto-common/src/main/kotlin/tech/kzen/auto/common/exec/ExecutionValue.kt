@@ -1,6 +1,5 @@
 package tech.kzen.auto.common.exec
 
-import tech.kzen.lib.common.notation.format.YamlNull.value
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.IoUtils
 
@@ -79,7 +78,7 @@ sealed class ExecutionValue {
                     )
 
                 else ->
-                    TODO("Not supported (yet): $value")
+                    TODO("Not supported (yet): $asCollection")
             }
         }
     }

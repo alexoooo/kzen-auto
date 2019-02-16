@@ -5,7 +5,8 @@ import tech.kzen.auto.common.exec.*
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath
-import tech.kzen.lib.common.notation.edit.*
+import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.common.util.Digest
 
 
@@ -61,7 +62,7 @@ class ExecutionManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(autoModel: ProjectModel, event: NotationEvent?) {
+    override suspend fun handleModel(autoModel: GraphStructure, event: NotationEvent?) {
         if (event == null) {
             return
         }
@@ -166,7 +167,7 @@ class ExecutionManager(
     }
 
 
-    suspend fun start(main: BundlePath, projectModel: ProjectModel): Digest {
+    suspend fun start(main: BundlePath, projectModel: GraphStructure): Digest {
         val model = modelOrInit()
         model.frames.clear()
 

@@ -1,11 +1,12 @@
 package tech.kzen.auto.common.service
 
-import tech.kzen.lib.common.metadata.read.NotationMetadataReader
-import tech.kzen.lib.common.notation.edit.NotationEvent
-import tech.kzen.lib.common.notation.io.NotationMedia
-import tech.kzen.lib.common.notation.io.common.MapNotationMedia
-import tech.kzen.lib.common.notation.model.GraphNotation
-import tech.kzen.lib.common.notation.repo.NotationRepository
+import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.metadata.read.NotationMetadataReader
+import tech.kzen.lib.common.structure.notation.edit.NotationEvent
+import tech.kzen.lib.common.structure.notation.io.NotationMedia
+import tech.kzen.lib.common.structure.notation.io.common.MapNotationMedia
+import tech.kzen.lib.common.structure.notation.model.GraphNotation
+import tech.kzen.lib.common.structure.notation.repo.NotationRepository
 import tech.kzen.lib.common.util.Digest
 
 
@@ -17,13 +18,13 @@ class ModelManager(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
-        suspend fun handleModel(autoModel: ProjectModel, event: NotationEvent?)
+        suspend fun handleModel(autoModel: GraphStructure, event: NotationEvent?)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private val subscribers = mutableSetOf<Observer>()
-    private var mostRecent: ProjectModel? = null
+    private var mostRecent: GraphStructure? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -34,7 +35,7 @@ class ModelManager(
 //            subscriber.handleModel(mostRecent!!, null)
 //        }
 
-        subscriber.handleModel(projectModel(), null)
+        subscriber.handleModel(graphStructure(), null)
     }
 
 
@@ -76,7 +77,7 @@ class ModelManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun projectModel(): ProjectModel {
+    suspend fun graphStructure(): GraphStructure {
         if (mostRecent == null) {
             mostRecent = readModel()
         }
@@ -84,7 +85,7 @@ class ModelManager(
     }
 
 
-    private suspend fun readModel(): ProjectModel {
+    private suspend fun readModel(): GraphStructure {
         val allNotation = notationRepository.notation()
 
         val graphNotation = graphNotation(allNotation)
@@ -93,7 +94,7 @@ class ModelManager(
         val metadata = notationMetadataReader.read(graphNotation)
 //        println("^^^^^^ readModel - got metadata: $metadata")
 
-        return ProjectModel(
+        return GraphStructure(
                 graphNotation,
                 metadata)
     }

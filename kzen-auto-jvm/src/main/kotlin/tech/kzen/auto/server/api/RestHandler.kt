@@ -13,11 +13,11 @@ import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionResponse
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.api.model.*
-import tech.kzen.lib.common.notation.NotationConventions
-import tech.kzen.lib.common.notation.edit.*
-import tech.kzen.lib.common.notation.model.AttributeNotation
-import tech.kzen.lib.common.notation.model.ObjectNotation
-import tech.kzen.lib.common.notation.model.PositionIndex
+import tech.kzen.lib.common.structure.notation.NotationConventions
+import tech.kzen.lib.common.structure.notation.edit.*
+import tech.kzen.lib.common.structure.notation.model.AttributeNotation
+import tech.kzen.lib.common.structure.notation.model.ObjectNotation
+import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.IoUtils
 import java.net.URI
@@ -442,7 +442,7 @@ class RestHandler {
 
     fun actionStart(serverRequest: ServerRequest): Mono<ServerResponse> {
         val digest = runBlocking {
-            val projectModel = ServerContext.modelManager.projectModel()
+            val projectModel = ServerContext.modelManager.graphStructure()
 
             ServerContext.executionManager.start(
                     NotationConventions.mainPath, projectModel)

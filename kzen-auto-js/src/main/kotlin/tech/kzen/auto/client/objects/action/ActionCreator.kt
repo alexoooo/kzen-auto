@@ -12,7 +12,7 @@ import tech.kzen.auto.client.service.action.ActionManager
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectName
-import tech.kzen.lib.common.notation.model.GraphNotation
+import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
 @Suppress("unused")

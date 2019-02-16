@@ -22,17 +22,14 @@ import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionState
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.auto.common.service.ProjectModel
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
-import tech.kzen.lib.common.metadata.model.GraphMetadata
-import tech.kzen.lib.common.notation.NotationConventions
-import tech.kzen.lib.common.notation.edit.CreateBundleCommand
-import tech.kzen.lib.common.notation.edit.NotationCommand
-import tech.kzen.lib.common.notation.edit.NotationEvent
-import tech.kzen.lib.common.notation.model.BundleNotation
-import tech.kzen.lib.common.notation.model.GraphNotation
-
+import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.notation.NotationConventions
+import tech.kzen.lib.common.structure.notation.edit.CreateBundleCommand
+import tech.kzen.lib.common.structure.notation.edit.NotationCommand
+import tech.kzen.lib.common.structure.notation.edit.NotationEvent
+import tech.kzen.lib.common.structure.notation.model.BundleNotation
 
 
 @Suppress("unused")
@@ -51,11 +48,8 @@ class AutoProject(
     ): RProps
 
     class State(
-            var notation: GraphNotation?,
-            var metadata: GraphMetadata?,
+            var structure: GraphStructure?,
             var execution: ExecutionModel?,
-//            var runningAll: Boolean,
-//            var pending: Boolean = false,
             var commandError: String?,
             var creating: Boolean
     ): RState
@@ -105,10 +99,10 @@ class AutoProject(
     ) {
 //        console.log("AutoProject componentDidUpdate", state, prevState)
 
-        if (state.notation != null &&
-                state.notation!!.bundles.values[NotationConventions.mainPath] == null &&
-                (prevState.notation == null ||
-                        prevState.notation!!.bundles.values[NotationConventions.mainPath] != null)) {
+        if (state.structure != null &&
+                state.structure!!.graphNotation.bundles.values[NotationConventions.mainPath] == null &&
+                (prevState.structure == null ||
+                        prevState.structure!!.graphNotation.bundles.values[NotationConventions.mainPath] != null)) {
             async {
                 createMain()
             }
@@ -135,14 +129,12 @@ class AutoProject(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(autoModel: ProjectModel, event: NotationEvent?) {
+    override suspend fun handleModel(autoModel: GraphStructure, event: NotationEvent?) {
 //        println("AutoProject - && handled - " +
 //                "${autoModel.graphNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
 
         setState {
-            notation = autoModel.graphNotation
-            metadata = autoModel.graphMetadata
-//            pending = false
+            structure = autoModel
         }
     }
 
@@ -236,12 +228,8 @@ class AutoProject(
 
 
     private suspend fun executionStateToFreshStart() {
-        val projectModel = ProjectModel(
-                state.notation!!,
-                state.metadata!!)
-
         val expectedDigest = ClientContext.executionManager.start(
-                NotationConventions.mainPath, projectModel)
+                NotationConventions.mainPath, state.structure!!)
 
         val actualDigest = ClientContext.restClient.startExecution()
 
@@ -262,7 +250,7 @@ class AutoProject(
 //                backgroundColor = Color("rgb(225, 225, 225)")
             }
 
-            val projectNotation = state.notation
+            val projectNotation = state.structure?.graphNotation
             if (projectNotation == null) {
                 +"Loading..."
             }
@@ -321,11 +309,10 @@ class AutoProject(
 //                println("AutoProject - the package - ${projectPackage.objects.keys}")
                     styledDiv {
                         css {
-                            //                        marginTop = 4.em
                             marginLeft = 1.em
                         }
 
-                        steps(projectNotation, projectPackage, NotationConventions.mainPath)
+                        steps(state.structure!!, projectPackage, NotationConventions.mainPath)
                     }
 
                     footer()
@@ -356,11 +343,11 @@ class AutoProject(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.steps(
-            projectNotation: GraphNotation,
-            projectPackage: BundleNotation,
+            graphStructure: GraphStructure,
+            bundleNotation: BundleNotation,
             bundlePath: BundlePath
     ) {
-        if (projectPackage.objects.values.isEmpty()) {
+        if (bundleNotation.objects.values.isEmpty()) {
             h3 {
                 +"Empty script, please add steps using action bar (above)"
             }
@@ -368,19 +355,17 @@ class AutoProject(
             insertionPoint(0)
         }
         else {
-            nonEmptySteps(projectNotation, projectPackage, bundlePath)
+            nonEmptySteps(graphStructure, bundleNotation, bundlePath)
         }
     }
 
 
     private fun RBuilder.nonEmptySteps(
-            projectNotation: GraphNotation,
-            projectPackage: BundleNotation,
+            graphStructure: GraphStructure,
+            bundleNotation: BundleNotation,
             bundlePath: BundlePath
     ) {
         insertionPoint(0)
-
-        val graphMetadata = state.metadata!!
 
         styledDiv {
             css {
@@ -390,20 +375,19 @@ class AutoProject(
             val next = state.execution?.next()
 
             var index = 0
-            for (e in projectPackage.objects.values) {
+            for (e in bundleNotation.objects.values) {
                 val status: ExecutionState? =
                         state.execution?.frames?.lastOrNull()?.states?.get(e.key)
 
                 val keyLocation = ObjectLocation(bundlePath, e.key)
 
                 action(keyLocation,
-                        projectNotation,
-                        graphMetadata,
+                        graphStructure,
                         status,
                         next?.bundlePath == bundlePath &&
                                 next.objectPath == e.key)
 
-                if (index < projectPackage.objects.values.size - 1) {
+                if (index < bundleNotation.objects.values.size - 1) {
                     styledDiv {
                         css {
                             marginTop =  0.5.em
@@ -438,7 +422,7 @@ class AutoProject(
             }
         }
 
-        insertionPoint(projectPackage.objects.values.size)
+        insertionPoint(bundleNotation.objects.values.size)
     }
 
 
@@ -472,8 +456,7 @@ class AutoProject(
 
     private fun RBuilder.action(
             objectLocation: ObjectLocation,
-            projectNotation: GraphNotation,
-            graphMetadata: GraphMetadata,
+            graphStructure: GraphStructure,
             executionState: ExecutionState?,
             nextToExecute: Boolean
     ) {
@@ -488,8 +471,7 @@ class AutoProject(
                     this,
 
                     objectLocation,
-                    projectNotation,
-                    graphMetadata,
+                    graphStructure,
                     executionState,
                     nextToExecute)
         }

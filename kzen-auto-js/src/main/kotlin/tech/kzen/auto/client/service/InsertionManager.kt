@@ -5,8 +5,8 @@ import tech.kzen.lib.common.api.model.BundleNesting
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath
-import tech.kzen.lib.common.notation.edit.AddObjectCommand
-import tech.kzen.lib.common.notation.model.PositionIndex
+import tech.kzen.lib.common.structure.notation.edit.AddObjectCommand
+import tech.kzen.lib.common.structure.notation.model.PositionIndex
 
 
 class InsertionManager {

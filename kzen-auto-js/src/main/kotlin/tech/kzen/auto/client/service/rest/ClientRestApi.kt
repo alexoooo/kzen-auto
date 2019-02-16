@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.service
+package tech.kzen.auto.client.service.rest
 
 import tech.kzen.auto.client.util.encodeURIComponent
 import tech.kzen.auto.client.util.httpGet
@@ -6,7 +6,7 @@ import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionResponse
 import tech.kzen.lib.common.api.model.*
-import tech.kzen.lib.common.notation.model.PositionIndex
+import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.IoUtils
 import tech.kzen.lib.platform.client.ClientJsonUtils

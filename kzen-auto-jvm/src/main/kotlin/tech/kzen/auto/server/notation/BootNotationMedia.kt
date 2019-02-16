@@ -4,8 +4,8 @@ import com.google.common.base.MoreObjects
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.BundleTree
-import tech.kzen.lib.common.notation.NotationConventions
-import tech.kzen.lib.common.notation.io.NotationMedia
+import tech.kzen.lib.common.structure.notation.NotationConventions
+import tech.kzen.lib.common.structure.notation.io.NotationMedia
 import tech.kzen.lib.common.util.Digest
 
 
@@ -13,7 +13,7 @@ class BootNotationMedia(
         private val prefix: String = NotationConventions.prefix,
         private val suffix: String = NotationConventions.suffix,
         private val loader: ClassLoader = Thread.currentThread().contextClassLoader
-) : NotationMedia {
+): NotationMedia {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val gradleResourcesInfix = "/out/production/resources/"

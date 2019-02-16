@@ -1,8 +1,8 @@
-package tech.kzen.auto.client.service
+package tech.kzen.auto.client.service.rest
 
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.BundleTree
-import tech.kzen.lib.common.notation.io.NotationMedia
+import tech.kzen.lib.common.structure.notation.io.NotationMedia
 import tech.kzen.lib.common.util.Digest
 
 

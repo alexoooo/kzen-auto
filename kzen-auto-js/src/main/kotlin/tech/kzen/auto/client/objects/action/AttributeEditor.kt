@@ -11,10 +11,9 @@ import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.lib.common.api.model.AttributeName
-import tech.kzen.lib.common.api.model.AttributePath
 import tech.kzen.lib.common.api.model.ObjectLocation
-import tech.kzen.lib.common.notation.edit.UpsertAttributeCommand
-import tech.kzen.lib.common.notation.model.ScalarAttributeNotation
+import tech.kzen.lib.common.structure.notation.edit.UpsertAttributeCommand
+import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 
 
 @Suppress("unused")

@@ -5,8 +5,7 @@ import react.ReactElement
 import tech.kzen.auto.common.exec.ExecutionState
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath
-import tech.kzen.lib.common.metadata.model.GraphMetadata
-import tech.kzen.lib.common.notation.model.GraphNotation
+import tech.kzen.lib.common.structure.GraphStructure
 
 
 interface ActionWrapper {
@@ -15,8 +14,7 @@ interface ActionWrapper {
 
     fun isApplicableTo(
             objectName: ObjectPath,
-            graphNotation: GraphNotation,
-            graphMetadata: GraphMetadata
+            graphStructure: GraphStructure
     ): Boolean
 
 
@@ -25,8 +23,7 @@ interface ActionWrapper {
 
             objectLocation: ObjectLocation,
 
-            projectNotation: GraphNotation,
-            graphMetadata: GraphMetadata,
+            graphStructure: GraphStructure,
 
             executionState: ExecutionState?,
             nextToExecute: Boolean

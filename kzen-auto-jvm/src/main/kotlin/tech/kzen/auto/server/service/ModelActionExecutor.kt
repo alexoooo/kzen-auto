@@ -17,13 +17,12 @@ class ModelActionExecutor(
 //    }
 
     override suspend fun execute(actionLocation: ObjectLocation): ExecutionResult {
-        val projectModel = modelManager.projectModel()
+        val graphStructure = modelManager.graphStructure()
 
-        val graphDefinition = GraphDefiner.define(
-                projectModel.graphNotation, projectModel.graphMetadata)
+        val graphDefinition = GraphDefiner.define(graphStructure)
 
         val objectGraph = GraphCreator.createGraph(
-                graphDefinition, projectModel.graphMetadata)
+                graphStructure, graphDefinition)
 
         val instance = objectGraph.objects.get(actionLocation)
 

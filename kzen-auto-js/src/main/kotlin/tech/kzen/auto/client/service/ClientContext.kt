@@ -1,15 +1,19 @@
 package tech.kzen.auto.client.service
 
+import tech.kzen.auto.client.service.rest.ClientRestActionExecutor
+import tech.kzen.auto.client.service.rest.ClientRestApi
+import tech.kzen.auto.client.service.rest.ClientRestExecutionInitializer
+import tech.kzen.auto.client.service.rest.RestNotationMedia
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.service.ExecutionLoop
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.metadata.read.NotationMetadataReader
-import tech.kzen.lib.common.notation.format.YamlNotationParser
-import tech.kzen.lib.common.notation.io.NotationMedia
-import tech.kzen.lib.common.notation.io.NotationParser
-import tech.kzen.lib.common.notation.io.common.MapNotationMedia
-import tech.kzen.lib.common.notation.repo.NotationRepository
+import tech.kzen.lib.common.structure.metadata.read.NotationMetadataReader
+import tech.kzen.lib.common.structure.notation.format.YamlNotationParser
+import tech.kzen.lib.common.structure.notation.io.NotationMedia
+import tech.kzen.lib.common.structure.notation.io.NotationParser
+import tech.kzen.lib.common.structure.notation.io.common.MapNotationMedia
+import tech.kzen.lib.common.structure.notation.repo.NotationRepository
 import tech.kzen.lib.platform.client.ModuleRegistry
 import kotlin.browser.window
 

@@ -22,14 +22,13 @@ import tech.kzen.lib.common.api.model.AttributeName
 import tech.kzen.lib.common.api.model.AttributePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath
-import tech.kzen.lib.common.metadata.model.AttributeMetadata
-import tech.kzen.lib.common.metadata.model.GraphMetadata
-import tech.kzen.lib.common.notation.edit.RemoveObjectCommand
-import tech.kzen.lib.common.notation.edit.ShiftObjectCommand
-import tech.kzen.lib.common.notation.model.AttributeNotation
-import tech.kzen.lib.common.notation.model.GraphNotation
-import tech.kzen.lib.common.notation.model.PositionIndex
-import tech.kzen.lib.common.notation.model.ScalarAttributeNotation
+import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
+import tech.kzen.lib.common.structure.notation.edit.RemoveObjectCommand
+import tech.kzen.lib.common.structure.notation.edit.ShiftObjectCommand
+import tech.kzen.lib.common.structure.notation.model.AttributeNotation
+import tech.kzen.lib.common.structure.notation.model.PositionIndex
+import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.IoUtils
 
@@ -54,8 +53,7 @@ class ActionController(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var objectLocation: ObjectLocation,
-            var notation: GraphNotation,
-            var metadata: GraphMetadata,
+            var structure: GraphStructure,
 
             var state: ExecutionState?,
             var next: Boolean
@@ -77,8 +75,7 @@ class ActionController(
 
         override fun isApplicableTo(
                 objectName: ObjectPath,
-                graphNotation: GraphNotation,
-                graphMetadata: GraphMetadata
+                graphStructure: GraphStructure
         ): Boolean {
             return true
         }
@@ -87,8 +84,7 @@ class ActionController(
         override fun render(
                 rBuilder: RBuilder,
                 objectLocation: ObjectLocation,
-                projectNotation: GraphNotation,
-                graphMetadata: GraphMetadata,
+                graphStructure: GraphStructure,
                 executionState: ExecutionState?,
                 nextToExecute: Boolean
         ): ReactElement {
@@ -96,8 +92,7 @@ class ActionController(
                 attrs {
                     this.objectLocation = objectLocation
 
-                    notation = projectNotation
-                    metadata = graphMetadata
+                    structure = graphStructure
 
                     state = executionState
                     next = nextToExecute
@@ -137,7 +132,7 @@ class ActionController(
 
     private fun onShiftUp() {
         val packagePath = props.objectLocation.bundlePath
-        val packageNotation = props.notation.bundles.values[packagePath]!!
+        val packageNotation = props.structure.graphNotation.bundles.values[packagePath]!!
         val index = packageNotation.indexOf(props.objectLocation.objectPath)
 
         async {
@@ -149,7 +144,7 @@ class ActionController(
 
     private fun onShiftDown() {
         val packagePath = props.objectLocation.bundlePath
-        val packageNotation = props.notation.bundles.values[packagePath]!!
+        val packageNotation = props.structure.graphNotation.bundles.values[packagePath]!!
         val index = packageNotation.indexOf(props.objectLocation.objectPath)
 
         async {
@@ -302,10 +297,10 @@ class ActionController(
 
 
     private fun RBuilder.renderCard() {
-        val objectMetadata = props.metadata.objectMetadata.get(props.objectLocation)
+        val objectMetadata = props.structure.graphMetadata.objectMetadata.get(props.objectLocation)
 
         val reactStyles = reactStyle {
-            val statusColor = when (props.state?.phase()) {
+            val cardColor = when (props.state?.phase()) {
                 ExecutionPhase.Pending ->
                     Color("#649fff")
 
@@ -321,11 +316,13 @@ class ActionController(
                 null -> null
             }
 
-            if (props.next) {
-                backgroundColor = Color.gold
-            }
-            else if (statusColor != null) {
-                backgroundColor = statusColor
+            // TODO: format intention to execute
+//            if (props.next) {
+//                backgroundColor = Color.gold
+//            }
+//            else
+            if (cardColor != null) {
+                backgroundColor = cardColor
             }
         }
 
@@ -351,7 +348,7 @@ class ActionController(
                         val keyAttributePath = AttributePath.ofAttribute(e.key)
 
                         val value =
-                                props.notation.transitiveAttribute(
+                                props.structure.graphNotation.transitiveAttribute(
                                         props.objectLocation, keyAttributePath)
                                 ?: continue
 
@@ -393,7 +390,7 @@ class ActionController(
 
 
     private fun RBuilder.renderHeader() {
-        val description = props.notation
+        val description = props.structure.graphNotation
                 .transitiveAttribute(props.objectLocation, descriptionAttribute)
                 ?.asString()
                 ?: defaultRunDescription
@@ -445,7 +442,7 @@ class ActionController(
                     child(NameEditor::class) {
                         attrs {
                             objectLocation = props.objectLocation
-                            notation = props.notation
+                            notation = props.structure.graphNotation
 
                             this.description = description
                             runCallback = ::onRun
@@ -458,7 +455,7 @@ class ActionController(
 
 
     private fun RBuilder.renderRunIcon() {
-        val icon = props.notation
+        val icon = props.structure.graphNotation
                 .transitiveAttribute(props.objectLocation, iconAttribute)
                 ?.asString()
                 ?: defaultRunIcon

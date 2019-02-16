@@ -6,7 +6,7 @@ import tech.kzen.lib.common.context.GraphInstance
 import tech.kzen.lib.common.definition.ListAttributeDefinition
 import tech.kzen.lib.common.definition.ObjectDefinition
 import tech.kzen.lib.common.definition.ValueAttributeDefinition
-import tech.kzen.lib.common.metadata.model.ObjectMetadata
+import tech.kzen.lib.common.structure.GraphStructure
 
 
 @Suppress("unused")
@@ -14,9 +14,9 @@ class ActionManagerCreator: ObjectCreator {
     @Suppress("UNCHECKED_CAST")
     override fun create(
             objectLocation: ObjectLocation,
+            graphStructure: GraphStructure,
             objectDefinition: ObjectDefinition,
-            objectMetadata: ObjectMetadata,
-            graphInstance: GraphInstance
+            partialGraphInstance: GraphInstance
     ): Any {
 //        println("^^^^^^ ActionManager.Creator")
         val handlesDefinition =

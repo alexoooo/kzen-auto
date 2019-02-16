@@ -1,12 +1,12 @@
 package tech.kzen.auto.client.service
 
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.notation.NotationConventions
-import tech.kzen.lib.common.notation.edit.*
-import tech.kzen.lib.common.notation.io.NotationParser
-import tech.kzen.lib.common.notation.repo.NotationRepository
+import tech.kzen.lib.common.structure.notation.NotationConventions
+import tech.kzen.lib.common.structure.notation.edit.*
+import tech.kzen.lib.common.structure.notation.io.NotationParser
+import tech.kzen.lib.common.structure.notation.repo.NotationRepository
 import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.platform.IoUtils
 
 
 // TODO: move to lib?
@@ -19,14 +19,8 @@ class CommandBus(
     //-----------------------------------------------------------------------------------------------------------------
     // TODO: observer vs subscriber?
     interface Observer {
-//    fun onCommandRequest(command: ProjectCommand)
-//
-//    fun onCommandAppliedInClient(command: ProjectCommand, event: ProjectEvent)
         fun onCommandFailedInClient(command: NotationCommand, cause: Throwable)
         fun onCommandSuccess(command: NotationCommand, event: NotationEvent)
-
-//    fun onCommandEventHandledLocally(command: ProjectCommand, event: ProjectEvent)
-//    fun onCommandAppliedInServer(command: ProjectCommand, event: ProjectEvent)
     }
 
 
@@ -58,42 +52,32 @@ class CommandBus(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun apply(command: NotationCommand) {
-        println("CommandBus - applying command: $command")
-//        observer.onCommandRequest(command)
+//        println("CommandBus - applying command: $command")
 
         val event = try {
             clientRepository.apply(command)
         }
         catch (e: Throwable) {
-            console.log("CommandBus - caught error in client: $command", e)
+//            console.log("CommandBus - caught error in client: $command", e)
             onCommandFailedInClient(command, e)
             return
         }
 
-        println("CommandBus - client event: $event")
+//        println("CommandBus - client event: $event")
 
         val bundleValue = ClientContext.notationMediaCache.read(NotationConventions.mainPath)
-        println("CommandBus - new bundle value !!: ${IoUtils.utf8Decode(bundleValue)}")
+//        println("CommandBus - new bundle value !!: ${IoUtils.utf8Decode(bundleValue)}")
 
         val parsedBundle = ClientContext.notationParser.parseBundle(bundleValue)
-        println("CommandBus - parsedBundle: $parsedBundle")
-
-
-//        val bundleNotation = clientRepository.notation().bundleNotations.values[NotationConventions.mainPath]!!
-//        val objectNotation = bundleNotation.objects.values.values.iterator().next()
-//        println("CommandBus - first object: $objectNotation")
-
-
-//        observer.onCommandAppliedInClient(command, event)
+//        println("CommandBus - parsedBundle: $parsedBundle")
 
         val clientDigest = clientRepository.digest()
-        println("CommandBus - applied in client: $clientDigest")
+//        println("CommandBus - applied in client: $clientDigest")
 
         modelManager.onEvent(event)
-//        observer.onCommandEventHandledLocally(command, event)
 
         val restDigest = applyRest(command)
-        println("CommandBus - applied in REST: $restDigest")
+//        println("CommandBus - applied in REST: $restDigest")
 
         if (clientDigest != restDigest) {
             modelManager.refresh()
