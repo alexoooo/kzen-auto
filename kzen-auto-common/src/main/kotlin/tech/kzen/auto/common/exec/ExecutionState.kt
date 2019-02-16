@@ -27,7 +27,7 @@ data class ExecutionState(
             return ExecutionState(
                     collection["running"] as Boolean,
                     collection["previous"]?.let {
-                        ExecutionResult.fromCollection(it as Map<String, String?>)
+                        ExecutionResult.fromCollection(it as Map<String, Any>)
                     }
             )
         }

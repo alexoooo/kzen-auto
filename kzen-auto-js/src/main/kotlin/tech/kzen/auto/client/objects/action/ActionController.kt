@@ -14,10 +14,10 @@ import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.exec.BinaryExecutionValue
 import tech.kzen.auto.common.exec.ExecutionPhase
 import tech.kzen.auto.common.exec.ExecutionState
 import tech.kzen.auto.common.exec.ExecutionSuccess
-import tech.kzen.auto.common.exec.TextExecutionValue
 import tech.kzen.lib.common.api.model.AttributeName
 import tech.kzen.lib.common.api.model.AttributePath
 import tech.kzen.lib.common.api.model.ObjectLocation
@@ -31,6 +31,7 @@ import tech.kzen.lib.common.notation.model.GraphNotation
 import tech.kzen.lib.common.notation.model.PositionIndex
 import tech.kzen.lib.common.notation.model.ScalarAttributeNotation
 import tech.kzen.lib.platform.ClassNames
+import tech.kzen.lib.platform.IoUtils
 
 
 class ActionController(
@@ -365,24 +366,25 @@ class ActionController(
 
 //                    console.log("^^^^^ props.state - ", props.state)
                     (props.state?.previous as? ExecutionSuccess)?.detail?.let {
-                        if (it is TextExecutionValue) {
-//                            println("got detail")
-                            img {
-                                attrs {
-//                                    width = "256px"
-                                    width = "100%"
-                                    src = "data:image/png;base64,${it.value}"
-                                }
-                            }
-                        }
-//                        if (it is BinaryExecutionValue) {
-//                            val screenshotPngBase64 = IoUtils.base64Encode(it.value)
+//                        if (it is TextExecutionValue) {
 //                            img {
 //                                attrs {
-//                                    src = "data:image/jpeg;base64,$screenshotPngBase64"
+////                                    width = "256px"
+//                                    width = "100%"
+//                                    src = "data:image/png;base64,${it.value}"
 //                                }
 //                            }
 //                        }
+                        if (it is BinaryExecutionValue) {
+//                            println("^^^^^^ it.value - ${it.value.size}")
+                            val screenshotPngBase64 = IoUtils.base64Encode(it.value)
+                            img {
+                                attrs {
+                                    width = "100%"
+                                    src = "data:png/png;base64,$screenshotPngBase64"
+                                }
+                            }
+                        }
                     }
                 }
             }

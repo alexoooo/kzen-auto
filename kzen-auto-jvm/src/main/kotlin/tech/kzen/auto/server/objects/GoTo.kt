@@ -19,7 +19,6 @@ class GoTo(
         driver.get(location)
 
         val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
-
         return ExecutionSuccess(
                 NullExecutionValue,
                 BinaryExecutionValue(screenshotPng))

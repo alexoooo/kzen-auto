@@ -9,13 +9,14 @@ sealed class ExecutionResult {
         const val valueKey = "value"
         const val detailKey = "detail"
 
-        fun fromCollection(collection: Map<String, Any?>): ExecutionResult {
+        @Suppress("UNCHECKED_CAST")
+        fun fromCollection(collection: Map<String, Any>): ExecutionResult {
             val error = collection[errorKey]
 
             return if (error == null) {
                 ExecutionSuccess(
-                        ExecutionValue.fromCollection(collection[valueKey]),
-                        ExecutionValue.fromCollection(collection[detailKey])
+                        ExecutionValue.fromCollection(collection[valueKey] as Map<String, Any>),
+                        ExecutionValue.fromCollection(collection[detailKey] as Map<String, Any>)
                 )
             }
             else {
@@ -50,15 +51,15 @@ data class ExecutionSuccess(
         val value: ExecutionValue,
         val detail: ExecutionValue
 ): ExecutionResult() {
+    companion object {
+        val empty = ExecutionSuccess(NullExecutionValue, NullExecutionValue)
+    }
+
     override fun toCollection(): Map<String, Any?> {
         return mapOf(
                 valueKey to value.toCollection(),
                 detailKey to detail.toCollection()
         )
-    }
-
-    companion object {
-        val empty = ExecutionSuccess(NullExecutionValue, NullExecutionValue)
     }
 
     override fun digest(): Digest {

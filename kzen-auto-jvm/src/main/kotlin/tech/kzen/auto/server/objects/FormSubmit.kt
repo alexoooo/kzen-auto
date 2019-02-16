@@ -1,10 +1,13 @@
 package tech.kzen.auto.server.objects
 
 import org.openqa.selenium.By
+import org.openqa.selenium.OutputType
 import org.openqa.selenium.WebElement
 import tech.kzen.auto.common.api.AutoAction
+import tech.kzen.auto.common.exec.BinaryExecutionValue
 import tech.kzen.auto.common.exec.ExecutionResult
 import tech.kzen.auto.common.exec.ExecutionSuccess
+import tech.kzen.auto.common.exec.NullExecutionValue
 import tech.kzen.auto.server.service.ServerContext
 
 
@@ -20,6 +23,9 @@ class FormSubmit(
 
         element.submit()
 
-        return ExecutionSuccess.empty
+        val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
+        return ExecutionSuccess(
+                NullExecutionValue,
+                BinaryExecutionValue(screenshotPng))
     }
 }

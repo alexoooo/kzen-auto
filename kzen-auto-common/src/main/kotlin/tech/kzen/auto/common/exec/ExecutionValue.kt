@@ -1,45 +1,91 @@
 package tech.kzen.auto.common.exec
 
+import tech.kzen.lib.common.notation.format.YamlNull.value
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.platform.IoUtils
 
 
 //---------------------------------------------------------------------------------------------------------------------
 // TODO: use {type: <enum>[, value: <nested>]}
 sealed class ExecutionValue {
     companion object {
-        fun fromCollection(asCollection: Any?): ExecutionValue {
-            return when (asCollection) {
+        fun of(value: Any?): ExecutionValue {
+            return when (value) {
                 null ->
                     NullExecutionValue
 
                 is String ->
-                    TextExecutionValue(asCollection)
+                    TextExecutionValue(value)
 
                 is Boolean ->
-                    BooleanExecutionValue(asCollection)
+                    BooleanExecutionValue(value)
 
                 is Number ->
-                    NumberExecutionValue(asCollection.toDouble())
+                    NumberExecutionValue(value.toDouble())
 
                 is ByteArray ->
-                    BinaryExecutionValue(asCollection)
+                    BinaryExecutionValue(value)
 
                 is List<*> ->
-                    ListExecutionValue(asCollection.map { fromCollection(it) })
+                    ListExecutionValue(value.map { of(it) })
 
                 is Map<*, *> ->
-                    MapExecutionValue(asCollection.entries.map {
-                        it.key as String to fromCollection(it.value)
+                    MapExecutionValue(value.entries.map {
+                        it.key as String to of(it.value)
                     }.toMap())
 
                 else ->
-                    TODO("Not supported (yet): $asCollection")
+                    TODO("Not supported (yet): $value")
+            }
+        }
+
+
+        fun fromCollection(asCollection: Map<String, Any>): ExecutionValue {
+            return when (asCollection["type"]) {
+                null ->
+                    throw IllegalArgumentException("'type' missing: $asCollection")
+
+                "null" ->
+                    NullExecutionValue
+
+                "text" ->
+                    TextExecutionValue(asCollection["value"] as String)
+
+                "boolean" ->
+                    BooleanExecutionValue(asCollection["value"] as Boolean)
+
+                "number" ->
+                    NumberExecutionValue(
+                            asCollection["value"] as Double)
+
+                "binary" ->
+                    BinaryExecutionValue(
+                            IoUtils.base64Decode(asCollection["value"] as String))
+
+                "list" ->
+                    ListExecutionValue(
+                            (asCollection["value"] as List<*>).map {
+                                @Suppress("UNCHECKED_CAST")
+                                fromCollection(it as Map<String, Any>)
+                            }
+                    )
+
+                "map" ->
+                    MapExecutionValue(
+                            (asCollection["value"] as Map<*, *>).map{
+                                @Suppress("UNCHECKED_CAST")
+                                it.key as String to fromCollection(it.value as Map<String, Any>)
+                            }.toMap()
+                    )
+
+                else ->
+                    TODO("Not supported (yet): $value")
             }
         }
     }
 
 
-    fun toCollection(): Any? {
+    fun get(): Any? {
         return when (this) {
             NullExecutionValue ->
                 null
@@ -57,11 +103,44 @@ sealed class ExecutionValue {
                 value
 
             is ListExecutionValue ->
-                values.map { it.toCollection() }
+                values.map { it.get() }
 
             is MapExecutionValue ->
-                values.mapValues { it.value.toCollection() }
+                values.mapValues { it.value.get() }
         }
+    }
+
+
+    fun toCollection(): Map<String, Any> {
+        return when (this) {
+            NullExecutionValue -> mapOf(
+                    "type" to "null")
+
+            is TextExecutionValue ->
+                toCollection("text", value)
+
+            is BooleanExecutionValue ->
+                toCollection("boolean", value)
+
+            is NumberExecutionValue ->
+                toCollection("number", value)
+
+            is BinaryExecutionValue ->
+                toCollection("binary", IoUtils.base64Encode(value))
+
+            is ListExecutionValue ->
+                toCollection("list", values.map { it.toCollection() })
+
+            is MapExecutionValue ->
+                toCollection("map", values.mapValues { it.value.toCollection() })
+        }
+    }
+
+
+    private fun toCollection(type: String, value: Any): Map<String, Any> {
+        return mapOf(
+                "type" to type,
+                "value" to value)
     }
 
 
@@ -70,6 +149,7 @@ sealed class ExecutionValue {
         digest(digest)
         return digest.digest()
     }
+
 
     fun digest(digest: Digest.Streaming) {
         when (this) {
@@ -89,11 +169,18 @@ sealed class ExecutionValue {
             is BinaryExecutionValue ->
                 digest.addBytes(value)
 
-            is ListExecutionValue ->
-                values.map { it.toCollection() }
+            is ListExecutionValue -> {
+                digest.addInt(values.size)
+                values.forEach { it.digest(digest) }
+            }
 
-            is MapExecutionValue ->
-                values.mapValues { it.value.toCollection() }
+            is MapExecutionValue -> {
+                digest.addInt(values.size)
+                values.forEach {
+                    digest.addUtf8(it.key)
+                    it.value.digest(digest)
+                }
+            }
         }
     }
 }
@@ -104,43 +191,43 @@ object NullExecutionValue: ExecutionValue()
 
 //---------------------------------------------------------------------------------------------------------------------
 sealed class ScalarExecutionValue: ExecutionValue() {
-    abstract fun get(): Any
+//    abstract fun get(): Any
 }
 
 
 data class TextExecutionValue(
         val value: String
 ): ScalarExecutionValue() {
-    override fun get(): String {
-        return value
-    }
+//    override fun get(): String {
+//        return value
+//    }
 }
 
 
 data class BooleanExecutionValue(
         val value: Boolean
 ): ScalarExecutionValue() {
-    override fun get(): Any {
-        return value
-    }
+//    override fun get(): Any {
+//        return value
+//    }
 }
 
 
 data class NumberExecutionValue(
         val value: Double
 ): ScalarExecutionValue() {
-    override fun get(): Double {
-        return value
-    }
+//    override fun get(): Double {
+//        return value
+//    }
 }
 
 
 data class BinaryExecutionValue(
         val value: ByteArray
 ): ScalarExecutionValue() {
-    override fun get(): ByteArray {
-        return value
-    }
+//    override fun get(): ByteArray {
+//        return value
+//    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
