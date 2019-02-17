@@ -25,7 +25,6 @@ interface ActionWrapper {
 
             graphStructure: GraphStructure,
 
-            executionState: ExecutionState?,
-            nextToExecute: Boolean
+            executionState: ExecutionState?
     ): ReactElement
 }

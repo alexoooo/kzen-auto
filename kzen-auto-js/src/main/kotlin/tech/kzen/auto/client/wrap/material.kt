@@ -25,6 +25,8 @@ external interface MaterialButtonProps: RProps {
     var size: String
     var fullWidth: Boolean
     var onClick: () -> Unit
+    var onMouseOver: () -> Unit
+    var onMouseOut: () -> Unit
 }
 
 
@@ -45,6 +47,8 @@ external interface MaterialIconButtonProps: RProps {
     var style: Json
 
     var onClick: () -> Unit
+    var onMouseOver: () -> Unit
+    var onMouseOut: () -> Unit
 }
 
 

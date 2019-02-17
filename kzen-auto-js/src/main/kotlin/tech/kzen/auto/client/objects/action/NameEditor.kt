@@ -162,6 +162,20 @@ class NameEditor(
     }
 
 
+    private fun onRun() {
+        props.runCallback()
+    }
+
+    private fun onRunEnter() {
+        ClientContext.executionIntent.set(props.objectLocation)
+    }
+
+    private fun onRunLeave() {
+        ClientContext.executionIntent.clearIf(props.objectLocation)
+    }
+
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun isModified(): Boolean {
         return props.objectLocation.objectPath.name.value != state.objectName
@@ -226,8 +240,16 @@ class NameEditor(
             attrs {
                 title = props.description
 
+                onMouseOverFunction = {
+                    onRunEnter()
+                }
+
+                onMouseOutFunction = {
+                    onRunLeave()
+                }
+
                 onClickFunction = {
-                    props.runCallback()
+                    onRun()
                 }
             }
 

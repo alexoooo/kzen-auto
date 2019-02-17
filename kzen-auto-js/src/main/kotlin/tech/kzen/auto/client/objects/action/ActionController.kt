@@ -12,6 +12,7 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.exec.ExecutionIntent
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.exec.BinaryExecutionValue
@@ -30,14 +31,12 @@ import tech.kzen.lib.common.structure.notation.model.AttributeNotation
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import tech.kzen.lib.platform.ClassNames
-import tech.kzen.lib.platform.IoUtils
 
 
 class ActionController(
         props: ActionController.Props
 ):
-        RComponent<ActionController.Props, ActionController.State>(props)
-{
+        RComponent<ActionController.Props, ActionController.State>(props), ExecutionIntent.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val iconAttribute = AttributePath.ofAttribute(AttributeName("icon"))
@@ -55,14 +54,14 @@ class ActionController(
             var objectLocation: ObjectLocation,
             var structure: GraphStructure,
 
-            var state: ExecutionState?,
-            var next: Boolean
+            var state: ExecutionState?
     ): RProps
 
 
     class State(
-            var hoverCard: Boolean = false,
-            var hoverAction: Boolean = false
+            var hoverCard: Boolean,
+            var hoverAction: Boolean,
+            var intentToRun: Boolean
     ): RState
 
 
@@ -85,8 +84,8 @@ class ActionController(
                 rBuilder: RBuilder,
                 objectLocation: ObjectLocation,
                 graphStructure: GraphStructure,
-                executionState: ExecutionState?,
-                nextToExecute: Boolean
+                executionState: ExecutionState?//,
+//                nextToExecute: Boolean
         ): ReactElement {
             return rBuilder.child(ActionController::class) {
                 attrs {
@@ -95,7 +94,7 @@ class ActionController(
                     structure = graphStructure
 
                     state = executionState
-                    next = nextToExecute
+//                    next = nextToExecute
                 }
             }
         }
@@ -106,11 +105,35 @@ class ActionController(
     override fun ActionController.State.init(props: ActionController.Props) {
         hoverCard = false
         hoverAction = false
+        intentToRun = false
     }
 
 
-    override fun componentDidUpdate(prevProps: ActionController.Props, prevState: ActionController.State, snapshot: Any) {
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun componentDidMount() {
+        ClientContext.executionIntent.observe(this)
+    }
+
+
+    override fun componentWillUnmount() {
+        ClientContext.executionIntent.unobserve(this)
+    }
+
+
+    override fun componentDidUpdate(
+            prevProps: ActionController.Props,
+            prevState: ActionController.State,
+            snapshot: Any
+    ) {
 //        console.log("state.hoverCard: ${state.hoverCard} | state.hoverAction: ${state.hoverAction}")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun onExecutionIntent(actionLocation: ObjectLocation?) {
+        setState {
+            intentToRun = actionLocation == props.objectLocation
+        }
     }
 
 
@@ -119,6 +142,16 @@ class ActionController(
         async {
             ClientContext.executionManager.execute(props.objectLocation)
         }
+    }
+
+
+    private fun onRunEnter() {
+        ClientContext.executionIntent.set(props.objectLocation)
+    }
+
+
+    private fun onRunLeave() {
+        ClientContext.executionIntent.clearIf(props.objectLocation)
     }
 
 
@@ -374,7 +407,7 @@ class ActionController(
 //                        }
                         if (it is BinaryExecutionValue) {
 //                            println("^^^^^^ it.value - ${it.value.size}")
-                            val screenshotPngBase64 = IoUtils.base64Encode(it.value)
+                            val screenshotPngBase64 = it.asBase64()
                             img {
                                 attrs {
                                     width = "100%"
@@ -460,6 +493,13 @@ class ActionController(
                 ?.asString()
                 ?: defaultRunIcon
 
+        val highlight =
+                if (state.intentToRun && props.state?.phase() != ExecutionPhase.Running) {
+                    Color("rgba(255, 215, 0, 0.5)")
+                }
+                else {
+                    Color("rgba(255, 255, 255, 0.5)")
+                }
 
         child(MaterialIconButton::class) {
             attrs {
@@ -467,10 +507,13 @@ class ActionController(
                     marginLeft = 8.px
                     width = 48.px
                     height = 48.px
-                    backgroundColor = Color("rgba(255, 255, 255, 0.5)")
+
+                    backgroundColor = highlight
                 }
 
                 onClick = ::onRun
+                onMouseOver = ::onRunEnter
+                onMouseOut = ::onRunLeave
             }
 
             child(iconClassForName(icon)) {
@@ -482,7 +525,7 @@ class ActionController(
                         fontSize = 1.75.em
                         borderRadius = 20.px
 
-                        backgroundColor =  Color("rgba(255, 255, 255, 0.5)")
+                        backgroundColor = highlight
                     }
                 }
             }

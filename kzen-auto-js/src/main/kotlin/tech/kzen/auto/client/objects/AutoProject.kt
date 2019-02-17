@@ -1,21 +1,18 @@
 package tech.kzen.auto.client.objects
 
 import kotlinx.css.*
-import kotlinx.html.InputType
-import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import react.*
 import react.dom.h3
-import react.dom.input
 import react.dom.span
 import styled.*
 import tech.kzen.auto.client.objects.action.ActionController
 import tech.kzen.auto.client.objects.action.ActionCreator
+import tech.kzen.auto.client.objects.action.ActionManager
 import tech.kzen.auto.client.objects.action.ActionWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.service.InsertionManager
-import tech.kzen.auto.client.service.action.ActionManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.exec.ExecutionModel
@@ -227,6 +224,25 @@ class AutoProject(
     }
 
 
+    private fun onRunAllEnter() {
+        val nextToRun = state.execution?.next()
+//        println("^$%^$%^% onRunAllEnter - ${state.execution} - $nextToRun")
+        if (nextToRun != null) {
+            ClientContext.executionIntent.set(nextToRun)
+        }
+    }
+
+
+    private fun onRunAllLeave() {
+        val nextToRun = state.execution?.next()
+//        println("^$%^$%^% onRunAllLeave - $nextToRun")
+        if (nextToRun != null) {
+            ClientContext.executionIntent.clearIf(nextToRun)
+        }
+    }
+
+
+
     private suspend fun executionStateToFreshStart() {
         val expectedDigest = ClientContext.executionManager.start(
                 NotationConventions.mainPath, state.structure!!)
@@ -372,7 +388,7 @@ class AutoProject(
                 width = 20.em
             }
 
-            val next = state.execution?.next()
+//            val next = state.execution?.next()
 
             var index = 0
             for (e in bundleNotation.objects.values) {
@@ -383,9 +399,9 @@ class AutoProject(
 
                 action(keyLocation,
                         graphStructure,
-                        status,
+                        status/*,
                         next?.bundlePath == bundlePath &&
-                                next.objectPath == e.key)
+                                next.objectPath == e.key*/)
 
                 if (index < bundleNotation.objects.values.size - 1) {
                     styledDiv {
@@ -457,8 +473,7 @@ class AutoProject(
     private fun RBuilder.action(
             objectLocation: ObjectLocation,
             graphStructure: GraphStructure,
-            executionState: ExecutionState?,
-            nextToExecute: Boolean
+            executionState: ExecutionState?
     ) {
         // todo:
         val actionUiWrapper: ActionWrapper =
@@ -472,8 +487,7 @@ class AutoProject(
 
                     objectLocation,
                     graphStructure,
-                    executionState,
-                    nextToExecute)
+                    executionState)
         }
     }
 
@@ -496,9 +510,11 @@ class AutoProject(
 //                    title = "Run"
 
                     onClick = ::onRunAll
+                    onMouseOver = ::onRunAllEnter
+                    onMouseOut = ::onRunAllLeave
 
                     style = reactStyle {
-                        backgroundColor = Color.yellow
+                        backgroundColor = Color.gold
                         width = 5.em
                         height = 5.em
                     }
@@ -516,32 +532,22 @@ class AutoProject(
     }
 
 
-    private fun RBuilder.runAll() {
-        input (type = InputType.button) {
-            attrs {
-                value = "Run All"
-                onClickFunction = { onRunAll() }
-            }
-        }
-    }
-
-
-    private fun RBuilder.reset() {
-        input (type = InputType.button) {
-            attrs {
-                value = "Clear"
-                onClickFunction = { onClear() }
-            }
-        }
-    }
-
-
-    private fun RBuilder.refresh() {
-        input (type = InputType.button) {
-            attrs {
-                value = "Reload"
-                onClickFunction = { onRefresh() }
-            }
-        }
-    }
+//    private fun RBuilder.reset() {
+//        input (type = InputType.button) {
+//            attrs {
+//                value = "Clear"
+//                onClickFunction = { onClear() }
+//            }
+//        }
+//    }
+//
+//
+//    private fun RBuilder.refresh() {
+//        input (type = InputType.button) {
+//            attrs {
+//                value = "Reload"
+//                onClickFunction = { onRefresh() }
+//            }
+//        }
+//    }
 }

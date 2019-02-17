@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.service
 
+import tech.kzen.auto.client.service.exec.ExecutionIntent
 import tech.kzen.auto.client.service.rest.ClientRestActionExecutor
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.rest.ClientRestExecutionInitializer
@@ -60,6 +61,7 @@ object ClientContext {
             executionManager)
 
     val insertionManager = InsertionManager()
+    val executionIntent = ExecutionIntent()
 
 
     //-----------------------------------------------------------------------------------------------------------------

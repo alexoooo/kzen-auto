@@ -224,6 +224,17 @@ data class NumberExecutionValue(
 data class BinaryExecutionValue(
         val value: ByteArray
 ): ScalarExecutionValue() {
+    private var base64: String? = null
+
+
+    fun asBase64(): String {
+        if (base64 == null) {
+            base64 = IoUtils.base64Encode(value)
+        }
+        return base64!!
+    }
+
+
 //    override fun get(): ByteArray {
 //        return value
 //    }

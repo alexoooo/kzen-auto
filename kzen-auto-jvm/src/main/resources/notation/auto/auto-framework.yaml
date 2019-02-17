@@ -27,10 +27,10 @@ ActionManager:
   creator: ActionManager.creator/Creator
 
 ActionManager.definer/Definer:
-  class: tech.kzen.auto.client.service.action.ActionManagerDefiner
+  class: tech.kzen.auto.client.objects.action.ActionManager$Definer
 
 ActionManager.creator/Creator:
-  class: tech.kzen.auto.client.service.action.ActionManagerCreator
+  class: tech.kzen.auto.client.objects.action.ActionManager$Creator
 
 
 ###########################################################
