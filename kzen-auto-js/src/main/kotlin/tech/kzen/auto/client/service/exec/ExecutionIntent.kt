@@ -1,11 +1,9 @@
 package tech.kzen.auto.client.service.exec
 
-import tech.kzen.auto.common.exec.ExecutionModel
-import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.lib.common.api.model.ObjectLocation
 
 
-class ExecutionIntent: ExecutionManager.Observer {
+class ExecutionIntent/*: ExecutionManager.Observer*/ {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         fun onExecutionIntent(actionLocation: ObjectLocation?)
@@ -38,11 +36,11 @@ class ExecutionIntent: ExecutionManager.Observer {
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun beforeExecution(objectLocation: ObjectLocation) {
-        set(objectLocation)
-    }
-
-    override suspend fun onExecutionModel(executionModel: ExecutionModel) {}
+//    override suspend fun beforeExecution(objectLocation: ObjectLocation) {
+//        set(objectLocation)
+//    }
+//
+//    override suspend fun onExecutionModel(executionModel: ExecutionModel) {}
 
 
     //-----------------------------------------------------------------------------------------------------------------

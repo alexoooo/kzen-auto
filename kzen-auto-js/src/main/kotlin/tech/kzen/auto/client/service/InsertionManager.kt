@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.service
 
-import tech.kzen.auto.client.objects.action.NameConventions
+import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.lib.common.api.model.BundleNesting
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation

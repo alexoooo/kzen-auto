@@ -73,7 +73,7 @@ object ClientContext {
         async {
             modelManager.observe(executionManager)
             executionManager.subscribe(executionLoop)
-            executionManager.subscribe(executionIntent)
+//            executionManager.subscribe(executionIntent)
         }
     }
 

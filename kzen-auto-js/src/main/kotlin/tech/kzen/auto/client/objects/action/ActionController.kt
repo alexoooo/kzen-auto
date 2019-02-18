@@ -22,7 +22,6 @@ import tech.kzen.auto.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.api.model.AttributeName
 import tech.kzen.lib.common.api.model.AttributePath
 import tech.kzen.lib.common.api.model.ObjectLocation
-import tech.kzen.lib.common.api.model.ObjectPath
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectCommand
@@ -66,40 +65,40 @@ class ActionController(
     ): RState
 
 
-    @Suppress("unused")
-    class Wrapper: ActionWrapper {
-        override fun priority(): Int {
-            return 0
-        }
-
-
-        override fun isApplicableTo(
-                objectName: ObjectPath,
-                graphStructure: GraphStructure
-        ): Boolean {
-            return true
-        }
-
-
-        override fun render(
-                rBuilder: RBuilder,
-                objectLocation: ObjectLocation,
-                graphStructure: GraphStructure,
-                executionState: ExecutionState?//,
-//                nextToExecute: Boolean
-        ): ReactElement {
-            return rBuilder.child(ActionController::class) {
-                attrs {
-                    this.objectLocation = objectLocation
-
-                    structure = graphStructure
-
-                    state = executionState
-//                    next = nextToExecute
-                }
-            }
-        }
-    }
+//    @Suppress("unused")
+//    class Wrapper: ActionWrapper {
+//        override fun priority(): Int {
+//            return 0
+//        }
+//
+//
+//        override fun isApplicableTo(
+//                objectName: ObjectPath,
+//                graphStructure: GraphStructure
+//        ): Boolean {
+//            return true
+//        }
+//
+//
+//        override fun render(
+//                rBuilder: RBuilder,
+//                objectLocation: ObjectLocation,
+//                graphStructure: GraphStructure,
+//                executionState: ExecutionState?//,
+////                nextToExecute: Boolean
+//        ): ReactElement {
+//            return rBuilder.child(ActionController::class) {
+//                attrs {
+//                    this.objectLocation = objectLocation
+//
+//                    structure = graphStructure
+//
+//                    state = executionState
+////                    next = nextToExecute
+//                }
+//            }
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -1,8 +1,7 @@
 package tech.kzen.auto.client
 
-//import tech.kzen.auto.client.service.CommandObserver
 import react.dom.render
-import tech.kzen.auto.client.objects.ReactWrapper
+import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.lib.common.api.model.BundlePath
@@ -16,7 +15,7 @@ import kotlin.browser.window
 import kotlin.dom.clear
 
 
-fun main(args: Array<String>) {
+fun main() {
     ClientContext.init()
 
     window.onload = {
@@ -35,7 +34,7 @@ fun main(args: Array<String>) {
                     ObjectPath.parse("root"))
 
             val rootInstance = autoGraph.objects.get(rootLocation)
-                    as? ReactWrapper
+                    as? ReactWrapper<*>
                     ?: throw IllegalStateException("Missing root object")
 
 //            console.log("^^^ main rootInstance", rootInstance)
@@ -46,7 +45,7 @@ fun main(args: Array<String>) {
             rootElement.clear()
 
             render(rootElement) {
-                rootInstance.execute(this)
+                rootInstance.child(this) {}
             }
         }
     }

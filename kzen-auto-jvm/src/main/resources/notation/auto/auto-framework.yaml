@@ -21,16 +21,16 @@ ActionWrapper:
 ###########################################################
 
 
-ActionManager:
-  class: tech.kzen.auto.client.objects.action.ActionManager
-  meta:
-    actions:
-      is: List
-      of: ObjectLocation
-      definer: WeakAutowiredAttributeDefiner
-      find:
-        is: Action
-
+#ActionManager:
+#  class: tech.kzen.auto.client.objects.action.ActionManager
+#  meta:
+#    actions:
+#      is: List
+#      of: ObjectLocation
+#      definer: WeakAutowiredAttributeDefiner
+#      find:
+#        is: Action
+#
 #  definer: ActionManager.definer/Definer
 #  creator: ActionManager.creator/Creator
 #
@@ -43,22 +43,36 @@ ActionManager:
 
 ###########################################################
 
-AutoProject:
+ProjectController:
   abstract: true
-  class: tech.kzen.auto.client.objects.AutoProject.Wrapper
-  actionManager: ActionManager
+  class: tech.kzen.auto.client.objects.ProjectController.Wrapper
+  ribbonController: RibbonController
   meta:
-    actionManager: ActionManager
+    ribbonController: RibbonController
+#  actionManager: ActionManager
+#  meta:
+#    actionManager: ActionManager
 
 
-ActionController:
-  abstract: true
-  is: ActionWrapper
-  class: tech.kzen.auto.client.objects.action.ActionController.Wrapper
+RibbonController:
+  class: tech.kzen.auto.client.objects.RibbonController.Wrapper
+  meta:
+    actionTypes:
+      is: List
+      of: ObjectLocation
+      definer: WeakAutowiredAttributeDefiner
+      find:
+        is: Action
+
+
+#ActionController:
+#  abstract: true
+#  is: ActionWrapper
+#  class: tech.kzen.auto.client.objects.action.ActionController.Wrapper
 
 
 ###########################################################
 
 root:
-  is: AutoProject
+  is: ProjectController
 

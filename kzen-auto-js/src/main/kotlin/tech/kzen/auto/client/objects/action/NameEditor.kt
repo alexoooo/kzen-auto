@@ -13,6 +13,7 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.api.model.AttributeName

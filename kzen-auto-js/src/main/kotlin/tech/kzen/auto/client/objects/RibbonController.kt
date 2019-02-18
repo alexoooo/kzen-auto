@@ -1,10 +1,14 @@
-package tech.kzen.auto.client.objects.action
+package tech.kzen.auto.client.objects
 
 import kotlinx.css.Color
 import kotlinx.css.em
 import react.*
+import tech.kzen.auto.client.api.ReactWrapper
+import tech.kzen.auto.client.objects.action.ActionController
+import tech.kzen.auto.client.objects.action.NameEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
+import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.auto.client.wrap.MaterialButton
 import tech.kzen.auto.client.wrap.iconClassForName
 import tech.kzen.auto.client.wrap.reactStyle
@@ -15,15 +19,17 @@ import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
 @Suppress("unused")
-class ActionCreator(
-        props: ActionCreator.Props
+class RibbonController(
+        props: Props
 ):
-        RComponent<ActionCreator.Props, ActionCreator.State>(props),
+        RComponent<RibbonController.Props, RibbonController.State>(props),
         InsertionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var actionManager: ActionManager,
+//            var actionTypes: ActionManager,
+            var actionTypes: List<ObjectLocation>,
+
             var notation: GraphNotation,
             var path: BundlePath
     ): RProps
@@ -35,17 +41,20 @@ class ActionCreator(
     ): RState
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-//    override fun State.init(props: Props) {
-//        console.log("ActionCreator | State.init - ${props.actionManager}")
-//        name = NameConventions.randomDefault()
-//
-//        val types = actionTypes()
-//        if (types.isEmpty()) {
-//            throw IllegalStateException("Must provide at least one action type")
-//        }
-//        type = types[0]
-//    }
+    @Suppress("unused")
+    class Wrapper(
+            private val actionTypes: List<ObjectLocation>
+    ): ReactWrapper<Props> {
+        override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
+            return input.child(RibbonController::class) {
+                attrs {
+                    actionTypes = this@Wrapper.actionTypes
+                }
+
+                handler()
+            }
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -75,13 +84,6 @@ class ActionCreator(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private fun onTypeChange(newValue: String) {
-//        setState {
-//            name = NameConventions.randomDefault()
-//            type = newValue
-//        }
-//    }
-
     private fun onUnSelect() {
         ClientContext.insertionManager.clearSelection()
     }
@@ -94,7 +96,7 @@ class ActionCreator(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        for (actionType in props.actionManager.actionLocations()) {
+        for (actionType in props.actionTypes) {
             child(MaterialButton::class) {
                 attrs {
                     key = actionType.toReference().asString()

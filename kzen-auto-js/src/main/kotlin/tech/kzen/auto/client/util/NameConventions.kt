@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.action
+package tech.kzen.auto.client.util
 
 import tech.kzen.lib.common.api.model.ObjectName
 import kotlin.js.Date
