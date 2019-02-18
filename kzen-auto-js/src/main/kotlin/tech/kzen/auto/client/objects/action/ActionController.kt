@@ -65,42 +65,6 @@ class ActionController(
     ): RState
 
 
-//    @Suppress("unused")
-//    class Wrapper: ActionWrapper {
-//        override fun priority(): Int {
-//            return 0
-//        }
-//
-//
-//        override fun isApplicableTo(
-//                objectName: ObjectPath,
-//                graphStructure: GraphStructure
-//        ): Boolean {
-//            return true
-//        }
-//
-//
-//        override fun render(
-//                rBuilder: RBuilder,
-//                objectLocation: ObjectLocation,
-//                graphStructure: GraphStructure,
-//                executionState: ExecutionState?//,
-////                nextToExecute: Boolean
-//        ): ReactElement {
-//            return rBuilder.child(ActionController::class) {
-//                attrs {
-//                    this.objectLocation = objectLocation
-//
-//                    structure = graphStructure
-//
-//                    state = executionState
-////                    next = nextToExecute
-//                }
-//            }
-//        }
-//    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun ActionController.State.init(props: ActionController.Props) {
         hoverCard = false
@@ -335,7 +299,12 @@ class ActionController(
         val reactStyles = reactStyle {
             val cardColor = when (props.state?.phase()) {
                 ExecutionPhase.Pending ->
-                    Color("#649fff")
+//                    Color("#649fff")
+//                    Color.gray
+//                    Color.gray.lighten(150)
+//                    Color.lightGray
+//                    Color.lightGray.darken(5)
+                    Color.white
 
                 ExecutionPhase.Running ->
                     Color.yellow
@@ -390,7 +359,7 @@ class ActionController(
                                 marginBottom = 0.5.em
                             }
 
-                            renderParameter(e.key, e.value, value)
+                            renderAttribute(e.key, e.value, value)
                         }
                     }
 
@@ -543,7 +512,7 @@ class ActionController(
     }
 
 
-    private fun RBuilder.renderParameter(
+    private fun RBuilder.renderAttribute(
             name: AttributeName,
             attributeMetadata: AttributeMetadata,
             attributeValue: AttributeNotation

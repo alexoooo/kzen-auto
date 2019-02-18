@@ -3,42 +3,12 @@
 
 ReactWrapper:
   abstract: true
-  class: tech.kzen.auto.client.objects.ReactWrapper
+  class: tech.kzen.auto.client.api.ReactWrapper
 
 
-ActionWrapper:
-  abstract: true
-  class: tech.kzen.auto.client.objects.ActionWrapper
-
-
-
-#"Action~§·Wrapper":
+#ActionWrapper:
 #  abstract: true
-#  class: tech.kzen.auto.common.api.AutoAction
-
-
-
-###########################################################
-
-
-#ActionManager:
-#  class: tech.kzen.auto.client.objects.action.ActionManager
-#  meta:
-#    actions:
-#      is: List
-#      of: ObjectLocation
-#      definer: WeakAutowiredAttributeDefiner
-#      find:
-#        is: Action
-#
-#  definer: ActionManager.definer/Definer
-#  creator: ActionManager.creator/Creator
-#
-#ActionManager.definer/Definer:
-#  class: tech.kzen.auto.client.objects.action.ActionManager$Definer
-#
-#ActionManager.creator/Creator:
-#  class: tech.kzen.auto.client.objects.action.ActionManager$Creator
+#  class: tech.kzen.auto.client.objects.ActionWrapper
 
 
 ###########################################################

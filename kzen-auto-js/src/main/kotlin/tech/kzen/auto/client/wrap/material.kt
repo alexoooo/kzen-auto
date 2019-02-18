@@ -19,6 +19,7 @@ external class MaterialButton: Component<MaterialButtonProps, RState> {
 
 external interface MaterialButtonProps: RProps {
     var id: String
+    var title: String
     var variant: String
     var color: String
     var style: Json
@@ -39,6 +40,7 @@ external class MaterialIconButton: Component<MaterialIconButtonProps, RState> {
 external interface MaterialIconButtonProps: RProps {
 //    var id: String
 //    var variant: String
+    var title: String
 
     var disabled: Boolean
 

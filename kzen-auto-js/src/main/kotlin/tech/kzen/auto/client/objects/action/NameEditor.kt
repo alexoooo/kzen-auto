@@ -25,7 +25,6 @@ import tech.kzen.lib.common.structure.notation.edit.RenameRefactorCommand
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
-@Suppress("unused")
 class NameEditor(
         props: NameEditor.Props
 ):

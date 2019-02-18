@@ -52,11 +52,17 @@ class ExecutionIntent/*: ExecutionManager.Observer*/ {
     }
 
 
+    fun actionLocation(): ObjectLocation? {
+        return actionLocation
+    }
+
+
     fun clearIf(actionLocation: ObjectLocation) {
         if (this.actionLocation == actionLocation) {
             clear()
         }
     }
+
 
     fun set(actionLocation: ObjectLocation) {
         if (this.actionLocation != actionLocation) {

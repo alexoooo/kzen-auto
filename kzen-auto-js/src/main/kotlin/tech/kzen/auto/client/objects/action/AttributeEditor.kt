@@ -16,7 +16,6 @@ import tech.kzen.lib.common.structure.notation.edit.UpsertAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 
 
-@Suppress("unused")
 class AttributeEditor(
         props: AttributeEditor.Props
 ):

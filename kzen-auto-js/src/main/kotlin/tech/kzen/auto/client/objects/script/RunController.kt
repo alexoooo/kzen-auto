@@ -1,14 +1,17 @@
 package tech.kzen.auto.client.objects.script
 
 import kotlinx.css.Color
+import kotlinx.css.Visibility
 import kotlinx.css.em
+import kotlinx.html.js.onMouseOutFunction
+import kotlinx.html.js.onMouseOverFunction
 import react.*
+import react.dom.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.MaterialFab
-import tech.kzen.auto.client.wrap.PlayArrowIcon
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.exec.ExecutionModel
+import tech.kzen.auto.common.exec.ExecutionPhase
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.api.model.ObjectLocation
@@ -25,8 +28,19 @@ class RunController:
     //-----------------------------------------------------------------------------------------------------------------
     class State(
             var structure: GraphStructure?,
-            var execution: ExecutionModel?
+            var execution: ExecutionModel?,
+            var fabHover: Boolean
     ): RState
+
+
+    enum class Phase {
+        Empty,
+        Pending,
+        Partial,
+        Running,
+        Looping,
+        Done
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -67,7 +81,7 @@ class RunController:
             prevState: RunController.State,
             snapshot: Any
     ) {
-//        console.log("ProjectController componentDidUpdate", state, prevState)
+        console.log("ProjectController componentDidUpdate", state, prevState)
         if (state.execution == null) {
             return
         }
@@ -111,11 +125,43 @@ class RunController:
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun phase(): Phase {
+        val executionModel = state.execution
+                ?: return Phase.Empty
+
+        if (executionModel.frames.isEmpty()) {
+            return Phase.Empty
+        }
+
+        if (executionModel.containsStatus(ExecutionPhase.Running)) {
+            if (ClientContext.executionLoop.running()) {
+                return Phase.Looping
+            }
+            return Phase.Running
+        }
+
+        if (executionModel.next() == null) {
+            return Phase.Done
+        }
+
+        if (executionModel.containsStatus(ExecutionPhase.Success) ||
+                executionModel.containsStatus(ExecutionPhase.Error)) {
+            return Phase.Partial
+        }
+
+        return Phase.Pending
+    }
+
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onPause() {
+        ClientContext.executionLoop.pause()
+    }
+
 
     private fun onClear() {
-        ClientContext.executionLoop.pause()
+        onPause()
 
         async {
             ClientContext.executionManager.reset()
@@ -126,11 +172,7 @@ class RunController:
 
     private fun onRunAll() {
         async {
-            //            println("ProjectController | onRunAll")
-
-            executionStateToFreshStart()
-
-//            println("ProjectController | after executionStateToFreshStart")
+//            executionStateToFreshStart()
 
             ClientContext.executionIntent.clear()
             ClientContext.executionLoop.run()
@@ -138,8 +180,26 @@ class RunController:
     }
 
 
-    private fun onRunAllEnter() {
+
+    private fun onOuterEnter() {
+        setState {
+            fabHover = true
+        }
+    }
+
+    private fun onOuterLeave() {
+        setState {
+            fabHover = false
+        }
+    }
+
+
+    private fun onFabEnter() {
         val nextToRun = state.execution?.next()
+        if (nextToRun == ClientContext.executionIntent.actionLocation()) {
+            return
+        }
+
 //        println("^$%^$%^% onRunAllEnter - ${state.execution} - $nextToRun")
         if (nextToRun != null) {
             ClientContext.executionIntent.set(nextToRun)
@@ -147,7 +207,7 @@ class RunController:
     }
 
 
-    private fun onRunAllLeave() {
+    private fun onFabLeave() {
         val nextToRun = state.execution?.next()
 //        println("^$%^$%^% onRunAllLeave - $nextToRun")
         if (nextToRun != null) {
@@ -158,23 +218,126 @@ class RunController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        child(MaterialFab::class) {
-            attrs {
-                onClick = ::onRunAll
-                onMouseOver = ::onRunAllEnter
-                onMouseOut = ::onRunAllLeave
+        val phase = phase()
+//        println("#$#%#$%#$% phase - $phase")
 
-                style = reactStyle {
-                    backgroundColor = Color.gold
-                    width = 5.em
-                    height = 5.em
+        if (phase == Phase.Empty) {
+            return
+        }
+
+        div {
+            attrs {
+                onMouseOverFunction = {
+                    onOuterEnter()
+                }
+                onMouseOutFunction = {
+                    onOuterLeave()
                 }
             }
 
-            child(PlayArrowIcon::class) {
+            if (phase == Phase.Partial) {
+                child(MaterialIconButton::class) {
+                    attrs {
+                        title = "Reset"
+
+                        style = reactStyle {
+                            if (! state.fabHover) {
+                                visibility = Visibility.hidden
+                            }
+
+//                            marginLeft = (-0.5).em
+                            marginRight = (-0.5).em
+                        }
+
+                        onClick = ::onClear
+                    }
+
+                    child(ReplayIcon::class) {
+                        attrs {
+                            style = reactStyle {
+//                                marginTop = 1.em
+                                fontSize = 1.5.em
+                            }
+                        }
+                    }
+                }
+            }
+
+            child(MaterialFab::class) {
+                val hasMoreToRun = phase == Phase.Pending || phase == Phase.Partial
+                val looping = phase == Phase.Looping
+
                 attrs {
+                    title =
+                            if (phase == Phase.Done) {
+                                "Reset"
+                            }
+                            else if (looping) {
+                                "Pause"
+                            }
+                            else if (phase == Phase.Pending) {
+                                "Run all"
+                            }
+                            else {
+                                "Continue"
+                            }
+
+                    onClick = {
+                        if (hasMoreToRun) {
+                            onRunAll()
+                        }
+                        else if (phase == Phase.Done) {
+                            onClear()
+                        }
+                        else if (looping) {
+                            onPause()
+                        }
+                    }
+
+                    onMouseOver = ::onFabEnter
+                    onMouseOut = ::onFabLeave
+
+
                     style = reactStyle {
-                        fontSize = 3.em
+                        backgroundColor =
+                                if (hasMoreToRun || looping) {
+                                    Color.gold
+                                }
+                                else {
+//                                Color("#649fff")
+                                    Color.white
+                                }
+
+                        width = 5.em
+                        height = 5.em
+                    }
+                }
+
+                if (hasMoreToRun) {
+                    child(PlayArrowIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                fontSize = 3.em
+                            }
+                        }
+                    }
+                }
+                else if (looping) {
+                    child(PauseIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                fontSize = 3.em
+                            }
+                        }
+                    }
+                }
+                else {
+                    child(ReplayIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                fontSize = 3.em
+                            }
+                        }
                     }
                 }
             }

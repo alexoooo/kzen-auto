@@ -65,7 +65,11 @@ class ExecutionLoop(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    fun running() = running
+    fun running(): Boolean {
+        return running
+    }
+
+
     fun pause() {
         println("ExecutionLoop | Pause request")
 

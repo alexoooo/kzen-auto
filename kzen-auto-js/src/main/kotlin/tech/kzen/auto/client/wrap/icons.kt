@@ -18,6 +18,8 @@ import kotlin.js.Json
 external interface IconProps : RProps {
     var color: String
     var style: Json
+
+    var onClick: () -> Unit
 }
 
 
@@ -35,6 +37,12 @@ external class DeleteIcon : Component<IconProps, RState> {
 
 @JsName("PlayArrow")
 external class PlayArrowIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Replay")
+external class ReplayIcon : Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 
@@ -116,8 +124,15 @@ external class TimerIcon : Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 
+
 @JsName("Edit")
 external class EditIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Pause")
+external class PauseIcon : Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 
