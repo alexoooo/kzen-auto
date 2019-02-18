@@ -66,7 +66,7 @@ class AttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun beforeExecution() {
+    override suspend fun beforeExecution(objectLocation: ObjectLocation) {
         flush()
     }
 

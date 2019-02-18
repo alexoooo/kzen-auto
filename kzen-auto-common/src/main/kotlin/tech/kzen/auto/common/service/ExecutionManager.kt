@@ -16,7 +16,7 @@ class ExecutionManager(
 ): ModelManager.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
-        suspend fun beforeExecution()
+        suspend fun beforeExecution(objectLocation: ObjectLocation)
         suspend fun onExecutionModel(executionModel: ExecutionModel)
     }
 
@@ -47,9 +47,9 @@ class ExecutionManager(
     }
 
 
-    private suspend fun publishBeforeExecution() {
+    private suspend fun publishBeforeExecution(objectLocation: ObjectLocation) {
         for (subscriber in subscribers) {
-            subscriber.beforeExecution()
+            subscriber.beforeExecution(objectLocation)
         }
     }
 
@@ -201,7 +201,7 @@ class ExecutionManager(
         }
         willExecute(objectLocation)
 
-        publishBeforeExecution()
+        publishBeforeExecution(objectLocation)
 
         if (delayMillis > 0) {
 //            println("ExecutionManager | delay($delayMillis)")

@@ -8,14 +8,14 @@ class ExecutionLoop(
         private val executionManager: ExecutionManager,
 //        private val delayMillis: Int = 1000
         private val delayMillis: Int = 0
-) : ExecutionManager.Observer {
+): ExecutionManager.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     private var running: Boolean = false
     private var executionModel: ExecutionModel? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun beforeExecution() {}
+    override suspend fun beforeExecution(objectLocation: ObjectLocation) {}
 
 
     override suspend fun onExecutionModel(executionModel: ExecutionModel) {

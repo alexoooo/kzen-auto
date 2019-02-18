@@ -42,3 +42,8 @@
         opacity: 1;
     }
 }
+
+
+.glowingText {
+    text-shadow: 1px 1px 3px rgba(255, 215, 0, 0.5);
+}

@@ -224,14 +224,29 @@ data class NumberExecutionValue(
 data class BinaryExecutionValue(
         val value: ByteArray
 ): ScalarExecutionValue() {
-    private var base64: String? = null
+    private val cache: MutableMap<String, Any> = mutableMapOf()
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T> cache(key: String, valueProvider: () -> T): T {
+        val existing = cache[key]
+        if (existing != null) {
+            return existing as T
+        }
+
+        val added = valueProvider()
+        cache[key] = added as Any
+
+        return added
+    }
 
 
     fun asBase64(): String {
-        if (base64 == null) {
-            base64 = IoUtils.base64Encode(value)
-        }
-        return base64!!
+        return cache("base64") { IoUtils.base64Encode(value) }
+
+//        if (base64 == null) {
+//            base64 = IoUtils.base64Encode(value)
+//        }
+//        return base64!!
     }
 
 

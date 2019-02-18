@@ -62,7 +62,7 @@ class ActionManager(
             val handleDefinitions = mutableListOf<ValueAttributeDefinition>()
 
             for (e in graphStructure.graphNotation.coalesce.values) {
-                val isValue = e.value.attributes[NotationConventions.isAttribute.attribute]
+                val isValue = e.value.attributes[NotationConventions.isName]
                         ?.asString()
                         ?: continue
 

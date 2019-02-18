@@ -41,6 +41,7 @@ class NameEditor(
             var objectLocation: ObjectLocation,
             var notation: GraphNotation,
             var description: String,
+            var intentToRun: Boolean,
             var runCallback: () -> Unit
     ): RProps
 
@@ -184,7 +185,7 @@ class NameEditor(
 
     private fun title(): String {
         val type = props.notation.getString(
-                props.objectLocation, NotationConventions.isAttribute)
+                props.objectLocation, NotationConventions.isPath)
 
         return props
                 .notation
@@ -260,6 +261,11 @@ class NameEditor(
 
                     fontSize = LinearDimension("1.5em")
                     fontWeight = FontWeight.bold
+
+                    if (props.intentToRun) {
+//                        println("^$%^$%^$% props.intentToRun - ${props.intentToRun}")
+                        classes.add("glowingText")
+                    }
                 }
 
                 val objectName =

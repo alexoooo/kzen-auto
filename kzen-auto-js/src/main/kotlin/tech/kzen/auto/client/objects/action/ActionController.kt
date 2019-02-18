@@ -31,6 +31,7 @@ import tech.kzen.lib.common.structure.notation.model.AttributeNotation
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import tech.kzen.lib.platform.ClassNames
+import tech.kzen.lib.platform.IoUtils
 
 
 class ActionController(
@@ -407,11 +408,19 @@ class ActionController(
 //                        }
                         if (it is BinaryExecutionValue) {
 //                            println("^^^^^^ it.value - ${it.value.size}")
-                            val screenshotPngBase64 = it.asBase64()
+//                            IoUtils.base64Encode(value)
+                            val binary = it
+
+                            val screenshotPngUrl = binary.cache("img") {
+                                val base64 = IoUtils.base64Encode(binary.value)
+                                "data:png/png;base64,$base64"
+                            }
+
+//                            val screenshotPngBase64 = it.asBase64()
                             img {
                                 attrs {
                                     width = "100%"
-                                    src = "data:png/png;base64,$screenshotPngBase64"
+                                    src = screenshotPngUrl
                                 }
                             }
                         }
@@ -423,7 +432,7 @@ class ActionController(
 
 
     private fun RBuilder.renderHeader() {
-        val description = props.structure.graphNotation
+        val actionDescription = props.structure.graphNotation
                 .transitiveAttribute(props.objectLocation, descriptionAttribute)
                 ?.asString()
                 ?: defaultRunDescription
@@ -439,9 +448,9 @@ class ActionController(
                     height = headerHeight
                 }
 
-                if (description.isNotEmpty()) {
+                if (actionDescription.isNotEmpty()) {
                     attrs {
-                        title = description
+                        title = actionDescription
                     }
                 }
 
@@ -477,7 +486,9 @@ class ActionController(
                             objectLocation = props.objectLocation
                             notation = props.structure.graphNotation
 
-                            this.description = description
+                            description = actionDescription
+                            intentToRun = state.intentToRun
+
                             runCallback = ::onRun
                         }
                     }

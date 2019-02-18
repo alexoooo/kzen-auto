@@ -137,7 +137,7 @@ class AutoProject(
 
 
 
-    override suspend fun beforeExecution() {}
+    override suspend fun beforeExecution(objectLocation: ObjectLocation) {}
 
 
     override suspend fun onExecutionModel(executionModel: ExecutionModel) {

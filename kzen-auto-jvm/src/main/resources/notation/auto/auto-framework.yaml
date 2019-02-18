@@ -22,15 +22,23 @@ ActionWrapper:
 
 
 ActionManager:
-  class: tech.kzen.auto.client.service.action.ActionManager
-  definer: ActionManager.definer/Definer
-  creator: ActionManager.creator/Creator
+  class: tech.kzen.auto.client.objects.action.ActionManager
+  meta:
+    actions:
+      is: List
+      of: ObjectLocation
+      definer: WeakAutowiredAttributeDefiner
+      find:
+        is: Action
 
-ActionManager.definer/Definer:
-  class: tech.kzen.auto.client.objects.action.ActionManager$Definer
-
-ActionManager.creator/Creator:
-  class: tech.kzen.auto.client.objects.action.ActionManager$Creator
+#  definer: ActionManager.definer/Definer
+#  creator: ActionManager.creator/Creator
+#
+#ActionManager.definer/Definer:
+#  class: tech.kzen.auto.client.objects.action.ActionManager$Definer
+#
+#ActionManager.creator/Creator:
+#  class: tech.kzen.auto.client.objects.action.ActionManager$Creator
 
 
 ###########################################################
