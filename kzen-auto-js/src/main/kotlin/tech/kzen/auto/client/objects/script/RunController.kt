@@ -127,10 +127,14 @@ class RunController:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun phase(): Phase {
+        println("%%%%%% phase - ${state.execution}")
+
         val executionModel = state.execution
                 ?: return Phase.Empty
 
-        if (executionModel.frames.isEmpty()) {
+        if (executionModel.frames.isEmpty() ||
+                executionModel.frames.size == 1 &&
+                executionModel.frames[0].states.isEmpty()) {
             return Phase.Empty
         }
 
@@ -219,7 +223,7 @@ class RunController:
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val phase = phase()
-//        println("#$#%#$%#$% phase - $phase")
+        println("#$#%#$%#$% phase - $phase")
 
         if (phase == Phase.Empty) {
             return
@@ -302,6 +306,7 @@ class RunController:
                         backgroundColor =
                                 if (hasMoreToRun || looping) {
                                     Color.gold
+//                                    Color("#ffb82d")
                                 }
                                 else {
 //                                Color("#649fff")

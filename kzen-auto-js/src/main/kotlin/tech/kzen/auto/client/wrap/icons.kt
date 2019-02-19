@@ -137,4 +137,10 @@ external class PauseIcon : Component<IconProps, RState> {
 }
 
 
+@JsName("Send")
+external class SendIcon : Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 

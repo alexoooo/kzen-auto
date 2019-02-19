@@ -307,10 +307,13 @@ class ActionController(
                     Color.white
 
                 ExecutionPhase.Running ->
-                    Color.yellow
+//                    Color.yellow
+//                    Color("#ffb82d")
+                    Color.gold
 
                 ExecutionPhase.Success ->
-                    Color.green.lighten(50)
+//                    Color.green.lighten(50)
+                    Color("#00a457")
 
                 ExecutionPhase.Error ->
                     Color.red
@@ -475,6 +478,7 @@ class ActionController(
         val highlight =
                 if (state.intentToRun && props.state?.phase() != ExecutionPhase.Running) {
                     Color("rgba(255, 215, 0, 0.5)")
+//                    Color("rgba(255, 184, 45, 0.5)")
                 }
                 else {
                     Color("rgba(255, 255, 255, 0.5)")

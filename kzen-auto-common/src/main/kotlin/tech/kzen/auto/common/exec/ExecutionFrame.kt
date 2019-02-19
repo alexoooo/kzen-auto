@@ -86,4 +86,10 @@ data class ExecutionFrame(
         check(objectPath !in states)
         states[objectPath] = ExecutionState.initial
     }
+
+
+    fun remove(objectPath: ObjectPath): Boolean {
+        val previous = states.remove(objectPath)
+        return previous != null
+    }
 }

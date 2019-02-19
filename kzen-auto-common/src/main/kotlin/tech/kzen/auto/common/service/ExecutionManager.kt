@@ -95,6 +95,9 @@ class ExecutionManager(
 
     private fun applySingular(model: ExecutionModel, event: SingularNotationEvent): Boolean {
         return when (event) {
+            is RemovedObjectEvent ->
+                model.remove(event.objectLocation)
+
             is RenamedObjectEvent ->
                 model.rename(event.objectLocation, event.newName)
 
@@ -115,7 +118,9 @@ class ExecutionManager(
         val upsertFrame = existingFrame
                 ?: model.frames.last()
 
-        val state = upsertFrame.states[objectLocation.objectPath]!!
+        // TODO
+        val state = upsertFrame.states[objectLocation.objectPath]
+                ?: return
 
         upsertFrame.states[objectLocation.objectPath] = state.copy(running = true)
 

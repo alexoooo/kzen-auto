@@ -29,6 +29,24 @@ data class ExecutionModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun remove(objectLocation: ObjectLocation): Boolean {
+        var renamedAny = false
+
+        for (frame in frames) {
+            if (frame.path != objectLocation.bundlePath) {
+                continue
+            }
+
+            val renamed = frame.remove(objectLocation.objectPath)
+
+            renamedAny = renamedAny || renamed
+        }
+
+        return renamedAny
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun rename(from: ObjectLocation, newName: ObjectName): Boolean {
         var renamedAny = false
 

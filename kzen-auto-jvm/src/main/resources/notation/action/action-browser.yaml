@@ -60,6 +60,7 @@ FormSubmit:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.FormSubmit
+  icon: Send
   title: "Submit a form"
   xpath: ""
   meta:
