@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.action
 
 
 import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.HTMLTextAreaElement
 import react.*
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
@@ -13,9 +14,11 @@ import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.lib.common.api.model.AttributeName
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.structure.notation.edit.UpsertAttributeCommand
+import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 
 
+// TODO: inject type-based editor
 class AttributeEditor(
         props: AttributeEditor.Props
 ):
@@ -24,14 +27,19 @@ class AttributeEditor(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var objectName: ObjectLocation,
+            var objectLocation: ObjectLocation,
             var attributeName: AttributeName,
-            var value: String
+
+            var value: String?,
+            var values: List<String>?
     ): RProps
 
 
     class State(
-            var value: String,
+            var value: String?,
+            var values: List<String>?,
+
+
 //            var submitDebounce: (Unit) -> Unit
             var submitDebounce: FunctionWithDebounce,
             var pending: Boolean
@@ -41,7 +49,15 @@ class AttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
-        value = props.value
+        if (props.value == null) {
+            value = null
+            values = props.values!!
+        }
+        else {
+            value = props.value
+            values = null
+        }
+
 
         submitDebounce = lodash.debounce({
             editParameterCommandAsync()
@@ -97,9 +113,21 @@ class AttributeEditor(
     }
 
 
-    private fun onSubmit() {
-        editParameterCommandAsync()
+    private fun onValuesChange(newValues: List<String>) {
+        if (state.values == newValues) {
+            return
+        }
+
+        setState {
+            values = newValues
+            pending = true
+        }
+
+//        console.log("onValueChange")
+
+        state.submitDebounce.apply()
     }
+
 
 
     private fun editParameterCommandAsync() {
@@ -110,10 +138,21 @@ class AttributeEditor(
 
 
     private suspend fun editParameterCommand() {
-        ClientContext.commandBus.apply(UpsertAttributeCommand(
-                props.objectName,
-                props.attributeName,
-                ScalarAttributeNotation(state.value)))
+        if (state.value != null) {
+            ClientContext.commandBus.apply(UpsertAttributeCommand(
+                    props.objectLocation,
+                    props.attributeName,
+                    ScalarAttributeNotation(state.value)))
+        }
+        else {
+            ClientContext.commandBus.apply(UpsertAttributeCommand(
+                    props.objectLocation,
+                    props.attributeName,
+                    ListAttributeNotation(
+                            state.values!!.map { ScalarAttributeNotation(it) }
+                    )
+            ))
+        }
 
         setState {
             pending = false
@@ -123,12 +162,22 @@ class AttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        if (state.value != null) {
+            renderString(state.value!!)
+        }
+        else {
+            renderListOfString(state.values!!)
+        }
+    }
+
+
+    private fun RBuilder.renderString(stateValue: String) {
         child(MaterialTextField::class) {
             attrs {
                 fullWidth = true
 
-                label = props.attributeName.value
-                value = state.value
+                label = formattedLabel()
+                value = stateValue
 
                 onChange = {
                     val target = it.target as HTMLInputElement
@@ -136,5 +185,41 @@ class AttributeEditor(
                 }
             }
         }
+    }
+
+
+    private fun RBuilder.renderListOfString(stateValues: List<String>) {
+        child(MaterialTextField::class) {
+            attrs {
+                fullWidth = true
+                multiline = true
+
+                label = formattedLabel() + " (one per line)"
+                value = stateValues.joinToString("\n")
+
+                onChange = {
+                    val target = it.target as HTMLTextAreaElement
+                    val lines = target.value.split(Regex("\\n+"))
+                    val values =
+                            if (lines.size == 1 && lines[0].isEmpty()) {
+                                listOf()
+                            }
+                            else {
+                                lines
+                            }
+                    onValuesChange(values)
+                }
+            }
+        }
+    }
+
+
+    private fun formattedLabel(): String {
+        val upperCamelCase = props.attributeName.value.capitalize()
+
+        val results = Regex("[A-Z][a-z]*").findAll(upperCamelCase)
+        val words = results.map { it.groups[0]!!.value }
+
+        return words.joinToString(" ")
     }
 }

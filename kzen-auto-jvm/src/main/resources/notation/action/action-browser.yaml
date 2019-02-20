@@ -9,6 +9,12 @@ OpenBrowser:
   icon: OpenInNew
   title: "Open browser"
   description: "Open a new browser window"
+  extensionFiles: []
+  meta:
+    extensionFiles:
+      is: List
+      of: String
+      description: "Packed .crx files or unpacked directories"
 
 
 CloseBrowser:

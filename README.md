@@ -1,5 +1,5 @@
 # kzen-auto
-Office automation
+Desktop automation
 
 Dev mode (two processes for client refresh, and server from IDE):
 > > run KzenAutoApp from IDE
@@ -12,7 +12,7 @@ Dev mode (two processes for client refresh, and server from IDE):
 Dist:
 > ./gradlew assemble
 >
-> java -jar server/build/libs/server-*.jar
+> java -jar kzen-auto-jvm/build/libs/server-*.jar
 
 Web:
 > http://localhost:8080/

@@ -45,11 +45,11 @@ class ModelManager(
 
 
     private suspend fun publish(event: NotationEvent?) {
-        println("ModelManager - Publishing - start")
+//        println("ModelManager - Publishing - start")
 
         mostRecent = readModel()
 
-        println("ModelManager - Publishing")
+//        println("ModelManager - Publishing")
         for (subscriber in subscribers) {
             subscriber.handleModel(mostRecent!!, event)
         }
@@ -102,12 +102,12 @@ class ModelManager(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun refresh() {
-        println("ModelManager - Refreshing - ${mostRecent == null}")
+//        println("ModelManager - Refreshing - ${mostRecent == null}")
 
         val restScan = notationMedia.scan()
         val clientScan = notationMediaCache.scan()
 
-        println("ModelManager - Refreshing - got scan - ${restScan.values.keys} vs ${clientScan.values.keys}")
+//        println("ModelManager - Refreshing - got scan - ${restScan.values.keys} vs ${clientScan.values.keys}")
 
         var changed = false
         for (dangling in clientScan.values.keys.minus(restScan.values.keys)) {
@@ -120,18 +120,18 @@ class ModelManager(
                     ?: Digest.zero
 
             if (clientDigest != e.value) {
-                println("ModelManager - Saving - ${e.key}")
+//                println("ModelManager - Saving - ${e.key}")
 
                 val body = notationMedia.read(e.key)
 
-                println("ModelManager - read - ${body.size}")
+//                println("ModelManager - read - ${body.size}")
 
                 notationMediaCache.write(e.key, body)
                 changed = true
             }
         }
 
-        println("ModelManager - Refreshing check - $changed - ${mostRecent == null}")
+//        println("ModelManager - Refreshing check - $changed - ${mostRecent == null}")
         if (changed || mostRecent == null) {
             notationRepository.clearCache()
             publish(null)

@@ -27,6 +27,7 @@ import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectCommand
 import tech.kzen.lib.common.structure.notation.edit.ShiftObjectCommand
 import tech.kzen.lib.common.structure.notation.model.AttributeNotation
+import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import tech.kzen.lib.platform.ClassNames
@@ -517,7 +518,7 @@ class ActionController(
 
 
     private fun RBuilder.renderAttribute(
-            name: AttributeName,
+            attributeName: AttributeName,
             attributeMetadata: AttributeMetadata,
             attributeValue: AttributeNotation
     ) {
@@ -535,14 +536,32 @@ class ActionController(
                     is String ->
                         child(AttributeEditor::class) {
                             attrs {
-                                objectName = props.objectLocation
-                                attributeName = name
+                                objectLocation = props.objectLocation
+                                this.attributeName = attributeName
                                 value = scalarValue
                             }
                         }
 
-                    else ->
+                    else -> {
                         +"[[ ${attributeValue.value} ]]"
+                    }
+                }
+            }
+
+            is ListAttributeNotation -> {
+                if (attributeValue.values.all { it.asString() != null }) {
+                    val stringValues = attributeValue.values.map { it.asString()!! }
+
+                    child(AttributeEditor::class) {
+                        attrs {
+                            objectLocation = props.objectLocation
+                            this.attributeName = attributeName
+                            values = stringValues
+                        }
+                    }
+                }
+                else {
+                    +"$attributeName: $attributeValue"
                 }
             }
 

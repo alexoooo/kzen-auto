@@ -81,7 +81,7 @@ class RunController:
             prevState: RunController.State,
             snapshot: Any
     ) {
-        console.log("ProjectController componentDidUpdate", state, prevState)
+//        console.log("RunController componentDidUpdate", state, prevState)
         if (state.execution == null) {
             return
         }
@@ -127,7 +127,7 @@ class RunController:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun phase(): Phase {
-        println("%%%%%% phase - ${state.execution}")
+//        println("%%%%%% phase - ${state.execution}")
 
         val executionModel = state.execution
                 ?: return Phase.Empty
@@ -223,7 +223,7 @@ class RunController:
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val phase = phase()
-        println("#$#%#$%#$% phase - $phase")
+//        println("#$#%#$%#$% phase - $phase")
 
         if (phase == Phase.Empty) {
             return

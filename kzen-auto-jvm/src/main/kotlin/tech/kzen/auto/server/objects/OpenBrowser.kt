@@ -7,10 +7,13 @@ import tech.kzen.auto.common.exec.ExecutionResult
 import tech.kzen.auto.common.exec.ExecutionSuccess
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.webdriver.model.BrowserLauncher
+import java.nio.file.Paths
 
 
 @Suppress("unused")
-class OpenBrowser: AutoAction {
+class OpenBrowser(
+        private val extensionFiles: List<String>
+): AutoAction {
     override suspend fun perform(): ExecutionResult {
         closeIfAlreadyOpen()
 
@@ -23,9 +26,16 @@ class OpenBrowser: AutoAction {
                 webDriverOption.browserLauncher.driverSystemProperty,
                 binary.toString())
 
+        // http://chromedriver.chromium.org/extensions
         // https://stackoverflow.com/a/44884633/1941359
         val chromeOptions = ChromeOptions()
         chromeOptions.setExperimentalOption("useAutomationExtension", false)
+
+        // https://www.maketecheasier.com/download-save-chrome-extension/
+        for (extensionFile in extensionFiles) {
+            val asFile = Paths.get(extensionFile).toFile()
+            chromeOptions.addExtensions(asFile)
+        }
 
         val driver = ChromeDriver(chromeOptions)
 
