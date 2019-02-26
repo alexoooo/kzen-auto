@@ -2,7 +2,6 @@ package tech.kzen.auto.client.service
 
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.common.structure.notation.io.NotationParser
 import tech.kzen.lib.common.structure.notation.repo.NotationRepository
@@ -65,10 +64,10 @@ class CommandBus(
 
 //        println("CommandBus - client event: $event")
 
-        val bundleValue = ClientContext.notationMediaCache.read(NotationConventions.mainPath)
+//        val bundleValue = ClientContext.notationMediaCache.read(NotationConventions.mainPath)
 //        println("CommandBus - new bundle value !!: ${IoUtils.utf8Decode(bundleValue)}")
 
-        val parsedBundle = ClientContext.notationParser.parseBundle(bundleValue)
+//        val parsedBundle = ClientContext.notationParser.parseBundle(bundleValue)
 //        println("CommandBus - parsedBundle: $parsedBundle")
 
         val clientDigest = clientRepository.digest()
