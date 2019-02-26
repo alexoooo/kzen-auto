@@ -70,7 +70,10 @@ data class ExecutionModel(
                 continue
             }
 
-            frame.add(objectLocation.objectPath)
+            // TODO: just frame.add without checking contains?
+            if (! frame.contains(objectLocation.objectPath)) {
+                frame.add(objectLocation.objectPath)
+            }
             return true
         }
 

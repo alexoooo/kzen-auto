@@ -32,7 +32,6 @@ class RunController:
             var fabHover: Boolean
     ): RState
 
-
     enum class Phase {
         Empty,
         Pending,
@@ -58,6 +57,13 @@ class RunController:
         setState {
             execution = executionModel
         }
+
+        if (! executionModel.containsStatus(ExecutionPhase.Running) &&
+                executionModel.next() == null &&
+                ClientContext.executionLoop.running()) {
+//            console.log("!@#!#!@#!@#!@ onExecutionModel - pause at end")
+            ClientContext.executionLoop.pause()
+        }
     }
 
 
@@ -82,11 +88,10 @@ class RunController:
             snapshot: Any
     ) {
 //        console.log("RunController componentDidUpdate", state, prevState)
-        if (state.execution == null) {
-            return
-        }
+        val execution = state.execution
+                ?: return
 
-        if (state.execution!!.frames.isEmpty()) {
+        if (execution.frames.isEmpty()) {
 //            console.log("!@#!#!@#!@#!@  starting execution")
             async {
                 executionStateToFreshStart()

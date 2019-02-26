@@ -83,7 +83,7 @@ data class ExecutionFrame(
 
 
     fun add(objectPath: ObjectPath) {
-        check(objectPath !in states)
+        check(objectPath !in states) { "Already present: $objectPath" }
         states[objectPath] = ExecutionState.initial
     }
 

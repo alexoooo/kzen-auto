@@ -12,7 +12,7 @@ Dev mode (two processes for client refresh, and server from IDE):
 Dist:
 > ./gradlew assemble
 >
-> java -jar kzen-auto-jvm/build/libs/server-*.jar
+> java -jar kzen-auto-jvm/build/libs/kzen-auto-jvm-*-boot.jar
 
 Web:
 > http://localhost:8080/

@@ -120,6 +120,17 @@ external class MaterialCardActions: Component<RProps, RState> {
 }
 
 
+@JsName("Paper")
+external class MaterialPaper: Component<PaperProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+external interface PaperProps: RProps {
+    var style: Json
+}
+
+
 @JsName("TextField")
 external class MaterialTextField: Component<MaterialTextFieldProps, RState> {
     override fun render(): ReactElement?

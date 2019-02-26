@@ -37,20 +37,26 @@ class ExecutionLoop(
 
 
     suspend fun run() {
-        println("ExecutionLoop | Run request")
+//        println("ExecutionLoop | Run request")
 
         if (running) {
-            println("ExecutionLoop | Already running")
+//            println("ExecutionLoop | Already running")
             return
         }
         running = true
 
-        println("ExecutionLoop | executionModel is $executionModel")
+//        println("ExecutionLoop | executionModel is $executionModel")
 
         val next = executionModel?.next()
-                ?: return
+        if (next == null) {
+//            println("ExecutionLoop | pausing at end of loop")
 
-        println("ExecutionLoop | next is $next")
+            // NB: auto-pause
+            running = false
+            return
+        }
+
+//        println("ExecutionLoop |^ next is $next")
 
         run(next)
     }
@@ -71,14 +77,14 @@ class ExecutionLoop(
 
 
     fun pause() {
-        println("ExecutionLoop | Pause request")
+//        println("ExecutionLoop | Pause request")
 
         if (! running) {
-            println("ExecutionLoop | Already paused")
+//            println("ExecutionLoop | Already paused")
             return
         }
 
-        println("ExecutionLoop | Pausing")
+//        println("ExecutionLoop | Pausing")
 
         running = false
     }
