@@ -212,7 +212,7 @@ class ProjectController(
                     attrs {
                         style = reactStyle {
                             backgroundColor = Color.white
-                            minHeight = 2.em
+//                            backgroundColor = Color.red
 
                             paddingTop = 1.em
                             paddingRight = 1.75.em
@@ -224,6 +224,8 @@ class ProjectController(
                     styledSpan {
                         css {
                             float = Float.left
+                            marginLeft = (-11).px
+                            marginTop = (-9).px
                         }
 
                         renderLogo()
@@ -251,9 +253,9 @@ class ProjectController(
             val headerHeight = (state.headerHeight ?: 64).px
             css {
                 position = Position.fixed
-                width = 100.vw
+                width = 100.vw.minus(10.em)
                 height = shadowWidth
-                left = 0.px
+                left = 10.em
                 top = headerHeight.minus(shadowWidth)
                 zIndex = 1000
                 backgroundColor = Color.white
@@ -270,7 +272,8 @@ class ProjectController(
 
             styledImg(src = "logo.png") {
                 css {
-                    height = 35.px
+//                    height = 35.px
+                    height = 52.px
                 }
 
                 attrs {
