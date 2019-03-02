@@ -3,10 +3,10 @@ package tech.kzen.auto.client.objects.script
 import kotlinx.css.*
 import kotlinx.html.title
 import react.*
-import react.dom.h3
 import react.dom.span
 import styled.css
 import styled.styledDiv
+import styled.styledH3
 import styled.styledSpan
 import tech.kzen.auto.client.objects.action.ActionController
 import tech.kzen.auto.client.service.ClientContext
@@ -170,7 +170,11 @@ class ScriptController(
             bundleNotation: BundleNotation
     ) {
         if (bundleNotation.objects.values.isEmpty()) {
-            h3 {
+            styledH3 {
+                css {
+                    paddingTop = 1.em
+                }
+
                 +"Empty script, please add steps using action bar (above)"
             }
 

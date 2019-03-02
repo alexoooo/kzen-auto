@@ -60,10 +60,23 @@ external class MaterialFab: Component<MaterialButtonProps, RState> {
 }
 
 
+@JsName("Drawer")
+external class MaterialDrawer: Component<DrawerProps, RState> {
+    override fun render(): ReactElement?
+}
+
+external interface DrawerProps : RProps {
+    var variant: String
+    var style: Json
+}
+
 
 @JsName("Typography")
-external class MaterialTypography: Component<RProps, RState> {
+external class MaterialTypography: Component<TypographyProps, RState> {
     override fun render(): ReactElement?
+}
+external interface TypographyProps: RProps {
+    var style: Json
 }
 
 
@@ -74,7 +87,7 @@ external class MaterialAppBar: Component<AppBarProps, RState> {
 }
 
 
-external interface AppBarProps : RProps {
+external interface AppBarProps: RProps {
     var position: String
     var style: Json
 }
