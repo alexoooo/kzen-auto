@@ -12,7 +12,6 @@ import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.auto.client.wrap.MaterialButton
 import tech.kzen.auto.client.wrap.iconClassForName
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectName
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
@@ -30,8 +29,7 @@ class RibbonController(
 //            var actionTypes: ActionManager,
             var actionTypes: List<ObjectLocation>,
 
-            var notation: GraphNotation,
-            var path: BundlePath
+            var notation: GraphNotation
     ): RProps
 
 

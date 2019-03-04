@@ -14,18 +14,25 @@ import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionPhase
 import tech.kzen.auto.common.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 
 
-class RunController:
-        RComponent<RProps, RunController.State>(),
+class RunController(
+        props: RunController.Props
+):
+        RComponent<RunController.Props, RunController.State>(props),
         ModelManager.Observer,
         ExecutionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
+    class Props(
+            var bundlePath: BundlePath?
+    ): RProps
+
+
     class State(
             var structure: GraphStructure?,
             var execution: ExecutionModel?,
@@ -83,7 +90,7 @@ class RunController:
 
 
     override fun componentDidUpdate(
-            prevProps: RProps,
+            prevProps: RunController.Props,
             prevState: RunController.State,
             snapshot: Any
     ) {
@@ -115,8 +122,14 @@ class RunController:
 
 
     private suspend fun executionStateToFreshStart() {
+        val graphStructure = state.structure
+                ?: return
+
+        val bundlePath = props.bundlePath
+                ?: return
+
         val expectedDigest = ClientContext.executionManager.start(
-                NotationConventions.mainPath, state.structure!!)
+                bundlePath, graphStructure)
 
         val actualDigest = ClientContext.restClient.startExecution()
 

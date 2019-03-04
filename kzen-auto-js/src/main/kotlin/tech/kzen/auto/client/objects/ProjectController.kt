@@ -10,7 +10,6 @@ import react.*
 import react.dom.div
 import styled.*
 import tech.kzen.auto.client.api.ReactWrapper
-import tech.kzen.auto.client.objects.script.RunController
 import tech.kzen.auto.client.objects.script.ScriptController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
@@ -18,8 +17,8 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.MaterialTypography
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.NotationCommand
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
@@ -47,13 +46,14 @@ class ProjectController(
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-//            var actionManager: ActionManager
             var ribbonController: RibbonController.Wrapper
     ): RProps
+
 
     class State(
             var structure: GraphStructure?,
             var commandError: String?,
+            var bundlePath: BundlePath?,
 
             var headerHeight: Int?
     ): RState
@@ -79,26 +79,17 @@ class ProjectController(
 
 
     private val handleResize: (Event) -> Unit = { _ ->
-//        async {
-//            delay(1)
-
-            val height = headerElement?.clientHeight ?: 0
-            if (state.headerHeight != height) {
-                setState {
-                    headerHeight = height
-                }
+        val height = headerElement?.clientHeight ?: 0
+        if (state.headerHeight != height) {
+            setState {
+                headerHeight = height
             }
-//        }
+        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-//        val height = headerElement?.clientHeight ?: 0
-//        setState {
-//            headerHeight = height
-//        }
-
         async {
             ClientContext.modelManager.observe(this)
             ClientContext.commandBus.observe(this)
@@ -165,6 +156,14 @@ class ProjectController(
 //        console.log("%%%%%%% onCommandFailedInClient", command, cause)
         setState {
             commandError = "${cause.message}"
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onNavigation(bundlePath: BundlePath?) {
+        setState {
+            this.bundlePath = bundlePath
         }
     }
 
@@ -240,7 +239,6 @@ class ProjectController(
                         props.ribbonController.child(this) {
                             attrs {
                                 notation = graphNotation
-                                path = NotationConventions.mainPath
                             }
                         }
                     }
@@ -272,7 +270,6 @@ class ProjectController(
 
             styledImg(src = "logo.png") {
                 css {
-//                    height = 35.px
                     height = 52.px
                 }
 
@@ -314,22 +311,12 @@ class ProjectController(
                     marginTop = shadowWidth
                 }
 
-                renderSidebarContent()
+                child(SidebarController::class) {
+                    attrs {
+                        onNavigation = ::onNavigation
+                    }
+                }
             }
-        }
-    }
-
-
-    private fun RBuilder.renderSidebarContent() {
-        styledDiv {
-            css {
-                paddingTop = 1.em
-                paddingRight = 1.em
-                paddingBottom = 1.em
-                paddingLeft = 1.em
-            }
-
-            +"Side bar..."
         }
     }
 
@@ -357,25 +344,9 @@ class ProjectController(
 
             child(ScriptController::class) {
                 attrs {
-                    bundlePath = NotationConventions.mainPath
+                    bundlePath = state.bundlePath
                 }
             }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.runController() {
-        styledDiv {
-            css {
-                position = Position.fixed
-                bottom = 0.px
-                right = 0.px
-                marginRight = 2.em
-                marginBottom = 2.em
-            }
-
-            child(RunController::class) {}
         }
     }
 }

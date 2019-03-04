@@ -1,19 +1,17 @@
-"Open Chrome":
+__ANON__20190302T024839_959Z:
   is: OpenBrowser
 
-"Go to Google":
+__ANON__20190302T024919_204Z:
   is: GoTo
-  location: "https://www.google.com/"
 
-"Enter search terms":
+__ANON__20190302T042207_622Z:
   is: SendKeys
-  xpath: '//*[@id="lst-ib"]'
-  text: "Goat Funny"
+  xpath: '//*[@id="tsf"]/div[2]/div/div[1]/div/div[1]/input'
+  text: "toronto weather"
 
-"Click Away":
-  is: LeftClick
-  xpath: '//*[@id="lga"]'
+__ANON__20190302T042436_433Z:
+  is: FormSubmit
+  xpath: '//*[@id="tsf"]/div[2]/div/div[1]/div/div[1]/input'
 
-"I'm Feeling Lucky":
-  is: LeftClick
-  xpath: '//*[@name="btnI"]'
+__ANON__20190303T204051_903Z:
+  is: CloseBrowser

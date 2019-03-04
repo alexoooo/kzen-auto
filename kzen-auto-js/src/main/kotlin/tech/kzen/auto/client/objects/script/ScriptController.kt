@@ -23,8 +23,6 @@ import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.NotationConventions
-import tech.kzen.lib.common.structure.notation.edit.CreateBundleCommand
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 import tech.kzen.lib.common.structure.notation.model.BundleNotation
 
@@ -39,7 +37,7 @@ class ScriptController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var bundlePath: BundlePath
+            var bundlePath: BundlePath?
     ): RProps
 
 
@@ -75,20 +73,6 @@ class ScriptController(
             snapshot: Any
     ) {
 //        console.log("ProjectController componentDidUpdate", state, prevState)
-
-        if (state.structure != null &&
-                state.structure!!.graphNotation.bundles.values[props.bundlePath] == null &&
-                (prevState.structure == null ||
-                        prevState.structure!!.graphNotation.bundles.values[props.bundlePath] != null)) {
-            async {
-                createBundle()
-            }
-        }
-    }
-
-
-    private suspend fun createBundle() {
-        ClientContext.commandBus.apply(CreateBundleCommand(NotationConventions.mainPath))
     }
 
 
@@ -133,7 +117,7 @@ class ScriptController(
     private fun onCreate(index: Int) {
         async {
             ClientContext.insertionManager.create(
-                    NotationConventions.mainPath,
+                    props.bundlePath!!,
                     index)
         }
     }
@@ -144,11 +128,29 @@ class ScriptController(
         val structure = state.structure
                 ?: return
 
+        val bundlePath = props.bundlePath
+        if (bundlePath == null) {
+            styledH3 {
+                css {
+                    paddingTop = 1.em
+                }
+
+                +"Please select a file from the sidebar (left)"
+            }
+            return
+        }
+
         val bundleNotation: BundleNotation? =
-                structure.graphNotation.bundles.values[props.bundlePath]
+                structure.graphNotation.bundles.values[bundlePath]
 
         if (bundleNotation == null) {
-            +"Initializing..."
+            styledH3 {
+                css {
+                    paddingTop = 1.em
+                }
+
+                +"Initializing..."
+            }
         }
         else {
             styledDiv {
@@ -156,7 +158,7 @@ class ScriptController(
                     marginLeft = 1.em
                 }
 
-                steps(state.structure!!, bundleNotation)
+                steps(structure, bundleNotation, bundlePath)
             }
 
             runController()
@@ -167,7 +169,8 @@ class ScriptController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.steps(
             graphStructure: GraphStructure,
-            bundleNotation: BundleNotation
+            bundleNotation: BundleNotation,
+            bundlePath: BundlePath
     ) {
         if (bundleNotation.objects.values.isEmpty()) {
             styledH3 {
@@ -181,14 +184,15 @@ class ScriptController(
             insertionPoint(0)
         }
         else {
-            nonEmptySteps(graphStructure, bundleNotation)
+            nonEmptySteps(graphStructure, bundleNotation, bundlePath)
         }
     }
 
 
     private fun RBuilder.nonEmptySteps(
             graphStructure: GraphStructure,
-            bundleNotation: BundleNotation
+            bundleNotation: BundleNotation,
+            bundlePath: BundlePath
     ) {
         insertionPoint(0)
 
@@ -204,7 +208,7 @@ class ScriptController(
                 val status: ExecutionState? =
                         state.execution?.frames?.lastOrNull()?.states?.get(e.key)
 
-                val keyLocation = ObjectLocation(props.bundlePath, e.key)
+                val keyLocation = ObjectLocation(bundlePath, e.key)
 
                 action(keyLocation,
                         graphStructure,
@@ -317,7 +321,11 @@ class ScriptController(
                 marginBottom = 2.em
             }
 
-            child(RunController::class) {}
+            child(RunController::class) {
+                attrs {
+                    bundlePath = props.bundlePath
+                }
+            }
         }
     }
 
