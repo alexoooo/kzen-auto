@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.service
 
-import tech.kzen.auto.common.exec.ExecutionModel
-import tech.kzen.auto.common.service.ExecutionInitializer
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionInitializer
 
 
 object EmptyExecutionInitializer: ExecutionInitializer {

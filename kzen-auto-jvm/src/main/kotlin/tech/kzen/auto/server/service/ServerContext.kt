@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.service
 
 import kotlinx.coroutines.runBlocking
-import tech.kzen.auto.common.service.ExecutionManager
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.server.notation.BootNotationMedia
 import tech.kzen.auto.server.service.webdriver.WebDriverContext

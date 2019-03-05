@@ -52,6 +52,5 @@ object CommonRestApi {
     const val actionPerform = "${actionPrefix}perform"
 
 
-    const val fieldStatus = "status"
     const val fieldDigest = "digest"
 }

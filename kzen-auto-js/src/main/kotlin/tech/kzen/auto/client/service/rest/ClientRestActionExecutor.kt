@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.service.rest
 
-import tech.kzen.auto.common.exec.ExecutionResult
-import tech.kzen.auto.common.service.ActionExecutor
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.imperative.service.ActionExecutor
 import tech.kzen.lib.common.api.model.ObjectLocation
 
 

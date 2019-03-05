@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.api.flow.input
+package tech.kzen.auto.common.paradigm.dataflow.input
 
 
 interface RequiredFlowInput<out T>: FlowInput<T> {

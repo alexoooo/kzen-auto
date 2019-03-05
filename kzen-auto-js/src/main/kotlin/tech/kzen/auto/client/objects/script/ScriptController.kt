@@ -16,9 +16,9 @@ import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.ArrowDownwardIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.exec.ExecutionModel
-import tech.kzen.auto.common.exec.ExecutionState
-import tech.kzen.auto.common.service.ExecutionManager
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation

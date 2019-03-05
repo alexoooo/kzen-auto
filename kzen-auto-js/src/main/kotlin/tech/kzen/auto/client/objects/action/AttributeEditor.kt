@@ -9,8 +9,8 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.MaterialTextField
 import tech.kzen.auto.client.wrap.lodash
-import tech.kzen.auto.common.exec.ExecutionModel
-import tech.kzen.auto.common.service.ExecutionManager
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.lib.common.api.model.AttributeName
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.structure.notation.edit.UpsertAttributeCommand

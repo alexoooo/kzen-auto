@@ -1,7 +1,8 @@
-package tech.kzen.auto.common.service
+package tech.kzen.auto.common.paradigm.imperative.service
 
 import kotlinx.coroutines.delay
-import tech.kzen.auto.common.exec.*
+import tech.kzen.auto.common.paradigm.imperative.model.*
+import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath

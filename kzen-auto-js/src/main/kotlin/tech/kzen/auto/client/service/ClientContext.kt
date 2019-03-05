@@ -6,8 +6,8 @@ import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.rest.ClientRestExecutionInitializer
 import tech.kzen.auto.client.service.rest.RestNotationMedia
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.common.service.ExecutionLoop
-import tech.kzen.auto.common.service.ExecutionManager
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.structure.metadata.read.NotationMetadataReader
 import tech.kzen.lib.common.structure.notation.format.YamlNotationParser

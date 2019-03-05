@@ -2,9 +2,9 @@ package tech.kzen.auto.server.objects
 
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
-import tech.kzen.auto.common.api.AutoAction
-import tech.kzen.auto.common.exec.ExecutionResult
-import tech.kzen.auto.common.exec.ExecutionSuccess
+import tech.kzen.auto.common.paradigm.imperative.ExecutionAction
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionSuccess
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.webdriver.model.BrowserLauncher
 import java.nio.file.Paths
@@ -13,7 +13,7 @@ import java.nio.file.Paths
 @Suppress("unused")
 class OpenBrowser(
         private val extensionFiles: List<String>
-): AutoAction {
+): ExecutionAction {
     override suspend fun perform(): ExecutionResult {
         closeIfAlreadyOpen()
 
@@ -42,11 +42,6 @@ class OpenBrowser(
         ServerContext.webDriverContext.set(driver)
 
         return ExecutionSuccess.empty
-//        val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
-//
-//        return ExecutionSuccess(
-//                NullExecutionValue,
-//                BinaryExecutionValue(screenshotPng))
     }
 
 

@@ -1,14 +1,14 @@
-package tech.kzen.auto.common.objects
+package tech.kzen.auto.common.objects.action
 
-import tech.kzen.auto.common.api.AutoAction
-import tech.kzen.auto.common.exec.ExecutionResult
-import tech.kzen.auto.common.exec.ExecutionSuccess
+import tech.kzen.auto.common.paradigm.imperative.ExecutionAction
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionSuccess
 
 
 @Suppress("unused")
 class PrintlnAction(
         private val message: String
-): AutoAction {
+): ExecutionAction {
     override suspend fun perform(): ExecutionResult {
         println("PrintlnAction: $message")
         return ExecutionSuccess.empty

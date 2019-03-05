@@ -15,10 +15,10 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.exec.ExecutionIntent
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.exec.BinaryExecutionValue
-import tech.kzen.auto.common.exec.ExecutionPhase
-import tech.kzen.auto.common.exec.ExecutionState
-import tech.kzen.auto.common.exec.ExecutionSuccess
+import tech.kzen.auto.common.paradigm.imperative.model.BinaryExecutionValue
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionSuccess
 import tech.kzen.lib.common.api.model.AttributeName
 import tech.kzen.lib.common.api.model.AttributePath
 import tech.kzen.lib.common.api.model.ObjectLocation

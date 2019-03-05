@@ -10,9 +10,9 @@ import react.dom.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.exec.ExecutionModel
-import tech.kzen.auto.common.exec.ExecutionPhase
-import tech.kzen.auto.common.service.ExecutionManager
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.api.model.ObjectLocation

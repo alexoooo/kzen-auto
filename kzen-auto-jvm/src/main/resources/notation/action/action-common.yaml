@@ -14,15 +14,11 @@
 
 Action:
   abstract: true
-  class: tech.kzen.auto.common.api.AutoAction
+  class: tech.kzen.auto.common.api.ExecutionAction
   description: "Perform action"
-#  value: NullCodec
-#  detail: NullCodec
   meta:
     icon: String
     description: String
-#    value: ResultCodec
-#    detail: ResultCodec
 
 
 ###########################################################

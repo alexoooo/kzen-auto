@@ -1,10 +1,10 @@
-package tech.kzen.auto.common.api.flow
+package tech.kzen.auto.common.paradigm.dataflow
 
 
-interface SingleFlow<out T>: DataFlow {
+interface OptionalFlow<out T>: DataFlow {
     interface Output<in T> {
         /**
-         * must be called
+         * may or may not be called
          */
         fun set(payload: T)
     }

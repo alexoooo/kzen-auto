@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.api.flow
+package tech.kzen.auto.common.paradigm.dataflow
 
 
 interface MultiFlow<out T>: DataFlow {

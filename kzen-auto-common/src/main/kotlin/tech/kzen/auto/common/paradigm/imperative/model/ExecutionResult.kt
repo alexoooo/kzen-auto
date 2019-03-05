@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.exec
+package tech.kzen.auto.common.paradigm.imperative.model
 
 import tech.kzen.lib.common.util.Digest
 

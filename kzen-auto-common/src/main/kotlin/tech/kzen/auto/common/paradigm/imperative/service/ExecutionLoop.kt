@@ -1,6 +1,6 @@
-package tech.kzen.auto.common.service
+package tech.kzen.auto.common.paradigm.imperative.service
 
-import tech.kzen.auto.common.exec.ExecutionModel
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.lib.common.api.model.ObjectLocation
 
 

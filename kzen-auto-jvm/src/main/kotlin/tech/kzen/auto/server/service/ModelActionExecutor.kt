@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.service
 
-import tech.kzen.auto.common.api.AutoAction
-import tech.kzen.auto.common.exec.ExecutionResult
-import tech.kzen.auto.common.service.ActionExecutor
+import tech.kzen.auto.common.paradigm.imperative.ExecutionAction
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.imperative.service.ActionExecutor
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.context.GraphCreator
@@ -26,7 +26,7 @@ class ModelActionExecutor(
 
         val instance = objectGraph.objects.get(actionLocation)
 
-        val action = instance as AutoAction
+        val action = instance as ExecutionAction
 
         return action.perform()
     }

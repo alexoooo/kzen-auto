@@ -3,8 +3,8 @@ package tech.kzen.auto.client.service.rest
 import tech.kzen.auto.client.util.encodeURIComponent
 import tech.kzen.auto.client.util.httpGet
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.exec.ExecutionModel
-import tech.kzen.auto.common.exec.ExecutionResponse
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResponse
 import tech.kzen.lib.common.api.model.*
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.util.Digest
