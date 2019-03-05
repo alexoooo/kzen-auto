@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.api.flow
 
 
-interface SinkFlow {
+interface SinkFlow: DataFlow {
     fun onMessage()
 }

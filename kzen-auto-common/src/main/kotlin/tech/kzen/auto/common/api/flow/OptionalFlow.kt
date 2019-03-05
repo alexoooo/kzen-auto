@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.api.flow
 
 
-interface OptionalFlow<out T> {
+interface OptionalFlow<out T>: DataFlow {
     interface Output<in T> {
         /**
          * may or may not be called
