@@ -244,9 +244,12 @@ class ClientRestApi(
     }
 
 
-    suspend fun startExecution(): Digest {
-        val responseText = httpGet("$baseUrl${CommonRestApi.actionStart}")
-        return Digest.parse(responseText)
+    suspend fun startExecution(bundlePath: BundlePath): Digest {
+        return getDigest(
+                "$baseUrl${CommonRestApi.actionStart}",
+                CommonRestApi.paramBundlePath to bundlePath.asString())
+//        val responseText = httpGet("$baseUrl${CommonRestApi.actionStart}")
+//        return Digest.parse(responseText)
     }
 
 

@@ -302,7 +302,8 @@ class ProjectController(
                 css {
                     backgroundColor = Color.white
 
-                    height = 100.pct
+                    height = 100.pct.minus(shadowWidth)
+                    overflowY = Overflow.auto
 
                     borderTopWidth = 1.px
                     borderTopStyle = BorderStyle.solid

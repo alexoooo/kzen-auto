@@ -172,20 +172,23 @@ class ExecutionManager(
     }
 
 
-    suspend fun start(main: BundlePath, projectModel: GraphStructure): Digest {
+    suspend fun start(
+            bundlePath: BundlePath,
+            projectModel: GraphStructure
+    ): Digest {
         val model = modelOrInit()
         model.frames.clear()
 
         val values = mutableMapOf<ObjectPath, ExecutionState>()
 
-        val packageNotation = projectModel.graphNotation.bundles.values[main]
+        val packageNotation = projectModel.graphNotation.bundles.values[bundlePath]
 
         if (packageNotation != null) {
             for (e in packageNotation.objects.values) {
                 values[e.key] = ExecutionState.initial
             }
 
-            val frame = ExecutionFrame(main, values)
+            val frame = ExecutionFrame(bundlePath, values)
 
             model.frames.add(frame)
         }

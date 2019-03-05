@@ -131,7 +131,7 @@ class RunController(
         val expectedDigest = ClientContext.executionManager.start(
                 bundlePath, graphStructure)
 
-        val actualDigest = ClientContext.restClient.startExecution()
+        val actualDigest = ClientContext.restClient.startExecution(bundlePath)
 
 //        console.log("^^^ executionStateToFreshStart", expectedDigest.asString(), actualDigest.asString())
 

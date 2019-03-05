@@ -13,7 +13,6 @@ import tech.kzen.auto.common.exec.ExecutionModel
 import tech.kzen.auto.common.exec.ExecutionResponse
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.api.model.*
-import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.common.structure.notation.model.AttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ObjectNotation
@@ -441,11 +440,14 @@ class RestHandler {
 
 
     fun actionStart(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val bundlePath: BundlePath = serverRequest.getParam(
+                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+
         val digest = runBlocking {
             val projectModel = ServerContext.modelManager.graphStructure()
 
             ServerContext.executionManager.start(
-                    NotationConventions.mainPath, projectModel)
+                    bundlePath, projectModel)
         }
 
         return ServerResponse
