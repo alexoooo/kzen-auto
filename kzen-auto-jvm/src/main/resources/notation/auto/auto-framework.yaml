@@ -24,8 +24,16 @@ ProjectController:
 #    actionManager: ActionManager
 
 
+RibbonGroup:
+  class: tech.kzen.auto.client.objects.ribbon.RibbonGroup
+  meta:
+    objectLocation:
+      is: ObjectLocation
+      definer: ObjectLocationAttributeDefiner
+
+
 RibbonController:
-  class: tech.kzen.auto.client.objects.RibbonController.Wrapper
+  class: tech.kzen.auto.client.objects.ribbon.RibbonController.Wrapper
   meta:
     actionTypes:
       is: List

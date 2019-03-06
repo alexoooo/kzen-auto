@@ -3,19 +3,18 @@ package tech.kzen.auto.client.objects
 import kotlinx.coroutines.delay
 import kotlinx.css.*
 import kotlinx.css.properties.boxShadow
-import kotlinx.html.title
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.Event
 import react.*
 import react.dom.div
-import styled.*
+import styled.css
+import styled.styledDiv
 import tech.kzen.auto.client.api.ReactWrapper
+import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.objects.script.ScriptController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.MaterialTypography
-import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.structure.GraphStructure
@@ -207,40 +206,9 @@ class ProjectController(
 //                    console.log("^^^^^^^ ref - foo", headerElement, headerElement?.clientHeight)
                 }
 
-                child(MaterialTypography::class) {
+                props.ribbonController.child(this) {
                     attrs {
-                        style = reactStyle {
-                            backgroundColor = Color.white
-//                            backgroundColor = Color.red
-
-                            paddingTop = 1.em
-                            paddingRight = 1.75.em
-                            paddingBottom = 1.em
-                            paddingLeft = 1.75.em
-                        }
-                    }
-
-                    styledSpan {
-                        css {
-                            float = Float.left
-                            marginLeft = (-11).px
-                            marginTop = (-9).px
-                        }
-
-                        renderLogo()
-                    }
-
-
-                    styledSpan {
-                        css {
-                            marginLeft = 1.em
-                        }
-
-                        props.ribbonController.child(this) {
-                            attrs {
-                                notation = graphNotation
-                            }
-                        }
+                        notation = graphNotation
                     }
                 }
             }
@@ -257,25 +225,6 @@ class ProjectController(
                 top = headerHeight.minus(shadowWidth)
                 zIndex = 1000
                 backgroundColor = Color.white
-            }
-        }
-    }
-
-
-    private fun RBuilder.renderLogo() {
-        styledA {
-            attrs {
-                href = "/"
-            }
-
-            styledImg(src = "logo.png") {
-                css {
-                    height = 52.px
-                }
-
-                attrs {
-                    title = "Kzen (home)"
-                }
             }
         }
     }

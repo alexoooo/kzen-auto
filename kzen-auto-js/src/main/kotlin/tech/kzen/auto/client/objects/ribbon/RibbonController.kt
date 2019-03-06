@@ -1,17 +1,20 @@
-package tech.kzen.auto.client.objects
+package tech.kzen.auto.client.objects.ribbon
 
 import kotlinx.css.Color
+import kotlinx.css.Float
 import kotlinx.css.em
+import kotlinx.css.px
+import kotlinx.html.title
 import react.*
+import react.dom.br
+import styled.*
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.action.ActionController
 import tech.kzen.auto.client.objects.action.NameEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.util.NameConventions
-import tech.kzen.auto.client.wrap.MaterialButton
-import tech.kzen.auto.client.wrap.iconClassForName
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectName
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
@@ -34,8 +37,9 @@ class RibbonController(
 
 
     class State(
-            var name: ObjectName,
-            var type: ObjectLocation?
+            var name: ObjectName?,
+            var type: ObjectLocation?,
+            var tabIndex: Int = 0
     ): RState
 
 
@@ -56,6 +60,14 @@ class RibbonController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun RibbonController.State.init(props: RibbonController.Props) {
+        name = null
+        type = null
+        tabIndex = 0
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.insertionManager.subscribe(this)
     }
@@ -66,6 +78,7 @@ class RibbonController(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override fun onSelected(action: ObjectLocation) {
         setState {
             name = NameConventions.randomAnonymous()
@@ -92,8 +105,83 @@ class RibbonController(
     }
 
 
+    private fun onTab(index: Int) {
+        setState {
+            tabIndex = index
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        styledDiv {
+            css {
+                backgroundColor = Color.white
+
+//                paddingTop = 1.em
+                paddingRight = 1.75.em
+                paddingBottom = 1.em
+                paddingLeft = 1.75.em
+
+            }
+
+            styledSpan {
+                css {
+                    float = Float.left
+                    marginLeft = (-11).px
+                    marginTop = 7.px
+                    marginRight = 1.em
+                }
+
+                renderLogo()
+            }
+
+
+//            styledSpan {
+//                css {
+//                    marginLeft = 1.em
+//                }
+//
+//                // ...
+//            }
+
+            child(MaterialTabs::class) {
+                attrs {
+                    textColor = "primary"
+                    indicatorColor = "primary"
+
+                    value = state.tabIndex
+
+                    onChange = { _, index: Int ->
+                        onTab(index)
+                    }
+                }
+
+                child(MaterialTab::class) {
+                    attrs {
+                        label = "File"
+                    }
+                }
+                child(MaterialTab::class) {
+                    attrs {
+                        label = "Script"
+                    }
+                }
+                child(MaterialTab::class) {
+                    attrs {
+                        label = "Data"
+                    }
+                }
+            }
+
+            br {}
+
+            renderSubActions()
+        }
+    }
+
+
+    private fun RBuilder.renderSubActions() {
         for (actionType in props.actionTypes) {
             child(MaterialButton::class) {
                 attrs {
@@ -141,6 +229,24 @@ class RibbonController(
         }
     }
 
+
+    private fun RBuilder.renderLogo() {
+        styledA {
+            attrs {
+                href = "/"
+            }
+
+            styledImg(src = "logo.png") {
+                css {
+                    height = 52.px
+                }
+
+                attrs {
+                    title = "Kzen (home)"
+                }
+            }
+        }
+    }
 
     //-----------------------------------------------------------------------------------------------------------------
 //    private fun actionTypes(): List<ObjectLocation> {
