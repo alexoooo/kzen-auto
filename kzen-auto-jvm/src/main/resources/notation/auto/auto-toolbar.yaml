@@ -1,0 +1,61 @@
+
+###########################################################
+
+RibbonGroup:
+  is: ChildContainer
+  class: tech.kzen.auto.client.objects.ribbon.RibbonGroup
+  meta:
+    children:
+      is: List
+      of: RibbonTool
+      definer: ParentChildAttributeDefiner
+    objectLocation:
+      is: ObjectLocation
+      definer: ObjectLocationAttributeDefiner
+
+
+RibbonTool:
+  abstract: true
+  is: ParentPointer
+  class: tech.kzen.auto.client.objects.ribbon.RibbonTool
+  meta:
+    delegate:
+      is: ObjectLocation
+      definer: WeakReferenceAttributeDefiner
+
+
+###########################################################
+
+ScriptGroup:
+  is: RibbonGroup
+
+
+OpenBrowserTool:
+  is: RibbonTool
+  parent: ScriptGroup
+  delegate: OpenBrowser
+
+
+CloseBrowserTool:
+  is: RibbonTool
+  parent: ScriptGroup
+  delegate: CloseBrowser
+
+
+
+RibbonController:
+  class: tech.kzen.auto.client.objects.ribbon.RibbonController.Wrapper
+  meta:
+    actionTypes:
+      is: List
+      of: ObjectLocation
+      definer: WeakAutowiredAttributeDefiner
+      find:
+        is: Action
+    ribbonGroups:
+      is: List
+      of: ObjectLocation
+      definer: AutowiredAttributeDefiner
+      find:
+        is: RibbonGroup
+

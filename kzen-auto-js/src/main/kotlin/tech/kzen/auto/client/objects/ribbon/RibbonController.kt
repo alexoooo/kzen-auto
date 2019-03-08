@@ -29,8 +29,8 @@ class RibbonController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-//            var actionTypes: ActionManager,
             var actionTypes: List<ObjectLocation>,
+            var ribbonGroups: List<RibbonGroup>,
 
             var notation: GraphNotation
     ): RProps
@@ -45,12 +45,14 @@ class RibbonController(
 
     @Suppress("unused")
     class Wrapper(
-            private val actionTypes: List<ObjectLocation>
+            private val actionTypes: List<ObjectLocation>,
+            private val ribbonGroups: List<RibbonGroup>
     ): ReactWrapper<Props> {
         override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
             return input.child(RibbonController::class) {
                 attrs {
                     actionTypes = this@Wrapper.actionTypes
+                    ribbonGroups = this@Wrapper.ribbonGroups
                 }
 
                 handler()
@@ -157,6 +159,14 @@ class RibbonController(
                     }
                 }
 
+                for (ribbonGroup in props.ribbonGroups) {
+                    child(MaterialTab::class) {
+                        attrs {
+                            label = ribbonGroup.title()
+                        }
+                    }
+                }
+
                 child(MaterialTab::class) {
                     attrs {
                         label = "File"
@@ -247,23 +257,4 @@ class RibbonController(
             }
         }
     }
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    private fun actionTypes(): List<ObjectLocation> {
-//        val actionTypes = mutableListOf<ObjectLocation>()
-//
-//        for (e in props.notation.coalesce.values) {
-//            val isParameter = e.value.attributes[NotationConventions.isAttribute.attribute]
-//                    ?.asString()
-//                    ?: continue
-//
-//            if (isParameter != "Action") {
-//                continue
-//            }
-//
-//            actionTypes.add(e.key)
-//        }
-//
-//        return actionTypes
-//    }
 }

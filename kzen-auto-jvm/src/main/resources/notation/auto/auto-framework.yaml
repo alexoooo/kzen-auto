@@ -6,10 +6,6 @@ ReactWrapper:
   class: tech.kzen.auto.client.api.ReactWrapper
 
 
-#ActionWrapper:
-#  abstract: true
-#  class: tech.kzen.auto.client.objects.ActionWrapper
-
 
 ###########################################################
 
@@ -19,34 +15,6 @@ ProjectController:
   ribbonController: RibbonController
   meta:
     ribbonController: RibbonController
-#  actionManager: ActionManager
-#  meta:
-#    actionManager: ActionManager
-
-
-RibbonGroup:
-  class: tech.kzen.auto.client.objects.ribbon.RibbonGroup
-  meta:
-    objectLocation:
-      is: ObjectLocation
-      definer: ObjectLocationAttributeDefiner
-
-
-RibbonController:
-  class: tech.kzen.auto.client.objects.ribbon.RibbonController.Wrapper
-  meta:
-    actionTypes:
-      is: List
-      of: ObjectLocation
-      definer: WeakAutowiredAttributeDefiner
-      find:
-        is: Action
-
-
-#ActionController:
-#  abstract: true
-#  is: ActionWrapper
-#  class: tech.kzen.auto.client.objects.action.ActionController.Wrapper
 
 
 ###########################################################
