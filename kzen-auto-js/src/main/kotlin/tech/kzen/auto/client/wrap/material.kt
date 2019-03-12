@@ -1,6 +1,7 @@
 @file:JsModule("@material-ui/core")
 package tech.kzen.auto.client.wrap
 
+import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
 import react.Component
@@ -185,6 +186,7 @@ external interface MaterialTextFieldProps: RProps {
     var onKeyPress: (e: KeyboardEvent) -> Unit
 
     var autoFocus: Boolean
+    var inputRef: (e: HTMLInputElement?) -> Unit
 
     var id: String
     var value: String

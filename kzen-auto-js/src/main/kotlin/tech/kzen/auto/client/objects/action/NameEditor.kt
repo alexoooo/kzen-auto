@@ -42,16 +42,42 @@ class NameEditor(
             var notation: GraphNotation,
             var description: String,
             var intentToRun: Boolean,
-            var runCallback: () -> Unit
+
+            var runCallback: () -> Unit,
+            var editSignal: EditSignal
     ): RProps
 
 
     class State(
             var editing: Boolean,
             var objectName: String,
-            var saving: Boolean,
-            var readerHover: Boolean
+            var saving: Boolean//,
+//            var readerHover: Boolean
     ): RState
+
+
+    class EditSignal {
+        private var callback: (() -> Unit)? = null
+
+        fun trigger() {
+            check(callback != null)
+            callback!!.invoke()
+        }
+
+        fun attach(callback: () -> Unit) {
+            check(this.callback == null)
+            this.callback = callback
+        }
+
+        fun detach(/*callback: () -> Unit*/) {
+//            check(this.callback == callback)
+            this.callback = null
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private var inputRef: HTMLInputElement? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -61,9 +87,19 @@ class NameEditor(
 
         editing = false
         saving = false
-        readerHover = false
+//        readerHover = false
     }
 
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun componentDidMount() {
+        this.props.editSignal.attach(::onEdit)
+    }
+
+
+    override fun componentWillUnmount() {
+        this.props.editSignal.detach()
+    }
 
 
     override fun componentDidUpdate(prevProps: Props, prevState: State, snapshot: Any) {
@@ -142,23 +178,28 @@ class NameEditor(
     }
 
 
-    private fun onReaderEnter() {
-        setState {
-            readerHover = true
-        }
-    }
-
-
-    private fun onReaderLeave() {
-        setState {
-            readerHover = false
-        }
-    }
+//    private fun onReaderEnter() {
+//        setState {
+//            readerHover = true
+//        }
+//    }
+//
+//
+//    private fun onReaderLeave() {
+//        setState {
+//            readerHover = false
+//        }
+//    }
 
 
     private fun onEdit() {
-        setState {
-            editing = true
+        if (state.editing) {
+            inputRef?.focus()
+        }
+        else {
+            setState {
+                editing = true
+            }
         }
     }
 
@@ -209,15 +250,15 @@ class NameEditor(
                 renderEditor()
             }
             else {
-                attrs {
-                    onMouseOverFunction = {
-                        onReaderEnter()
-                    }
-
-                    onMouseOutFunction = {
-                        onReaderLeave()
-                    }
-                }
+//                attrs {
+//                    onMouseOverFunction = {
+//                        onReaderEnter()
+//                    }
+//
+//                    onMouseOutFunction = {
+//                        onReaderLeave()
+//                    }
+//                }
 
                 renderReader()
             }
@@ -232,10 +273,9 @@ class NameEditor(
 
                 cursor = Cursor.pointer
                 height = ActionController.headerHeight
-                width = 100.pct.minus(2.em)
+                width = 100.pct//.minus(2.em)
 
                 marginTop = 10.px
-//                backgroundColor = Color.red
             }
 
             attrs {
@@ -286,32 +326,32 @@ class NameEditor(
         }
 
 
-        styledDiv {
-            css {
-                float = Float.right
-
-                if (! state.readerHover) {
-                    visibility = Visibility.hidden
-                }
-            }
-
-            attrs {
-                title = "Edit name"
-            }
-
-            child(MaterialIconButton::class) {
-                attrs {
-                    style = reactStyle {
-                        marginLeft = (-0.5).em
-                        marginRight = (-0.5).em
-                    }
-
-                    onClick = ::onEdit
-                }
-
-                child(EditIcon::class) {}
-            }
-        }
+//        styledDiv {
+//            css {
+//                float = Float.right
+//
+//                if (! state.readerHover) {
+//                    visibility = Visibility.hidden
+//                }
+//            }
+//
+//            attrs {
+//                title = "Edit name"
+//            }
+//
+//            child(MaterialIconButton::class) {
+//                attrs {
+//                    style = reactStyle {
+//                        marginLeft = (-0.5).em
+//                        marginRight = (-0.5).em
+//                    }
+//
+//                    onClick = ::onEdit
+//                }
+//
+//                child(EditIcon::class) {}
+//            }
+//        }
     }
 
 
@@ -331,6 +371,10 @@ class NameEditor(
 //                    label = "Name"
                     fullWidth = true
                     autoFocus = true
+
+                    inputRef = {
+                        this@NameEditor.inputRef = it
+                    }
 
                     value =
                             if (NameConventions.isDefault(ObjectName(state.objectName))) {

@@ -67,6 +67,10 @@ class ActionController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var editSignal = NameEditor.EditSignal()
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun ActionController.State.init(props: ActionController.Props) {
         hoverCard = false
         hoverAction = false
@@ -152,6 +156,11 @@ class ActionController(
     }
 
 
+    private fun onEditName() {
+        editSignal.trigger()
+    }
+
+
     private fun onMouseOver(cardOrActions: Boolean) {
         if (cardOrActions) {
             setState {
@@ -204,14 +213,13 @@ class ActionController(
 
             styledSpan {
                 css {
-//                    display = Display.inlineBlock
                     float = Float.right
-//                    backgroundColor = Color.red
-//                    marginTop = (-1).px
 
                     if (! (state.hoverCard || state.hoverAction)) {
                         display = Display.none
                     }
+
+//                    zIndex = 1000
                 }
 
                 attrs {
@@ -225,23 +233,37 @@ class ActionController(
                     }
                 }
 
-//                +" x"
-
-//                if (state.hoverCard || state.hoverAction) {
-                    renderActions()
-//                }
+                renderQuickActions()
             }
         }
     }
 
 
-    private fun RBuilder.renderActions() {
+    private fun RBuilder.renderQuickActions() {
         styledDiv {
             css {
                 display = Display.inlineBlock
             }
 
             styledSpan {
+                attrs {
+                    title = "Edit name"
+                }
+
+                child(MaterialIconButton::class) {
+                    attrs {
+                        onClick = ::onEditName
+                    }
+
+                    child(EditIcon::class) {}
+                }
+            }
+
+            styledSpan {
+                css {
+                    marginLeft = (-0.95).em
+                }
+
                 attrs {
                     title = "Shift up"
                 }
@@ -257,7 +279,7 @@ class ActionController(
 
             styledSpan {
                 css {
-                    marginLeft = (-0.5).em
+                    marginLeft = (-0.95).em
                 }
 
                 attrs {
@@ -275,7 +297,7 @@ class ActionController(
 
             styledSpan {
                 css {
-                    marginLeft = (-0.5).em
+                    marginLeft = (-0.95).em
                 }
 
                 attrs {
@@ -301,15 +323,9 @@ class ActionController(
             val cardColor = when (props.state?.phase()) {
                 ExecutionPhase.Pending ->
 //                    Color("#649fff")
-//                    Color.gray
-//                    Color.gray.lighten(150)
-//                    Color.lightGray
-//                    Color.lightGray.darken(5)
                     Color.white
 
                 ExecutionPhase.Running ->
-//                    Color.yellow
-//                    Color("#ffb82d")
                     Color.gold
 
                 ExecutionPhase.Success ->
@@ -322,11 +338,6 @@ class ActionController(
                 null -> null
             }
 
-            // TODO: format intention to execute
-//            if (props.next) {
-//                backgroundColor = Color.gold
-//            }
-//            else
             if (cardColor != null) {
                 backgroundColor = cardColor
             }
@@ -379,8 +390,6 @@ class ActionController(
 //                            }
 //                        }
                         if (it is BinaryExecutionValue) {
-//                            println("^^^^^^ it.value - ${it.value.size}")
-//                            IoUtils.base64Encode(value)
                             val binary = it
 
                             val screenshotPngUrl = binary.cache("img") {
@@ -462,6 +471,7 @@ class ActionController(
                             intentToRun = state.intentToRun
 
                             runCallback = ::onRun
+                            editSignal = this@ActionController.editSignal
                         }
                     }
                 }

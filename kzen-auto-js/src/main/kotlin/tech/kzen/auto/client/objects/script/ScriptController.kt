@@ -1,6 +1,9 @@
 package tech.kzen.auto.client.objects.script
 
-import kotlinx.css.*
+import kotlinx.css.Cursor
+import kotlinx.css.Position
+import kotlinx.css.em
+import kotlinx.css.px
 import kotlinx.html.title
 import react.*
 import react.dom.span
@@ -219,27 +222,58 @@ class ScriptController(
                 if (index < bundleNotation.objects.values.size - 1) {
                     styledDiv {
                         css {
-                            marginTop =  0.5.em
-                            float = Float.left
-                        }
-                        insertionPoint(index + 1)
-                    }
-
-                    styledDiv {
-                        css {
-                            marginLeft = LinearDimension.auto
-                            marginRight = LinearDimension.auto
-                            display = Display.block
-
-                            width = 3.em
-                            marginTop =  0.5.em
-                            marginBottom = 0.5.em
+                            position = Position.relative
+                            height = 4.em
+                            width = 9.em
+//                            backgroundColor = Color.blue
+//                            backgroundColor = Color.red
+//                            zIndex = -1
                         }
 
-                        child(ArrowDownwardIcon::class) {
-                            attrs {
-                                style = reactStyle {
-                                    fontSize = 3.em
+                        styledDiv {
+                            css {
+                                marginTop = 0.5.em
+
+                                position = Position.absolute
+                                height = 1.em
+                                width = 1.em
+                                top = 0.em
+                                left = 0.em
+
+//                                zIndex = 1999
+//                                float = Float.left
+                            }
+                            insertionPoint(index + 1)
+                        }
+
+                        styledDiv {
+                            css {
+//                                marginLeft = LinearDimension.auto
+//                                marginRight = LinearDimension.auto
+
+                                position = Position.absolute
+                                height = 3.em
+                                width = 3.em
+                                top = 0.em
+                                left = 8.em
+
+//                            position = Position.absolute
+//                            top = 0.px
+//                            left = 0.em
+//                                display = Display.inline
+//                                float = Float.left
+//                                marginLeft = 4.75.em
+//
+//                                width = 3.em
+                                marginTop =  0.5.em
+                                marginBottom = 0.5.em
+                            }
+
+                            child(ArrowDownwardIcon::class) {
+                                attrs {
+                                    style = reactStyle {
+                                        fontSize = 3.em
+                                    }
                                 }
                             }
                         }
