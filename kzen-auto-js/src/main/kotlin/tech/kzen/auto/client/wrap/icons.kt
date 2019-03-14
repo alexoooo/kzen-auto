@@ -143,4 +143,16 @@ external class SendIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("MoreVert")
+external class MoreVertIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("SubdirectoryArrowLeft")
+external class SubdirectoryArrowLeftIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 

@@ -3,11 +3,9 @@ package tech.kzen.auto.client.objects.action
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
-import kotlinx.html.title
+import org.w3c.dom.HTMLButtonElement
 import react.*
-import react.dom.div
 import react.dom.img
-import react.dom.span
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -47,6 +45,8 @@ class ActionController(
         const val defaultRunDescription = "Run"
 
         val headerHeight = 2.5.em
+        private val runIconWidth = 40.px
+        private val editIconOffset = 12.px
     }
 
 
@@ -61,20 +61,25 @@ class ActionController(
 
     class State(
             var hoverCard: Boolean,
-            var hoverAction: Boolean,
-            var intentToRun: Boolean
+            var hoverMenu: Boolean,
+            var intentToRun: Boolean,
+
+            var optionsOpen: Boolean
     ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private var editSignal = NameEditor.EditSignal()
+    private var buttonRef: HTMLButtonElement? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ActionController.State.init(props: ActionController.Props) {
         hoverCard = false
-        hoverAction = false
+        hoverMenu = false
         intentToRun = false
+
+        optionsOpen = false
     }
 
 
@@ -125,6 +130,8 @@ class ActionController(
 
 
     private fun onRemove() {
+        onOptionsClose()
+
         async {
             ClientContext.commandBus.apply(RemoveObjectCommand(
                     props.objectLocation))
@@ -133,6 +140,8 @@ class ActionController(
 
 
     private fun onShiftUp() {
+        onOptionsClose()
+
         val packagePath = props.objectLocation.bundlePath
         val packageNotation = props.structure.graphNotation.bundles.values[packagePath]!!
         val index = packageNotation.indexOf(props.objectLocation.objectPath)
@@ -145,6 +154,8 @@ class ActionController(
 
 
     private fun onShiftDown() {
+        onOptionsClose()
+
         val packagePath = props.objectLocation.bundlePath
         val packageNotation = props.structure.graphNotation.bundles.values[packagePath]!!
         val index = packageNotation.indexOf(props.objectLocation.objectPath)
@@ -157,6 +168,8 @@ class ActionController(
 
 
     private fun onEditName() {
+        onOptionsClose()
+
         editSignal.trigger()
     }
 
@@ -169,7 +182,7 @@ class ActionController(
         }
         else {
             setState {
-                hoverAction = true
+                hoverMenu = true
             }
         }
     }
@@ -183,137 +196,50 @@ class ActionController(
         }
         else {
             setState {
-                hoverAction = false
+                hoverMenu = false
             }
+        }
+    }
+
+
+    private fun onOptionsToggle() {
+        setState {
+            optionsOpen = ! optionsOpen
+        }
+    }
+
+
+    private fun onOptionsClose() {
+        setState {
+            optionsOpen = false
+
+            hoverCard = false
+            hoverMenu = false
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        span {
-            styledSpan {
-                css {
-//                    display = Display.inlineBlock
-                    width = 20.em
-                }
-
-                attrs {
-                    onMouseOverFunction = {
-                        onMouseOver(true)
-                    }
-
-                    onMouseOutFunction = {
-                        onMouseOut(true)
-                    }
-                }
-
-                renderCard()
-            }
-
-            styledSpan {
-                css {
-                    float = Float.right
-
-                    if (! (state.hoverCard || state.hoverAction)) {
-                        display = Display.none
-                    }
-
-//                    zIndex = 1000
-                }
-
-                attrs {
-                    onMouseOverFunction = {
-//                        console.log("#!@#!@#!@#!@ onMouseOver - ACTIONS!!")
-                        onMouseOver(false)
-                    }
-
-                    onMouseOutFunction = {
-                        onMouseOut(false)
-                    }
-                }
-
-                renderQuickActions()
-            }
-        }
-    }
-
-
-    private fun RBuilder.renderQuickActions() {
-        styledDiv {
+        styledSpan {
             css {
-                display = Display.inlineBlock
+                width = 20.em
             }
 
-            styledSpan {
-                attrs {
-                    title = "Edit name"
+            attrs {
+                onMouseOverFunction = {
+                    onMouseOver(true)
                 }
 
-                child(MaterialIconButton::class) {
-                    attrs {
-                        onClick = ::onEditName
-                    }
-
-                    child(EditIcon::class) {}
+                onMouseOutFunction = {
+                    onMouseOut(true)
                 }
             }
 
-            styledSpan {
-                css {
-                    marginLeft = (-0.95).em
-                }
-
-                attrs {
-                    title = "Shift up"
-                }
-
-                child(MaterialIconButton::class) {
-                    attrs {
-                        onClick = ::onShiftUp
-                    }
-
-                    child(KeyboardArrowUpIcon::class) {}
-                }
-            }
-
-            styledSpan {
-                css {
-                    marginLeft = (-0.95).em
-                }
-
-                attrs {
-                    title = "Shift down"
-                }
-
-                child(MaterialIconButton::class) {
-                    attrs {
-                        onClick = ::onShiftDown
-                    }
-
-                    child(KeyboardArrowDownIcon::class) {}
-                }
-            }
-
-            styledSpan {
-                css {
-                    marginLeft = (-0.95).em
-                }
-
-                attrs {
-                    title = "Remove"
-                }
-
-                child(MaterialIconButton::class) {
-                    attrs {
-                        onClick = ::onRemove
-                    }
-
-                    child(DeleteIcon::class) {}
-                }
-            }
+            renderCard()
         }
     }
+
 
 
     private fun RBuilder.renderCard() {
@@ -329,8 +255,10 @@ class ActionController(
                     Color.gold
 
                 ExecutionPhase.Success ->
-//                    Color.green.lighten(50)
-                    Color("#00a457")
+//                    Color("#00a457")
+                    Color("#00b467")
+//                    Color("#13aa59")
+//                    Color("#1faf61")
 
                 ExecutionPhase.Error ->
                     Color.red
@@ -380,15 +308,6 @@ class ActionController(
 
 //                    console.log("^^^^^ props.state - ", props.state)
                     (props.state?.previous as? ExecutionSuccess)?.detail?.let {
-//                        if (it is TextExecutionValue) {
-//                            img {
-//                                attrs {
-////                                    width = "256px"
-//                                    width = "100%"
-//                                    src = "data:image/png;base64,${it.value}"
-//                                }
-//                            }
-//                        }
                         if (it is BinaryExecutionValue) {
                             val binary = it
 
@@ -418,69 +337,172 @@ class ActionController(
                 ?.asString()
                 ?: defaultRunDescription
 
-        val iconWidth = 40.px
-
-        div {
-            styledDiv {
-                css {
-                    display = Display.inlineBlock
-
-                    width = iconWidth
-                    height = headerHeight
-                }
-
-                if (actionDescription.isNotEmpty()) {
-                    attrs {
-                        title = actionDescription
-                    }
-                }
-
-                styledDiv {
-                    css {
-                        float = Float.left
-                        marginTop = (-0.6).em
-                        marginLeft = (-1.25).em
-                    }
-
-                    renderRunIcon()
-                }
+        styledDiv {
+            css {
+                position = Position.relative
+                height = headerHeight
+                width = 100.pct
             }
 
             styledDiv {
                 css {
-                    display = Display.inlineBlock
-
-                    width = 100.pct.minus(iconWidth)
+                    position = Position.absolute
                     height = headerHeight
+                    width = runIconWidth
+                    top = (-12).px
+                    left = (-20).px
                 }
 
-                styledDiv {
-                    css {
-                        float = Float.left
-                        width = 100.pct
+                renderRunIcon(actionDescription)
+            }
 
-                        marginTop = (-10).px
-                    }
 
-                    child(NameEditor::class) {
-                        attrs {
-                            objectLocation = props.objectLocation
-                            notation = props.structure.graphNotation
+            styledDiv {
+                css {
+                    position = Position.absolute
+                    height = headerHeight
+                    width = 100.pct.minus(runIconWidth).minus(editIconOffset)
+                    top = (-11).px
+                    left = runIconWidth
+                }
 
-                            description = actionDescription
-                            intentToRun = state.intentToRun
+                child(NameEditor::class) {
+                    attrs {
+                        objectLocation = props.objectLocation
+                        notation = props.structure.graphNotation
 
-                            runCallback = ::onRun
-                            editSignal = this@ActionController.editSignal
-                        }
+                        description = actionDescription
+                        intentToRun = state.intentToRun
+
+                        runCallback = ::onRun
+                        editSignal = this@ActionController.editSignal
                     }
                 }
+            }
+
+
+            styledDiv {
+                css {
+                    position = Position.absolute
+                    height = headerHeight
+                    width = 23.px
+                    top = (-20).px
+                    right = 0.px
+                }
+
+                renderEditIcon()
             }
         }
     }
 
 
-    private fun RBuilder.renderRunIcon() {
+    private fun RBuilder.renderEditIcon() {
+        styledSpan {
+            css {
+                // NB: blinks in and out without this
+                backgroundColor = Color.transparent
+
+                if (! (state.hoverCard || state.hoverMenu)) {
+                    display = Display.none
+                }
+            }
+
+            attrs {
+                onMouseOverFunction = {
+                    onMouseOver(false)
+                }
+
+                onMouseOutFunction = {
+                    onMouseOut(false)
+                }
+            }
+
+            child(MaterialIconButton::class) {
+                attrs {
+                    title = "Options..."
+                    onClick = ::onOptionsToggle
+
+                    buttonRef = {
+                        this@ActionController.buttonRef = it
+                    }
+                }
+
+                child(MoreVertIcon::class) {}
+            }
+        }
+
+        child(MaterialMenu::class) {
+            attrs {
+                open = state.optionsOpen
+
+                onClose = ::onOptionsClose
+
+                anchorEl = buttonRef
+            }
+
+            renderMenuItems()
+        }
+    }
+
+
+    private fun RBuilder.renderMenuItems() {
+        val iconStyle = reactStyle {
+            marginRight = 1.em
+        }
+
+        child(MaterialMenuItem::class) {
+            attrs {
+                onClick = ::onEditName
+            }
+            child(EditIcon::class) {
+                attrs {
+                    style = iconStyle
+                }
+            }
+            +"Rename"
+        }
+
+        child(MaterialMenuItem::class) {
+            attrs {
+                onClick = ::onShiftUp
+            }
+            child(KeyboardArrowUpIcon::class) {
+                attrs {
+                    style = iconStyle
+                }
+            }
+            +"Move up"
+        }
+
+        child(MaterialMenuItem::class) {
+            attrs {
+                onClick = ::onShiftDown
+            }
+            child(KeyboardArrowDownIcon::class) {
+                attrs {
+                    style = iconStyle
+                }
+            }
+            +"Move down"
+        }
+
+        child(MaterialMenuItem::class) {
+            attrs {
+                onClick = ::onRemove
+            }
+            child(DeleteIcon::class) {
+                attrs {
+                    style = iconStyle
+                }
+            }
+            +"Remove"
+        }
+    }
+
+
+    private fun RBuilder.renderRunIcon(
+            actionDescription: String
+    ) {
         val icon = props.structure.graphNotation
                 .transitiveAttribute(props.objectLocation, iconAttribute)
                 ?.asString()
@@ -497,10 +519,17 @@ class ActionController(
 
         child(MaterialIconButton::class) {
             attrs {
+                if (actionDescription.isNotEmpty()) {
+                    attrs {
+                        title = actionDescription
+                    }
+                }
+
+                val overfill = 8.px
                 style = reactStyle {
-                    marginLeft = 8.px
-                    width = 48.px
-                    height = 48.px
+                    marginLeft = overfill
+                    width = runIconWidth.plus(overfill)
+                    height = runIconWidth.plus(overfill)
 
                     backgroundColor = highlight
                 }

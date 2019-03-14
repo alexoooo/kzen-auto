@@ -119,7 +119,7 @@ class NameEditor(
                 }
 
         if (state.objectName != adjustedName.value) {
-            console.log("$$$$$$ saveAsync - '${state.objectName}' != '$adjustedName'")
+//            console.log("$$$$$$ saveAsync - '${state.objectName}' != '$adjustedName'")
             setState {
                 objectName = adjustedName.value
             }
@@ -191,15 +191,30 @@ class NameEditor(
 //        }
 //    }
 
+    private fun onInputRef(inputRef: HTMLInputElement?) {
+        val isNew = this.inputRef == null && inputRef != null
+
+        this.inputRef = inputRef
+
+        if (isNew) {
+            async {
+                delay(1)
+                this.inputRef?.focus()
+            }
+        }
+    }
+
 
     private fun onEdit() {
-        if (state.editing) {
-            inputRef?.focus()
-        }
-        else {
+        if (! state.editing) {
             setState {
                 editing = true
             }
+        }
+
+        async {
+            delay(1)
+            inputRef?.focus()
         }
     }
 
@@ -372,9 +387,7 @@ class NameEditor(
                     fullWidth = true
                     autoFocus = true
 
-                    inputRef = {
-                        this@NameEditor.inputRef = it
-                    }
+                    inputRef = ::onInputRef
 
                     value =
                             if (NameConventions.isDefault(ObjectName(state.objectName))) {
@@ -401,6 +414,8 @@ class NameEditor(
 
             child(MaterialIconButton::class) {
                 attrs {
+                    title = "Cancel name edit (keyboard shortcut: Escape)"
+
                     style = reactStyle {
                         marginLeft = (-3).em
                     }
@@ -413,8 +428,11 @@ class NameEditor(
 
             child(MaterialIconButton::class) {
                 attrs {
+                    title = "Save name (keyboard shortcut: Enter)"
+
                     style = reactStyle {
-                        marginLeft = (-0.5).em
+//                        marginLeft = (-0.5).em
+                        marginLeft = (-0.75).em
                         marginRight = (-1).em
                     }
 

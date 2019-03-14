@@ -1,10 +1,6 @@
 package tech.kzen.auto.client.wrap
 
-import kotlinx.html.CommonAttributeGroupFacade
-import org.w3c.dom.events.Event
-import react.RBuilder
-import react.RHandler
-import react.RProps
+import kotlin.js.Json
 
 //fun RBuilder.materialButton(handler: RHandler<MaterialButtonProps>) = child(MaterialButton::class) {
 //    attrs {
@@ -14,7 +10,12 @@ import react.RProps
 //    handler()
 //}
 
-class ButtonStyle(val backgroundColor: String, val color: String)
+
+class NestedInputLabelProps(
+        val style: Json
+)
+
+//class ButtonStyle(val backgroundColor: String, val color: String)
 //
 //fun RBuilder.materialTextField(handler: RHandler<MaterialTextFieldProps>) = child(MaterialTextField::class) {
 //    attrs { margin = "normal" }

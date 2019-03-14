@@ -291,7 +291,9 @@ class ScriptController(
     private fun RBuilder.insertionPoint(index: Int) {
         styledSpan {
             attrs {
-                title = "Insert action here"
+                if (state.creating) {
+                    title = "Insert action here"
+                }
             }
 
             child(MaterialIconButton::class) {

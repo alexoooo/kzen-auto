@@ -179,6 +179,11 @@ class AttributeEditor(
                 label = formattedLabel()
                 value = stateValue
 
+                // https://stackoverflow.com/questions/54052525/how-to-change-material-ui-textfield-bottom-and-label-color-on-error-and-on-focus
+//                InputLabelProps = NestedInputLabelProps(reactStyle {
+//                    color = Color("rgb(66, 66, 66)")
+//                })
+
                 onChange = {
                     val target = it.target as HTMLInputElement
                     onValueChange(target.value)

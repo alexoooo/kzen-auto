@@ -197,6 +197,10 @@ class SidebarController(
         val structure = state.structure
                 ?: return
 
+        div {
+            +"Project"
+        }
+
         styledDiv {
             css {
                 paddingTop = 1.em

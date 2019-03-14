@@ -1,6 +1,8 @@
 @file:JsModule("@material-ui/core")
 package tech.kzen.auto.client.wrap
 
+import org.w3c.dom.HTMLButtonElement
+import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
@@ -26,9 +28,12 @@ external interface MaterialButtonProps: RProps {
     var style: Json
     var size: String
     var fullWidth: Boolean
+
     var onClick: () -> Unit
     var onMouseOver: () -> Unit
     var onMouseOut: () -> Unit
+
+    var buttonRef: (e: HTMLButtonElement?) -> Unit
 }
 
 
@@ -52,6 +57,8 @@ external interface MaterialIconButtonProps: RProps {
     var onClick: () -> Unit
     var onMouseOver: () -> Unit
     var onMouseOut: () -> Unit
+
+    var buttonRef: (e: HTMLButtonElement?) -> Unit
 }
 
 
@@ -149,8 +156,6 @@ external interface CardProps: RProps {
 
 
 
-
-
 @JsName("CardContent")
 external class MaterialCardContent: Component<RProps, RState> {
     override fun render(): ReactElement?
@@ -175,11 +180,11 @@ external interface PaperProps: RProps {
 
 
 @JsName("TextField")
-external class MaterialTextField: Component<MaterialTextFieldProps, RState> {
+external class MaterialTextField: Component<TextFieldProps, RState> {
     override fun render(): ReactElement?
 }
 
-external interface MaterialTextFieldProps: RProps {
+external interface TextFieldProps: RProps {
     var onChange: (e: Event) -> Unit
 
     var onKeyDown: (e: KeyboardEvent) -> Unit
@@ -187,6 +192,8 @@ external interface MaterialTextFieldProps: RProps {
 
     var autoFocus: Boolean
     var inputRef: (e: HTMLInputElement?) -> Unit
+
+    var InputLabelProps: NestedInputLabelProps
 
     var id: String
     var value: String
@@ -207,11 +214,12 @@ external interface MaterialTextFieldProps: RProps {
 //}
 //
 //@JsName("InputLabel")
-//external class MaterialInputLabel : Component<MaterialInputLabelProps, RState> {
+//external class MaterialInputLabel: Component<InputLabelProps, RState> {
 //    override fun render(): ReactElement?
 //}
 //
-//external interface MaterialInputLabelProps : RProps {
+//external interface InputLabelProps: RProps {
+//    var style: Json
 //}
 //
 //@JsName("Select")
@@ -223,12 +231,25 @@ external interface MaterialTextFieldProps: RProps {
 //    var value: String
 //    var onChange: ()->Unit
 //}
-//
-//@JsName("MenuItem")
-//external class MaterialMenuItem : Component<MaterialMenuItemProps, RState> {
-//    override fun render(): ReactElement?
-//}
-//
-//external interface MaterialMenuItemProps : RProps {
-//    var value: String
-//}
+
+@JsName("Menu")
+external class MaterialMenu: Component<MenuProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+external interface MenuProps: RProps {
+    var open: Boolean
+    var onClose: () -> Unit
+    var anchorEl: HTMLElement?
+}
+
+
+@JsName("MenuItem")
+external class MaterialMenuItem: Component<MenuItemProps, RState> {
+    override fun render(): ReactElement?
+}
+
+external interface MenuItemProps: RProps {
+    var onClick: () -> Unit
+}
