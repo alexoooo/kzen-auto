@@ -16,6 +16,7 @@ import kotlin.js.Json
 // NB: can't create common MaterialIcon interface because 'external' doesn't support that
 
 external interface IconProps: RProps {
+    var title: String
     var color: String
     var style: Json
 
@@ -151,6 +152,42 @@ external class MoreVertIcon: Component<IconProps, RState> {
 
 @JsName("SubdirectoryArrowLeft")
 external class SubdirectoryArrowLeftIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Folder")
+external class FolderIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("FolderOpen")
+external class FolderOpenIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Receipt")
+external class ReceiptIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("PlaylistPlay")
+external class PlaylistPlayIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("FormatListNumbered")
+external class FormatListNumberedIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("TableChart")
+external class TableChartIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 

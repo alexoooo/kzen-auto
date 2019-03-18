@@ -131,28 +131,24 @@ class ScriptController(
         val structure = state.structure
                 ?: return
 
-        val bundlePath = props.bundlePath
-        if (bundlePath == null) {
-            styledH3 {
-                css {
-                    paddingTop = 1.em
-                }
-
-                +"Please select a file from the sidebar (left)"
-            }
-            return
-        }
+        val bundlePath: BundlePath? = props.bundlePath
 
         val bundleNotation: BundleNotation? =
-                structure.graphNotation.bundles.values[bundlePath]
+                bundlePath.let { structure.graphNotation.bundles.values[it] }
 
         if (bundleNotation == null) {
             styledH3 {
                 css {
+                    marginLeft = 1.em
                     paddingTop = 1.em
                 }
 
-                +"Initializing..."
+                if (structure.graphNotation.bundles.values.isEmpty()) {
+                    +"Please create a file in the sidebar (left)"
+                }
+                else {
+                    +"Please select a file from the sidebar (left)"
+                }
             }
         }
         else {
@@ -161,7 +157,7 @@ class ScriptController(
                     marginLeft = 1.em
                 }
 
-                steps(structure, bundleNotation, bundlePath)
+                steps(structure, bundleNotation, bundlePath!!)
             }
 
             runController()
@@ -255,7 +251,7 @@ class ScriptController(
                                 height = 3.em
                                 width = 3.em
                                 top = 0.em
-                                left = 8.em
+                                left = 8.5.em
 
 //                            position = Position.absolute
 //                            top = 0.px

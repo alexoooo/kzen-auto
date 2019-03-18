@@ -22,6 +22,7 @@ import tech.kzen.lib.common.api.model.AttributePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
+import tech.kzen.lib.common.structure.metadata.model.ObjectMetadata
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectCommand
 import tech.kzen.lib.common.structure.notation.edit.ShiftObjectCommand
 import tech.kzen.lib.common.structure.notation.model.AttributeNotation
@@ -284,47 +285,7 @@ class ActionController(
                         marginBottom = (-1.5).em
                     }
 
-                    for (e in objectMetadata.attributes) {
-                        if (e.key == iconAttribute.attribute ||
-                                e.key == descriptionAttribute.attribute) {
-                            continue
-                        }
-
-                        val keyAttributePath = AttributePath.ofAttribute(e.key)
-
-                        val value =
-                                props.structure.graphNotation.transitiveAttribute(
-                                        props.objectLocation, keyAttributePath)
-                                ?: continue
-
-                        styledDiv {
-                            css {
-                                marginBottom = 0.5.em
-                            }
-
-                            renderAttribute(e.key, e.value, value)
-                        }
-                    }
-
-//                    console.log("^^^^^ props.state - ", props.state)
-                    (props.state?.previous as? ExecutionSuccess)?.detail?.let {
-                        if (it is BinaryExecutionValue) {
-                            val binary = it
-
-                            val screenshotPngUrl = binary.cache("img") {
-                                val base64 = IoUtils.base64Encode(binary.value)
-                                "data:png/png;base64,$base64"
-                            }
-
-//                            val screenshotPngBase64 = it.asBase64()
-                            img {
-                                attrs {
-                                    width = "100%"
-                                    src = screenshotPngUrl
-                                }
-                            }
-                        }
-                    }
+                    renderBody(objectMetadata)
                 }
             }
         }
@@ -390,13 +351,60 @@ class ActionController(
                     right = 0.px
                 }
 
-                renderEditIcon()
+                renderOptionsMenu()
             }
         }
     }
 
 
-    private fun RBuilder.renderEditIcon() {
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderBody(objectMetadata: ObjectMetadata) {
+        for (e in objectMetadata.attributes) {
+            if (e.key == iconAttribute.attribute ||
+                    e.key == descriptionAttribute.attribute) {
+                continue
+            }
+
+            val keyAttributePath = AttributePath.ofAttribute(e.key)
+
+            val value =
+                    props.structure.graphNotation.transitiveAttribute(
+                            props.objectLocation, keyAttributePath)
+                            ?: continue
+
+            styledDiv {
+                css {
+                    marginBottom = 0.5.em
+                }
+
+                renderAttribute(e.key, e.value, value)
+            }
+        }
+
+//                    console.log("^^^^^ props.state - ", props.state)
+        (props.state?.previous as? ExecutionSuccess)?.detail?.let {
+            if (it is BinaryExecutionValue) {
+                val binary = it
+
+                val screenshotPngUrl = binary.cache("img") {
+                    val base64 = IoUtils.base64Encode(binary.value)
+                    "data:png/png;base64,$base64"
+                }
+
+//                            val screenshotPngBase64 = it.asBase64()
+                img {
+                    attrs {
+                        width = "100%"
+                        src = screenshotPngUrl
+                    }
+                }
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderOptionsMenu() {
         styledSpan {
             css {
                 // NB: blinks in and out without this

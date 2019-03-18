@@ -12,6 +12,7 @@ import styled.styledDiv
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.objects.script.ScriptController
+import tech.kzen.auto.client.objects.sidebar.SidebarController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.util.async
