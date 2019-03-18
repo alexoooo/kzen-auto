@@ -14,6 +14,7 @@ import styled.styledSpan
 import tech.kzen.auto.client.objects.action.ActionController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
+import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.ArrowDownwardIcon
@@ -36,15 +37,17 @@ class ScriptController(
         RComponent<ScriptController.Props, ScriptController.State>(props),
         ModelManager.Observer,
         ExecutionManager.Observer,
-        InsertionManager.Observer
+        InsertionManager.Observer,
+        NavigationManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var bundlePath: BundlePath?
+
     ): RProps
 
 
     class State(
+            var bundlePath: BundlePath?,
             var structure: GraphStructure?,
             var execution: ExecutionModel?,
             var creating: Boolean
@@ -58,6 +61,7 @@ class ScriptController(
             ClientContext.modelManager.observe(this)
             ClientContext.executionManager.subscribe(this)
             ClientContext.insertionManager.subscribe(this)
+            ClientContext.navigationManager.observe(this)
         }
     }
 
@@ -67,6 +71,7 @@ class ScriptController(
         ClientContext.modelManager.unobserve(this)
         ClientContext.executionManager.unsubscribe(this)
         ClientContext.insertionManager.unSubscribe(this)
+        ClientContext.navigationManager.unobserve(this)
     }
 
 
@@ -117,10 +122,18 @@ class ScriptController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun handleNavigation(bundlePath: BundlePath?) {
+        setState {
+            this.bundlePath = bundlePath
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(index: Int) {
         async {
             ClientContext.insertionManager.create(
-                    props.bundlePath!!,
+                    state.bundlePath!!,
                     index)
         }
     }
@@ -131,7 +144,7 @@ class ScriptController(
         val structure = state.structure
                 ?: return
 
-        val bundlePath: BundlePath? = props.bundlePath
+        val bundlePath: BundlePath? = state.bundlePath
 
         val bundleNotation: BundleNotation? =
                 bundlePath.let { structure.graphNotation.bundles.values[it] }
@@ -355,7 +368,7 @@ class ScriptController(
 
             child(RunController::class) {
                 attrs {
-                    bundlePath = props.bundlePath
+                    bundlePath = state.bundlePath
                 }
             }
         }

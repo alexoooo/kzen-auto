@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.service
 
-import tech.kzen.auto.client.service.exec.ExecutionIntent
 import tech.kzen.auto.client.service.rest.ClientRestActionExecutor
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.rest.ClientRestExecutionInitializer
@@ -63,6 +62,8 @@ object ClientContext {
     val insertionManager = InsertionManager()
     val executionIntent = ExecutionIntent()
 
+    val navigationManager = NavigationManager()
+
 
     //-----------------------------------------------------------------------------------------------------------------
     fun init() {
@@ -71,25 +72,11 @@ object ClientContext {
         ModuleRegistry.add(kzenAutoJs)
 
         async {
+            navigationManager.postConstruct()
+
             modelManager.observe(executionManager)
             executionManager.subscribe(executionLoop)
 //            executionManager.subscribe(executionIntent)
         }
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    fun foo() {
-//
-//        val notation = context.repository.notation()
-//        val autoNotation = NotationConventions.autoNotation(notation)
-//
-//        val autoMetadata = context.notationMetadataReader.read(autoNotation)
-//
-//        val graphDefinition = ObjectGraphDefiner.define(
-//                autoNotation, autoMetadata)
-//
-//        val autoGraph = ObjectGraphCreator
-//                .createGraph(graphDefinition, autoMetadata)
-//    }
 }

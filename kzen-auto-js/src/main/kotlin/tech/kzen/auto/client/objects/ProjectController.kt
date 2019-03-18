@@ -17,7 +17,6 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.BundlePath
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.NotationCommand
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
@@ -53,7 +52,7 @@ class ProjectController(
     class State(
             var structure: GraphStructure?,
             var commandError: String?,
-            var bundlePath: BundlePath?,
+//            var bundlePath: BundlePath?,
 
             var headerHeight: Int?
     ): RState
@@ -161,11 +160,11 @@ class ProjectController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onNavigation(bundlePath: BundlePath?) {
-        setState {
-            this.bundlePath = bundlePath
-        }
-    }
+//    private fun onNavigation(bundlePath: BundlePath?) {
+//        setState {
+//            this.bundlePath = bundlePath
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -263,9 +262,9 @@ class ProjectController(
                 }
 
                 child(SidebarController::class) {
-                    attrs {
-                        onNavigation = ::onNavigation
-                    }
+//                    attrs {
+//                        onNavigation = ::onNavigation
+//                    }
                 }
             }
         }
@@ -294,9 +293,9 @@ class ProjectController(
             }
 
             child(ScriptController::class) {
-                attrs {
-                    bundlePath = state.bundlePath
-                }
+//                attrs {
+//                    bundlePath = state.bundlePath
+//                }
             }
         }
     }

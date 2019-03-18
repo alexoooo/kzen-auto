@@ -5,6 +5,7 @@ import react.*
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.api.model.BundlePath
@@ -16,11 +17,18 @@ class SidebarController(
         props: Props
 ):
         RComponent<SidebarController.Props, SidebarController.State>(props),
-        ModelManager.Observer
+        ModelManager.Observer,
+        NavigationManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private const val bundleBase = "main"
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var onNavigation: ((BundlePath?) -> Unit)?
+//            var onNavigation: ((BundlePath?) -> Unit)?
     ): RProps
 
 
@@ -31,10 +39,22 @@ class SidebarController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun mainBundles(graphStructure: GraphStructure): List<BundlePath> {
+        return graphStructure
+                .graphNotation
+                .bundles
+                .values
+                .keys
+                .filter { it.segments[0] == bundleBase }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
 //        println("ProjectController - Subscribed")
         async {
             ClientContext.modelManager.observe(this)
+            ClientContext.navigationManager.observe(this)
         }
     }
 
@@ -42,6 +62,7 @@ class SidebarController(
     override fun componentWillUnmount() {
 //        println("ProjectController - Un-subscribed")
         ClientContext.modelManager.unobserve(this)
+        ClientContext.navigationManager.unobserve(this)
     }
 
 
@@ -53,19 +74,11 @@ class SidebarController(
         val structure = state.structure
                 ?: return
 
-        // TODO: handle URL-based navigation
+        val mainBundles = mainBundles(structure)
 
-//            val mainBundles = mainBundles(structure)
-//
-//            if (state.bundlePath == null && ! mainBundles.isEmpty()) {
-//                setState {
-//                    bundlePath = mainBundles[0]
-//                }
-//            }
-//
-//            if (state.bundlePath != prevState.bundlePath) {
-//                props.onNavigation?.invoke(state.bundlePath)
-//            }
+        if (state.bundlePath == null && ! mainBundles.isEmpty()) {
+            ClientContext.navigationManager.goto(mainBundles[0])
+        }
     }
 
 
@@ -74,6 +87,13 @@ class SidebarController(
 //        console.log("^ handleModel")
         setState {
             structure = autoModel
+        }
+    }
+
+
+    override fun handleNavigation(bundlePath: BundlePath?) {
+        setState {
+            this.bundlePath = bundlePath
         }
     }
 
@@ -138,6 +158,7 @@ class SidebarController(
             child(SidebarFolder::class) {
                 attrs {
                     this.structure = structure
+                    selectedBundlePath = state.bundlePath
                 }
             }
 

@@ -25,7 +25,8 @@ class SidebarFile(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var bundlePath: BundlePath
+            var bundlePath: BundlePath,
+            var selected: Boolean
     ): RProps
 
 
@@ -166,6 +167,10 @@ class SidebarFile(
 //                    fontSize = (1.2).em
                     marginTop = 2.px
 //                    cursor = Cursor.pointer
+
+                    if (props.selected) {
+                        fontWeight = FontWeight.bold
+                    }
                 }
 
 

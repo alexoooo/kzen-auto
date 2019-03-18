@@ -30,8 +30,8 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var structure: GraphStructure/*,
-            var onNavigation: ((BundlePath?) -> Unit)?*/
+            var structure: GraphStructure,
+            var selectedBundlePath: BundlePath?
     ): RProps
 
 
@@ -44,6 +44,7 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var buttonRef: HTMLButtonElement? = null
+    private var mainBundlesCache: List<BundlePath>? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -52,14 +53,29 @@ class SidebarFolder(
     }
 
 
+    override fun componentDidUpdate(
+            prevProps: Props,
+            prevState: State,
+            snapshot: Any
+    ) {
+        if (props.structure != prevProps.structure) {
+            mainBundlesCache = null
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
-    private fun mainBundles(graphStructure: GraphStructure): List<BundlePath> {
-        return graphStructure
-                .graphNotation
-                .bundles
-                .values
-                .keys
-                .filter { it.segments[0] == bundleBase }
+    private fun mainBundles(): List<BundlePath> {
+        if (mainBundlesCache == null) {
+            mainBundlesCache = props
+                    .structure
+                    .graphNotation
+                    .bundles
+                    .values
+                    .keys
+                    .filter { it.segments[0] == bundleBase }
+        }
+        return mainBundlesCache!!
     }
 
 
@@ -164,11 +180,9 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val mainBundlePaths = mainBundles(props.structure)
-
         renderFolderItem()
 
-        renderSubItems(mainBundlePaths)
+        renderSubItems()
     }
 
 
@@ -238,14 +252,24 @@ class SidebarFolder(
     }
 
 
-    private fun RBuilder.renderSubItems(
-            mainBundlePaths: List<BundlePath>
-    ) {
-//        val current = state.bundlePath
-        for (bundlePath in mainBundlePaths) {
-            child(SidebarFile::class) {
-                attrs {
-                    this.bundlePath = bundlePath
+    private fun RBuilder.renderSubItems() {
+        val mainBundles = mainBundles()
+
+        if (mainBundles.isEmpty()) {
+            styledDiv {
+                css {
+                    marginLeft = 2.em
+                }
+                +"(Empty)"
+            }
+        }
+        else {
+            for (bundlePath in mainBundles()) {
+                child(SidebarFile::class) {
+                    attrs {
+                        this.bundlePath = bundlePath
+                        selected = (bundlePath == props.selectedBundlePath)
+                    }
                 }
             }
         }
