@@ -3,7 +3,7 @@ package tech.kzen.auto.common.paradigm.imperative.service
 import kotlinx.coroutines.delay
 import tech.kzen.auto.common.paradigm.imperative.model.*
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath
 import tech.kzen.lib.common.structure.GraphStructure
@@ -174,22 +174,22 @@ class ExecutionManager(
 
 
     suspend fun start(
-            bundlePath: BundlePath,
-            projectModel: GraphStructure
+            documentPath: DocumentPath,
+            graphStructure: GraphStructure
     ): Digest {
         val model = modelOrInit()
         model.frames.clear()
 
         val values = mutableMapOf<ObjectPath, ExecutionState>()
 
-        val packageNotation = projectModel.graphNotation.bundles.values[bundlePath]
+        val packageNotation = graphStructure.graphNotation.documents.values[documentPath]
 
         if (packageNotation != null) {
             for (e in packageNotation.objects.values) {
                 values[e.key] = ExecutionState.initial
             }
 
-            val frame = ExecutionFrame(bundlePath, values)
+            val frame = ExecutionFrame(documentPath, values)
 
             model.frames.add(frame)
         }

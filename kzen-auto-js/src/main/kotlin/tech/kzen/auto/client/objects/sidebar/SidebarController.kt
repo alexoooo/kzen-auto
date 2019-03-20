@@ -8,7 +8,8 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.DocumentName
+import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 
@@ -22,7 +23,7 @@ class SidebarController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val bundleBase = "main"
+        private val documentBase = DocumentName("main")
     }
 
 
@@ -34,18 +35,18 @@ class SidebarController(
 
     class State(
             var structure: GraphStructure?,
-            var bundlePath: BundlePath?
+            var documentPath: DocumentPath?
     ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun mainBundles(graphStructure: GraphStructure): List<BundlePath> {
+    private fun mainDocument(graphStructure: GraphStructure): List<DocumentPath> {
         return graphStructure
                 .graphNotation
-                .bundles
+                .documents
                 .values
                 .keys
-                .filter { it.segments[0] == bundleBase }
+                .filter { it.segments[0] == documentBase }
     }
 
 
@@ -74,10 +75,10 @@ class SidebarController(
         val structure = state.structure
                 ?: return
 
-        val mainBundles = mainBundles(structure)
+        val mainDocuments = mainDocument(structure)
 
-        if (state.bundlePath == null && ! mainBundles.isEmpty()) {
-            ClientContext.navigationManager.goto(mainBundles[0])
+        if (state.documentPath == null && ! mainDocuments.isEmpty()) {
+            ClientContext.navigationManager.goto(mainDocuments[0])
         }
     }
 
@@ -91,9 +92,9 @@ class SidebarController(
     }
 
 
-    override fun handleNavigation(bundlePath: BundlePath?) {
+    override fun handleNavigation(documentPath: DocumentPath?) {
         setState {
-            this.bundlePath = bundlePath
+            this.documentPath = documentPath
         }
     }
 
@@ -158,26 +159,9 @@ class SidebarController(
             child(SidebarFolder::class) {
                 attrs {
                     this.structure = structure
-                    selectedBundlePath = state.bundlePath
+                    selectedDocumentPath = state.documentPath
                 }
             }
-
-
-//            styledSpan {
-//                attrs {
-//                    title = "Add new file"
-//                }
-//
-//                child(MaterialIconButton::class) {
-//                    attrs {
-//                        onClick = {
-//                            onAdd()
-//                        }
-//                    }
-//
-//                    child(AddCircleOutlineIcon::class) {}
-//                }
-//            }
         }
     }
 }

@@ -2,8 +2,8 @@ package tech.kzen.auto.server.notation
 
 import com.google.common.base.MoreObjects
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
-import tech.kzen.lib.common.api.model.BundlePath
-import tech.kzen.lib.common.api.model.BundleTree
+import tech.kzen.lib.common.api.model.DocumentPath
+import tech.kzen.lib.common.api.model.DocumentTree
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.io.NotationMedia
 import tech.kzen.lib.common.util.Digest
@@ -20,11 +20,11 @@ class BootNotationMedia(
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val cache: MutableMap<BundlePath, Digest> = mutableMapOf()
+    private val cache: MutableMap<DocumentPath, Digest> = mutableMapOf()
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun scan(): BundleTree<Digest> {
+    override suspend fun scan(): DocumentTree<Digest> {
         if (cache.isEmpty()) {
             val paths = scanPaths()
 
@@ -34,17 +34,17 @@ class BootNotationMedia(
                 cache[path] = digest
             }
         }
-        return BundleTree(cache)
+        return DocumentTree(cache)
     }
 
 
-    private fun scanPaths(): List<BundlePath> {
+    private fun scanPaths(): List<DocumentPath> {
         val patternResolver = PathMatchingResourcePatternResolver(loader)
 
         val pattern = "classpath*:$prefix**/*$suffix"
         val classResources = patternResolver.getResources(pattern)
 
-        val builder = mutableListOf<BundlePath>()
+        val builder = mutableListOf<DocumentPath>()
 
         for (resource in classResources) {
             val fullPath = try {
@@ -74,13 +74,13 @@ class BootNotationMedia(
             // strip jar '!' and leading '/'
             val innerPath = fullPath.substring(start + 2)
 
-            if (! BundlePath.matches(innerPath)) {
+            if (! DocumentPath.matches(innerPath)) {
                 continue
             }
 
             val afterPrefix = innerPath.substring(prefix.length)
 
-            builder.add(BundlePath.parse(afterPrefix))
+            builder.add(DocumentPath.parse(afterPrefix))
         }
 
         return builder
@@ -88,18 +88,18 @@ class BootNotationMedia(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun read(location: BundlePath): ByteArray {
+    override suspend fun read(location: DocumentPath): ByteArray {
         val bytes = loader.getResource(prefix + location.asRelativeFile()).readBytes()
         println("ClasspathNotationMedia - read ${bytes.size}")
         return bytes
     }
 
 
-    override suspend fun write(location: BundlePath, bytes: ByteArray) {
+    override suspend fun write(location: DocumentPath, bytes: ByteArray) {
         throw UnsupportedOperationException("Classpath writing not supported")
     }
 
-    override suspend fun delete(location: BundlePath) {
+    override suspend fun delete(location: DocumentPath) {
         throw UnsupportedOperationException("Classpath deleting not supported")
     }
 }

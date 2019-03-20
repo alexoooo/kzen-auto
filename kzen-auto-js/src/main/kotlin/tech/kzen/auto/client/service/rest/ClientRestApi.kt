@@ -17,22 +17,22 @@ class ClientRestApi(
         private val baseUrl: String
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun scanNotationPaths(): BundleTree<Digest> {
+    suspend fun scanNotationPaths(): DocumentTree<Digest> {
         val scanText = httpGet("$baseUrl${CommonRestApi.scan}")
 
-        val builder = mutableMapOf<BundlePath, Digest>()
+        val builder = mutableMapOf<DocumentPath, Digest>()
         // NB: using transform just to iterate the Json, is there a better way to do this?
         JSON.parse<Json>(scanText) { key: String, value: Any? ->
             if (value is String) {
-                builder[BundlePath.parse(key)] = Digest.parse(value)
+                builder[DocumentPath.parse(key)] = Digest.parse(value)
             }
             null
         }
-        return BundleTree(builder)
+        return DocumentTree(builder)
     }
 
 
-    suspend fun readNotation(location: BundlePath): ByteArray {
+    suspend fun readNotation(location: DocumentPath): ByteArray {
         @Suppress("UNUSED_VARIABLE")
         val response = httpGet("$baseUrl${CommonRestApi.notationPrefix}" +
                 location.asRelativeFile())
@@ -42,35 +42,35 @@ class ClientRestApi(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun createBundle(
-            projectPath: BundlePath
+    suspend fun createDocument(
+            documentPath: DocumentPath
     ): Digest {
         return getDigest(
-                CommonRestApi.commandBundleCreate,
-                CommonRestApi.paramBundlePath to projectPath.asString())
+                CommonRestApi.commandDocumentCreate,
+                CommonRestApi.paramDocumentPath to documentPath.asString())
     }
 
 
-    suspend fun deleteBundle(
-            projectPath: BundlePath
+    suspend fun deleteDocument(
+            documentPath: DocumentPath
     ): Digest {
         return getDigest(
-                CommonRestApi.commandBundleDelete,
-                CommonRestApi.paramBundlePath to projectPath.asRelativeFile())
+                CommonRestApi.commandDocumentDelete,
+                CommonRestApi.paramDocumentPath to documentPath.asRelativeFile())
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun addObject(
             objectLocation: ObjectLocation,
-            indexInBundle: PositionIndex,
+            indexInDocument: PositionIndex,
             deparsedObjectNotation: String
     ): Digest {
         return getDigest(
                 CommonRestApi.commandObjectAdd,
-                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                CommonRestApi.paramPositionIndex to indexInBundle.asString(),
+                CommonRestApi.paramPositionIndex to indexInDocument.asString(),
                 CommonRestApi.paramObjectNotation to deparsedObjectNotation)
     }
 
@@ -80,20 +80,20 @@ class ClientRestApi(
     ): Digest {
         return getDigest(
                 CommonRestApi.commandObjectRemove,
-                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
     }
 
 
     suspend fun shiftObject(
             objectLocation: ObjectLocation,
-            newPositionInBundle: PositionIndex
+            newPositionInDocument: PositionIndex
     ): Digest {
         return getDigest(
                 CommonRestApi.commandObjectShift,
-                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                CommonRestApi.paramPositionIndex to newPositionInBundle.asString())
+                CommonRestApi.paramPositionIndex to newPositionInDocument.asString())
     }
 
 
@@ -103,7 +103,7 @@ class ClientRestApi(
     ): Digest {
         return getDigest(
                 CommonRestApi.commandObjectRename,
-                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramObjectName to newName.value)
     }
@@ -114,17 +114,17 @@ class ClientRestApi(
             containingList: AttributePath,
             indexInList: PositionIndex,
             objectName: ObjectName,
-            positionInBundle: PositionIndex,
+            positionInDocument: PositionIndex,
             deparsedObjectNotation: String
     ): Digest {
         return getDigest(
                 CommonRestApi.commandObjectInsert,
-                CommonRestApi.paramBundlePath to containingObjectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to containingObjectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
                 CommonRestApi.paramAttributePath to containingList.asString(),
                 CommonRestApi.paramPositionIndex to indexInList.asString(),
                 CommonRestApi.paramObjectName to objectName.value,
-                CommonRestApi.paramSecondaryPosition to positionInBundle.asString(),
+                CommonRestApi.paramSecondaryPosition to positionInDocument.asString(),
                 CommonRestApi.paramObjectNotation to deparsedObjectNotation)
     }
 
@@ -137,7 +137,7 @@ class ClientRestApi(
     ): Digest {
         return getDigest(
                 CommonRestApi.commandAttributeUpsert,
-                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramAttributeName to attributeName.value,
                 CommonRestApi.paramAttributeNotation to deparsedAttributeNotation)
@@ -151,7 +151,7 @@ class ClientRestApi(
     ): Digest {
         return getDigest(
                 CommonRestApi.commandAttributeUpdateIn,
-                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramAttributePath to attributePath.asString(),
                 CommonRestApi.paramAttributeNotation to deparsedAttributeNotation)
@@ -166,7 +166,7 @@ class ClientRestApi(
     ): Digest {
         return getDigest(
                 CommonRestApi.commandAttributeInsertItemIn,
-                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramAttributePath to containingList.asString(),
                 CommonRestApi.paramPositionIndex to indexInList.asString(),
@@ -183,7 +183,7 @@ class ClientRestApi(
     ): Digest {
         return getDigest(
                 CommonRestApi.commandAttributeInsertEntryIn,
-                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramAttributePath to containingMap.asString(),
                 CommonRestApi.paramPositionIndex to indexInMap.asString(),
@@ -198,7 +198,7 @@ class ClientRestApi(
     ): Digest {
         return getDigest(
                 CommonRestApi.commandAttributeRemoveIn,
-                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramAttributePath to attributePath.asString())
     }
@@ -211,7 +211,7 @@ class ClientRestApi(
     ): Digest {
         return getDigest(
                 CommonRestApi.commandAttributeShiftIn,
-                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramAttributePath to attributePath.asString(),
                 CommonRestApi.paramPositionIndex to newPosition.asString())
@@ -225,7 +225,7 @@ class ClientRestApi(
     ): Digest {
         return getDigest(
                 CommonRestApi.commandRefactorRename,
-                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramObjectName to newName.value)
     }
@@ -244,10 +244,10 @@ class ClientRestApi(
     }
 
 
-    suspend fun startExecution(bundlePath: BundlePath): Digest {
+    suspend fun startExecution(documentPath: DocumentPath): Digest {
         return getDigest(
                 "$baseUrl${CommonRestApi.actionStart}",
-                CommonRestApi.paramBundlePath to bundlePath.asString())
+                CommonRestApi.paramDocumentPath to documentPath.asString())
 //        val responseText = httpGet("$baseUrl${CommonRestApi.actionStart}")
 //        return Digest.parse(responseText)
     }
@@ -266,7 +266,7 @@ class ClientRestApi(
     ): ExecutionResponse {
         val responseJson = getJson(
                 CommonRestApi.actionPerform,
-                CommonRestApi.paramBundlePath to objectLocation.bundlePath.asString(),
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
 
         @Suppress("UNCHECKED_CAST")

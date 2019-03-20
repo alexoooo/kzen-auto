@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.service
 
 import tech.kzen.auto.client.util.NameConventions
-import tech.kzen.lib.common.api.model.BundleNesting
-import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.DocumentNesting
+import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath
 import tech.kzen.lib.common.structure.notation.edit.AddObjectCommand
@@ -53,7 +53,7 @@ class InsertionManager {
     }
 
 
-    suspend fun create(path: BundlePath, index: Int) {
+    suspend fun create(path: DocumentPath, index: Int) {
         if (selected == null) {
             return
         }
@@ -64,7 +64,7 @@ class InsertionManager {
 
         val newObjectLocation = ObjectLocation(
                 path,
-                ObjectPath(NameConventions.randomAnonymous(), BundleNesting.root))
+                ObjectPath(NameConventions.randomAnonymous(), DocumentNesting.root))
 
         val command = AddObjectCommand.ofParent(
                 newObjectLocation,

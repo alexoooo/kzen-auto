@@ -33,7 +33,7 @@ data class ExecutionModel(
         var renamedAny = false
 
         for (frame in frames) {
-            if (frame.path != objectLocation.bundlePath) {
+            if (frame.path != objectLocation.documentPath) {
                 continue
             }
 
@@ -51,7 +51,7 @@ data class ExecutionModel(
         var renamedAny = false
 
         for (frame in frames) {
-            if (frame.path != from.bundlePath) {
+            if (frame.path != from.documentPath) {
                 continue
             }
 
@@ -66,7 +66,7 @@ data class ExecutionModel(
 
     fun add(objectLocation: ObjectLocation): Boolean {
         for (frame in frames) {
-            if (frame.path != objectLocation.bundlePath) {
+            if (frame.path != objectLocation.documentPath) {
                 continue
             }
 
@@ -86,7 +86,7 @@ data class ExecutionModel(
             objectLocation: ObjectLocation
     ): ExecutionFrame? =
         frames.findLast {
-            it.path == objectLocation.bundlePath &&
+            it.path == objectLocation.documentPath &&
                     it.contains(objectLocation.objectPath)
         }
 

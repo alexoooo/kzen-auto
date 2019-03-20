@@ -1,26 +1,26 @@
 package tech.kzen.auto.client.service
 
-import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.DocumentPath
 import kotlin.browser.window
 
 
 class NavigationManager {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
-        fun handleNavigation(bundlePath: BundlePath?)
+        fun handleNavigation(documentPath: DocumentPath?)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private val observers = mutableSetOf<Observer>()
-    private var bundlePath: BundlePath? = null
+    private var documentPath: DocumentPath? = null
 
 
     fun observe(observer: Observer) {
         observers.add(observer)
 
-        if (bundlePath != null) {
-            observer.handleNavigation(bundlePath)
+        if (documentPath != null) {
+            observer.handleNavigation(documentPath)
         }
     }
 
@@ -32,7 +32,7 @@ class NavigationManager {
 
     private fun publish() {
         for (observer in observers) {
-            observer.handleNavigation(bundlePath)
+            observer.handleNavigation(documentPath)
         }
     }
 
@@ -50,24 +50,24 @@ class NavigationManager {
     }
 
 
-    fun goto(bundlePath: BundlePath) {
-        window.location.hash = "#" + bundlePath.asString()
+    fun goto(documentPath: DocumentPath) {
+        window.location.hash = "#" + documentPath.asString()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun readAndPublishIfNecessary() {
-        val previous = bundlePath
+        val previous = documentPath
 
-        bundlePath = read()
+        documentPath = read()
 
-        if (previous != bundlePath) {
+        if (previous != documentPath) {
             publish()
         }
     }
 
 
-    private fun read(): BundlePath? {
+    private fun read(): DocumentPath? {
 //        console.log("^^^ read", window.location.hash)
         val path = window.location.hash.substring(1)
 
@@ -75,6 +75,6 @@ class NavigationManager {
             return null
         }
 
-        return BundlePath.parse(path)
+        return DocumentPath.parse(path)
     }
 }

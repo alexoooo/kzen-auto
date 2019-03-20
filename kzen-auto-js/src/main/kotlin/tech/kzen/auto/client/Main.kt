@@ -4,7 +4,7 @@ import react.dom.render
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath
 import tech.kzen.lib.common.context.GraphCreator
@@ -30,7 +30,7 @@ fun main() {
 
 //            console.log("^^^ main autoGraph ^^ ", autoGraph.objects.values.keys.toString())
             val rootLocation = ObjectLocation(
-                    BundlePath.parse("auto/auto-framework.yaml"),
+                    DocumentPath.parse("auto/auto-framework.yaml"),
                     ObjectPath.parse("root"))
 
             val rootInstance = autoGraph.objects.get(rootLocation)

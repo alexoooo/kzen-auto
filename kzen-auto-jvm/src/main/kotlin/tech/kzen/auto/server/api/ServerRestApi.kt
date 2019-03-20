@@ -16,8 +16,8 @@ class ServerRestApi(
         GET("${CommonRestApi.notationPrefix}**", counterHandler::notation)
 
 
-        GET(CommonRestApi.commandBundleCreate, counterHandler::createBundle)
-        GET(CommonRestApi.commandBundleDelete, counterHandler::deleteBundle)
+        GET(CommonRestApi.commandDocumentCreate, counterHandler::createDocument)
+        GET(CommonRestApi.commandDocumentDelete, counterHandler::deleteDocument)
 
         GET(CommonRestApi.commandObjectAdd, counterHandler::addObject)
         GET(CommonRestApi.commandObjectRemove, counterHandler::removeObject)

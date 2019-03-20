@@ -11,9 +11,10 @@ import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.DocumentName
+import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.edit.CreateBundleCommand
+import tech.kzen.lib.common.structure.notation.edit.CreateDocumentCommand
 import kotlin.random.Random
 
 
@@ -24,14 +25,14 @@ class SidebarFolder(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val bundleBase = "main"
+        private val documentBase = DocumentName("main")
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var structure: GraphStructure,
-            var selectedBundlePath: BundlePath?
+            var selectedDocumentPath: DocumentPath?
     ): RProps
 
 
@@ -44,7 +45,7 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var buttonRef: HTMLButtonElement? = null
-    private var mainBundlesCache: List<BundlePath>? = null
+    private var mainDocumentsCache: List<DocumentPath>? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -59,23 +60,23 @@ class SidebarFolder(
             snapshot: Any
     ) {
         if (props.structure != prevProps.structure) {
-            mainBundlesCache = null
+            mainDocumentsCache = null
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun mainBundles(): List<BundlePath> {
-        if (mainBundlesCache == null) {
-            mainBundlesCache = props
+    private fun mainDocuments(): List<DocumentPath> {
+        if (mainDocumentsCache == null) {
+            mainDocumentsCache = props
                     .structure
                     .graphNotation
-                    .bundles
+                    .documents
                     .values
                     .keys
-                    .filter { it.segments[0] == bundleBase }
+                    .filter { it.segments[0] == documentBase }
         }
-        return mainBundlesCache!!
+        return mainDocumentsCache!!
     }
 
 
@@ -125,7 +126,7 @@ class SidebarFolder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun generateBundleName(): BundlePath {
+    private fun generateDocumentName(): DocumentPath {
         val prefix = "Script"
 
         val suffix = findSuffix(prefix, props.structure)
@@ -146,7 +147,7 @@ class SidebarFolder(
                 val candidateSuffix = "-$i"
                 val candidatePath = resolve(prefix + candidateSuffix)
 
-                if (structure.graphNotation.bundles.values.containsKey(candidatePath)) {
+                if (structure.graphNotation.documents.values.containsKey(candidatePath)) {
                     continue
                 }
 
@@ -158,13 +159,13 @@ class SidebarFolder(
     }
 
 
-    private fun resolve(name: String): BundlePath {
-        return BundlePath(listOf(bundleBase, "$name.yaml"))
+    private fun resolve(name: String): DocumentPath {
+        return DocumentPath(listOf(documentBase, DocumentName("$name.yaml")))
     }
 
 
-    private suspend fun createBundle(bundlePath: BundlePath) {
-        ClientContext.commandBus.apply(CreateBundleCommand(bundlePath))
+    private suspend fun createDocument(documentPath: DocumentPath) {
+        ClientContext.commandBus.apply(CreateDocumentCommand(documentPath))
     }
 
 
@@ -172,8 +173,8 @@ class SidebarFolder(
         onOptionsClose()
 
         async {
-            val newBundleName = generateBundleName()
-            createBundle(newBundleName)
+            val newBundleName = generateDocumentName()
+            createDocument(newBundleName)
         }
     }
 
@@ -253,9 +254,9 @@ class SidebarFolder(
 
 
     private fun RBuilder.renderSubItems() {
-        val mainBundles = mainBundles()
+        val mainDocuments = mainDocuments()
 
-        if (mainBundles.isEmpty()) {
+        if (mainDocuments.isEmpty()) {
             styledDiv {
                 css {
                     marginLeft = 2.em
@@ -264,11 +265,13 @@ class SidebarFolder(
             }
         }
         else {
-            for (bundlePath in mainBundles()) {
+            for (documentPath in mainDocuments()) {
                 child(SidebarFile::class) {
                     attrs {
-                        this.bundlePath = bundlePath
-                        selected = (bundlePath == props.selectedBundlePath)
+                        key = documentPath.asString()
+
+                        this.documentPath = documentPath
+                        selected = (documentPath == props.selectedDocumentPath)
                     }
                 }
             }

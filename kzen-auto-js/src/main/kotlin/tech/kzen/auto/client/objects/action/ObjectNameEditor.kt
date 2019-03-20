@@ -25,10 +25,10 @@ import tech.kzen.lib.common.structure.notation.edit.RenameRefactorCommand
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
-class NameEditor(
-        props: NameEditor.Props
+class ObjectNameEditor(
+        props: ObjectNameEditor.Props
 ):
-        RComponent<NameEditor.Props, NameEditor.State>(props)
+        RComponent<ObjectNameEditor.Props, ObjectNameEditor.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -51,8 +51,7 @@ class NameEditor(
     class State(
             var editing: Boolean,
             var objectName: String,
-            var saving: Boolean//,
-//            var readerHover: Boolean
+            var saving: Boolean
     ): RState
 
 
@@ -81,8 +80,8 @@ class NameEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun NameEditor.State.init(props: NameEditor.Props) {
-//        console.log("NameEditor | State.init - ${props.objectName}", Date.now())
+    override fun ObjectNameEditor.State.init(props: ObjectNameEditor.Props) {
+//        console.log("ObjectNameEditor | State.init - ${props.objectName}", Date.now())
         objectName = props.objectLocation.objectPath.name.value
 
         editing = false
@@ -265,16 +264,6 @@ class NameEditor(
                 renderEditor()
             }
             else {
-//                attrs {
-//                    onMouseOverFunction = {
-//                        onReaderEnter()
-//                    }
-//
-//                    onMouseOutFunction = {
-//                        onReaderLeave()
-//                    }
-//                }
-
                 renderReader()
             }
         }
@@ -339,34 +328,6 @@ class NameEditor(
                 }
             }
         }
-
-
-//        styledDiv {
-//            css {
-//                float = Float.right
-//
-//                if (! state.readerHover) {
-//                    visibility = Visibility.hidden
-//                }
-//            }
-//
-//            attrs {
-//                title = "Edit name"
-//            }
-//
-//            child(MaterialIconButton::class) {
-//                attrs {
-//                    style = reactStyle {
-//                        marginLeft = (-0.5).em
-//                        marginRight = (-0.5).em
-//                    }
-//
-//                    onClick = ::onEdit
-//                }
-//
-//                child(EditIcon::class) {}
-//            }
-//        }
     }
 
 

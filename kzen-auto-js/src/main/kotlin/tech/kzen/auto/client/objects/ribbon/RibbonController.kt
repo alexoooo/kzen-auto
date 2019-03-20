@@ -10,7 +10,7 @@ import react.dom.br
 import styled.*
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.action.ActionController
-import tech.kzen.auto.client.objects.action.NameEditor
+import tech.kzen.auto.client.objects.action.ObjectNameEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.util.NameConventions
@@ -216,7 +216,7 @@ class RibbonController(
                 }
 
                 val title = props.notation
-                        .transitiveAttribute(actionType, NameEditor.titleAttribute)
+                        .transitiveAttribute(actionType, ObjectNameEditor.titleAttribute)
                         ?.asString()
                         ?: actionType.objectPath.name.value
 

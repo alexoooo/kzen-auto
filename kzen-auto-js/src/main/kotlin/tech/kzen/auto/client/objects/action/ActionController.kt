@@ -70,7 +70,7 @@ class ActionController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var editSignal = NameEditor.EditSignal()
+    private var editSignal = ObjectNameEditor.EditSignal()
     private var buttonRef: HTMLButtonElement? = null
 
 
@@ -143,8 +143,8 @@ class ActionController(
     private fun onShiftUp() {
         onOptionsClose()
 
-        val packagePath = props.objectLocation.bundlePath
-        val packageNotation = props.structure.graphNotation.bundles.values[packagePath]!!
+        val packagePath = props.objectLocation.documentPath
+        val packageNotation = props.structure.graphNotation.documents.values[packagePath]!!
         val index = packageNotation.indexOf(props.objectLocation.objectPath)
 
         async {
@@ -157,8 +157,8 @@ class ActionController(
     private fun onShiftDown() {
         onOptionsClose()
 
-        val packagePath = props.objectLocation.bundlePath
-        val packageNotation = props.structure.graphNotation.bundles.values[packagePath]!!
+        val packagePath = props.objectLocation.documentPath
+        val packageNotation = props.structure.graphNotation.documents.values[packagePath]!!
         val index = packageNotation.indexOf(props.objectLocation.objectPath)
 
         async {
@@ -327,7 +327,7 @@ class ActionController(
                     left = runIconWidth
                 }
 
-                child(NameEditor::class) {
+                child(ObjectNameEditor::class) {
                     attrs {
                         objectLocation = props.objectLocation
                         notation = props.structure.graphNotation

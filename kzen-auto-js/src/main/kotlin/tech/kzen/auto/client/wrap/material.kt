@@ -185,6 +185,8 @@ external class MaterialTextField: Component<TextFieldProps, RState> {
 }
 
 external interface TextFieldProps: RProps {
+    var style: Json
+
     var onChange: (e: Event) -> Unit
 
     var onKeyDown: (e: KeyboardEvent) -> Unit

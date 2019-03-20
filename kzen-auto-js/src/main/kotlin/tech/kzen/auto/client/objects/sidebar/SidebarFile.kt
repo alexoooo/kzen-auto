@@ -1,21 +1,18 @@
 package tech.kzen.auto.client.objects.sidebar
 
 import kotlinx.css.*
-import kotlinx.css.properties.TextDecorationLine
-import kotlinx.css.properties.textDecoration
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import org.w3c.dom.HTMLButtonElement
 import react.*
 import styled.css
-import styled.styledA
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.lib.common.api.model.BundlePath
-import tech.kzen.lib.common.structure.notation.edit.DeleteBundleCommand
+import tech.kzen.lib.common.api.model.DocumentPath
+import tech.kzen.lib.common.structure.notation.edit.DeleteDocumentCommand
 
 
 class SidebarFile(
@@ -25,7 +22,7 @@ class SidebarFile(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var bundlePath: BundlePath,
+            var documentPath: DocumentPath,
             var selected: Boolean
     ): RProps
 
@@ -40,6 +37,7 @@ class SidebarFile(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var buttonRef: HTMLButtonElement? = null
+    private var nameEditorRef: DocumentNameEditor? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -94,13 +92,9 @@ class SidebarFile(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun displayPath(bundlePath: BundlePath): String {
-        val path = bundlePath.segments.subList(1, bundlePath.segments.size - 1)
-        val suffix = bundlePath.segments.last()
-
-        val parts = path.plus(suffix.substringBeforeLast("."))
-
-        return parts.joinToString("/")
+    private fun onRename() {
+        onOptionsClose()
+        nameEditorRef?.onEdit()
     }
 
 
@@ -108,7 +102,7 @@ class SidebarFile(
         onOptionsClose()
 
         async {
-            ClientContext.commandBus.apply(DeleteBundleCommand(props.bundlePath))
+            ClientContext.commandBus.apply(DeleteDocumentCommand(props.documentPath))
         }
     }
 
@@ -164,37 +158,22 @@ class SidebarFile(
                     width = 100.pct.minus(iconWidth)
                     marginLeft = 6.px
 
-//                    fontSize = (1.2).em
                     marginTop = 2.px
-//                    cursor = Cursor.pointer
 
                     if (props.selected) {
                         fontWeight = FontWeight.bold
                     }
                 }
 
-
-//                attrs {
-//                    onClickFunction = {
-//                        setState {
-//                            this.bundlePath = bundlePath
-//                        }
-//                    }
-//                }
-
-                styledA {
-                    css {
-                        color = Color.inherit
-
-//                        textDecoration = TextDecoration("inherit")
-                        textDecoration(TextDecorationLine.initial)
-                    }
-
+                child(DocumentNameEditor::class) {
                     attrs {
-                        href = "#" + props.bundlePath.asString()
-                    }
+                        ref<DocumentNameEditor> {
+//                            console.log("^^^^^ BundleNameEditor ref", it)
+                            nameEditorRef = it
+                        }
 
-                    +displayPath(props.bundlePath)
+                        this.documentPath = props.documentPath
+                    }
                 }
             }
 
@@ -275,8 +254,8 @@ class SidebarFile(
 
         child(MaterialMenuItem::class) {
             attrs {
-//                onClick = ::onAdd
-                onClick = ::onOptionsClose
+                onClick = ::onRename
+//                onClick = ::onOptionsClose
             }
             child(EditIcon::class) {
                 attrs {

@@ -88,20 +88,20 @@ class CommandBus(
 
     private suspend fun applyRest(command: NotationCommand): Digest =
         when (command) {
-            is CreateBundleCommand ->
-                restClient.createBundle(
-                        command.bundlePath)
+            is CreateDocumentCommand ->
+                restClient.createDocument(
+                        command.documentPath)
 
 
-            is DeleteBundleCommand ->
-                restClient.deleteBundle(
-                        command.bundlePath)
+            is DeleteDocumentCommand ->
+                restClient.deleteDocument(
+                        command.documentPath)
 
 
             is AddObjectCommand -> {
                 val deparsed = notationParser.deparseObject(command.body)
                 restClient.addObject(
-                        command.objectLocation, command.indexInBundle, deparsed)
+                        command.objectLocation, command.indexInDocument, deparsed)
             }
 
 
@@ -112,7 +112,7 @@ class CommandBus(
 
             is ShiftObjectCommand ->
                 restClient.shiftObject(
-                        command.objectLocation, command.newPositionInBundle)
+                        command.objectLocation, command.newPositionInDocument)
 
 
             is RenameObjectCommand ->
@@ -127,7 +127,7 @@ class CommandBus(
                         command.containingList,
                         command.indexInList,
                         command.objectName,
-                        command.positionInBundle,
+                        command.positionInDocument,
                         deparsed)
             }
 

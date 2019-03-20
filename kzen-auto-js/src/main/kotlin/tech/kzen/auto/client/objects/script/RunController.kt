@@ -14,7 +14,7 @@ import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
@@ -29,7 +29,7 @@ class RunController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var bundlePath: BundlePath?
+            var documentPath: DocumentPath?
     ): RProps
 
 
@@ -126,13 +126,13 @@ class RunController(
         val graphStructure = state.structure
                 ?: return
 
-        val bundlePath = props.bundlePath
+        val documentPath = props.documentPath
                 ?: return
 
         val expectedDigest = ClientContext.executionManager.start(
-                bundlePath, graphStructure)
+                documentPath, graphStructure)
 
-        val actualDigest = ClientContext.restClient.startExecution(bundlePath)
+        val actualDigest = ClientContext.restClient.startExecution(documentPath)
 
 //        console.log("^^^ executionStateToFreshStart", expectedDigest.asString(), actualDigest.asString())
 

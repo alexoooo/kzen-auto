@@ -24,11 +24,11 @@ import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
-import tech.kzen.lib.common.structure.notation.model.BundleNotation
+import tech.kzen.lib.common.structure.notation.model.DocumentNotation
 
 
 class ScriptController(
@@ -47,7 +47,7 @@ class ScriptController(
 
 
     class State(
-            var bundlePath: BundlePath?,
+            var documentPath: DocumentPath?,
             var structure: GraphStructure?,
             var execution: ExecutionModel?,
             var creating: Boolean
@@ -122,9 +122,9 @@ class ScriptController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun handleNavigation(bundlePath: BundlePath?) {
+    override fun handleNavigation(documentPath: DocumentPath?) {
         setState {
-            this.bundlePath = bundlePath
+            this.documentPath = documentPath
         }
     }
 
@@ -133,7 +133,7 @@ class ScriptController(
     private fun onCreate(index: Int) {
         async {
             ClientContext.insertionManager.create(
-                    state.bundlePath!!,
+                    state.documentPath!!,
                     index)
         }
     }
@@ -144,19 +144,19 @@ class ScriptController(
         val structure = state.structure
                 ?: return
 
-        val bundlePath: BundlePath? = state.bundlePath
+        val documentPath: DocumentPath? = state.documentPath
 
-        val bundleNotation: BundleNotation? =
-                bundlePath.let { structure.graphNotation.bundles.values[it] }
+        val documentNotation: DocumentNotation? =
+                documentPath.let { structure.graphNotation.documents.values[it] }
 
-        if (bundleNotation == null) {
+        if (documentNotation == null) {
             styledH3 {
                 css {
                     marginLeft = 1.em
                     paddingTop = 1.em
                 }
 
-                if (structure.graphNotation.bundles.values.isEmpty()) {
+                if (structure.graphNotation.documents.values.isEmpty()) {
                     +"Please create a file in the sidebar (left)"
                 }
                 else {
@@ -170,7 +170,7 @@ class ScriptController(
                     marginLeft = 1.em
                 }
 
-                steps(structure, bundleNotation, bundlePath!!)
+                steps(structure, documentNotation, documentPath!!)
             }
 
             runController()
@@ -181,10 +181,10 @@ class ScriptController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.steps(
             graphStructure: GraphStructure,
-            bundleNotation: BundleNotation,
-            bundlePath: BundlePath
+            documentNotation: DocumentNotation,
+            documentPath: DocumentPath
     ) {
-        if (bundleNotation.objects.values.isEmpty()) {
+        if (documentNotation.objects.values.isEmpty()) {
             styledH3 {
                 css {
                     paddingTop = 1.em
@@ -196,15 +196,15 @@ class ScriptController(
             insertionPoint(0)
         }
         else {
-            nonEmptySteps(graphStructure, bundleNotation, bundlePath)
+            nonEmptySteps(graphStructure, documentNotation, documentPath)
         }
     }
 
 
     private fun RBuilder.nonEmptySteps(
             graphStructure: GraphStructure,
-            bundleNotation: BundleNotation,
-            bundlePath: BundlePath
+            documentNotation: DocumentNotation,
+            documentPath: DocumentPath
     ) {
         insertionPoint(0)
 
@@ -216,11 +216,11 @@ class ScriptController(
 //            val next = state.execution?.next()
 
             var index = 0
-            for (e in bundleNotation.objects.values) {
+            for (e in documentNotation.objects.values) {
                 val status: ExecutionState? =
                         state.execution?.frames?.lastOrNull()?.states?.get(e.key)
 
-                val keyLocation = ObjectLocation(bundlePath, e.key)
+                val keyLocation = ObjectLocation(documentPath, e.key)
 
                 action(keyLocation,
                         graphStructure,
@@ -228,7 +228,7 @@ class ScriptController(
                         next?.bundlePath == bundlePath &&
                                 next.objectPath == e.key*/)
 
-                if (index < bundleNotation.objects.values.size - 1) {
+                if (index < documentNotation.objects.values.size - 1) {
                     styledDiv {
                         css {
                             position = Position.relative
@@ -293,7 +293,7 @@ class ScriptController(
             }
         }
 
-        insertionPoint(bundleNotation.objects.values.size)
+        insertionPoint(documentNotation.objects.values.size)
     }
 
 
@@ -368,7 +368,7 @@ class ScriptController(
 
             child(RunController::class) {
                 attrs {
-                    bundlePath = state.bundlePath
+                    documentPath = state.documentPath
                 }
             }
         }

@@ -1,12 +1,12 @@
 package tech.kzen.auto.common.paradigm.imperative.model
 
-import tech.kzen.lib.common.api.model.BundlePath
+import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.api.model.ObjectName
 import tech.kzen.lib.common.api.model.ObjectPath
 
 
 data class ExecutionFrame(
-        val path: BundlePath,
+        val path: DocumentPath,
         val states: MutableMap<ObjectPath, ExecutionState>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -35,7 +35,7 @@ data class ExecutionFrame(
                 collection: Map<String, Any>
         ): ExecutionFrame {
             val relativeLocation = collection[pathKey] as String
-            val path = BundlePath.parse(relativeLocation)
+            val path = DocumentPath.parse(relativeLocation)
 
             val valuesMap = collection[statesKey] as Map<*, *>
 

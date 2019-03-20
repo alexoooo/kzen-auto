@@ -8,9 +8,9 @@ object CommonRestApi {
 
     private const val commandPrefix = "/command/"
 
-    private const val commandBundlePrefix = "${commandPrefix}bundle/"
-    const val commandBundleCreate = "${commandBundlePrefix}create"
-    const val commandBundleDelete = "${commandBundlePrefix}delete"
+    private const val commandDocumentPrefix = "${commandPrefix}document/"
+    const val commandDocumentCreate = "${commandDocumentPrefix}create"
+    const val commandDocumentDelete = "${commandDocumentPrefix}delete"
 
     private const val commandObjectPrefix = "${commandPrefix}object/"
     const val commandObjectAdd = "${commandObjectPrefix}add"
@@ -33,7 +33,7 @@ object CommonRestApi {
     const val commandRefactorRename = "${commandRefactorPrefix}rename"
 
 
-    const val paramBundlePath = "path"
+    const val paramDocumentPath = "path"
     const val paramObjectPath = "object"
     const val paramPositionIndex = "index"
     const val paramSecondaryPosition = "position"

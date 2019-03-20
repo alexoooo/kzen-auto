@@ -93,13 +93,13 @@ class RestHandler {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun scan(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val projectPaths = runBlocking {
+        val documentTree = runBlocking {
             ServerContext.notationMedia.scan()
         }
 
         val asMap = mutableMapOf<String, String>()
 
-        for (e in projectPaths.values) {
+        for (e in documentTree.values) {
             asMap[e.key.asRelativeFile()] = e.value.asString()
         }
 
@@ -114,7 +114,7 @@ class RestHandler {
         val notationPrefix = "/notation/"
         val requestSuffix = serverRequest.path().substring(notationPrefix.length)
 
-        val notationPath = BundlePath.parse(requestSuffix)
+        val notationPath = DocumentPath.parse(requestSuffix)
         val notationBytes = runBlocking {
             ServerContext.notationMedia.read(notationPath)
         }
@@ -132,33 +132,33 @@ class RestHandler {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun createBundle(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+    fun createDocument(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         return applyAndDigest(
-                CreateBundleCommand(bundlePath))
+                CreateDocumentCommand(documentPath))
     }
 
 
-    fun deleteBundle(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+    fun deleteDocument(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         return applyAndDigest(
-                DeleteBundleCommand(bundlePath))
+                DeleteDocumentCommand(documentPath))
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun addObject(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
 
-        val indexInBundle: PositionIndex = serverRequest.getParam(
+        val indexInDocument: PositionIndex = serverRequest.getParam(
                 CommonRestApi.paramPositionIndex, PositionIndex.Companion::parse)
 
         val objectNotation: ObjectNotation = serverRequest.getParam(
@@ -166,45 +166,45 @@ class RestHandler {
 
         return applyAndDigest(
                 AddObjectCommand(
-                        ObjectLocation(bundlePath, objectPath),
-                        indexInBundle,
+                        ObjectLocation(documentPath, objectPath),
+                        indexInDocument,
                         objectNotation))
     }
 
 
     fun removeObject(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
 
         return applyAndDigest(
                 RemoveObjectCommand(
-                        ObjectLocation(bundlePath, objectPath)))
+                        ObjectLocation(documentPath, objectPath)))
     }
 
 
     fun shiftObject(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
 
-        val indexInBundle: PositionIndex = serverRequest.getParam(
+        val indexInDocument: PositionIndex = serverRequest.getParam(
                 CommonRestApi.paramPositionIndex, PositionIndex.Companion::parse)
 
         return applyAndDigest(
                 ShiftObjectCommand(
-                        ObjectLocation(bundlePath, objectPath),
-                        indexInBundle))
+                        ObjectLocation(documentPath, objectPath),
+                        indexInDocument))
     }
 
 
     fun renameObject(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
@@ -214,14 +214,14 @@ class RestHandler {
 
         return applyAndDigest(
                 RenameObjectCommand(
-                        ObjectLocation(bundlePath, objectPath),
+                        ObjectLocation(documentPath, objectPath),
                         objectName))
     }
 
 
     fun insertObjectInList(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val containingObjectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
@@ -235,7 +235,7 @@ class RestHandler {
         val objectName: ObjectName = serverRequest.getParam(
                 CommonRestApi.paramObjectName, ::ObjectName)
 
-        val positionInBundle: PositionIndex = serverRequest.getParam(
+        val positionInDocument: PositionIndex = serverRequest.getParam(
                 CommonRestApi.paramSecondaryPosition, PositionIndex.Companion::parse)
 
         val objectNotation: ObjectNotation = serverRequest.getParam(
@@ -243,19 +243,19 @@ class RestHandler {
 
         return applyAndDigest(
                 InsertObjectInListAttributeCommand(
-                        ObjectLocation(bundlePath, containingObjectPath),
+                        ObjectLocation(documentPath, containingObjectPath),
                         containingList,
                         indexInList,
                         objectName,
-                        positionInBundle,
+                        positionInDocument,
                         objectNotation))
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun upsertAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
@@ -268,15 +268,15 @@ class RestHandler {
 
         return applyAndDigest(
                 UpsertAttributeCommand(
-                        ObjectLocation(bundlePath, objectPath),
+                        ObjectLocation(documentPath, objectPath),
                         attributeName,
                         attributeNotation))
     }
 
 
     fun updateInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
@@ -289,15 +289,15 @@ class RestHandler {
 
         return applyAndDigest(
                 UpdateInAttributeCommand(
-                        ObjectLocation(bundlePath, objectPath),
+                        ObjectLocation(documentPath, objectPath),
                         attributePath,
                         attributeNotation))
     }
 
 
     fun insertListItemInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
@@ -313,7 +313,7 @@ class RestHandler {
 
         return applyAndDigest(
                 InsertListItemInAttributeCommand(
-                        ObjectLocation(bundlePath, objectPath),
+                        ObjectLocation(documentPath, objectPath),
                         containingList,
                         indexInList,
                         itemNotation))
@@ -321,8 +321,8 @@ class RestHandler {
 
 
     fun insertMapEntryInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
@@ -341,7 +341,7 @@ class RestHandler {
 
         return applyAndDigest(
                 InsertMapEntryInAttributeCommand(
-                        ObjectLocation(bundlePath, objectPath),
+                        ObjectLocation(documentPath, objectPath),
                         containingMap,
                         indexInMap,
                         mapKey,
@@ -350,8 +350,8 @@ class RestHandler {
 
 
     fun removeInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
@@ -361,14 +361,14 @@ class RestHandler {
 
         return applyAndDigest(
                 RemoveInAttributeCommand(
-                        ObjectLocation(bundlePath, objectPath),
+                        ObjectLocation(documentPath, objectPath),
                         attributePath))
     }
 
 
     fun shiftInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
@@ -381,7 +381,7 @@ class RestHandler {
 
         return applyAndDigest(
                 ShiftInAttributeCommand(
-                        ObjectLocation(bundlePath, objectPath),
+                        ObjectLocation(documentPath, objectPath),
                         attributePath,
                         newPosition))
     }
@@ -389,8 +389,8 @@ class RestHandler {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun refactorName(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
@@ -400,7 +400,7 @@ class RestHandler {
 
         return applyAndDigest(
                 RenameRefactorCommand(
-                        ObjectLocation(bundlePath, objectPath),
+                        ObjectLocation(documentPath, objectPath),
                         newName))
     }
 
@@ -440,14 +440,14 @@ class RestHandler {
 
 
     fun actionStart(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val digest = runBlocking {
             val projectModel = ServerContext.modelManager.graphStructure()
 
             ServerContext.executionManager.start(
-                    bundlePath, projectModel)
+                    documentPath, projectModel)
         }
 
         return ServerResponse
@@ -468,13 +468,13 @@ class RestHandler {
 
 
     fun actionPerform(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val bundlePath: BundlePath = serverRequest.getParam(
-                CommonRestApi.paramBundlePath, BundlePath.Companion::parse)
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
 
-        val objectLocation = ObjectLocation(bundlePath, objectPath)
+        val objectLocation = ObjectLocation(documentPath, objectPath)
 
         val execution: ExecutionResponse = runBlocking {
             ServerContext.executionManager.execute(objectLocation)
