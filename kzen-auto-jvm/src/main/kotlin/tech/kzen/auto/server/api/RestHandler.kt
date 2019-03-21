@@ -405,6 +405,20 @@ class RestHandler {
     }
 
 
+    fun refactorDocumentName(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
+        val newName: DocumentName = serverRequest.getParam(
+                CommonRestApi.paramDocumentName, ::DocumentName)
+
+        return applyAndDigest(
+                RenameDocumentRefactorCommand(
+                        documentPath,
+                        newName))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun applyAndDigest(command: NotationCommand): Mono<ServerResponse> {
         val digest = applyCommand(command)

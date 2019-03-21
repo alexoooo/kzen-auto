@@ -33,6 +33,7 @@ class ServerRestApi(
         GET(CommonRestApi.commandAttributeShiftIn, counterHandler::shiftInAttribute)
 
         GET(CommonRestApi.commandRefactorRename, counterHandler::refactorName)
+        GET(CommonRestApi.commandRefactorDocumentRename, counterHandler::refactorDocumentName)
 
         GET(CommonRestApi.actionModel, counterHandler::actionModel)
         GET(CommonRestApi.actionStart, counterHandler::actionStart)

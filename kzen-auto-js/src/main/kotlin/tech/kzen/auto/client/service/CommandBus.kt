@@ -174,6 +174,11 @@ class CommandBus(
                         command.objectLocation, command.newName)
 
 
+            is RenameDocumentRefactorCommand ->
+                restClient.refactorDocumentName(
+                        command.documentPath, command.newName)
+
+
             else ->
                 throw UnsupportedOperationException("Unknown: $command")
         }

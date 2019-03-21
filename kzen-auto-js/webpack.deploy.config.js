@@ -1,3 +1,9 @@
+// https://github.com/webpack-contrib/copy-webpack-plugin/issues/59
+var fs = require('fs');
+var gracefulFs = require('graceful-fs');
+gracefulFs.gracefulify(fs);
+
+
 const webpack = require("webpack");
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const UglifyJSPlugin = require('uglifyjs-webpack-plugin');

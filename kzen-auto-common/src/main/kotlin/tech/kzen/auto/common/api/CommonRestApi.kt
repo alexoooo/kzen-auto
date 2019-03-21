@@ -31,6 +31,7 @@ object CommonRestApi {
 
     private const val commandRefactorPrefix = "${commandPrefix}refactor/"
     const val commandRefactorRename = "${commandRefactorPrefix}rename"
+    const val commandRefactorDocumentRename = "${commandRefactorPrefix}rename-doc"
 
 
     const val paramDocumentPath = "path"
@@ -39,6 +40,7 @@ object CommonRestApi {
     const val paramSecondaryPosition = "position"
     const val paramObjectNotation = "body"
     const val paramObjectName = "name"
+    const val paramDocumentName = "file"
     const val paramAttributeName = "attribute"
     const val paramAttributePath = "in-attribute"
     const val paramAttributeKey = "key"

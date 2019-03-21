@@ -231,6 +231,17 @@ class ClientRestApi(
     }
 
 
+    suspend fun refactorDocumentName(
+            documentPath: DocumentPath,
+            documentName: DocumentName
+    ): Digest {
+        return getDigest(
+                CommonRestApi.commandRefactorDocumentRename,
+                CommonRestApi.paramDocumentPath to documentPath.asString(),
+                CommonRestApi.paramDocumentName to documentName.value)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun executionModel(): ExecutionModel {
         val responseText = httpGet("$baseUrl${CommonRestApi.actionModel}")

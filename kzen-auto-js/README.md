@@ -1,9 +1,9 @@
 
 For dev mode, run:
-> ./gradlew -t client:watch
+> ./gradlew -t kzen-auto-js:watch
 > cd client
 > yarn run start
 
 
 
-Note that "gradle :client:run" doesn't close correctly (node remains running).
+Note that "gradle :kzen-auto-js:run" doesn't close correctly (node remains running).
