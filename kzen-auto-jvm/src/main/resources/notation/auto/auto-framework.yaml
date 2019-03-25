@@ -5,16 +5,16 @@ ReactWrapper:
   abstract: true
   class: tech.kzen.auto.client.api.ReactWrapper
 
-
-
 ###########################################################
 
 ProjectController:
   abstract: true
   class: tech.kzen.auto.client.objects.ProjectController.Wrapper
   ribbonController: RibbonController
+  stageController: StageController
   meta:
     ribbonController: RibbonController
+    stageController: StageController
 
 
 ###########################################################

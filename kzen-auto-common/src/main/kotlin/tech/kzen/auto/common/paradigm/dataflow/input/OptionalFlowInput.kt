@@ -8,5 +8,4 @@ interface OptionalFlowInput<out T> {
     fun get(): T?
 
 //    fun index(): Long
-//    fun isRepeated(): Boolean
 }

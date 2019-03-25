@@ -1,0 +1,34 @@
+
+
+StageController:
+  class: tech.kzen.auto.client.objects.document.StageController.Wrapper
+  meta:
+    documentControllers:
+      is: List
+      of: DocumentController
+      definer: AutowiredAttributeDefiner
+      find:
+        is: DocumentController
+
+
+DocumentController:
+  abstract: true
+  is: ReactWrapper
+  meta:
+    type: Document
+
+
+###########################################################
+
+
+ScriptController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.script.ScriptController$Wrapper
+  type: Script
+
+
+PivotTableController:
+  abstract: true
+  is: Document
+
+

@@ -1,0 +1,24 @@
+
+Document:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.DocumentArchetype
+#  meta:
+#    objectLocation:
+#      is: ObjectLocation
+#      definer: ObjectLocationAttributeDefiner
+
+
+###########################################################
+
+
+Script:
+  is: Document
+  class: tech.kzen.auto.common.objects.document.ScriptDocument
+  steps: []
+  meta:
+    steps:
+      is: List
+      of: Action
+    objectLocation:
+      is: ObjectLocation
+      definer: ObjectLocationAttributeDefiner

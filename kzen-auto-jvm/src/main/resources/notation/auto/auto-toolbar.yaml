@@ -54,7 +54,8 @@ RibbonController:
         is: Action
     ribbonGroups:
       is: List
-      of: ObjectLocation
+#      of: ObjectLocation
+      of: RibbonGroup
       definer: AutowiredAttributeDefiner
       find:
         is: RibbonGroup

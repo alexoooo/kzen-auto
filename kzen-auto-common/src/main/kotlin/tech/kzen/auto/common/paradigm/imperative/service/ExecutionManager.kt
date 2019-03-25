@@ -63,7 +63,7 @@ class ExecutionManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(autoModel: GraphStructure, event: NotationEvent?) {
+    override suspend fun handleModel(projectStructure: GraphStructure, event: NotationEvent?) {
         if (event == null) {
             return
         }

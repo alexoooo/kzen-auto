@@ -12,6 +12,7 @@ import styled.styledDiv
 import styled.styledH3
 import styled.styledSpan
 import tech.kzen.auto.client.objects.action.ActionController
+import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
@@ -20,38 +21,58 @@ import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.ArrowDownwardIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.DocumentPath
-import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.api.model.*
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 import tech.kzen.lib.common.structure.notation.model.DocumentNotation
+import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 
 
-class ScriptController(
-        props: ScriptController.Props
-):
-        RComponent<ScriptController.Props, ScriptController.State>(props),
+@Suppress("unused")
+class ScriptController:
+        RComponent<RProps, ScriptController.State>(),
         ModelManager.Observer,
         ExecutionManager.Observer,
         InsertionManager.Observer,
         NavigationManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
+    companion object {
+        private val mainObjectPath = ObjectPath.parse("main")
+        private val stepsAttributePath = AttributePath.parse("steps")
+    }
 
-    ): RProps
 
-
+    //-----------------------------------------------------------------------------------------------------------------
     class State(
             var documentPath: DocumentPath?,
             var structure: GraphStructure?,
             var execution: ExecutionModel?,
             var creating: Boolean
     ): RState
+
+
+    @Suppress("unused")
+    class Wrapper(
+            private val type: DocumentArchetype
+    ):
+            DocumentController
+    {
+        override fun type(): DocumentArchetype {
+            return type
+        }
+
+        override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
+            return input.child(ScriptController::class) {
+                handler()
+            }
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -76,7 +97,7 @@ class ScriptController(
 
 
     override fun componentDidUpdate(
-            prevProps: ScriptController.Props,
+            prevProps: RProps,
             prevState: ScriptController.State,
             snapshot: Any
     ) {
@@ -85,12 +106,12 @@ class ScriptController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(autoModel: GraphStructure, event: NotationEvent?) {
+    override suspend fun handleModel(projectStructure: GraphStructure, event: NotationEvent?) {
 //        println("ProjectController - && handled - " +
 //                "${autoModel.graphNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
 
         setState {
-            structure = autoModel
+            structure = projectStructure
         }
     }
 
@@ -184,7 +205,17 @@ class ScriptController(
             documentNotation: DocumentNotation,
             documentPath: DocumentPath
     ) {
-        if (documentNotation.objects.values.isEmpty()) {
+        val mainObjectLocation = ObjectLocation(documentPath, mainObjectPath)
+
+        val stepsNotation = graphStructure
+                .graphNotation
+                .transitiveAttribute(mainObjectLocation, stepsAttributePath)
+                as? ListAttributeNotation
+                ?: return
+
+        val stepReferences = stepsNotation.values.map { ObjectReference.parse(it.asString()!!) }
+
+        if (stepReferences.isEmpty()) {
             styledH3 {
                 css {
                     paddingTop = 1.em
@@ -196,7 +227,7 @@ class ScriptController(
             insertionPoint(0)
         }
         else {
-            nonEmptySteps(graphStructure, documentNotation, documentPath)
+            nonEmptySteps(graphStructure, documentNotation, documentPath, stepReferences)
         }
     }
 
@@ -204,7 +235,8 @@ class ScriptController(
     private fun RBuilder.nonEmptySteps(
             graphStructure: GraphStructure,
             documentNotation: DocumentNotation,
-            documentPath: DocumentPath
+            documentPath: DocumentPath,
+            stepReferences: List<ObjectReference>
     ) {
         insertionPoint(0)
 
@@ -213,87 +245,71 @@ class ScriptController(
                 width = 20.em
             }
 
-//            val next = state.execution?.next()
+            for ((index, stepReference) in stepReferences.withIndex()) {
+                val stepLocation = graphStructure.graphNotation.coalesce.locate(stepReference)
+                val objectPath = stepLocation.objectPath
 
-            var index = 0
-            for (e in documentNotation.objects.values) {
                 val status: ExecutionState? =
-                        state.execution?.frames?.lastOrNull()?.states?.get(e.key)
+                        state.execution?.frames?.lastOrNull()?.states?.get(objectPath)
 
-                val keyLocation = ObjectLocation(documentPath, e.key)
+                val keyLocation = ObjectLocation(documentPath, objectPath)
 
                 action(keyLocation,
                         graphStructure,
-                        status/*,
-                        next?.bundlePath == bundlePath &&
-                                next.objectPath == e.key*/)
+                        status)
 
-                if (index < documentNotation.objects.values.size - 1) {
-                    styledDiv {
-                        css {
-                            position = Position.relative
-                            height = 4.em
-                            width = 9.em
-//                            backgroundColor = Color.blue
-//                            backgroundColor = Color.red
-//                            zIndex = -1
-                        }
-
-                        styledDiv {
-                            css {
-                                marginTop = 0.5.em
-
-                                position = Position.absolute
-                                height = 1.em
-                                width = 1.em
-                                top = 0.em
-                                left = 0.em
-
-//                                zIndex = 1999
-//                                float = Float.left
-                            }
-                            insertionPoint(index + 1)
-                        }
-
-                        styledDiv {
-                            css {
-//                                marginLeft = LinearDimension.auto
-//                                marginRight = LinearDimension.auto
-
-                                position = Position.absolute
-                                height = 3.em
-                                width = 3.em
-                                top = 0.em
-                                left = 8.5.em
-
-//                            position = Position.absolute
-//                            top = 0.px
-//                            left = 0.em
-//                                display = Display.inline
-//                                float = Float.left
-//                                marginLeft = 4.75.em
-//
-//                                width = 3.em
-                                marginTop =  0.5.em
-                                marginBottom = 0.5.em
-                            }
-
-                            child(ArrowDownwardIcon::class) {
-                                attrs {
-                                    style = reactStyle {
-                                        fontSize = 3.em
-                                    }
-                                }
-                            }
-                        }
-                    }
+                if (index < stepReferences.size - 1) {
+                    downArrowWithInsertionPoint(index)
                 }
-
-                index++
             }
         }
 
         insertionPoint(documentNotation.objects.values.size)
+    }
+
+
+    private fun RBuilder.downArrowWithInsertionPoint(index: Int) {
+        styledDiv {
+            css {
+                position = Position.relative
+                height = 4.em
+                width = 9.em
+            }
+
+            styledDiv {
+                css {
+                    marginTop = 0.5.em
+
+                    position = Position.absolute
+                    height = 1.em
+                    width = 1.em
+                    top = 0.em
+                    left = 0.em
+                }
+                insertionPoint(index + 1)
+            }
+
+            styledDiv {
+                css {
+                    position = Position.absolute
+                    height = 3.em
+                    width = 3.em
+                    top = 0.em
+                    left = 8.5.em
+
+                    marginTop =  0.5.em
+                    marginBottom = 0.5.em
+                }
+
+                child(ArrowDownwardIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+                    }
+                }
+            }
+        }
     }
 
 

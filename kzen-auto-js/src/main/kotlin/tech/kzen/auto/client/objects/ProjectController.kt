@@ -10,8 +10,8 @@ import react.dom.div
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.api.ReactWrapper
+import tech.kzen.auto.client.objects.document.StageController
 import tech.kzen.auto.client.objects.ribbon.RibbonController
-import tech.kzen.auto.client.objects.script.ScriptController
 import tech.kzen.auto.client.objects.sidebar.SidebarController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
@@ -45,7 +45,8 @@ class ProjectController(
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var ribbonController: RibbonController.Wrapper
+            var ribbonController: RibbonController.Wrapper,
+            var stageController: StageController.Wrapper
     ): RProps
 
 
@@ -60,15 +61,14 @@ class ProjectController(
 
     @Suppress("unused")
     class Wrapper(
-//            private val actionManager: ActionManager
-            private val ribbonController: RibbonController.Wrapper
+            private val ribbonController: RibbonController.Wrapper,
+            private val stageController: StageController.Wrapper
     ): ReactWrapper<ProjectController.Props> {
         override fun child(input: RBuilder, handler: RHandler<ProjectController.Props>): ReactElement {
-//            println("^%$^$% ProjectController - $actionManager")
             return input.child(ProjectController::class) {
                 attrs {
-//                    actionManager = this@Wrapper.actionManager
                     ribbonController = this@Wrapper.ribbonController
+                    stageController = this@Wrapper.stageController
                 }
 
                 handler()
@@ -132,12 +132,12 @@ class ProjectController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(autoModel: GraphStructure, event: NotationEvent?) {
+    override suspend fun handleModel(projectStructure: GraphStructure, event: NotationEvent?) {
 //        println("ProjectController - && handled - " +
-//                "${autoModel.graphNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
+//                "${projectStructure.graphNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
 
         setState {
-            structure = autoModel
+            structure = projectStructure
         }
     }
 
@@ -179,7 +179,7 @@ class ProjectController(
 
                 renderSidebar()
 
-                renderStage()
+                renderStage(graphNotation)
             }
         }
     }
@@ -272,7 +272,9 @@ class ProjectController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderStage() {
+    private fun RBuilder.renderStage(
+            graphNotation: GraphNotation
+    ) {
         styledDiv {
             val headerHeight = (state.headerHeight ?: 64).px
             val leftPad = 1.em
@@ -292,11 +294,17 @@ class ProjectController(
                 +"!! ERROR: ${state.commandError}"
             }
 
-            child(ScriptController::class) {
+            props.stageController.child(this) {}
+
+//            graphNotation.documents.get(state.documentPath)
+
+
+//            state.bundlePath
+//            child(ScriptController::class) {
 //                attrs {
 //                    bundlePath = state.bundlePath
 //                }
-            }
+//            }
         }
     }
 }

@@ -2,7 +2,7 @@ package tech.kzen.auto.common.paradigm.dataflow
 
 
 /**
- * Must inject FlowInput for use in onMessage,
+ * Must inject FlowInput for use in the process method,
  *  can also inject more than one FlowInput or additional OptionalFlowInput.
  *
  * Can inject (at most one of) SingleFlowOutput or OptionalFlowOutput.
