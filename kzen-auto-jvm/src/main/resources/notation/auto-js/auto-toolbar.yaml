@@ -14,9 +14,9 @@ RibbonGroup:
       is: List
       of: RibbonTool
       definer: ParentChildAttributeDefiner
-    objectLocation:
-      is: ObjectLocation
-      definer: ObjectLocationAttributeDefiner
+#    objectLocation:
+#      is: ObjectLocation
+#      definer: ObjectLocationAttributeDefiner
 
 
 RibbonTool:
@@ -26,7 +26,8 @@ RibbonTool:
   meta:
     delegate:
       is: ObjectLocation
-      definer: WeakReferenceAttributeDefiner
+#      definer: WeakReferenceAttributeDefiner
+      definer: WeakAttributeDefiner
 
 
 ###########################################################
@@ -61,7 +62,6 @@ RibbonController:
         is: Action
     ribbonGroups:
       is: List
-#      of: ObjectLocation
       of: RibbonGroup
       definer: AutowiredAttributeDefiner
       find:

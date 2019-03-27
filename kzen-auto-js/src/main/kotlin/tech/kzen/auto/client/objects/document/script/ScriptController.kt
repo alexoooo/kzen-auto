@@ -150,7 +150,7 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun handleNavigation(documentPath: DocumentPath?) {
-        console.log("^^^^^^ script - handleNavigation", documentPath)
+//        console.log("^^^^^^ script - handleNavigation", documentPath)
 
         setState {
             this.documentPath = documentPath

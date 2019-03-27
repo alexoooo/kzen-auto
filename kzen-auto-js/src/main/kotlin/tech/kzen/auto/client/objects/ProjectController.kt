@@ -15,8 +15,10 @@ import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.objects.sidebar.SidebarController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
+import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.NotationCommand
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
@@ -30,7 +32,8 @@ class ProjectController(
 ):
         RComponent<ProjectController.Props, ProjectController.State>(props),
         ModelManager.Observer,
-        CommandBus.Observer
+        CommandBus.Observer,
+        NavigationManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -77,7 +80,8 @@ class ProjectController(
     }
 
 
-    private val handleResize: (Event) -> Unit = { _ ->
+    // TODO: is there a way to directly observe the headerElement height change?
+    private val handleResize: (Event?) -> Unit = { _ ->
         val height = headerElement?.clientHeight ?: 0
         if (state.headerHeight != height) {
             setState {
@@ -92,16 +96,17 @@ class ProjectController(
         async {
             ClientContext.modelManager.observe(this)
             ClientContext.commandBus.observe(this)
+            ClientContext.navigationManager.observe(this)
         }
 
-        async {
-            delay(1)
-
-            val height = headerElement?.clientHeight ?: 0
-            setState {
-                headerHeight = height
-            }
-        }
+//        async {
+//            delay(1)
+//
+//            val height = headerElement?.clientHeight ?: 0
+//            setState {
+//                headerHeight = height
+//            }
+//        }
 
         window.addEventListener("resize", handleResize)
     }
@@ -111,6 +116,7 @@ class ProjectController(
 //        println("ProjectController - Un-subscribed")
         ClientContext.modelManager.unobserve(this)
         ClientContext.commandBus.unobserve(this)
+        ClientContext.navigationManager.unobserve(this)
 
         window.addEventListener("resize", handleResize)
     }
@@ -160,11 +166,13 @@ class ProjectController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private fun onNavigation(bundlePath: BundlePath?) {
-//        setState {
-//            this.bundlePath = bundlePath
-//        }
-//    }
+    override fun handleNavigation(documentPath: DocumentPath?) {
+        async {
+            // NB: account for possible header resize
+            delay(1)
+            handleResize.invoke(null)
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
