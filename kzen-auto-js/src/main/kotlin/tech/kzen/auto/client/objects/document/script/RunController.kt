@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.script
+package tech.kzen.auto.client.objects.document.script
 
 import kotlinx.css.Color
 import kotlinx.css.Visibility

@@ -31,7 +31,15 @@ class NavigationManager {
 
 
     private fun publish() {
-        for (observer in observers) {
+//        console.log("^^^^ nav publishing")
+        val observersCopy = observers.toList()
+        for (observer in observersCopy) {
+            if (observer !in observers) {
+                // NB: unobserve could be called mid-way through iteration, e.g. in StageController / ScriptController
+                continue
+            }
+
+//            console.log("^^^^ nav publishing - observer", observer)
             observer.handleNavigation(documentPath)
         }
     }
@@ -62,7 +70,9 @@ class NavigationManager {
         documentPath = read()
 
         if (previous != documentPath) {
-            publish()
+//            async {
+                publish()
+//            }
         }
     }
 

@@ -60,9 +60,11 @@ class ModelManager(
     suspend fun autoNotation(): GraphNotation {
         val allNotation = notationRepository.notation()
 
+        // TODO: use profiles instead
         return allNotation.filterPaths {
             it.asRelativeFile().startsWith("base/") ||
-                    it.asRelativeFile().startsWith("auto/") ||
+                    it.asRelativeFile().startsWith("auto-js/") ||
+                    it.asRelativeFile().startsWith("auto-common/") ||
                     it.asRelativeFile().startsWith("action/")
         }
     }
@@ -71,7 +73,7 @@ class ModelManager(
     private fun graphNotation(allNotation: GraphNotation): GraphNotation {
         return allNotation.filterPaths {
             it.asRelativeFile().startsWith("base/") ||
-                    ! it.asRelativeFile().startsWith("auto/")
+                    ! it.asRelativeFile().startsWith("auto-js/")
         }
     }
 

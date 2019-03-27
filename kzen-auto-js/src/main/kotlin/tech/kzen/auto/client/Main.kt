@@ -30,7 +30,7 @@ fun main() {
 
 //            console.log("^^^ main autoGraph ^^ ", autoGraph.objects.values.keys.toString())
             val rootLocation = ObjectLocation(
-                    DocumentPath.parse("auto/auto-framework.yaml"),
+                    DocumentPath.parse("auto-js/auto-framework.yaml"),
                     ObjectPath.parse("root"))
 
             val rootInstance = autoGraph.objects.get(rootLocation)

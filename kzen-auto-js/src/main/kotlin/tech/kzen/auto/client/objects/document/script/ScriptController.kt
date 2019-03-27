@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.script
+package tech.kzen.auto.client.objects.document.script
 
 import kotlinx.css.Cursor
 import kotlinx.css.Position
@@ -77,8 +77,12 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
+//        console.log("^^^^^^ script - componentDidMount")
+
 //        println("ProjectController - Subscribed")
         async {
+//            console.log("^^^^^^ script - adding observers")
+
             ClientContext.modelManager.observe(this)
             ClientContext.executionManager.subscribe(this)
             ClientContext.insertionManager.subscribe(this)
@@ -88,6 +92,8 @@ class ScriptController:
 
 
     override fun componentWillUnmount() {
+//        console.log("^^^^^^ script - componentWillUnmount")
+
 //        println("ProjectController - Un-subscribed")
         ClientContext.modelManager.unobserve(this)
         ClientContext.executionManager.unsubscribe(this)
@@ -144,6 +150,8 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun handleNavigation(documentPath: DocumentPath?) {
+        console.log("^^^^^^ script - handleNavigation", documentPath)
+
         setState {
             this.documentPath = documentPath
         }

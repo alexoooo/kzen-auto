@@ -2,9 +2,14 @@
 ###########################################################
 
 RibbonGroup:
+  abstract: true
   is: ChildContainer
   class: tech.kzen.auto.client.objects.ribbon.RibbonGroup
+  title: ''
+  documentArchetype: Document
   meta:
+    title: String
+    documentArchetype: Document
     children:
       is: List
       of: RibbonTool
@@ -28,6 +33,8 @@ RibbonTool:
 
 ScriptGroup:
   is: RibbonGroup
+  title: "Insert"
+  documentArchetype: Script
 
 
 OpenBrowserTool:

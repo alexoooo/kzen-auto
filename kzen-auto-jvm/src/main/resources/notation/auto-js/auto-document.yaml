@@ -23,12 +23,13 @@ DocumentController:
 
 ScriptController:
   is: DocumentController
-  class: tech.kzen.auto.client.objects.script.ScriptController$Wrapper
+  class: tech.kzen.auto.client.objects.document.script.ScriptController$Wrapper
   type: Script
 
 
-PivotTableController:
-  abstract: true
-  is: Document
+QueryController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.query.QueryController$Wrapper
+  type: Query
 
 

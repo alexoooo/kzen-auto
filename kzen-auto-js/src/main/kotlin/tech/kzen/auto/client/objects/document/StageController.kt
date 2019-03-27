@@ -99,13 +99,15 @@ class StageController(
                 ?.let { ObjectName(it) }
                 ?: return
 
-        for (documentController in props.documentControllers) {
-//            console.log("^^^^^^ documentController", documentController)
-            if (parent != documentController.type().name()) {
-                continue
-            }
+        val documentController = props.documentControllers
+                .single { parent == it.type().name() }
 
-            documentController.child(this) {}
+//        console.log("^^^^^ Stage - documentController", path, documentController)
+
+        documentController.child(this) {
+//            attrs {
+//                key = parent.value
+//            }
         }
     }
 }

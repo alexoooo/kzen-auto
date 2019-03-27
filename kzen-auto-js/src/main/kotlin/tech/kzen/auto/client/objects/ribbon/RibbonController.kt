@@ -13,10 +13,14 @@ import tech.kzen.auto.client.objects.action.ActionController
 import tech.kzen.auto.client.objects.action.ObjectNameEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
+import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectName
+import tech.kzen.lib.common.api.model.ObjectPath
+import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
@@ -25,8 +29,15 @@ class RibbonController(
         props: Props
 ):
         RComponent<RibbonController.Props, RibbonController.State>(props),
-        InsertionManager.Observer
+        InsertionManager.Observer,
+        NavigationManager.Observer
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val mainObjectPath = ObjectPath.parse("main")
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var actionTypes: List<ObjectLocation>,
@@ -39,7 +50,9 @@ class RibbonController(
     class State(
             var name: ObjectName?,
             var type: ObjectLocation?,
-            var tabIndex: Int = 0
+            var tabIndex: Int = 0,
+
+            var currentRibbonGroups: List<RibbonGroup>
     ): RState
 
 
@@ -66,6 +79,7 @@ class RibbonController(
         name = null
         type = null
         tabIndex = 0
+        currentRibbonGroups = listOf()
     }
 
 
@@ -92,6 +106,31 @@ class RibbonController(
     override fun onUnselected() {
         setState {
             type = null
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun handleNavigation(documentPath: DocumentPath?) {
+        if (documentPath == null) {
+            return
+        }
+
+        val documentNotation = props.notation.documents.get(documentPath)
+
+        val mainNotation = documentNotation.objects.values[mainObjectPath]
+                ?: return
+
+        val typeName = mainNotation
+                .attributes[NotationConventions.isName]
+                ?.asString()
+                ?.let { ObjectName(it) }
+                ?: return
+
+        setState {
+            currentRibbonGroups = props
+                    .ribbonGroups
+                    .filter { it.documentArchetype.name() == typeName }
         }
     }
 
@@ -159,7 +198,7 @@ class RibbonController(
                     }
                 }
 
-                for (ribbonGroup in props.ribbonGroups) {
+                for (ribbonGroup in state.currentRibbonGroups) {
                     child(MaterialTab::class) {
                         attrs {
                             label = ribbonGroup.title()
@@ -167,21 +206,21 @@ class RibbonController(
                     }
                 }
 
-                child(MaterialTab::class) {
-                    attrs {
-                        label = "File"
-                    }
-                }
-                child(MaterialTab::class) {
-                    attrs {
-                        label = "Script"
-                    }
-                }
-                child(MaterialTab::class) {
-                    attrs {
-                        label = "Data"
-                    }
-                }
+//                child(MaterialTab::class) {
+//                    attrs {
+//                        label = "File"
+//                    }
+//                }
+//                child(MaterialTab::class) {
+//                    attrs {
+//                        label = "Script"
+//                    }
+//                }
+//                child(MaterialTab::class) {
+//                    attrs {
+//                        label = "Data"
+//                    }
+//                }
             }
 
             br {}

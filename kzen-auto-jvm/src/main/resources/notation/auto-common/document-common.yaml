@@ -22,3 +22,17 @@ Script:
     objectLocation:
       is: ObjectLocation
       definer: ObjectLocationAttributeDefiner
+
+
+Query:
+  is: Document
+  class: tech.kzen.auto.common.objects.document.QueryDocument
+#  steps: []
+  meta:
+#    steps:
+#      is: List
+#      of: Action
+    objectLocation:
+      is: ObjectLocation
+      definer: ObjectLocationAttributeDefiner
+
