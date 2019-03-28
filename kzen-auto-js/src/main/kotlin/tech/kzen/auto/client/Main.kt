@@ -4,9 +4,7 @@ import react.dom.render
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.lib.common.api.model.DocumentPath
-import tech.kzen.lib.common.api.model.ObjectLocation
-import tech.kzen.lib.common.api.model.ObjectPath
+import tech.kzen.lib.common.api.model.ObjectReference
 import tech.kzen.lib.common.context.GraphCreator
 import tech.kzen.lib.common.context.GraphDefiner
 import tech.kzen.lib.common.structure.GraphStructure
@@ -29,9 +27,8 @@ fun main() {
             val autoGraph = GraphCreator.createGraph(autoStructure, graphDefinition)
 
 //            console.log("^^^ main autoGraph ^^ ", autoGraph.objects.values.keys.toString())
-            val rootLocation = ObjectLocation(
-                    DocumentPath.parse("auto-js/auto-framework.yaml"),
-                    ObjectPath.parse("root"))
+            val rootLocation = autoGraph.objects
+                    .locate(ObjectReference.parse("root"))
 
             val rootInstance = autoGraph.objects.get(rootLocation)
                     as? ReactWrapper<*>

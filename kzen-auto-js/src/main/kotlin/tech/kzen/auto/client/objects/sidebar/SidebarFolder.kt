@@ -11,6 +11,7 @@ import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.lib.common.api.model.DocumentName
 import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
@@ -32,7 +33,8 @@ class SidebarFolder(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var structure: GraphStructure,
-            var selectedDocumentPath: DocumentPath?
+            var selectedDocumentPath: DocumentPath?,
+            var documentArchetypes: List<DocumentArchetype>
     ): RProps
 
 
@@ -302,7 +304,7 @@ class SidebarFolder(
 
             child(MaterialIconButton::class) {
                 attrs {
-                    title = "Options..."
+                    title = "Project options..."
                     onClick = ::onOptionsToggle
 
                     buttonRef = {
@@ -338,6 +340,22 @@ class SidebarFolder(
             marginRight = 1.em
         }
 
+        for (documentArchetype in props.documentArchetypes) {
+            child(MaterialMenuItem::class) {
+                attrs {
+                    key = documentArchetype.name().value
+                    onClick = ::onOptionsClose
+                }
+                child(PlaylistPlayIcon::class) {
+                    attrs {
+                        style = iconStyle
+                    }
+                }
+                +documentArchetype.name().value
+            }
+        }
+
+
         child(MaterialMenuItem::class) {
             attrs {
                 onClick = ::onAdd
@@ -361,7 +379,7 @@ class SidebarFolder(
                     style = iconStyle
                 }
             }
-            +"New Pivot Table..."
+            +"New Query..."
         }
     }
 }

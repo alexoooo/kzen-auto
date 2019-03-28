@@ -4,13 +4,15 @@ import kotlinx.css.em
 import react.*
 import styled.css
 import styled.styledDiv
+import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.DocumentName
 import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 
 
@@ -22,14 +24,8 @@ class SidebarController(
         NavigationManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val documentBase = DocumentName("main")
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     class Props(
-//            var onNavigation: ((BundlePath?) -> Unit)?
+        var documentArchetypes: List<DocumentArchetype>
     ): RProps
 
 
@@ -39,6 +35,22 @@ class SidebarController(
     ): RState
 
 
+    @Suppress("unused")
+    class Wrapper(
+            private val documentArchetypes: List<DocumentArchetype>
+    ): ReactWrapper<SidebarController.Props> {
+        override fun child(input: RBuilder, handler: RHandler<SidebarController.Props>): ReactElement {
+            return input.child(SidebarController::class) {
+                attrs {
+                    documentArchetypes = this@Wrapper.documentArchetypes
+                }
+
+                handler()
+            }
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun mainDocument(graphStructure: GraphStructure): List<DocumentPath> {
         return graphStructure
@@ -46,7 +58,7 @@ class SidebarController(
                 .documents
                 .values
                 .keys
-                .filter { it.segments[0] == documentBase }
+                .filter { it.segments[0] == NotationConventions.mainDocumentName }
     }
 
 
@@ -100,50 +112,6 @@ class SidebarController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private fun generateBundleName(): BundlePath {
-//        val prefix = "Script"
-//
-//        val suffix = findSuffix(prefix, state.structure)
-//
-//        return resolve(prefix + suffix)
-//    }
-
-
-//    private fun findSuffix(
-//            prefix: String,
-//            structure: GraphStructure?
-//    ): String {
-//        if (structure == null) {
-//            return "-" + Random.nextInt()
-//        }
-//        else {
-//            for (i in 2 .. 999) {
-//                val candidateSuffix = "-$i"
-//                val candidatePath = resolve(prefix + candidateSuffix)
-//
-//                if (structure.graphNotation.bundles.values.containsKey(candidatePath)) {
-//                    continue
-//                }
-//
-//                return candidateSuffix
-//            }
-//
-//            return "-" + Random.nextInt()
-//        }
-//    }
-
-
-//    private fun resolve(name: String): BundlePath {
-//        return BundlePath(listOf(bundleBase, "$name.yaml"))
-//    }
-
-
-//    private suspend fun createBundle(bundlePath: BundlePath) {
-//        ClientContext.commandBus.apply(CreateBundleCommand(bundlePath))
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val structure = state.structure
                 ?: return
@@ -160,6 +128,7 @@ class SidebarController(
                 attrs {
                     this.structure = structure
                     selectedDocumentPath = state.documentPath
+                    documentArchetypes = props.documentArchetypes
                 }
             }
         }

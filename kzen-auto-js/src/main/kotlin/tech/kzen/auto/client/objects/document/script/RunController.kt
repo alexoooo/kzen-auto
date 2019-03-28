@@ -51,9 +51,9 @@ class RunController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(projectModel: GraphStructure, event: NotationEvent?) {
+    override suspend fun handleModel(projectStructure: GraphStructure, event: NotationEvent?) {
         setState {
-            structure = projectModel
+            structure = projectStructure
         }
     }
 

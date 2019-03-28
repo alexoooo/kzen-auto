@@ -49,6 +49,7 @@ class ProjectController(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var ribbonController: RibbonController.Wrapper,
+            var sidebarController: SidebarController.Wrapper,
             var stageController: StageController.Wrapper
     ): RProps
 
@@ -65,12 +66,14 @@ class ProjectController(
     @Suppress("unused")
     class Wrapper(
             private val ribbonController: RibbonController.Wrapper,
+            private val sidebarController: SidebarController.Wrapper,
             private val stageController: StageController.Wrapper
     ): ReactWrapper<ProjectController.Props> {
         override fun child(input: RBuilder, handler: RHandler<ProjectController.Props>): ReactElement {
             return input.child(ProjectController::class) {
                 attrs {
                     ribbonController = this@Wrapper.ribbonController
+                    sidebarController = this@Wrapper.sidebarController
                     stageController = this@Wrapper.stageController
                 }
 
@@ -187,7 +190,7 @@ class ProjectController(
 
                 renderSidebar()
 
-                renderStage(graphNotation)
+                renderStage(/*graphNotation*/)
             }
         }
     }
@@ -269,11 +272,7 @@ class ProjectController(
                     marginTop = shadowWidth
                 }
 
-                child(SidebarController::class) {
-//                    attrs {
-//                        onNavigation = ::onNavigation
-//                    }
-                }
+                props.sidebarController.child(this) {}
             }
         }
     }
@@ -281,7 +280,7 @@ class ProjectController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderStage(
-            graphNotation: GraphNotation
+//            graphNotation: GraphNotation
     ) {
         styledDiv {
             val headerHeight = (state.headerHeight ?: 64).px
@@ -303,16 +302,6 @@ class ProjectController(
             }
 
             props.stageController.child(this) {}
-
-//            graphNotation.documents.get(state.documentPath)
-
-
-//            state.bundlePath
-//            child(ScriptController::class) {
-//                attrs {
-//                    bundlePath = state.bundlePath
-//                }
-//            }
         }
     }
 }

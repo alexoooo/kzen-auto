@@ -1,4 +1,21 @@
 
+RibbonController:
+  class: tech.kzen.auto.client.objects.ribbon.RibbonController.Wrapper
+  meta:
+    actionTypes:
+      is: List
+      of: ObjectLocation
+      definer: WeakAutowiredAttributeDefiner
+      find:
+        is: Action
+    ribbonGroups:
+      is: List
+      of: RibbonGroup
+      definer: AutowiredAttributeDefiner
+      find:
+        is: RibbonGroup
+
+
 ###########################################################
 
 RibbonGroup:
@@ -48,22 +65,3 @@ CloseBrowserTool:
   is: RibbonTool
   parent: ScriptGroup
   delegate: CloseBrowser
-
-
-
-RibbonController:
-  class: tech.kzen.auto.client.objects.ribbon.RibbonController.Wrapper
-  meta:
-    actionTypes:
-      is: List
-      of: ObjectLocation
-      definer: WeakAutowiredAttributeDefiner
-      find:
-        is: Action
-    ribbonGroups:
-      is: List
-      of: RibbonGroup
-      definer: AutowiredAttributeDefiner
-      find:
-        is: RibbonGroup
-

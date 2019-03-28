@@ -9,11 +9,13 @@ ReactWrapper:
 
 ProjectController:
   abstract: true
-  class: tech.kzen.auto.client.objects.ProjectController.Wrapper
+  class: tech.kzen.auto.client.objects.ProjectController$Wrapper
   ribbonController: RibbonController
+  sidebarController: SidebarController
   stageController: StageController
   meta:
     ribbonController: RibbonController
+    sidebarController: SidebarController
     stageController: StageController
 
 

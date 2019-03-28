@@ -1,0 +1,10 @@
+
+SidebarController:
+  class: tech.kzen.auto.client.objects.sidebar.SidebarController$Wrapper
+  meta:
+    documentArchetypes:
+      is: List
+      of: Document
+      definer: AutowiredAttributeDefiner
+      find:
+        is: Document
