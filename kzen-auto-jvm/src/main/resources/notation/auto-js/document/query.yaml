@@ -1,0 +1,9 @@
+
+
+QueryController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.query.QueryController$Wrapper
+  type: Query
+
+
+###########################################################

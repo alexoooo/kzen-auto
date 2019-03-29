@@ -1,0 +1,27 @@
+
+
+ScriptController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.script.ScriptController$Wrapper
+  type: Script
+
+
+###########################################################
+
+
+ScriptGroup:
+  is: RibbonGroup
+  title: "Insert"
+  documentArchetype: Script
+
+
+OpenBrowserTool:
+  is: RibbonTool
+  parent: ScriptGroup
+  delegate: OpenBrowser
+
+
+CloseBrowserTool:
+  is: RibbonTool
+  parent: ScriptGroup
+  delegate: CloseBrowser

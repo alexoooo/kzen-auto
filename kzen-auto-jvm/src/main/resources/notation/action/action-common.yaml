@@ -2,15 +2,6 @@
 
 ###########################################################
 
-#ResultCodec:
-#  abstract: true
-#  class: tech.kzen.auto.common.api.ResultCodec
-
-
-#NullCodec:
-#  is: ResultCodec
-#  class: tech.kzen.auto.common.objects.codec.NullCodec
-
 
 Action:
   abstract: true

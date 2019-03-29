@@ -48,8 +48,8 @@ class ProjectController(
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var ribbonController: RibbonController.Wrapper,
             var sidebarController: SidebarController.Wrapper,
+            var ribbonController: RibbonController.Wrapper,
             var stageController: StageController.Wrapper
     ): RProps
 
@@ -65,8 +65,8 @@ class ProjectController(
 
     @Suppress("unused")
     class Wrapper(
-            private val ribbonController: RibbonController.Wrapper,
             private val sidebarController: SidebarController.Wrapper,
+            private val ribbonController: RibbonController.Wrapper,
             private val stageController: StageController.Wrapper
     ): ReactWrapper<ProjectController.Props> {
         override fun child(input: RBuilder, handler: RHandler<ProjectController.Props>): ReactElement {

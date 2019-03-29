@@ -1,26 +1,92 @@
 
-###########################################################
-
-ReactWrapper:
-  abstract: true
-  class: tech.kzen.auto.client.api.ReactWrapper
-
-###########################################################
 
 ProjectController:
   abstract: true
   class: tech.kzen.auto.client.objects.ProjectController$Wrapper
-  ribbonController: RibbonController
   sidebarController: SidebarController
+  ribbonController: RibbonController
   stageController: StageController
   meta:
-    ribbonController: RibbonController
     sidebarController: SidebarController
+    ribbonController: RibbonController
     stageController: StageController
 
 
 ###########################################################
 
-root:
-  is: ProjectController
 
+SidebarController:
+  class: tech.kzen.auto.client.objects.sidebar.SidebarController$Wrapper
+  meta:
+    documentArchetypes:
+      is: List
+      of: Document
+      definer: AutowiredAttributeDefiner
+      find:
+        is: Document
+
+
+###########################################################
+
+
+RibbonController:
+  class: tech.kzen.auto.client.objects.ribbon.RibbonController.Wrapper
+  meta:
+    actionTypes:
+      is: List
+      of: ObjectLocation
+      definer: WeakAutowiredAttributeDefiner
+      find:
+        is: Action
+    ribbonGroups:
+      is: List
+      of: RibbonGroup
+      definer: AutowiredAttributeDefiner
+      find:
+        is: RibbonGroup
+
+
+RibbonGroup:
+  abstract: true
+  is: ChildContainer
+  class: tech.kzen.auto.client.objects.ribbon.RibbonGroup
+  title: ''
+  documentArchetype: Document
+  meta:
+    title: String
+    documentArchetype: Document
+    children:
+      is: List
+      of: RibbonTool
+      definer: ParentChildAttributeDefiner
+
+
+RibbonTool:
+  abstract: true
+  is: ParentPointer
+  class: tech.kzen.auto.client.objects.ribbon.RibbonTool
+  meta:
+    delegate:
+      is: ObjectLocation
+      definer: WeakAttributeDefiner
+
+
+###########################################################
+
+
+StageController:
+  class: tech.kzen.auto.client.objects.document.StageController.Wrapper
+  meta:
+    documentControllers:
+      is: List
+      of: DocumentController
+      definer: AutowiredAttributeDefiner
+      find:
+        is: DocumentController
+
+
+DocumentController:
+  abstract: true
+  is: ReactWrapper
+  meta:
+    type: Document

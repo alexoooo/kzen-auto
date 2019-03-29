@@ -1,0 +1,13 @@
+
+
+root:
+  is: ProjectController
+
+
+###########################################################
+
+
+ReactWrapper:
+  abstract: true
+  class: tech.kzen.auto.client.api.ReactWrapper
+
