@@ -58,7 +58,7 @@ class SidebarController(
                 .documents
                 .values
                 .keys
-                .filter { it.segments[0] == NotationConventions.mainDocumentName }
+                .filter { it.startsWith(NotationConventions.mainDocumentPath) }
     }
 
 

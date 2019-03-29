@@ -43,11 +43,13 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun createDocument(
-            documentPath: DocumentPath
+            documentPath: DocumentPath,
+            deparsedDocumentNotation: String
     ): Digest {
         return getDigest(
                 CommonRestApi.commandDocumentCreate,
-                CommonRestApi.paramDocumentPath to documentPath.asString())
+                CommonRestApi.paramDocumentPath to documentPath.asString(),
+                CommonRestApi.paramDocumentNotation to deparsedDocumentNotation)
     }
 
 

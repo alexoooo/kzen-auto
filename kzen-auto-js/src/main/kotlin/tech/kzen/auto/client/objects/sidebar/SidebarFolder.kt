@@ -15,6 +15,7 @@ import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.lib.common.api.model.DocumentName
 import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.CreateDocumentCommand
 import kotlin.random.Random
 
@@ -26,7 +27,7 @@ class SidebarFolder(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val documentBase = DocumentName("main")
+        private val documentBase = NotationConventions.mainDocumentPath
     }
 
 
@@ -76,7 +77,7 @@ class SidebarFolder(
                     .documents
                     .values
                     .keys
-                    .filter { it.segments[0] == documentBase }
+                    .filter { it.startsWith(documentBase) }
         }
         return mainDocumentsCache!!
     }
@@ -128,8 +129,10 @@ class SidebarFolder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun generateDocumentName(): DocumentPath {
-        val prefix = "Script"
+    private fun generateDocumentName(
+            archetype: DocumentArchetype
+    ): DocumentPath {
+        val prefix = archetype.name().value
 
         val suffix = findSuffix(prefix, props.structure)
 
@@ -162,21 +165,28 @@ class SidebarFolder(
 
 
     private fun resolve(name: String): DocumentPath {
-        return DocumentPath(listOf(documentBase, DocumentName("$name.yaml")))
+        return documentBase.withName(DocumentName.ofFilenameWithDefaultExtension(name))
     }
 
 
-    private suspend fun createDocument(documentPath: DocumentPath) {
-        ClientContext.commandBus.apply(CreateDocumentCommand(documentPath))
+    private suspend fun createDocument(
+            documentPath: DocumentPath,
+            archetype: DocumentArchetype
+    ) {
+        val newDocument = archetype.newDocument()
+//        console.log("^^^^^ createDocument", newDocument)
+
+        ClientContext.commandBus.apply(
+                CreateDocumentCommand(documentPath, newDocument))
     }
 
 
-    private fun onAdd() {
+    private fun onAdd(archetype: DocumentArchetype) {
         onOptionsClose()
 
         async {
-            val newBundleName = generateDocumentName()
-            createDocument(newBundleName)
+            val newBundleName = generateDocumentName(archetype)
+            createDocument(newBundleName, archetype)
         }
     }
 
@@ -344,42 +354,42 @@ class SidebarFolder(
             child(MaterialMenuItem::class) {
                 attrs {
                     key = documentArchetype.name().value
-                    onClick = ::onOptionsClose
+                    onClick = {
+                        onAdd(documentArchetype)
+                    }
                 }
                 child(PlaylistPlayIcon::class) {
                     attrs {
                         style = iconStyle
                     }
                 }
-                +documentArchetype.name().value
+                +"New ${documentArchetype.name().value}..."
             }
         }
 
-
-        child(MaterialMenuItem::class) {
-            attrs {
-                onClick = ::onAdd
+//        child(MaterialMenuItem::class) {
+//            attrs {
+////                onClick = ::onAdd
 //                onClick = ::onOptionsClose
-            }
-            child(PlaylistPlayIcon::class) {
-                attrs {
-                    style = iconStyle
-                }
-            }
-            +"New Script..."
-        }
-
-        child(MaterialMenuItem::class) {
-            attrs {
-//                onClick = ::onShiftUp
-                onClick = ::onOptionsClose
-            }
-            child(TableChartIcon::class) {
-                attrs {
-                    style = iconStyle
-                }
-            }
-            +"New Query..."
-        }
+//            }
+//            child(PlaylistPlayIcon::class) {
+//                attrs {
+//                    style = iconStyle
+//                }
+//            }
+//            +"New Script..."
+//        }
+//
+//        child(MaterialMenuItem::class) {
+//            attrs {
+//                onClick = ::onOptionsClose
+//            }
+//            child(TableChartIcon::class) {
+//                attrs {
+//                    style = iconStyle
+//                }
+//            }
+//            +"New Query..."
+//        }
     }
 }

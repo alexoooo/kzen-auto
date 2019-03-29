@@ -142,7 +142,7 @@ class AttributeEditor(
             ClientContext.commandBus.apply(UpsertAttributeCommand(
                     props.objectLocation,
                     props.attributeName,
-                    ScalarAttributeNotation(state.value)))
+                    ScalarAttributeNotation(state.value!!)))
         }
         else {
             ClientContext.commandBus.apply(UpsertAttributeCommand(

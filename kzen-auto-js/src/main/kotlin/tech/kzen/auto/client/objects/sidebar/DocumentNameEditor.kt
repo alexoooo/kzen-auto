@@ -65,26 +65,11 @@ class DocumentNameEditor(
 
 
     private fun saveAsync() {
-//        val adjustedName =
-//                if (state.name.isBlank()) {
-//                    NameConventions.randomAnonymous()
-//                }
-//                else {
-//                    ObjectName(state.objectName)
-//                }
-//
-//        if (state.objectName != adjustedName.value) {
-////            console.log("$$$$$$ saveAsync - '${state.objectName}' != '$adjustedName'")
-//            setState {
-//                objectName = adjustedName.value
-//            }
-//        }
-
         async {
 //            // NB: not sure why this is necessary, without it state.saving doesn't show
 //            delay(1)
 
-            val nameWithExtension = DocumentName(state.name + ".yaml")
+            val nameWithExtension = DocumentName.ofFilenameWithDefaultExtension(state.name)
             ClientContext.commandBus.apply(RenameDocumentRefactorCommand(
                     props.documentPath, nameWithExtension))
 
@@ -103,9 +88,7 @@ class DocumentNameEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun displayPath(): String {
-        val segment = props.documentPath.segments.last()
-//        console.log("^^^^^ ", props.documentPath, segment, segment.value)
-        return segment.value.substringBeforeLast(".")
+        return props.documentPath.name!!.value.substringBeforeLast(".")
     }
 
 

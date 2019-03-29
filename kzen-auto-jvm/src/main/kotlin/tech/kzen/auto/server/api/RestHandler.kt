@@ -15,6 +15,7 @@ import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.api.model.*
 import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.common.structure.notation.model.AttributeNotation
+import tech.kzen.lib.common.structure.notation.model.DocumentNotation
 import tech.kzen.lib.common.structure.notation.model.ObjectNotation
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.util.Digest
@@ -136,8 +137,12 @@ class RestHandler {
         val documentPath: DocumentPath = serverRequest.getParam(
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
+        val documentBody: DocumentNotation = serverRequest.getParam(CommonRestApi.paramDocumentNotation) {
+            ServerContext.yamlParser.parseDocument(IoUtils.utf8Encode(it))
+        }
+
         return applyAndDigest(
-                CreateDocumentCommand(documentPath))
+                CreateDocumentCommand(documentPath, documentBody))
     }
 
 

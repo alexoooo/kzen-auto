@@ -6,6 +6,7 @@ import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.common.structure.notation.io.NotationParser
 import tech.kzen.lib.common.structure.notation.repo.NotationRepository
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.platform.IoUtils
 
 
 // TODO: move to lib?
@@ -88,9 +89,11 @@ class CommandBus(
 
     private suspend fun applyRest(command: NotationCommand): Digest =
         when (command) {
-            is CreateDocumentCommand ->
+            is CreateDocumentCommand -> {
+                val deparsed = notationParser.deparseDocument(command.documentNotation, ByteArray(0))
                 restClient.createDocument(
-                        command.documentPath)
+                        command.documentPath, IoUtils.utf8Decode(deparsed))
+            }
 
 
             is DeleteDocumentCommand ->

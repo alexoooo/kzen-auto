@@ -41,6 +41,7 @@ object CommonRestApi {
     const val paramObjectNotation = "body"
     const val paramObjectName = "name"
     const val paramDocumentName = "file"
+    const val paramDocumentNotation = "document"
     const val paramAttributeName = "attribute"
     const val paramAttributePath = "in-attribute"
     const val paramAttributeKey = "key"
