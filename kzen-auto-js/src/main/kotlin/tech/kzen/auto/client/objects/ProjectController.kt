@@ -161,7 +161,7 @@ class ProjectController(
 
 
     override fun onCommandFailedInClient(command: NotationCommand, cause: Throwable) {
-//        console.log("%%%%%%% onCommandFailedInClient", command, cause)
+        console.log("%%%%%%% onCommandFailedInClient", command, cause)
         setState {
             commandError = "${cause.message}"
         }

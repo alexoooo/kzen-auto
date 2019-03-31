@@ -209,7 +209,7 @@ class RibbonController(
         val currentRibbon = state.currentRibbonGroups.singleOrNull()
                 ?: return
 
-        console.log("^^^^^ currentRibbon", currentRibbon)
+//        console.log("^^^^^ currentRibbon", currentRibbon)
 
         for (ribbonTool in currentRibbon.children) {
             child(MaterialButton::class) {

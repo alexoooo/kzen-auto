@@ -58,12 +58,12 @@ class CommandBus(
             clientRepository.apply(command)
         }
         catch (e: Throwable) {
-//            console.log("CommandBus - caught error in client: $command", e)
+            console.log("CommandBus - caught error in client: $command", e)
             onCommandFailedInClient(command, e)
             return
         }
 
-//        println("CommandBus - client event: $event")
+        console.log("CommandBus - client event: $event")
 
 //        val bundleValue = ClientContext.notationMediaCache.read(NotationConventions.mainPath)
 //        println("CommandBus - new bundle value !!: ${IoUtils.utf8Decode(bundleValue)}")

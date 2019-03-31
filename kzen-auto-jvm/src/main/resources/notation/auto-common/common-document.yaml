@@ -6,7 +6,7 @@ Document:
     icon: String
     objectLocation:
       is: ObjectLocation
-      definer: ObjectLocationAttributeDefiner
+      by: SelfLocation
 
 
 ###########################################################
@@ -21,9 +21,6 @@ Script:
     steps:
       is: List
       of: Action
-#    objectLocation:
-#      is: ObjectLocation
-#      definer: ObjectLocationAttributeDefiner
 
 
 Query:

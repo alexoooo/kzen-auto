@@ -22,7 +22,7 @@ abstract class DocumentArchetype(
                     ?: return null
 
             return mainObject
-                    .attributes[NotationConventions.isName]
+                    .attributes[NotationConventions.isAttributeName]
                     ?.asString()
                     ?.let { ObjectName(it) }
         }

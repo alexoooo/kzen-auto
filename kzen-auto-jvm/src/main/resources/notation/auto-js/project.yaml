@@ -6,10 +6,6 @@ ProjectController:
   sidebarController: SidebarController
   ribbonController: RibbonController
   stageController: StageController
-  meta:
-    sidebarController: SidebarController
-    ribbonController: RibbonController
-    stageController: StageController
 
 
 ###########################################################
@@ -21,9 +17,7 @@ SidebarController:
     documentArchetypes:
       is: List
       of: Document
-      definer: AutowiredAttributeDefiner
-      find:
-        is: Document
+      by: Autowired
 
 
 ###########################################################
@@ -35,15 +29,12 @@ RibbonController:
     actionTypes:
       is: List
       of: ObjectLocation
-      definer: WeakAutowiredAttributeDefiner
-      find:
-        is: Action
+      by: AutowiredNominal
+      find: Action
     ribbonGroups:
       is: List
       of: RibbonGroup
-      definer: AutowiredAttributeDefiner
-      find:
-        is: RibbonGroup
+      by: Autowired
 
 
 RibbonGroup:
@@ -54,11 +45,10 @@ RibbonGroup:
   documentArchetype: Document
   meta:
     title: String
-    documentArchetype: Document
     children:
       is: List
       of: RibbonTool
-      definer: ParentChildAttributeDefiner
+      by: ParentChild
 
 
 RibbonTool:
@@ -68,7 +58,7 @@ RibbonTool:
   meta:
     delegate:
       is: ObjectLocation
-      definer: WeakAttributeDefiner
+      by: Nominal
 
 
 ###########################################################
@@ -80,9 +70,7 @@ StageController:
     documentControllers:
       is: List
       of: DocumentController
-      definer: AutowiredAttributeDefiner
-      find:
-        is: DocumentController
+      by: Autowired
 
 
 DocumentController:

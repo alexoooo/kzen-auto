@@ -240,7 +240,7 @@ class ObjectNameEditor(
 
     private fun title(): String {
         val type = props.notation.getString(
-                props.objectLocation, NotationConventions.isPath)
+                props.objectLocation, NotationConventions.isAttributePath)
 
         return props
                 .notation

@@ -3,6 +3,7 @@ package tech.kzen.auto.server.api
 import com.google.common.io.MoreFiles
 import com.google.common.io.Resources
 import kotlinx.coroutines.runBlocking
+import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
@@ -36,13 +37,17 @@ class RestHandler {
 
         val resourceDirectories = discoverResourceDirectories()
 
+        private const val cssExtension = "css"
+
         val allowedExtensions = listOf(
                 "html",
                 "js",
-                "css",
+                cssExtension,
                 "svg",
                 "png",
                 "ico")
+
+        private val cssMediaType = MediaType.valueOf("text/css")
 
 
         private const val jvmSuffix = "-jvm"
@@ -519,6 +524,7 @@ class RestHandler {
                 }
 
         val path = Paths.get(resolvedPath).normalize()
+        val extension = MoreFiles.getFileExtension(path)
 
         if (! isResourceAllowed(path)) {
             return ServerResponse
@@ -532,11 +538,26 @@ class RestHandler {
                         .build()
 
         val responseBuilder = ServerResponse.ok()
+
+        val responseType: MediaType? = responseType(extension)
+        if (responseType !== null) {
+            responseBuilder.contentType(responseType)
+        }
+
         return if (bytes.isEmpty()) {
             responseBuilder.build()
         }
         else {
             responseBuilder.body(Mono.just(bytes))
+        }
+    }
+
+
+    private fun responseType(extension: String): MediaType? {
+        return when (extension) {
+            cssExtension -> cssMediaType
+
+            else -> null
         }
     }
 

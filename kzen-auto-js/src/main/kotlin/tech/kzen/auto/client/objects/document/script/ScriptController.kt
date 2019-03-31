@@ -47,7 +47,7 @@ class ScriptController:
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val stepsAttributePath = AttributePath.parse("steps")
+        val stepsAttributePath = AttributePath.parse("steps")
     }
 
 
@@ -238,14 +238,14 @@ class ScriptController:
             insertionPoint(0)
         }
         else {
-            nonEmptySteps(graphStructure, documentNotation, documentPath, stepReferences)
+            nonEmptySteps(graphStructure, /*documentNotation,*/ documentPath, stepReferences)
         }
     }
 
 
     private fun RBuilder.nonEmptySteps(
             graphStructure: GraphStructure,
-            documentNotation: DocumentNotation,
+//            documentNotation: DocumentNotation,
             documentPath: DocumentPath,
             stepReferences: List<ObjectReference>
     ) {
@@ -270,12 +270,12 @@ class ScriptController:
                         status)
 
                 if (index < stepReferences.size - 1) {
-                    downArrowWithInsertionPoint(index)
+                    downArrowWithInsertionPoint(index + 1)
                 }
             }
         }
 
-        insertionPoint(documentNotation.objects.values.size)
+        insertionPoint(stepReferences.size)
     }
 
 
@@ -297,7 +297,7 @@ class ScriptController:
                     top = 0.em
                     left = 0.em
                 }
-                insertionPoint(index + 1)
+                insertionPoint(index)
             }
 
             styledDiv {
@@ -331,6 +331,8 @@ class ScriptController:
                     title = "Insert action here"
                 }
             }
+
+//            +"Index: $index"
 
             child(MaterialIconButton::class) {
                 attrs {
