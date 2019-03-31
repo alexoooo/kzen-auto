@@ -14,9 +14,11 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.lib.common.api.model.DocumentName
 import tech.kzen.lib.common.api.model.DocumentPath
+import tech.kzen.lib.common.api.model.ObjectReference
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.CreateDocumentCommand
+import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import kotlin.random.Random
 
 
@@ -282,6 +284,7 @@ class SidebarFolder(
                     attrs {
                         key = documentPath.asString()
 
+                        structure = props.structure
                         this.documentPath = documentPath
                         selected = (documentPath == props.selectedDocumentPath)
                     }
@@ -351,6 +354,14 @@ class SidebarFolder(
         }
 
         for (documentArchetype in props.documentArchetypes) {
+            val archetypeLocation = props.structure.graphNotation.coalesce
+                    .locate(ObjectReference.ofName(documentArchetype.name()))
+
+            val icon = (props.structure.graphNotation.coalesce
+                    .get(archetypeLocation)
+                    .get(SidebarFile.iconAttribute) as ScalarAttributeNotation
+                    ).value
+
             child(MaterialMenuItem::class) {
                 attrs {
                     key = documentArchetype.name().value
@@ -358,38 +369,15 @@ class SidebarFolder(
                         onAdd(documentArchetype)
                     }
                 }
-                child(PlaylistPlayIcon::class) {
+
+                child(iconClassForName(icon)) {
                     attrs {
                         style = iconStyle
                     }
                 }
+
                 +"New ${documentArchetype.name().value}..."
             }
         }
-
-//        child(MaterialMenuItem::class) {
-//            attrs {
-////                onClick = ::onAdd
-//                onClick = ::onOptionsClose
-//            }
-//            child(PlaylistPlayIcon::class) {
-//                attrs {
-//                    style = iconStyle
-//                }
-//            }
-//            +"New Script..."
-//        }
-//
-//        child(MaterialMenuItem::class) {
-//            attrs {
-//                onClick = ::onOptionsClose
-//            }
-//            child(TableChartIcon::class) {
-//                attrs {
-//                    style = iconStyle
-//                }
-//            }
-//            +"New Query..."
-//        }
     }
 }

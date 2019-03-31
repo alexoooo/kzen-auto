@@ -3,7 +3,6 @@ package tech.kzen.auto.client.objects.document.query
 import react.*
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.lib.common.api.model.ObjectPath
 
 
 class QueryController:
@@ -13,13 +12,6 @@ class QueryController:
 //        InsertionManager.Observer,
 //        NavigationManager.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val mainObjectPath = ObjectPath.parse("main")
-//        private val stepsAttributePath = AttributePath.parse("steps")
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     class State(
 //            var documentPath: DocumentPath?,

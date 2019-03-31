@@ -39,6 +39,12 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "Send" ->
             SendIcon::class
 
+        "PlaylistPlay" ->
+            PlaylistPlayIcon::class
+
+        "TableChart" ->
+            TableChartIcon::class
+
         else ->
             TextureIcon::class
     }

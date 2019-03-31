@@ -17,11 +17,10 @@ import tech.kzen.auto.client.wrap.MaterialButton
 import tech.kzen.auto.client.wrap.MaterialTab
 import tech.kzen.auto.client.wrap.MaterialTabs
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectName
-import tech.kzen.lib.common.api.model.ObjectPath
-import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
@@ -33,12 +32,6 @@ class RibbonController(
         InsertionManager.Observer,
         NavigationManager.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val mainObjectPath = ObjectPath.parse("main")
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var actionTypes: List<ObjectLocation>,
@@ -119,15 +112,7 @@ class RibbonController(
             return
         }
 
-        val documentNotation = props.notation.documents.get(documentPath)
-
-        val mainNotation = documentNotation.objects.values[mainObjectPath]
-                ?: return
-
-        val typeName = mainNotation
-                .attributes[NotationConventions.isName]
-                ?.asString()
-                ?.let { ObjectName(it) }
+        val typeName = DocumentArchetype.archetypeName(props.notation, documentPath)
                 ?: return
 
         val documentRibbonGroups = props

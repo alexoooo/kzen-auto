@@ -5,12 +5,10 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.api.model.DocumentPath
-import tech.kzen.lib.common.api.model.ObjectName
-import tech.kzen.lib.common.api.model.ObjectPath
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 
 
@@ -87,27 +85,12 @@ class StageController(
         val path = state.documentPath
                 ?: return
 
-        val document = notation.documents.values[path]
-                ?: return
-
-        val mainObject = document.objects.values[ObjectPath.parse("main")]
-                ?: return
-
-        val parent = mainObject
-                .attributes[NotationConventions.isName]
-                ?.asString()
-                ?.let { ObjectName(it) }
+        val parent = DocumentArchetype.archetypeName(notation, path)
                 ?: return
 
         val documentController = props.documentControllers
                 .single { parent == it.type().name() }
 
-//        console.log("^^^^^ Stage - documentController", path, documentController)
-
-        documentController.child(this) {
-//            attrs {
-//                key = parent.value
-//            }
-        }
+        documentController.child(this) {}
     }
 }

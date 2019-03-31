@@ -11,8 +11,13 @@ import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.DocumentArchetype
+import tech.kzen.lib.common.api.model.AttributeName
+import tech.kzen.lib.common.api.model.AttributePath
 import tech.kzen.lib.common.api.model.DocumentPath
+import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.DeleteDocumentCommand
+import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 
 
 class SidebarFile(
@@ -20,8 +25,14 @@ class SidebarFile(
 ):
         RComponent<SidebarFile.Props, SidebarFile.State>(props)
 {
+    companion object {
+        val iconAttribute = AttributePath.ofAttribute(AttributeName("icon"))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
+            var structure: GraphStructure,
             var documentPath: DocumentPath,
             var selected: Boolean
     ): RProps
@@ -109,7 +120,19 @@ class SidebarFile(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+//        val documentArchetype = props.structure.graphNotation
+
+        val archetypeLocation = DocumentArchetype
+                .archetypeLocation(props.structure.graphNotation, props.documentPath)
+                ?: return
+
+        val icon = (props.structure.graphNotation.coalesce
+                .get(archetypeLocation)
+                .get(iconAttribute) as ScalarAttributeNotation
+                ).value
+
         val indent = 2.em
+        val iconWidth = 22.px
 
         styledDiv {
             css {
@@ -129,9 +152,6 @@ class SidebarFile(
                 }
             }
 
-//            val iconWidth = 22.px
-            val iconWidth = 24.px
-
             styledDiv {
                 css {
                     position = Position.absolute
@@ -142,9 +162,9 @@ class SidebarFile(
                     height = iconWidth
                 }
 
-                child(PlaylistPlayIcon::class) {
+                child(iconClassForName(icon)) {
                     attrs {
-                        title = "Script"
+                        title = archetypeLocation.objectPath.name.value
                     }
                 }
             }

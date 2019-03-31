@@ -2,10 +2,11 @@
 Document:
   abstract: true
   class: tech.kzen.auto.common.objects.document.DocumentArchetype
-#  meta:
-#    objectLocation:
-#      is: ObjectLocation
-#      definer: ObjectLocationAttributeDefiner
+  meta:
+    icon: String
+    objectLocation:
+      is: ObjectLocation
+      definer: ObjectLocationAttributeDefiner
 
 
 ###########################################################
@@ -14,25 +15,27 @@ Document:
 Script:
   is: Document
   class: tech.kzen.auto.common.objects.document.ScriptDocument
+  icon: PlaylistPlay
   steps: []
   meta:
     steps:
       is: List
       of: Action
-    objectLocation:
-      is: ObjectLocation
-      definer: ObjectLocationAttributeDefiner
+#    objectLocation:
+#      is: ObjectLocation
+#      definer: ObjectLocationAttributeDefiner
 
 
 Query:
   is: Document
   class: tech.kzen.auto.common.objects.document.QueryDocument
+  icon: TableChart
 #  steps: []
-  meta:
+#  meta:
 #    steps:
 #      is: List
 #      of: Action
-    objectLocation:
-      is: ObjectLocation
-      definer: ObjectLocationAttributeDefiner
+#    objectLocation:
+#      is: ObjectLocation
+#      definer: ObjectLocationAttributeDefiner
 

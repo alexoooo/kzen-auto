@@ -26,8 +26,12 @@ import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.*
+import tech.kzen.lib.common.api.model.AttributePath
+import tech.kzen.lib.common.api.model.DocumentPath
+import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.api.model.ObjectReference
 import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 import tech.kzen.lib.common.structure.notation.model.DocumentNotation
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
@@ -43,7 +47,6 @@ class ScriptController:
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val mainObjectPath = ObjectPath.parse("main")
         private val stepsAttributePath = AttributePath.parse("steps")
     }
 
@@ -213,7 +216,7 @@ class ScriptController:
             documentNotation: DocumentNotation,
             documentPath: DocumentPath
     ) {
-        val mainObjectLocation = ObjectLocation(documentPath, mainObjectPath)
+        val mainObjectLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
 
         val stepsNotation = graphStructure
                 .graphNotation
