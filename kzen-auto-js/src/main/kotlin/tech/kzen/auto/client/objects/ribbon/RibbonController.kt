@@ -9,14 +9,13 @@ import react.*
 import react.dom.br
 import styled.*
 import tech.kzen.auto.client.api.ReactWrapper
+import tech.kzen.auto.client.objects.action.ActionController
+import tech.kzen.auto.client.objects.action.ObjectNameEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.NameConventions
-import tech.kzen.auto.client.wrap.MaterialButton
-import tech.kzen.auto.client.wrap.MaterialTab
-import tech.kzen.auto.client.wrap.MaterialTabs
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.api.model.ObjectLocation
@@ -120,6 +119,7 @@ class RibbonController(
                 .filter { it.documentArchetype.name() == typeName }
 
         setState {
+            tabIndex = 0
             currentRibbonGroups = documentRibbonGroups
         }
     }
@@ -206,8 +206,11 @@ class RibbonController(
 
 
     private fun RBuilder.renderSubActions() {
-        val currentRibbon = state.currentRibbonGroups.singleOrNull()
-                ?: return
+        if (state.currentRibbonGroups.isEmpty()) {
+            return
+        }
+
+        val currentRibbon = state.currentRibbonGroups[state.tabIndex]
 
 //        console.log("^^^^^ currentRibbon", currentRibbon)
 
@@ -229,84 +232,37 @@ class RibbonController(
 
                     style = reactStyle {
                         if (state.type == ribbonTool.delegate) {
-                            backgroundColor = Color.blue.lighten(50).withAlpha(0.5)
+                            color = Color.white
+                            backgroundColor = Color("#649fff")
+//                            backgroundColor = Color.blue.lighten(50).withAlpha(0.5)
+                        }
+
+                        marginRight = 0.5.em
+                    }
+                }
+
+                val title = props.notation
+                        .transitiveAttribute(ribbonTool.delegate, ObjectNameEditor.titleAttribute)
+                        ?.asString()
+                        ?: ribbonTool.delegate.objectPath.name.value
+
+                val icon = props.notation
+                        .transitiveAttribute(ribbonTool.delegate, ActionController.iconAttribute)
+                        ?.asString()
+
+                if (icon != null) {
+                    child(iconClassForName(icon)) {
+                        attrs {
+                            style = reactStyle {
+                                marginRight = 0.25.em
+                            }
                         }
                     }
                 }
 
-
-//                val title = props.notation
-//                        .transitiveAttribute(actionType, ObjectNameEditor.titleAttribute)
-//                        ?.asString()
-//                        ?: actionType.objectPath.name.value
-//
-//                val icon = props.notation
-//                        .transitiveAttribute(actionType, ActionController.iconAttribute)
-//                        ?.asString()
-//
-//                if (icon != null) {
-//                    child(iconClassForName(icon)) {
-//                        attrs {
-//                            style = reactStyle {
-//                                marginRight = 0.25.em
-//                            }
-//                        }
-//                    }
-//                }
-//
-//                +title
-
-                +ribbonTool.delegate.objectPath.name.value
+                +title
             }
         }
-
-//        br {}
-//
-//        for (actionType in props.actionTypes) {
-//            child(MaterialButton::class) {
-//                attrs {
-//                    key = actionType.toReference().asString()
-//                    variant = "outlined"
-//                    size = "small"
-//
-//                    onClick = {
-//                        if (state.type == actionType) {
-//                            onUnSelect()
-//                        }
-//                        else {
-//                            onSelect(actionType)
-//                        }
-//                    }
-//
-//                    style = reactStyle {
-//                        if (state.type == actionType) {
-//                            backgroundColor = Color.blue.lighten(50).withAlpha(0.5)
-//                        }
-//                    }
-//                }
-//
-//                val title = props.notation
-//                        .transitiveAttribute(actionType, ObjectNameEditor.titleAttribute)
-//                        ?.asString()
-//                        ?: actionType.objectPath.name.value
-//
-//                val icon = props.notation
-//                        .transitiveAttribute(actionType, ActionController.iconAttribute)
-//                        ?.asString()
-//
-//                if (icon != null) {
-//                    child(iconClassForName(icon)) {
-//                        attrs {
-//                            style = reactStyle {
-//                                marginRight = 0.25.em
-//                            }
-//                        }
-//                    }
-//                }
-//
-//                +title
-//            }
-//        }
     }
 
 

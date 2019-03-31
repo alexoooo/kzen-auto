@@ -43,7 +43,7 @@ LeftClick:
   is: Action
   class: tech.kzen.auto.server.objects.LeftClick
   icon: TouchApp
-  title: "Left mouse click"
+  title: "Click"
   xpath: ""
   meta:
     xpath: String
@@ -54,7 +54,7 @@ SendKeys:
   is: Action
   class: tech.kzen.auto.server.objects.SendKeys
   icon: Keyboard
-  title: "Type on keyboard"
+  title: "Type"
   xpath: ""
   text: ""
   meta:
@@ -67,7 +67,7 @@ FormSubmit:
   is: Action
   class: tech.kzen.auto.server.objects.FormSubmit
   icon: Send
-  title: "Submit a form"
+  title: "Submit"
   xpath: ""
   meta:
     xpath: String

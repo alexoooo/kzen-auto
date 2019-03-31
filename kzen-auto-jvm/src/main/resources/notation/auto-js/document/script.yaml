@@ -6,7 +6,7 @@ ScriptController:
   type: Script
 
 
-###########################################################
+#######################################################################################################################
 
 
 ScriptGroup:
@@ -14,6 +14,7 @@ ScriptGroup:
   title: "Insert"
   documentArchetype: Script
 
+###########################################################
 
 OpenBrowserTool:
   is: RibbonTool
@@ -25,3 +26,40 @@ CloseBrowserTool:
   is: RibbonTool
   parent: ScriptGroup
   delegate: CloseBrowser
+
+###########################################################
+
+GoToTool:
+  is: RibbonTool
+  parent: ScriptGroup
+  delegate: GoTo
+
+LeftClickTool:
+  is: RibbonTool
+  parent: ScriptGroup
+  delegate: LeftClick
+
+SendKeysTool:
+  is: RibbonTool
+  parent: ScriptGroup
+  delegate: SendKeys
+
+FormSubmitTool:
+  is: RibbonTool
+  parent: ScriptGroup
+  delegate: FormSubmit
+
+
+#######################################################################################################################
+
+
+CommonScriptGroup:
+  is: RibbonGroup
+  title: "Basic"
+  documentArchetype: Script
+
+
+PrintlnActionTool:
+  is: RibbonTool
+  parent: CommonScriptGroup
+  delegate: PrintlnAction
