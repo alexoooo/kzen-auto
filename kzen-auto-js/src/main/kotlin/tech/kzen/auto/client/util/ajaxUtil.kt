@@ -43,14 +43,6 @@ fun <T> async(x: suspend () -> T): Promise<T> {
             }
 //
             override val context = EmptyCoroutineContext
-
-//            override fun resume(value: T) {
-//                resolve(value)
-//            }
-//
-//            override fun resumeWithException(exception: Throwable) {
-//                reject(exception)
-//            }
         })
     }
 }

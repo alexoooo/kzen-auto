@@ -19,6 +19,7 @@ import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.CreateDocumentCommand
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import kotlin.js.Date
 import kotlin.random.Random
 
 
@@ -30,6 +31,7 @@ class SidebarFolder(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val documentBase = NotationConventions.mainDocumentPath
+        private const val menuDanglingTimeout = 300
     }
 
 
@@ -51,6 +53,10 @@ class SidebarFolder(
     //-----------------------------------------------------------------------------------------------------------------
     private var buttonRef: HTMLButtonElement? = null
     private var mainDocumentsCache: List<DocumentPath>? = null
+
+    // NB: workaround for open options icon remaining after click with drag away from item
+    private var processingOption: Boolean = false
+    private var optionCompletedTime: Double? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -87,12 +93,32 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onMouseOver(itemOrMenu: Boolean) {
+        if (state.optionsOpen || processingOption) {
+//            console.log("^^^ onMouseOver hoverItem - skip due to", state.optionsOpen, processingOption)
+            return
+        }
+
+        optionCompletedTime?.let {
+            val now = Date.now()
+            val elapsed = now - it
+//            console.log("^^^ onMouseOver hoverItem - elapsed", elapsed)
+
+            if (elapsed < menuDanglingTimeout) {
+                return
+            }
+            else {
+                optionCompletedTime = null
+            }
+        }
+
         if (itemOrMenu) {
+//            console.log("^^^ onMouseOver hoverItem")
             setState {
                 hoverItem = true
             }
         }
         else {
+//            console.log("^^^ onMouseOver hoverOptions")
             setState {
                 hoverOptions = true
             }
@@ -102,11 +128,13 @@ class SidebarFolder(
 
     private fun onMouseOut(itemOrMenu: Boolean) {
         if (itemOrMenu) {
+//            console.log("^^^ onMouseOut hoverItem")
             setState {
                 hoverItem = false
             }
         }
         else {
+//            console.log("^^^ onMouseOut hoverOptions")
             setState {
                 hoverOptions = false
             }
@@ -114,14 +142,15 @@ class SidebarFolder(
     }
 
 
-    private fun onOptionsToggle() {
+    private fun onOptionsOpen() {
         setState {
-            optionsOpen = ! optionsOpen
+            optionsOpen = true
         }
     }
 
 
     private fun onOptionsClose() {
+//        console.log("^^^^^^ onOptionsClose")
         setState {
             optionsOpen = false
             hoverItem = false
@@ -150,11 +179,13 @@ class SidebarFolder(
             return "-" + Random.nextInt()
         }
         else {
-            for (i in 2 .. 999) {
-                val candidateSuffix = "-$i"
-                val candidatePath = resolve(prefix + candidateSuffix)
+            if (testSuffix(structure, prefix, "")) {
+                return ""
+            }
 
-                if (structure.graphNotation.documents.values.containsKey(candidatePath)) {
+            for (i in 1 .. 99) {
+                val candidateSuffix = "-$i"
+                if (! testSuffix(structure, prefix, candidateSuffix)) {
                     continue
                 }
 
@@ -163,6 +194,16 @@ class SidebarFolder(
 
             return "-" + Random.nextInt()
         }
+    }
+
+
+    private fun testSuffix(
+            structure: GraphStructure,
+            prefix: String,
+            candidateSuffix: String
+    ): Boolean {
+        val candidatePath = resolve(prefix + candidateSuffix)
+        return candidatePath !in structure.graphNotation.documents.values
     }
 
 
@@ -184,11 +225,16 @@ class SidebarFolder(
 
 
     private fun onAdd(archetype: DocumentArchetype) {
+        processingOption = true
         onOptionsClose()
 
         async {
             val newBundleName = generateDocumentName(archetype)
             createDocument(newBundleName, archetype)
+        }.then {
+//            console.log("Setting processingOption = false")
+            optionCompletedTime = Date.now()
+            processingOption = false
         }
     }
 
@@ -207,8 +253,6 @@ class SidebarFolder(
                 position = Position.relative
                 height = 2.em
                 width = 100.pct
-
-//                backgroundColor = Color.red
             }
 
             attrs {
@@ -318,7 +362,7 @@ class SidebarFolder(
             child(MaterialIconButton::class) {
                 attrs {
                     title = "Project options..."
-                    onClick = ::onOptionsToggle
+                    onClick = ::onOptionsOpen
 
                     buttonRef = {
                         this@SidebarFolder.buttonRef = it

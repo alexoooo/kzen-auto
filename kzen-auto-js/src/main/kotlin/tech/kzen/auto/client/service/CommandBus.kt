@@ -63,7 +63,7 @@ class CommandBus(
             return
         }
 
-        console.log("CommandBus - client event: $event")
+//        console.log("CommandBus - client event: $event")
 
 //        val bundleValue = ClientContext.notationMediaCache.read(NotationConventions.mainPath)
 //        println("CommandBus - new bundle value !!: ${IoUtils.utf8Decode(bundleValue)}")

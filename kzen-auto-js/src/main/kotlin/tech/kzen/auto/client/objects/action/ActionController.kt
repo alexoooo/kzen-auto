@@ -26,12 +26,13 @@ import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.metadata.model.ObjectMetadata
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
-import tech.kzen.lib.common.structure.notation.edit.ShiftObjectCommand
+import tech.kzen.lib.common.structure.notation.edit.ShiftInAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.AttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import tech.kzen.lib.platform.IoUtils
+import kotlin.js.Date
 
 
 class ActionController(
@@ -49,6 +50,8 @@ class ActionController(
         val headerHeight = 2.5.em
         private val runIconWidth = 40.px
         private val editIconOffset = 12.px
+
+        private const val menuDanglingTimeout = 300
     }
 
 
@@ -74,6 +77,9 @@ class ActionController(
     //-----------------------------------------------------------------------------------------------------------------
     private var editSignal = ObjectNameEditor.EditSignal()
     private var buttonRef: HTMLButtonElement? = null
+
+    private var processingOption: Boolean = false
+    private var optionCompletedTime: Double? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -133,9 +139,7 @@ class ActionController(
 
 
     private fun onRemove() {
-        onOptionsClose()
-
-        async {
+        performOption {
             val scriptMain = ObjectLocation(
                     props.objectLocation.documentPath,
                     NotationConventions.mainObjectPath)
@@ -144,8 +148,6 @@ class ActionController(
                     ScriptDocument.stepsAttributePath.attribute,
                     props.attributeNesting)
 
-//            ClientContext.commandBus.apply(RemoveObjectCommand(
-//                    props.objectLocation))
             ClientContext.commandBus.apply(RemoveObjectInAttributeCommand(
                     scriptMain, objectAttributePath))
         }
@@ -153,41 +155,65 @@ class ActionController(
 
 
     private fun onShiftUp() {
-        onOptionsClose()
-
-        val packagePath = props.objectLocation.documentPath
-        val packageNotation = props.structure.graphNotation.documents.values[packagePath]!!
-        val index = packageNotation.indexOf(props.objectLocation.objectPath)
-
-        async {
-            ClientContext.commandBus.apply(ShiftObjectCommand(
-                    props.objectLocation, PositionIndex(index.value - 1)))
-        }
+        onShift(-1)
     }
 
 
     private fun onShiftDown() {
-        onOptionsClose()
+        onShift(1)
+    }
 
-        val packagePath = props.objectLocation.documentPath
-        val packageNotation = props.structure.graphNotation.documents.values[packagePath]!!
-        val index = packageNotation.indexOf(props.objectLocation.objectPath)
 
-        async {
-            ClientContext.commandBus.apply(ShiftObjectCommand(
-                    props.objectLocation, PositionIndex(index.value + 1)))
+    private fun onShift(offset: Int) {
+        performOption {
+            // NB: makes onOptionsClose take effect faster
+//            delay(1)
+
+            val scriptMain = ObjectLocation(
+                    props.objectLocation.documentPath,
+                    NotationConventions.mainObjectPath)
+
+            val objectAttributePath = AttributePath(
+                    ScriptDocument.stepsAttributePath.attribute,
+                    props.attributeNesting)
+
+            val index = props.attributeNesting.segments.last().asIndex()!!
+//            console.log("^^^^ onShift", index, offset, props.attributeNesting)
+
+            ClientContext.commandBus.apply(ShiftInAttributeCommand(
+                    scriptMain,
+                    objectAttributePath,
+                    PositionIndex(index + offset)))
         }
     }
 
 
     private fun onEditName() {
-        onOptionsClose()
-
-        editSignal.trigger()
+        performOption {
+            editSignal.trigger()
+        }
     }
 
 
     private fun onMouseOver(cardOrActions: Boolean) {
+        if (state.optionsOpen || processingOption) {
+//            console.log("^^^ onMouseOver hoverItem - skip due to optionsOpen")
+            return
+        }
+
+        optionCompletedTime?.let {
+            val now = Date.now()
+            val elapsed = now - it
+//            console.log("^^^ onMouseOver hoverItem - elapsed", elapsed)
+
+            if (elapsed < menuDanglingTimeout) {
+                return
+            }
+            else {
+                optionCompletedTime = null
+            }
+        }
+
         if (cardOrActions) {
             setState {
                 hoverCard = true
@@ -215,9 +241,9 @@ class ActionController(
     }
 
 
-    private fun onOptionsToggle() {
+    private fun onOptionsOpen() {
         setState {
-            optionsOpen = ! optionsOpen
+            optionsOpen = true
         }
     }
 
@@ -225,9 +251,21 @@ class ActionController(
     private fun onOptionsClose() {
         setState {
             optionsOpen = false
-
             hoverCard = false
             hoverMenu = false
+        }
+    }
+
+
+    private fun performOption(action: suspend () -> Unit) {
+        processingOption = true
+        onOptionsClose()
+
+        async {
+            action.invoke()
+        }.then {
+            optionCompletedTime = Date.now()
+            processingOption = false
         }
     }
 
@@ -440,7 +478,7 @@ class ActionController(
             child(MaterialIconButton::class) {
                 attrs {
                     title = "Options..."
-                    onClick = ::onOptionsToggle
+                    onClick = ::onOptionsOpen
 
                     buttonRef = {
                         this@ActionController.buttonRef = it

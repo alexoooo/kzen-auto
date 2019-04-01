@@ -18,6 +18,7 @@ import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.DeleteDocumentCommand
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import kotlin.js.Date
 
 
 class SidebarFile(
@@ -27,6 +28,7 @@ class SidebarFile(
 {
     companion object {
         val iconAttribute = AttributePath.ofAttribute(AttributeName("icon"))
+        private const val menuDanglingTimeout = 300
     }
 
 
@@ -50,6 +52,9 @@ class SidebarFile(
     private var buttonRef: HTMLButtonElement? = null
     private var nameEditorRef: DocumentNameEditor? = null
 
+    private var processingOption: Boolean = false
+    private var optionCompletedTime: Double? = null
+
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun SidebarFile.State.init(props: SidebarFile.Props) {
@@ -59,6 +64,24 @@ class SidebarFile(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onMouseOver(itemOrMenu: Boolean) {
+        if (state.optionsOpen || processingOption) {
+//            console.log("^^^ onMouseOver hoverItem - skip due to optionsOpen")
+            return
+        }
+
+        optionCompletedTime?.let {
+            val now = Date.now()
+            val elapsed = now - it
+//            console.log("^^^ onMouseOver hoverItem - elapsed", elapsed)
+
+            if (elapsed < menuDanglingTimeout) {
+                return
+            }
+            else {
+                optionCompletedTime = null
+            }
+        }
+
         if (itemOrMenu) {
             setState {
                 hoverItem = true
@@ -86,9 +109,9 @@ class SidebarFile(
     }
 
 
-    private fun onOptionsToggle() {
+    private fun onOptionsOpen() {
         setState {
-            optionsOpen = ! optionsOpen
+            optionsOpen = true
         }
     }
 
@@ -104,16 +127,28 @@ class SidebarFile(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRename() {
-        onOptionsClose()
-        nameEditorRef?.onEdit()
+        performOption {
+            nameEditorRef?.onEdit()
+        }
     }
 
 
     private fun onRemove() {
+        performOption {
+            ClientContext.commandBus.apply(DeleteDocumentCommand(props.documentPath))
+        }
+    }
+
+
+    private fun performOption(action: suspend () -> Unit) {
+        processingOption = true
         onOptionsClose()
 
         async {
-            ClientContext.commandBus.apply(DeleteDocumentCommand(props.documentPath))
+            action.invoke()
+        }.then {
+            optionCompletedTime = Date.now()
+            processingOption = false
         }
     }
 
@@ -237,7 +272,7 @@ class SidebarFile(
             child(MaterialIconButton::class) {
                 attrs {
                     title = "Options..."
-                    onClick = ::onOptionsToggle
+                    onClick = ::onOptionsOpen
 
                     buttonRef = {
                         this@SidebarFile.buttonRef = it
