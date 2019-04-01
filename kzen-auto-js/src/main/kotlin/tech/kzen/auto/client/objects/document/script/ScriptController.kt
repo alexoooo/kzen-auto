@@ -22,14 +22,12 @@ import tech.kzen.auto.client.wrap.ArrowDownwardIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
+import tech.kzen.auto.common.objects.document.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.AttributePath
-import tech.kzen.lib.common.api.model.DocumentPath
-import tech.kzen.lib.common.api.model.ObjectLocation
-import tech.kzen.lib.common.api.model.ObjectReference
+import tech.kzen.lib.common.api.model.*
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
@@ -45,12 +43,6 @@ class ScriptController:
         InsertionManager.Observer,
         NavigationManager.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        val stepsAttributePath = AttributePath.parse("steps")
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     class State(
             var documentPath: DocumentPath?,
@@ -202,7 +194,7 @@ class ScriptController:
                     marginLeft = 1.em
                 }
 
-                steps(structure, documentNotation, documentPath!!)
+                steps(structure, /*documentNotation, */documentPath!!)
             }
 
             runController()
@@ -213,14 +205,14 @@ class ScriptController:
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.steps(
             graphStructure: GraphStructure,
-            documentNotation: DocumentNotation,
+//            documentNotation: DocumentNotation,
             documentPath: DocumentPath
     ) {
         val mainObjectLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
 
         val stepsNotation = graphStructure
                 .graphNotation
-                .transitiveAttribute(mainObjectLocation, stepsAttributePath)
+                .transitiveAttribute(mainObjectLocation, ScriptDocument.stepsAttributePath)
                 as? ListAttributeNotation
                 ?: return
 
@@ -265,7 +257,8 @@ class ScriptController:
 
                 val keyLocation = ObjectLocation(documentPath, objectPath)
 
-                action(keyLocation,
+                action(index,
+                        keyLocation,
                         graphStructure,
                         status)
 
@@ -355,6 +348,7 @@ class ScriptController:
 
 
     private fun RBuilder.action(
+            index: Int,
             objectLocation: ObjectLocation,
             graphStructure: GraphStructure,
             executionState: ExecutionState?
@@ -368,6 +362,7 @@ class ScriptController:
 
             child(ActionController::class) {
                 attrs {
+                    attributeNesting = AttributeNesting(listOf(AttributeSegment.ofIndex(index)))
                     this.objectLocation = objectLocation
                     structure = graphStructure
                     state = executionState

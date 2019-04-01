@@ -18,7 +18,8 @@ object CommonRestApi {
     const val commandObjectShift = "${commandObjectPrefix}shift"
     const val commandObjectRename = "${commandObjectPrefix}rename"
 //    const val commandObjectRelocate = "${commandObjectPrefix}relocate"
-    const val commandObjectInsert = "${commandObjectPrefix}insert"
+    const val commandObjectInsertInList = "${commandObjectPrefix}insert-in-list"
+    const val commandObjectRemoveIn = "${commandObjectPrefix}remove-in"
 
     private const val commandAttributePrefix = "${commandPrefix}attribute/"
     const val commandAttributeUpsert = "${commandAttributePrefix}upsert"
@@ -30,7 +31,7 @@ object CommonRestApi {
     const val commandAttributeShiftIn = "${commandAttributePrefix}shift-in"
 
     private const val commandRefactorPrefix = "${commandPrefix}refactor/"
-    const val commandRefactorRename = "${commandRefactorPrefix}rename"
+    const val commandRefactorObjectRename = "${commandRefactorPrefix}rename"
     const val commandRefactorDocumentRename = "${commandRefactorPrefix}rename-doc"
 
 

@@ -120,7 +120,7 @@ class ClientRestApi(
             deparsedObjectNotation: String
     ): Digest {
         return getDigest(
-                CommonRestApi.commandObjectInsert,
+                CommonRestApi.commandObjectInsertInList,
                 CommonRestApi.paramDocumentPath to containingObjectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
                 CommonRestApi.paramAttributePath to containingList.asString(),
@@ -128,6 +128,18 @@ class ClientRestApi(
                 CommonRestApi.paramObjectName to objectName.value,
                 CommonRestApi.paramSecondaryPosition to positionInDocument.asString(),
                 CommonRestApi.paramObjectNotation to deparsedObjectNotation)
+    }
+
+
+    suspend fun removeObjectInAttribute(
+            containingObjectLocation: ObjectLocation,
+            attributePath: AttributePath
+    ): Digest {
+        return getDigest(
+                CommonRestApi.commandObjectRemoveIn,
+                CommonRestApi.paramDocumentPath to containingObjectLocation.documentPath.asString(),
+                CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
+                CommonRestApi.paramAttributePath to attributePath.asString())
     }
 
 
@@ -226,7 +238,7 @@ class ClientRestApi(
             newName: ObjectName
     ): Digest {
         return getDigest(
-                CommonRestApi.commandRefactorRename,
+                CommonRestApi.commandRefactorObjectRename,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramObjectName to newName.value)

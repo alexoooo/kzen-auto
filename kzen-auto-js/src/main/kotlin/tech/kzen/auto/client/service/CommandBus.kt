@@ -134,6 +134,12 @@ class CommandBus(
                         deparsed)
             }
 
+            is RemoveObjectInAttributeCommand -> {
+                restClient.removeObjectInAttribute(
+                        command.containingObjectLocation,
+                        command.attributePath)
+            }
+
 
             is UpsertAttributeCommand -> {
                 val deparsed = notationParser.deparseAttribute(command.attributeNotation)
@@ -172,7 +178,7 @@ class CommandBus(
                 restClient.shiftInAttribute(
                         command.objectLocation, command.attributePath, command.newPosition)
 
-            is RenameRefactorCommand ->
+            is RenameObjectRefactorCommand ->
                 restClient.refactorName(
                         command.objectLocation, command.newName)
 

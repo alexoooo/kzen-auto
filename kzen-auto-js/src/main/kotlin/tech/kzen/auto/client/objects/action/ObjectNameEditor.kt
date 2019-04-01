@@ -21,7 +21,7 @@ import tech.kzen.lib.common.api.model.AttributePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectName
 import tech.kzen.lib.common.structure.notation.NotationConventions
-import tech.kzen.lib.common.structure.notation.edit.RenameRefactorCommand
+import tech.kzen.lib.common.structure.notation.edit.RenameObjectRefactorCommand
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
@@ -128,7 +128,7 @@ class ObjectNameEditor(
              // NB: not sure why this is necessary, without it state.saving doesn't show
              delay(1)
 
-             ClientContext.commandBus.apply(RenameRefactorCommand(
+             ClientContext.commandBus.apply(RenameObjectRefactorCommand(
                     props.objectLocation, adjustedName))
 
              // NB: no need to set saving = false, the component will un-mount

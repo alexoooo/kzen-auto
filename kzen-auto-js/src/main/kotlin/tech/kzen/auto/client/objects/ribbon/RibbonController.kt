@@ -6,7 +6,6 @@ import kotlinx.css.em
 import kotlinx.css.px
 import kotlinx.html.title
 import react.*
-import react.dom.br
 import styled.*
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.action.ActionController
@@ -167,15 +166,6 @@ class RibbonController(
                 renderLogo()
             }
 
-
-//            styledSpan {
-//                css {
-//                    marginLeft = 1.em
-//                }
-//
-//                // ...
-//            }
-
             child(MaterialTabs::class) {
                 attrs {
                     textColor = "primary"
@@ -198,9 +188,12 @@ class RibbonController(
                 }
             }
 
-            br {}
-
-            renderSubActions()
+            styledDiv {
+                css {
+                    marginTop = 16.px
+                }
+                renderSubActions()
+            }
         }
     }
 

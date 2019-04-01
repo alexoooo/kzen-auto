@@ -18,7 +18,7 @@ Action:
 PrintlnAction:
   abstract: true
   is: Action
-  class: tech.kzen.auto.common.objects.PrintlnAction
+  class: tech.kzen.auto.common.objects.action.PrintlnAction
   icon: Message
   title: "Print line"
   message: "default message"

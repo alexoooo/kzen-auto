@@ -1,13 +1,16 @@
 package tech.kzen.auto.common.paradigm.imperative.service
 
 import kotlinx.coroutines.delay
+import tech.kzen.auto.common.objects.document.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.*
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.api.model.ObjectPath
 import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.*
+import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.util.Digest
 
 
@@ -182,11 +185,17 @@ class ExecutionManager(
 
         val values = mutableMapOf<ObjectPath, ExecutionState>()
 
-        val packageNotation = graphStructure.graphNotation.documents.values[documentPath]
+        val documentNotation = graphStructure.graphNotation.documents.values[documentPath]
 
-        if (packageNotation != null) {
-            for (e in packageNotation.objects.values) {
-                values[e.key] = ExecutionState.initial
+        if (documentNotation != null) {
+            val steps = graphStructure.graphNotation.transitiveAttribute(
+                    ObjectLocation(documentPath, NotationConventions.mainObjectPath),
+                    ScriptDocument.stepsAttributePath
+            ) as ListAttributeNotation
+
+            for (i in steps.values) {
+                val objectPath = ObjectPath.parse(i.asString()!!)
+                values[objectPath] = ExecutionState.initial
             }
 
             val frame = ExecutionFrame(documentPath, values)

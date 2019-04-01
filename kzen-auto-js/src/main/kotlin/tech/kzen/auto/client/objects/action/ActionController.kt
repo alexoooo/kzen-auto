@@ -13,23 +13,24 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionSuccess
 import tech.kzen.lib.common.api.model.AttributeName
+import tech.kzen.lib.common.api.model.AttributeNesting
 import tech.kzen.lib.common.api.model.AttributePath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
 import tech.kzen.lib.common.structure.metadata.model.ObjectMetadata
-import tech.kzen.lib.common.structure.notation.edit.RemoveObjectCommand
+import tech.kzen.lib.common.structure.notation.NotationConventions
+import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.ShiftObjectCommand
 import tech.kzen.lib.common.structure.notation.model.AttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
-import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.IoUtils
 
 
@@ -53,6 +54,7 @@ class ActionController(
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
+            var attributeNesting: AttributeNesting,
             var objectLocation: ObjectLocation,
             var structure: GraphStructure,
 
@@ -134,8 +136,18 @@ class ActionController(
         onOptionsClose()
 
         async {
-            ClientContext.commandBus.apply(RemoveObjectCommand(
-                    props.objectLocation))
+            val scriptMain = ObjectLocation(
+                    props.objectLocation.documentPath,
+                    NotationConventions.mainObjectPath)
+
+            val objectAttributePath = AttributePath(
+                    ScriptDocument.stepsAttributePath.attribute,
+                    props.attributeNesting)
+
+//            ClientContext.commandBus.apply(RemoveObjectCommand(
+//                    props.objectLocation))
+            ClientContext.commandBus.apply(RemoveObjectInAttributeCommand(
+                    scriptMain, objectAttributePath))
         }
     }
 
@@ -377,7 +389,7 @@ class ActionController(
                     marginBottom = 0.5.em
                 }
 
-                renderAttribute(e.key, e.value, value)
+                renderAttribute(e.key, /*e.value, */value)
             }
         }
 
@@ -566,31 +578,18 @@ class ActionController(
 
     private fun RBuilder.renderAttribute(
             attributeName: AttributeName,
-            attributeMetadata: AttributeMetadata,
+//            attributeMetadata: AttributeMetadata,
             attributeValue: AttributeNotation
     ) {
         when (attributeValue) {
             is ScalarAttributeNotation -> {
-                val scalarValue =
-                        if (attributeMetadata.type?.className == ClassNames.kotlinString) {
-                            attributeValue.value.toString()
-                        }
-                        else {
-                            attributeValue.value
-                        }
+                val scalarValue = attributeValue.value
 
-                when (scalarValue) {
-                    is String ->
-                        child(AttributeEditor::class) {
-                            attrs {
-                                objectLocation = props.objectLocation
-                                this.attributeName = attributeName
-                                value = scalarValue
-                            }
-                        }
-
-                    else -> {
-                        +"[[ ${attributeValue.value} ]]"
+                child(AttributeEditor::class) {
+                    attrs {
+                        objectLocation = props.objectLocation
+                        this.attributeName = attributeName
+                        value = scalarValue
                     }
                 }
             }

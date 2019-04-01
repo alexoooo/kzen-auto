@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.service
 
-import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.util.NameConventions
+import tech.kzen.auto.common.objects.document.ScriptDocument
 import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.structure.notation.NotationConventions
@@ -80,7 +80,7 @@ class InsertionManager {
 
         val command = InsertObjectInListAttributeCommand(
                 containingObjectLocation,
-                ScriptController.stepsAttributePath,
+                ScriptDocument.stepsAttributePath,
                 PositionIndex(index),
                 NameConventions.randomAnonymous(),
                 positionInDocument,

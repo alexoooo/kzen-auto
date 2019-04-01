@@ -262,6 +262,23 @@ class RestHandler {
     }
 
 
+    fun removeObjectInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
+        val containingObjectPath: ObjectPath = serverRequest.getParam(
+                CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
+
+        val attributePath: AttributePath = serverRequest.getParam(
+                CommonRestApi.paramAttributePath, AttributePath.Companion::parse)
+
+        return applyAndDigest(
+                RemoveObjectInAttributeCommand(
+                        ObjectLocation(documentPath, containingObjectPath),
+                        attributePath))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun upsertAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
         val documentPath: DocumentPath = serverRequest.getParam(
@@ -398,7 +415,7 @@ class RestHandler {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun refactorName(serverRequest: ServerRequest): Mono<ServerResponse> {
+    fun refactorObjectName(serverRequest: ServerRequest): Mono<ServerResponse> {
         val documentPath: DocumentPath = serverRequest.getParam(
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
@@ -409,7 +426,7 @@ class RestHandler {
                 CommonRestApi.paramObjectName, ::ObjectName)
 
         return applyAndDigest(
-                RenameRefactorCommand(
+                RenameObjectRefactorCommand(
                         ObjectLocation(documentPath, objectPath),
                         newName))
     }

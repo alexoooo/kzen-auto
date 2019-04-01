@@ -23,7 +23,8 @@ class ServerRestApi(
         GET(CommonRestApi.commandObjectRemove, counterHandler::removeObject)
         GET(CommonRestApi.commandObjectShift, counterHandler::shiftObject)
         GET(CommonRestApi.commandObjectRename, counterHandler::renameObject)
-        GET(CommonRestApi.commandObjectInsert, counterHandler::insertObjectInList)
+        GET(CommonRestApi.commandObjectInsertInList, counterHandler::insertObjectInList)
+        GET(CommonRestApi.commandObjectRemoveIn, counterHandler::removeObjectInAttribute)
 
         GET(CommonRestApi.commandAttributeUpsert, counterHandler::upsertAttribute)
         GET(CommonRestApi.commandAttributeUpdateIn, counterHandler::updateInAttribute)
@@ -32,7 +33,7 @@ class ServerRestApi(
         GET(CommonRestApi.commandAttributeRemoveIn, counterHandler::removeInAttribute)
         GET(CommonRestApi.commandAttributeShiftIn, counterHandler::shiftInAttribute)
 
-        GET(CommonRestApi.commandRefactorRename, counterHandler::refactorName)
+        GET(CommonRestApi.commandRefactorObjectRename, counterHandler::refactorObjectName)
         GET(CommonRestApi.commandRefactorDocumentRename, counterHandler::refactorDocumentName)
 
         GET(CommonRestApi.actionModel, counterHandler::actionModel)
