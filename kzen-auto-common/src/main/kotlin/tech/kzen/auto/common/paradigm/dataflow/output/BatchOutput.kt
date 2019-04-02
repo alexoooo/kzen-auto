@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.paradigm.dataflow.output
 
 
-interface BatchEgress<in T>: OptionalEgress<T> {
+interface BatchOutput<in T>: OptionalOutput<T> {
     /**
      * can be called any number of times, will be buffered
      */

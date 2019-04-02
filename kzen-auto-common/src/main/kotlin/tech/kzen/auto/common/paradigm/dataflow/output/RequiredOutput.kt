@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.paradigm.dataflow.output
 
 
-interface RequiredEgress<in T>: OptionalEgress<T> {
+interface RequiredOutput<in T>: OptionalOutput<T> {
     /**
      * Must be called exactly one time
      */

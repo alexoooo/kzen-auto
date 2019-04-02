@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.paradigm.dataflow.output
 
 
-interface StreamEgress<in T>: OptionalEgress<T> {
+interface StreamOutput<in T>: OptionalOutput<T> {
     /**
      * If hasNext, then StreamDataflow.next() is called
      */

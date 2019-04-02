@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.paradigm.dataflow.input
 
 
-interface OptionalIngress<out T> {
+interface OptionalInput<out T> {
     /**
      * @return current received message payload (if any)
      */
