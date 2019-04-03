@@ -1,19 +1,13 @@
 package tech.kzen.auto.client.service
 
-import tech.kzen.auto.client.util.NameConventions
-import tech.kzen.auto.common.objects.document.ScriptDocument
-import tech.kzen.lib.common.api.model.DocumentPath
 import tech.kzen.lib.common.api.model.ObjectLocation
-import tech.kzen.lib.common.structure.notation.NotationConventions
-import tech.kzen.lib.common.structure.notation.edit.InsertObjectInListAttributeCommand
-import tech.kzen.lib.common.structure.notation.model.ObjectNotation
-import tech.kzen.lib.common.structure.notation.model.PositionIndex
 
 
 class InsertionManager {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         fun onSelected(action: ObjectLocation)
+//        fun onInserted(action: ObjectLocation)
         fun onUnselected()
     }
 
@@ -54,42 +48,16 @@ class InsertionManager {
     }
 
 
-    suspend fun create(path: DocumentPath, index: Int) {
+    fun getAndClearSelection(): ObjectLocation? {
         if (selected == null) {
-            return
+            return null
         }
 
         val selectedAction = selected!!
 
         clearSelection()
 
-//        val newObjectLocation = ObjectLocation(
-//                path,
-//                ObjectPath(NameConventions.randomAnonymous(), DocumentNesting.root))
-//
-//        val command = AddObjectCommand.ofParent(
-//                newObjectLocation,
-//                PositionIndex(index),
-//                selectedAction.toReference().name)
-
-        val containingObjectLocation = ObjectLocation(
-                path, NotationConventions.mainObjectPath)
-
-        // NB: +1 offset for main Script object
-        val positionInDocument = PositionIndex(index + 1)
-
-        val command = InsertObjectInListAttributeCommand(
-                containingObjectLocation,
-                ScriptDocument.stepsAttributePath,
-                PositionIndex(index),
-                NameConventions.randomAnonymous(),
-                positionInDocument,
-                ObjectNotation.ofParent(selectedAction.toReference().name)
-        )
-
-//        console.log("Creating: $command", command)
-
-        ClientContext.commandBus.apply(command)
+        return selectedAction
     }
 
 

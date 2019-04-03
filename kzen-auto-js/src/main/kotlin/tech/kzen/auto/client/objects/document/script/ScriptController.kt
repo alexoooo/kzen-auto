@@ -16,6 +16,7 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
+import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.ArrowDownwardIcon
@@ -30,9 +31,12 @@ import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.api.model.*
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
+import tech.kzen.lib.common.structure.notation.edit.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 import tech.kzen.lib.common.structure.notation.model.DocumentNotation
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
+import tech.kzen.lib.common.structure.notation.model.ObjectNotation
+import tech.kzen.lib.common.structure.notation.model.PositionIndex
 
 
 @Suppress("unused")
@@ -155,10 +159,28 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(index: Int) {
+        val objectNotation = ClientContext.insertionManager
+                .getAndClearSelection()
+                ?.let { ObjectNotation.ofParent(it.toReference().name) }
+                ?: return
+
+        val containingObjectLocation = ObjectLocation(
+                state.documentPath!!, NotationConventions.mainObjectPath)
+
+        // NB: +1 offset for main Script object
+        val positionInDocument = PositionIndex(index + 1)
+
+        val command = InsertObjectInListAttributeCommand(
+                containingObjectLocation,
+                ScriptDocument.stepsAttributePath,
+                PositionIndex(index),
+                NameConventions.randomAnonymous(),
+                positionInDocument,
+                objectNotation
+        )
+
         async {
-            ClientContext.insertionManager.create(
-                    state.documentPath!!,
-                    index)
+            ClientContext.commandBus.apply(command)
         }
     }
 
@@ -174,6 +196,7 @@ class ScriptController:
                 documentPath.let { structure.graphNotation.documents.values[it] }
 
         if (documentNotation == null) {
+            // TODO: move this to StageController?
             styledH3 {
                 css {
                     marginLeft = 1.em
@@ -398,17 +421,6 @@ class ScriptController:
         }
     }
 
-
-//    private fun RBuilder.reset() {
-//        input (type = InputType.button) {
-//            attrs {
-//                value = "Clear"
-//                onClickFunction = { onClear() }
-//            }
-//        }
-//    }
-//
-//
 //    private fun RBuilder.refresh() {
 //        input (type = InputType.button) {
 //            attrs {

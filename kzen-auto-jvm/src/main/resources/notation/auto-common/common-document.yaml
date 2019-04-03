@@ -27,12 +27,9 @@ Query:
   is: Document
   class: tech.kzen.auto.common.objects.document.QueryDocument
   icon: TableChart
-#  steps: []
-#  meta:
-#    steps:
-#      is: List
-#      of: Action
-#    objectLocation:
-#      is: ObjectLocation
-#      definer: ObjectLocationAttributeDefiner
+  sources: []
+  meta:
+    sources:
+      is: List
+      of: Action
 

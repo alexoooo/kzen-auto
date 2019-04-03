@@ -6,4 +6,18 @@ QueryController:
   type: Query
 
 
+#######################################################################################################################
+
+
+QueryGroup:
+  is: RibbonGroup
+  title: "Insert"
+  documentArchetype: Query
+
 ###########################################################
+
+CsvSourceTool:
+  is: RibbonTool
+  parent: QueryGroup
+  delegate: CsvSource
+

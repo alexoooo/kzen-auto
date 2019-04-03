@@ -12,10 +12,6 @@ import tech.kzen.lib.common.context.GraphDefiner
 class ModelActionExecutor(
         private val modelManager: ModelManager
 ): ActionExecutor {
-//    override suspend fun actionManager(): ActionManager {
-//        TODO()
-//    }
-
     override suspend fun execute(actionLocation: ObjectLocation): ExecutionResult {
         val graphStructure = modelManager.graphStructure()
 
@@ -30,9 +26,4 @@ class ModelActionExecutor(
 
         return action.perform()
     }
-
-
-//    override suspend fun executeResponse(actionLocation: ObjectLocation): ExecutionResultResponse {
-//        TODO()
-//    }
 }

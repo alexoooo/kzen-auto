@@ -86,6 +86,7 @@ class SidebarFolder(
                     .values
                     .keys
                     .filter { it.startsWith(documentBase) }
+                    .sortedBy { it.asString().toLowerCase() }
         }
         return mainDocumentsCache!!
     }
