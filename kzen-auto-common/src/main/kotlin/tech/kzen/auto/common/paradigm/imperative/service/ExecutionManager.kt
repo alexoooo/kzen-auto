@@ -4,9 +4,9 @@ import kotlinx.coroutines.delay
 import tech.kzen.auto.common.objects.document.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.*
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.DocumentPath
-import tech.kzen.lib.common.api.model.ObjectLocation
-import tech.kzen.lib.common.api.model.ObjectPath
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.*

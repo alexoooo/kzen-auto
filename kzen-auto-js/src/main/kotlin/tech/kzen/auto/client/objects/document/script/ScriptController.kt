@@ -11,8 +11,8 @@ import styled.css
 import styled.styledDiv
 import styled.styledH3
 import styled.styledSpan
-import tech.kzen.auto.client.objects.action.ActionController
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.script.action.ActionController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
@@ -28,7 +28,11 @@ import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.*
+import tech.kzen.lib.common.model.attribute.AttributeNesting
+import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.InsertObjectInListAttributeCommand

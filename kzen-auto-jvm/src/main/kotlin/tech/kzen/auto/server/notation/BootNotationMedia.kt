@@ -2,8 +2,8 @@ package tech.kzen.auto.server.notation
 
 import com.google.common.base.MoreObjects
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
-import tech.kzen.lib.common.api.model.DocumentPath
-import tech.kzen.lib.common.api.model.DocumentTree
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.io.NotationMedia
 import tech.kzen.lib.common.util.Digest
@@ -19,12 +19,13 @@ class BootNotationMedia(
         val gradleResourcesInfix = "/out/production/resources/"
     }
 
+
     //-----------------------------------------------------------------------------------------------------------------
     private val cache: MutableMap<DocumentPath, Digest> = mutableMapOf()
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun scan(): DocumentTree<Digest> {
+    override suspend fun scan(): DocumentPathMap<Digest> {
         if (cache.isEmpty()) {
             val paths = scanPaths()
 
@@ -34,7 +35,7 @@ class BootNotationMedia(
                 cache[path] = digest
             }
         }
-        return DocumentTree(cache)
+        return DocumentPathMap(cache)
     }
 
 

@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.service.rest
 
-import tech.kzen.lib.common.api.model.DocumentPath
-import tech.kzen.lib.common.api.model.DocumentTree
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.structure.notation.io.NotationMedia
 import tech.kzen.lib.common.util.Digest
 
@@ -9,7 +9,7 @@ import tech.kzen.lib.common.util.Digest
 class RestNotationMedia(
         private val restClient: ClientRestApi
 ): NotationMedia {
-    override suspend fun scan(): DocumentTree<Digest> {
+    override suspend fun scan(): DocumentPathMap<Digest> {
         return restClient.scanNotationPaths()
     }
 

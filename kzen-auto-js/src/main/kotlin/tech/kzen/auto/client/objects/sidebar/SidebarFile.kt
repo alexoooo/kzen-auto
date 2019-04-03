@@ -12,9 +12,9 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.lib.common.api.model.AttributeName
-import tech.kzen.lib.common.api.model.AttributePath
-import tech.kzen.lib.common.api.model.DocumentPath
+import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.DeleteDocumentCommand
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
@@ -27,7 +27,7 @@ class SidebarFile(
         RComponent<SidebarFile.Props, SidebarFile.State>(props)
 {
     companion object {
-        val iconAttribute = AttributePath.ofAttribute(AttributeName("icon"))
+        val iconAttribute = AttributePath.ofName(AttributeName("icon"))
         private const val menuDanglingTimeout = 300
     }
 

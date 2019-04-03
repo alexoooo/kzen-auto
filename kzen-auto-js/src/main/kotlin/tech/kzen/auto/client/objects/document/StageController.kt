@@ -7,7 +7,7 @@ import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.DocumentPath
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 

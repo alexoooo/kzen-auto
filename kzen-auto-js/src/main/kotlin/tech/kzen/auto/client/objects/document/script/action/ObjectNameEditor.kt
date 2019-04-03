@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.action
+package tech.kzen.auto.client.objects.document.script.action
 
 import kotlinx.coroutines.delay
 import kotlinx.css.*
@@ -16,10 +16,9 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.lib.common.api.model.AttributeName
-import tech.kzen.lib.common.api.model.AttributePath
-import tech.kzen.lib.common.api.model.ObjectLocation
-import tech.kzen.lib.common.api.model.ObjectName
+import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.RenameObjectRefactorCommand
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
@@ -30,12 +29,6 @@ class ObjectNameEditor(
 ):
         RComponent<ObjectNameEditor.Props, ObjectNameEditor.State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        val titleAttribute = AttributePath.ofAttribute(AttributeName("title"))
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var objectLocation: ObjectLocation,
@@ -244,7 +237,7 @@ class ObjectNameEditor(
 
         return props
                 .notation
-                .transitiveAttribute(props.objectLocation, titleAttribute)
+                .transitiveAttribute(props.objectLocation, AutoConventions.titleAttributePath)
                 ?.asString()
                 ?: type
     }
@@ -320,7 +313,7 @@ class ObjectNameEditor(
                             props.objectLocation.objectPath.name
                         }
 
-                if (NameConventions.isDefault(objectName)) {
+                if (AutoConventions.isAnonymous(objectName)) {
                     +title()
                 }
                 else {
@@ -351,7 +344,7 @@ class ObjectNameEditor(
                     inputRef = ::onInputRef
 
                     value =
-                            if (NameConventions.isDefault(ObjectName(state.objectName))) {
+                            if (AutoConventions.isAnonymous(ObjectName(state.objectName))) {
                                 ""
                             }
                             else {

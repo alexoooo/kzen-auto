@@ -15,8 +15,8 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.MaterialTextField
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.lib.common.api.model.DocumentName
-import tech.kzen.lib.common.api.model.DocumentPath
+import tech.kzen.lib.common.model.document.DocumentName
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.structure.notation.edit.RenameDocumentRefactorCommand
 
 

@@ -4,9 +4,9 @@ import tech.kzen.auto.common.paradigm.imperative.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.imperative.service.ActionExecutor
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.ObjectLocation
 import tech.kzen.lib.common.context.GraphCreator
 import tech.kzen.lib.common.context.GraphDefiner
+import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 class ModelActionExecutor(

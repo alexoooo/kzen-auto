@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.action
+package tech.kzen.auto.client.objects.document.script.action
 
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
@@ -18,10 +18,11 @@ import tech.kzen.auto.common.paradigm.imperative.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionSuccess
-import tech.kzen.lib.common.api.model.AttributeName
-import tech.kzen.lib.common.api.model.AttributeNesting
-import tech.kzen.lib.common.api.model.AttributePath
-import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributeNesting
+import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.metadata.model.ObjectMetadata
 import tech.kzen.lib.common.structure.notation.NotationConventions
@@ -38,12 +39,11 @@ import kotlin.js.Date
 class ActionController(
         props: ActionController.Props
 ):
-        RComponent<ActionController.Props, ActionController.State>(props), ExecutionIntent.Observer {
+        RComponent<ActionController.Props, ActionController.State>(props),
+        ExecutionIntent.Observer
+{
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val iconAttribute = AttributePath.ofAttribute(AttributeName("icon"))
-        val descriptionAttribute = AttributePath.ofAttribute(AttributeName("description"))
-
         const val defaultRunIcon = "PlayArrowIcon"
         const val defaultRunDescription = "Run"
 
@@ -344,7 +344,7 @@ class ActionController(
 
     private fun RBuilder.renderHeader() {
         val actionDescription = props.structure.graphNotation
-                .transitiveAttribute(props.objectLocation, descriptionAttribute)
+                .transitiveAttribute(props.objectLocation, AutoConventions.descriptionAttributePath)
                 ?.asString()
                 ?: defaultRunDescription
 
@@ -409,13 +409,13 @@ class ActionController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderBody(objectMetadata: ObjectMetadata) {
-        for (e in objectMetadata.attributes) {
-            if (e.key == iconAttribute.attribute ||
-                    e.key == descriptionAttribute.attribute) {
+        for (e in objectMetadata.attributes.values) {
+            if (e.key == AutoConventions.iconAttributePath.attribute ||
+                    e.key == AutoConventions.descriptionAttributePath.attribute) {
                 continue
             }
 
-            val keyAttributePath = AttributePath.ofAttribute(e.key)
+            val keyAttributePath = AttributePath.ofName(e.key)
 
             val value =
                     props.structure.graphNotation.transitiveAttribute(
@@ -562,7 +562,7 @@ class ActionController(
             actionDescription: String
     ) {
         val icon = props.structure.graphNotation
-                .transitiveAttribute(props.objectLocation, iconAttribute)
+                .transitiveAttribute(props.objectLocation, AutoConventions.iconAttributePath)
                 ?.asString()
                 ?: defaultRunIcon
 

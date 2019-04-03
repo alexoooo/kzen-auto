@@ -4,7 +4,6 @@ import kotlinx.css.Cursor
 import kotlinx.css.em
 import kotlinx.html.title
 import react.*
-import react.dom.span
 import styled.css
 import styled.styledDiv
 import styled.styledH3
@@ -21,9 +20,11 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.QueryDocument
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.api.model.DocumentPath
-import tech.kzen.lib.common.api.model.ObjectLocation
-import tech.kzen.lib.common.api.model.ObjectReference
+import tech.kzen.lib.common.model.attribute.AttributeNesting
+import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.InsertObjectInListAttributeCommand
@@ -220,12 +221,12 @@ class QueryController:
 
             for ((index, sourceReference) in sourceReferences.withIndex()) {
                 val sourceLocation = graphStructure.graphNotation.coalesce.locate(sourceReference)
-                val objectPath = sourceLocation.objectPath
+//                val objectPath = sourceLocation.objectPath
+//
+//                val keyLocation = ObjectLocation(documentPath, objectPath)
 
-                val keyLocation = ObjectLocation(documentPath, objectPath)
-
-                flow(index,
-                        keyLocation,
+                source(index,
+                        sourceLocation,
                         graphStructure)
 
                 if (index < sourceReferences.size - 1) {
@@ -268,16 +269,17 @@ class QueryController:
     }
 
 
-    private fun RBuilder.flow(
+    private fun RBuilder.source(
             index: Int,
             objectLocation: ObjectLocation,
             graphStructure: GraphStructure
     ) {
-        span {
-            key = objectLocation.toReference().asString()
-
-            +"Flow $index: "
-            +objectLocation.asString()
+        child(SourceController::class) {
+            attrs {
+                attributeNesting = AttributeNesting(listOf(AttributeSegment.ofIndex(index)))
+                this.objectLocation = objectLocation
+                this.graphStructure = graphStructure
+            }
         }
     }
 }

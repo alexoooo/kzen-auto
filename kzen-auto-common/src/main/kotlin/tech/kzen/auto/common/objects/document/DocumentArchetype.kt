@@ -1,6 +1,10 @@
 package tech.kzen.auto.common.objects.document
 
-import tech.kzen.lib.common.api.model.*
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.locate.ObjectReference
+import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.obj.ObjectPathMap
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.model.DocumentNotation
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
@@ -22,7 +26,8 @@ abstract class DocumentArchetype(
                     ?: return null
 
             return mainObject
-                    .attributes[NotationConventions.isAttributeName]
+                    .attributes
+                    .values[NotationConventions.isAttributeName]
                     ?.asString()
                     ?.let { ObjectName(it) }
         }
@@ -46,7 +51,7 @@ abstract class DocumentArchetype(
 
     fun newDocument(): DocumentNotation {
         val mainObjectNotation = ObjectNotation.ofParent(name())
-        return DocumentNotation(DocumentMap(mapOf(
+        return DocumentNotation(ObjectPathMap(mapOf(
                 NotationConventions.mainObjectPath to mainObjectNotation
         )))
     }

@@ -45,6 +45,12 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "TableChart" ->
             TableChartIcon::class
 
+        "Search" ->
+            SearchIcon::class
+
+        "TripOrigin" ->
+            TripOriginIcon::class
+
         else ->
             TextureIcon::class
     }

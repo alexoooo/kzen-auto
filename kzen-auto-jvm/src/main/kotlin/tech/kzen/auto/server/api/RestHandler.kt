@@ -13,7 +13,14 @@ import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResponse
 import tech.kzen.auto.server.service.ServerContext
-import tech.kzen.lib.common.api.model.*
+import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.document.DocumentName
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.common.structure.notation.model.AttributeNotation
 import tech.kzen.lib.common.structure.notation.model.DocumentNotation

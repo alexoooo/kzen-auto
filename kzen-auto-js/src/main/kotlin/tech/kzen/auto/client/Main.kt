@@ -4,9 +4,9 @@ import react.dom.render
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.lib.common.api.model.ObjectReference
 import tech.kzen.lib.common.context.GraphCreator
 import tech.kzen.lib.common.context.GraphDefiner
+import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.GraphStructure
 import kotlin.browser.document
 import kotlin.browser.window

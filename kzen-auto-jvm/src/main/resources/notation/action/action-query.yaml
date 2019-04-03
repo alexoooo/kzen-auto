@@ -6,7 +6,7 @@ CsvSource:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.query.CsvSource
-  icon: OpenInNew
+  icon: TripOrigin
   title: "CSV Source"
   description: "CSV: Comma-separated value"
   filePath: "C:/path/to/file.csv"

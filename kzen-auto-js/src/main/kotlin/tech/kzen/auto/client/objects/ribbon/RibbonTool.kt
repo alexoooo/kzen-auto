@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.ribbon
 
-import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 class RibbonTool(

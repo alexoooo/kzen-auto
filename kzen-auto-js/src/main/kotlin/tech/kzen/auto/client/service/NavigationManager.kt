@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.service
 
-import tech.kzen.lib.common.api.model.DocumentPath
+import tech.kzen.lib.common.model.document.DocumentPath
 import kotlin.browser.window
 
 

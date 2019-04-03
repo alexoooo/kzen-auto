@@ -5,7 +5,14 @@ import tech.kzen.auto.client.util.httpGet
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResponse
-import tech.kzen.lib.common.api.model.*
+import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.document.DocumentName
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.document.DocumentPathMap
+import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.IoUtils
@@ -17,7 +24,7 @@ class ClientRestApi(
         private val baseUrl: String
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun scanNotationPaths(): DocumentTree<Digest> {
+    suspend fun scanNotationPaths(): DocumentPathMap<Digest> {
         val scanText = httpGet("$baseUrl${CommonRestApi.scan}")
 
         val builder = mutableMapOf<DocumentPath, Digest>()
@@ -28,7 +35,7 @@ class ClientRestApi(
             }
             null
         }
-        return DocumentTree(builder)
+        return DocumentPathMap(builder)
     }
 
 

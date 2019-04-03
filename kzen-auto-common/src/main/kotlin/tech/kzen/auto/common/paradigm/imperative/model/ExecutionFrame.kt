@@ -1,8 +1,8 @@
 package tech.kzen.auto.common.paradigm.imperative.model
 
-import tech.kzen.lib.common.api.model.DocumentPath
-import tech.kzen.lib.common.api.model.ObjectName
-import tech.kzen.lib.common.api.model.ObjectPath
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.obj.ObjectPath
 
 
 data class ExecutionFrame(

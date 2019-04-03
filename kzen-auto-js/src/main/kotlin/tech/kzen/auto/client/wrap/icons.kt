@@ -192,4 +192,16 @@ external class TableChartIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("Search")
+external class SearchIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("TripOrigin")
+external class TripOriginIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 

@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.paradigm.imperative.service
 
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
-import tech.kzen.lib.common.api.model.ObjectLocation
+import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 class ExecutionLoop(
