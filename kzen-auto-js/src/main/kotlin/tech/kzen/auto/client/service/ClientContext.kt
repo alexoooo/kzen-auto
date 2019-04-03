@@ -49,7 +49,7 @@ object ClientContext {
     private val restExecutionInitializer = ClientRestExecutionInitializer(
             restClient)
 
-    private val restActionExecutor = ClientRestActionExecutor(
+    val restActionExecutor = ClientRestActionExecutor(
             restClient)
 
     val executionManager = ExecutionManager(

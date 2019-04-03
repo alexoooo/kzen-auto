@@ -226,19 +226,7 @@ class ExecutionManager(
             delay(delayMillis.toLong())
         }
 
-        val response: ExecutionResult = try {
-            actionExecutor.execute(objectLocation)
-        }
-        catch (e: Exception) {
-            println("#$%#$%#$ got exception: $e")
-
-//            val digest = modelOrInit().digest()
-//            ExecutionResponse(
-//                    ,
-//                    digest
-//            )
-            ExecutionError(e.message ?: "Error")
-        }
+        val response = actionExecutor.execute(objectLocation)
 
 //        val parentRef = ObjectReference.parse(
 //                modelManager.autoNotation().getString(objectLocation, NotationConventions.isAttribute))

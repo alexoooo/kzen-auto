@@ -186,40 +186,30 @@ sealed class ExecutionValue {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-object NullExecutionValue: ExecutionValue()
+object NullExecutionValue: ExecutionValue() {
+    override fun toString(): String {
+        return "Null"
+    }
+}
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class ScalarExecutionValue: ExecutionValue() {
-//    abstract fun get(): Any
-}
+sealed class ScalarExecutionValue: ExecutionValue()
 
 
 data class TextExecutionValue(
         val value: String
-): ScalarExecutionValue() {
-//    override fun get(): String {
-//        return value
-//    }
-}
+): ScalarExecutionValue()
 
 
 data class BooleanExecutionValue(
         val value: Boolean
-): ScalarExecutionValue() {
-//    override fun get(): Any {
-//        return value
-//    }
-}
+): ScalarExecutionValue()
 
 
 data class NumberExecutionValue(
         val value: Double
-): ScalarExecutionValue() {
-//    override fun get(): Double {
-//        return value
-//    }
-}
+): ScalarExecutionValue()
 
 
 data class BinaryExecutionValue(

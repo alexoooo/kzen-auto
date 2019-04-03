@@ -216,6 +216,7 @@ class QueryController:
 
         styledDiv {
             css {
+                marginLeft = 1.em
                 width = 20.em
             }
 
@@ -275,6 +276,8 @@ class QueryController:
             graphStructure: GraphStructure
     ) {
         child(SourceController::class) {
+            key = objectLocation.toReference().asString()
+
             attrs {
                 attributeNesting = AttributeNesting(listOf(AttributeSegment.ofIndex(index)))
                 this.objectLocation = objectLocation

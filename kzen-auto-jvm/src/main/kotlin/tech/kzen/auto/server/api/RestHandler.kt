@@ -12,6 +12,7 @@ import reactor.core.publisher.Mono
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResponse
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -526,6 +527,25 @@ class RestHandler {
 
         val execution: ExecutionResponse = runBlocking {
             ServerContext.executionManager.execute(objectLocation)
+        }
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just(execution.toCollection()))
+    }
+
+
+    fun actionDetached(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
+        val objectPath: ObjectPath = serverRequest.getParam(
+                CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
+
+        val objectLocation = ObjectLocation(documentPath, objectPath)
+
+        val execution: ExecutionResult = runBlocking {
+            ServerContext.actionExecutor.execute(objectLocation)
         }
 
         return ServerResponse

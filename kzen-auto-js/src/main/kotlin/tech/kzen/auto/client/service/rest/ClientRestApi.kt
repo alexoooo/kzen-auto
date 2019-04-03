@@ -5,6 +5,7 @@ import tech.kzen.auto.client.util.httpGet
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResponse
+import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -308,6 +309,21 @@ class ClientRestApi(
 //        val digest = responseJson[CommonRestApi.fieldDigest] as String
 
         return ExecutionResponse.fromCollection(responseCollection)
+    }
+
+
+    suspend fun performDetached(
+            objectLocation: ObjectLocation
+    ): ExecutionResult {
+        val responseJson = getJson(
+                CommonRestApi.actionDetached,
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+
+        @Suppress("UNCHECKED_CAST")
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
+
+        return ExecutionResult.fromCollection(responseCollection)
     }
 
 

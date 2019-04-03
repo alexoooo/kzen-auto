@@ -10,7 +10,7 @@ sealed class ExecutionResult {
         const val detailKey = "detail"
 
         @Suppress("UNCHECKED_CAST")
-        fun fromCollection(collection: Map<String, Any>): ExecutionResult {
+        fun fromCollection(collection: Map<String, Any?>): ExecutionResult {
             val error = collection[errorKey]
 
             return if (error == null) {

@@ -40,6 +40,7 @@ class ServerRestApi(
         GET(CommonRestApi.actionStart, counterHandler::actionStart)
         GET(CommonRestApi.actionReset, counterHandler::actionReset)
         GET(CommonRestApi.actionPerform, counterHandler::actionPerform)
+        GET(CommonRestApi.actionDetached, counterHandler::actionDetached)
 
         // provide value from client
 //        GET("/action/submit", counterHandler::actionSubmit)
