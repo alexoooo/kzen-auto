@@ -58,19 +58,26 @@ class RunController(
     }
 
 
-    override suspend fun beforeExecution(objectLocation: ObjectLocation) {}
+    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {}
 
 
-    override suspend fun onExecutionModel(executionModel: ExecutionModel) {
+    override suspend fun onExecutionModel(
+            host: DocumentPath,
+            executionModel: ExecutionModel
+    ) {
+        if (host != props.documentPath) {
+            return
+        }
+
         setState {
             execution = executionModel
         }
 
         if (! executionModel.containsStatus(ExecutionPhase.Running) &&
                 executionModel.next() == null &&
-                ClientContext.executionLoop.running()) {
+                ClientContext.executionLoop.running(host)) {
 //            console.log("!@#!#!@#!@#!@ onExecutionModel - pause at end")
-            ClientContext.executionLoop.pause()
+            ClientContext.executionLoop.pause(host)
         }
     }
 
@@ -113,11 +120,14 @@ class RunController(
 
     // TODO: refresh manager?
     private fun onRefresh() {
-        ClientContext.executionLoop.pause()
+        val host = props.documentPath
+                ?: return
+
+        ClientContext.executionLoop.pause(host)
 
         async {
             ClientContext.modelManager.refresh()
-            ClientContext.executionManager.reset()
+            ClientContext.executionManager.reset(host)
         }
     }
 
@@ -147,6 +157,8 @@ class RunController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun phase(): Phase {
 //        println("%%%%%% phase - ${state.execution}")
+        val host = props.documentPath
+                ?: return Phase.Empty
 
         val executionModel = state.execution
                 ?: return Phase.Empty
@@ -158,7 +170,7 @@ class RunController(
         }
 
         if (executionModel.containsStatus(ExecutionPhase.Running)) {
-            if (ClientContext.executionLoop.running()) {
+            if (ClientContext.executionLoop.running(host)) {
                 return Phase.Looping
             }
             return Phase.Running
@@ -179,26 +191,35 @@ class RunController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onPause() {
-        ClientContext.executionLoop.pause()
+        val host = props.documentPath
+                ?: return
+
+        ClientContext.executionLoop.pause(host)
     }
 
 
     private fun onClear() {
+        val host = props.documentPath
+                ?: return
+
         onPause()
 
         async {
-            ClientContext.executionManager.reset()
+            ClientContext.executionManager.reset(host)
             executionStateToFreshStart()
         }
     }
 
 
     private fun onRunAll() {
+        val host = props.documentPath
+                ?: return
+
         async {
 //            executionStateToFreshStart()
 
             ClientContext.executionIntent.clear()
-            ClientContext.executionLoop.run()
+            ClientContext.executionLoop.run(host)
         }
     }
 

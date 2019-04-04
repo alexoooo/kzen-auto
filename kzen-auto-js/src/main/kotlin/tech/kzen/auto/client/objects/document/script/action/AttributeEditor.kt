@@ -12,6 +12,7 @@ import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.notation.edit.UpsertAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
@@ -81,12 +82,12 @@ class AttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun beforeExecution(objectLocation: ObjectLocation) {
+    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
         flush()
     }
 
 
-    override suspend fun onExecutionModel(executionModel: ExecutionModel) {}
+    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ExecutionModel) {}
 
 
     //-----------------------------------------------------------------------------------------------------------------

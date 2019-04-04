@@ -265,8 +265,10 @@ class ClientRestApi(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun executionModel(): ExecutionModel {
-        val responseText = httpGet("$baseUrl${CommonRestApi.actionModel}")
+    suspend fun executionModel(host: DocumentPath): ExecutionModel {
+        val responseText = get(
+                "$baseUrl${CommonRestApi.actionModel}",
+                CommonRestApi.paramDocumentPath to host.asString())
 
         val responseJson = JSON.parse<Array<Json>>(responseText)
         val responseCollection = ClientJsonUtils.toList(responseJson)
@@ -287,10 +289,11 @@ class ClientRestApi(
 
 
     suspend fun resetExecution(
-//            objectName: String
+            host: DocumentPath
     ): Digest {
-        val responseText = httpGet("$baseUrl${CommonRestApi.actionReset}")
-        return Digest.parse(responseText)
+        return getDigest(
+                "$baseUrl${CommonRestApi.actionReset}",
+                CommonRestApi.paramDocumentPath to host.asString())
     }
 
 

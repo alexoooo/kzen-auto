@@ -37,7 +37,6 @@ import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
-import tech.kzen.lib.common.structure.notation.model.DocumentNotation
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ObjectNotation
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
@@ -80,12 +79,12 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
+
 //        console.log("^^^^^^ script - componentDidMount")
 
 //        println("ProjectController - Subscribed")
         async {
 //            console.log("^^^^^^ script - adding observers")
-
             ClientContext.modelManager.observe(this)
             ClientContext.executionManager.subscribe(this)
             ClientContext.insertionManager.subscribe(this)
@@ -110,6 +109,13 @@ class ScriptController:
             prevState: ScriptController.State,
             snapshot: Any
     ) {
+        console.log("%#$%#$%#$ componentDidUpdate", state.documentPath, prevState.documentPath)
+        if (state.documentPath != null && prevState.documentPath == null) {
+            async {
+                ClientContext.executionManager.executionModel(state.documentPath!!)
+            }
+        }
+
 //        console.log("ProjectController componentDidUpdate", state, prevState)
     }
 
@@ -126,10 +132,14 @@ class ScriptController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun beforeExecution(objectLocation: ObjectLocation) {}
+    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {}
 
 
-    override suspend fun onExecutionModel(executionModel: ExecutionModel) {
+    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ExecutionModel) {
+        if (state.documentPath != host) {
+            return
+        }
+
         setState {
             execution = executionModel
         }
@@ -191,41 +201,44 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+//        +"Foo"
         val structure = state.structure
                 ?: return
 
-        val documentPath: DocumentPath? = state.documentPath
+//        +"Bar"
+        val documentPath: DocumentPath = state.documentPath
+                ?: return
 
-        val documentNotation: DocumentNotation? =
-                documentPath.let { structure.graphNotation.documents.values[it] }
+//        +"Baz"
+//        val documentNotation: DocumentNotation = structure.graphNotation.documents.values[documentPath]
+//                ?: return
 
-        if (documentNotation == null) {
-            // TODO: move this to StageController?
-            styledH3 {
-                css {
-                    marginLeft = 1.em
-                    paddingTop = 1.em
-                }
+//        if (documentNotation == null) {
+//            // TODO: move this to StageController?
+//            styledH3 {
+//                css {
+//                    marginLeft = 1.em
+//                    paddingTop = 1.em
+//                }
+//
+//                if (structure.graphNotation.documents.values.isEmpty()) {
+//                    +"Please create a file in the sidebar (left)"
+//                }
+//                else {
+//                    +"Please select a file from the sidebar (left)"
+//                }
+//            }
+//        }
 
-                if (structure.graphNotation.documents.values.isEmpty()) {
-                    +"Please create a file in the sidebar (left)"
-                }
-                else {
-                    +"Please select a file from the sidebar (left)"
-                }
+        styledDiv {
+            css {
+                marginLeft = 1.em
             }
-        }
-        else {
-            styledDiv {
-                css {
-                    marginLeft = 1.em
-                }
 
-                steps(structure, /*documentNotation, */documentPath!!)
-            }
-
-            runController()
+            steps(structure, /*documentNotation, */documentPath)
         }
+
+        runController()
     }
 
 

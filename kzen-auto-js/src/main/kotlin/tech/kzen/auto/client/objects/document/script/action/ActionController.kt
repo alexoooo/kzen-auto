@@ -123,7 +123,9 @@ class ActionController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRun() {
         async {
-            ClientContext.executionManager.execute(props.objectLocation)
+            ClientContext.executionManager.execute(
+                    props.objectLocation.documentPath,
+                    props.objectLocation)
         }
     }
 

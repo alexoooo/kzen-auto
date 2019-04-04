@@ -20,29 +20,36 @@ class ExecutionManager(
 ): ModelManager.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
-        suspend fun beforeExecution(objectLocation: ObjectLocation)
-        suspend fun onExecutionModel(executionModel: ExecutionModel)
+        suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation)
+        suspend fun onExecutionModel(host: DocumentPath, executionModel: ExecutionModel)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private val subscribers = mutableSetOf<Observer>()
-    private var modelOrNull: ExecutionModel? = null
+    private val models: MutableMap<DocumentPath, ExecutionModel> = mutableMapOf()
 
 
-    // TODO: could be lazy?
-    private suspend fun modelOrInit(): ExecutionModel {
-        if (modelOrNull == null) {
-            modelOrNull = executionInitializer.initialExecutionModel()
+    private suspend fun modelOrInit(host: DocumentPath): ExecutionModel {
+        val existing = models[host]
+        if (existing != null) {
+            return existing
         }
-        return modelOrNull!!
+        val initial = executionInitializer.initialExecutionModel(host)
+        models[host] = initial
+        publishExecutionModel(host, initial)
+        return initial
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun subscribe(subscriber: Observer) {
         subscribers.add(subscriber)
-        subscriber.onExecutionModel(modelOrInit())
+
+        for (model in models) {
+            println("^^^ subscribe - onExecutionModel - $model")
+            subscriber.onExecutionModel(model.key, model.value)
+        }
     }
 
 
@@ -51,32 +58,45 @@ class ExecutionManager(
     }
 
 
-    private suspend fun publishBeforeExecution(objectLocation: ObjectLocation) {
+    private suspend fun publishBeforeExecution(
+            host: DocumentPath,
+            objectLocation: ObjectLocation
+    ) {
         for (subscriber in subscribers) {
-            subscriber.beforeExecution(objectLocation)
+            println("^^^ publishBeforeExecution - $host - $objectLocation")
+            subscriber.beforeExecution(host, objectLocation)
         }
     }
 
 
-    private suspend fun publishExecutionModel(model: ExecutionModel) {
+    private suspend fun publishExecutionModel(
+            host: DocumentPath,
+            model: ExecutionModel
+    ) {
         for (subscriber in subscribers) {
-            subscriber.onExecutionModel(model)
+            println("^^^ publishExecutionModel - $host - $model")
+            subscriber.onExecutionModel(host, model)
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(projectStructure: GraphStructure, event: NotationEvent?) {
+    override suspend fun handleModel(
+            projectStructure: GraphStructure,
+            event: NotationEvent?
+    ) {
         if (event == null) {
             return
         }
 
-        val model = modelOrInit()
+        for (host in models.keys) {
+            val model = modelOrInit(host)
 
-        val changed = apply(model, event)
+            val changed = apply(model, event)
 
-        if (changed) {
-            publishExecutionModel(model)
+            if (changed) {
+                publishExecutionModel(host, model)
+            }
         }
     }
 
@@ -115,8 +135,11 @@ class ExecutionManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun willExecute(objectLocation: ObjectLocation) {
-        val model = modelOrInit()
+    suspend fun willExecute(
+            host: DocumentPath,
+            objectLocation: ObjectLocation
+    ) {
+        val model = modelOrInit(host)
         val existingFrame = model.findLast(objectLocation)
 
         val upsertFrame = existingFrame
@@ -128,12 +151,16 @@ class ExecutionManager(
 
         upsertFrame.states[objectLocation.objectPath] = state.copy(running = true)
 
-        publishExecutionModel(model)
+        publishExecutionModel(host, model)
     }
 
 
-    suspend fun didExecute(objectLocation: ObjectLocation, executionState: ExecutionState) {
-        val model = modelOrInit()
+    suspend fun didExecute(
+            host: DocumentPath,
+            objectLocation: ObjectLocation,
+            executionState: ExecutionState
+    ) {
+        val model = modelOrInit(host)
         val existingFrame = model.findLast(objectLocation)
 
         val upsertFrame = existingFrame
@@ -141,55 +168,64 @@ class ExecutionManager(
 
         upsertFrame.states[objectLocation.objectPath] = executionState
 
-        publishExecutionModel(model)
+        publishExecutionModel(host, model)
     }
 
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun isExecuting(): Boolean {
-        return modelOrInit().containsStatus(ExecutionPhase.Running)
+    suspend fun isExecuting(
+            host: DocumentPath
+    ): Boolean {
+        return modelOrInit(host).containsStatus(ExecutionPhase.Running)
     }
 
 
-    suspend fun executionModel(): ExecutionModel {
-        return modelOrInit()
+    suspend fun executionModel(
+            host: DocumentPath
+    ): ExecutionModel {
+        return modelOrInit(host)
     }
 
 
-    suspend fun readExecutionModel(prototype: ExecutionModel) {
-        val model = modelOrInit()
+    suspend fun readExecutionModel(
+            host: DocumentPath,
+            prototype: ExecutionModel
+    ) {
+        val model = modelOrInit(host)
         model.frames.clear()
         model.frames.addAll(prototype.frames)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun reset(): Digest {
-        val model = modelOrInit()
+    suspend fun reset(
+            host: DocumentPath
+    ): Digest {
+        val model = modelOrInit(host)
 
         model.frames.clear()
 
-        publishExecutionModel(model)
+        publishExecutionModel(host, model)
 
         return model.digest()
     }
 
 
     suspend fun start(
-            documentPath: DocumentPath,
+            host: DocumentPath,
             graphStructure: GraphStructure
     ): Digest {
-        val model = modelOrInit()
+        val model = modelOrInit(host)
         model.frames.clear()
 
         val values = mutableMapOf<ObjectPath, ExecutionState>()
 
-        val documentNotation = graphStructure.graphNotation.documents.values[documentPath]
+        val documentNotation = graphStructure.graphNotation.documents.values[host]
 
         if (documentNotation != null) {
             val steps = graphStructure.graphNotation.transitiveAttribute(
-                    ObjectLocation(documentPath, NotationConventions.mainObjectPath),
+                    ObjectLocation(host, NotationConventions.mainObjectPath),
                     ScriptDocument.stepsAttributePath
             ) as ListAttributeNotation
 
@@ -198,18 +234,19 @@ class ExecutionManager(
                 values[objectPath] = ExecutionState.initial
             }
 
-            val frame = ExecutionFrame(documentPath, values)
+            val frame = ExecutionFrame(host, values)
 
             model.frames.add(frame)
         }
 
-        publishExecutionModel(model)
+        publishExecutionModel(host, model)
 
         return model.digest()
     }
 
 
     suspend fun execute(
+            host: DocumentPath,
             objectLocation: ObjectLocation,
             delayMillis: Int = 0
     ): ExecutionResponse {
@@ -217,9 +254,9 @@ class ExecutionManager(
 //            println("ExecutionManager | %%%% delay($delayMillis)")
             delay(delayMillis.toLong())
         }
-        willExecute(objectLocation)
+        willExecute(host, objectLocation)
 
-        publishBeforeExecution(objectLocation)
+        publishBeforeExecution(host, objectLocation)
 
         if (delayMillis > 0) {
 //            println("ExecutionManager | delay($delayMillis)")
@@ -235,14 +272,14 @@ class ExecutionManager(
 //        val actionHandle = actionExecutor.actionManager().get(parentLocation)
 //        val result = response.toResult(actionHandle)
 
-        val digest = modelOrInit().digest()
+        val digest = modelOrInit(host).digest()
 
         val executionState = ExecutionState(
                 false,
                 response
         )
 
-        didExecute(objectLocation, executionState)
+        didExecute(host, objectLocation, executionState)
 
         return ExecutionResponse(response, digest)
     }
