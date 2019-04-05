@@ -78,6 +78,14 @@ class ScriptController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun ScriptController.State.init(props: RProps) {
+        documentPath = null
+        structure = null
+        execution = null
+        creating = false
+    }
+
+
     override fun componentDidMount() {
 
 //        console.log("^^^^^^ script - componentDidMount")
@@ -109,10 +117,13 @@ class ScriptController:
             prevState: ScriptController.State,
             snapshot: Any
     ) {
-        console.log("%#$%#$%#$ componentDidUpdate", state.documentPath, prevState.documentPath)
-        if (state.documentPath != null && prevState.documentPath == null) {
+//        console.log("%#$%#$%#$ componentDidUpdate", state.documentPath, prevState.documentPath)
+        if (state.documentPath != null && state.documentPath != prevState.documentPath) {
             async {
-                ClientContext.executionManager.executionModel(state.documentPath!!)
+                val executionModel = ClientContext.executionManager.executionModel(state.documentPath!!)
+                setState {
+                    execution = executionModel
+                }
             }
         }
 
@@ -136,6 +147,7 @@ class ScriptController:
 
 
     override suspend fun onExecutionModel(host: DocumentPath, executionModel: ExecutionModel) {
+//        console.log("^^^^ onExecutionModel", host, state.documentPath, executionModel)
         if (state.documentPath != host) {
             return
         }
@@ -201,11 +213,13 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-//        +"Foo"
+//        +"Path: ${state.documentPath}"
+//        br {}
+//        +"Exec: ${state.execution?.frames?.lastOrNull()?.path}"
+
         val structure = state.structure
                 ?: return
 
-//        +"Bar"
         val documentPath: DocumentPath = state.documentPath
                 ?: return
 
@@ -433,6 +447,8 @@ class ScriptController:
             child(RunController::class) {
                 attrs {
                     documentPath = state.documentPath
+                    structure = state.structure
+                    execution = state.execution
                 }
             }
         }

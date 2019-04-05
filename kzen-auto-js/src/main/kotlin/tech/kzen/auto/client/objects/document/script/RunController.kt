@@ -13,29 +13,29 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
-import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 
 
 class RunController(
         props: RunController.Props
 ):
         RComponent<RunController.Props, RunController.State>(props),
-        ModelManager.Observer,
+//        ModelManager.Observer,
         ExecutionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var documentPath: DocumentPath?
+            var documentPath: DocumentPath?,
+            var structure: GraphStructure?,
+            var execution: ExecutionModel?
     ): RProps
 
 
     class State(
-            var structure: GraphStructure?,
-            var execution: ExecutionModel?,
+//            var structure: GraphStructure?,
+//            var execution: ExecutionModel?,
             var fabHover: Boolean
     ): RState
 
@@ -51,11 +51,11 @@ class RunController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(projectStructure: GraphStructure, event: NotationEvent?) {
-        setState {
-            structure = projectStructure
-        }
-    }
+//    override suspend fun handleModel(projectStructure: GraphStructure, event: NotationEvent?) {
+//        setState {
+//            structure = projectStructure
+//        }
+//    }
 
 
     override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {}
@@ -69,9 +69,9 @@ class RunController(
             return
         }
 
-        setState {
-            execution = executionModel
-        }
+//        setState {
+//            execution = executionModel
+//        }
 
         if (! executionModel.containsStatus(ExecutionPhase.Running) &&
                 executionModel.next() == null &&
@@ -85,14 +85,14 @@ class RunController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         async {
-            ClientContext.modelManager.observe(this)
+//            ClientContext.modelManager.observe(this)
             ClientContext.executionManager.subscribe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.modelManager.unobserve(this)
+//        ClientContext.modelManager.unobserve(this)
         ClientContext.executionManager.unsubscribe(this)
     }
 
@@ -102,8 +102,17 @@ class RunController(
             prevState: RunController.State,
             snapshot: Any
     ) {
+//        if (props.documentPath != null && props.documentPath != prevState.documentPath) {
+//            async {
+//                val executionModel = ClientContext.executionManager.executionModel(state.documentPath!!)
+//                setState {
+//                    execution = executionModel
+//                }
+//            }
+//        }
 //        console.log("RunController componentDidUpdate", state, prevState)
-        val execution = state.execution
+//        val execution = state.execution
+        val execution = props.execution
                 ?: return
 
         if (execution.frames.isEmpty()) {
@@ -133,7 +142,8 @@ class RunController(
 
 
     private suspend fun executionStateToFreshStart() {
-        val graphStructure = state.structure
+//        val graphStructure = state.structure
+        val graphStructure = props.structure
                 ?: return
 
         val documentPath = props.documentPath
@@ -160,7 +170,8 @@ class RunController(
         val host = props.documentPath
                 ?: return Phase.Empty
 
-        val executionModel = state.execution
+//        val executionModel = state.execution
+        val executionModel = props.execution
                 ?: return Phase.Empty
 
         if (executionModel.frames.isEmpty() ||
@@ -239,7 +250,8 @@ class RunController(
 
 
     private fun onFabEnter() {
-        val nextToRun = state.execution?.next()
+//        val nextToRun = state.execution?.next()
+        val nextToRun = props.execution?.next()
         if (nextToRun == ClientContext.executionIntent.actionLocation()) {
             return
         }
@@ -252,7 +264,8 @@ class RunController(
 
 
     private fun onFabLeave() {
-        val nextToRun = state.execution?.next()
+//        val nextToRun = state.execution?.next()
+        val nextToRun = props.execution?.next()
 //        println("^$%^$%^% onRunAllLeave - $nextToRun")
         if (nextToRun != null) {
             ClientContext.executionIntent.clearIf(nextToRun)
@@ -262,6 +275,10 @@ class RunController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+//        +"Path: ${props.documentPath?.asString()}"
+//        br {}
+//        +"Exec: ${state.execution?.frames?.lastOrNull()?.path}"
+
         val phase = phase()
 //        println("#$#%#$%#$% phase - $phase")
 

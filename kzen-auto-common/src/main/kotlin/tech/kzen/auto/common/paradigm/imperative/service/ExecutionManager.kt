@@ -47,7 +47,7 @@ class ExecutionManager(
         subscribers.add(subscriber)
 
         for (model in models) {
-            println("^^^ subscribe - onExecutionModel - $model")
+//            println("^^^ subscribe - onExecutionModel - $model")
             subscriber.onExecutionModel(model.key, model.value)
         }
     }
