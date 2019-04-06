@@ -1,20 +1,18 @@
 package tech.kzen.auto.client.objects.sidebar
 
 import kotlinx.coroutines.delay
-import kotlinx.css.Color
-import kotlinx.css.pct
+import kotlinx.css.*
 import kotlinx.css.properties.TextDecorationLine
 import kotlinx.css.properties.textDecoration
-import kotlinx.css.px
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
 import react.*
 import styled.css
 import styled.styledA
+import styled.styledDiv
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.MaterialTextField
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.structure.notation.edit.RenameDocumentRefactorCommand
@@ -69,7 +67,7 @@ class DocumentNameEditor(
 //            // NB: not sure why this is necessary, without it state.saving doesn't show
 //            delay(1)
 
-            val nameWithExtension = DocumentName.ofFilenameWithDefaultExtension(state.name)
+            val nameWithExtension = DocumentName.ofYaml(state.name)
             ClientContext.commandBus.apply(RenameDocumentRefactorCommand(
                     props.documentPath, nameWithExtension))
 
@@ -153,7 +151,7 @@ class DocumentNameEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         if (state.editing) {
-            renderWriter()
+            renderEditor()
         }
         else {
             styledA {
@@ -174,32 +172,77 @@ class DocumentNameEditor(
     }
 
 
-    private fun RBuilder.renderWriter() {
-        child(MaterialTextField::class) {
-            attrs {
-                style = reactStyle {
-                    marginTop = (-6).px
+    private fun RBuilder.renderEditor() {
+        styledDiv {
+            css {
+                display = Display.inlineBlock
+
+                width = 100.pct.minus(4.5.em)
+//                height = ActionController.headerHeight
+
+//                marginTop = 10.px
+//                marginTop = (-14).px
+                marginTop = (-20).px
+            }
+
+            child(MaterialTextField::class) {
+                attrs {
+//                    style = reactStyle {
+//                        marginTop = (-6).px
+//                    }
+
+                    fullWidth = true
+                    autoFocus = true
+
+                    inputRef = ::onInputRef
+
+                    value = state.name
+
+                    onChange = {
+                        val target = it.target as HTMLInputElement
+                        onNameChange(target.value)
+                    }
+
+                    onKeyDown = ::handleEnterAndEscape
+                }
+            }
+        }
+
+        styledDiv {
+            css {
+                float = Float.right
+            }
+
+            child(MaterialIconButton::class) {
+                attrs {
+                    title = "Cancel name edit (keyboard shortcut: Escape)"
+
+                    style = reactStyle {
+                        marginLeft = (-3.5).em
+                    }
+
+                    onClick = ::onCancel
                 }
 
-                fullWidth = true
-                autoFocus = true
+                child(CancelIcon::class) {}
+            }
 
-                inputRef = ::onInputRef
+            child(MaterialIconButton::class) {
+                attrs {
+                    title = "Save name (keyboard shortcut: Enter)"
 
-                value = state.name
-//                        if (NameConventions.isDefault(ObjectName(state.objectName))) {
-//                            ""
-//                        }
-//                        else {
-//                            state.objectName
-//                        }
+                    style = reactStyle {
+                        //                        marginLeft = (-0.5).em
+                        marginLeft = (-0.75).em
+                        marginRight = (-1).em
+                    }
 
-                onChange = {
-                    val target = it.target as HTMLInputElement
-                    onNameChange(target.value)
+                    onClick = ::onRename
+
+                    disabled = ! isModified()
                 }
 
-                onKeyDown = ::handleEnterAndEscape
+                child(SaveIcon::class) {}
             }
         }
     }

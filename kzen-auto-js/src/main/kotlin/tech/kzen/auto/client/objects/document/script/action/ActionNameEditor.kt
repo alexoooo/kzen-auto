@@ -24,10 +24,10 @@ import tech.kzen.lib.common.structure.notation.edit.RenameObjectRefactorCommand
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
-class ObjectNameEditor(
-        props: ObjectNameEditor.Props
+class ActionNameEditor(
+        props: ActionNameEditor.Props
 ):
-        RComponent<ObjectNameEditor.Props, ObjectNameEditor.State>(props)
+        RComponent<ActionNameEditor.Props, ActionNameEditor.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
@@ -73,7 +73,7 @@ class ObjectNameEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun ObjectNameEditor.State.init(props: ObjectNameEditor.Props) {
+    override fun ActionNameEditor.State.init(props: ActionNameEditor.Props) {
 //        console.log("ObjectNameEditor | State.init - ${props.objectName}", Date.now())
         objectName = props.objectLocation.objectPath.name.value
 

@@ -209,7 +209,7 @@ class SidebarFolder(
 
 
     private fun resolve(name: String): DocumentPath {
-        return documentBase.withName(DocumentName.ofFilenameWithDefaultExtension(name))
+        return documentBase.withName(DocumentName.ofYaml(name))
     }
 
 

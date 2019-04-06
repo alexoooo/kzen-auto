@@ -125,8 +125,8 @@ class RestHandler {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun notation(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val notationPrefix = "/notation/"
-        val requestSuffix = serverRequest.path().substring(notationPrefix.length)
+        val encodedRequestSuffix = serverRequest.path().substring(CommonRestApi.notationPrefix.length)
+        val requestSuffix = URI(encodedRequestSuffix).path
 
         val notationPath = DocumentPath.parse(requestSuffix)
         val notationBytes = runBlocking {

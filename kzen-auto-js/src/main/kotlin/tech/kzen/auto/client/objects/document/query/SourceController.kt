@@ -207,21 +207,27 @@ class SourceController(
 
 
     private fun RBuilder.renderResult(executionResult: ExecutionResult) {
-        when (executionResult) {
-            is ExecutionError -> {
-                styledDiv {
-                    css {
-                        color = Color.red
-                    }
-                    +executionResult.errorMessage
-                }
+        styledDiv {
+            css {
+                marginTop = 1.em
             }
 
-            is ExecutionSuccess -> {
-                +executionResult.value.get().toString()
+            when (executionResult) {
+                is ExecutionError -> {
+                    styledDiv {
+                        css {
+                            color = Color.red
+                        }
+                        +executionResult.errorMessage
+                    }
+                }
+
+                is ExecutionSuccess -> {
+                    +executionResult.value.get().toString()
 //                +"Value: ${executionResult.value.get()}"
 //                br {}
 //                +"Detail: ${executionResult.detail.get()}"
+                }
             }
         }
     }

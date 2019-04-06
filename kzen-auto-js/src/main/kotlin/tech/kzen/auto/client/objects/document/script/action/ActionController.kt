@@ -75,7 +75,7 @@ class ActionController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var editSignal = ObjectNameEditor.EditSignal()
+    private var editSignal = ActionNameEditor.EditSignal()
     private var buttonRef: HTMLButtonElement? = null
 
     private var processingOption: Boolean = false
@@ -379,7 +379,7 @@ class ActionController(
                     left = runIconWidth
                 }
 
-                child(ObjectNameEditor::class) {
+                child(ActionNameEditor::class) {
                     attrs {
                         objectLocation = props.objectLocation
                         notation = props.structure.graphNotation

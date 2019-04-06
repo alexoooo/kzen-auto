@@ -63,7 +63,7 @@ class ExecutionManager(
             objectLocation: ObjectLocation
     ) {
         for (subscriber in subscribers) {
-            println("^^^ publishBeforeExecution - $host - $objectLocation")
+//            println("^^^ publishBeforeExecution - $host - $objectLocation")
             subscriber.beforeExecution(host, objectLocation)
         }
     }
@@ -74,7 +74,7 @@ class ExecutionManager(
             model: ExecutionModel
     ) {
         for (subscriber in subscribers) {
-            println("^^^ publishExecutionModel - $host - $model")
+//            println("^^^ publishExecutionModel - $host - $model")
             subscriber.onExecutionModel(host, model)
         }
     }

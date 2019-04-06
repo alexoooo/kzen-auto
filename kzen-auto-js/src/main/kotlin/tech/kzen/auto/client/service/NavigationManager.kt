@@ -79,11 +79,14 @@ class NavigationManager {
 
     private fun read(): DocumentPath? {
 //        console.log("^^^ read", window.location.hash)
-        val path = window.location.hash.substring(1)
+        val encodedPath = window.location.hash.substring(1)
 
-        if (path.isEmpty()) {
+        if (encodedPath.isEmpty()) {
             return null
         }
+
+//        val path = js("decodeURIComponent(encodedPath)") as String
+        val path = js("decodeURI(encodedPath)") as String
 
         return DocumentPath.parse(path)
     }

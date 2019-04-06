@@ -69,4 +69,15 @@ object ServerContext {
             modelManager.observe(executionManager)
         }
     }
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun init() {
+        // NB: trigger above init block, if not already triggered
+    }
+
+    fun close() {
+        webDriverContext.quit()
+    }
 }
