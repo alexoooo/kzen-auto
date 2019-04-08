@@ -259,6 +259,13 @@ class ActionController(
     }
 
 
+    private fun onOptionsCancel() {
+//        console.log("^^^^^^ onOptionsCancel")
+        onOptionsClose()
+        optionCompletedTime = Date.now()
+    }
+
+
     private fun performOption(action: suspend () -> Unit) {
         processingOption = true
         onOptionsClose()
@@ -501,7 +508,7 @@ class ActionController(
             attrs {
                 open = state.optionsOpen
 
-                onClose = ::onOptionsClose
+                onClose = ::onOptionsCancel
 
                 anchorEl = buttonRef
             }

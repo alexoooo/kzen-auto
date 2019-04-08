@@ -163,6 +163,13 @@ class SidebarFolder(
     }
 
 
+    private fun onOptionsCancel() {
+//        console.log("^^^^^^ onOptionsCancel")
+        onOptionsClose()
+        optionCompletedTime = Date.now()
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun generateDocumentName(
             archetype: DocumentArchetype
@@ -386,7 +393,7 @@ class SidebarFolder(
             attrs {
                 open = state.optionsOpen
 
-                onClose = ::onOptionsClose
+                onClose = ::onOptionsCancel
 
                 anchorEl = buttonRef
             }

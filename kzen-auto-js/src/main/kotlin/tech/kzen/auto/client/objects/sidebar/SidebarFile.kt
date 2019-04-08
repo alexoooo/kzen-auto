@@ -125,6 +125,13 @@ class SidebarFile(
     }
 
 
+    private fun onOptionsCancel() {
+//        console.log("^^^^^^ onOptionsCancel")
+        onOptionsClose()
+        optionCompletedTime = Date.now()
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRename() {
         performOption {
@@ -291,7 +298,7 @@ class SidebarFile(
             attrs {
                 open = state.optionsOpen
 
-                onClose = ::onOptionsClose
+                onClose = ::onOptionsCancel
 
                 anchorEl = buttonRef
             }
@@ -309,7 +316,6 @@ class SidebarFile(
         child(MaterialMenuItem::class) {
             attrs {
                 onClick = ::onRename
-//                onClick = ::onOptionsClose
             }
             child(EditIcon::class) {
                 attrs {
@@ -322,7 +328,6 @@ class SidebarFile(
         child(MaterialMenuItem::class) {
             attrs {
                 onClick = ::onRemove
-//                onClick = ::onOptionsClose
             }
             child(DeleteIcon::class) {
                 attrs {
