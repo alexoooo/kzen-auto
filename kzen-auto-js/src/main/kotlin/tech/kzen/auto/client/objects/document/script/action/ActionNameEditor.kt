@@ -170,19 +170,6 @@ class ActionNameEditor(
     }
 
 
-//    private fun onReaderEnter() {
-//        setState {
-//            readerHover = true
-//        }
-//    }
-//
-//
-//    private fun onReaderLeave() {
-//        setState {
-//            readerHover = false
-//        }
-//    }
-
     private fun onInputRef(inputRef: HTMLInputElement?) {
         val isNew = this.inputRef == null && inputRef != null
 

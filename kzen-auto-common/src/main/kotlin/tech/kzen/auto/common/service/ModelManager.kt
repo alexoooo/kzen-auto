@@ -49,7 +49,7 @@ class ModelManager(
 
         mostRecent = readModel()
 
-//        println("ModelManager - Publishing")
+//        println("ModelManager - Publishing - $mostRecent")
         for (subscriber in subscribers) {
             subscriber.handleModel(mostRecent!!, event)
         }

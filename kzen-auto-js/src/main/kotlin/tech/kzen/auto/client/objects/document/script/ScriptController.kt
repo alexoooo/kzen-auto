@@ -303,6 +303,10 @@ class ScriptController:
             }
 
             for ((index, stepReference) in stepReferences.withIndex()) {
+//                console.log("^^^^^ Locating", stepReference, stepReference.asString(),
+//                        graphStructure.graphNotation.coalesce.values.keys.toList())
+//                        graphStructure.graphNotation.coalesce.values.keys.map { it.objectPath.asString() }.toString())
+
                 val stepLocation = graphStructure.graphNotation.coalesce.locate(stepReference)
                 val objectPath = stepLocation.objectPath
 

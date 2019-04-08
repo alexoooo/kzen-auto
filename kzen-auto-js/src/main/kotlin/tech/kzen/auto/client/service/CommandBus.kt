@@ -52,7 +52,7 @@ class CommandBus(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun apply(command: NotationCommand) {
-//        println("CommandBus - applying command: $command")
+//        console.log("CommandBus - applying command: $command", command)
 
         val event = try {
             clientRepository.apply(command)
@@ -62,8 +62,8 @@ class CommandBus(
             onCommandFailedInClient(command, e)
             return
         }
-
-//        console.log("CommandBus - client event: $event")
+//        console.log("CommandBus - client event:",
+//                event, clientRepository.aggregate().state.coalesce.values.keys.toList())
 
 //        val bundleValue = ClientContext.notationMediaCache.read(NotationConventions.mainPath)
 //        println("CommandBus - new bundle value !!: ${IoUtils.utf8Decode(bundleValue)}")
