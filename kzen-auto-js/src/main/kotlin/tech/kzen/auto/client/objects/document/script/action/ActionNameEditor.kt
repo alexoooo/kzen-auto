@@ -332,7 +332,8 @@ class ActionNameEditor(
                 width = 100.pct.minus(4.em)
                 height = ActionController.headerHeight
 
-                marginTop = 10.px
+//                marginTop = 10.px
+                marginTop = 8.px
             }
 
             child(MaterialTextField::class) {
@@ -363,6 +364,7 @@ class ActionNameEditor(
 
         styledDiv {
             css {
+                marginTop = (-3).px
                 float = Float.right
             }
 

@@ -32,6 +32,9 @@ class SidebarFolder(
     companion object {
         private val documentBase = NotationConventions.mainDocumentPath
         private const val menuDanglingTimeout = 300
+
+//        val indent = 2.em
+        val indent = (2).em.minus(4.px)
     }
 
 
@@ -318,7 +321,7 @@ class SidebarFolder(
         if (mainDocuments.isEmpty()) {
             styledDiv {
                 css {
-                    marginLeft = 2.em
+                    marginLeft = SidebarFolder.indent
                 }
                 +"(Empty)"
             }

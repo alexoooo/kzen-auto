@@ -166,15 +166,16 @@ class SidebarFile(
                 .get(iconAttribute) as ScalarAttributeNotation
                 ).value
 
-        val indent = 2.em
         val iconWidth = 22.px
 
         styledDiv {
             css {
                 position = Position.relative
                 height = 2.em
-                width = 100.pct.minus(indent)
-                marginLeft = indent
+                width = 100.pct.minus(SidebarFolder.indent)
+                marginLeft = SidebarFolder.indent
+
+//                backgroundColor = Color.red
             }
 
             attrs {
@@ -213,7 +214,7 @@ class SidebarFile(
                     width = 100.pct.minus(iconWidth)
                     marginLeft = 6.px
 
-                    marginTop = 2.px
+//                    marginTop = 2.px
 
                     if (props.selected) {
                         fontWeight = FontWeight.bold
@@ -237,8 +238,6 @@ class SidebarFile(
                     position = Position.absolute
                     top = 0.px
                     right = 0.px
-
-//                    backgroundColor = Color.blue
                 }
 
                 renderOptionsMenu()

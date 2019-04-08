@@ -375,7 +375,8 @@ class ActionController(
                     position = Position.absolute
                     height = headerHeight
                     width = 100.pct.minus(runIconWidth).minus(editIconOffset)
-                    top = (-11).px
+//                    top = (-11).px
+                    top = (-13).px
                     left = runIconWidth
                 }
 
@@ -399,8 +400,13 @@ class ActionController(
                     position = Position.absolute
                     height = headerHeight
                     width = 23.px
-                    top = (-20).px
-                    right = 0.px
+
+//                    top = (-20).px
+//                    top = (-15).px
+                    top = (-16).px
+
+//                    right = 0.px
+                    right = 9.px
                 }
 
                 renderOptionsMenu()

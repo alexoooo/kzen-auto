@@ -154,16 +154,27 @@ class DocumentNameEditor(
             renderEditor()
         }
         else {
-            styledA {
+            renderReader()
+        }
+    }
+
+
+    private fun RBuilder.renderReader() {
+        styledA {
+            css {
+                color = Color.inherit
+                textDecoration(TextDecorationLine.initial)
+            }
+
+            attrs {
+                href = "#" + props.documentPath.asString()
+            }
+
+            styledDiv {
                 css {
+                    marginTop = 2.px
+//                    backgroundColor = Color.blue
                     width = 100.pct
-
-                    color = Color.inherit
-                    textDecoration(TextDecorationLine.initial)
-                }
-
-                attrs {
-                    href = "#" + props.documentPath.asString()
                 }
 
                 +state.name
@@ -173,23 +184,26 @@ class DocumentNameEditor(
 
 
     private fun RBuilder.renderEditor() {
+//        styledDiv {
+//            css {
+//                backgroundColor = Color.blue
+//            }
+//            +"foo"
+//        }
+
+
         styledDiv {
             css {
                 display = Display.inlineBlock
 
-                width = 100.pct.minus(4.5.em)
-//                height = ActionController.headerHeight
-
-//                marginTop = 10.px
-//                marginTop = (-14).px
-                marginTop = (-20).px
+                width = 100.pct.minus(4.7.em)
             }
 
             child(MaterialTextField::class) {
                 attrs {
-//                    style = reactStyle {
-//                        marginTop = (-6).px
-//                    }
+                    style = reactStyle {
+                        marginTop = (-5).px
+                    }
 
                     fullWidth = true
                     autoFocus = true
@@ -211,6 +225,7 @@ class DocumentNameEditor(
         styledDiv {
             css {
                 float = Float.right
+                marginTop = (-12).px
             }
 
             child(MaterialIconButton::class) {
@@ -218,7 +233,7 @@ class DocumentNameEditor(
                     title = "Cancel name edit (keyboard shortcut: Escape)"
 
                     style = reactStyle {
-                        marginLeft = (-3.5).em
+                        marginLeft = (-3.7).em
                     }
 
                     onClick = ::onCancel
@@ -232,7 +247,6 @@ class DocumentNameEditor(
                     title = "Save name (keyboard shortcut: Enter)"
 
                     style = reactStyle {
-                        //                        marginLeft = (-0.5).em
                         marginLeft = (-0.75).em
                         marginRight = (-1).em
                     }
