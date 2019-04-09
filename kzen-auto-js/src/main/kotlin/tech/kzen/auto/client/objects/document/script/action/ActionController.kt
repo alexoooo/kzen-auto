@@ -568,7 +568,7 @@ class ActionController(
                     style = iconStyle
                 }
             }
-            +"Remove"
+            +"Delete"
         }
     }
 

@@ -1,10 +1,15 @@
 package tech.kzen.auto.client.service
 
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.structure.notation.edit.CreateDocumentCommand
+import tech.kzen.lib.common.structure.notation.edit.DeleteDocumentCommand
+import tech.kzen.lib.common.structure.notation.edit.NotationCommand
+import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 import kotlin.browser.window
 
 
-class NavigationManager {
+class NavigationManager: CommandBus.Subscriber
+{
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         fun handleNavigation(documentPath: DocumentPath?)
@@ -46,7 +51,7 @@ class NavigationManager {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun postConstruct() {
+    fun postConstruct(commandBus: CommandBus) {
         // var type = window.location.hash.substr(1);
 
         readAndPublishIfNecessary()
@@ -55,6 +60,32 @@ class NavigationManager {
 //            console.log("^^^ hashchange", it)
             readAndPublishIfNecessary()
         })
+
+        commandBus.subscribe(this)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun onCommandFailedInClient(command: NotationCommand, cause: Throwable) {}
+
+
+    override fun onCommandSuccess(command: NotationCommand, event: NotationEvent) {
+        if (command is DeleteDocumentCommand) {
+            if (command.documentPath == documentPath) {
+                clear()
+            }
+        }
+        else if (command is CreateDocumentCommand) {
+            if (command.documentPath == documentPath) {
+                publish()
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun clear() {
+        window.location.hash = ""
     }
 
 
@@ -70,9 +101,7 @@ class NavigationManager {
         documentPath = read()
 
         if (previous != documentPath) {
-//            async {
-                publish()
-//            }
+            publish()
         }
     }
 

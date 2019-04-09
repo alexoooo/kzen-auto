@@ -32,7 +32,7 @@ class ProjectController(
 ):
         RComponent<ProjectController.Props, ProjectController.State>(props),
         ModelManager.Observer,
-        CommandBus.Observer,
+        CommandBus.Subscriber,
         NavigationManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ class ProjectController(
     override fun componentDidMount() {
         async {
             ClientContext.modelManager.observe(this)
-            ClientContext.commandBus.observe(this)
+            ClientContext.commandBus.subscribe(this)
             ClientContext.navigationManager.observe(this)
         }
 
@@ -118,7 +118,7 @@ class ProjectController(
     override fun componentWillUnmount() {
 //        println("ProjectController - Un-subscribed")
         ClientContext.modelManager.unobserve(this)
-        ClientContext.commandBus.unobserve(this)
+        ClientContext.commandBus.unsubscribe(this)
         ClientContext.navigationManager.unobserve(this)
 
         window.addEventListener("resize", handleResize)
@@ -161,7 +161,7 @@ class ProjectController(
 
 
     override fun onCommandFailedInClient(command: NotationCommand, cause: Throwable) {
-        console.log("%%%%%%% onCommandFailedInClient", command, cause)
+//        console.log("%%%%%%% onCommandFailedInClient", command, cause)
         setState {
             commandError = "${cause.message}"
         }

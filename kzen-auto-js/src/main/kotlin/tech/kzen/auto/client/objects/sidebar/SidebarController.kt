@@ -10,9 +10,9 @@ import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 
 
@@ -52,17 +52,6 @@ class SidebarController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun mainDocument(graphStructure: GraphStructure): List<DocumentPath> {
-        return graphStructure
-                .graphNotation
-                .documents
-                .values
-                .keys
-                .filter { it.startsWith(NotationConventions.mainDocumentPath) }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
 //        println("ProjectController - Subscribed")
         async {
@@ -87,7 +76,7 @@ class SidebarController(
         val structure = state.structure
                 ?: return
 
-        val mainDocuments = mainDocument(structure)
+        val mainDocuments = AutoConventions.mainDocuments(structure.graphNotation)
 
         if (state.documentPath == null && ! mainDocuments.isEmpty()) {
             ClientContext.navigationManager.goto(mainDocuments[0])

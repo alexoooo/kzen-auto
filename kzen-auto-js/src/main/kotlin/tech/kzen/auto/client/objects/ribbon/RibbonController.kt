@@ -105,12 +105,22 @@ class RibbonController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun handleNavigation(documentPath: DocumentPath?) {
+//        console.log("^^^^^ handleNavigation", documentPath)
+
         if (documentPath == null) {
+            setState {
+                name = null
+                type = null
+                tabIndex = 0
+                currentRibbonGroups = listOf()
+            }
             return
         }
 
         val typeName = DocumentArchetype.archetypeName(props.notation, documentPath)
                 ?: return
+
+//        console.log("^^^^^ handleNavigation - typeName", typeName)
 
         val documentRibbonGroups = props
                 .ribbonGroups

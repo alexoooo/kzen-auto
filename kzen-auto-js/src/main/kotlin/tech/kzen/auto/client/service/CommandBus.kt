@@ -17,34 +17,33 @@ class CommandBus(
         private val notationParser: NotationParser
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    // TODO: observer vs subscriber?
-    interface Observer {
+    interface Subscriber {
         fun onCommandFailedInClient(command: NotationCommand, cause: Throwable)
         fun onCommandSuccess(command: NotationCommand, event: NotationEvent)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val observers = mutableSetOf<Observer>()
+    private val subscribers = mutableSetOf<Subscriber>()
 
 
-    fun observe(observer: Observer) {
-        observers.add(observer)
+    fun subscribe(observer: Subscriber) {
+        subscribers.add(observer)
     }
 
-    fun unobserve(observer: Observer) {
-        observers.remove(observer)
+    fun unsubscribe(observer: Subscriber) {
+        subscribers.remove(observer)
     }
 
 
     private fun onCommandFailedInClient(command: NotationCommand, cause: Throwable) {
-        for (observer in observers) {
+        for (observer in subscribers) {
             observer.onCommandFailedInClient(command, cause)
         }
     }
 
     private fun onCommandSuccess(command: NotationCommand, event: NotationEvent) {
-        for (observer in observers) {
+        for (observer in subscribers) {
             observer.onCommandSuccess(command, event)
         }
     }

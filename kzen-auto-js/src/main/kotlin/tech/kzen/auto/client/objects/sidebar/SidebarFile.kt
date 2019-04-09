@@ -334,7 +334,7 @@ class SidebarFile(
                     style = iconStyle
                 }
             }
-            +"Remove"
+            +"Delete"
         }
     }
 }

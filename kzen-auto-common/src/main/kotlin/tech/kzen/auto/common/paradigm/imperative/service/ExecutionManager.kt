@@ -89,10 +89,13 @@ class ExecutionManager(
             return
         }
 
-        for (host in models.keys) {
+        // NB: avoid concurrent modification for DeletedDocumentEvent handling
+        val modelHosts = models.keys.toList()
+
+        for (host in modelHosts) {
             val model = modelOrInit(host)
 
-            val changed = apply(model, event)
+            val changed = apply(host, model, event)
 
             if (changed) {
                 publishExecutionModel(host, model)
@@ -101,15 +104,20 @@ class ExecutionManager(
     }
 
 
-    private fun apply(model: ExecutionModel, event: NotationEvent): Boolean {
+    private fun apply(
+            documentPath: DocumentPath,
+            model: ExecutionModel,
+            event: NotationEvent
+    ): Boolean {
         return when (event) {
             is SingularNotationEvent ->
-                applySingular(model, event)
+                applySingular(documentPath, model, event)
 
             is CompoundNotationEvent -> {
                 var anyChanged = false
                 for (singularEvent in event.singularEvents) {
-                    anyChanged = anyChanged || applySingular(model, singularEvent)
+                    val changed = applySingular(documentPath, model, singularEvent)
+                    anyChanged = anyChanged || changed
                 }
                 return anyChanged
             }
@@ -117,7 +125,11 @@ class ExecutionManager(
     }
 
 
-    private fun applySingular(model: ExecutionModel, event: SingularNotationEvent): Boolean {
+    private fun applySingular(
+            documentPath: DocumentPath,
+            model: ExecutionModel,
+            event: SingularNotationEvent
+    ): Boolean {
         return when (event) {
             is RemovedObjectEvent ->
                 model.remove(event.objectLocation)
@@ -127,6 +139,14 @@ class ExecutionManager(
 
             is AddedObjectEvent ->
                 model.add(event.objectLocation)
+
+            is DeletedDocumentEvent ->
+                if (event.documentPath == documentPath) {
+                    models.remove(documentPath) != null
+                }
+                else {
+                    false
+                }
 
             else ->
                 false

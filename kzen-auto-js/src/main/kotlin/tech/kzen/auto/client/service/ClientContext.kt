@@ -72,11 +72,10 @@ object ClientContext {
         ModuleRegistry.add(kzenAutoJs)
 
         async {
-            navigationManager.postConstruct()
+            navigationManager.postConstruct(commandBus)
 
             modelManager.observe(executionManager)
             executionManager.subscribe(executionLoop)
-//            executionManager.subscribe(executionIntent)
         }
     }
 }

@@ -29,20 +29,24 @@ data class ExecutionModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+//    fun remove(documentPath: DocumentPath): Boolean {
+//        var renamedAny = false
+//    }
+
     fun remove(objectLocation: ObjectLocation): Boolean {
-        var renamedAny = false
+        var anyChanged = false
 
         for (frame in frames) {
             if (frame.path != objectLocation.documentPath) {
                 continue
             }
 
-            val renamed = frame.remove(objectLocation.objectPath)
+            val changed = frame.remove(objectLocation.objectPath)
 
-            renamedAny = renamedAny || renamed
+            anyChanged = anyChanged || changed
         }
 
-        return renamedAny
+        return anyChanged
     }
 
 

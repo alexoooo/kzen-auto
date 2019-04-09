@@ -213,43 +213,18 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-//        +"Path: ${state.documentPath}"
-//        br {}
-//        +"Exec: ${state.execution?.frames?.lastOrNull()?.path}"
-
         val structure = state.structure
                 ?: return
 
         val documentPath: DocumentPath = state.documentPath
                 ?: return
 
-//        +"Baz"
-//        val documentNotation: DocumentNotation = structure.graphNotation.documents.values[documentPath]
-//                ?: return
-
-//        if (documentNotation == null) {
-//            // TODO: move this to StageController?
-//            styledH3 {
-//                css {
-//                    marginLeft = 1.em
-//                    paddingTop = 1.em
-//                }
-//
-//                if (structure.graphNotation.documents.values.isEmpty()) {
-//                    +"Please create a file in the sidebar (left)"
-//                }
-//                else {
-//                    +"Please select a file from the sidebar (left)"
-//                }
-//            }
-//        }
-
         styledDiv {
             css {
                 marginLeft = 1.em
             }
 
-            steps(structure, /*documentNotation, */documentPath)
+            steps(structure, documentPath)
         }
 
         runController()
@@ -259,7 +234,6 @@ class ScriptController:
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.steps(
             graphStructure: GraphStructure,
-//            documentNotation: DocumentNotation,
             documentPath: DocumentPath
     ) {
         val mainObjectLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
@@ -284,14 +258,13 @@ class ScriptController:
             insertionPoint(0)
         }
         else {
-            nonEmptySteps(graphStructure, /*documentNotation,*/ documentPath, stepReferences)
+            nonEmptySteps(graphStructure, documentPath, stepReferences)
         }
     }
 
 
     private fun RBuilder.nonEmptySteps(
             graphStructure: GraphStructure,
-//            documentNotation: DocumentNotation,
             documentPath: DocumentPath,
             stepReferences: List<ObjectReference>
     ) {

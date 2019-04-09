@@ -1,13 +1,18 @@
 package tech.kzen.auto.client.objects.document
 
+import kotlinx.css.em
 import react.*
+import styled.css
+import styled.styledH3
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 
@@ -78,18 +83,58 @@ class StageController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun RBuilder.render() {
+    private fun documentArchetypeName(): ObjectName? {
         val notation = state.structure?.graphNotation
-                ?: return
+                ?: return null
 
         val path = state.documentPath
-                ?: return
+                ?: return null
 
-        val parent = DocumentArchetype.archetypeName(notation, path)
-                ?: return
+        return DocumentArchetype.archetypeName(notation, path)
+    }
 
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun RBuilder.render() {
+        val archetypeName = documentArchetypeName()
+
+        if (archetypeName == null) {
+            renderMissingDocument()
+        }
+        else {
+            renderDocumentController(archetypeName)
+        }
+    }
+
+
+    private fun RBuilder.renderMissingDocument() {
+        styledH3 {
+            css {
+                marginLeft = 1.em
+                paddingTop = 1.em
+            }
+
+            val mainDocuments = state
+                    .structure
+                    ?.graphNotation
+                    ?.let { AutoConventions.mainDocuments(it) }
+                    ?: listOf()
+
+            if (mainDocuments.isEmpty()) {
+                +"Please create a file from the sidebar (left)"
+            }
+            else {
+                +"Please select a file from the sidebar (left)"
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderDocumentController(
+            archetypeName: ObjectName
+    ) {
         val documentController = props.documentControllers
-                .single { parent == it.type().name() }
+                .single { archetypeName == it.type().name() }
 
         documentController.child(this) {}
     }
