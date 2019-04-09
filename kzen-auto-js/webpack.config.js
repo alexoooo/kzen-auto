@@ -41,6 +41,8 @@ module.exports = {
     },
     devtool: 'cheap-source-map',
     plugins: [
+        // TODO: https://github.com/nuxt/nuxt.js/issues/3042
+        //  seems to be holding back webpack upgrade
         new webpack.optimize.CommonsChunkPlugin({
             name: 'vendor',
             filename: 'vendor.bundle.js'
