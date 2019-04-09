@@ -1,10 +1,7 @@
 package tech.kzen.auto.client.service
 
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.structure.notation.edit.CreateDocumentCommand
-import tech.kzen.lib.common.structure.notation.edit.DeleteDocumentCommand
-import tech.kzen.lib.common.structure.notation.edit.NotationCommand
-import tech.kzen.lib.common.structure.notation.edit.NotationEvent
+import tech.kzen.lib.common.structure.notation.edit.*
 import kotlin.browser.window
 
 
@@ -70,14 +67,31 @@ class NavigationManager: CommandBus.Subscriber
 
 
     override fun onCommandSuccess(command: NotationCommand, event: NotationEvent) {
-        if (command is DeleteDocumentCommand) {
-            if (command.documentPath == documentPath) {
-                clear()
+        when (command) {
+            is RenameDocumentRefactorCommand -> {
+                val renamedEvent = event as RenamedDocumentRefactorEvent
+//                console.log("^^^^ RenameDocumentRefactorCommand",
+//                        documentPath?.asString(),
+//                        renamedEvent.removedUnderOldName.documentPath.asString(),
+//                        renamedEvent.createdWithNewName.destination.asString(),
+//                        event)
+                if (renamedEvent.removedUnderOldName.documentPath == documentPath) {
+                    goto(renamedEvent.createdWithNewName.destination)
+                }
             }
-        }
-        else if (command is CreateDocumentCommand) {
-            if (command.documentPath == documentPath) {
-                publish()
+
+
+            is DeleteDocumentCommand ->
+                if (command.documentPath == documentPath) {
+                    clear()
+                }
+
+
+            // NB: could have been pre-selected before creation
+            is CreateDocumentCommand -> {
+                if (command.documentPath == documentPath) {
+                    publish()
+                }
             }
         }
     }

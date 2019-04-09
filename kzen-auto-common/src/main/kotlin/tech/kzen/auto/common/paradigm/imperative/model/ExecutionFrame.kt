@@ -58,7 +58,7 @@ data class ExecutionFrame(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun rename(from: ObjectPath, newName: ObjectName): Boolean {
-        if (! states.containsKey(from)) {
+        if (from !in states) {
             return false
         }
 
@@ -82,9 +82,24 @@ data class ExecutionFrame(
     }
 
 
-    fun add(objectPath: ObjectPath) {
+    fun add(objectPath: ObjectPath, index: Int) {
         check(objectPath !in states) { "Already present: $objectPath" }
-        states[objectPath] = ExecutionState.initial
+
+        val added = mutableMapOf<ObjectPath, ExecutionState>()
+
+        for ((i, entry) in states.entries.withIndex()) {
+            if (i == index) {
+                added[objectPath] = ExecutionState.initial
+            }
+            added[entry.key] = entry.value
+        }
+
+        if (added.size == states.size) {
+            added[objectPath] = ExecutionState.initial
+        }
+
+        states.clear()
+        states.putAll(added)
     }
 
 

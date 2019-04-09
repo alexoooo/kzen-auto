@@ -18,6 +18,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.structure.notation.edit.RenameDocumentRefactorCommand
 
 
+// TODO: error detection
 class DocumentNameEditor(
         props: Props
 ):

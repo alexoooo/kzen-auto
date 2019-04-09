@@ -6,6 +6,8 @@ import tech.kzen.lib.common.util.Digest
 
 
 // TODO: use persistent data structure
+// TODO: decouple calculation of 'next' from any ordering requirements
+// TODO: unify imperative and dataflow
 data class ExecutionModel(
         val frames: MutableList<ExecutionFrame>
 ) {
@@ -68,7 +70,7 @@ data class ExecutionModel(
     }
 
 
-    fun add(objectLocation: ObjectLocation): Boolean {
+    fun add(objectLocation: ObjectLocation, indexInFrame: Int): Boolean {
         for (frame in frames) {
             if (frame.path != objectLocation.documentPath) {
                 continue
@@ -76,7 +78,7 @@ data class ExecutionModel(
 
             // TODO: just frame.add without checking contains?
             if (! frame.contains(objectLocation.objectPath)) {
-                frame.add(objectLocation.objectPath)
+                frame.add(objectLocation.objectPath, indexInFrame)
             }
             return true
         }

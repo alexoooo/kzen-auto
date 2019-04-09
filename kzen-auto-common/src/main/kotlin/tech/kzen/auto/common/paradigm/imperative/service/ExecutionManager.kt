@@ -114,13 +114,51 @@ class ExecutionManager(
                 applySingular(documentPath, model, event)
 
             is CompoundNotationEvent -> {
-                var anyChanged = false
-                for (singularEvent in event.singularEvents) {
-                    val changed = applySingular(documentPath, model, singularEvent)
-                    anyChanged = anyChanged || changed
-                }
-                return anyChanged
+                applyCompound(documentPath, model, event)
             }
+        }
+    }
+
+
+    private fun applyCompound(
+            documentPath: DocumentPath,
+            model: ExecutionModel,
+            event: CompoundNotationEvent
+    ): Boolean {
+        val appliedWithDependentEvents = applyCompoundWithDependentEvents(documentPath, model, event)
+        if (appliedWithDependentEvents) {
+            return true
+        }
+
+        var anyChanged = false
+        for (singularEvent in event.singularEvents) {
+            val changed = applySingular(documentPath, model, singularEvent)
+            anyChanged = anyChanged || changed
+        }
+        return anyChanged
+    }
+
+
+    private fun applyCompoundWithDependentEvents(
+            documentPath: DocumentPath,
+            model: ExecutionModel,
+            event: CompoundNotationEvent
+    ): Boolean {
+        return when (event) {
+            is RenamedDocumentRefactorEvent -> {
+//                println("^^^^^ applyCompoundWithDependentEvents - $documentPath - $event")
+                if (event.removedUnderOldName.documentPath == documentPath) {
+                    models.remove(event.removedUnderOldName.documentPath)
+                    models[event.createdWithNewName.destination] = model
+                    true
+                }
+                else {
+                    false
+                }
+            }
+
+            else ->
+                false
         }
     }
 
@@ -138,7 +176,8 @@ class ExecutionManager(
                 model.rename(event.objectLocation, event.newName)
 
             is AddedObjectEvent ->
-                model.add(event.objectLocation)
+                // TODO: generalize next-to-run?
+                model.add(event.objectLocation, event.indexInDocument.value - 1)
 
             is DeletedDocumentEvent ->
                 if (event.documentPath == documentPath) {
