@@ -5,7 +5,6 @@ gracefulFs.gracefulify(fs);
 
 
 const webpack = require("webpack");
-const HtmlWebpackPlugin = require('html-webpack-plugin');
 const BrowserSyncPlugin = require('browser-sync-webpack-plugin');
 const path = require("path");
 

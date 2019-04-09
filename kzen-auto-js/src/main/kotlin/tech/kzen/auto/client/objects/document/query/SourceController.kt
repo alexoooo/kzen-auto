@@ -94,7 +94,7 @@ class SourceController(
         ClientContext.commandBus.apply(UpsertAttributeCommand(
                 props.objectLocation,
                 filePathAttribute.attribute,
-                ScalarAttributeNotation(state.value!!)))
+                ScalarAttributeNotation(state.value)))
 
         setState {
             pending = false

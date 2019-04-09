@@ -17,9 +17,6 @@ dependencies {
 
     compile group: 'tech.kzen.lib', name: 'kzen-lib-js', version: kzenLibVersion
 
-//    compile group: 'com.github.rivasdiaz', name: 'kotlin-rmwc', version: '8e9666dfc8'
-    // com.github.rivasdiaz:kotlin-rmwc:8e9666dfc8
-
     compile "org.jetbrains:kotlin-react:$reactVersion"
     compile "org.jetbrains:kotlin-react-dom:$reactDomVersion"
     compile "org.jetbrains:kotlin-styled:$kotlinStyledVersion"
@@ -29,7 +26,7 @@ dependencies {
 
 
 node {
-    version = '11.11.0'
+    version = '11.13.0'
     download true
 }
 

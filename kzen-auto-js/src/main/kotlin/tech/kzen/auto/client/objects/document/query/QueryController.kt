@@ -201,14 +201,13 @@ class QueryController:
             insertionPoint(0)
         }
         else {
-            nonEmptySources(graphStructure, /*documentNotation,*/ documentPath, sourceReferences)
+            nonEmptySources(graphStructure, sourceReferences)
         }
     }
 
 
     private fun RBuilder.nonEmptySources(
             graphStructure: GraphStructure,
-            documentPath: DocumentPath,
             sourceReferences: List<ObjectReference>
     ) {
         insertionPoint(0)
