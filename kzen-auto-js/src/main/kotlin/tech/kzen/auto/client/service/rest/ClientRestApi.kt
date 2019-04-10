@@ -26,7 +26,7 @@ class ClientRestApi(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun scanNotationPaths(): DocumentPathMap<Digest> {
-        val scanText = httpGet("$baseUrl${CommonRestApi.scan}")
+        val scanText = get(CommonRestApi.scan)
 
         val builder = mutableMapOf<DocumentPath, Digest>()
         // NB: using transform just to iterate the Json, is there a better way to do this?
@@ -42,8 +42,7 @@ class ClientRestApi(
 
     suspend fun readNotation(location: DocumentPath): ByteArray {
         @Suppress("UNUSED_VARIABLE")
-        val response = httpGet("$baseUrl${CommonRestApi.notationPrefix}" +
-                location.asRelativeFile())
+        val response = get(CommonRestApi.notationPrefix + location.asRelativeFile())
 
         return IoUtils.utf8Encode(response)
     }
@@ -267,7 +266,7 @@ class ClientRestApi(
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun executionModel(host: DocumentPath): ExecutionModel {
         val responseText = get(
-                "$baseUrl${CommonRestApi.actionModel}",
+                CommonRestApi.actionModel,
                 CommonRestApi.paramDocumentPath to host.asString())
 
         val responseJson = JSON.parse<Array<Json>>(responseText)
@@ -281,10 +280,8 @@ class ClientRestApi(
 
     suspend fun startExecution(documentPath: DocumentPath): Digest {
         return getDigest(
-                "$baseUrl${CommonRestApi.actionStart}",
+                CommonRestApi.actionStart,
                 CommonRestApi.paramDocumentPath to documentPath.asString())
-//        val responseText = httpGet("$baseUrl${CommonRestApi.actionStart}")
-//        return Digest.parse(responseText)
     }
 
 
@@ -292,7 +289,7 @@ class ClientRestApi(
             host: DocumentPath
     ): Digest {
         return getDigest(
-                "$baseUrl${CommonRestApi.actionReset}",
+                CommonRestApi.actionReset,
                 CommonRestApi.paramDocumentPath to host.asString())
     }
 
