@@ -30,7 +30,7 @@ RibbonController:
       is: List
       of: ObjectLocation
       by: AutowiredNominal
-      find: Action
+      for: Action
     ribbonGroups:
       is: List
       of: RibbonGroup

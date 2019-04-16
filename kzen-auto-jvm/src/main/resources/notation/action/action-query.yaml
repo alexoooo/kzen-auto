@@ -2,14 +2,115 @@
 ###########################################################
 
 
-CsvSource:
-  abstract: true
-  is: Action
-  class: tech.kzen.auto.server.objects.query.CsvSource
-  icon: TripOrigin
-  title: "CSV Source"
-  description: "CSV: Comma-separated value"
-  filePath: "C:/path/to/file.csv"
-  meta:
-    filePath: String
+#CsvSource:
+#  abstract: true
+#  is: Action
+#  class: tech.kzen.auto.server.objects.query.CsvSource
+#  icon: TripOrigin
+#  title: "CSV Source"
+#  description: "CSV: Comma-separated value"
+#  filePath: "C:/path/to/file.csv"
+#  meta:
+#    filePath: String
 
+
+#######################################################################################################################
+
+
+OptionalInput:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.dataflow.input.OptionalInput
+
+
+RequiredInput:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.dataflow.input.RequiredInput
+
+
+###########################################################
+
+
+OptionalOutput:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.dataflow.output.OptionalOutput
+
+
+RequiredOutput:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.dataflow.output.RequiredOutput
+
+
+BatchOutput:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.dataflow.output.BatchOutput
+
+
+StreamOutput:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.dataflow.output.StreamOutput
+
+
+###########################################################
+
+
+Dataflow:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.dataflow.Dataflow
+  description: "Process data"
+  meta:
+    icon: String
+    description: String
+    row: Int
+    column: Int
+
+
+StreamDataflow:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.dataflow.StreamDataflow
+
+
+DataflowPipe:
+  class: tech.kzen.auto.common.objects.query.DataflowPipe
+
+
+#######################################################################################################################
+
+
+IntRangeSource:
+  abstract: true
+  is: Dataflow
+  class: tech.kzen.auto.server.objects.query.IntRangeSource
+  icon: TripOrigin
+  description: "Range of numbers"
+  from: 1
+  to: 100
+  meta:
+    output:
+      is: StreamOutput
+      by: DataflowPipe
+    from: Int
+    to: Int
+
+
+CountSink:
+  abstract: true
+  is: Dataflow
+  class: tech.kzen.auto.server.objects.query.CountSink
+  icon: ExposurePlus1
+  description: "Counter"
+  meta:
+    input:
+      is: RequiredInput
+      by: DataflowPipe
+
+
+#CsvSource:
+#  abstract: true
+#  is: Action
+#  class: tech.kzen.auto.server.objects.query.CsvSource
+#  icon: TripOrigin
+#  title: "CSV Source"
+#  description: "CSV: Comma-separated value"
+#  filePath: "C:/path/to/file.csv"
+#  meta:
+#    filePath: String

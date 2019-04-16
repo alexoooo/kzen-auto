@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects
+package tech.kzen.auto.server.objects.script
 
 import tech.kzen.auto.common.paradigm.imperative.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult

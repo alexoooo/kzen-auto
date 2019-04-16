@@ -20,6 +20,7 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.QueryDocument
 import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -29,9 +30,7 @@ import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
-import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
-import tech.kzen.lib.common.structure.notation.model.ObjectNotation
-import tech.kzen.lib.common.structure.notation.model.PositionIndex
+import tech.kzen.lib.common.structure.notation.model.*
 
 
 class QueryController:
@@ -41,6 +40,13 @@ class QueryController:
         InsertionManager.Observer,
         NavigationManager.Observer
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val rowAttributeName = AttributeName("row")
+        private val columnAttributeName = AttributeName("column")
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     class State(
             var documentPath: DocumentPath?,
@@ -140,24 +146,61 @@ class QueryController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onCreate(index: Int) {
-        val objectNotation = ClientContext.insertionManager
-                .getAndClearSelection()
-                ?.let { ObjectNotation.ofParent(it.toReference().name) }
+    private fun documentNotation(): DocumentNotation? {
+        val graphStructure = state.structure
+                ?: return null
+
+        val documentPath = state.documentPath
+                ?: return null
+
+        return graphStructure
+                .graphNotation
+                .documents
+                .get(documentPath)
+    }
+
+
+    private fun verticesNotation(
+            documentNotation: DocumentNotation
+    ): ListAttributeNotation? {
+        return documentNotation
+                .objects
+                .values[NotationConventions.mainObjectPath]
+                ?.attributes
+                ?.values
+                ?.get(QueryDocument.verticesAttributeName)
+                as? ListAttributeNotation
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onCreate(
+            row: Int,
+            column: Int
+    ) {
+        val archetypeLocation = ClientContext.insertionManager.getAndClearSelection()
                 ?: return
+
+        val documentNotation = documentNotation()
+                ?: return
+
+        val verticesNotation = verticesNotation(documentNotation)
+                ?: return
+
+        val objectNotation = ObjectNotation
+                .ofParent(archetypeLocation.objectPath.name)
+                .upsertAttribute(rowAttributeName, ScalarAttributeNotation(row.toString()))
+                .upsertAttribute(columnAttributeName, ScalarAttributeNotation(column.toString()))
 
         val containingObjectLocation = ObjectLocation(
                 state.documentPath!!, NotationConventions.mainObjectPath)
 
-        // NB: +1 offset for main Script object
-        val positionInDocument = PositionIndex(index + 1)
-
         val command = InsertObjectInListAttributeCommand(
                 containingObjectLocation,
-                QueryDocument.sourcesAttributePath,
-                PositionIndex(index),
+                QueryDocument.verticesAttributePath,
+                PositionIndex(verticesNotation.values.size),
                 NameConventions.randomAnonymous(),
-                positionInDocument,
+                PositionIndex(documentNotation.objects.values.size),
                 objectNotation
         )
 
@@ -169,48 +212,37 @@ class QueryController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val graphStructure = state.structure
+        val documentNotation = documentNotation()
                 ?: return
 
-        val documentPath = state.documentPath
+        val verticesNotation = verticesNotation(documentNotation)
                 ?: return
 
-//        val documentNotation: DocumentNotation =
-//                graphStructure.graphNotation.documents.values[documentPath]
-//                ?: return
+        val vertexReferences = verticesNotation.values.map { ObjectReference.parse(it.asString()!!) }
 
-        val mainObjectLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
-
-        val sourcesNotation = graphStructure
-                .graphNotation
-                .transitiveAttribute(mainObjectLocation, QueryDocument.sourcesAttributePath)
-                as? ListAttributeNotation
-                ?: return
-
-        val sourceReferences = sourcesNotation.values.map { ObjectReference.parse(it.asString()!!) }
-
-        if (sourceReferences.isEmpty()) {
+        if (vertexReferences.isEmpty()) {
             styledH3 {
                 css {
                     paddingTop = 1.em
                 }
 
-                +"Empty query, please add flows using toolbar (above)"
+//                +"Empty query, please add flows using toolbar (above)"
+                +"Empty query, please add a source from the toolbar (above)"
             }
 
-            insertionPoint(0)
+            insertionPoint(0, 0)
         }
         else {
-            nonEmptySources(graphStructure, sourceReferences)
+            nonEmptyDag(state.structure!!, vertexReferences)
         }
     }
 
 
-    private fun RBuilder.nonEmptySources(
+    private fun RBuilder.nonEmptyDag(
             graphStructure: GraphStructure,
             sourceReferences: List<ObjectReference>
     ) {
-        insertionPoint(0)
+//        insertionPoint(0)
 
 
         styledDiv {
@@ -225,21 +257,21 @@ class QueryController:
 //
 //                val keyLocation = ObjectLocation(documentPath, objectPath)
 
-                source(index,
+                vertex(index,
                         sourceLocation,
                         graphStructure)
 
                 if (index < sourceReferences.size - 1) {
-                    insertionPoint(index + 1)
+                    insertionPoint(index + 1, 0)
                 }
             }
         }
 
-        insertionPoint(sourceReferences.size)
+        insertionPoint(sourceReferences.size, 0)
     }
 
 
-    private fun RBuilder.insertionPoint(index: Int) {
+    private fun RBuilder.insertionPoint(row: Int, column: Int) {
         styledSpan {
             attrs {
                 if (state.creating) {
@@ -259,7 +291,7 @@ class QueryController:
                     }
 
                     onClick = {
-                        onCreate(index)
+                        onCreate(row, column)
                     }
                 }
 
@@ -269,12 +301,12 @@ class QueryController:
     }
 
 
-    private fun RBuilder.source(
+    private fun RBuilder.vertex(
             index: Int,
             objectLocation: ObjectLocation,
             graphStructure: GraphStructure
     ) {
-        child(SourceController::class) {
+        child(VertexController::class) {
             key = objectLocation.toReference().asString()
 
             attrs {

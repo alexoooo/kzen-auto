@@ -15,9 +15,7 @@ data class ExecutionState(
         fun toCollection(result: ExecutionState): Map<String, Any?> {
             return mapOf(
                     "running" to result.running,
-                    "previous" to result.previous?.let{
-                        it.toCollection()
-                    }
+                    "previous" to result.previous?.toCollection()
             )
         }
 

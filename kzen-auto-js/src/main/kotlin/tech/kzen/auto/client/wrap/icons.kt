@@ -204,4 +204,13 @@ external class TripOriginIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("ExposurePlus1")
+external class ExposurePlus1Icon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
 
+
+@JsName("SettingsInputComponent")
+external class SettingsInputComponentIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

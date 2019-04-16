@@ -67,7 +67,7 @@ object ClientContext {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun init() {
-        console.log("starting with baseUrl: ", baseUrl)
+//        console.log("starting with baseUrl: ", baseUrl)
 
         val kzenAutoJs = js("require('kzen-auto-js.js')")
 //        console.log("kzenAutoJs", kzenAutoJs)

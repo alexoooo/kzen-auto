@@ -16,8 +16,20 @@ QueryGroup:
 
 ###########################################################
 
-CsvSourceTool:
+#CsvSourceTool:
+#  is: RibbonTool
+#  parent: QueryGroup
+#  delegate: CsvSource
+
+
+IntRangeSourceTool:
   is: RibbonTool
   parent: QueryGroup
-  delegate: CsvSource
+  delegate: IntRangeSource
+
+
+CountSinkTool:
+  is: RibbonTool
+  parent: QueryGroup
+  delegate: CountSink
 

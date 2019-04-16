@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects
+package tech.kzen.auto.server.objects.script
 
 import org.openqa.selenium.By
 import org.openqa.selenium.OutputType

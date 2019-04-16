@@ -252,7 +252,7 @@ class ScriptController:
                     paddingTop = 1.em
                 }
 
-                +"Empty script, please add steps using toolbar (above)"
+                +"Empty script, please add steps from the toolbar (above)"
             }
 
             insertionPoint(0)

@@ -27,9 +27,9 @@ Query:
   is: Document
   class: tech.kzen.auto.common.objects.document.QueryDocument
   icon: Search
-  sources: []
+  vertices: []
   meta:
-    sources:
+    vertices:
       is: List
-      of: Action
+      of: Dataflow
 

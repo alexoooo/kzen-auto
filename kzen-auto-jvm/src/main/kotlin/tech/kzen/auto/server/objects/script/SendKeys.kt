@@ -1,6 +1,8 @@
-package tech.kzen.auto.server.objects
+package tech.kzen.auto.server.objects.script
 
+import org.openqa.selenium.By
 import org.openqa.selenium.OutputType
+import org.openqa.selenium.WebElement
 import tech.kzen.auto.common.paradigm.imperative.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
@@ -10,13 +12,19 @@ import tech.kzen.auto.server.service.ServerContext
 
 
 @Suppress("unused")
-class GoTo(
-        var location: String
+class SendKeys(
+        var xpath: String,
+        var text: String
 ): ExecutionAction {
     override suspend fun perform(): ExecutionResult {
+        // https://stackoverflow.com/questions/44455269/gmail-login-using-selenium-webdriver-in-java
+
         val driver = ServerContext.webDriverContext.get()
 
-        driver.get(location)
+        val element: WebElement =
+                driver.findElement(By.xpath(xpath))
+
+        element.sendKeys(text)
 
         val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
         return ExecutionSuccess(
