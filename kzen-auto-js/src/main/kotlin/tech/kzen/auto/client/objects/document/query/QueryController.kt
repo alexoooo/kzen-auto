@@ -1,9 +1,11 @@
 package tech.kzen.auto.client.objects.document.query
 
 import kotlinx.css.Cursor
+import kotlinx.css.Display
 import kotlinx.css.em
 import kotlinx.html.title
 import react.*
+import react.dom.br
 import styled.css
 import styled.styledDiv
 import styled.styledH3
@@ -19,6 +21,8 @@ import tech.kzen.auto.client.wrap.MaterialIconButton
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.QueryDocument
+import tech.kzen.auto.common.objects.query.VertexInfo
+import tech.kzen.auto.common.objects.query.VertexMatrix
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -31,8 +35,10 @@ import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 import tech.kzen.lib.common.structure.notation.model.*
+import tech.kzen.lib.platform.collect.persistentListOf
 
 
+@Suppress("unused")
 class QueryController:
         RComponent<RProps, QueryController.State>(),
         ModelManager.Observer,
@@ -96,7 +102,7 @@ class QueryController:
 
     override fun componentDidUpdate(
             prevProps: RProps,
-            prevState: QueryController.State,
+            prevState: State,
             snapshot: Any
     ) {
 //        console.log("ProjectController componentDidUpdate", state, prevState)
@@ -173,6 +179,27 @@ class QueryController:
     }
 
 
+    private fun vertexInfoLayers(
+            verticesNotation: ListAttributeNotation
+    ): VertexMatrix {
+//        val documentNotation = documentNotation()
+//        val vertexNotations = vertexNotations(documentNotation!!)!!
+        val notation = state.structure!!.graphNotation
+
+        val vertexInfos = verticesNotation.values.withIndex().map {
+            val vertexReference = ObjectReference.parse((it.value as ScalarAttributeNotation).value)
+            val objectLocation = notation.coalesce.locate(vertexReference)
+            val objectNotation = notation.coalesce.get(objectLocation)!!
+            VertexInfo.fromDataflowNotation(
+                    it.index,
+                    objectLocation,
+                    objectNotation)
+        }
+
+        return VertexMatrix.ofUnorderedInfos(vertexInfos)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(
             row: Int,
@@ -218,9 +245,10 @@ class QueryController:
         val verticesNotation = verticesNotation(documentNotation)
                 ?: return
 
-        val vertexReferences = verticesNotation.values.map { ObjectReference.parse(it.asString()!!) }
+//        val vertexReferences = vertexNotations.values.map { ObjectReference.parse(it.asString()!!) }
+        val vertexInfos = vertexInfoLayers(verticesNotation)
 
-        if (vertexReferences.isEmpty()) {
+        if (vertexInfos.isEmpty()) {
             styledH3 {
                 css {
                     paddingTop = 1.em
@@ -233,41 +261,54 @@ class QueryController:
             insertionPoint(0, 0)
         }
         else {
-            nonEmptyDag(state.structure!!, vertexReferences)
+            nonEmptyDag(state.structure!!, vertexInfos)
         }
     }
 
 
     private fun RBuilder.nonEmptyDag(
             graphStructure: GraphStructure,
-            sourceReferences: List<ObjectReference>
+            vertexInfoMatrix: VertexMatrix
     ) {
-//        insertionPoint(0)
+        for ((rowIndex, row) in vertexInfoMatrix.rows.withIndex()) {
+            var previousColumn = 0
+            for (cell in row) {
+                val delta = cell.column - previousColumn
+
+                for (absent in 0 until delta) {
+                    absentVertex(rowIndex, previousColumn + absent)
+                }
+
+                vertex(cell,
+                        graphStructure)
+
+                previousColumn = cell.column
+            }
+
+            for (suffixColumn in row.last().column + 1 .. vertexInfoMatrix.usedColumns + 1) {
+                absentVertex(rowIndex, suffixColumn)
+            }
+
+            br {}
+
+            insertionPoint(rowIndex + 1, 0)
+        }
+    }
 
 
+    private fun RBuilder.absentVertex(
+            row: Int,
+            column: Int
+    ) {
         styledDiv {
             css {
+                display = Display.inlineBlock
                 marginLeft = 1.em
                 width = 20.em
             }
 
-            for ((index, sourceReference) in sourceReferences.withIndex()) {
-                val sourceLocation = graphStructure.graphNotation.coalesce.locate(sourceReference)
-//                val objectPath = sourceLocation.objectPath
-//
-//                val keyLocation = ObjectLocation(documentPath, objectPath)
-
-                vertex(index,
-                        sourceLocation,
-                        graphStructure)
-
-                if (index < sourceReferences.size - 1) {
-                    insertionPoint(index + 1, 0)
-                }
-            }
+            +"[$row, $column]"
         }
-
-        insertionPoint(sourceReferences.size, 0)
     }
 
 
@@ -302,17 +343,26 @@ class QueryController:
 
 
     private fun RBuilder.vertex(
-            index: Int,
-            objectLocation: ObjectLocation,
+            vertexInfo: VertexInfo,
             graphStructure: GraphStructure
     ) {
-        child(VertexController::class) {
-            key = objectLocation.toReference().asString()
+        styledDiv {
+            css {
+                display = Display.inlineBlock
+                marginLeft = 1.em
+                width = 20.em
+            }
 
-            attrs {
-                attributeNesting = AttributeNesting(listOf(AttributeSegment.ofIndex(index)))
-                this.objectLocation = objectLocation
-                this.graphStructure = graphStructure
+            child(VertexController::class) {
+                key = vertexInfo.objectLocation.toReference().asString()
+
+                attrs {
+                    attributeNesting = AttributeNesting(persistentListOf(
+                            AttributeSegment.ofIndex(vertexInfo.indexInVertices)))
+
+                    this.objectLocation = vertexInfo.objectLocation
+                    this.graphStructure = graphStructure
+                }
             }
         }
     }

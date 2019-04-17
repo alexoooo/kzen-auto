@@ -413,7 +413,7 @@ class SidebarFolder(
                     .locate(ObjectReference.ofName(documentArchetype.name()))
 
             val icon = (props.structure.graphNotation.coalesce
-                    .get(archetypeLocation)
+                    .get(archetypeLocation)!!
                     .get(SidebarFile.iconAttribute) as ScalarAttributeNotation
                     ).value
 

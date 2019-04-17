@@ -169,7 +169,7 @@ class SidebarFile(
                 ?: return
 
         val icon = (props.structure.graphNotation.coalesce
-                .get(archetypeLocation)
+                .get(archetypeLocation)!!
                 .get(iconAttribute) as ScalarAttributeNotation
                 ).value
 

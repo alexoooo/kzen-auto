@@ -18,6 +18,7 @@ import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.IoUtils
 import tech.kzen.lib.platform.client.ClientJsonUtils
+import tech.kzen.lib.platform.collect.toPersistentMap
 import kotlin.js.Json
 
 
@@ -36,7 +37,7 @@ class ClientRestApi(
             }
             null
         }
-        return DocumentPathMap(builder)
+        return DocumentPathMap(builder.toPersistentMap())
     }
 
 

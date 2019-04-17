@@ -9,6 +9,7 @@ import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.model.DocumentNotation
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
 import tech.kzen.lib.common.structure.notation.model.ObjectNotation
+import tech.kzen.lib.platform.collect.persistentMapOf
 
 
 abstract class DocumentArchetype(
@@ -51,7 +52,7 @@ abstract class DocumentArchetype(
 
     fun newDocument(): DocumentNotation {
         val mainObjectNotation = ObjectNotation.ofParent(name())
-        return DocumentNotation(ObjectPathMap(mapOf(
+        return DocumentNotation(ObjectPathMap(persistentMapOf(
                 NotationConventions.mainObjectPath to mainObjectNotation
         )))
     }

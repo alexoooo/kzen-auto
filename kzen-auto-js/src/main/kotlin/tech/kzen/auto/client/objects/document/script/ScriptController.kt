@@ -40,6 +40,7 @@ import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ObjectNotation
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
+import tech.kzen.lib.platform.collect.persistentListOf
 
 
 @Suppress("unused")
@@ -393,7 +394,7 @@ class ScriptController:
 
             child(ActionController::class) {
                 attrs {
-                    attributeNesting = AttributeNesting(listOf(AttributeSegment.ofIndex(index)))
+                    attributeNesting = AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index)))
                     this.objectLocation = objectLocation
                     structure = graphStructure
                     state = executionState

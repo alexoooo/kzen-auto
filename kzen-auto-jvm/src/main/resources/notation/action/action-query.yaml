@@ -69,8 +69,8 @@ StreamDataflow:
   class: tech.kzen.auto.common.paradigm.dataflow.StreamDataflow
 
 
-DataflowPipe:
-  class: tech.kzen.auto.common.objects.query.DataflowPipe
+DataflowWiring:
+  class: tech.kzen.auto.common.objects.query.DataflowWiring
 
 
 #######################################################################################################################
@@ -87,7 +87,7 @@ IntRangeSource:
   meta:
     output:
       is: StreamOutput
-      by: DataflowPipe
+      by: DataflowWiring
     from: Int
     to: Int
 
@@ -101,7 +101,7 @@ CountSink:
   meta:
     input:
       is: RequiredInput
-      by: DataflowPipe
+      by: DataflowWiring
 
 
 #CsvSource:

@@ -7,6 +7,7 @@ import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.io.NotationMedia
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.platform.collect.toPersistentMap
 
 
 class BootNotationMedia(
@@ -35,7 +36,7 @@ class BootNotationMedia(
                 cache[path] = digest
             }
         }
-        return DocumentPathMap(cache)
+        return DocumentPathMap(cache.toPersistentMap())
     }
 
 

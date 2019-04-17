@@ -303,7 +303,7 @@ class ActionController(
 
 
     private fun RBuilder.renderCard() {
-        val objectMetadata = props.structure.graphMetadata.objectMetadata.get(props.objectLocation)
+        val objectMetadata = props.structure.graphMetadata.objectMetadata.get(props.objectLocation)!!
 
         val reactStyles = reactStyle {
             val cardColor = when (props.state?.phase()) {

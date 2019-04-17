@@ -15,7 +15,7 @@ import tech.kzen.lib.platform.ClassNames
 
 
 @Suppress("unused")
-class DataflowPipe: AttributeDefiner {
+class DataflowWiring: AttributeDefiner {
     companion object {
         private val streamOutputClass = ClassName(
                 "tech.kzen.auto.common.paradigm.dataflow.output.StreamOutput")
@@ -32,9 +32,10 @@ class DataflowPipe: AttributeDefiner {
             partialGraphDefinition: GraphDefinition,
             partialGraphInstance: GraphInstance
     ): AttributeDefinition {
+        @Suppress("MoveVariableDeclarationIntoWhen")
         val attributeClass: ClassName = graphStructure
                 .graphMetadata
-                .get(objectLocation)
+                .get(objectLocation)!!
                 .attributes
                 .values[attributeName]
                 ?.type

@@ -17,6 +17,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.notation.edit.UpsertAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import tech.kzen.lib.platform.collect.toPersistentList
 
 
 // TODO: inject type-based editor
@@ -150,7 +151,7 @@ class AttributeEditor(
                     props.objectLocation,
                     props.attributeName,
                     ListAttributeNotation(
-                            state.values!!.map { ScalarAttributeNotation(it) }
+                            state.values!!.map { ScalarAttributeNotation(it) }.toPersistentList()
                     )
             ))
         }
