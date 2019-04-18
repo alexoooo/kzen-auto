@@ -133,12 +133,12 @@ class ScriptController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(projectStructure: GraphStructure, event: NotationEvent?) {
+    override suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?) {
 //        println("ProjectController - && handled - " +
 //                "${autoModel.graphNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
 
         setState {
-            structure = projectStructure
+            structure = graphStructure
         }
     }
 

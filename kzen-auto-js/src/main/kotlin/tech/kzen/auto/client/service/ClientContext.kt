@@ -57,6 +57,7 @@ object ClientContext {
             restActionExecutor)
 
     val executionLoop = ExecutionLoop(
+            modelManager,
             executionManager)
 
     val insertionManager = InsertionManager()

@@ -18,7 +18,7 @@ class ModelManager(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
-        suspend fun handleModel(projectStructure: GraphStructure, event: NotationEvent?)
+        suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?)
     }
 
 

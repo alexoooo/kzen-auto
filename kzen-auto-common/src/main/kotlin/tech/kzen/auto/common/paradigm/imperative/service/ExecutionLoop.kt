@@ -1,15 +1,20 @@
 package tech.kzen.auto.common.paradigm.imperative.service
 
+import tech.kzen.auto.common.paradigm.imperative.ImerativeControlFlow
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
+import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 class ExecutionLoop(
+        private val modelManager: ModelManager,
         private val executionManager: ExecutionManager,
 //        private val delayMillis: Int = 1000
         private val delayMillis: Int = 0
-): ExecutionManager.Observer {
+):
+        ExecutionManager.Observer
+{
     //-----------------------------------------------------------------------------------------------------------------
     private val states = mutableMapOf<DocumentPath, State>()
 
@@ -40,8 +45,10 @@ class ExecutionLoop(
             return
         }
 
-        val next = executionModel.next()
-                ?: return
+        val next = ImerativeControlFlow.next(
+                modelManager.graphStructure().graphNotation,
+                executionModel
+        ) ?: return
 
         run(host, next)
     }
@@ -63,7 +70,9 @@ class ExecutionLoop(
 
 //        println("ExecutionLoop | executionModel is $executionModel")
 
-        val next = state.executionModel?.next()
+        val next = state.executionModel?.let {
+            ImerativeControlFlow.next(modelManager.graphStructure().graphNotation, it)
+        }
         if (next == null) {
 //            println("ExecutionLoop | pausing at end of loop")
 

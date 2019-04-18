@@ -3,11 +3,13 @@ package tech.kzen.auto.common.paradigm.imperative.model
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.platform.collect.PersistentMap
+import tech.kzen.lib.platform.collect.toPersistentMap
 
 
 data class ExecutionFrame(
         val path: DocumentPath,
-        val states: MutableMap<ObjectPath, ExecutionState>
+        val states: PersistentMap<ObjectPath, ExecutionState>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -45,66 +47,79 @@ data class ExecutionFrame(
                         ExecutionState.fromCollection(e.value as Map<String, Any?>)
             }
 
-            return ExecutionFrame(path, values)
+            return ExecutionFrame(path, values.toPersistentMap())
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun contains(objectName: ObjectPath): Boolean {
-        return states.containsKey(objectName)
+    fun contains(objectPath: ObjectPath): Boolean {
+        return states.containsKey(objectPath)
+    }
+
+
+    fun set(objectPath: ObjectPath, executionState: ExecutionState): ExecutionFrame {
+        return copy(states = states.put(objectPath, executionState))
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun rename(from: ObjectPath, newName: ObjectName): Boolean {
-        if (from !in states) {
-            return false
-        }
+    fun rename(from: ObjectPath, newName: ObjectName): ExecutionFrame {
+        val state = states[from]
+                ?: return this
 
-        val renamed = mutableMapOf<ObjectPath, ExecutionState>()
-        for (e in states) {
-            val key =
-                    if (e.key == from) {
-                        from.copy(name = newName)
-                    }
-                    else {
-                        e.key
-                    }
+        val newNamePath = from.copy(name = newName)
 
-            renamed[key] = e.value
-        }
+        val removedAtOldName = states.remove(from)
+        val addedAtNewName = removedAtOldName.put(newNamePath, state)
 
-        states.clear()
-        states.putAll(renamed)
-
-        return true
+        return copy(states = addedAtNewName)
+//        val renamed = mutableMapOf<ObjectPath, ExecutionState>()
+//        for (e in states) {
+//            val key =
+//                    if (e.key == from) {
+//                        from.copy(name = newName)
+//                    }
+//                    else {
+//                        e.key
+//                    }
+//
+//            renamed[key] = e.value
+//        }
+//
+//        states.clear()
+//        states.putAll(renamed)
+//
+//        return true
     }
 
 
-    fun add(objectPath: ObjectPath, index: Int) {
+    fun add(objectPath: ObjectPath/*, index: Int*/): ExecutionFrame {
         check(objectPath !in states) { "Already present: $objectPath" }
 
-        val added = mutableMapOf<ObjectPath, ExecutionState>()
-
-        for ((i, entry) in states.entries.withIndex()) {
-            if (i == index) {
-                added[objectPath] = ExecutionState.initial
-            }
-            added[entry.key] = entry.value
-        }
-
-        if (added.size == states.size) {
-            added[objectPath] = ExecutionState.initial
-        }
-
-        states.clear()
-        states.putAll(added)
+        return copy(states = states.put(
+                objectPath, ExecutionState.initial))
+//        val added = mutableMapOf<ObjectPath, ExecutionState>()
+//
+//        for ((i, entry) in states.entries.withIndex()) {
+//            if (i == index) {
+//                added[objectPath] = ExecutionState.initial
+//            }
+//            added[entry.key] = entry.value
+//        }
+//
+//        if (added.size == states.size) {
+//            added[objectPath] = ExecutionState.initial
+//        }
+//
+//        states.clear()
+//        states.putAll(added)
     }
 
 
-    fun remove(objectPath: ObjectPath): Boolean {
-        val previous = states.remove(objectPath)
-        return previous != null
+    fun remove(objectPath: ObjectPath): ExecutionFrame {
+//        val previous = states.remove(objectPath)
+//        return previous != null
+        return copy(states = states.remove(objectPath))
     }
 }

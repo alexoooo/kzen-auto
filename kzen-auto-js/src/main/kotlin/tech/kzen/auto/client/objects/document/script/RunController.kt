@@ -10,6 +10,7 @@ import react.dom.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.paradigm.imperative.ImerativeControlFlow
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
@@ -19,7 +20,7 @@ import tech.kzen.lib.common.structure.GraphStructure
 
 
 class RunController(
-        props: RunController.Props
+        props: Props
 ):
         RComponent<RunController.Props, RunController.State>(props),
 //        ModelManager.Observer,
@@ -69,15 +70,13 @@ class RunController(
             return
         }
 
-//        setState {
-//            execution = executionModel
-//        }
-
-        if (! executionModel.containsStatus(ExecutionPhase.Running) &&
-                executionModel.next() == null &&
-                ClientContext.executionLoop.running(host)) {
-//            console.log("!@#!#!@#!@#!@ onExecutionModel - pause at end")
-            ClientContext.executionLoop.pause(host)
+        if (! executionModel.containsStatus(ExecutionPhase.Running)) {
+            val next = ImerativeControlFlow.next(props.structure!!.graphNotation, executionModel)
+            if (next == null &&
+                    ClientContext.executionLoop.running(host)) {
+//                console.log("!@#!#!@#!@#!@ onExecutionModel - pause at end")
+                ClientContext.executionLoop.pause(host)
+            }
         }
     }
 
@@ -187,9 +186,8 @@ class RunController(
             return Phase.Running
         }
 
-        if (executionModel.next() == null) {
-            return Phase.Done
-        }
+        val next = ImerativeControlFlow.next(props.structure!!.graphNotation, executionModel)
+                ?: return Phase.Done
 
         if (executionModel.containsStatus(ExecutionPhase.Success) ||
                 executionModel.containsStatus(ExecutionPhase.Error)) {
@@ -251,7 +249,9 @@ class RunController(
 
     private fun onFabEnter() {
 //        val nextToRun = state.execution?.next()
-        val nextToRun = props.execution?.next()
+        val nextToRun = props.execution?.let {
+            ImerativeControlFlow.next(props.structure!!.graphNotation, it)
+        }
         if (nextToRun == ClientContext.executionIntent.actionLocation()) {
             return
         }
@@ -265,7 +265,9 @@ class RunController(
 
     private fun onFabLeave() {
 //        val nextToRun = state.execution?.next()
-        val nextToRun = props.execution?.next()
+        val nextToRun = props.execution?.let {
+            ImerativeControlFlow.next(props.structure!!.graphNotation, it)
+        }
 //        println("^$%^$%^% onRunAllLeave - $nextToRun")
         if (nextToRun != null) {
             ClientContext.executionIntent.clearIf(nextToRun)

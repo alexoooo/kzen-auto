@@ -85,10 +85,10 @@ class SidebarController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(projectStructure: GraphStructure, event: NotationEvent?) {
+    override suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?) {
 //        console.log("^ handleModel")
         setState {
-            structure = projectStructure
+            structure = graphStructure
         }
     }
 

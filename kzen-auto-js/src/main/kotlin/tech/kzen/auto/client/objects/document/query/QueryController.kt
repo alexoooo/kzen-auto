@@ -110,9 +110,9 @@ class QueryController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(projectStructure: GraphStructure, event: NotationEvent?) {
+    override suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?) {
         setState {
-            structure = projectStructure
+            structure = graphStructure
         }
     }
 

@@ -496,10 +496,10 @@ class RestHandler {
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val digest = runBlocking {
-            val projectModel = ServerContext.modelManager.graphStructure()
+            val graphStructure = ServerContext.modelManager.graphStructure()
 
             ServerContext.executionManager.start(
-                    documentPath, projectModel)
+                    documentPath, graphStructure)
         }
 
         return ServerResponse

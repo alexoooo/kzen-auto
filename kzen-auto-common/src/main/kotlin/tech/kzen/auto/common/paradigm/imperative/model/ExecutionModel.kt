@@ -3,13 +3,12 @@ package tech.kzen.auto.common.paradigm.imperative.model
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.platform.collect.PersistentList
+import tech.kzen.lib.platform.collect.toPersistentList
 
 
-// TODO: use persistent data structure
-// TODO: decouple calculation of 'next' from any ordering requirements
-// TODO: unify imperative and dataflow
 data class ExecutionModel(
-        val frames: MutableList<ExecutionFrame>
+        val frames: PersistentList<ExecutionFrame>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -25,7 +24,7 @@ data class ExecutionModel(
         ): ExecutionModel {
             return ExecutionModel(collection
                     .map { ExecutionFrame.fromCollection(it) }
-                    .toMutableList())
+                    .toPersistentList())
         }
     }
 
@@ -35,55 +34,118 @@ data class ExecutionModel(
 //        var renamedAny = false
 //    }
 
-    fun remove(objectLocation: ObjectLocation): Boolean {
-        var anyChanged = false
+    fun remove(objectLocation: ObjectLocation): ExecutionModel {
+        var builder = frames
 
-        for (frame in frames) {
+        for ((index, frame) in frames.withIndex()) {
             if (frame.path != objectLocation.documentPath) {
                 continue
             }
 
-            val changed = frame.remove(objectLocation.objectPath)
-
-            anyChanged = anyChanged || changed
+            val removed = frame.remove(objectLocation.objectPath)
+            builder = builder.set(index, removed)
         }
 
-        return anyChanged
+        if (builder == frames) {
+            return this
+        }
+        return ExecutionModel(builder)
+
+//        val removed = frames.map {
+//            if (it.path == objectLocation.documentPath) {
+//                it.remove(objectLocation.objectPath)
+//            }
+//            else {
+//                it
+//            }
+//        }.toPersistentList()
+//
+//        return (
+//                if (frames == removed) {
+//                    this
+//                }
+//                else {
+//                    ExecutionModel(removed)
+//                })
+
+//        var anyChanged = false
+//
+//        for (frame in frames) {
+//            if (frame.path != objectLocation.documentPath) {
+//                continue
+//            }
+//
+//            val changed = frame.remove(objectLocation.objectPath)
+//
+//            anyChanged = anyChanged || changed
+//        }
+//
+//        return anyChanged
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun rename(from: ObjectLocation, newName: ObjectName): Boolean {
-        var renamedAny = false
-
-        for (frame in frames) {
+    fun rename(from: ObjectLocation, newName: ObjectName): ExecutionModel {
+        var builder = frames
+        for ((index, frame) in frames.withIndex()) {
             if (frame.path != from.documentPath) {
                 continue
             }
 
             val renamed = frame.rename(from.objectPath, newName)
-
-            renamedAny = renamedAny || renamed
+            builder = builder.set(index, renamed)
         }
 
-        return renamedAny
+        if (builder == frames) {
+            return this
+        }
+        return ExecutionModel(builder)
+
+//        var renamedAny = false
+//
+//        for (frame in frames) {
+//            if (frame.path != from.documentPath) {
+//                continue
+//            }
+//
+//            val renamed = frame.rename(from.objectPath, newName)
+//
+//            renamedAny = renamedAny || renamed
+//        }
+//
+//        return renamedAny
     }
 
 
-    fun add(objectLocation: ObjectLocation, indexInFrame: Int): Boolean {
-        for (frame in frames) {
+    fun add(objectLocation: ObjectLocation/*, indexInFrame: Int*/): ExecutionModel {
+        var builder = frames
+        for ((index, frame) in frames.withIndex()) {
             if (frame.path != objectLocation.documentPath) {
                 continue
             }
 
-            // TODO: just frame.add without checking contains?
-            if (! frame.contains(objectLocation.objectPath)) {
-                frame.add(objectLocation.objectPath, indexInFrame)
-            }
-            return true
+            val added = frame.add(objectLocation.objectPath/*, indexInFrame*/)
+            builder = builder.set(index, added)
         }
 
-        return false
+        if (builder == frames) {
+            return this
+        }
+        return ExecutionModel(builder)
+
+//        for (frame in frames) {
+//            if (frame.path != objectLocation.documentPath) {
+//                continue
+//            }
+//
+//            // TODO: just frame.add without checking contains?
+//            if (! frame.contains(objectLocation.objectPath)) {
+//                frame.add(objectLocation.objectPath, indexInFrame)
+//            }
+//            return true
+//        }
+//
+//        return false
     }
 
 
@@ -108,25 +170,25 @@ data class ExecutionModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun next(): ObjectLocation? {
-        if (frames.isEmpty() || containsStatus(ExecutionPhase.Running)) {
-            return null
-        }
-
-        val lastFrame = frames.last()
-
-        for (e in lastFrame.states) {
-            if (e.value.phase() == ExecutionPhase.Error) {
-                return null
-            }
-
-            if (e.value.phase() == ExecutionPhase.Pending) {
-                return ObjectLocation(lastFrame.path, e.key)
-            }
-        }
-
-        return null
-    }
+//    fun next(): ObjectLocation? {
+//        if (frames.isEmpty() || containsStatus(ExecutionPhase.Running)) {
+//            return null
+//        }
+//
+//        val lastFrame = frames.last()
+//
+//        for (e in lastFrame.states) {
+//            if (e.value.phase() == ExecutionPhase.Error) {
+//                return null
+//            }
+//
+//            if (e.value.phase() == ExecutionPhase.Pending) {
+//                return ObjectLocation(lastFrame.path, e.key)
+//            }
+//        }
+//
+//        return null
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

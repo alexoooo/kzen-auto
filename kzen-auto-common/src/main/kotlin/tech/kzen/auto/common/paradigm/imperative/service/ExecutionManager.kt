@@ -12,6 +12,10 @@ import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.platform.collect.PersistentMap
+import tech.kzen.lib.platform.collect.persistentListOf
+import tech.kzen.lib.platform.collect.persistentMapOf
+import tech.kzen.lib.platform.collect.toPersistentMap
 
 
 class ExecutionManager(
@@ -27,7 +31,7 @@ class ExecutionManager(
 
     //-----------------------------------------------------------------------------------------------------------------
     private val subscribers = mutableSetOf<Observer>()
-    private val models: MutableMap<DocumentPath, ExecutionModel> = mutableMapOf()
+    private var models: PersistentMap<DocumentPath, ExecutionModel> = persistentMapOf()
 
 
     private suspend fun modelOrInit(host: DocumentPath): ExecutionModel {
@@ -36,7 +40,7 @@ class ExecutionManager(
             return existing
         }
         val initial = executionInitializer.initialExecutionModel(host)
-        models[host] = initial
+        models = models.put(host, initial)
         publishExecutionModel(host, initial)
         return initial
     }
@@ -73,6 +77,8 @@ class ExecutionManager(
             host: DocumentPath,
             model: ExecutionModel
     ) {
+//        val model = models[host]!!
+
         for (subscriber in subscribers) {
 //            println("^^^ publishExecutionModel - $host - $model")
             subscriber.onExecutionModel(host, model)
@@ -82,7 +88,7 @@ class ExecutionManager(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun handleModel(
-            projectStructure: GraphStructure,
+            graphStructure: GraphStructure,
             event: NotationEvent?
     ) {
         if (event == null) {
@@ -90,15 +96,17 @@ class ExecutionManager(
         }
 
         // NB: avoid concurrent modification for DeletedDocumentEvent handling
-        val modelHosts = models.keys.toList()
+//        val modelHosts = models.keys.toList()
 
-        for (host in modelHosts) {
-            val model = modelOrInit(host)
+        for (host in models.keys) {
+//            val model = modelOrInit(host)
 
-            val changed = apply(host, model, event)
+            val model = models[host]!!
+            val newModels = apply(host, /*model,*/ event)
 
-            if (changed) {
-                publishExecutionModel(host, model)
+            if (models != newModels) {
+                models = newModels
+                publishExecutionModel(host, models[host]!!)
             }
         }
     }
@@ -106,15 +114,17 @@ class ExecutionManager(
 
     private fun apply(
             documentPath: DocumentPath,
-            model: ExecutionModel,
+//            currentModels: PersistentMap<DocumentPath, ExecutionModel>,
+//            model: ExecutionModel,
             event: NotationEvent
-    ): Boolean {
+    ): PersistentMap<DocumentPath, ExecutionModel> {
+//        val model = models[documentPath]!!
         return when (event) {
             is SingularNotationEvent ->
-                applySingular(documentPath, model, event)
+                applySingular(documentPath, models, /*model,*/ event)
 
             is CompoundNotationEvent -> {
-                applyCompound(documentPath, model, event)
+                applyCompound(documentPath, /*currentModels, model,*/ event)
             }
         }
     }
@@ -122,73 +132,80 @@ class ExecutionManager(
 
     private fun applyCompound(
             documentPath: DocumentPath,
-            model: ExecutionModel,
+//            currentModels: PersistentMap<DocumentPath, ExecutionModel>,
+//            model: ExecutionModel,
             event: CompoundNotationEvent
-    ): Boolean {
-        val appliedWithDependentEvents = applyCompoundWithDependentEvents(documentPath, model, event)
-        if (appliedWithDependentEvents) {
-            return true
+    ): PersistentMap<DocumentPath, ExecutionModel> {
+        val model = models[documentPath]!!
+        val appliedWithDependentEvents = applyCompoundWithDependentEvents(
+                documentPath, /*currentModels,*/ model, event)
+        if (models != appliedWithDependentEvents) {
+            return appliedWithDependentEvents
         }
 
-        var anyChanged = false
+        var builder = models
         for (singularEvent in event.singularEvents) {
-            val changed = applySingular(documentPath, model, singularEvent)
-            anyChanged = anyChanged || changed
+            builder = applySingular(documentPath, builder, singularEvent)
         }
-        return anyChanged
+        return builder
     }
 
 
     private fun applyCompoundWithDependentEvents(
             documentPath: DocumentPath,
+//            currentModels: PersistentMap<DocumentPath, ExecutionModel>,
             model: ExecutionModel,
             event: CompoundNotationEvent
-    ): Boolean {
+    ): PersistentMap<DocumentPath, ExecutionModel> {
         return when (event) {
             is RenamedDocumentRefactorEvent -> {
 //                println("^^^^^ applyCompoundWithDependentEvents - $documentPath - $event")
                 if (event.removedUnderOldName.documentPath == documentPath) {
-                    models.remove(event.removedUnderOldName.documentPath)
-                    models[event.createdWithNewName.destination] = model
-                    true
+                    val removed = models.remove(event.removedUnderOldName.documentPath)
+                    removed.put(event.createdWithNewName.destination, model)
                 }
                 else {
-                    false
+                    models
                 }
             }
 
             else ->
-                false
+                models
         }
     }
 
 
     private fun applySingular(
             documentPath: DocumentPath,
-            model: ExecutionModel,
+            currentModels: PersistentMap<DocumentPath, ExecutionModel>,
+//            model: ExecutionModel,
             event: SingularNotationEvent
-    ): Boolean {
+    ): PersistentMap<DocumentPath, ExecutionModel> {
+        val model = models[documentPath]!!
+
         return when (event) {
             is RemovedObjectEvent ->
-                model.remove(event.objectLocation)
+                currentModels.put(documentPath,
+                        model.remove(event.objectLocation))
 
             is RenamedObjectEvent ->
-                model.rename(event.objectLocation, event.newName)
+                currentModels.put(documentPath,
+                        model.rename(event.objectLocation, event.newName))
 
             is AddedObjectEvent ->
-                // TODO: generalize next-to-run?
-                model.add(event.objectLocation, event.indexInDocument.value - 1)
+                currentModels.put(documentPath,
+                        model.add(event.objectLocation/*, event.indexInDocument.value - 1*/))
 
             is DeletedDocumentEvent ->
                 if (event.documentPath == documentPath) {
-                    models.remove(documentPath) != null
+                    currentModels.remove(documentPath)
                 }
                 else {
-                    false
+                    currentModels
                 }
 
             else ->
-                false
+                currentModels
         }
     }
 
@@ -204,13 +221,20 @@ class ExecutionManager(
         val upsertFrame = existingFrame
                 ?: model.frames.last()
 
-        // TODO
         val state = upsertFrame.states[objectLocation.objectPath]
                 ?: return
 
-        upsertFrame.states[objectLocation.objectPath] = state.copy(running = true)
+        val updatedFrame = upsertFrame.set(
+                objectLocation.objectPath,
+                state.copy(running = true))
 
-        publishExecutionModel(host, model)
+        val updatedModel = ExecutionModel(
+                model.frames.set(model.frames.size - 1, updatedFrame))
+
+        models = models.put(host, updatedModel)
+//        upsertFrame.states[objectLocation.objectPath] = state.copy(running = true)
+
+        publishExecutionModel(host, updatedModel)
     }
 
 
@@ -225,7 +249,15 @@ class ExecutionManager(
         val upsertFrame = existingFrame
                 ?: model.frames.last()
 
-        upsertFrame.states[objectLocation.objectPath] = executionState
+        val updatedFrame = upsertFrame.set(
+                objectLocation.objectPath,
+                executionState)
+//        upsertFrame.states[objectLocation.objectPath] = executionState
+
+        val updatedModel = ExecutionModel(
+                model.frames.set(model.frames.size - 1, updatedFrame))
+
+        models = models.put(host, updatedModel)
 
         publishExecutionModel(host, model)
     }
@@ -251,9 +283,11 @@ class ExecutionManager(
             host: DocumentPath,
             prototype: ExecutionModel
     ) {
-        val model = modelOrInit(host)
-        model.frames.clear()
-        model.frames.addAll(prototype.frames)
+        models = models.put(host, prototype)
+
+//        val model = modelOrInit(host)
+//        model.frames.clear()
+//        model.frames.addAll(prototype.frames)
     }
 
 
@@ -261,9 +295,11 @@ class ExecutionManager(
     suspend fun reset(
             host: DocumentPath
     ): Digest {
-        val model = modelOrInit(host)
+//        val model = modelOrInit(host)
 
-        model.frames.clear()
+        val model = ExecutionModel(persistentListOf())
+        models = models.put(host, model)
+//        model.frames.clear()
 
         publishExecutionModel(host, model)
 
@@ -275,10 +311,8 @@ class ExecutionManager(
             host: DocumentPath,
             graphStructure: GraphStructure
     ): Digest {
-        val model = modelOrInit(host)
-        model.frames.clear()
-
-        val values = mutableMapOf<ObjectPath, ExecutionState>()
+//        val model = modelOrInit(host)
+//        model.frames.clear()
 
         val documentNotation = graphStructure.graphNotation.documents.values[host]
 
@@ -288,18 +322,21 @@ class ExecutionManager(
                     ScriptDocument.stepsAttributePath
             ) as ListAttributeNotation
 
+            val values = mutableMapOf<ObjectPath, ExecutionState>()
             for (i in steps.values) {
                 val objectPath = ObjectPath.parse(i.asString()!!)
                 values[objectPath] = ExecutionState.initial
             }
 
-            val frame = ExecutionFrame(host, values)
+            val frame = ExecutionFrame(host, values.toPersistentMap())
+            val executionModel = ExecutionModel(persistentListOf(frame))
 
-            model.frames.add(frame)
+            models = models.put(host, executionModel)
+//            model.frames.add(frame)
         }
 
+        val model = modelOrInit(host)
         publishExecutionModel(host, model)
-
         return model.digest()
     }
 

@@ -8,7 +8,6 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 @Suppress("unused")
 class QueryDocument(
-//        val sources: List<ExecutionAction>,
         val vertices: List<Dataflow>,
         objectLocation: ObjectLocation
 ):
@@ -16,7 +15,6 @@ class QueryDocument(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        val sourcesAttributePath = AttributePath.parse("sources")
         val verticesAttributeName = AttributeName("vertices")
         val verticesAttributePath = AttributePath.ofName(verticesAttributeName)
     }
