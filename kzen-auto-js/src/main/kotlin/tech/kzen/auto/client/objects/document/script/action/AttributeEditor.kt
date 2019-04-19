@@ -72,13 +72,13 @@ class AttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         async {
-            ClientContext.executionManager.subscribe(this)
+            ClientContext.executionManager.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.executionManager.unsubscribe(this)
+        ClientContext.executionManager.unobserve(this)
     }
 
 

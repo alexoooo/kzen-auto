@@ -37,7 +37,7 @@ import kotlin.js.Date
 
 
 class ActionController(
-        props: ActionController.Props
+        props: Props
 ):
         RComponent<ActionController.Props, ActionController.State>(props),
         ExecutionIntent.Observer
@@ -83,7 +83,7 @@ class ActionController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun ActionController.State.init(props: ActionController.Props) {
+    override fun State.init(props: Props) {
         hoverCard = false
         hoverMenu = false
         intentToRun = false
@@ -104,8 +104,8 @@ class ActionController(
 
 
     override fun componentDidUpdate(
-            prevProps: ActionController.Props,
-            prevState: ActionController.State,
+            prevProps: Props,
+            prevState: State,
             snapshot: Any
     ) {
 //        console.log("state.hoverCard: ${state.hoverCard} | state.hoverAction: ${state.hoverAction}")
@@ -323,7 +323,9 @@ class ActionController(
                 ExecutionPhase.Error ->
                     Color.red
 
-                null -> null
+                null ->
+//                    null
+                    Color.gray
             }
 
             if (cardColor != null) {

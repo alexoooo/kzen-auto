@@ -32,6 +32,7 @@ class ExecutionManager(
     //-----------------------------------------------------------------------------------------------------------------
     private val subscribers = mutableSetOf<Observer>()
     private var models: PersistentMap<DocumentPath, ExecutionModel> = persistentMapOf()
+//    private var version = 0
 
 
     private suspend fun modelOrInit(host: DocumentPath): ExecutionModel {
@@ -47,17 +48,17 @@ class ExecutionManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun subscribe(subscriber: Observer) {
+    suspend fun observe(subscriber: Observer) {
         subscribers.add(subscriber)
 
+//        println("!!! observe - onExecutionModel - $models")
         for (model in models) {
-//            println("^^^ subscribe - onExecutionModel - $model")
             subscriber.onExecutionModel(model.key, model.value)
         }
     }
 
 
-    fun unsubscribe(subscriber: Observer) {
+    fun unobserve(subscriber: Observer) {
         subscribers.remove(subscriber)
     }
 
@@ -66,8 +67,8 @@ class ExecutionManager(
             host: DocumentPath,
             objectLocation: ObjectLocation
     ) {
+//        println("^^^ publishBeforeExecution - $host - $objectLocation")
         for (subscriber in subscribers) {
-//            println("^^^ publishBeforeExecution - $host - $objectLocation")
             subscriber.beforeExecution(host, objectLocation)
         }
     }
@@ -79,8 +80,10 @@ class ExecutionManager(
     ) {
 //        val model = models[host]!!
 
+//        val current = version++
+//        println("^^^ publishExecutionModel - $current - $host - $model")
         for (subscriber in subscribers) {
-//            println("^^^ publishExecutionModel - $host - $model")
+//            println("^^^ ### publishExecutionModel - to subscriber - $current")
             subscriber.onExecutionModel(host, model)
         }
     }
@@ -101,12 +104,15 @@ class ExecutionManager(
         for (host in models.keys) {
 //            val model = modelOrInit(host)
 
-            val model = models[host]!!
+//            val model = models[host]!!
             val newModels = apply(host, /*model,*/ event)
 
             if (models != newModels) {
                 models = newModels
-                publishExecutionModel(host, models[host]!!)
+//                publishExecutionModel(host, models[host]!!)
+                if (host in models) {
+                    publishExecutionModel(host, models[host]!!)
+                }
             }
         }
     }
@@ -114,17 +120,14 @@ class ExecutionManager(
 
     private fun apply(
             documentPath: DocumentPath,
-//            currentModels: PersistentMap<DocumentPath, ExecutionModel>,
-//            model: ExecutionModel,
             event: NotationEvent
     ): PersistentMap<DocumentPath, ExecutionModel> {
-//        val model = models[documentPath]!!
         return when (event) {
             is SingularNotationEvent ->
-                applySingular(documentPath, models, /*model,*/ event)
+                applySingular(documentPath, models, event)
 
             is CompoundNotationEvent -> {
-                applyCompound(documentPath, /*currentModels, model,*/ event)
+                applyCompound(documentPath, event)
             }
         }
     }
@@ -132,13 +135,11 @@ class ExecutionManager(
 
     private fun applyCompound(
             documentPath: DocumentPath,
-//            currentModels: PersistentMap<DocumentPath, ExecutionModel>,
-//            model: ExecutionModel,
             event: CompoundNotationEvent
     ): PersistentMap<DocumentPath, ExecutionModel> {
         val model = models[documentPath]!!
         val appliedWithDependentEvents = applyCompoundWithDependentEvents(
-                documentPath, /*currentModels,*/ model, event)
+                documentPath, model, event)
         if (models != appliedWithDependentEvents) {
             return appliedWithDependentEvents
         }
@@ -153,7 +154,6 @@ class ExecutionManager(
 
     private fun applyCompoundWithDependentEvents(
             documentPath: DocumentPath,
-//            currentModels: PersistentMap<DocumentPath, ExecutionModel>,
             model: ExecutionModel,
             event: CompoundNotationEvent
     ): PersistentMap<DocumentPath, ExecutionModel> {
@@ -178,10 +178,9 @@ class ExecutionManager(
     private fun applySingular(
             documentPath: DocumentPath,
             currentModels: PersistentMap<DocumentPath, ExecutionModel>,
-//            model: ExecutionModel,
             event: SingularNotationEvent
     ): PersistentMap<DocumentPath, ExecutionModel> {
-        val model = models[documentPath]!!
+        val model = currentModels[documentPath]!!
 
         return when (event) {
             is RemovedObjectEvent ->
@@ -194,7 +193,7 @@ class ExecutionManager(
 
             is AddedObjectEvent ->
                 currentModels.put(documentPath,
-                        model.add(event.objectLocation/*, event.indexInDocument.value - 1*/))
+                        model.add(event.objectLocation))
 
             is DeletedDocumentEvent ->
                 if (event.documentPath == documentPath) {
@@ -259,7 +258,8 @@ class ExecutionManager(
 
         models = models.put(host, updatedModel)
 
-        publishExecutionModel(host, model)
+//        println("^^^ didExecute: $host - $updatedModel")
+        publishExecutionModel(host, updatedModel)
     }
 
 
@@ -279,16 +279,16 @@ class ExecutionManager(
     }
 
 
-    suspend fun readExecutionModel(
-            host: DocumentPath,
-            prototype: ExecutionModel
-    ) {
-        models = models.put(host, prototype)
-
-//        val model = modelOrInit(host)
-//        model.frames.clear()
-//        model.frames.addAll(prototype.frames)
-    }
+//    fun readExecutionModel(
+//            host: DocumentPath,
+//            prototype: ExecutionModel
+//    ) {
+//        models = models.put(host, prototype)
+//
+////        val model = modelOrInit(host)
+////        model.frames.clear()
+////        model.frames.addAll(prototype.frames)
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -360,13 +360,6 @@ class ExecutionManager(
         }
 
         val response = actionExecutor.execute(objectLocation)
-
-//        val parentRef = ObjectReference.parse(
-//                modelManager.autoNotation().getString(objectLocation, NotationConventions.isAttribute))
-//        val parentLocation = modelManager.autoNotation().coalesce.locate(objectLocation, parentRef)
-//
-//        val actionHandle = actionExecutor.actionManager().get(parentLocation)
-//        val result = response.toResult(actionHandle)
 
         val digest = modelOrInit(host).digest()
 

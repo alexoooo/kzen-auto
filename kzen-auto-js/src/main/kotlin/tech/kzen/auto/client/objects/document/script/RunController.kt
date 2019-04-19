@@ -85,14 +85,14 @@ class RunController(
     override fun componentDidMount() {
         async {
 //            ClientContext.modelManager.observe(this)
-            ClientContext.executionManager.subscribe(this)
+            ClientContext.executionManager.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
 //        ClientContext.modelManager.unobserve(this)
-        ClientContext.executionManager.unsubscribe(this)
+        ClientContext.executionManager.unobserve(this)
     }
 
 

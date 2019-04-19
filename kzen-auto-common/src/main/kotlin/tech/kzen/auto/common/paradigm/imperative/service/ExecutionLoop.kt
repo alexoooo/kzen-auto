@@ -1,5 +1,7 @@
 package tech.kzen.auto.common.paradigm.imperative.service
 
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
 import tech.kzen.auto.common.paradigm.imperative.ImerativeControlFlow
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.service.ModelManager
@@ -50,6 +52,8 @@ class ExecutionLoop(
                 executionModel
         ) ?: return
 
+//        println("$$$$ onExecutionModel - $host - $next - $executionModel")
+
         run(host, next)
     }
 
@@ -91,8 +95,11 @@ class ExecutionLoop(
             host: DocumentPath,
             next: ObjectLocation
     ) {
-        // NB: this will trigger ExecutionManager.Observer onExecutionModel method above
-        executionManager.execute(host, next, delayMillis)
+        // NB: break cycle, is there a cleaner way to do this?
+        GlobalScope.async {
+            // NB: this will trigger ExecutionManager.Observer onExecutionModel method above
+            executionManager.execute(host, next, delayMillis)
+        }
     }
 
 

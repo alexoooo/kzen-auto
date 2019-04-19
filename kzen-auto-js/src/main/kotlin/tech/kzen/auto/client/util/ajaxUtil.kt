@@ -32,7 +32,7 @@ suspend fun httpGet(url: String): String = suspendCoroutine { c ->
 // TODO: what does this really do?
 fun <T> async(x: suspend () -> T): Promise<T> {
     return Promise { resolve, reject ->
-        x.startCoroutine(object : Continuation<T> {
+        x.startCoroutine(object: Continuation<T> {
             override fun resumeWith(result: Result<T>) {
                 if (result.isSuccess) {
                     resolve(result.getOrThrow())

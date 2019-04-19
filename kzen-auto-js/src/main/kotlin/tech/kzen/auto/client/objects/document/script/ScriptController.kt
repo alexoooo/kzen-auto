@@ -79,7 +79,7 @@ class ScriptController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun ScriptController.State.init(props: RProps) {
+    override fun State.init(props: RProps) {
         documentPath = null
         structure = null
         execution = null
@@ -95,7 +95,7 @@ class ScriptController:
         async {
 //            console.log("^^^^^^ script - adding observers")
             ClientContext.modelManager.observe(this)
-            ClientContext.executionManager.subscribe(this)
+            ClientContext.executionManager.observe(this)
             ClientContext.insertionManager.subscribe(this)
             ClientContext.navigationManager.observe(this)
         }
@@ -107,7 +107,7 @@ class ScriptController:
 
 //        println("ProjectController - Un-subscribed")
         ClientContext.modelManager.unobserve(this)
-        ClientContext.executionManager.unsubscribe(this)
+        ClientContext.executionManager.unobserve(this)
         ClientContext.insertionManager.unSubscribe(this)
         ClientContext.navigationManager.unobserve(this)
     }
@@ -115,13 +115,18 @@ class ScriptController:
 
     override fun componentDidUpdate(
             prevProps: RProps,
-            prevState: ScriptController.State,
+            prevState: State,
             snapshot: Any
     ) {
 //        console.log("%#$%#$%#$ componentDidUpdate", state.documentPath, prevState.documentPath)
         if (state.documentPath != null && state.documentPath != prevState.documentPath) {
             async {
                 val executionModel = ClientContext.executionManager.executionModel(state.documentPath!!)
+//                console.log("%#$%#$%#$ componentDidUpdate",
+//                        state.documentPath,
+//                        prevState.documentPath,
+//                        executionModel)
+
                 setState {
                     execution = executionModel
                 }
@@ -148,11 +153,11 @@ class ScriptController:
 
 
     override suspend fun onExecutionModel(host: DocumentPath, executionModel: ExecutionModel) {
-//        console.log("^^^^ onExecutionModel", host, state.documentPath, executionModel)
         if (state.documentPath != host) {
             return
         }
 
+//        console.log("^^^^ onExecutionModel: $host - ${state.documentPath} - $executionModel")
         setState {
             execution = executionModel
         }
@@ -284,7 +289,7 @@ class ScriptController:
                 val stepLocation = graphStructure.graphNotation.coalesce.locate(stepReference)
                 val objectPath = stepLocation.objectPath
 
-                val status: ExecutionState? =
+                val executionState: ExecutionState? =
                         state.execution?.frames?.lastOrNull()?.states?.get(objectPath)
 
                 val keyLocation = ObjectLocation(documentPath, objectPath)
@@ -292,7 +297,7 @@ class ScriptController:
                 action(index,
                         keyLocation,
                         graphStructure,
-                        status)
+                        executionState)
 
                 if (index < stepReferences.size - 1) {
                     downArrowWithInsertionPoint(index + 1)

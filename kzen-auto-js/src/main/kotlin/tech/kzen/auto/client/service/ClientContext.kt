@@ -78,7 +78,7 @@ object ClientContext {
             navigationManager.postConstruct(commandBus)
 
             modelManager.observe(executionManager)
-            executionManager.subscribe(executionLoop)
+            executionManager.observe(executionLoop)
         }
     }
 }
