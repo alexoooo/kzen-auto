@@ -30,8 +30,11 @@ data class VertexMatrix(
     val usedRows: Int
             get() = rows.size
 
-    val usedColumns: Int =
-            rows.map { it.last().column }.max() ?: 0
+    val usedColumns: Int = rows
+            .map { it.last().column }
+            .max()
+            ?.let { it + 1 }
+            ?: 0
 
 
     fun isEmpty(): Boolean {

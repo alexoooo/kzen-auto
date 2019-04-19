@@ -176,6 +176,7 @@ class QueryController:
                 ?.values
                 ?.get(QueryDocument.verticesAttributeName)
                 as? ListAttributeNotation
+                ?: ListAttributeNotation(persistentListOf())
     }
 
 
@@ -242,13 +243,12 @@ class QueryController:
         val documentNotation = documentNotation()
                 ?: return
 
-        val verticesNotation = verticesNotation(documentNotation)
-                ?: return
+        val vertexInfos =
+                verticesNotation(documentNotation)?.let {
+                    vertexInfoLayers(it)
+                }
 
-//        val vertexReferences = vertexNotations.values.map { ObjectReference.parse(it.asString()!!) }
-        val vertexInfos = vertexInfoLayers(verticesNotation)
-
-        if (vertexInfos.isEmpty()) {
+        if (vertexInfos?.isEmpty() != false) {
             styledH3 {
                 css {
                     paddingTop = 1.em
@@ -261,7 +261,14 @@ class QueryController:
             insertionPoint(0, 0)
         }
         else {
-            nonEmptyDag(state.structure!!, vertexInfos)
+            styledDiv {
+                css {
+                    paddingTop = 2.em
+//                    backgroundColor = Color.blue
+                }
+
+                nonEmptyDag(state.structure!!, vertexInfos)
+            }
         }
     }
 
@@ -270,12 +277,16 @@ class QueryController:
             graphStructure: GraphStructure,
             vertexInfoMatrix: VertexMatrix
     ) {
+//        console.log("^$%^%^$% vertexInfoMatrix", vertexInfoMatrix)
+//        +"vertexInfoMatrix.usedColumns: ${vertexInfoMatrix.usedColumns} - ${vertexInfoMatrix.rows.size}"
+//        br {}
+
         for ((rowIndex, row) in vertexInfoMatrix.rows.withIndex()) {
-            var previousColumn = 0
+            var previousColumn = -1
             for (cell in row) {
                 val delta = cell.column - previousColumn
 
-                for (absent in 0 until delta) {
+                for (absent in 0 until delta - 1) {
                     absentVertex(rowIndex, previousColumn + absent)
                 }
 
@@ -285,13 +296,15 @@ class QueryController:
                 previousColumn = cell.column
             }
 
-            for (suffixColumn in row.last().column + 1 .. vertexInfoMatrix.usedColumns + 1) {
+            for (suffixColumn in row.last().column + 1 .. vertexInfoMatrix.usedColumns) {
                 absentVertex(rowIndex, suffixColumn)
             }
 
             br {}
+        }
 
-            insertionPoint(rowIndex + 1, 0)
+        for (column in 0 .. vertexInfoMatrix.usedColumns) {
+            absentVertex(vertexInfoMatrix.usedRows, column)
         }
     }
 
@@ -307,7 +320,14 @@ class QueryController:
                 width = 20.em
             }
 
-            +"[$row, $column]"
+            styledSpan {
+                css {
+                    paddingLeft = 8.em
+                }
+
+                insertionPoint(row, column)
+            }
+//            +"[$row, $column]"
         }
     }
 
