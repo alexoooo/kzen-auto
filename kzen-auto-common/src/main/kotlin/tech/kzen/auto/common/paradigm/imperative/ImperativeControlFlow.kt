@@ -10,7 +10,7 @@ import tech.kzen.lib.common.structure.notation.model.GraphNotation
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 
 
-object ImerativeControlFlow {
+object ImperativeControlFlow {
     fun next(
             graphNotation: GraphNotation,
             executionModel: ExecutionModel
@@ -31,7 +31,9 @@ object ImerativeControlFlow {
         val mainObjectLocation = ObjectLocation(lastFrame.path, NotationConventions.mainObjectPath)
         val stepsNotation = graphNotation
                 .transitiveAttribute(mainObjectLocation, ScriptDocument.stepsAttributePath)
-                as ListAttributeNotation
+                as? ListAttributeNotation
+                ?: return null
+
         val stepReferences = stepsNotation.values.map { ObjectReference.parse(it.asString()!!) }
 
         for (stepReference in stepReferences) {

@@ -10,7 +10,7 @@ import react.dom.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.paradigm.imperative.ImerativeControlFlow
+import tech.kzen.auto.common.paradigm.imperative.ImperativeControlFlow
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
@@ -19,6 +19,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 
 
+// TODO: bugfix 'rename' causes 'Run all' to turn into 'Reset'
 class RunController(
         props: Props
 ):
@@ -71,7 +72,7 @@ class RunController(
         }
 
         if (! executionModel.containsStatus(ExecutionPhase.Running)) {
-            val next = ImerativeControlFlow.next(props.structure!!.graphNotation, executionModel)
+            val next = ImperativeControlFlow.next(props.structure!!.graphNotation, executionModel)
             if (next == null &&
                     ClientContext.executionLoop.running(host)) {
 //                console.log("!@#!#!@#!@#!@ onExecutionModel - pause at end")
@@ -97,8 +98,8 @@ class RunController(
 
 
     override fun componentDidUpdate(
-            prevProps: RunController.Props,
-            prevState: RunController.State,
+            prevProps: Props,
+            prevState: State,
             snapshot: Any
     ) {
 //        if (props.documentPath != null && props.documentPath != prevState.documentPath) {
@@ -186,7 +187,7 @@ class RunController(
             return Phase.Running
         }
 
-        val next = ImerativeControlFlow.next(props.structure!!.graphNotation, executionModel)
+        val next = ImperativeControlFlow.next(props.structure!!.graphNotation, executionModel)
                 ?: return Phase.Done
 
         if (executionModel.containsStatus(ExecutionPhase.Success) ||
@@ -250,7 +251,7 @@ class RunController(
     private fun onFabEnter() {
 //        val nextToRun = state.execution?.next()
         val nextToRun = props.execution?.let {
-            ImerativeControlFlow.next(props.structure!!.graphNotation, it)
+            ImperativeControlFlow.next(props.structure!!.graphNotation, it)
         }
         if (nextToRun == ClientContext.executionIntent.actionLocation()) {
             return
@@ -266,7 +267,7 @@ class RunController(
     private fun onFabLeave() {
 //        val nextToRun = state.execution?.next()
         val nextToRun = props.execution?.let {
-            ImerativeControlFlow.next(props.structure!!.graphNotation, it)
+            ImperativeControlFlow.next(props.structure!!.graphNotation, it)
         }
 //        println("^$%^$%^% onRunAllLeave - $nextToRun")
         if (nextToRun != null) {
