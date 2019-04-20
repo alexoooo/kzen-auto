@@ -1,15 +1,12 @@
 package tech.kzen.auto.client.objects.document.query
 
-import kotlinx.css.Cursor
-import kotlinx.css.Display
-import kotlinx.css.em
+import kotlinx.css.*
 import kotlinx.html.title
 import react.*
-import react.dom.br
-import styled.css
-import styled.styledDiv
-import styled.styledH3
-import styled.styledSpan
+import react.dom.table
+import react.dom.tbody
+import react.dom.tr
+import styled.*
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
@@ -275,36 +272,31 @@ class QueryController:
 
     private fun RBuilder.nonEmptyDag(
             graphStructure: GraphStructure,
-            vertexInfoMatrix: VertexMatrix
+            vertexMatrix: VertexMatrix
     ) {
-//        console.log("^$%^%^$% vertexInfoMatrix", vertexInfoMatrix)
-//        +"vertexInfoMatrix.usedColumns: ${vertexInfoMatrix.usedColumns} - ${vertexInfoMatrix.rows.size}"
-//        br {}
+        table {
+            tbody {
+                for (row in 0 .. vertexMatrix.usedRows) {
+                    tr {
+                        for (column in 0 .. vertexMatrix.usedColumns) {
+                            styledTd {
+                                css {
+                                    padding(1.em)
+                                }
 
-        for ((rowIndex, row) in vertexInfoMatrix.rows.withIndex()) {
-            var previousColumn = -1
-            for (cell in row) {
-                val delta = cell.column - previousColumn
-
-                for (absent in 0 until delta - 1) {
-                    absentVertex(rowIndex, previousColumn + absent)
+                                val vertexInfo = vertexMatrix.get(row, column)
+                                if (vertexInfo == null) {
+                                    absentVertex(row, column)
+                                }
+                                else {
+                                    vertex(vertexInfo,
+                                            graphStructure)
+                                }
+                            }
+                        }
+                    }
                 }
-
-                vertex(cell,
-                        graphStructure)
-
-                previousColumn = cell.column
             }
-
-            for (suffixColumn in row.last().column + 1 .. vertexInfoMatrix.usedColumns) {
-                absentVertex(rowIndex, suffixColumn)
-            }
-
-            br {}
-        }
-
-        for (column in 0 .. vertexInfoMatrix.usedColumns) {
-            absentVertex(vertexInfoMatrix.usedRows, column)
         }
     }
 
@@ -315,19 +307,12 @@ class QueryController:
     ) {
         styledDiv {
             css {
-                display = Display.inlineBlock
-                marginLeft = 1.em
-                width = 20.em
+                width = 100.pct
+                textAlign = TextAlign.center
             }
 
-            styledSpan {
-                css {
-                    paddingLeft = 8.em
-                }
-
-                insertionPoint(row, column)
-            }
 //            +"[$row, $column]"
+            insertionPoint(row, column)
         }
     }
 
@@ -366,12 +351,14 @@ class QueryController:
             vertexInfo: VertexInfo,
             graphStructure: GraphStructure
     ) {
-        styledDiv {
-            css {
-                display = Display.inlineBlock
-                marginLeft = 1.em
-                width = 20.em
-            }
+//        styledDiv {
+//            css {
+//                display = Display.inlineBlock
+//                marginLeft = 1.em
+//                width = 20.em
+//            }
+
+//            +"[${vertexInfo.row}, ${vertexInfo.column}]"
 
             child(VertexController::class) {
                 key = vertexInfo.objectLocation.toReference().asString()
@@ -384,6 +371,6 @@ class QueryController:
                     this.graphStructure = graphStructure
                 }
             }
-        }
+//        }
     }
 }

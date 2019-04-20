@@ -187,7 +187,7 @@ class RunController(
             return Phase.Running
         }
 
-        val next = ImperativeControlFlow.next(props.structure!!.graphNotation, executionModel)
+        ImperativeControlFlow.next(props.structure!!.graphNotation, executionModel)
                 ?: return Phase.Done
 
         if (executionModel.containsStatus(ExecutionPhase.Success) ||

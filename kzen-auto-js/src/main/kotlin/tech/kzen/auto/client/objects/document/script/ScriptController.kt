@@ -200,14 +200,15 @@ class ScriptController:
                 state.documentPath!!, NotationConventions.mainObjectPath)
 
         // NB: +1 offset for main Script object
-        val positionInDocument = PositionIndex(index + 1)
+        val endOfDocumentPosition =
+                state.structure!!.graphNotation.documents.get(state.documentPath!!)!!.objects.values.size
 
         val command = InsertObjectInListAttributeCommand(
                 containingObjectLocation,
                 ScriptDocument.stepsAttributePath,
                 PositionIndex(index),
                 NameConventions.randomAnonymous(),
-                positionInDocument,
+                PositionIndex(endOfDocumentPosition),
                 objectNotation
         )
 

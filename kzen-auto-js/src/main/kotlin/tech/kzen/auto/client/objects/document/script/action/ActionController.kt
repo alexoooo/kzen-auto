@@ -328,9 +328,9 @@ class ActionController(
                     Color.gray
             }
 
-            if (cardColor != null) {
+//            if (cardColor != null) {
                 backgroundColor = cardColor
-            }
+//            }
         }
 
         child(MaterialCard::class) {
