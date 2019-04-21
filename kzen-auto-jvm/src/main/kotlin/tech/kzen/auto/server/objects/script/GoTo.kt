@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.script
 
 import org.openqa.selenium.OutputType
-import tech.kzen.auto.common.paradigm.imperative.ExecutionAction
+import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionSuccess

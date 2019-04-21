@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.query
 
-import tech.kzen.auto.common.paradigm.imperative.ExecutionAction
+import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.*
 import java.nio.file.Files
 import java.nio.file.Paths

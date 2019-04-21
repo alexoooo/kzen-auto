@@ -2,7 +2,7 @@ package tech.kzen.auto.common.paradigm.imperative.service
 
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
-import tech.kzen.auto.common.paradigm.imperative.ImperativeControlFlow
+import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -47,7 +47,7 @@ class ExecutionLoop(
             return
         }
 
-        val next = ImperativeControlFlow.next(
+        val next = ImperativeUtils.next(
                 modelManager.graphStructure().graphNotation,
                 executionModel
         ) ?: return
@@ -75,7 +75,7 @@ class ExecutionLoop(
 //        println("ExecutionLoop | executionModel is $executionModel")
 
         val next = state.executionModel?.let {
-            ImperativeControlFlow.next(modelManager.graphStructure().graphNotation, it)
+            ImperativeUtils.next(modelManager.graphStructure().graphNotation, it)
         }
         if (next == null) {
 //            println("ExecutionLoop | pausing at end of loop")

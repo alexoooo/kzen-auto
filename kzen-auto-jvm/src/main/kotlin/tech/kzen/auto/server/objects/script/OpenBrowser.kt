@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.script
 
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
-import tech.kzen.auto.common.paradigm.imperative.ExecutionAction
+import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionSuccess
 import tech.kzen.auto.server.service.ServerContext

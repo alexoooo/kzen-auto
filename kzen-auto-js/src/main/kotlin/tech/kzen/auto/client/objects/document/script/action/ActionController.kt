@@ -13,7 +13,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.ScriptDocument
+import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState

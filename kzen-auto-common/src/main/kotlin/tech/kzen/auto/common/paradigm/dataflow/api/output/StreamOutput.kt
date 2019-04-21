@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.paradigm.dataflow.output
+package tech.kzen.auto.common.paradigm.dataflow.api.output
 
 
 interface StreamOutput<in T>: OptionalOutput<T> {

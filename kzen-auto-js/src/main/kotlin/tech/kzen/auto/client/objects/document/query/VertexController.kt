@@ -12,7 +12,7 @@ import styled.styledH3
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.QueryDocument
+import tech.kzen.auto.common.objects.document.query.QueryDocument
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation

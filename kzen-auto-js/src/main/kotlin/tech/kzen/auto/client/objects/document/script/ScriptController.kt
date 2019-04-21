@@ -23,7 +23,7 @@ import tech.kzen.auto.client.wrap.ArrowDownwardIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.auto.common.objects.document.ScriptDocument
+import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager

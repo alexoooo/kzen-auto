@@ -65,7 +65,7 @@ class ModelManager(
             it.asRelativeFile().startsWith("base/") ||
                     it.asRelativeFile().startsWith("auto-js/") ||
                     it.asRelativeFile().startsWith("auto-common/") ||
-                    it.asRelativeFile().startsWith("action/")
+                    it.asRelativeFile().startsWith("auto-jvm/")
         }
     }
 

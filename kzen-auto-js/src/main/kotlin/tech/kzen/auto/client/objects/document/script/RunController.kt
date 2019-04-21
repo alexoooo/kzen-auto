@@ -10,7 +10,7 @@ import react.dom.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.paradigm.imperative.ImperativeControlFlow
+import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
@@ -72,7 +72,7 @@ class RunController(
         }
 
         if (! executionModel.containsStatus(ExecutionPhase.Running)) {
-            val next = ImperativeControlFlow.next(props.structure!!.graphNotation, executionModel)
+            val next = ImperativeUtils.next(props.structure!!.graphNotation, executionModel)
             if (next == null &&
                     ClientContext.executionLoop.running(host)) {
 //                console.log("!@#!#!@#!@#!@ onExecutionModel - pause at end")
@@ -187,7 +187,7 @@ class RunController(
             return Phase.Running
         }
 
-        ImperativeControlFlow.next(props.structure!!.graphNotation, executionModel)
+        ImperativeUtils.next(props.structure!!.graphNotation, executionModel)
                 ?: return Phase.Done
 
         if (executionModel.containsStatus(ExecutionPhase.Success) ||
@@ -251,7 +251,7 @@ class RunController(
     private fun onFabEnter() {
 //        val nextToRun = state.execution?.next()
         val nextToRun = props.execution?.let {
-            ImperativeControlFlow.next(props.structure!!.graphNotation, it)
+            ImperativeUtils.next(props.structure!!.graphNotation, it)
         }
         if (nextToRun == ClientContext.executionIntent.actionLocation()) {
             return
@@ -267,7 +267,7 @@ class RunController(
     private fun onFabLeave() {
 //        val nextToRun = state.execution?.next()
         val nextToRun = props.execution?.let {
-            ImperativeControlFlow.next(props.structure!!.graphNotation, it)
+            ImperativeUtils.next(props.structure!!.graphNotation, it)
         }
 //        println("^$%^$%^% onRunAllLeave - $nextToRun")
         if (nextToRun != null) {

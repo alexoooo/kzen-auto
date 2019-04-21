@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.paradigm.dataflow
+package tech.kzen.auto.common.paradigm.dataflow.api
 
 
 interface StreamDataflow: Dataflow {

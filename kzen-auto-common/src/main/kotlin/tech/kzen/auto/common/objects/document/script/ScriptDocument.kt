@@ -1,21 +1,20 @@
-package tech.kzen.auto.common.objects.document
+package tech.kzen.auto.common.objects.document.script
 
-import tech.kzen.auto.common.paradigm.dataflow.Dataflow
-import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.auto.common.objects.document.DocumentArchetype
+import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 @Suppress("unused")
-class QueryDocument(
-        val vertices: List<Dataflow>,
+class ScriptDocument(
+        val steps: List<ExecutionAction>,
         objectLocation: ObjectLocation
 ):
         DocumentArchetype(objectLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val verticesAttributeName = AttributeName("vertices")
-        val verticesAttributePath = AttributePath.ofName(verticesAttributeName)
+        val stepsAttributePath = AttributePath.parse("steps")
     }
 }

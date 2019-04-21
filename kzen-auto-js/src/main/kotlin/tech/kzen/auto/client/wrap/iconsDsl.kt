@@ -54,6 +54,9 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "ExposurePlus1" ->
             ExposurePlus1Icon::class
 
+        "ArrowDownward" ->
+            ArrowDownwardIcon::class
+
         else ->
             TextureIcon::class
     }

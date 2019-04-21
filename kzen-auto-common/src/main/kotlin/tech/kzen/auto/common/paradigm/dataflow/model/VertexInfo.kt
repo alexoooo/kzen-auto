@@ -1,11 +1,10 @@
-package tech.kzen.auto.common.objects.query
+package tech.kzen.auto.common.paradigm.dataflow.model
 
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.notation.model.ObjectNotation
 
 
-// TODO: move somewhere better
 data class VertexInfo(
         val indexInVertices: Int,
         val objectLocation: ObjectLocation,

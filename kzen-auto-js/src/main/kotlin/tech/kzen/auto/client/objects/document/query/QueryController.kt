@@ -17,9 +17,9 @@ import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.auto.common.objects.document.QueryDocument
-import tech.kzen.auto.common.objects.query.VertexInfo
-import tech.kzen.auto.common.objects.query.VertexMatrix
+import tech.kzen.auto.common.objects.document.query.QueryDocument
+import tech.kzen.auto.common.paradigm.dataflow.model.VertexInfo
+import tech.kzen.auto.common.paradigm.dataflow.model.VertexMatrix
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting

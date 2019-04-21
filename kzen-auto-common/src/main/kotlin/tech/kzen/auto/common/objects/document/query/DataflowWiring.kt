@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.query
+package tech.kzen.auto.common.objects.document.query
 
 import tech.kzen.auto.common.paradigm.dataflow.model.mutable.MutableRequiredInput
 import tech.kzen.auto.common.paradigm.dataflow.model.mutable.MutableStreamOutput
@@ -18,10 +18,10 @@ import tech.kzen.lib.platform.ClassNames
 class DataflowWiring: AttributeDefiner {
     companion object {
         private val streamOutputClass = ClassName(
-                "tech.kzen.auto.common.paradigm.dataflow.output.StreamOutput")
+                "tech.kzen.auto.common.paradigm.dataflow.api.StreamOutput")
 
         private val requiredInputClass = ClassName(
-                "tech.kzen.auto.common.paradigm.dataflow.input.RequiredInput")
+                "tech.kzen.auto.common.paradigm.dataflow.api.RequiredInput")
     }
 
 

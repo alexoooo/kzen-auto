@@ -1,0 +1,45 @@
+
+###########################################################
+
+
+#CsvSource:
+#  abstract: true
+#  is: Action
+#  class: tech.kzen.auto.server.objects.query.CsvSource
+#  icon: TripOrigin
+#  title: "CSV Source"
+#  description: "CSV: Comma-separated value"
+#  filePath: "C:/path/to/file.csv"
+#  meta:
+#    filePath: String
+
+
+#######################################################################################################################
+
+
+IntRangeSource:
+  abstract: true
+  is: Dataflow
+  class: tech.kzen.auto.server.objects.query.IntRangeSource
+  icon: TripOrigin
+  description: "Range of numbers"
+  from: 1
+  to: 100
+  meta:
+    output:
+      is: StreamOutput
+      by: DataflowWiring
+    from: Int
+    to: Int
+
+
+CountSink:
+  abstract: true
+  is: Dataflow
+  class: tech.kzen.auto.server.objects.query.CountSink
+  icon: ExposurePlus1
+  description: "Counter"
+  meta:
+    input:
+      is: RequiredInput
+      by: DataflowWiring

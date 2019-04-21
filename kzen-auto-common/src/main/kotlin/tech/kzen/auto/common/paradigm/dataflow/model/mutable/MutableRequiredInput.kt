@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.paradigm.dataflow.model.mutable
 
-import tech.kzen.auto.common.paradigm.dataflow.input.RequiredInput
+import tech.kzen.auto.common.paradigm.dataflow.api.input.RequiredInput
 
 
 class MutableRequiredInput<out T>: RequiredInput<T> {

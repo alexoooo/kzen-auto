@@ -2,8 +2,8 @@ package tech.kzen.auto.server.objects.query
 
 import tech.kzen.auto.common.paradigm.common.api.StatefulObject
 import tech.kzen.auto.common.paradigm.common.api.ValidatedObject
-import tech.kzen.auto.common.paradigm.dataflow.StreamDataflow
-import tech.kzen.auto.common.paradigm.dataflow.output.StreamOutput
+import tech.kzen.auto.common.paradigm.dataflow.api.StreamDataflow
+import tech.kzen.auto.common.paradigm.dataflow.api.output.StreamOutput
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionValue
 
 

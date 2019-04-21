@@ -7,7 +7,7 @@ class InsertionManager {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         fun onSelected(action: ObjectLocation)
-//        fun onInserted(action: ObjectLocation)
+//        fun onInserted(auto-jvm: ObjectLocation)
         fun onUnselected()
     }
 

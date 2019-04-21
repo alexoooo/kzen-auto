@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.paradigm.dataflow.model.mutable
 
-import tech.kzen.auto.common.paradigm.dataflow.output.StreamOutput
+import tech.kzen.auto.common.paradigm.dataflow.api.output.StreamOutput
 
 
 class MutableStreamOutput<T>: StreamOutput<T> {

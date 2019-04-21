@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.paradigm.dataflow.input
+package tech.kzen.auto.common.paradigm.dataflow.api.input
 
 
 interface RequiredInput<out T>: OptionalInput<T> {

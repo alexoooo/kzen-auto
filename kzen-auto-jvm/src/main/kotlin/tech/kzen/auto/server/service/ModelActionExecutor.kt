@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.service
 
-import tech.kzen.auto.common.paradigm.imperative.ExecutionAction
+import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.imperative.service.ActionExecutor
 import tech.kzen.auto.common.service.ModelManager

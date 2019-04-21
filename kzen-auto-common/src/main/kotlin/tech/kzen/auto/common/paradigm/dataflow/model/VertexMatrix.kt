@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.query
+package tech.kzen.auto.common.paradigm.dataflow.model
 
 
 data class VertexMatrix(

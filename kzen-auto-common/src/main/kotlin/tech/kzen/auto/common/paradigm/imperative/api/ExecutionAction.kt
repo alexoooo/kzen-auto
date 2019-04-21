@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.paradigm.imperative
+package tech.kzen.auto.common.paradigm.imperative.api
 
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
 

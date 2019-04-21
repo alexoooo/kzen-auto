@@ -1,6 +1,6 @@
-package tech.kzen.auto.common.paradigm.imperative
+package tech.kzen.auto.common.paradigm.imperative.util
 
-import tech.kzen.auto.common.objects.document.ScriptDocument
+import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -10,7 +10,7 @@ import tech.kzen.lib.common.structure.notation.model.GraphNotation
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 
 
-object ImperativeControlFlow {
+object ImperativeUtils {
     fun next(
             graphNotation: GraphNotation,
             executionModel: ExecutionModel

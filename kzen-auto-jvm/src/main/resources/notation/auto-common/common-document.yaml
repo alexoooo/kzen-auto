@@ -14,7 +14,7 @@ Document:
 
 Script:
   is: Document
-  class: tech.kzen.auto.common.objects.document.ScriptDocument
+  class: tech.kzen.auto.common.objects.document.script.ScriptDocument
   icon: PlaylistPlay
   steps: []
   meta:
@@ -25,7 +25,7 @@ Script:
 
 Query:
   is: Document
-  class: tech.kzen.auto.common.objects.document.QueryDocument
+  class: tech.kzen.auto.common.objects.document.query.QueryDocument
   icon: Search
   vertices: []
   meta:
