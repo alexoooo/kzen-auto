@@ -68,8 +68,8 @@ class ProjectController(
             private val sidebarController: SidebarController.Wrapper,
             private val ribbonController: RibbonController.Wrapper,
             private val stageController: StageController.Wrapper
-    ): ReactWrapper<ProjectController.Props> {
-        override fun child(input: RBuilder, handler: RHandler<ProjectController.Props>): ReactElement {
+    ): ReactWrapper<Props> {
+        override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
             return input.child(ProjectController::class) {
                 attrs {
                     ribbonController = this@Wrapper.ribbonController
@@ -126,8 +126,8 @@ class ProjectController(
 
 
     override fun componentDidUpdate(
-            prevProps: ProjectController.Props,
-            prevState: ProjectController.State,
+            prevProps: Props,
+            prevState: State,
             snapshot: Any
     ) {
         val height = headerElement?.clientHeight ?: 0

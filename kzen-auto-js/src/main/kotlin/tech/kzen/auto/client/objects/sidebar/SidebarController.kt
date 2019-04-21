@@ -38,8 +38,8 @@ class SidebarController(
     @Suppress("unused")
     class Wrapper(
             private val documentArchetypes: List<DocumentArchetype>
-    ): ReactWrapper<SidebarController.Props> {
-        override fun child(input: RBuilder, handler: RHandler<SidebarController.Props>): ReactElement {
+    ): ReactWrapper<Props> {
+        override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
             return input.child(SidebarController::class) {
                 attrs {
                     documentArchetypes = this@Wrapper.documentArchetypes

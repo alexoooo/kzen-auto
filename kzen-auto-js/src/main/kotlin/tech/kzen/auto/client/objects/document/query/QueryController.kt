@@ -1,6 +1,9 @@
 package tech.kzen.auto.client.objects.document.query
 
-import kotlinx.css.*
+import kotlinx.css.Cursor
+import kotlinx.css.TextAlign
+import kotlinx.css.em
+import kotlinx.css.pct
 import kotlinx.html.title
 import react.*
 import react.dom.table
@@ -21,7 +24,6 @@ import tech.kzen.auto.common.objects.document.query.QueryDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.VertexInfo
 import tech.kzen.auto.common.paradigm.dataflow.model.VertexMatrix
 import tech.kzen.auto.common.service.ModelManager
-import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -43,13 +45,6 @@ class QueryController:
         InsertionManager.Observer,
         NavigationManager.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val rowAttributeName = AttributeName("row")
-        private val columnAttributeName = AttributeName("column")
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     class State(
             var documentPath: DocumentPath?,
@@ -214,8 +209,8 @@ class QueryController:
 
         val objectNotation = ObjectNotation
                 .ofParent(archetypeLocation.objectPath.name)
-                .upsertAttribute(rowAttributeName, ScalarAttributeNotation(row.toString()))
-                .upsertAttribute(columnAttributeName, ScalarAttributeNotation(column.toString()))
+                .upsertAttribute(VertexInfo.rowAttributeName, ScalarAttributeNotation(row.toString()))
+                .upsertAttribute(VertexInfo.columnAttributeName, ScalarAttributeNotation(column.toString()))
 
         val containingObjectLocation = ObjectLocation(
                 state.documentPath!!, NotationConventions.mainObjectPath)
@@ -280,9 +275,9 @@ class QueryController:
                     tr {
                         for (column in 0 .. vertexMatrix.usedColumns) {
                             styledTd {
-                                css {
-                                    padding(1.em)
-                                }
+//                                css {
+//                                    padding(1.em)
+//                                }
 
                                 val vertexInfo = vertexMatrix.get(row, column)
                                 if (vertexInfo == null) {

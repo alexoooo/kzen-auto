@@ -1,21 +1,29 @@
 package tech.kzen.auto.client.objects.document.query
 
-import kotlinx.css.Float
-import kotlinx.css.em
+import kotlinx.css.*
+import kotlinx.css.properties.borderLeft
+import kotlinx.css.properties.borderRight
+import kotlinx.css.properties.borderTop
 import react.RBuilder
 import react.RComponent
 import react.RProps
 import react.RState
-import react.dom.div
 import styled.css
+import styled.styledDiv
 import styled.styledH3
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.DeleteIcon
+import tech.kzen.auto.client.wrap.MaterialIconButton
+import tech.kzen.auto.client.wrap.SettingsInputComponentIcon
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.query.QueryDocument
+import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
@@ -27,9 +35,11 @@ class VertexController(
         RComponent<VertexController.Props, VertexController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-//    companion object {
+    companion object {
 //        private val filePathAttribute = AttributePath.parse("filePath")
-//    }
+        private val inputAttributeName = AttributeName("input")
+        private val outputAttributeName = AttributeName("output")
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -136,64 +146,202 @@ class VertexController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        child(MaterialCard::class) {
-//            attrs {
-//                style = reactStyles
-//            }
+        styledDiv {
+            css {
+                backgroundColor = Color.white
+                borderRadius = 3.px
+                position = Position.relative
+                filter = "drop-shadow(0 1px 1px gray)"
+            }
 
-            child(MaterialCardContent::class) {
-                div {
-                    child(MaterialIconButton::class) {
-                        attrs {
-                            title = "Remove"
+            val objectNotation = props.graphStructure.graphNotation.coalesce.get(props.objectLocation)!!
+            val parentReference = ObjectReference.parse(
+                    objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
+            val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
 
-                            style = reactStyle {
-                                float = Float.right
-                                marginTop = (-1).em
-                            }
+            if (parentLocation.objectPath.name.value.endsWith("Pipe")) {
+                renderPipe()
+            }
+            else {
+                renderFitting()
+            }
+        }
+    }
 
-                            onClick = ::onRemove
-                        }
+    private fun RBuilder.renderPipe() {
+        renderIngress()
 
-                        child(DeleteIcon::class) {}
+        styledDiv {
+            css {
+                display = Display.block
+                marginTop = 1.5.em
+            }
+
+            child(MaterialIconButton::class) {
+                attrs {
+                    title = "Remove"
+
+                    style = reactStyle {
+                        float = Float.right
+                        marginTop = (-1).em
                     }
 
-                    styledH3 {
-                        css {
-                            width = 10.em
-                        }
+                    onClick = ::onRemove
+                }
 
-//                        child(TripOriginIcon::class) {
-                        child(SettingsInputComponentIcon::class) {
-                            attrs {
-                                style = reactStyle {
-                                    marginRight = (0.5).em
-                                }
-                            }
+                child(DeleteIcon::class) {}
+            }
+        }
+
+        renderEgress()
+    }
+
+
+    private fun RBuilder.renderFitting() {
+        val objectMetadata = props.graphStructure.graphMetadata.get(props.objectLocation)!!
+        val hasInput = objectMetadata.attributes.values.containsKey(inputAttributeName)
+        val hasOutput = objectMetadata.attributes.values.containsKey(outputAttributeName)
+
+        if (hasInput) {
+            renderIngress()
+        }
+
+        renderContent()
+
+        if (hasOutput) {
+            renderEgress()
+        }
+    }
+
+
+    private fun RBuilder.renderContent() {
+        styledDiv {
+            css {
+                display = Display.block
+////                marginTop = 1.5.em
+//                marginBottom = 1.em
+//                marginLeft = 1.em
+//                marginRight = 1.em
+                margin(1.em)
+            }
+
+            child(MaterialIconButton::class) {
+                attrs {
+                    title = "Remove"
+
+                    style = reactStyle {
+                        float = Float.right
+                    }
+
+                    onClick = ::onRemove
+                }
+
+                child(DeleteIcon::class) {}
+            }
+
+            styledH3 {
+                css {
+                    width = 10.em
+                }
+
+                child(SettingsInputComponentIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            marginRight = (0.5).em
                         }
-//                        +"CSV source"
-                        +"Vertex"
                     }
                 }
 
-//                child(MaterialTextField::class) {
-//                    attrs {
-//                        fullWidth = true
-//
-//                        label = "File Path"
-//                        value = state.value
-//
-//                        onChange = {
-//                            val target = it.target as HTMLInputElement
-//                            onValueChange(target.value)
-//                        }
-//                    }
-//                }
-//
-//                state.executionResult?.let {
-//                    renderResult(it)
-//                }
+                renderName()
             }
+        }
+    }
+
+
+    private fun RBuilder.renderIngress() {
+        styledDiv {
+            css {
+                position = Position.absolute
+
+                width = 10.px
+                height = 0.px
+
+                borderTop(10.px, BorderStyle.solid, Color.white)
+                borderLeft(5.px, BorderStyle.solid, Color.transparent)
+                borderRight(5.px, BorderStyle.solid, Color.transparent)
+
+                top = (-19).px
+                left = (100).px
+//                zIndex = -999
+            }
+        }
+
+        styledDiv {
+            css {
+                backgroundColor = Color.white
+                position = Position.absolute
+
+                width = 10.px
+                height = 10.px
+
+                top = (-10).px
+                left = (105).px
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderEgress() {
+        styledDiv {
+            css {
+                backgroundColor = Color.white
+                position = Position.absolute
+
+                width = 10.px
+                height = 10.px
+
+                bottom = (-10).px
+                left = (105).px
+            }
+        }
+
+        styledDiv {
+            css {
+                position = Position.absolute
+
+                width = 0.px
+                height = 0.px
+
+//                borderBottom(10.px, BorderStyle.solid, Color.white)
+//                borderLeft(5.px, BorderStyle.solid, Color.transparent)
+//                borderRight(5.px, BorderStyle.solid, Color.transparent)
+
+                borderTop(10.px, BorderStyle.solid, Color.white)
+                borderLeft(10.px, BorderStyle.solid, Color.transparent)
+                borderRight(10.px, BorderStyle.solid, Color.transparent)
+
+//                bottom = (-19).px
+                bottom = (-19).px
+                left = (100).px
+//                zIndex = 999
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderName() {
+        val name = props.objectLocation.objectPath.name
+
+        if (AutoConventions.isAnonymous(name)) {
+            val objectNotation = props.graphStructure.graphNotation.coalesce.get(props.objectLocation)!!
+            val parentReference = ObjectReference.parse(
+                    objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
+            val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
+
+            +"${parentLocation.objectPath.name}"
+        }
+        else {
+            +name.value
         }
     }
 

@@ -33,3 +33,11 @@ CountSinkTool:
   parent: QueryGroup
   delegate: CountSink
 
+
+###########################################################
+
+DownPipeTool:
+  is: RibbonTool
+  parent: QueryGroup
+  delegate: DownPipe
+
