@@ -8,6 +8,7 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.common.util.AutoConventions
@@ -19,7 +20,8 @@ import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 class SidebarController(
         props: Props
 ):
-        RComponent<SidebarController.Props, SidebarController.State>(props),
+//        RComponent<SidebarController.Props, SidebarController.State>(props),
+        RPureComponent<SidebarController.Props, SidebarController.State>(props),
         ModelManager.Observer,
         NavigationManager.Observer
 {

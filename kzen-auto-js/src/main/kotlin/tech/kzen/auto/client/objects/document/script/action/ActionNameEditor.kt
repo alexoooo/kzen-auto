@@ -8,7 +8,10 @@ import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
-import react.*
+import react.RBuilder
+import react.RProps
+import react.RState
+import react.setState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -25,9 +28,10 @@ import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
 class ActionNameEditor(
-        props: ActionNameEditor.Props
+        props: Props
 ):
-        RComponent<ActionNameEditor.Props, ActionNameEditor.State>(props)
+//        RComponent<ActionNameEditor.Props, ActionNameEditor.State>(props)
+        RPureComponent<ActionNameEditor.Props, ActionNameEditor.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
@@ -73,7 +77,7 @@ class ActionNameEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun ActionNameEditor.State.init(props: ActionNameEditor.Props) {
+    override fun State.init(props: Props) {
 //        console.log("ObjectNameEditor | State.init - ${props.objectName}", Date.now())
         objectName = props.objectLocation.objectPath.name.value
 

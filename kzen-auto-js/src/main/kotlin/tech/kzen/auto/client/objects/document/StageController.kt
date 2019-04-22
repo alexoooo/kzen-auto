@@ -18,7 +18,7 @@ import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 
 
 class StageController(
-        props: StageController.Props
+        props: Props
 ):
         RComponent<StageController.Props, StageController.State>(props),
         ModelManager.Observer,
@@ -39,8 +39,8 @@ class StageController(
     @Suppress("unused")
     class Wrapper(
             private val documentControllers: List<DocumentController>
-    ): ReactWrapper<StageController.Props> {
-        override fun child(input: RBuilder, handler: RHandler<StageController.Props>): ReactElement {
+    ): ReactWrapper<Props> {
+        override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
             return input.child(StageController::class) {
                 attrs {
                     documentControllers = this@Wrapper.documentControllers

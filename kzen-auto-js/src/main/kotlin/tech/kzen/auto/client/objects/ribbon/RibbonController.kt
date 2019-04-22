@@ -25,7 +25,8 @@ import tech.kzen.lib.common.structure.notation.model.GraphNotation
 class RibbonController(
         props: Props
 ):
-        RComponent<RibbonController.Props, RibbonController.State>(props),
+//        RComponent<RibbonController.Props, RibbonController.State>(props),
+        RPureComponent<RibbonController.Props, RibbonController.State>(props),
         InsertionManager.Observer,
         NavigationManager.Observer
 {
@@ -66,7 +67,7 @@ class RibbonController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun RibbonController.State.init(props: RibbonController.Props) {
+    override fun State.init(props: Props) {
         name = null
         type = null
         tabIndex = 0

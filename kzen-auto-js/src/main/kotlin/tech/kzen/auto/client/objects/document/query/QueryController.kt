@@ -18,6 +18,7 @@ import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.query.QueryDocument
@@ -39,7 +40,8 @@ import tech.kzen.lib.platform.collect.persistentListOf
 
 @Suppress("unused")
 class QueryController:
-        RComponent<RProps, QueryController.State>(),
+//        RComponent<RProps, QueryController.State>(),
+        RPureComponent<RProps, QueryController.State>(),
         ModelManager.Observer,
 //        ExecutionManager.Observer,
         InsertionManager.Observer,

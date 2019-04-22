@@ -3,11 +3,15 @@ package tech.kzen.auto.client.objects.document.script.action
 
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLTextAreaElement
-import react.*
+import react.RBuilder
+import react.RProps
+import react.RState
+import react.setState
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.MaterialTextField
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
@@ -22,9 +26,10 @@ import tech.kzen.lib.platform.collect.toPersistentList
 
 // TODO: inject type-based editor
 class AttributeEditor(
-        props: AttributeEditor.Props
+        props: Props
 ):
-        RComponent<AttributeEditor.Props, AttributeEditor.State>(props),
+//        RComponent<AttributeEditor.Props, AttributeEditor.State>(props),
+        RPureComponent<AttributeEditor.Props, AttributeEditor.State>(props),
         ExecutionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -41,8 +46,6 @@ class AttributeEditor(
             var value: String?,
             var values: List<String>?,
 
-
-//            var submitDebounce: (Unit) -> Unit
             var submitDebounce: FunctionWithDebounce,
             var pending: Boolean
     ): RState

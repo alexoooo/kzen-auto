@@ -17,6 +17,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
@@ -28,9 +29,10 @@ import kotlin.browser.window
 
 @Suppress("unused")
 class ProjectController(
-        props: ProjectController.Props
+        props: Props
 ):
-        RComponent<ProjectController.Props, ProjectController.State>(props),
+//        RComponent<ProjectController.Props, ProjectController.State>(props),
+        RPureComponent<ProjectController.Props, ProjectController.State>(props),
         ModelManager.Observer,
         CommandBus.Subscriber,
         NavigationManager.Observer

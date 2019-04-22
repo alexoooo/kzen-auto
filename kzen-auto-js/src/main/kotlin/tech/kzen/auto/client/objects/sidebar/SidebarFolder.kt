@@ -26,7 +26,8 @@ import kotlin.random.Random
 class SidebarFolder(
         props: Props
 ):
-        RComponent<SidebarFolder.Props, SidebarFolder.State>(props)
+//        RComponent<SidebarFolder.Props, SidebarFolder.State>(props)
+        RPureComponent<SidebarFolder.Props, SidebarFolder.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -49,13 +50,14 @@ class SidebarFolder(
     class State(
             var hoverItem: Boolean,
             var hoverOptions: Boolean,
-            var optionsOpen: Boolean
+            var optionsOpen: Boolean,
+            var mainDocuments: List<DocumentPath>
     ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private var buttonRef: HTMLButtonElement? = null
-    private var mainDocumentsCache: List<DocumentPath>? = null
+//    private var mainDocumentsCache: List<DocumentPath>? = null
 
     // NB: workaround for open options icon remaining after click with drag away from item
     private var processingOption: Boolean = false
@@ -63,8 +65,9 @@ class SidebarFolder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun SidebarFolder.State.init(props: SidebarFolder.Props) {
+    override fun State.init(props: Props) {
         optionsOpen = false
+        mainDocuments = mainDocuments(props.structure)
     }
 
 
@@ -74,24 +77,22 @@ class SidebarFolder(
             snapshot: Any
     ) {
         if (props.structure != prevProps.structure) {
-            mainDocumentsCache = null
+            setState {
+                mainDocuments = mainDocuments(props.structure)
+            }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun mainDocuments(): List<DocumentPath> {
-        if (mainDocumentsCache == null) {
-            mainDocumentsCache = props
-                    .structure
-                    .graphNotation
-                    .documents
-                    .values
-                    .keys
-                    .filter { it.startsWith(documentBase) }
-                    .sortedBy { it.asString().toLowerCase() }
-        }
-        return mainDocumentsCache!!
+    private fun mainDocuments(structure: GraphStructure): List<DocumentPath> {
+        return structure
+                .graphNotation
+                .documents
+                .values
+                .keys
+                .filter { it.startsWith(documentBase) }
+                .sortedBy { it.asString().toLowerCase() }
     }
 
 
@@ -323,7 +324,7 @@ class SidebarFolder(
 
 
     private fun RBuilder.renderSubItems() {
-        val mainDocuments = mainDocuments()
+        val mainDocuments = state.mainDocuments
 
         if (mainDocuments.isEmpty()) {
             styledDiv {
@@ -334,7 +335,7 @@ class SidebarFolder(
             }
         }
         else {
-            for (documentPath in mainDocuments()) {
+            for (documentPath in mainDocuments) {
                 child(SidebarFile::class) {
                     attrs {
                         key = documentPath.asString()

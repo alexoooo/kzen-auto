@@ -24,7 +24,8 @@ import kotlin.js.Date
 class SidebarFile(
         props: Props
 ):
-        RComponent<SidebarFile.Props, SidebarFile.State>(props)
+        RPureComponent<SidebarFile.Props, SidebarFile.State>(props)
+//        RComponent<SidebarFile.Props, SidebarFile.State>(props)
 {
     companion object {
         val iconAttribute = AttributePath.ofName(AttributeName("icon"))
@@ -57,7 +58,7 @@ class SidebarFile(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun SidebarFile.State.init(props: SidebarFile.Props) {
+    override fun State.init(props: Props) {
         optionsOpen = false
     }
 

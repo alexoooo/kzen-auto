@@ -39,7 +39,8 @@ import kotlin.js.Date
 class ActionController(
         props: Props
 ):
-        RComponent<ActionController.Props, ActionController.State>(props),
+//        RComponent<ActionController.Props, ActionController.State>(props),
+        RPureComponent<ActionController.Props, ActionController.State>(props),
         ExecutionIntent.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------

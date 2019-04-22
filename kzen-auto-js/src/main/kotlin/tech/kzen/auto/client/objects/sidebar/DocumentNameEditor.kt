@@ -6,7 +6,10 @@ import kotlinx.css.properties.TextDecorationLine
 import kotlinx.css.properties.textDecoration
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
-import react.*
+import react.RBuilder
+import react.RProps
+import react.RState
+import react.setState
 import styled.css
 import styled.styledA
 import styled.styledDiv
@@ -22,7 +25,8 @@ import tech.kzen.lib.common.structure.notation.edit.RenameDocumentRefactorComman
 class DocumentNameEditor(
         props: Props
 ):
-        RComponent<DocumentNameEditor.Props, DocumentNameEditor.State>(props)
+//        RComponent<DocumentNameEditor.Props, DocumentNameEditor.State>(props)
+        RPureComponent<DocumentNameEditor.Props, DocumentNameEditor.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
@@ -42,7 +46,7 @@ class DocumentNameEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun DocumentNameEditor.State.init(props: DocumentNameEditor.Props) {
+    override fun State.init(props: Props) {
 //        console.log("ObjectNameEditor | State.init - ${props.objectName}", Date.now())
         name = displayPath()
 
@@ -53,8 +57,8 @@ class DocumentNameEditor(
 
 
     override fun componentDidUpdate(
-            prevProps: DocumentNameEditor.Props,
-            prevState: DocumentNameEditor.State,
+            prevProps: Props,
+            prevState: State,
             snapshot: Any
     ) {
         if (state.saving && ! prevState.saving) {

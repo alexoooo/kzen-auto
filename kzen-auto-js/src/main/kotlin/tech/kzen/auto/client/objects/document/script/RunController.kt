@@ -5,15 +5,18 @@ import kotlinx.css.Visibility
 import kotlinx.css.em
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
-import react.*
+import react.RBuilder
+import react.RProps
+import react.RState
 import react.dom.div
+import react.setState
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
+import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
@@ -23,7 +26,8 @@ import tech.kzen.lib.common.structure.GraphStructure
 class RunController(
         props: Props
 ):
-        RComponent<RunController.Props, RunController.State>(props),
+//        RComponent<RunController.Props, RunController.State>(props),
+        RPureComponent<RunController.Props, RunController.State>(props),
 //        ModelManager.Observer,
         ExecutionManager.Observer
 {

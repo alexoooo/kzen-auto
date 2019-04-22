@@ -18,10 +18,7 @@ import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
-import tech.kzen.auto.client.wrap.ArrowDownwardIcon
-import tech.kzen.auto.client.wrap.MaterialIconButton
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
@@ -45,7 +42,8 @@ import tech.kzen.lib.platform.collect.persistentListOf
 
 @Suppress("unused")
 class ScriptController:
-        RComponent<RProps, ScriptController.State>(),
+//        RComponent<RProps, ScriptController.State>(),
+        RPureComponent<RProps, ScriptController.State>(),
         ModelManager.Observer,
         ExecutionManager.Observer,
         InsertionManager.Observer,
