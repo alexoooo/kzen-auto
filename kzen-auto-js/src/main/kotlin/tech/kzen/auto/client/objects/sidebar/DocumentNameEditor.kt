@@ -69,9 +69,6 @@ class DocumentNameEditor(
 
     private fun saveAsync() {
         async {
-//            // NB: not sure why this is necessary, without it state.saving doesn't show
-//            delay(1)
-
             val nameWithExtension = DocumentName.ofYaml(state.name)
             ClientContext.commandBus.apply(RenameDocumentRefactorCommand(
                     props.documentPath, nameWithExtension))

@@ -5,7 +5,8 @@ import tech.kzen.lib.common.structure.notation.edit.*
 import kotlin.browser.window
 
 
-class NavigationManager: CommandBus.Subscriber
+class NavigationManager:
+        CommandBus.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {

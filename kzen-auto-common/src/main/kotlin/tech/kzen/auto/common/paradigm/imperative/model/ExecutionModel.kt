@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.paradigm.imperative.model
 
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.util.Digest
@@ -30,10 +31,26 @@ data class ExecutionModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    fun remove(documentPath: DocumentPath): Boolean {
-//        var renamedAny = false
-//    }
+    fun move(from: DocumentPath, newPath: DocumentPath): ExecutionModel {
+        var builder = frames
 
+        for ((index, frame) in frames.withIndex()) {
+            if (frame.path != from) {
+                continue
+            }
+
+            val moved = frame.copy(path = newPath)
+            builder = builder.set(index, moved)
+        }
+
+        if (builder == frames) {
+            return this
+        }
+        return ExecutionModel(builder)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun remove(objectLocation: ObjectLocation): ExecutionModel {
         var builder = frames
 
@@ -50,37 +67,6 @@ data class ExecutionModel(
             return this
         }
         return ExecutionModel(builder)
-
-//        val removed = frames.map {
-//            if (it.path == objectLocation.documentPath) {
-//                it.remove(objectLocation.objectPath)
-//            }
-//            else {
-//                it
-//            }
-//        }.toPersistentList()
-//
-//        return (
-//                if (frames == removed) {
-//                    this
-//                }
-//                else {
-//                    ExecutionModel(removed)
-//                })
-
-//        var anyChanged = false
-//
-//        for (frame in frames) {
-//            if (frame.path != objectLocation.documentPath) {
-//                continue
-//            }
-//
-//            val changed = frame.remove(objectLocation.objectPath)
-//
-//            anyChanged = anyChanged || changed
-//        }
-//
-//        return anyChanged
     }
 
 
@@ -100,20 +86,6 @@ data class ExecutionModel(
             return this
         }
         return ExecutionModel(builder)
-
-//        var renamedAny = false
-//
-//        for (frame in frames) {
-//            if (frame.path != from.documentPath) {
-//                continue
-//            }
-//
-//            val renamed = frame.rename(from.objectPath, newName)
-//
-//            renamedAny = renamedAny || renamed
-//        }
-//
-//        return renamedAny
     }
 
 
@@ -132,20 +104,6 @@ data class ExecutionModel(
             return this
         }
         return ExecutionModel(builder)
-
-//        for (frame in frames) {
-//            if (frame.path != objectLocation.documentPath) {
-//                continue
-//            }
-//
-//            // TODO: just frame.add without checking contains?
-//            if (! frame.contains(objectLocation.objectPath)) {
-//                frame.add(objectLocation.objectPath, indexInFrame)
-//            }
-//            return true
-//        }
-//
-//        return false
     }
 
 
@@ -167,28 +125,6 @@ data class ExecutionModel(
         }
         return false
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    fun next(): ObjectLocation? {
-//        if (frames.isEmpty() || containsStatus(ExecutionPhase.Running)) {
-//            return null
-//        }
-//
-//        val lastFrame = frames.last()
-//
-//        for (e in lastFrame.states) {
-//            if (e.value.phase() == ExecutionPhase.Error) {
-//                return null
-//            }
-//
-//            if (e.value.phase() == ExecutionPhase.Pending) {
-//                return ObjectLocation(lastFrame.path, e.key)
-//            }
-//        }
-//
-//        return null
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -21,7 +21,9 @@ import tech.kzen.lib.platform.collect.toPersistentMap
 class ExecutionManager(
         private val executionInitializer: ExecutionInitializer,
         private val actionExecutor: ActionExecutor
-): ModelManager.Observer {
+):
+        ModelManager.Observer
+{
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation)
@@ -161,8 +163,11 @@ class ExecutionManager(
             is RenamedDocumentRefactorEvent -> {
 //                println("^^^^^ applyCompoundWithDependentEvents - $documentPath - $event")
                 if (event.removedUnderOldName.documentPath == documentPath) {
+                    val newModel = model.move(
+                            event.removedUnderOldName.documentPath, event.createdWithNewName.destination)
+
                     val removed = models.remove(event.removedUnderOldName.documentPath)
-                    removed.put(event.createdWithNewName.destination, model)
+                    removed.put(event.createdWithNewName.destination, newModel)
                 }
                 else {
                     models
