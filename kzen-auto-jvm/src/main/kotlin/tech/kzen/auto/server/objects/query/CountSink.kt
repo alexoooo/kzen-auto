@@ -1,30 +1,34 @@
 package tech.kzen.auto.server.objects.query
 
-import tech.kzen.auto.common.paradigm.common.api.StatefulObject
+import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.input.RequiredInput
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionValue
 
 
 class CountSink(
         private val input: RequiredInput<*>
 ):
-        Dataflow,
-        StatefulObject
+        Dataflow<CountSink.State>
 {
     //-----------------------------------------------------------------------------------------------------------------
-    private var count = 0
+    class State(
+            var count: Int = 0
+    )
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun inspect(): ExecutionValue {
-        return ExecutionValue.of(count)
+    override fun inspectState(state: State): ExecutionValue {
+        return ExecutionValue.of(state.count)
+    }
+
+
+    override fun initialState(): State {
+        return State()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun process() {
+    override fun process(state: State): State {
         input.get()
-        count++
+        return state
     }
 }

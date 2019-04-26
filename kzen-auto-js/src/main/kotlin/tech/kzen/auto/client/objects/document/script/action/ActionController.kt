@@ -4,8 +4,11 @@ import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import org.w3c.dom.HTMLButtonElement
-import react.*
+import react.RBuilder
+import react.RProps
+import react.RState
 import react.dom.img
+import react.setState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -14,10 +17,10 @@ import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
-import tech.kzen.auto.common.paradigm.imperative.model.BinaryExecutionValue
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionSuccess
+import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -62,7 +65,7 @@ class ActionController(
             var objectLocation: ObjectLocation,
             var structure: GraphStructure,
 
-            var state: ExecutionState?
+            var state: ImperativeState?
     ): RProps
 
 
@@ -308,20 +311,20 @@ class ActionController(
 
         val reactStyles = reactStyle {
             val cardColor = when (props.state?.phase()) {
-                ExecutionPhase.Pending ->
+                ImperativePhase.Pending ->
 //                    Color("#649fff")
                     Color.white
 
-                ExecutionPhase.Running ->
+                ImperativePhase.Running ->
                     Color.gold
 
-                ExecutionPhase.Success ->
+                ImperativePhase.Success ->
 //                    Color("#00a457")
                     Color("#00b467")
 //                    Color("#13aa59")
 //                    Color("#1faf61")
 
-                ExecutionPhase.Error ->
+                ImperativePhase.Error ->
                     Color.red
 
                 null ->
@@ -450,7 +453,7 @@ class ActionController(
         }
 
 //                    console.log("^^^^^ props.state - ", props.state)
-        (props.state?.previous as? ExecutionSuccess)?.detail?.let {
+        (props.state?.previous as? ImperativeSuccess)?.detail?.let {
             if (it is BinaryExecutionValue) {
                 val binary = it
 
@@ -585,7 +588,7 @@ class ActionController(
                 ?: defaultRunIcon
 
         val highlight =
-                if (state.intentToRun && props.state?.phase() != ExecutionPhase.Running) {
+                if (state.intentToRun && props.state?.phase() != ImperativePhase.Running) {
                     Color("rgba(255, 215, 0, 0.5)")
 //                    Color("rgba(255, 184, 45, 0.5)")
                 }

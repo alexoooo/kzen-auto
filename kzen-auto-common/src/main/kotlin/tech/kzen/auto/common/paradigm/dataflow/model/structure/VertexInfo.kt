@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.paradigm.dataflow.model
+package tech.kzen.auto.common.paradigm.dataflow.model.structure
 
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.locate.ObjectLocation

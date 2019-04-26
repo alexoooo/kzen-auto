@@ -42,6 +42,10 @@ class ServerRestApi(
         GET(CommonRestApi.actionPerform, counterHandler::actionPerform)
         GET(CommonRestApi.actionDetached, counterHandler::actionDetached)
 
+        GET(CommonRestApi.execModel, counterHandler::execModel)
+        GET(CommonRestApi.execReset, counterHandler::execReset)
+        GET(CommonRestApi.execPerform, counterHandler::execPerform)
+
         // provide value from client
 //        GET("/auto-jvm/submit", counterHandler::actionSubmit)
 

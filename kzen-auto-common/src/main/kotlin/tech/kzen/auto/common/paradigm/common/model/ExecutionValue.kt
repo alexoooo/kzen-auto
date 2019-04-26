@@ -1,14 +1,19 @@
-package tech.kzen.auto.common.paradigm.imperative.model
+package tech.kzen.auto.common.paradigm.common.model
 
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.IoUtils
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// TODO: use {type: <enum>[, value: <nested>]}
 sealed class ExecutionValue {
     companion object {
         fun of(value: Any?): ExecutionValue {
+            return ofArbitrary(value)
+                    ?: TODO("Not supported (yet): $value")
+        }
+
+
+        fun ofArbitrary(value: Any?): ExecutionValue? {
             return when (value) {
                 null ->
                     NullExecutionValue
@@ -26,15 +31,23 @@ sealed class ExecutionValue {
                     BinaryExecutionValue(value)
 
                 is List<*> ->
-                    ListExecutionValue(value.map { of(it) })
+                    ListExecutionValue(value.map {
+                        ofArbitrary(it) ?: return null
+                    })
 
                 is Map<*, *> ->
                     MapExecutionValue(value.entries.map {
-                        it.key as String to of(it.value)
+                        val key = it.key as? String
+                                ?: return null
+
+                        val subValue = ofArbitrary(it.value)
+                                ?: return null
+
+                        key to subValue
                     }.toMap())
 
                 else ->
-                    TODO("Not supported (yet): $value")
+                    null
             }
         }
 

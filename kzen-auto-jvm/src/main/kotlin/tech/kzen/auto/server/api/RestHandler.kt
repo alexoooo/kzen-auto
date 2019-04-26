@@ -10,9 +10,11 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResponse
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -487,7 +489,7 @@ class RestHandler {
 
         return ServerResponse
                 .ok()
-                .body(Mono.just(ExecutionModel.toCollection(executionModel)))
+                .body(Mono.just(ImperativeModel.toCollection(executionModel)))
     }
 
 
@@ -531,7 +533,7 @@ class RestHandler {
 
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
-        val execution: ExecutionResponse = runBlocking {
+        val execution: ImperativeResponse = runBlocking {
             ServerContext.executionManager.execute(documentPath, objectLocation)
         }
 
@@ -550,13 +552,61 @@ class RestHandler {
 
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
-        val execution: ExecutionResult = runBlocking {
+        val execution: ImperativeResult = runBlocking {
             ServerContext.actionExecutor.execute(objectLocation)
         }
 
         return ServerResponse
                 .ok()
                 .body(Mono.just(execution.toCollection()))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun execModel(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
+        val visualDataflowModel = runBlocking {
+            ServerContext.visualDataflowManager.get(documentPath)
+        }
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just(VisualDataflowModel.toCollection(visualDataflowModel)))
+    }
+
+
+    fun execReset(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
+        val digest = runBlocking {
+            ServerContext.visualDataflowManager.reset(documentPath)
+        }
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just(digest.asString()))
+    }
+
+
+    fun execPerform(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
+        val objectPath: ObjectPath = serverRequest.getParam(
+                CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
+
+        val objectLocation = ObjectLocation(documentPath, objectPath)
+
+        val transition: VisualVertexTransition = runBlocking {
+            ServerContext.visualDataflowManager.execute(documentPath, objectLocation)
+        }
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just(VisualVertexTransition.toCollection(transition)))
     }
 
 

@@ -8,30 +8,30 @@ import tech.kzen.lib.platform.collect.PersistentList
 import tech.kzen.lib.platform.collect.toPersistentList
 
 
-data class ExecutionModel(
-        val frames: PersistentList<ExecutionFrame>
+data class ImperativeModel(
+        val frames: PersistentList<ImperativeFrame>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        fun toCollection(model: ExecutionModel): List<Map<String, Any>> {
+        fun toCollection(model: ImperativeModel): List<Map<String, Any>> {
             return model
                     .frames
-                    .map { ExecutionFrame.toCollection(it) }
+                    .map { ImperativeFrame.toCollection(it) }
         }
 
 
         fun fromCollection(
                 collection: List<Map<String, Any>>
-        ): ExecutionModel {
-            return ExecutionModel(collection
-                    .map { ExecutionFrame.fromCollection(it) }
+        ): ImperativeModel {
+            return ImperativeModel(collection
+                    .map { ImperativeFrame.fromCollection(it) }
                     .toPersistentList())
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun move(from: DocumentPath, newPath: DocumentPath): ExecutionModel {
+    fun move(from: DocumentPath, newPath: DocumentPath): ImperativeModel {
         var builder = frames
 
         for ((index, frame) in frames.withIndex()) {
@@ -46,12 +46,12 @@ data class ExecutionModel(
         if (builder == frames) {
             return this
         }
-        return ExecutionModel(builder)
+        return ImperativeModel(builder)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun remove(objectLocation: ObjectLocation): ExecutionModel {
+    fun remove(objectLocation: ObjectLocation): ImperativeModel {
         var builder = frames
 
         for ((index, frame) in frames.withIndex()) {
@@ -66,12 +66,12 @@ data class ExecutionModel(
         if (builder == frames) {
             return this
         }
-        return ExecutionModel(builder)
+        return ImperativeModel(builder)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun rename(from: ObjectLocation, newName: ObjectName): ExecutionModel {
+    fun rename(from: ObjectLocation, newName: ObjectName): ImperativeModel {
         var builder = frames
         for ((index, frame) in frames.withIndex()) {
             if (frame.path != from.documentPath) {
@@ -85,11 +85,11 @@ data class ExecutionModel(
         if (builder == frames) {
             return this
         }
-        return ExecutionModel(builder)
+        return ImperativeModel(builder)
     }
 
 
-    fun add(objectLocation: ObjectLocation/*, indexInFrame: Int*/): ExecutionModel {
+    fun add(objectLocation: ObjectLocation/*, indexInFrame: Int*/): ImperativeModel {
         var builder = frames
         for ((index, frame) in frames.withIndex()) {
             if (frame.path != objectLocation.documentPath) {
@@ -103,21 +103,21 @@ data class ExecutionModel(
         if (builder == frames) {
             return this
         }
-        return ExecutionModel(builder)
+        return ImperativeModel(builder)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun findLast(
             objectLocation: ObjectLocation
-    ): ExecutionFrame? =
+    ): ImperativeFrame? =
         frames.findLast {
             it.path == objectLocation.documentPath &&
                     it.contains(objectLocation.objectPath)
         }
 
 
-    fun containsStatus(status: ExecutionPhase): Boolean {
+    fun containsStatus(status: ImperativePhase): Boolean {
         for (frame in frames) {
             if (frame.states.values.find { it.phase() == status } != null) {
                 return true

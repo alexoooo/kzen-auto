@@ -2,8 +2,8 @@ package tech.kzen.auto.common.paradigm.imperative.service
 
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -12,7 +12,6 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 class ExecutionLoop(
         private val modelManager: ModelManager,
         private val executionManager: ExecutionManager,
-//        private val delayMillis: Int = 1000
         private val delayMillis: Int = 0
 ):
         ExecutionManager.Observer
@@ -22,7 +21,7 @@ class ExecutionLoop(
 
     private class State {
         var running: Boolean = false
-        var executionModel: ExecutionModel? = null
+        var executionModel: ImperativeModel? = null
     }
 
 
@@ -37,7 +36,7 @@ class ExecutionLoop(
 
     override suspend fun onExecutionModel(
             host: DocumentPath,
-            executionModel: ExecutionModel
+            executionModel: ImperativeModel
     ) {
         val state = getOrCreate(host)
 

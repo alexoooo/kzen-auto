@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.service.rest
 
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionInitializer
 import tech.kzen.lib.common.model.document.DocumentPath
 
@@ -10,7 +10,7 @@ class ClientRestExecutionInitializer(
 ): ExecutionInitializer {
     override suspend fun initialExecutionModel(
             host: DocumentPath
-    ): ExecutionModel {
+    ): ImperativeModel {
         return clientRestApi.executionModel(host)
     }
 }

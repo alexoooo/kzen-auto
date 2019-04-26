@@ -21,8 +21,8 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionState
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -53,7 +53,7 @@ class ScriptController:
     class State(
             var documentPath: DocumentPath?,
             var structure: GraphStructure?,
-            var execution: ExecutionModel?,
+            var execution: ImperativeModel?,
             var creating: Boolean
     ): RState
 
@@ -150,7 +150,7 @@ class ScriptController:
     override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {}
 
 
-    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ExecutionModel) {
+    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {
         if (state.documentPath != host) {
             return
         }
@@ -288,7 +288,7 @@ class ScriptController:
                 val stepLocation = graphStructure.graphNotation.coalesce.locate(stepReference)
                 val objectPath = stepLocation.objectPath
 
-                val executionState: ExecutionState? =
+                val executionState: ImperativeState? =
                         state.execution?.frames?.lastOrNull()?.states?.get(objectPath)
 
                 val keyLocation = ObjectLocation(documentPath, objectPath)
@@ -387,7 +387,7 @@ class ScriptController:
             index: Int,
             objectLocation: ObjectLocation,
             graphStructure: GraphStructure,
-            executionState: ExecutionState?
+            executionState: ImperativeState?
     ) {
         // todo:
 //        val actionUiWrapper: ActionWrapper =

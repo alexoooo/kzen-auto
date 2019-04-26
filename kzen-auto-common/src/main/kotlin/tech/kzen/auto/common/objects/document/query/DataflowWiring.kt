@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.objects.document.query
 
-import tech.kzen.auto.common.paradigm.dataflow.model.mutable.MutableRequiredInput
-import tech.kzen.auto.common.paradigm.dataflow.model.mutable.MutableStreamOutput
+import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableRequiredInput
+import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableStreamOutput
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.context.GraphInstance
 import tech.kzen.lib.common.definition.AttributeDefinition

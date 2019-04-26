@@ -4,11 +4,7 @@ import com.google.common.io.ByteStreams
 import org.slf4j.LoggerFactory
 import java.net.URI
 import java.security.cert.X509Certificate
-import javax.net.ssl.HostnameVerifier
-import javax.net.ssl.HttpsURLConnection
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
+import javax.net.ssl.*
 
 
 class DownloadManager {
@@ -24,7 +20,7 @@ class DownloadManager {
         // https://stackoverflow.com/a/24501156
 
         val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
-            override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate>? = null
+            override fun getAcceptedIssuers(): Array<X509Certificate>? = null
             override fun checkClientTrusted(certs: Array<X509Certificate>, authType: String) {}
             override fun checkServerTrusted(certs: Array<X509Certificate>, authType: String) {}
         })

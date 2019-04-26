@@ -27,17 +27,17 @@ class ExecutionManager(
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation)
-        suspend fun onExecutionModel(host: DocumentPath, executionModel: ExecutionModel)
+        suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val subscribers = mutableSetOf<Observer>()
-    private var models: PersistentMap<DocumentPath, ExecutionModel> = persistentMapOf()
+    private val observers = mutableSetOf<Observer>()
+    private var models: PersistentMap<DocumentPath, ImperativeModel> = persistentMapOf()
 //    private var version = 0
 
 
-    private suspend fun modelOrInit(host: DocumentPath): ExecutionModel {
+    private suspend fun modelOrInit(host: DocumentPath): ImperativeModel {
         val existing = models[host]
         if (existing != null) {
             return existing
@@ -50,18 +50,18 @@ class ExecutionManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun observe(subscriber: Observer) {
-        subscribers.add(subscriber)
+    suspend fun observe(observer: Observer) {
+        observers.add(observer)
 
 //        println("!!! observe - onExecutionModel - $models")
         for (model in models) {
-            subscriber.onExecutionModel(model.key, model.value)
+            observer.onExecutionModel(model.key, model.value)
         }
     }
 
 
-    fun unobserve(subscriber: Observer) {
-        subscribers.remove(subscriber)
+    fun unobserve(observer: Observer) {
+        observers.remove(observer)
     }
 
 
@@ -70,7 +70,7 @@ class ExecutionManager(
             objectLocation: ObjectLocation
     ) {
 //        println("^^^ publishBeforeExecution - $host - $objectLocation")
-        for (subscriber in subscribers) {
+        for (subscriber in observers) {
             subscriber.beforeExecution(host, objectLocation)
         }
     }
@@ -78,13 +78,13 @@ class ExecutionManager(
 
     private suspend fun publishExecutionModel(
             host: DocumentPath,
-            model: ExecutionModel
+            model: ImperativeModel
     ) {
 //        val model = models[host]!!
 
 //        val current = version++
 //        println("^^^ publishExecutionModel - $current - $host - $model")
-        for (subscriber in subscribers) {
+        for (subscriber in observers) {
 //            println("^^^ ### publishExecutionModel - to subscriber - $current")
             subscriber.onExecutionModel(host, model)
         }
@@ -123,7 +123,7 @@ class ExecutionManager(
     private fun apply(
             documentPath: DocumentPath,
             event: NotationEvent
-    ): PersistentMap<DocumentPath, ExecutionModel> {
+    ): PersistentMap<DocumentPath, ImperativeModel> {
         return when (event) {
             is SingularNotationEvent ->
                 applySingular(documentPath, models, event)
@@ -138,7 +138,7 @@ class ExecutionManager(
     private fun applyCompound(
             documentPath: DocumentPath,
             event: CompoundNotationEvent
-    ): PersistentMap<DocumentPath, ExecutionModel> {
+    ): PersistentMap<DocumentPath, ImperativeModel> {
         val model = models[documentPath]!!
         val appliedWithDependentEvents = applyCompoundWithDependentEvents(
                 documentPath, model, event)
@@ -156,9 +156,9 @@ class ExecutionManager(
 
     private fun applyCompoundWithDependentEvents(
             documentPath: DocumentPath,
-            model: ExecutionModel,
+            model: ImperativeModel,
             event: CompoundNotationEvent
-    ): PersistentMap<DocumentPath, ExecutionModel> {
+    ): PersistentMap<DocumentPath, ImperativeModel> {
         return when (event) {
             is RenamedDocumentRefactorEvent -> {
 //                println("^^^^^ applyCompoundWithDependentEvents - $documentPath - $event")
@@ -182,9 +182,9 @@ class ExecutionManager(
 
     private fun applySingular(
             documentPath: DocumentPath,
-            currentModels: PersistentMap<DocumentPath, ExecutionModel>,
+            currentModels: PersistentMap<DocumentPath, ImperativeModel>,
             event: SingularNotationEvent
-    ): PersistentMap<DocumentPath, ExecutionModel> {
+    ): PersistentMap<DocumentPath, ImperativeModel> {
         val model = currentModels[documentPath]!!
 
         return when (event) {
@@ -214,72 +214,18 @@ class ExecutionManager(
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    suspend fun willExecute(
-            host: DocumentPath,
-            objectLocation: ObjectLocation
-    ) {
-        val model = modelOrInit(host)
-        val existingFrame = model.findLast(objectLocation)
-
-        val upsertFrame = existingFrame
-                ?: model.frames.last()
-
-        val state = upsertFrame.states[objectLocation.objectPath]
-                ?: return
-
-        val updatedFrame = upsertFrame.set(
-                objectLocation.objectPath,
-                state.copy(running = true))
-
-        val updatedModel = ExecutionModel(
-                model.frames.set(model.frames.size - 1, updatedFrame))
-
-        models = models.put(host, updatedModel)
-//        upsertFrame.states[objectLocation.objectPath] = state.copy(running = true)
-
-        publishExecutionModel(host, updatedModel)
-    }
-
-
-    suspend fun didExecute(
-            host: DocumentPath,
-            objectLocation: ObjectLocation,
-            executionState: ExecutionState
-    ) {
-        val model = modelOrInit(host)
-        val existingFrame = model.findLast(objectLocation)
-
-        val upsertFrame = existingFrame
-                ?: model.frames.last()
-
-        val updatedFrame = upsertFrame.set(
-                objectLocation.objectPath,
-                executionState)
-//        upsertFrame.states[objectLocation.objectPath] = executionState
-
-        val updatedModel = ExecutionModel(
-                model.frames.set(model.frames.size - 1, updatedFrame))
-
-        models = models.put(host, updatedModel)
-
-//        println("^^^ didExecute: $host - $updatedModel")
-        publishExecutionModel(host, updatedModel)
-    }
-
-
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun isExecuting(
             host: DocumentPath
     ): Boolean {
-        return modelOrInit(host).containsStatus(ExecutionPhase.Running)
+        return modelOrInit(host).containsStatus(ImperativePhase.Running)
     }
 
 
     suspend fun executionModel(
             host: DocumentPath
-    ): ExecutionModel {
+    ): ImperativeModel {
         return modelOrInit(host)
     }
 
@@ -300,11 +246,8 @@ class ExecutionManager(
     suspend fun reset(
             host: DocumentPath
     ): Digest {
-//        val model = modelOrInit(host)
-
-        val model = ExecutionModel(persistentListOf())
+        val model = ImperativeModel(persistentListOf())
         models = models.put(host, model)
-//        model.frames.clear()
 
         publishExecutionModel(host, model)
 
@@ -316,9 +259,6 @@ class ExecutionManager(
             host: DocumentPath,
             graphStructure: GraphStructure
     ): Digest {
-//        val model = modelOrInit(host)
-//        model.frames.clear()
-
         val documentNotation = graphStructure.graphNotation.documents.values[host]
 
         if (documentNotation != null) {
@@ -327,14 +267,14 @@ class ExecutionManager(
                     ScriptDocument.stepsAttributePath
             ) as ListAttributeNotation
 
-            val values = mutableMapOf<ObjectPath, ExecutionState>()
+            val values = mutableMapOf<ObjectPath, ImperativeState>()
             for (i in steps.values) {
                 val objectPath = ObjectPath.parse(i.asString()!!)
-                values[objectPath] = ExecutionState.initial
+                values[objectPath] = ImperativeState.initial
             }
 
-            val frame = ExecutionFrame(host, values.toPersistentMap())
-            val executionModel = ExecutionModel(persistentListOf(frame))
+            val frame = ImperativeFrame(host, values.toPersistentMap())
+            val executionModel = ImperativeModel(persistentListOf(frame))
 
             models = models.put(host, executionModel)
 //            model.frames.add(frame)
@@ -346,18 +286,17 @@ class ExecutionManager(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     suspend fun execute(
             host: DocumentPath,
             objectLocation: ObjectLocation,
             delayMillis: Int = 0
-    ): ExecutionResponse {
+    ): ImperativeResponse {
         if (delayMillis > 0) {
 //            println("ExecutionManager | %%%% delay($delayMillis)")
             delay(delayMillis.toLong())
         }
         willExecute(host, objectLocation)
-
-        publishBeforeExecution(host, objectLocation)
 
         if (delayMillis > 0) {
 //            println("ExecutionManager | delay($delayMillis)")
@@ -368,13 +307,67 @@ class ExecutionManager(
 
         val digest = modelOrInit(host).digest()
 
-        val executionState = ExecutionState(
+        val executionState = ImperativeState(
                 false,
                 response
         )
 
         didExecute(host, objectLocation, executionState)
 
-        return ExecutionResponse(response, digest)
+        return ImperativeResponse(response, digest)
+    }
+
+
+    private suspend fun willExecute(
+            host: DocumentPath,
+            objectLocation: ObjectLocation
+    ) {
+        val model = modelOrInit(host)
+        val existingFrame = model.findLast(objectLocation)
+
+        val upsertFrame = existingFrame
+                ?: model.frames.last()
+
+        val state = upsertFrame.states[objectLocation.objectPath]
+                ?: return
+
+        val updatedFrame = upsertFrame.set(
+                objectLocation.objectPath,
+                state.copy(running = true))
+
+        val updatedModel = ImperativeModel(
+                model.frames.set(model.frames.size - 1, updatedFrame))
+
+        models = models.put(host, updatedModel)
+//        upsertFrame.states[objectLocation.objectPath] = state.copy(running = true)
+
+        publishExecutionModel(host, updatedModel)
+        publishBeforeExecution(host, objectLocation)
+    }
+
+
+    private suspend fun didExecute(
+            host: DocumentPath,
+            objectLocation: ObjectLocation,
+            executionState: ImperativeState
+    ) {
+        val model = modelOrInit(host)
+        val existingFrame = model.findLast(objectLocation)
+
+        val upsertFrame = existingFrame
+                ?: model.frames.last()
+
+        val updatedFrame = upsertFrame.set(
+                objectLocation.objectPath,
+                executionState)
+//        upsertFrame.states[objectLocation.objectPath] = executionState
+
+        val updatedModel = ImperativeModel(
+                model.frames.set(model.frames.size - 1, updatedFrame))
+
+        models = models.put(host, updatedModel)
+
+//        println("^^^ didExecute: $host - $updatedModel")
+        publishExecutionModel(host, updatedModel)
     }
 }

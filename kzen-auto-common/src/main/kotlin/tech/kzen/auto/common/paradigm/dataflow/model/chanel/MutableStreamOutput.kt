@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.paradigm.dataflow.model.mutable
+package tech.kzen.auto.common.paradigm.dataflow.model.chanel
 
 import tech.kzen.auto.common.paradigm.dataflow.api.output.StreamOutput
 

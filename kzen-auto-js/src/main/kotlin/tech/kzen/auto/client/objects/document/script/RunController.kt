@@ -13,8 +13,8 @@ import react.setState
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -35,7 +35,7 @@ class RunController(
     class Props(
             var documentPath: DocumentPath?,
             var structure: GraphStructure?,
-            var execution: ExecutionModel?
+            var execution: ImperativeModel?
     ): RProps
 
 
@@ -69,13 +69,13 @@ class RunController(
 
     override suspend fun onExecutionModel(
             host: DocumentPath,
-            executionModel: ExecutionModel
+            executionModel: ImperativeModel
     ) {
         if (host != props.documentPath) {
             return
         }
 
-        if (! executionModel.containsStatus(ExecutionPhase.Running)) {
+        if (! executionModel.containsStatus(ImperativePhase.Running)) {
             val next = ImperativeUtils.next(props.structure!!.graphNotation, executionModel)
             if (next == null &&
                     ClientContext.executionLoop.running(host)) {
@@ -184,7 +184,7 @@ class RunController(
             return Phase.Empty
         }
 
-        if (executionModel.containsStatus(ExecutionPhase.Running)) {
+        if (executionModel.containsStatus(ImperativePhase.Running)) {
             if (ClientContext.executionLoop.running(host)) {
                 return Phase.Looping
             }
@@ -194,8 +194,8 @@ class RunController(
         ImperativeUtils.next(props.structure!!.graphNotation, executionModel)
                 ?: return Phase.Done
 
-        if (executionModel.containsStatus(ExecutionPhase.Success) ||
-                executionModel.containsStatus(ExecutionPhase.Error)) {
+        if (executionModel.containsStatus(ImperativePhase.Success) ||
+                executionModel.containsStatus(ImperativePhase.Error)) {
             return Phase.Partial
         }
 

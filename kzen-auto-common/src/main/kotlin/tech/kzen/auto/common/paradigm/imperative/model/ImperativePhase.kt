@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.paradigm.imperative.model
 
 
-enum class ExecutionPhase {
+enum class ImperativePhase {
     Pending,
     Running,
     Success,

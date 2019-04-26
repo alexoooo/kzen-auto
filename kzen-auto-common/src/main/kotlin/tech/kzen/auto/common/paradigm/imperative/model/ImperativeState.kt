@@ -3,16 +3,16 @@ package tech.kzen.auto.common.paradigm.imperative.model
 import tech.kzen.lib.common.util.Digest
 
 
-data class ExecutionState(
+data class ImperativeState(
         val running: Boolean,
-        val previous: ExecutionResult?
+        val previous: ImperativeResult?
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val initial = ExecutionState(false, null)
+        val initial = ImperativeState(false, null)
 
 
-        fun toCollection(result: ExecutionState): Map<String, Any?> {
+        fun toCollection(result: ImperativeState): Map<String, Any?> {
             return mapOf(
                     "running" to result.running,
                     "previous" to result.previous?.toCollection()
@@ -21,11 +21,11 @@ data class ExecutionState(
 
 
         @Suppress("UNCHECKED_CAST")
-        fun fromCollection(collection: Map<String, Any?>): ExecutionState {
-            return ExecutionState(
+        fun fromCollection(collection: Map<String, Any?>): ImperativeState {
+            return ImperativeState(
                     collection["running"] as Boolean,
                     collection["previous"]?.let {
-                        ExecutionResult.fromCollection(it as Map<String, Any>)
+                        ImperativeResult.fromCollection(it as Map<String, Any>)
                     }
             )
         }
@@ -33,21 +33,21 @@ data class ExecutionState(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun phase(): ExecutionPhase {
+    fun phase(): ImperativePhase {
         if (running) {
-            return ExecutionPhase.Running
+            return ImperativePhase.Running
         }
 
         if (previous == null) {
-            return ExecutionPhase.Pending
+            return ImperativePhase.Pending
         }
 
         return when (previous) {
-            is ExecutionError ->
-                ExecutionPhase.Error
+            is ImperativeError ->
+                ImperativePhase.Error
 
-            is ExecutionSuccess ->
-                ExecutionPhase.Success
+            is ImperativeSuccess ->
+                ImperativePhase.Success
         }
     }
 
@@ -57,12 +57,7 @@ data class ExecutionState(
 
         digest.addBoolean(running)
 
-        if (previous == null) {
-            digest.addMissing()
-        }
-        else {
-            digest.addDigest(previous.digest())
-        }
+        digest.addDigest(previous?.digest())
 
         return digest.digest()
     }

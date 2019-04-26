@@ -22,8 +22,8 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.query.QueryDocument
-import tech.kzen.auto.common.paradigm.dataflow.model.VertexInfo
-import tech.kzen.auto.common.paradigm.dataflow.model.VertexMatrix
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexInfo
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexMatrix
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment

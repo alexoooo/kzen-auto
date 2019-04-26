@@ -3,11 +3,11 @@ package tech.kzen.auto.server.objects.script
 import org.openqa.selenium.By
 import org.openqa.selenium.OutputType
 import org.openqa.selenium.WebElement
+import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
+import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
-import tech.kzen.auto.common.paradigm.imperative.model.BinaryExecutionValue
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.imperative.model.NullExecutionValue
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
 import tech.kzen.auto.server.service.ServerContext
 
 
@@ -15,7 +15,7 @@ import tech.kzen.auto.server.service.ServerContext
 class LeftClick(
         var xpath: String
 ): ExecutionAction {
-    override suspend fun perform(): ExecutionResult {
+    override suspend fun perform(): ImperativeResult {
         val driver = ServerContext.webDriverContext.get()
 
         val element: WebElement =
@@ -24,7 +24,7 @@ class LeftClick(
         element.click()
 
         val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
-        return ExecutionSuccess(
+        return ImperativeSuccess(
                 NullExecutionValue,
                 BinaryExecutionValue(screenshotPng))
     }

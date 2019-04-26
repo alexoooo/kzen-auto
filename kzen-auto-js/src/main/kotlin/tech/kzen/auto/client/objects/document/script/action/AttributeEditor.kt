@@ -13,7 +13,7 @@ import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.MaterialTextField
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.lodash
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -91,7 +91,7 @@ class AttributeEditor(
     }
 
 
-    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ExecutionModel) {}
+    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {}
 
 
     //-----------------------------------------------------------------------------------------------------------------

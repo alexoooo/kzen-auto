@@ -3,9 +3,11 @@ package tech.kzen.auto.client.service.rest
 import tech.kzen.auto.client.util.encodeURIComponent
 import tech.kzen.auto.client.util.httpGet
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResponse
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -265,7 +267,7 @@ class ClientRestApi(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun executionModel(host: DocumentPath): ExecutionModel {
+    suspend fun executionModel(host: DocumentPath): ImperativeModel {
         val responseText = get(
                 CommonRestApi.actionModel,
                 CommonRestApi.paramDocumentPath to host.asString())
@@ -274,7 +276,7 @@ class ClientRestApi(
         val responseCollection = ClientJsonUtils.toList(responseJson)
 
         @Suppress("UNCHECKED_CAST")
-        return ExecutionModel.fromCollection(
+        return ImperativeModel.fromCollection(
                 responseCollection as List<Map<String, Any>>)
     }
 
@@ -297,7 +299,7 @@ class ClientRestApi(
 
     suspend fun performAction(
             objectLocation: ObjectLocation
-    ): ExecutionResponse {
+    ): ImperativeResponse {
         val responseJson = getJson(
                 CommonRestApi.actionPerform,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
@@ -309,13 +311,13 @@ class ClientRestApi(
 //        val status = responseJson[CommonRestApi.fieldStatus] as String
 //        val digest = responseJson[CommonRestApi.fieldDigest] as String
 
-        return ExecutionResponse.fromCollection(responseCollection)
+        return ImperativeResponse.fromCollection(responseCollection)
     }
 
 
     suspend fun performDetached(
             objectLocation: ObjectLocation
-    ): ExecutionResult {
+    ): ImperativeResult {
         val responseJson = getJson(
                 CommonRestApi.actionDetached,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
@@ -324,7 +326,47 @@ class ClientRestApi(
         @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
-        return ExecutionResult.fromCollection(responseCollection)
+        return ImperativeResult.fromCollection(responseCollection)
+    }
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun visualDataflowModel(host: DocumentPath): VisualDataflowModel {
+        val responseText = get(
+                CommonRestApi.execModel,
+                CommonRestApi.paramDocumentPath to host.asString())
+
+        val responseJson = JSON.parse<Json>(responseText)
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
+
+        @Suppress("UNCHECKED_CAST")
+        return VisualDataflowModel.fromCollection(
+                responseCollection as Map<String, Any>)
+    }
+
+
+    suspend fun resetDataflowExecution(
+            host: DocumentPath
+    ): Digest {
+        return getDigest(
+                CommonRestApi.execReset,
+                CommonRestApi.paramDocumentPath to host.asString())
+    }
+
+
+    suspend fun execDataflow(
+            objectLocation: ObjectLocation
+    ): VisualVertexTransition {
+        val responseJson = getJson(
+                CommonRestApi.execPerform,
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+
+        @Suppress("UNCHECKED_CAST")
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
+
+        return VisualVertexTransition.fromCollection(responseCollection)
     }
 
 

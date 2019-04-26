@@ -1,8 +1,8 @@
 package tech.kzen.auto.common.paradigm.imperative.util
 
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionModel
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionPhase
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.notation.NotationConventions
@@ -13,16 +13,16 @@ import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 object ImperativeUtils {
     fun next(
             graphNotation: GraphNotation,
-            executionModel: ExecutionModel
+            executionModel: ImperativeModel
     ): ObjectLocation? {
-        if (executionModel.frames.isEmpty() || executionModel.containsStatus(ExecutionPhase.Running)) {
+        if (executionModel.frames.isEmpty() || executionModel.containsStatus(ImperativePhase.Running)) {
             return null
         }
 
         val lastFrame = executionModel.frames.last()
 
         for (e in lastFrame.states) {
-            if (e.value.phase() == ExecutionPhase.Error) {
+            if (e.value.phase() == ImperativePhase.Error) {
                 return null
             }
         }
@@ -40,7 +40,7 @@ object ImperativeUtils {
             val stepLocation = graphNotation.coalesce.locate(stepReference)
             val objectPath = stepLocation.objectPath
 
-            if (lastFrame.states[objectPath]?.phase() == ExecutionPhase.Pending) {
+            if (lastFrame.states[objectPath]?.phase() == ImperativePhase.Pending) {
                 return stepLocation
             }
         }

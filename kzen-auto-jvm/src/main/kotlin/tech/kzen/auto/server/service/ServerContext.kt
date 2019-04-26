@@ -1,9 +1,16 @@
 package tech.kzen.auto.server.service
 
 import kotlinx.coroutines.runBlocking
+import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveDataflowManager
+import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveVisualProvider
+import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageInspector
+import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
+import tech.kzen.auto.common.service.InstanceManager
 import tech.kzen.auto.common.service.ModelManager
 import tech.kzen.auto.server.notation.BootNotationMedia
+import tech.kzen.auto.server.service.imperative.EmptyExecutionInitializer
+import tech.kzen.auto.server.service.imperative.ModelActionExecutor
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
 import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
@@ -52,6 +59,19 @@ object ServerContext {
             actionExecutor)
 
 
+    val instanceManager = InstanceManager()
+    private val dataflowMessageInspector = DataflowMessageInspector()
+
+    val activeDataflowManager = ActiveDataflowManager(
+            instanceManager,
+            dataflowMessageInspector)
+
+    private val activeVisualProvider = ActiveVisualProvider(activeDataflowManager)
+
+    val visualDataflowManager = VisualDataflowManager(
+            activeVisualProvider, activeVisualProvider)
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private val downloadManager = DownloadManager()
 
@@ -67,6 +87,7 @@ object ServerContext {
 
         runBlocking {
             modelManager.observe(executionManager)
+            modelManager.observe(instanceManager)
         }
     }
 

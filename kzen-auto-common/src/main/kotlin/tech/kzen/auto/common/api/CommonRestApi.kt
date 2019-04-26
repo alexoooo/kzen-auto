@@ -57,5 +57,12 @@ object CommonRestApi {
     const val actionDetached = "${actionPrefix}detached"
 
 
+    private const val execPrefix = "/exec/"
+    const val execModel = "${execPrefix}model"
+    const val execReset = "${execPrefix}reset"
+    const val execPerform = "${execPrefix}perform"
+//    const val execDetached = "${execPrefix}detached"
+
+
     const val fieldDigest = "digest"
 }

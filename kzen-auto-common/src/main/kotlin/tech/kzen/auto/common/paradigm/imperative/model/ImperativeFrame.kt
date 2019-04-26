@@ -7,9 +7,9 @@ import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.toPersistentMap
 
 
-data class ExecutionFrame(
+data class ImperativeFrame(
         val path: DocumentPath,
-        val states: PersistentMap<ObjectPath, ExecutionState>
+        val states: PersistentMap<ObjectPath, ImperativeState>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -17,14 +17,14 @@ data class ExecutionFrame(
         private const val statesKey = "states"
 
 
-        fun toCollection(frame: ExecutionFrame): Map<String, Any> {
+        fun toCollection(frame: ImperativeFrame): Map<String, Any> {
             val builder = mutableMapOf<String, Any>()
 
             builder[pathKey] = frame.path.asRelativeFile()
 
             val values = mutableMapOf<String, Map<String, Any?>>()
             for (e in frame.states) {
-                values[e.key.asString()] = ExecutionState.toCollection(e.value)
+                values[e.key.asString()] = ImperativeState.toCollection(e.value)
             }
             builder[statesKey] = values
 
@@ -35,19 +35,19 @@ data class ExecutionFrame(
         @Suppress("UNCHECKED_CAST")
         fun fromCollection(
                 collection: Map<String, Any>
-        ): ExecutionFrame {
+        ): ImperativeFrame {
             val relativeLocation = collection[pathKey] as String
             val path = DocumentPath.parse(relativeLocation)
 
             val valuesMap = collection[statesKey] as Map<*, *>
 
-            val values = mutableMapOf<ObjectPath, ExecutionState>()
+            val values = mutableMapOf<ObjectPath, ImperativeState>()
             for (e in valuesMap) {
                 values[ObjectPath.parse(e.key as String)] =
-                        ExecutionState.fromCollection(e.value as Map<String, Any?>)
+                        ImperativeState.fromCollection(e.value as Map<String, Any?>)
             }
 
-            return ExecutionFrame(path, values.toPersistentMap())
+            return ImperativeFrame(path, values.toPersistentMap())
         }
     }
 
@@ -58,13 +58,13 @@ data class ExecutionFrame(
     }
 
 
-    fun set(objectPath: ObjectPath, executionState: ExecutionState): ExecutionFrame {
+    fun set(objectPath: ObjectPath, executionState: ImperativeState): ImperativeFrame {
         return copy(states = states.put(objectPath, executionState))
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun rename(from: ObjectPath, newName: ObjectName): ExecutionFrame {
+    fun rename(from: ObjectPath, newName: ObjectName): ImperativeFrame {
         val state = states[from]
                 ?: return this
 
@@ -94,11 +94,11 @@ data class ExecutionFrame(
     }
 
 
-    fun add(objectPath: ObjectPath/*, index: Int*/): ExecutionFrame {
+    fun add(objectPath: ObjectPath/*, index: Int*/): ImperativeFrame {
         check(objectPath !in states) { "Already present: $objectPath" }
 
         return copy(states = states.put(
-                objectPath, ExecutionState.initial))
+                objectPath, ImperativeState.initial))
 //        val added = mutableMapOf<ObjectPath, ExecutionState>()
 //
 //        for ((i, entry) in states.entries.withIndex()) {
@@ -117,7 +117,7 @@ data class ExecutionFrame(
     }
 
 
-    fun remove(objectPath: ObjectPath): ExecutionFrame {
+    fun remove(objectPath: ObjectPath): ImperativeFrame {
 //        val previous = states.remove(objectPath)
 //        return previous != null
         return copy(states = states.remove(objectPath))

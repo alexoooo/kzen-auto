@@ -1,29 +1,39 @@
 package tech.kzen.auto.server.objects.query
 
-import tech.kzen.auto.common.paradigm.common.api.StatefulObject
 import tech.kzen.auto.common.paradigm.common.api.ValidatedObject
+import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.dataflow.api.StreamDataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.output.StreamOutput
-import tech.kzen.auto.common.paradigm.imperative.model.ExecutionValue
 
 
 class IntRangeSource(
         private val output: StreamOutput<Int>,
 
-        from: Int,
+        private val from: Int,
         private val to: Int
 ):
-        StreamDataflow,
-        StatefulObject,
+        StreamDataflow<IntRangeSource.State>,
         ValidatedObject
 {
     //-----------------------------------------------------------------------------------------------------------------
-    private var next = from
+    class State(
+            var next: Int
+    )
+
+
+    override fun initialState(): State {
+        return State(from)
+    }
+
+
+    override fun inspectState(state: State): ExecutionValue {
+        return ExecutionValue.of(state.next)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun validate(): String? {
-        if (next > to) {
+        if (from > to) {
             return "'From' must be less than or equal to 'To'"
         }
 
@@ -31,21 +41,18 @@ class IntRangeSource(
     }
 
 
-    override fun inspect(): ExecutionValue {
-        return ExecutionValue.of(next)
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
-    override fun process() {
-        if (next <= to) {
-            next()
+    override fun process(state: State): State {
+        if (state.next <= to) {
+            next(state)
         }
+        return state
     }
 
 
-    override fun next() {
-        output.set(next, next < to)
-        next++
+    override fun next(state: State): State {
+        output.set(state.next, state.next < to)
+        state.next++
+        return state
     }
 }

@@ -9,7 +9,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 @Suppress("unused")
 class QueryDocument(
-        val vertices: List<Dataflow>,
+        val vertices: List<Dataflow<*>>,
         objectLocation: ObjectLocation
 ):
         DocumentArchetype(objectLocation)
