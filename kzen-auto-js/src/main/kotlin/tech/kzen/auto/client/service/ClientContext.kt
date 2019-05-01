@@ -1,13 +1,11 @@
 package tech.kzen.auto.client.service
 
-import tech.kzen.auto.client.service.rest.ClientRestActionExecutor
-import tech.kzen.auto.client.service.rest.ClientRestApi
-import tech.kzen.auto.client.service.rest.ClientRestExecutionInitializer
-import tech.kzen.auto.client.service.rest.RestNotationMedia
+import tech.kzen.auto.client.service.rest.*
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
-import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.structure.metadata.read.NotationMetadataReader
 import tech.kzen.lib.common.structure.notation.format.YamlNotationParser
 import tech.kzen.lib.common.structure.notation.io.NotationMedia
@@ -23,7 +21,7 @@ object ClientContext {
     val baseUrl = window.location.pathname.substringBeforeLast("/")
     val restClient = ClientRestApi(baseUrl)
 
-    private val restNotationMedia: NotationMedia = RestNotationMedia(restClient)
+    private val restNotationMedia: NotationMedia = ClientRestNotationMedia(restClient)
     val notationMediaCache = MapNotationMedia()
 
     val notationParser: NotationParser = YamlNotationParser()
@@ -33,7 +31,7 @@ object ClientContext {
     private val clientRepository = NotationRepository(
             notationMediaCache, notationParser, notationMetadataReader)
 
-    val modelManager = ModelManager(
+    val modelManager = GraphStructureManager(
             notationMediaCache,
             clientRepository,
             restNotationMedia,
@@ -64,6 +62,16 @@ object ClientContext {
     val executionIntent = ExecutionIntent()
 
     val navigationManager = NavigationManager()
+
+    private val clientRestVisualDataflowInitializer = ClientRestVisualDataflowInitializer(
+            restClient)
+
+    private val clientRestVisualDataflowExecutor = ClientRestVisualDataflowExecutor(
+            restClient)
+
+    val visualDataflowManager = VisualDataflowManager(
+            clientRestVisualDataflowInitializer,
+            clientRestVisualDataflowExecutor)
 
 
     //-----------------------------------------------------------------------------------------------------------------

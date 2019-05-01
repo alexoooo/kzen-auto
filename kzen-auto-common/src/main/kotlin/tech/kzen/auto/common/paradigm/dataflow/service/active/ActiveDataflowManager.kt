@@ -4,14 +4,14 @@ import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.StreamDataflow
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.*
 import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageInspector
-import tech.kzen.auto.common.service.InstanceManager
+import tech.kzen.auto.common.service.GraphInstanceManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.platform.collect.toPersistentMap
 
 
 class ActiveDataflowManager(
-        private val instanceManager: InstanceManager,
+        private val instanceManager: GraphInstanceManager,
         private val dataflowMessageInspector: DataflowMessageInspector
 ) {
     //-----------------------------------------------------------------------------------------------------------------

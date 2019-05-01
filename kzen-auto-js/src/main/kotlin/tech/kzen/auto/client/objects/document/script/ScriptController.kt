@@ -24,7 +24,7 @@ import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
-import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -44,7 +44,7 @@ import tech.kzen.lib.platform.collect.persistentListOf
 class ScriptController:
 //        RComponent<RProps, ScriptController.State>(),
         RPureComponent<RProps, ScriptController.State>(),
-        ModelManager.Observer,
+        GraphStructureManager.Observer,
         ExecutionManager.Observer,
         InsertionManager.Observer,
         NavigationManager.Observer
@@ -86,7 +86,6 @@ class ScriptController:
 
 
     override fun componentDidMount() {
-
 //        console.log("^^^^^^ script - componentDidMount")
 
 //        println("ProjectController - Subscribed")
@@ -400,7 +399,7 @@ class ScriptController:
                 attrs {
                     attributeNesting = AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index)))
                     this.objectLocation = objectLocation
-                    structure = graphStructure
+                    this.graphStructure = graphStructure
                     state = executionState
                 }
             }
@@ -426,7 +425,7 @@ class ScriptController:
                 marginBottom = 2.em
             }
 
-            child(RunController::class) {
+            child(ScriptRunController::class) {
                 attrs {
                     documentPath = state.documentPath
                     structure = state.structure

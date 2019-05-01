@@ -292,7 +292,7 @@ class ActionNameEditor(
 
                     if (props.intentToRun) {
 //                        println("^$%^$%^$% props.intentToRun - ${props.intentToRun}")
-                        classes.add("glowingText")
+                        classes.add(CssClasses.glowingText)
                     }
                 }
 

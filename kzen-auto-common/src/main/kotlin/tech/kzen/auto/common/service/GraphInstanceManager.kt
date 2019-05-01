@@ -5,8 +5,8 @@ import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 
 
-class InstanceManager:
-        ModelManager.Observer
+class GraphInstanceManager:
+        GraphStructureManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val singletons = mutableMapOf<ObjectLocation, Any>()

@@ -6,8 +6,8 @@ import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveVisualProvid
 import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageInspector
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
-import tech.kzen.auto.common.service.InstanceManager
-import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.auto.common.service.GraphInstanceManager
+import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.auto.server.notation.BootNotationMedia
 import tech.kzen.auto.server.service.imperative.EmptyExecutionInitializer
 import tech.kzen.auto.server.service.imperative.ModelActionExecutor
@@ -46,7 +46,7 @@ object ServerContext {
             notationMetadataReader)
 
 
-    val modelManager = ModelManager(
+    val modelManager = GraphStructureManager(
             notationMediaCache,
             repository,
             notationMedia,
@@ -59,7 +59,7 @@ object ServerContext {
             actionExecutor)
 
 
-    val instanceManager = InstanceManager()
+    val instanceManager = GraphInstanceManager()
     private val dataflowMessageInspector = DataflowMessageInspector()
 
     val activeDataflowManager = ActiveDataflowManager(

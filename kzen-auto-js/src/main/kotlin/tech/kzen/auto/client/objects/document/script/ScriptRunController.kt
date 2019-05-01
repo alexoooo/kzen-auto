@@ -23,11 +23,11 @@ import tech.kzen.lib.common.structure.GraphStructure
 
 
 // TODO: bugfix 'rename' causes 'Run all' to turn into 'Reset'?
-class RunController(
+class ScriptRunController(
         props: Props
 ):
 //        RComponent<RunController.Props, RunController.State>(props),
-        RPureComponent<RunController.Props, RunController.State>(props),
+        RPureComponent<ScriptRunController.Props, ScriptRunController.State>(props),
 //        ModelManager.Observer,
         ExecutionManager.Observer
 {
@@ -238,7 +238,6 @@ class RunController(
     }
 
 
-
     private fun onOuterEnter() {
         setState {
             fabHover = true
@@ -336,29 +335,30 @@ class RunController(
                 val looping = phase == Phase.Looping
 
                 attrs {
-                    title =
-                            if (phase == Phase.Done) {
-                                "Reset"
-                            }
-                            else if (looping) {
-                                "Pause"
-                            }
-                            else if (phase == Phase.Pending) {
-                                "Run all"
-                            }
-                            else {
-                                "Continue"
-                            }
+                    title = when {
+                        phase == Phase.Done ->
+                            "Reset"
+
+                        looping ->
+                            "Pause"
+
+                        phase == Phase.Pending ->
+                            "Run all"
+
+                        else ->
+                            "Continue"
+                    }
 
                     onClick = {
-                        if (hasMoreToRun) {
-                            onRunAll()
-                        }
-                        else if (phase == Phase.Done) {
-                            onClear()
-                        }
-                        else if (looping) {
-                            onPause()
+                        when {
+                            hasMoreToRun ->
+                                onRunAll()
+
+                            phase == Phase.Done ->
+                                onClear()
+
+                            looping ->
+                                onPause()
                         }
                     }
 

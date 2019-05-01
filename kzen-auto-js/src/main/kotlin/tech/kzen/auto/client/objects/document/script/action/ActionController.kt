@@ -63,7 +63,7 @@ class ActionController(
     class Props(
             var attributeNesting: AttributeNesting,
             var objectLocation: ObjectLocation,
-            var structure: GraphStructure,
+            var graphStructure: GraphStructure,
 
             var state: ImperativeState?
     ): RProps
@@ -307,7 +307,7 @@ class ActionController(
 
 
     private fun RBuilder.renderCard() {
-        val objectMetadata = props.structure.graphMetadata.objectMetadata.get(props.objectLocation)!!
+        val objectMetadata = props.graphStructure.graphMetadata.objectMetadata.get(props.objectLocation)!!
 
         val reactStyles = reactStyle {
             val cardColor = when (props.state?.phase()) {
@@ -358,7 +358,7 @@ class ActionController(
 
 
     private fun RBuilder.renderHeader() {
-        val actionDescription = props.structure.graphNotation
+        val actionDescription = props.graphStructure.graphNotation
                 .transitiveAttribute(props.objectLocation, AutoConventions.descriptionAttributePath)
                 ?.asString()
                 ?: defaultRunDescription
@@ -396,7 +396,7 @@ class ActionController(
                 child(ActionNameEditor::class) {
                     attrs {
                         objectLocation = props.objectLocation
-                        notation = props.structure.graphNotation
+                        notation = props.graphStructure.graphNotation
 
                         description = actionDescription
                         intentToRun = state.intentToRun
@@ -439,7 +439,7 @@ class ActionController(
             val keyAttributePath = AttributePath.ofName(e.key)
 
             val value =
-                    props.structure.graphNotation.transitiveAttribute(
+                    props.graphStructure.graphNotation.transitiveAttribute(
                             props.objectLocation, keyAttributePath)
                             ?: continue
 
@@ -582,7 +582,7 @@ class ActionController(
     private fun RBuilder.renderRunIcon(
             actionDescription: String
     ) {
-        val icon = props.structure.graphNotation
+        val icon = props.graphStructure.graphNotation
                 .transitiveAttribute(props.objectLocation, AutoConventions.iconAttributePath)
                 ?.asString()
                 ?: defaultRunIcon

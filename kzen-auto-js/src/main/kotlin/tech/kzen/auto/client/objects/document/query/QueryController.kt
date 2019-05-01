@@ -19,9 +19,12 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.query.QueryDocument
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexInfo
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexMatrix
-import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
+import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -39,16 +42,19 @@ import tech.kzen.lib.platform.collect.persistentListOf
 class QueryController:
 //        RComponent<RProps, QueryController.State>(),
         RPureComponent<RProps, QueryController.State>(),
-        ModelManager.Observer,
+        GraphStructureManager.Observer,
 //        ExecutionManager.Observer,
         InsertionManager.Observer,
-        NavigationManager.Observer
+        NavigationManager.Observer,
+        VisualDataflowManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
             var documentPath: DocumentPath?,
-            var structure: GraphStructure?,
-            var creating: Boolean
+            var graphStructure: GraphStructure?,
+            var creating: Boolean,
+
+            var visualDataflowModel: VisualDataflowModel?
     ): RState
 
 
@@ -103,7 +109,21 @@ class QueryController:
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?) {
         setState {
-            structure = graphStructure
+            this.graphStructure = graphStructure
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun beforeDataflowExecution(
+            host: DocumentPath,
+            vertexLocation: ObjectLocation
+    ) {}
+
+
+    override suspend fun onVisualDataflowModel(host: DocumentPath, visualDataflowModel: VisualDataflowModel) {
+        setState {
+            this.visualDataflowModel = visualDataflowModel
         }
     }
 
@@ -144,7 +164,7 @@ class QueryController:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun documentNotation(): DocumentNotation? {
-        val graphStructure = state.structure
+        val graphStructure = state.graphStructure
                 ?: return null
 
         val documentPath = state.documentPath
@@ -176,7 +196,7 @@ class QueryController:
     ): VertexMatrix {
 //        val documentNotation = documentNotation()
 //        val vertexNotations = vertexNotations(documentNotation!!)!!
-        val notation = state.structure!!.graphNotation
+        val notation = state.graphStructure!!.graphNotation
 
         val vertexInfos = verticesNotation.values.withIndex().map {
             val vertexReference = ObjectReference.parse((it.value as ScalarAttributeNotation).value)
@@ -267,7 +287,13 @@ class QueryController:
 //                    backgroundColor = Color.blue
                 }
 
-                nonEmptyDag(state.structure!!, vertexInfos)
+                val visualDataflowModel = state.visualDataflowModel
+                        ?: VisualDataflowModel.empty
+
+                nonEmptyDag(
+                        state.graphStructure!!,
+                        visualDataflowModel,
+                        vertexInfos)
             }
         }
     }
@@ -275,6 +301,7 @@ class QueryController:
 
     private fun RBuilder.nonEmptyDag(
             graphStructure: GraphStructure,
+            visualDataflowModel: VisualDataflowModel,
             vertexMatrix: VertexMatrix
     ) {
         table {
@@ -293,7 +320,8 @@ class QueryController:
                                 }
                                 else {
                                     vertex(vertexInfo,
-                                            graphStructure)
+                                            graphStructure,
+                                            visualDataflowModel)
                                 }
                             }
                         }
@@ -352,29 +380,25 @@ class QueryController:
 
     private fun RBuilder.vertex(
             vertexInfo: VertexInfo,
-            graphStructure: GraphStructure
+            graphStructure: GraphStructure,
+            visualDataflowModel: VisualDataflowModel
     ) {
-//        styledDiv {
-//            css {
-//                display = Display.inlineBlock
-//                marginLeft = 1.em
-//                width = 20.em
-//            }
+        child(VertexController::class) {
+            key = vertexInfo.objectLocation.toReference().asString()
 
-//            +"[${vertexInfo.row}, ${vertexInfo.column}]"
+            attrs {
+                attributeNesting = AttributeNesting(persistentListOf(
+                        AttributeSegment.ofIndex(vertexInfo.indexInVertices)))
 
-            child(VertexController::class) {
-                key = vertexInfo.objectLocation.toReference().asString()
+                this.objectLocation = vertexInfo.objectLocation
+                this.graphStructure = graphStructure
 
-                attrs {
-                    attributeNesting = AttributeNesting(persistentListOf(
-                            AttributeSegment.ofIndex(vertexInfo.indexInVertices)))
-
-                    this.objectLocation = vertexInfo.objectLocation
-                    this.graphStructure = graphStructure
-                }
+                this.visualVertexModel = visualDataflowModel.vertices[vertexInfo.objectLocation]
+                        ?: VisualVertexModel.empty
+//                        ?: throw IllegalStateException(
+//                                "Visual vertex state missing: ${vertexInfo.objectLocation}")
             }
-//        }
+        }
     }
 
 
@@ -389,17 +413,12 @@ class QueryController:
                 marginBottom = 2.em
             }
 
-            +"Next"
-            +"|"
-            +"Reset"
-
-//            child(RunController::class) {
-//                attrs {
-//                    documentPath = state.documentPath
-//                    structure = state.structure
-//                    execution = state.execution
-//                }
-//            }
+            child(QueryRunController::class) {
+                attrs {
+                    documentPath = state.documentPath
+                    graphStructure = state.graphStructure
+                }
+            }
         }
     }
 }

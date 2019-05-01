@@ -3,7 +3,7 @@ package tech.kzen.auto.common.paradigm.imperative.service
 import kotlinx.coroutines.delay
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.*
-import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -22,7 +22,7 @@ class ExecutionManager(
         private val executionInitializer: ExecutionInitializer,
         private val actionExecutor: ActionExecutor
 ):
-        ModelManager.Observer
+        GraphStructureManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {

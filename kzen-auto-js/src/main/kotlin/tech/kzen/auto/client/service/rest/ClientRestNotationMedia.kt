@@ -6,7 +6,7 @@ import tech.kzen.lib.common.structure.notation.io.NotationMedia
 import tech.kzen.lib.common.util.Digest
 
 
-class RestNotationMedia(
+class ClientRestNotationMedia(
         private val restClient: ClientRestApi
 ): NotationMedia {
     override suspend fun scan(): DocumentPathMap<Digest> {

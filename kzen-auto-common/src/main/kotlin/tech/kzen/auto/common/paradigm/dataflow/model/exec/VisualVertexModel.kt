@@ -2,21 +2,18 @@ package tech.kzen.auto.common.paradigm.dataflow.model.exec
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.platform.collect.persistentMapOf
 
 
-// TODO: add support for detail logging
+// TODO: add support for logging (possibly with log levels)
 data class VisualVertexModel(
         val running: Boolean,
         val state: ExecutionValue?,
         val message: ExecutionValue?,
-//        val remainingBatch: PersistentList<ExecutionValue>,
-//        val streamHasNext: Boolean
-        val hasNext: Boolean
+        val hasNext: Boolean?
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val empty = VisualDataflowModel(persistentMapOf())
+        val empty = VisualVertexModel(false, null, null, null)
 
         private val runningKey = "running"
         private val stateKey = "state"
@@ -53,6 +50,25 @@ data class VisualVertexModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun phase(): VisualVertexPhase {
+        // TODO: add support for Error
+        return when {
+            running ->
+                VisualVertexPhase.Running
+
+            hasNext == null ->
+                VisualVertexPhase.Pending
+
+            hasNext ->
+                VisualVertexPhase.Remaining
+
+            else ->
+                VisualVertexPhase.Done
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun digest(): Digest {
         val digest = Digest.Streaming()
 
@@ -62,7 +78,12 @@ data class VisualVertexModel(
 
         digest.addDigest(message?.digest())
 
-        digest.addBoolean(hasNext)
+        if (hasNext == null) {
+            digest.addMissing()
+        }
+        else {
+            digest.addBoolean(hasNext)
+        }
 
         return digest.digest()
     }

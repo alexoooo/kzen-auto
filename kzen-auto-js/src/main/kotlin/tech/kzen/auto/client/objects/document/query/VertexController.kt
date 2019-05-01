@@ -7,13 +7,17 @@ import kotlinx.css.properties.borderTop
 import react.RBuilder
 import react.RProps
 import react.RState
+import react.setState
 import styled.css
 import styled.styledDiv
 import styled.styledH3
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.query.QueryDocument
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -28,12 +32,11 @@ import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeComma
 class VertexController(
         props: Props
 ):
-//        RComponent<VertexController.Props, VertexController.State>(props)
-        RPureComponent<VertexController.Props, VertexController.State>(props)
+        RPureComponent<VertexController.Props, VertexController.State>(props),
+        ExecutionIntent.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        private val filePathAttribute = AttributePath.parse("filePath")
         private val inputAttributeName = AttributeName("input")
         private val outputAttributeName = AttributeName("output")
     }
@@ -43,44 +46,47 @@ class VertexController(
     class Props(
             var attributeNesting: AttributeNesting,
             var objectLocation: ObjectLocation,
-            var graphStructure: GraphStructure
+            var graphStructure: GraphStructure,
+
+            var visualVertexModel: VisualVertexModel?
     ): RProps
 
 
     class State(
-//            var value: String,
-//            var submitDebounce: FunctionWithDebounce,
-//            var pending: Boolean,
-//
-//            var executionResult: ExecutionResult?
+            var hoverCard: Boolean,
+            var hoverMenu: Boolean,
+            var intentToRun: Boolean,
+
+            var optionsOpen: Boolean
     ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-//        val filePath = props
-//                .graphStructure
-//                .graphNotation
-//                .transitiveAttribute(props.objectLocation, filePathAttribute)
-//                ?.asString()
-//                ?: ""
-//
-//        value = filePath
-//
-//        submitDebounce = lodash.debounce({
-//            editParameterCommandAsync()
-//        }, 1000)
-//
-//        pending = false
-//
-//        executionResult = null
+        hoverCard = false
+        hoverMenu = false
+        intentToRun = false
+
+        optionsOpen = false
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-//        async {
-//            executeAction()
-//        }
+        ClientContext.executionIntent.observe(this)
+    }
+
+
+    override fun componentWillUnmount() {
+        ClientContext.executionIntent.unobserve(this)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun onExecutionIntent(actionLocation: ObjectLocation?) {
+        setState {
+            intentToRun = actionLocation == props.objectLocation
+        }
     }
 
 
@@ -212,6 +218,30 @@ class VertexController(
 
 
     private fun RBuilder.renderContent() {
+        val cardColor = when (props.visualVertexModel?.phase()) {
+            VisualVertexPhase.Pending ->
+//                    Color("#649fff")
+                Color.white
+
+            VisualVertexPhase.Running ->
+                Color.gold
+
+            VisualVertexPhase.Done ->
+//                    Color("#00a457")
+                Color("#00b467")
+//                    Color("#13aa59")
+//                    Color("#1faf61")
+
+            VisualVertexPhase.Remaining ->
+                Color("#00a457")
+
+            VisualVertexPhase.Error ->
+                Color.red
+
+            null ->
+                Color.gray
+        }
+
         styledDiv {
             css {
                 display = Display.block
@@ -220,6 +250,8 @@ class VertexController(
 //                marginLeft = 1.em
 //                marginRight = 1.em
                 margin(1.em)
+
+                backgroundColor = cardColor
             }
 
             child(MaterialIconButton::class) {
@@ -239,6 +271,10 @@ class VertexController(
             styledH3 {
                 css {
                     width = 10.em
+
+                    if (state.intentToRun) {
+                        classes.add(CssClasses.glowingText)
+                    }
                 }
 
                 child(SettingsInputComponentIcon::class) {

@@ -11,7 +11,7 @@ import tech.kzen.lib.common.util.Digest
 
 
 // TODO: add profiles or something instead of using ad-hoc document path patterns
-class ModelManager(
+class GraphStructureManager(
         private var notationMediaCache: MapNotationMedia,
         private var notationRepository: NotationRepository,
         private var notationMedia: NotationMedia,

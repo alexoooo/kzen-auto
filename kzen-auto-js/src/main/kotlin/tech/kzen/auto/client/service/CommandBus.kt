@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.service
 
 import tech.kzen.auto.client.service.rest.ClientRestApi
-import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.common.structure.notation.io.NotationParser
 import tech.kzen.lib.common.structure.notation.repo.NotationRepository
@@ -12,7 +12,7 @@ import tech.kzen.lib.platform.IoUtils
 // TODO: move to lib?
 class CommandBus(
         private val clientRepository: NotationRepository,
-        private val modelManager: ModelManager,
+        private val graphStructureManager: GraphStructureManager,
         private val restClient: ClientRestApi,
         private val notationParser: NotationParser
 ) {
@@ -73,13 +73,13 @@ class CommandBus(
         val clientDigest = clientRepository.digest()
 //        println("CommandBus - applied in client: $clientDigest")
 
-        modelManager.onEvent(event)
+        graphStructureManager.onEvent(event)
 
         val restDigest = applyRest(command)
 //        println("CommandBus - applied in REST: $restDigest")
 
         if (clientDigest != restDigest) {
-            modelManager.refresh()
+            graphStructureManager.refresh()
         }
 
         onCommandSuccess(command, event)

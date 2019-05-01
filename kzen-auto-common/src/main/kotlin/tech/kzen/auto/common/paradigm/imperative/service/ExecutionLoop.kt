@@ -4,13 +4,13 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
-import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 class ExecutionLoop(
-        private val modelManager: ModelManager,
+        private val graphStructureManager: GraphStructureManager,
         private val executionManager: ExecutionManager,
         private val delayMillis: Int = 0
 ):
@@ -47,7 +47,7 @@ class ExecutionLoop(
         }
 
         val next = ImperativeUtils.next(
-                modelManager.graphStructure().graphNotation,
+                graphStructureManager.graphStructure().graphNotation,
                 executionModel
         ) ?: return
 
@@ -74,7 +74,7 @@ class ExecutionLoop(
 //        println("ExecutionLoop | executionModel is $executionModel")
 
         val next = state.executionModel?.let {
-            ImperativeUtils.next(modelManager.graphStructure().graphNotation, it)
+            ImperativeUtils.next(graphStructureManager.graphStructure().graphNotation, it)
         }
         if (next == null) {
 //            println("ExecutionLoop | pausing at end of loop")

@@ -10,7 +10,7 @@ import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.auto.common.service.ModelManager
+import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
@@ -22,7 +22,7 @@ class SidebarController(
 ):
 //        RComponent<SidebarController.Props, SidebarController.State>(props),
         RPureComponent<SidebarController.Props, SidebarController.State>(props),
-        ModelManager.Observer,
+        GraphStructureManager.Observer,
         NavigationManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
