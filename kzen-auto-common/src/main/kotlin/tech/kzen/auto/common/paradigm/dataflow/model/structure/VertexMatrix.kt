@@ -1,6 +1,9 @@
 package tech.kzen.auto.common.paradigm.dataflow.model.structure
 
+import tech.kzen.lib.common.model.locate.ObjectLocation
 
+
+// TODO: optimize via mutable builder
 data class VertexMatrix(
         val rows: List<List<VertexInfo>>
 ) {
@@ -34,8 +37,12 @@ data class VertexMatrix(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    val usedRows: Int
-            get() = rows.lastOrNull()?.first()?.row?.let { it + 1 } ?: 0
+    val usedRows: Int = rows
+            .lastOrNull()
+            ?.first()
+            ?.row
+            ?.let { it + 1 }
+            ?: 0
 
 
     val usedColumns: Int = rows
@@ -43,6 +50,20 @@ data class VertexMatrix(
             .max()
             ?.let { it + 1 }
             ?: 0
+
+
+
+    fun byLocation(): Map<ObjectLocation, VertexInfo> {
+        val builder = mutableMapOf<ObjectLocation, VertexInfo>()
+
+        for (row in rows) {
+            for (vertexInfo in row) {
+                builder[vertexInfo.objectLocation] = vertexInfo
+            }
+        }
+
+        return builder
+    }
 
 
     fun isEmpty(): Boolean {

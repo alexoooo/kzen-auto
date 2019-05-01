@@ -1,9 +1,6 @@
 package tech.kzen.auto.client.objects.document.query
 
-import kotlinx.css.Cursor
-import kotlinx.css.TextAlign
-import kotlinx.css.em
-import kotlinx.css.pct
+import kotlinx.css.*
 import kotlinx.html.title
 import react.*
 import react.dom.table
@@ -51,16 +48,16 @@ class QueryController:
     class State(
             var documentPath: DocumentPath?,
             var structure: GraphStructure?,
-//            var execution: ExecutionModel?,
             var creating: Boolean
-    ) : RState
+    ): RState
 
 
     @Suppress("unused")
     class Wrapper(
             private val type: DocumentArchetype
-    ) :
-            DocumentController {
+    ):
+            DocumentController
+    {
         override fun type(): DocumentArchetype {
             return type
         }
@@ -237,6 +234,15 @@ class QueryController:
         val documentNotation = documentNotation()
                 ?: return
 
+        renderGraph(documentNotation)
+
+        runController()
+    }
+
+
+    private fun RBuilder.renderGraph(
+            documentNotation: DocumentNotation
+    ) {
         val vertexInfos =
                 verticesNotation(documentNotation)?.let {
                     vertexInfoLayers(it)
@@ -369,5 +375,31 @@ class QueryController:
                 }
             }
 //        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.runController() {
+        styledDiv {
+            css {
+                position = Position.fixed
+                bottom = 0.px
+                right = 0.px
+                marginRight = 2.em
+                marginBottom = 2.em
+            }
+
+            +"Next"
+            +"|"
+            +"Reset"
+
+//            child(RunController::class) {
+//                attrs {
+//                    documentPath = state.documentPath
+//                    structure = state.structure
+//                    execution = state.execution
+//                }
+//            }
+        }
     }
 }

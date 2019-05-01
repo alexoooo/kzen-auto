@@ -22,7 +22,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 
 
-// TODO: bugfix 'rename' causes 'Run all' to turn into 'Reset'
+// TODO: bugfix 'rename' causes 'Run all' to turn into 'Reset'?
 class RunController(
         props: Props
 ):
