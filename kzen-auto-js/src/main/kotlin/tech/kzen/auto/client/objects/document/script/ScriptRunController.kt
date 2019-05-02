@@ -365,7 +365,6 @@ class ScriptRunController(
                     onMouseOver = ::onFabEnter
                     onMouseOut = ::onFabLeave
 
-
                     style = reactStyle {
                         backgroundColor =
                                 if (hasMoreToRun || looping) {

@@ -7,7 +7,6 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.lib.common.context.GraphCreator
 import tech.kzen.lib.common.context.GraphDefiner
 import tech.kzen.lib.common.model.locate.ObjectReference
-import tech.kzen.lib.common.structure.GraphStructure
 import kotlin.browser.document
 import kotlin.browser.window
 import kotlin.dom.clear
@@ -20,17 +19,15 @@ fun main() {
         async {
             ClientContext.modelManager.refresh()
 
-            val autoNotation = ClientContext.modelManager.autoNotation()
-            val autoMetadata = ClientContext.notationMetadataReader.read(autoNotation)
-            val autoStructure = GraphStructure(autoNotation, autoMetadata)
-            val graphDefinition = GraphDefiner.define(autoStructure)
-            val autoGraph = GraphCreator.createGraph(autoStructure, graphDefinition)
+            val clientGraphStructure = ClientContext.modelManager.clientGraphStructure()
+            val clientGraphDefinition = GraphDefiner.define(clientGraphStructure)
+            val clientGraphInstance = GraphCreator.createGraph(clientGraphStructure, clientGraphDefinition)
 
 //            console.log("^^^ main autoGraph ^^ ", autoGraph.objects.values.keys.toString())
-            val rootLocation = autoGraph.objects
+            val rootLocation = clientGraphInstance.objects
                     .locate(ObjectReference.parse("root"))
 
-            val rootInstance = autoGraph.objects.get(rootLocation)
+            val rootInstance = clientGraphInstance.objects.get(rootLocation)
                     as? ReactWrapper<*>
                     ?: throw IllegalStateException("Missing root object")
 

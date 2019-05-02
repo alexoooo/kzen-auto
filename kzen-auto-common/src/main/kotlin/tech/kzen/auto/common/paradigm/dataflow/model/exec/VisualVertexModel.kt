@@ -9,16 +9,18 @@ data class VisualVertexModel(
         val running: Boolean,
         val state: ExecutionValue?,
         val message: ExecutionValue?,
-        val hasNext: Boolean?
+        val hasNext: Boolean,
+        val iteration: Int
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val empty = VisualVertexModel(false, null, null, null)
+        val empty = VisualVertexModel(false, null, null, false, 0)
 
-        private val runningKey = "running"
-        private val stateKey = "state"
-        private val messageKey = "message"
-        private val hasNextKey = "hasNext"
+        private const val runningKey = "running"
+        private const val stateKey = "state"
+        private const val messageKey = "message"
+        private const val hasNextKey = "hasNext"
+        private const val iterationKey = "iteration"
 
 
         fun toCollection(model: VisualVertexModel): Map<String, Any?> {
@@ -26,7 +28,8 @@ data class VisualVertexModel(
                     runningKey to model.running,
                     stateKey to model.state?.toCollection(),
                     messageKey to model.message?.toCollection(),
-                    hasNextKey to model.hasNext
+                    hasNextKey to model.hasNext,
+                    iterationKey to model.iteration
             )
         }
 
@@ -43,7 +46,8 @@ data class VisualVertexModel(
                     collection[messageKey]?.let {
                         ExecutionValue.fromCollection(it as Map<String, Any>)
                     },
-                    collection[hasNextKey] as Boolean
+                    collection[hasNextKey] as Boolean,
+                    collection[iterationKey] as Int
             )
         }
     }
@@ -56,7 +60,7 @@ data class VisualVertexModel(
             running ->
                 VisualVertexPhase.Running
 
-            hasNext == null ->
+            iteration == 0 ->
                 VisualVertexPhase.Pending
 
             hasNext ->
@@ -78,12 +82,9 @@ data class VisualVertexModel(
 
         digest.addDigest(message?.digest())
 
-        if (hasNext == null) {
-            digest.addMissing()
-        }
-        else {
-            digest.addBoolean(hasNext)
-        }
+        digest.addBoolean(hasNext)
+
+        digest.addInt(iteration)
 
         return digest.digest()
     }

@@ -25,7 +25,7 @@ class GraphStructureManager(
 
     //-----------------------------------------------------------------------------------------------------------------
     private val subscribers = mutableSetOf<Observer>()
-    private var mostRecent: GraphStructure? = null
+    private var serverGraphStructureCache: GraphStructure? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -36,7 +36,7 @@ class GraphStructureManager(
 //            subscriber.handleModel(mostRecent!!, null)
 //        }
 
-        subscriber.handleModel(graphStructure(), null)
+        subscriber.handleModel(serverGraphStructure(), null)
     }
 
 
@@ -48,19 +48,27 @@ class GraphStructureManager(
     private suspend fun publish(event: NotationEvent?) {
 //        println("ModelManager - Publishing - start")
 
-        mostRecent = readModel()
+        serverGraphStructureCache = readServerGraphStructure()
 
 //        println("ModelManager - Publishing - $mostRecent")
         for (subscriber in subscribers) {
-            subscriber.handleModel(mostRecent!!, event)
+            subscriber.handleModel(serverGraphStructureCache!!, event)
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun autoNotation(): GraphNotation {
+    suspend fun clientGraphStructure(): GraphStructure {
         val allNotation = notationRepository.notation()
+        val clientGraphNotation = clientGraphNotation(allNotation)
+        val metadata = notationMetadataReader.read(clientGraphNotation)
+        return GraphStructure(clientGraphNotation, metadata)
+    }
 
+
+    private fun clientGraphNotation(
+            allNotation: GraphNotation
+    ): GraphNotation {
         // TODO: use profiles instead
         return allNotation.filterPaths {
             it.asRelativeFile().startsWith("base/") ||
@@ -71,27 +79,19 @@ class GraphStructureManager(
     }
 
 
-    private fun graphNotation(allNotation: GraphNotation): GraphNotation {
-        return allNotation.filterPaths {
-            it.asRelativeFile().startsWith("base/") ||
-                    ! it.asRelativeFile().startsWith("auto-js/")
-        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun graphStructure(): GraphStructure {
-        if (mostRecent == null) {
-            mostRecent = readModel()
+    suspend fun serverGraphStructure(): GraphStructure {
+        if (serverGraphStructureCache == null) {
+            serverGraphStructureCache = readServerGraphStructure()
         }
-        return mostRecent!!
+        return serverGraphStructureCache!!
     }
 
 
-    private suspend fun readModel(): GraphStructure {
+    private suspend fun readServerGraphStructure(): GraphStructure {
         val allNotation = notationRepository.notation()
 
-        val graphNotation = graphNotation(allNotation)
+        val graphNotation = serverGraphNotation(allNotation)
 //        println("^^^^^^ readModel ^^ - ${graphNotation.coalesce.values}")
 
         val metadata = notationMetadataReader.read(graphNotation)
@@ -100,6 +100,14 @@ class GraphStructureManager(
         return GraphStructure(
                 graphNotation,
                 metadata)
+    }
+
+
+    private fun serverGraphNotation(allNotation: GraphNotation): GraphNotation {
+        return allNotation.filterPaths {
+            it.asRelativeFile().startsWith("base/") ||
+                    ! it.asRelativeFile().startsWith("auto-js/")
+        }
     }
 
 
@@ -135,7 +143,7 @@ class GraphStructureManager(
         }
 
 //        println("ModelManager - Refreshing check - $changed - ${mostRecent == null}")
-        if (changed || mostRecent == null) {
+        if (changed || serverGraphStructureCache == null) {
             notationRepository.clearCache()
             publish(null)
         }

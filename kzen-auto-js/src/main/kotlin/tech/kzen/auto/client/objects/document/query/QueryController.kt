@@ -86,6 +86,8 @@ class QueryController:
 //            ClientContext.executionManager.subscribe(this)
             ClientContext.insertionManager.subscribe(this)
             ClientContext.navigationManager.observe(this)
+
+            ClientContext.visualDataflowManager.observe(this)
         }
     }
 
@@ -96,6 +98,7 @@ class QueryController:
 //        ClientContext.executionManager.unsubscribe(this)
         ClientContext.insertionManager.unSubscribe(this)
         ClientContext.navigationManager.unobserve(this)
+        ClientContext.visualDataflowManager.unobserve(this)
     }
 
 
@@ -105,6 +108,14 @@ class QueryController:
             snapshot: Any
     ) {
 //        console.log("ProjectController componentDidUpdate", state, prevState)
+
+        if (state.documentPath != prevState.documentPath) {
+            state.documentPath?.let {
+                async {
+                    ClientContext.visualDataflowManager.ping(it)
+                }
+            }
+        }
     }
 
 
@@ -124,6 +135,10 @@ class QueryController:
 
 
     override suspend fun onVisualDataflowModel(host: DocumentPath, visualDataflowModel: VisualDataflowModel) {
+        if (state.documentPath != host) {
+            return
+        }
+
         setState {
             this.visualDataflowModel = visualDataflowModel
         }

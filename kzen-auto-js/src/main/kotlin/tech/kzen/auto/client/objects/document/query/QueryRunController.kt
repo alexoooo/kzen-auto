@@ -52,11 +52,11 @@ class QueryRunController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        val documentPath = props.documentPath
-                ?: return
+//        val documentPath = props.documentPath
+//                ?: return
 
         async {
-            ClientContext.visualDataflowManager.observe(documentPath, this)
+            ClientContext.visualDataflowManager.observe(this)
         }
     }
 
@@ -98,7 +98,7 @@ class QueryRunController(
                     props.graphStructure!!.graphNotation,
                     it)
         }
-        console.log("^$%^$%^% onFabEnter - $nextToRun - ${state.visualDataflowModel}")
+//        console.log("^$%^$%^% onFabEnter - $nextToRun - ${state.visualDataflowModel}")
 
         if (nextToRun == ClientContext.executionIntent.actionLocation()) {
             return
@@ -126,6 +126,30 @@ class QueryRunController(
     }
 
 
+    private fun onRun() {
+        val documentPath = props.documentPath
+                ?: return
+
+        val visualDataflowModel = state.visualDataflowModel
+                ?: return
+
+
+        val nextToRun = DataflowUtils.next(
+                documentPath,
+                props.graphStructure!!.graphNotation,
+                visualDataflowModel
+        ) ?: return
+
+        async {
+            ClientContext.visualDataflowManager.execute(
+                    documentPath,
+                    nextToRun,
+                    250
+            )
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         div {
@@ -142,6 +166,8 @@ class QueryRunController(
                 attrs {
                     onMouseOver = ::onFabEnter
                     onMouseOut = ::onFabLeave
+
+                    onClick = ::onRun
                 }
 
                 +"Next"

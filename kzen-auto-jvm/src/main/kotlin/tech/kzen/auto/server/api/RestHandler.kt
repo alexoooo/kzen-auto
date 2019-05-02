@@ -471,7 +471,7 @@ class RestHandler {
             val event = ServerContext.repository.apply(command)
 
             // TODO: consolidate with CommandBus?
-            ServerContext.modelManager.onEvent(event)
+            ServerContext.graphStructureManager.onEvent(event)
 
             ServerContext.repository.digest()
         }
@@ -498,7 +498,7 @@ class RestHandler {
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val digest = runBlocking {
-            val graphStructure = ServerContext.modelManager.graphStructure()
+            val graphStructure = ServerContext.graphStructureManager.serverGraphStructure()
 
             ServerContext.executionManager.start(
                     documentPath, graphStructure)

@@ -289,6 +289,8 @@ class VertexController(
 
                 renderName()
             }
+
+            renderState()
         }
     }
 
@@ -378,6 +380,16 @@ class VertexController(
         else {
             +name.value
         }
+    }
+
+
+    private fun RBuilder.renderState() {
+        console.log("^^^^ renderState", props.visualVertexModel)
+
+        val vertexState = props.visualVertexModel?.state
+                ?: return
+
+        +"State: ${vertexState.get()}"
     }
 
 

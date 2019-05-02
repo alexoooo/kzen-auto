@@ -13,7 +13,7 @@ class ModelActionExecutor(
         private val graphStructureManager: GraphStructureManager
 ): ActionExecutor {
     override suspend fun execute(actionLocation: ObjectLocation): ImperativeResult {
-        val graphStructure = graphStructureManager.graphStructure()
+        val graphStructure = graphStructureManager.serverGraphStructure()
 
         val graphDefinition = GraphDefiner.define(graphStructure)
 

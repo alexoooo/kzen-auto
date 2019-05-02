@@ -46,27 +46,31 @@ object ServerContext {
             notationMetadataReader)
 
 
-    val modelManager = GraphStructureManager(
+    val graphStructureManager = GraphStructureManager(
             notationMediaCache,
             repository,
             notationMedia,
             notationMetadataReader)
 
-    val actionExecutor = ModelActionExecutor(modelManager)
+    val actionExecutor = ModelActionExecutor(graphStructureManager)
 
     val executionManager = ExecutionManager(
             EmptyExecutionInitializer,
             actionExecutor)
 
 
-    val instanceManager = GraphInstanceManager()
+    private val graphInstanceManager = GraphInstanceManager(
+            graphStructureManager)
+
     private val dataflowMessageInspector = DataflowMessageInspector()
 
-    val activeDataflowManager = ActiveDataflowManager(
-            instanceManager,
-            dataflowMessageInspector)
+    private val activeDataflowManager = ActiveDataflowManager(
+            graphInstanceManager,
+            dataflowMessageInspector,
+            graphStructureManager)
 
-    private val activeVisualProvider = ActiveVisualProvider(activeDataflowManager)
+    private val activeVisualProvider = ActiveVisualProvider(
+            activeDataflowManager)
 
     val visualDataflowManager = VisualDataflowManager(
             activeVisualProvider, activeVisualProvider)
@@ -86,8 +90,8 @@ object ServerContext {
         downloadManager.initialize()
 
         runBlocking {
-            modelManager.observe(executionManager)
-            modelManager.observe(instanceManager)
+            graphStructureManager.observe(executionManager)
+            graphStructureManager.observe(graphInstanceManager)
         }
     }
 

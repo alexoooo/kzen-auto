@@ -23,26 +23,41 @@ class VisualDataflowManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val observers = mutableSetOf<Pair<DocumentPath, Observer>>()
+//    private val observers = mutableSetOf<Pair<DocumentPath, Observer>>()
+    private val observers = mutableSetOf<Observer>()
     private var models: PersistentMap<DocumentPath, VisualDataflowModel> = persistentMapOf()
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun observe(host: DocumentPath, observer: Observer) {
-        observers.add(host to observer)
+    suspend fun observe(/*host: DocumentPath,*/ observer: Observer) {
+//        observers.add(host to observer)
+        observers.add(observer)
 
-        val model = models[host]
-        if (model != null) {
+        for ((host, model) in models) {
             observer.onVisualDataflowModel(host, model)
         }
-        else {
-            initiateModel(host)
-        }
+
+//        val model = models[host]
+//        if (model != null) {
+//            observer.onVisualDataflowModel(host, model)
+//        }
+//        else {
+//            initiateModel(host)
+//        }
     }
 
 
     fun unobserve(observer: Observer) {
-        observers.removeAll { it.second == observer }
+        observers.removeAll { it == observer }
+    }
+
+
+    suspend fun ping(host: DocumentPath) {
+        if (host in models) {
+            return
+        }
+
+        initiateModel(host)
     }
 
 
@@ -50,10 +65,10 @@ class VisualDataflowManager(
             host: DocumentPath,
             vertexLocation: ObjectLocation
     ) {
-        for ((hostKey, observer) in observers) {
-            if (host != hostKey) {
-                continue
-            }
+        for (observer in observers) {
+//            if (host != hostKey) {
+//                continue
+//            }
 
             observer.beforeDataflowExecution(host, vertexLocation)
         }
@@ -64,10 +79,11 @@ class VisualDataflowManager(
             host: DocumentPath,
             model: VisualDataflowModel
     ) {
-        for ((hostKey, observer) in observers) {
-            if (host != hostKey) {
-                continue
-            }
+//        for ((hostKey, observer) in observers) {
+        for (observer in observers) {
+//            if (host != hostKey) {
+//                continue
+//            }
 
             observer.onVisualDataflowModel(host, model)
         }
@@ -159,7 +175,8 @@ class VisualDataflowManager(
                 false,
                 updatedState,
                 visualDataflowTransition.message,
-                visualDataflowTransition.hasNext)
+                visualDataflowTransition.hasNext,
+                visualDataflowTransition.iteration)
 
         val updatedModel = model.put(objectLocation, updatedVertex)
 
