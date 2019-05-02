@@ -1,6 +1,15 @@
 package tech.kzen.auto.common.paradigm.dataflow.model.structure
 
+import tech.kzen.auto.common.objects.document.query.QueryDocument
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.locate.ObjectReference
+import tech.kzen.lib.common.structure.notation.NotationConventions
+import tech.kzen.lib.common.structure.notation.model.DocumentNotation
+import tech.kzen.lib.common.structure.notation.model.GraphNotation
+import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
+import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import tech.kzen.lib.platform.collect.persistentListOf
 
 
 // TODO: optimize via mutable builder
@@ -9,6 +18,55 @@ data class VertexMatrix(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        val empty = VertexMatrix(listOf())
+
+
+        fun ofQueryDocument(
+                host: DocumentPath,
+                graphNotation: GraphNotation
+        ): VertexMatrix {
+            val documentNotation = graphNotation.documents.get(host)
+                    ?: return empty
+
+            val verticesNotation = verticesNotation(documentNotation)
+                    ?: return empty
+
+            return vertexInfoLayers(graphNotation,  verticesNotation)
+        }
+
+
+        fun verticesNotation(
+                documentNotation: DocumentNotation
+        ): ListAttributeNotation? {
+            return documentNotation
+                    .objects
+                    .values[NotationConventions.mainObjectPath]
+                    ?.attributes
+                    ?.values
+                    ?.get(QueryDocument.verticesAttributeName)
+                    as? ListAttributeNotation
+                    ?: ListAttributeNotation(persistentListOf())
+        }
+
+
+        fun vertexInfoLayers(
+                graphNotation: GraphNotation,
+                verticesNotation: ListAttributeNotation
+        ): VertexMatrix {
+            val vertexInfos = verticesNotation.values.withIndex().map {
+                val vertexReference = ObjectReference.parse((it.value as ScalarAttributeNotation).value)
+                val objectLocation = graphNotation.coalesce.locate(vertexReference)
+                val objectNotation = graphNotation.coalesce.get(objectLocation)!!
+                VertexInfo.fromDataflowNotation(
+                        it.index,
+                        objectLocation,
+                        objectNotation)
+            }
+
+            return ofUnorderedInfos(vertexInfos)
+        }
+
+
         fun ofUnorderedInfos(unorderedInfos: List<VertexInfo>): VertexMatrix {
             val sortedByRowThenColumn = unorderedInfos.sortedWith(VertexInfo.byRowThenColumn)
 

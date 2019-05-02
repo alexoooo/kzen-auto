@@ -29,12 +29,14 @@ import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
-import tech.kzen.lib.common.structure.notation.model.*
+import tech.kzen.lib.common.structure.notation.model.DocumentNotation
+import tech.kzen.lib.common.structure.notation.model.ObjectNotation
+import tech.kzen.lib.common.structure.notation.model.PositionIndex
+import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
@@ -177,41 +179,6 @@ class QueryController:
     }
 
 
-    private fun verticesNotation(
-            documentNotation: DocumentNotation
-    ): ListAttributeNotation? {
-        return documentNotation
-                .objects
-                .values[NotationConventions.mainObjectPath]
-                ?.attributes
-                ?.values
-                ?.get(QueryDocument.verticesAttributeName)
-                as? ListAttributeNotation
-                ?: ListAttributeNotation(persistentListOf())
-    }
-
-
-    private fun vertexInfoLayers(
-            verticesNotation: ListAttributeNotation
-    ): VertexMatrix {
-//        val documentNotation = documentNotation()
-//        val vertexNotations = vertexNotations(documentNotation!!)!!
-        val notation = state.graphStructure!!.graphNotation
-
-        val vertexInfos = verticesNotation.values.withIndex().map {
-            val vertexReference = ObjectReference.parse((it.value as ScalarAttributeNotation).value)
-            val objectLocation = notation.coalesce.locate(vertexReference)
-            val objectNotation = notation.coalesce.get(objectLocation)!!
-            VertexInfo.fromDataflowNotation(
-                    it.index,
-                    objectLocation,
-                    objectNotation)
-        }
-
-        return VertexMatrix.ofUnorderedInfos(vertexInfos)
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(
             row: Int,
@@ -223,7 +190,7 @@ class QueryController:
         val documentNotation = documentNotation()
                 ?: return
 
-        val verticesNotation = verticesNotation(documentNotation)
+        val verticesNotation = VertexMatrix.verticesNotation(documentNotation)
                 ?: return
 
         val objectNotation = ObjectNotation
@@ -264,8 +231,8 @@ class QueryController:
             documentNotation: DocumentNotation
     ) {
         val vertexInfos =
-                verticesNotation(documentNotation)?.let {
-                    vertexInfoLayers(it)
+                VertexMatrix.verticesNotation(documentNotation)?.let {
+                    VertexMatrix.vertexInfoLayers(state.graphStructure!!.graphNotation,  it)
                 }
 
         if (vertexInfos?.isEmpty() != false) {
@@ -274,7 +241,6 @@ class QueryController:
                     paddingTop = 1.em
                 }
 
-//                +"Empty query, please add flows using toolbar (above)"
                 +"Empty query, please add a source from the toolbar (above)"
             }
 

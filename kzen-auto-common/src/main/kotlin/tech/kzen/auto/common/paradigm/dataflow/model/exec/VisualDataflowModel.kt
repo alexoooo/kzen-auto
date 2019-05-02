@@ -14,6 +14,7 @@ data class VisualDataflowModel(
     companion object {
         val empty = VisualDataflowModel(persistentMapOf())
 
+
         fun toCollection(model: VisualDataflowModel): Map<String, Any> {
             return model
                     .vertices

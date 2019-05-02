@@ -23,22 +23,26 @@ class VisualDataflowManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val observers = mutableSetOf<Observer>()
+    private val observers = mutableSetOf<Pair<DocumentPath, Observer>>()
     private var models: PersistentMap<DocumentPath, VisualDataflowModel> = persistentMapOf()
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun observe(observer: Observer) {
-        observers.add(observer)
+    suspend fun observe(host: DocumentPath, observer: Observer) {
+        observers.add(host to observer)
 
-        for (model in models) {
-            observer.onVisualDataflowModel(model.key, model.value)
+        val model = models[host]
+        if (model != null) {
+            observer.onVisualDataflowModel(host, model)
+        }
+        else {
+            initiateModel(host)
         }
     }
 
 
     fun unobserve(observer: Observer) {
-        observers.remove(observer)
+        observers.removeAll { it.second == observer }
     }
 
 
@@ -46,8 +50,12 @@ class VisualDataflowManager(
             host: DocumentPath,
             vertexLocation: ObjectLocation
     ) {
-        for (subscriber in observers) {
-            subscriber.beforeDataflowExecution(host, vertexLocation)
+        for ((hostKey, observer) in observers) {
+            if (host != hostKey) {
+                continue
+            }
+
+            observer.beforeDataflowExecution(host, vertexLocation)
         }
     }
 
@@ -56,8 +64,12 @@ class VisualDataflowManager(
             host: DocumentPath,
             model: VisualDataflowModel
     ) {
-        for (subscriber in observers) {
-            subscriber.onVisualDataflowModel(host, model)
+        for ((hostKey, observer) in observers) {
+            if (host != hostKey) {
+                continue
+            }
+
+            observer.onVisualDataflowModel(host, model)
         }
     }
 
@@ -71,6 +83,11 @@ class VisualDataflowManager(
             return existing
         }
 
+        return initiateModel(host)
+    }
+
+
+    private suspend fun initiateModel(host: DocumentPath): VisualDataflowModel {
         val initial = visualDataflowInitializer.initialModel(host)
         models = models.put(host, initial)
         publishModel(host, initial)

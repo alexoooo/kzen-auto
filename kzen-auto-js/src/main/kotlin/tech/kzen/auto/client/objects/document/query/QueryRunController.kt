@@ -23,16 +23,14 @@ import tech.kzen.lib.common.structure.GraphStructure
 class QueryRunController(
         props: Props
 ):
-//        RComponent<RunController.Props, RunController.State>(props),
         RPureComponent<QueryRunController.Props, QueryRunController.State>(props),
-//        ModelManager.Observer,
         VisualDataflowManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var documentPath: DocumentPath?,
-            var graphStructure: GraphStructure?/*,
-            var visualDataflowModel: VisualDataflowModel?*/
+            var graphStructure: GraphStructure?//,
+//            var
     ): RProps
 
 
@@ -54,8 +52,11 @@ class QueryRunController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
+        val documentPath = props.documentPath
+                ?: return
+
         async {
-            ClientContext.visualDataflowManager.observe(this)
+            ClientContext.visualDataflowManager.observe(documentPath, this)
         }
     }
 
@@ -92,7 +93,10 @@ class QueryRunController(
 
     private fun onFabEnter() {
         val nextToRun = state.visualDataflowModel?.let {
-            DataflowUtils.next(props.graphStructure!!.graphNotation, it)
+            DataflowUtils.next(
+                    props.documentPath!!,
+                    props.graphStructure!!.graphNotation,
+                    it)
         }
         console.log("^$%^$%^% onFabEnter - $nextToRun - ${state.visualDataflowModel}")
 
@@ -110,7 +114,10 @@ class QueryRunController(
     private fun onFabLeave() {
 //        val nextToRun = state.execution?.next()
         val nextToRun = state.visualDataflowModel?.let {
-            DataflowUtils.next(props.graphStructure!!.graphNotation, it)
+            DataflowUtils.next(
+                    props.documentPath!!,
+                    props.graphStructure!!.graphNotation,
+                    it)
         }
 //        println("^$%^$%^% onRunAllLeave - $nextToRun")
         if (nextToRun != null) {

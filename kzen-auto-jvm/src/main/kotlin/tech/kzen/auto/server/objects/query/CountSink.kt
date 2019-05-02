@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.input.RequiredInput
 
 
+@Suppress("unused")
 class CountSink(
         private val input: RequiredInput<*>
 ):
@@ -12,7 +13,7 @@ class CountSink(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
-            var count: Int = 0
+            var count: Long = 0
     )
 
 
