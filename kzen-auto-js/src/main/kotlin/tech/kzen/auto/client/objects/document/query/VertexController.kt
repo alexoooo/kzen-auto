@@ -149,6 +149,8 @@ class VertexController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+//        +"state.intentToRun: ${state.intentToRun}"
+
         styledDiv {
             css {
                 backgroundColor = Color.white

@@ -12,8 +12,11 @@ data class DataflowDag(
     companion object {
         fun of(vertexMatrix: VertexMatrix): DataflowDag {
             val vertexMap = vertexMatrix.byLocation()
+//            println("^^^ DataflowDag vertexMap - $vertexMap")
             val successors = successors(vertexMatrix, vertexMap)
+//            println("^^^ DataflowDag successors - $successors")
             val layers = layers(successors, vertexMap)
+//            println("^^^ DataflowDag layers - $layers")
             return DataflowDag(successors, layers)
         }
 
@@ -67,16 +70,18 @@ data class DataflowDag(
             val open = mutableSetOf<ObjectLocation>()
             open.addAll(successors.keys)
 
+            val predecessors = predecessors(successors)
+
             val layerBuilder = mutableListOf<ObjectLocation>()
 
             while (open.isNotEmpty()) {
                 next_candidate@
                 for (candidate in open) {
-                    @Suppress("MapGetWithNotNullAssertionOperator")
-                    val candidateSuccessors = successors[candidate]!!
+                    val candidatePredecessors = predecessors[candidate]
+                            ?: listOf()
 
-                    for (successor in candidateSuccessors) {
-                        if (successor !in open) {
+                    for (predecessor in candidatePredecessors) {
+                        if (predecessor in open) {
                             continue@next_candidate
                         }
                     }
@@ -92,9 +97,28 @@ data class DataflowDag(
 
                 builder.add(nextLayer)
                 layerBuilder.clear()
+
+                open.removeAll(nextLayer)
             }
 
             return builder
+        }
+
+
+        private fun predecessors(
+                successors: Map<ObjectLocation, List<ObjectLocation>>
+        ): Map<ObjectLocation, List<ObjectLocation>> {
+            val predecessors = mutableMapOf<ObjectLocation, MutableList<ObjectLocation>>()
+
+            for ((vertex, vertexSuccessors) in successors) {
+                for (vertexSuccessor in vertexSuccessors) {
+                    predecessors.getOrPut(vertexSuccessor) { mutableListOf() }
+
+                    predecessors[vertexSuccessor]!!.add(vertex)
+                }
+            }
+
+            return predecessors
         }
 
 

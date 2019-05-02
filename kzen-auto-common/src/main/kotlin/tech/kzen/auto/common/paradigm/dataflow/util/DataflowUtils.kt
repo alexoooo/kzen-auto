@@ -24,9 +24,10 @@ object DataflowUtils {
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
         val vertexMatrix = VertexMatrix.ofQueryDocument(host, graphNotation)
-        println("^^^^^ next: VertexMatrix - $vertexMatrix")
+//        println("^^^^^ next: vertexMatrix - $vertexMatrix")
 
         val dataflowDag = DataflowDag.of(vertexMatrix)
+//        println("^^^^^ next: dataflowDag - $dataflowDag")
 
         var lastLayerInProgress: Int = -1
         var lastFinishedLayer: Int = -1
@@ -42,6 +43,7 @@ object DataflowUtils {
                 lastFinishedLayer = index
             }
         }
+//        println("^^^^^ next: dataflowDag - $lastLayerInProgress / $lastFinishedLayer")
 
         val nextLayerIndex = when {
             lastLayerInProgress != -1 ->
@@ -55,7 +57,7 @@ object DataflowUtils {
         }
         val nextLayer = dataflowDag.layers[nextLayerIndex]
 
-        return firstUnfinished(nextLayer, visualDataflowModel)
+        return firstPending(nextLayer, visualDataflowModel)
     }
 
 
@@ -83,7 +85,7 @@ object DataflowUtils {
     }
 
 
-    private fun firstUnfinished(
+    private fun firstPending(
             layer: List<ObjectLocation>,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
@@ -91,7 +93,7 @@ object DataflowUtils {
             val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
                     ?: VisualVertexModel.empty
 
-            if (visualVertexModel.phase() == VisualVertexPhase.Done) {
+            if (visualVertexModel.phase() == VisualVertexPhase.Pending) {
                 return vertexLocation
             }
         }
