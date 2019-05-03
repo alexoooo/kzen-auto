@@ -8,5 +8,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 // TODO: add frames
 class ActiveDataflowModel(
         val vertices: MutableMap<ObjectLocation, ActiveVertexModel>,
+
+        // TODO: factor out
         val dataflowDag: DataflowDag
 )

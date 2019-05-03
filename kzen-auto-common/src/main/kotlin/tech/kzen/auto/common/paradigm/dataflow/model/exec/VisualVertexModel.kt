@@ -6,10 +6,29 @@ import tech.kzen.lib.common.util.Digest
 
 // TODO: add support for logging (possibly with log levels)
 data class VisualVertexModel(
+        /**
+         * If true, then the below values, which refer to the "current" time, are potentially stale.
+         */
         val running: Boolean,
+
+        /**
+         * Null means stateless
+         */
         val state: ExecutionValue?,
+
+        /**
+         * Null either no output or wasn't processed yet
+         */
         val message: ExecutionValue?,
+
+        /**
+         * Might be from stream or batch, visually there's no distinction
+         */
         val hasNext: Boolean,
+
+        /**
+         * Number of times executed in current block context, reset to zero and end of block
+         */
         val iteration: Int
 ) {
     //-----------------------------------------------------------------------------------------------------------------

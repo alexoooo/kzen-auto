@@ -1,8 +1,6 @@
 package tech.kzen.auto.common.paradigm.dataflow.util
 
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
-import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
-import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexMatrix
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -17,11 +15,11 @@ object DataflowUtils {
     val outputAttributeName = AttributeName("output")
 
 
-    private enum class LayerClassification {
-        NotStarted,
-        InProgress,
-        Finished
-    }
+//    private enum class LayerClassification {
+//        NotStarted,
+//        InProgress,
+//        Finished
+//    }
 
 
     fun next(
@@ -29,6 +27,8 @@ object DataflowUtils {
             graphNotation: GraphNotation,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
+//        println("^^^^^ next: visualDataflowModel - $visualDataflowModel")
+
         val vertexMatrix = VertexMatrix.ofQueryDocument(host, graphNotation)
 //        println("^^^^^ next: vertexMatrix - $vertexMatrix")
 
@@ -36,73 +36,134 @@ object DataflowUtils {
 //        println("^^^^^ next: dataflowDag - $dataflowDag")
 
         var lastLayerInProgress: Int = -1
-        var lastFinishedLayer: Int = -1
+        var firstLayerReady: Int = -1
 
         for ((index, layer) in dataflowDag.layers.withIndex()) {
-            val layerClassification = classifyLayer(layer, visualDataflowModel)
-
-            if (layerClassification == LayerClassification.InProgress) {
+            if (isLayerInProgress(layer, visualDataflowModel)) {
                 lastLayerInProgress = index
             }
 
-            if (layerClassification == LayerClassification.Finished) {
-                lastFinishedLayer = index
+            if (firstLayerReady == -1 &&
+                    isLayerReady(layer, visualDataflowModel, dataflowDag)) {
+                firstLayerReady = index
             }
         }
-//        println("^^^^^ next: dataflowDag - $lastLayerInProgress / $lastFinishedLayer")
+        println("^^^^^ next: dataflowDag - $lastLayerInProgress / $firstLayerReady")
 
         val nextLayerIndex = when {
             lastLayerInProgress != -1 ->
                 lastLayerInProgress
 
-            lastFinishedLayer != -1 ->
-                lastFinishedLayer + 1
+            firstLayerReady != -1 ->
+                firstLayerReady
 
             else ->
-                0
+                return null
         }
+
         val nextLayer = dataflowDag.layers[nextLayerIndex]
 
-        return firstPending(nextLayer, visualDataflowModel)
+        return nextInLayer(nextLayer, visualDataflowModel)
     }
 
 
-    private fun classifyLayer(
+    private fun isLayerInProgress(
             layer: List<ObjectLocation>,
             visualDataflowModel: VisualDataflowModel
-    ): LayerClassification {
-        val doneCount = layer.count {
-            val visualVertexModel = visualDataflowModel.vertices[it]
-                    ?: VisualVertexModel.empty
+    ): Boolean {
+        for (vertexLocation in layer) {
+            val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
+                    ?: continue
 
-            visualVertexModel.phase() == VisualVertexPhase.Done
+            if (visualVertexModel.message != null) {
+                continue
+            }
+
+            if (visualVertexModel.hasNext) {
+                return true
+            }
         }
 
-        return when {
-            doneCount == layer.size ->
-                DataflowUtils.LayerClassification.Finished
-
-            doneCount >= 1 ->
-                DataflowUtils.LayerClassification.InProgress
-
-            else ->
-                DataflowUtils.LayerClassification.NotStarted
-        }
+        return false
     }
 
 
-    private fun firstPending(
+    private fun isLayerReady(
+            layer: List<ObjectLocation>,
+            visualDataflowModel: VisualDataflowModel,
+            dataflowDag: DataflowDag
+    ): Boolean {
+        for (vertexLocation in layer) {
+            val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
+                    ?: continue
+
+            if (visualVertexModel.iteration != 0) {
+                continue
+            }
+
+            val predecessors = dataflowDag.predecessors[vertexLocation]
+                    ?: return true
+
+//            println("^^^^^^ isLayerReady $visualVertexModel - $predecessors")
+
+            if (predecessors.isEmpty()) {
+                return true
+            }
+
+            val hasInputsAvailable = predecessors
+                    .map { visualDataflowModel.vertices[it] }
+                    .any { it?.message != null }
+
+            if (hasInputsAvailable) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+
+//    private fun classifyLayer(
+//            layer: List<ObjectLocation>,
+//            visualDataflowModel: VisualDataflowModel
+//    ): LayerClassification {
+//        val doneCount = layer.count {
+//            val visualVertexModel = visualDataflowModel.vertices[it]
+//                    ?: VisualVertexModel.empty
+//
+//            visualVertexModel.phase() == VisualVertexPhase.Done
+//        }
+//
+//        return when {
+//            doneCount == layer.size ->
+//                DataflowUtils.LayerClassification.Finished
+//
+//            doneCount >= 1 ->
+//                DataflowUtils.LayerClassification.InProgress
+//
+//            else ->
+//                DataflowUtils.LayerClassification.NotStarted
+//        }
+//    }
+
+
+    private fun nextInLayer(
             layer: List<ObjectLocation>,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
-        for (vertexLocation in layer) {
-            val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
-                    ?: VisualVertexModel.empty
-
-            if (visualVertexModel.phase() == VisualVertexPhase.Pending) {
-                return vertexLocation
-            }
+        if (layer.size == 1) {
+            return layer.first()
         }
-        return null
+
+        TODO()
+//        for (vertexLocation in layer) {
+//            val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
+//                    ?: VisualVertexModel.empty
+//
+//            if (visualVertexModel.phase() == VisualVertexPhase.Pending) {
+//                return vertexLocation
+//            }
+//        }
+//        return null
     }
 }

@@ -18,8 +18,10 @@ import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.query.QueryDocument
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -53,7 +55,8 @@ class VertexController(
             var objectLocation: ObjectLocation,
             var graphStructure: GraphStructure,
 
-            var visualVertexModel: VisualVertexModel?
+            var visualDataflowModel: VisualDataflowModel,
+            var dataflowDag: DataflowDag
     ): RProps
 
 
@@ -62,7 +65,9 @@ class VertexController(
             var hoverMenu: Boolean,
             var intentToRun: Boolean,
 
-            var optionsOpen: Boolean
+            var optionsOpen: Boolean//,
+
+//            var visualVertexModel: VisualVertexModel?
     ): RState
 
 
@@ -73,6 +78,9 @@ class VertexController(
         intentToRun = false
 
         optionsOpen = false
+
+//        visualVertexModel = props.visualDataflowModel.vertices[props.objectLocation]
+//                ?: VisualVertexModel.empty
     }
 
 
@@ -86,6 +94,20 @@ class VertexController(
         ClientContext.executionIntent.unobserve(this)
     }
 
+
+//    override fun componentDidUpdate(
+//            prevProps: Props,
+//            prevState: State,
+//            snapshot: Any
+//    ) {
+////        console.log("ProjectController componentDidUpdate", state, prevState)
+//
+//        if (props.visualDataflowModel != prevProps.visualDataflowModel) {
+//            setState {
+//                visualVertexModel = props.visualDataflowModel.vertices[props.objectLocation]
+//            }
+//        }
+//    }
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onExecutionIntent(actionLocation: ObjectLocation?) {
@@ -152,6 +174,11 @@ class VertexController(
 //    }
 
 
+    private fun visalVertexModel(): VisualVertexModel? {
+        return props.visualDataflowModel.vertices[props.objectLocation]
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         styledSpan {
@@ -181,7 +208,7 @@ class VertexController(
         val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
         val isPipe = parentLocation.objectPath.name.value.endsWith("Pipe")
 
-        val phase = props.visualVertexModel?.phase()
+        val phase = visalVertexModel()?.phase()
 
         val cardColor = when (phase) {
             VisualVertexPhase.Pending ->
@@ -295,9 +322,16 @@ class VertexController(
                 renderHeader(phase)
             }
 
-            renderState()
-            renderMessage()
+            renderBody()
         }
+    }
+
+
+    private fun RBuilder.renderBody() {
+        predecessorAvailable()
+        renderIterations()
+        renderState()
+        renderMessage()
     }
 
 
@@ -626,8 +660,52 @@ class VertexController(
                     }
 
                     +displayName
+//                    +"Foo"
                 }
             }
+        }
+    }
+
+
+    private fun RBuilder.predecessorAvailable() {
+//        console.log("^^^^ renderState", props.visualVertexModel)
+        val iteration = visalVertexModel()?.iteration
+                ?: return
+
+        if (iteration != 0) {
+            return
+        }
+
+        val predecessors = props.dataflowDag.predecessors[props.objectLocation]
+                ?: return
+
+        if (predecessors.isEmpty()) {
+            return
+        }
+
+        val hasInputsAvailable = predecessors
+                .map { props.visualDataflowModel.vertices[it] }
+                .any { it?.message != null }
+
+        div {
+            if (hasInputsAvailable) {
+                +"[Input available]"
+            }
+            else {
+                +"[Input missing]"
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderIterations() {
+//        console.log("^^^^ renderState", props.visualVertexModel)
+
+        val iteration = visalVertexModel()?.iteration
+                ?: return
+
+        div {
+            +"Iteration: $iteration"
         }
     }
 
@@ -635,7 +713,7 @@ class VertexController(
     private fun RBuilder.renderState() {
 //        console.log("^^^^ renderState", props.visualVertexModel)
 
-        val vertexState = props.visualVertexModel?.state
+        val vertexState = visalVertexModel()?.state
                 ?: return
 
         div {
@@ -647,11 +725,15 @@ class VertexController(
     private fun RBuilder.renderMessage() {
 //        console.log("^^^^ renderState", props.visualVertexModel)
 
-        val vertexMessage = props.visualVertexModel?.message
+        val vertexMessage = visalVertexModel()?.message
                 ?: return
 
         div {
             +"Message: ${vertexMessage.get()}"
+
+            if (visalVertexModel()?.hasNext == true) {
+                +" [Has more messages]"
+            }
         }
     }
 

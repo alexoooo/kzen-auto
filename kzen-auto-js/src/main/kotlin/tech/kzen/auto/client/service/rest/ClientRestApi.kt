@@ -332,7 +332,9 @@ class ClientRestApi(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun visualDataflowModel(host: DocumentPath): VisualDataflowModel {
+    suspend fun visualDataflowModel(
+            host: DocumentPath
+    ): VisualDataflowModel {
         val responseText = get(
                 CommonRestApi.execModel,
                 CommonRestApi.paramDocumentPath to host.asString())

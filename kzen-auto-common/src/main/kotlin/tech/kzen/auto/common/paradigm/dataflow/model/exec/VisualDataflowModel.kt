@@ -8,14 +8,17 @@ import tech.kzen.lib.platform.collect.toPersistentMap
 
 
 data class VisualDataflowModel(
-        val vertices: PersistentMap<ObjectLocation, VisualVertexModel>
+        val vertices: PersistentMap<ObjectLocation, VisualVertexModel>//,
+//        val dataflowDag: DataflowDag
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val empty = VisualDataflowModel(persistentMapOf())
+        val empty = VisualDataflowModel(persistentMapOf()/*, DataflowDag.of(VertexMatrix.empty)*/)
 
 
-        fun toCollection(model: VisualDataflowModel): Map<String, Any> {
+        fun toCollection(
+                model: VisualDataflowModel
+        ): Map<String, Any> {
             return model
                     .vertices
                     .mapKeys {
@@ -29,14 +32,16 @@ data class VisualDataflowModel(
 
         @Suppress("UNCHECKED_CAST")
         fun fromCollection(
-                collection: Map<String, Any>
+                collection: Map<String, Any>/*,
+                dataflowDag: DataflowDag*/
         ): VisualDataflowModel {
             return VisualDataflowModel(collection
                     .map {
                         ObjectLocation.parse(it.key) to
                                 VisualVertexModel.fromCollection(it.value as Map<String, Any?>)
                     }
-                    .toPersistentMap()
+                    .toPersistentMap()/*,
+                    dataflowDag*/
             )
         }
     }
@@ -48,7 +53,8 @@ data class VisualDataflowModel(
             newModel: VisualVertexModel
     ): VisualDataflowModel {
         return VisualDataflowModel(
-                vertices.put(vertexLocation, newModel))
+                vertices.put(vertexLocation, newModel)/*,
+                dataflowDag*/)
     }
 
 

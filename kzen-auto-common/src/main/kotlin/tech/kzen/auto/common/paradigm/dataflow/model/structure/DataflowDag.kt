@@ -6,8 +6,8 @@ import tech.kzen.lib.platform.collect.toPersistentList
 
 data class DataflowDag(
         val successors: Map<ObjectLocation, List<ObjectLocation>>,
-        val layers: List<List<ObjectLocation>>,
-        val predecessors: Map<ObjectLocation, List<ObjectLocation>>
+        val predecessors: Map<ObjectLocation, List<ObjectLocation>>,
+        val layers: List<List<ObjectLocation>>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -16,7 +16,7 @@ data class DataflowDag(
             val successors = successors(vertexMatrix, vertexMap)
             val predecessors = predecessors(successors)
             val layers = layers(successors, vertexMap, predecessors)
-            return DataflowDag(successors, layers, predecessors)
+            return DataflowDag(successors, predecessors, layers)
         }
 
 

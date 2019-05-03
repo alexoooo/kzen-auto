@@ -20,7 +20,7 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.query.QueryDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
-import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexInfo
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexMatrix
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
@@ -289,6 +289,8 @@ class QueryController:
             visualDataflowModel: VisualDataflowModel,
             vertexMatrix: VertexMatrix
     ) {
+        val dataflowDag = DataflowDag.of(vertexMatrix)
+
         table {
             tbody {
                 for (row in 0 .. vertexMatrix.usedRows) {
@@ -306,7 +308,8 @@ class QueryController:
                                 else {
                                     vertex(vertexInfo,
                                             graphStructure,
-                                            visualDataflowModel)
+                                            visualDataflowModel,
+                                            dataflowDag)
                                 }
                             }
                         }
@@ -366,7 +369,8 @@ class QueryController:
     private fun RBuilder.vertex(
             vertexInfo: VertexInfo,
             graphStructure: GraphStructure,
-            visualDataflowModel: VisualDataflowModel
+            visualDataflowModel: VisualDataflowModel,
+            dataflowDag: DataflowDag
     ) {
         child(VertexController::class) {
             key = vertexInfo.objectLocation.toReference().asString()
@@ -378,8 +382,11 @@ class QueryController:
                 this.objectLocation = vertexInfo.objectLocation
                 this.graphStructure = graphStructure
 
-                this.visualVertexModel = visualDataflowModel.vertices[vertexInfo.objectLocation]
-                        ?: VisualVertexModel.empty
+//                this.visualVertexModel = visualDataflowModel.vertices[vertexInfo.objectLocation]
+//                        ?: VisualVertexModel.empty
+
+                this.visualDataflowModel = visualDataflowModel
+                this.dataflowDag = dataflowDag
 //                        ?: throw IllegalStateException(
 //                                "Visual vertex state missing: ${vertexInfo.objectLocation}")
             }

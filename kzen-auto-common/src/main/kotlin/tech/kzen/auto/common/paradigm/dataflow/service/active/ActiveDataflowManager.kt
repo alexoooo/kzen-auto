@@ -58,10 +58,18 @@ class ActiveDataflowManager(
         val builder = mutableMapOf<ObjectLocation, ActiveVertexModel>()
         for (vertexLocation in vertexMatrix.byLocation().keys) {
             val vertexInstance = instanceManager.get(vertexLocation).reference as Dataflow<*>
+
             val initialState = vertexInstance.initialState()
+            val initialStateOrNull =
+                    if (initialState == Unit) {
+                        null
+                    }
+                    else {
+                        initialState
+                    }
 
             builder[vertexLocation] = ActiveVertexModel(
-                    initialState,
+                    initialStateOrNull,
                     null,
                     mutableListOf(),
                     false,
@@ -106,7 +114,9 @@ class ActiveDataflowManager(
                     activeVertexModel.iterationCount.toInt())
         }
 
-        return VisualDataflowModel(builder.toPersistentMap())
+        return VisualDataflowModel(
+                builder.toPersistentMap()/*,
+                activeDataflowModel.dataflowDag*/)
     }
 
 
@@ -189,11 +199,17 @@ class ActiveDataflowManager(
             }
 
             val nextState =
-                    if (activeVertexModel.streamHasNext) {
-                        (dataflow as StreamDataflow).next(activeVertexModel.state!!)
-                    }
-                    else {
-                        dataflow.process(activeVertexModel.state)
+                    when {
+                        activeVertexModel.streamHasNext ->
+                            (dataflow as StreamDataflow).next(activeVertexModel.state!!)
+
+                        activeVertexModel.state == null -> {
+                            dataflow.process(Unit)
+                            null
+                        }
+
+                        else ->
+                            dataflow.process(activeVertexModel.state)
                     }
 
             val output = instance.constructorAttributes[DataflowUtils.outputAttributeName] as? MutableDataflowOutput<*>
