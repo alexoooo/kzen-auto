@@ -131,7 +131,8 @@ class VisualDataflowManager(
             delay(waitAfterRunningMillis.toLong())
         }
 
-        val visualVertexTransition = visualDataflowExecutor.execute(host, objectLocation)
+        val visualVertexTransition = visualDataflowExecutor
+                .execute(host, objectLocation)
 
         didExecute(host, objectLocation, visualVertexTransition)
 

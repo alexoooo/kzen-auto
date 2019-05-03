@@ -5,12 +5,18 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexMatrix
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
 object DataflowUtils {
+    //-----------------------------------------------------------------------------------------------------------------
+    val inputAttributeName = AttributeName("input")
+    val outputAttributeName = AttributeName("output")
+
+
     private enum class LayerClassification {
         NotStarted,
         InProgress,

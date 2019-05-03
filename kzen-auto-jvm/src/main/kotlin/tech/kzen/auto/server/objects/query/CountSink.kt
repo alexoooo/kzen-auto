@@ -30,6 +30,7 @@ class CountSink(
     //-----------------------------------------------------------------------------------------------------------------
     override fun process(state: State): State {
         input.get()
+        state.count++
         return state
     }
 }

@@ -112,7 +112,11 @@ class QueryController:
         if (state.documentPath != prevState.documentPath) {
             state.documentPath?.let {
                 async {
-                    ClientContext.visualDataflowManager.ping(it)
+                    val visualDataflowModel = ClientContext.visualDataflowManager.get(it)
+
+                    setState {
+                        this.visualDataflowModel = visualDataflowModel
+                    }
                 }
             }
         }

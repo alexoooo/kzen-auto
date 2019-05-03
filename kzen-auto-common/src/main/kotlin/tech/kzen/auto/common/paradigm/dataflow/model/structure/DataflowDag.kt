@@ -6,18 +6,17 @@ import tech.kzen.lib.platform.collect.toPersistentList
 
 data class DataflowDag(
         val successors: Map<ObjectLocation, List<ObjectLocation>>,
-        val layers: List<List<ObjectLocation>>
+        val layers: List<List<ObjectLocation>>,
+        val predecessors: Map<ObjectLocation, List<ObjectLocation>>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         fun of(vertexMatrix: VertexMatrix): DataflowDag {
             val vertexMap = vertexMatrix.byLocation()
-//            println("^^^ DataflowDag vertexMap - $vertexMap")
             val successors = successors(vertexMatrix, vertexMap)
-//            println("^^^ DataflowDag successors - $successors")
-            val layers = layers(successors, vertexMap)
-//            println("^^^ DataflowDag layers - $layers")
-            return DataflowDag(successors, layers)
+            val predecessors = predecessors(successors)
+            val layers = layers(successors, vertexMap, predecessors)
+            return DataflowDag(successors, layers, predecessors)
         }
 
 
@@ -59,7 +58,8 @@ data class DataflowDag(
 
         private fun layers(
                 successors: Map<ObjectLocation, List<ObjectLocation>>,
-                vertexMap: Map<ObjectLocation, VertexInfo>
+                vertexMap: Map<ObjectLocation, VertexInfo>,
+                predecessors: Map<ObjectLocation, List<ObjectLocation>>
         ): List<List<ObjectLocation>> {
             if (successors.isEmpty()) {
                 return listOf()
@@ -69,8 +69,6 @@ data class DataflowDag(
 
             val open = mutableSetOf<ObjectLocation>()
             open.addAll(successors.keys)
-
-            val predecessors = predecessors(successors)
 
             val layerBuilder = mutableListOf<ObjectLocation>()
 

@@ -18,8 +18,8 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.query.QueryDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
+import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -35,13 +35,6 @@ class VertexController(
         RPureComponent<VertexController.Props, VertexController.State>(props),
         ExecutionIntent.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val inputAttributeName = AttributeName("input")
-        private val outputAttributeName = AttributeName("output")
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var attributeNesting: AttributeNesting,
@@ -204,8 +197,8 @@ class VertexController(
 
     private fun RBuilder.renderFitting() {
         val objectMetadata = props.graphStructure.graphMetadata.get(props.objectLocation)!!
-        val hasInput = objectMetadata.attributes.values.containsKey(inputAttributeName)
-        val hasOutput = objectMetadata.attributes.values.containsKey(outputAttributeName)
+        val hasInput = objectMetadata.attributes.values.containsKey(DataflowUtils.inputAttributeName)
+        val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.outputAttributeName)
 
         if (hasInput) {
             renderIngress()
@@ -384,7 +377,7 @@ class VertexController(
 
 
     private fun RBuilder.renderState() {
-        console.log("^^^^ renderState", props.visualVertexModel)
+//        console.log("^^^^ renderState", props.visualVertexModel)
 
         val vertexState = props.visualVertexModel?.state
                 ?: return

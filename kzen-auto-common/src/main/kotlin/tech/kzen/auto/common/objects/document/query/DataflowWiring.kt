@@ -3,10 +3,10 @@ package tech.kzen.auto.common.objects.document.query
 import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableRequiredInput
 import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableStreamOutput
 import tech.kzen.lib.common.api.AttributeDefiner
-import tech.kzen.lib.common.context.GraphInstance
-import tech.kzen.lib.common.definition.AttributeDefinition
-import tech.kzen.lib.common.definition.GraphDefinition
-import tech.kzen.lib.common.definition.ValueAttributeDefinition
+import tech.kzen.lib.common.context.definition.AttributeDefinition
+import tech.kzen.lib.common.context.definition.GraphDefinition
+import tech.kzen.lib.common.context.definition.ValueAttributeDefinition
+import tech.kzen.lib.common.context.instance.GraphInstance
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure

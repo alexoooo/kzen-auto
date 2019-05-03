@@ -2,6 +2,7 @@ package tech.kzen.auto.common.service
 
 import tech.kzen.lib.common.context.GraphCreator
 import tech.kzen.lib.common.context.GraphDefiner
+import tech.kzen.lib.common.context.instance.ObjectInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
@@ -26,7 +27,7 @@ class GraphInstanceManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun get(objectLocation: ObjectLocation): Any {
+    suspend fun get(objectLocation: ObjectLocation): ObjectInstance {
         val graphStructure = graphStructureManager.serverGraphStructure()
 
         val graphDefinition = GraphDefiner.define(graphStructure)
@@ -34,6 +35,6 @@ class GraphInstanceManager(
         val objectGraph = GraphCreator.createGraph(
                 graphStructure, graphDefinition)
 
-        return objectGraph.objects.get(objectLocation)!!
+        return objectGraph[objectLocation]!!
     }
 }

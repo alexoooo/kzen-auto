@@ -3,9 +3,13 @@ package tech.kzen.auto.common.paradigm.dataflow.service.active
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.StreamDataflow
+import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableRequiredInput
+import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableStreamOutput
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.*
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexMatrix
 import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageInspector
+import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.service.GraphInstanceManager
 import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -20,6 +24,13 @@ class ActiveDataflowManager(
 )//:
 //        GraphStructureManager.Observer
 {
+//    //-----------------------------------------------------------------------------------------------------------------
+//    private class Handle(
+//            val input: ObjectLocation?,
+//            val output: ObjectLocation?
+//    )
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private var models: MutableMap<DocumentPath, ActiveDataflowModel> = mutableMapOf()
 
@@ -46,7 +57,7 @@ class ActiveDataflowManager(
 
         val builder = mutableMapOf<ObjectLocation, ActiveVertexModel>()
         for (vertexLocation in vertexMatrix.byLocation().keys) {
-            val vertexInstance = instanceManager.get(vertexLocation) as Dataflow<*>
+            val vertexInstance = instanceManager.get(vertexLocation).reference as Dataflow<*>
             val initialState = vertexInstance.initialState()
 
             builder[vertexLocation] = ActiveVertexModel(
@@ -57,10 +68,17 @@ class ActiveDataflowManager(
                     0)
         }
 
-        val activeDataflowModel = ActiveDataflowModel(builder)
+        val dataflowDag = DataflowDag.of(vertexMatrix)
+
+        val activeDataflowModel = ActiveDataflowModel(builder, dataflowDag)
         models[host] = activeDataflowModel
         return activeDataflowModel
     }
+
+
+//    private fun buildHandle(): Handle {
+//
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -97,7 +115,7 @@ class ActiveDataflowManager(
             state: Any
     ): ExecutionValue {
         @Suppress("UNCHECKED_CAST")
-        val dataflow = instanceManager.get(vertexLocation) as Dataflow<Any>
+        val dataflow = instanceManager.get(vertexLocation).reference as Dataflow<Any>
         return dataflow.inspectState(state)
     }
 
@@ -107,15 +125,16 @@ class ActiveDataflowManager(
             host: DocumentPath,
             vertexLocation: ObjectLocation
     ): VisualVertexTransition {
-        val activeDataflowModel = get(host).vertices[vertexLocation]!!
+        val activeDataflowModel = get(host)
+        val activeVertexModel = activeDataflowModel.vertices[vertexLocation]!!
 
-        val previousStateView = activeDataflowModel.state?.let {
+        val previousStateView = activeVertexModel.state?.let {
             inspectState(vertexLocation, it)
         }
 
-        execute(host, vertexLocation)
+        execute(host, vertexLocation, activeDataflowModel.dataflowDag)
 
-        val nextStateView = activeDataflowModel.state?.let {
+        val nextStateView = activeVertexModel.state?.let {
             inspectState(vertexLocation, it)
         }
 
@@ -127,40 +146,46 @@ class ActiveDataflowManager(
                     null
                 }
 
-        val messageView = activeDataflowModel.message?.let {
+        val messageView = activeVertexModel.message?.let {
             dataflowMessageInspector.inspectMessage(it)
         }
 
         return VisualVertexTransition(
                 stateChange,
                 messageView,
-                activeDataflowModel.hasNext(),
-                activeDataflowModel.iterationCount.toInt())
+                activeVertexModel.hasNext(),
+                activeVertexModel.iterationCount.toInt())
     }
 
 
     suspend fun execute(
             host: DocumentPath,
-            vertexLocation: ObjectLocation
-    ) {
-        val activeDataflowModel = get(host).vertices[vertexLocation]!!
-        return execute(vertexLocation, activeDataflowModel)
-    }
-
-
-    private suspend fun execute(
             vertexLocation: ObjectLocation,
-            activeVertexModel: ActiveVertexModel
+            dataflowDag: DataflowDag
     ) {
+        val activeDataflowModel = get(host)
+        val activeVertexModel = activeDataflowModel.vertices[vertexLocation]!!
+
         if (activeVertexModel.remainingBatch.isNotEmpty()) {
             val nextMessage = activeVertexModel.remainingBatch.removeAt(0)
             activeVertexModel.message = nextMessage
         }
         else {
-            @Suppress("UNCHECKED_CAST")
-            val dataflow = instanceManager.get(vertexLocation) as Dataflow<Any?>
+            val instance = instanceManager.get(vertexLocation)
 
-            // TODO: input and output
+            @Suppress("UNCHECKED_CAST")
+            val dataflow = instance.reference as Dataflow<Any?>
+
+            val input = instance.constructorAttributes[DataflowUtils.inputAttributeName] as? MutableRequiredInput<*>
+            if (input != null) {
+                val inputLocation: ObjectLocation =
+                        dataflowDag.predecessors[vertexLocation]?.first()!!
+
+                val inputActiveModel = activeDataflowModel.vertices[inputLocation]!!
+
+                val message = inputActiveModel.message
+                input.set(message)
+            }
 
             val nextState =
                     if (activeVertexModel.streamHasNext) {
@@ -169,6 +194,12 @@ class ActiveDataflowManager(
                     else {
                         dataflow.process(activeVertexModel.state)
                     }
+
+            val output = instance.constructorAttributes[DataflowUtils.outputAttributeName] as? MutableStreamOutput<*>
+            if (output != null) {
+                val message = output.getAndClear()
+                activeVertexModel.message = message
+            }
 
             activeVertexModel.state = nextState
         }

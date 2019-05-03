@@ -24,10 +24,13 @@ fun main() {
             val clientGraphInstance = GraphCreator.createGraph(clientGraphStructure, clientGraphDefinition)
 
 //            console.log("^^^ main autoGraph ^^ ", autoGraph.objects.values.keys.toString())
-            val rootLocation = clientGraphInstance.objects
+            val rootLocation = clientGraphInstance
+                    .objects
                     .locate(ObjectReference.parse("root"))
 
-            val rootInstance = clientGraphInstance.objects.get(rootLocation)
+            val rootInstance = clientGraphInstance
+                    .objects[rootLocation]
+                    ?.reference
                     as? ReactWrapper<*>
                     ?: throw IllegalStateException("Missing root object")
 
