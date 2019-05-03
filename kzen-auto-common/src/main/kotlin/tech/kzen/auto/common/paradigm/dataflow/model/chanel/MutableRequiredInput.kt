@@ -3,6 +3,8 @@ package tech.kzen.auto.common.paradigm.dataflow.model.chanel
 import tech.kzen.auto.common.paradigm.dataflow.api.input.RequiredInput
 
 
+
+// TODO: enforce optional/required contracts
 class MutableRequiredInput<out T>: RequiredInput<T> {
     private var value: T? = null
 

@@ -4,13 +4,15 @@ import kotlinx.css.*
 import kotlinx.css.properties.borderLeft
 import kotlinx.css.properties.borderRight
 import kotlinx.css.properties.borderTop
+import kotlinx.html.title
 import react.RBuilder
 import react.RProps
 import react.RState
+import react.dom.div
 import react.setState
 import styled.css
 import styled.styledDiv
-import styled.styledH3
+import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.util.async
@@ -36,6 +38,16 @@ class VertexController(
         ExecutionIntent.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private const val defaultIcon = "SettingsInputComponent"
+
+        val headerHeight = 2.5.em
+        private val mainIconWidth = 40.px
+        private val menuIconOffset = 12.px
+
+        private val cardWidth = 20.em
+    }
+
     class Props(
             var attributeNesting: AttributeNesting,
             var objectLocation: ObjectLocation,
@@ -142,29 +154,77 @@ class VertexController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-//        +"state.intentToRun: ${state.intentToRun}"
+        styledSpan {
+            css {
+                width = cardWidth
+            }
+
+//            attrs {
+//                onMouseOverFunction = {
+//                    onMouseOver(true)
+//                }
+//
+//                onMouseOutFunction = {
+//                    onMouseOut(true)
+//                }
+//            }
+
+            renderCard()
+        }
+    }
+
+
+    private fun RBuilder.renderCard() {
+        val objectNotation = props.graphStructure.graphNotation.coalesce[props.objectLocation]!!
+        val parentReference = ObjectReference.parse(
+                objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
+        val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
+        val isPipe = parentLocation.objectPath.name.value.endsWith("Pipe")
+
+        val phase = props.visualVertexModel?.phase()
+
+        val cardColor = when (phase) {
+            VisualVertexPhase.Pending ->
+//                    Color("#649fff")
+                Color.white
+
+            VisualVertexPhase.Running ->
+                Color.gold
+
+            VisualVertexPhase.Done ->
+//                    Color("#00a457")
+                Color("#00b467")
+//                    Color("#13aa59")
+//                    Color("#1faf61")
+
+            VisualVertexPhase.Remaining ->
+                Color("#00a457")
+
+            VisualVertexPhase.Error ->
+                Color.red
+
+            null ->
+                Color.gray
+        }
 
         styledDiv {
             css {
-                backgroundColor = Color.white
+                backgroundColor = cardColor
                 borderRadius = 3.px
                 position = Position.relative
                 filter = "drop-shadow(0 1px 1px gray)"
+                width = 20.em
             }
 
-            val objectNotation = props.graphStructure.graphNotation.coalesce.get(props.objectLocation)!!
-            val parentReference = ObjectReference.parse(
-                    objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
-            val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
-
-            if (parentLocation.objectPath.name.value.endsWith("Pipe")) {
+            if (isPipe) {
                 renderPipe()
             }
             else {
-                renderFitting()
+                renderFitting(phase)
             }
         }
     }
+
 
     private fun RBuilder.renderPipe() {
         renderIngress()
@@ -195,7 +255,9 @@ class VertexController(
     }
 
 
-    private fun RBuilder.renderFitting() {
+    private fun RBuilder.renderFitting(
+            phase: VisualVertexPhase?
+    ) {
         val objectMetadata = props.graphStructure.graphMetadata.get(props.objectLocation)!!
         val hasInput = objectMetadata.attributes.values.containsKey(DataflowUtils.inputAttributeName)
         val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.outputAttributeName)
@@ -204,7 +266,7 @@ class VertexController(
             renderIngress()
         }
 
-        renderContent()
+        renderContent(phase)
 
         if (hasOutput) {
             renderEgress()
@@ -212,50 +274,119 @@ class VertexController(
     }
 
 
-    private fun RBuilder.renderContent() {
-        val cardColor = when (props.visualVertexModel?.phase()) {
-            VisualVertexPhase.Pending ->
-//                    Color("#649fff")
-                Color.white
-
-            VisualVertexPhase.Running ->
-                Color.gold
-
-            VisualVertexPhase.Done ->
-//                    Color("#00a457")
-                Color("#00b467")
-//                    Color("#13aa59")
-//                    Color("#1faf61")
-
-            VisualVertexPhase.Remaining ->
-                Color("#00a457")
-
-            VisualVertexPhase.Error ->
-                Color.red
-
-            null ->
-                Color.gray
-        }
-
+    private fun RBuilder.renderContent(
+            phase: VisualVertexPhase?
+    ) {
         styledDiv {
             css {
                 display = Display.block
-////                marginTop = 1.5.em
+//                marginTop = 1.5.em
 //                marginBottom = 1.em
 //                marginLeft = 1.em
 //                marginRight = 1.em
                 margin(1.em)
-
-                backgroundColor = cardColor
+//                backgroundColor = cardColor
             }
+
+            styledDiv {
+                css {
+                    paddingTop = 1.em
+                }
+                renderHeader(phase)
+            }
+
+            renderState()
+            renderMessage()
+        }
+    }
+
+
+    private fun RBuilder.renderHeader(
+            phase: VisualVertexPhase?
+    ) {
+        val description = props.graphStructure.graphNotation
+                .transitiveAttribute(props.objectLocation, AutoConventions.descriptionAttributePath)
+                ?.asString()
+
+        styledDiv {
+            css {
+                position = Position.relative
+                height = headerHeight
+                width = 100.pct
+            }
+
+
+            styledDiv {
+                css {
+                    position = Position.absolute
+                    height = headerHeight
+                    width = mainIconWidth
+                    top = (-12).px
+                    left = (-20).px
+                }
+
+                renderIcon(description, phase)
+            }
+
+
+            styledDiv {
+                css {
+                    position = Position.absolute
+                    height = headerHeight
+                    width = 100.pct.minus(mainIconWidth).minus(menuIconOffset)
+//                    top = (-11).px
+                    top = (-13).px
+                    left = mainIconWidth
+                }
+
+                renderName(description)
+            }
+
+
+            styledDiv {
+                css {
+                    position = Position.absolute
+                    height = headerHeight
+                    width = 23.px
+
+//                    top = (-20).px
+//                    top = (-15).px
+                    top = (-16).px
+
+//                    right = 0.px
+                    right = 9.px
+                }
+
+                renderOptionsMenu()
+            }
+        }
+    }
+
+    private fun RBuilder.renderOptionsMenu() {
+        styledSpan {
+            css {
+                // NB: blinks in and out without this
+                backgroundColor = Color.transparent
+
+//                if (! (state.hoverCard || state.hoverMenu)) {
+//                    display = Display.none
+//                }
+            }
+
+//            attrs {
+//                onMouseOverFunction = {
+//                    onMouseOver(false)
+//                }
+//
+//                onMouseOutFunction = {
+//                    onMouseOut(false)
+//                }
+//            }
+
 
             child(MaterialIconButton::class) {
                 attrs {
                     title = "Remove"
-
-                    style = reactStyle {
-                        float = Float.right
-                    }
 
                     onClick = ::onRemove
                 }
@@ -263,27 +394,86 @@ class VertexController(
                 child(DeleteIcon::class) {}
             }
 
-            styledH3 {
-                css {
-                    width = 10.em
+//            child(MaterialIconButton::class) {
+//                attrs {
+//                    title = "Options..."
+//                    onClick = ::onOptionsOpen
+//
+//                    buttonRef = {
+//                        this@ActionController.buttonRef = it
+//                    }
+//                }
+//
+//                child(MoreVertIcon::class) {}
+//            }
+        }
 
-                    if (state.intentToRun) {
-                        classes.add(CssClasses.glowingText)
-                    }
+//        child(MaterialMenu::class) {
+//            attrs {
+//                open = state.optionsOpen
+//
+//                onClose = ::onOptionsCancel
+//
+//                anchorEl = buttonRef
+//            }
+//
+//            renderMenuItems()
+//        }
+    }
+
+
+    private fun RBuilder.renderIcon(
+            description: String?,
+            phase: VisualVertexPhase?
+    ) {
+        val icon = props.graphStructure.graphNotation
+                .transitiveAttribute(props.objectLocation, AutoConventions.iconAttributePath)
+                ?.asString()
+                ?: defaultIcon
+
+        val highlight =
+                if (state.intentToRun && phase != VisualVertexPhase.Running) {
+                    Color("rgba(255, 215, 0, 0.5)")
+                }
+                else {
+                    Color("rgba(255, 255, 255, 0.5)")
                 }
 
-                child(SettingsInputComponentIcon::class) {
+        child(MaterialIconButton::class) {
+            attrs {
+                if (description?.isNotEmpty() == true) {
                     attrs {
-                        style = reactStyle {
-                            marginRight = (0.5).em
-                        }
+                        title = description
                     }
                 }
 
-                renderName()
+                val overfill = 8.px
+                style = reactStyle {
+                    marginLeft = overfill
+                    width = mainIconWidth.plus(overfill)
+                    height = mainIconWidth.plus(overfill)
+
+                    backgroundColor = highlight
+                }
+
+//                onClick = ::onRun
+//                onMouseOver = ::onRunEnter
+//                onMouseOut = ::onRunLeave
             }
 
-            renderState()
+            child(iconClassForName(icon)) {
+                attrs {
+                    style = reactStyle {
+                        color = Color.black
+
+                        marginTop = (-9).px
+                        fontSize = 1.75.em
+                        borderRadius = 20.px
+
+                        backgroundColor = highlight
+                    }
+                }
+            }
         }
     }
 
@@ -359,19 +549,85 @@ class VertexController(
     }
 
 
-    private fun RBuilder.renderName() {
+    private fun RBuilder.renderName(description: String?) {
+//        child(ActionNameEditor::class) {
+//            attrs {
+//                objectLocation = props.objectLocation
+//                notation = props.graphStructure.graphNotation
+//
+//                description = actionDescription
+//                intentToRun = state.intentToRun
+//
+//                runCallback = ::onRun
+//                editSignal = this@ActionController.editSignal
+//            }
+//        }
+
         val name = props.objectLocation.objectPath.name
+        val displayName =
+                if (AutoConventions.isAnonymous(name)) {
+                    val objectNotation = props.graphStructure.graphNotation.coalesce[props.objectLocation]!!
+                    val parentReference = ObjectReference.parse(
+                            objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
+                    val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
 
-        if (AutoConventions.isAnonymous(name)) {
-            val objectNotation = props.graphStructure.graphNotation.coalesce.get(props.objectLocation)!!
-            val parentReference = ObjectReference.parse(
-                    objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
-            val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
+                    parentLocation.objectPath.name.value
+                }
+                else {
+                    name.value
+                }
 
-            +"${parentLocation.objectPath.name}"
-        }
-        else {
-            +name.value
+        styledDiv {
+            css {
+                height = headerHeight
+                width = 100.pct
+            }
+
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+
+                    cursor = Cursor.pointer
+                    height = headerHeight
+                    width = 100.pct
+
+                    marginTop = 10.px
+                }
+
+                attrs {
+                    if (description != null) {
+                        title = description
+                    }
+
+//                    onMouseOverFunction = {
+//                        onRunEnter()
+//                    }
+//
+//                    onMouseOutFunction = {
+//                        onRunLeave()
+//                    }
+//
+//                    onClickFunction = {
+//                        onRun()
+//                    }
+                }
+
+                styledSpan {
+                    css {
+                        width = 100.pct
+                        height = headerHeight
+
+                        fontSize = LinearDimension("1.5em")
+                        fontWeight = FontWeight.bold
+
+                        if (state.intentToRun) {
+                            classes.add(CssClasses.glowingText)
+                        }
+                    }
+
+                    +displayName
+                }
+            }
         }
     }
 
@@ -382,7 +638,21 @@ class VertexController(
         val vertexState = props.visualVertexModel?.state
                 ?: return
 
-        +"State: ${vertexState.get()}"
+        div {
+            +"State: ${vertexState.get()}"
+        }
+    }
+
+
+    private fun RBuilder.renderMessage() {
+//        console.log("^^^^ renderState", props.visualVertexModel)
+
+        val vertexMessage = props.visualVertexModel?.message
+                ?: return
+
+        div {
+            +"Message: ${vertexMessage.get()}"
+        }
     }
 
 

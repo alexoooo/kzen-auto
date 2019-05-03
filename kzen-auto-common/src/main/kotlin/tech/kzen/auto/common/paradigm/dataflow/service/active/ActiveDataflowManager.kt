@@ -3,8 +3,8 @@ package tech.kzen.auto.common.paradigm.dataflow.service.active
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.StreamDataflow
+import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableDataflowOutput
 import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableRequiredInput
-import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableStreamOutput
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.*
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexMatrix
@@ -154,7 +154,8 @@ class ActiveDataflowManager(
                 stateChange,
                 messageView,
                 activeVertexModel.hasNext(),
-                activeVertexModel.iterationCount.toInt())
+                activeVertexModel.iterationCount.toInt(),
+                listOf())
     }
 
 
@@ -195,15 +196,32 @@ class ActiveDataflowManager(
                         dataflow.process(activeVertexModel.state)
                     }
 
-            val output = instance.constructorAttributes[DataflowUtils.outputAttributeName] as? MutableStreamOutput<*>
+            val output = instance.constructorAttributes[DataflowUtils.outputAttributeName] as? MutableDataflowOutput<*>
             if (output != null) {
-                val message = output.getAndClear()
-                activeVertexModel.message = message
+                if (output.bufferHasMultiple()) {
+                    output.consumeAndClear {
+                        if (activeVertexModel.message == null) {
+                            activeVertexModel.message = it
+                        }
+                        else {
+                            activeVertexModel.remainingBatch.add(it!!)
+                        }
+                    }
+                }
+                else {
+                    activeVertexModel.message = output.getAndClear()
+                }
+                activeVertexModel.streamHasNext = output.streamHasNext()
             }
 
             activeVertexModel.state = nextState
         }
 
         activeVertexModel.iterationCount++
+
+//        TODO("detect and and clear back up to in progress layer")
+
+//        if
+//        activeVertexModel.hasNext()
     }
 }

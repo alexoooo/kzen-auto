@@ -214,3 +214,8 @@ external class ExposurePlus1Icon: Component<IconProps, RState> {
 external class SettingsInputComponentIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+@JsName("FilterList")
+external class FilterListIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

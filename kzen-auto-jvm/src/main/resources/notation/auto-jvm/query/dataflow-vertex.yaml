@@ -33,6 +33,21 @@ IntRangeSource:
     to: Int
 
 
+PrimeFilter:
+  abstract: true
+  is: Dataflow
+  class: tech.kzen.auto.server.objects.query.PrimeFilter
+  icon: FilterList
+  description: "Filter prime numbers"
+  meta:
+    input:
+      is: RequiredInput
+      by: DataflowWiring
+    output:
+      is: OptionalOutput
+      by: DataflowWiring
+
+
 CountSink:
   abstract: true
   is: Dataflow

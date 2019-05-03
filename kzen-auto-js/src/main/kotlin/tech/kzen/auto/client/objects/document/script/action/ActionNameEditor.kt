@@ -261,7 +261,7 @@ class ActionNameEditor(
 
                 cursor = Cursor.pointer
                 height = ActionController.headerHeight
-                width = 100.pct//.minus(2.em)
+                width = 100.pct
 
                 marginTop = 10.px
             }

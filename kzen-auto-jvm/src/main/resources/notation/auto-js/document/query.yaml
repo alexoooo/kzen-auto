@@ -28,6 +28,12 @@ IntRangeSourceTool:
   delegate: IntRangeSource
 
 
+PrimeFilterTool:
+  is: RibbonTool
+  parent: QueryGroup
+  delegate: PrimeFilter
+
+
 CountSinkTool:
   is: RibbonTool
   parent: QueryGroup
@@ -36,8 +42,9 @@ CountSinkTool:
 
 ###########################################################
 
-DownPipeTool:
-  is: RibbonTool
-  parent: QueryGroup
-  delegate: DownPipe
+# TODO: bring back pipes
+#DownPipeTool:
+#  is: RibbonTool
+#  parent: QueryGroup
+#  delegate: DownPipe
 

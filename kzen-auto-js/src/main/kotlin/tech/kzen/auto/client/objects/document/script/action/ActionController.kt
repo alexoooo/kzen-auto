@@ -53,7 +53,7 @@ class ActionController(
 
         val headerHeight = 2.5.em
         private val runIconWidth = 40.px
-        private val editIconOffset = 12.px
+        private val menuIconOffset = 12.px
 
         private const val menuDanglingTimeout = 300
     }
@@ -387,7 +387,7 @@ class ActionController(
                 css {
                     position = Position.absolute
                     height = headerHeight
-                    width = 100.pct.minus(runIconWidth).minus(editIconOffset)
+                    width = 100.pct.minus(runIconWidth).minus(menuIconOffset)
 //                    top = (-11).px
                     top = (-13).px
                     left = runIconWidth
