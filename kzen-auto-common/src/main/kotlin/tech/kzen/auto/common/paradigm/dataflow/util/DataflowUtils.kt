@@ -27,12 +27,25 @@ object DataflowUtils {
             graphNotation: GraphNotation,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
-//        println("^^^^^ next: visualDataflowModel - $visualDataflowModel")
-
         val vertexMatrix = VertexMatrix.ofQueryDocument(host, graphNotation)
 //        println("^^^^^ next: vertexMatrix - $vertexMatrix")
 
         val dataflowDag = DataflowDag.of(vertexMatrix)
+
+        return next(dataflowDag, visualDataflowModel)
+    }
+
+    fun next(
+//            host: DocumentPath,
+            dataflowDag: DataflowDag,
+            visualDataflowModel: VisualDataflowModel
+    ): ObjectLocation? {
+//        println("^^^^^ next: visualDataflowModel - $visualDataflowModel")
+
+//        val vertexMatrix = VertexMatrix.ofQueryDocument(host, graphNotation)
+//        println("^^^^^ next: vertexMatrix - $vertexMatrix")
+
+//        val dataflowDag = DataflowDag.of(vertexMatrix)
 //        println("^^^^^ next: dataflowDag - $dataflowDag")
 
         var lastLayerInProgress: Int = -1

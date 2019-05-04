@@ -164,6 +164,8 @@ class VisualDataflowManager(
             objectLocation: ObjectLocation,
             visualDataflowTransition: VisualVertexTransition
     ) {
+//        println("^^^^^^ didExecute - $visualDataflowTransition")
+
         val model = get(host)
 
         val visualVertexModel = model.vertices[objectLocation]
@@ -181,8 +183,41 @@ class VisualDataflowManager(
 
         val updatedModel = model.put(objectLocation, updatedVertex)
 
-        models = models.put(host, updatedModel)
+        val withStackUnwind = unwindStackIfRequired(updatedModel, visualDataflowTransition)
 
-        publishModel(host, updatedModel)
+        models = models.put(host, withStackUnwind)
+
+        publishModel(host, withStackUnwind)
+    }
+
+
+    private fun unwindStackIfRequired(
+            updatedModel: VisualDataflowModel,
+            visualDataflowTransition: VisualVertexTransition
+    ): VisualDataflowModel {
+        if (visualDataflowTransition.cleared.isEmpty() && visualDataflowTransition.loop.isEmpty()) {
+            return updatedModel
+        }
+
+        var cursor = updatedModel
+
+        for (loop in visualDataflowTransition.loop) {
+            cursor = cursor.put(
+                    loop,
+                    updatedModel.vertices[loop]!!.copy(
+                            message = null
+                    ))
+        }
+
+        for (cleared in visualDataflowTransition.cleared) {
+            cursor = cursor.put(
+                    cleared,
+                    updatedModel.vertices[cleared]!!.copy(
+                            message = null,
+                            iteration = 0
+                    ))
+        }
+
+        return cursor
     }
 }

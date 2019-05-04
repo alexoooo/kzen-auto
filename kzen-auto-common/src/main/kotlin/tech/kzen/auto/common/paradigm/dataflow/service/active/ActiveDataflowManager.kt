@@ -142,7 +142,14 @@ class ActiveDataflowManager(
             inspectState(vertexLocation, it)
         }
 
-        execute(host, vertexLocation, activeDataflowModel.dataflowDag)
+        val loop = mutableListOf<ObjectLocation>()
+        val cleared = mutableListOf<ObjectLocation>()
+
+        execute(host,
+                vertexLocation,
+                activeDataflowModel.dataflowDag,
+                { loop.add(it) },
+                { cleared.add(it) })
 
         val nextStateView = activeVertexModel.state?.let {
             inspectState(vertexLocation, it)
@@ -165,16 +172,89 @@ class ActiveDataflowManager(
                 messageView,
                 activeVertexModel.hasNext(),
                 activeVertexModel.iterationCount.toInt(),
-                listOf())
+                loop,
+                cleared)
     }
 
 
     suspend fun execute(
             host: DocumentPath,
             vertexLocation: ObjectLocation,
-            dataflowDag: DataflowDag
+            dataflowDag: DataflowDag,
+            loopConsumer: (ObjectLocation) -> Unit = {},
+            clearedConsumer: (ObjectLocation) -> Unit = {}
     ) {
         val activeDataflowModel = get(host)
+        executeDirect(activeDataflowModel, vertexLocation, dataflowDag)
+
+        val visualDataflowModel = inspect(host)
+
+        if (isDone(dataflowDag, visualDataflowModel)) {
+            clearIteration(dataflowDag, activeDataflowModel, loopConsumer, clearedConsumer)
+        }
+    }
+
+
+    private fun isDone(
+            dataflowDag: DataflowDag,
+            visualDataflowModel: VisualDataflowModel
+    ): Boolean {
+        val next = DataflowUtils.next(dataflowDag, visualDataflowModel)
+        return next == null
+    }
+
+
+    private fun clearIteration(
+            dataflowDag: DataflowDag,
+            activeDataflowModel: ActiveDataflowModel,
+            loopConsumer: (ObjectLocation) -> Unit,
+            clearedConsumer: (ObjectLocation) -> Unit
+    ) {
+        val lastRowWithNextMessage = dataflowDag
+                .layers
+                .indexOfLast {layer ->
+                    layer.any {
+                        activeDataflowModel
+                                .vertices[it]
+                                ?.hasNext()
+                                ?: false
+                    }
+                }
+
+        if (lastRowWithNextMessage == -1) {
+            return
+        }
+
+        for (followingVertex in dataflowDag.layers[lastRowWithNextMessage]) {
+            val vertexModel = activeDataflowModel.vertices[followingVertex]!!
+
+            if (vertexModel.message != null) {
+                vertexModel.message = null
+                loopConsumer.invoke(followingVertex)
+            }
+        }
+
+        val followingLayers = dataflowDag.layers.subList(
+                lastRowWithNextMessage + 1, dataflowDag.layers.size)
+        for (followingLayer in followingLayers) {
+            for (followingVertex in followingLayer) {
+                val vertexModel = activeDataflowModel.vertices[followingVertex]!!
+
+                if (vertexModel.iterationCount > 0) {
+                    vertexModel.iterationCount = 0
+                    vertexModel.message = null
+                    clearedConsumer.invoke(followingVertex)
+                }
+            }
+        }
+    }
+
+
+    private suspend fun executeDirect(
+            activeDataflowModel: ActiveDataflowModel,
+            vertexLocation: ObjectLocation,
+            dataflowDag: DataflowDag
+    ) {
         val activeVertexModel = activeDataflowModel.vertices[vertexLocation]!!
 
         if (activeVertexModel.remainingBatch.isNotEmpty()) {
@@ -234,10 +314,5 @@ class ActiveDataflowManager(
         }
 
         activeVertexModel.iterationCount++
-
-//        TODO("detect and and clear back up to in progress layer")
-
-//        if
-//        activeVertexModel.hasNext()
     }
 }

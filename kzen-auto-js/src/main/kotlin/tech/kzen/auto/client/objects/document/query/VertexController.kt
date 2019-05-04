@@ -726,12 +726,18 @@ class VertexController(
 //        console.log("^^^^ renderState", props.visualVertexModel)
 
         val vertexMessage = visalVertexModel()?.message
-                ?: return
+        val hasNext = visalVertexModel()?.hasNext ?: false
+
+        if (vertexMessage == null && ! hasNext) {
+            return
+        }
 
         div {
-            +"Message: ${vertexMessage.get()}"
+            vertexMessage?.let {
+                +"Message: ${it.get()}"
+            }
 
-            if (visalVertexModel()?.hasNext == true) {
+            if (hasNext) {
                 +" [Has more messages]"
             }
         }
