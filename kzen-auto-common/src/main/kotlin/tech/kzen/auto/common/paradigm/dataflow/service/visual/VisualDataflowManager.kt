@@ -11,6 +11,7 @@ import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.persistentMapOf
 
 
+// TODO: add reset, unify Initializer/Executor/Reset
 class VisualDataflowManager(
         private val visualDataflowInitializer: VisualDataflowInitializer,
         private val visualDataflowExecutor: VisualDataflowExecutor
@@ -214,7 +215,7 @@ class VisualDataflowManager(
                     cleared,
                     updatedModel.vertices[cleared]!!.copy(
                             message = null,
-                            iteration = 0
+                            epoch = 0
                     ))
         }
 

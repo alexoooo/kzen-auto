@@ -1,17 +1,17 @@
 package tech.kzen.auto.client.objects.document.query
 
+import kotlinx.css.Visibility
+import kotlinx.css.em
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import react.RBuilder
 import react.RProps
 import react.RState
-import react.dom.br
 import react.dom.div
 import react.setState
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.MaterialFab
-import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
@@ -74,6 +74,20 @@ class QueryRunController(
         setState {
             this.visualDataflowModel = visualDataflowModel
         }
+
+        if (ClientContext.executionIntent.actionLocation() != null) {
+            val nextToRun = DataflowUtils.next(
+                    props.documentPath!!,
+                    props.graphStructure!!.graphNotation,
+                    visualDataflowModel)
+
+            if (nextToRun != null) {
+                ClientContext.executionIntent.set(nextToRun)
+            }
+            else {
+                ClientContext.executionIntent.clear()
+            }
+        }
     }
 
 
@@ -112,27 +126,28 @@ class QueryRunController(
 
 
     private fun onFabLeave() {
-//        val nextToRun = state.execution?.next()
-        val nextToRun = state.visualDataflowModel?.let {
-            DataflowUtils.next(
-                    props.documentPath!!,
-                    props.graphStructure!!.graphNotation,
-                    it)
-        }
-//        println("^$%^$%^% onRunAllLeave - $nextToRun")
-        if (nextToRun != null) {
-            ClientContext.executionIntent.clearIf(nextToRun)
-        }
+        ClientContext.executionIntent.clear()
+////        val nextToRun = state.execution?.next()
+//        val nextToRun = state.visualDataflowModel?.let {
+//            DataflowUtils.next(
+//                    props.documentPath!!,
+//                    props.graphStructure!!.graphNotation,
+//                    it)
+//        }
+////        println("^$%^$%^% onRunAllLeave - $nextToRun")
+//        if (nextToRun != null) {
+//            ClientContext.executionIntent.clearIf(nextToRun)
+//        }
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun onRun() {
         val documentPath = props.documentPath
                 ?: return
 
         val visualDataflowModel = state.visualDataflowModel
                 ?: return
-
 
         val nextToRun = DataflowUtils.next(
                 documentPath,
@@ -150,8 +165,42 @@ class QueryRunController(
     }
 
 
+    private fun onReset() {
+        val host = props.documentPath
+                ?: return
+
+        async {
+            ClientContext.visualDataflowManager.reset(host)
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        val isInProgress = state.visualDataflowModel?.isInProgress() ?: false
+
+        val hasNextToRun: Boolean = run block@{
+            val documentPath = props.documentPath
+                    ?: return@block false
+
+            val graphNotation = props.graphStructure?.graphNotation
+                    ?: return@block false
+
+            val visualDataflowModel = state.visualDataflowModel
+                    ?: return@block false
+
+            val nextToRun = DataflowUtils.next(
+                    documentPath,
+                    graphNotation,
+                    visualDataflowModel)
+
+            nextToRun != null
+        }
+
+        if (! isInProgress && ! hasNextToRun) {
+            return
+        }
+
         div {
             attrs {
                 onMouseOverFunction = {
@@ -162,19 +211,55 @@ class QueryRunController(
                 }
             }
 
+            if (isInProgress) {
+                child(MaterialIconButton::class) {
+                    attrs {
+                        title = "Reset"
+
+                        style = reactStyle {
+                            if (! state.fabHover) {
+                                visibility = Visibility.hidden
+                            }
+
+//                            marginLeft = (-0.5).em
+                            marginRight = (-0.5).em
+                        }
+
+                        onClick = ::onReset
+                    }
+
+                    child(ReplayIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                //                                marginTop = 1.em
+                                fontSize = 1.5.em
+                            }
+                        }
+                    }
+                }
+            }
+
             child(MaterialFab::class) {
                 attrs {
                     onMouseOver = ::onFabEnter
                     onMouseOut = ::onFabLeave
 
-                    onClick = ::onRun
+                    onClick = {
+                        if (hasNextToRun) {
+                            onRun()
+                        }
+                        else {
+                            onReset()
+                        }
+                    }
                 }
 
-                +"Next"
-
-                br {}
-
-                +"Reset"
+                if (hasNextToRun) {
+                    +"Next"
+                }
+                else {
+                    +"Reset"
+                }
             }
         }
     }

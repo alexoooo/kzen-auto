@@ -111,7 +111,7 @@ class ActiveDataflowManager(
                     stateInspection,
                     messageInspection,
                     hasNext,
-                    activeVertexModel.iterationCount.toInt())
+                    activeVertexModel.epoch.toInt())
         }
 
         return VisualDataflowModel(
@@ -171,7 +171,7 @@ class ActiveDataflowManager(
                 stateChange,
                 messageView,
                 activeVertexModel.hasNext(),
-                activeVertexModel.iterationCount.toInt(),
+                activeVertexModel.epoch.toInt(),
                 loop,
                 cleared)
     }
@@ -240,8 +240,8 @@ class ActiveDataflowManager(
             for (followingVertex in followingLayer) {
                 val vertexModel = activeDataflowModel.vertices[followingVertex]!!
 
-                if (vertexModel.iterationCount > 0) {
-                    vertexModel.iterationCount = 0
+                if (vertexModel.epoch > 0) {
+                    vertexModel.epoch = 0
                     vertexModel.message = null
                     clearedConsumer.invoke(followingVertex)
                 }
@@ -313,6 +313,6 @@ class ActiveDataflowManager(
             activeVertexModel.state = nextState
         }
 
-        activeVertexModel.iterationCount++
+        activeVertexModel.epoch++
     }
 }

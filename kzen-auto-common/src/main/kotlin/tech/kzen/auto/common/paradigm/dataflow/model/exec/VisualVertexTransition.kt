@@ -15,12 +15,12 @@ data class VisualVertexTransition(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val stateChangeKey = "stateChange"
-        private val messageKey = "message"
-        private val hasNextKey = "hasNext"
-        private val iterationKey = "iteration"
-        private val loopKey = "loop"
-        private val clearedKey = "cleared"
+        private const val stateChangeKey = "stateChange"
+        private const val messageKey = "message"
+        private const val hasNextKey = "hasNext"
+        private const val epochKey = "epoch"
+        private const val loopKey = "loop"
+        private const val clearedKey = "cleared"
 
 
         fun toCollection(model: VisualVertexTransition): Map<String, Any?> {
@@ -28,7 +28,7 @@ data class VisualVertexTransition(
                     stateChangeKey to model.stateChange?.toCollection(),
                     messageKey to model.message?.toCollection(),
                     hasNextKey to model.hasNext,
-                    iterationKey to model.iteration,
+                    epochKey to model.iteration,
                     loopKey to model.loop.map { it.asString() },
                     clearedKey to model.cleared.map { it.asString() }
             )
@@ -47,7 +47,7 @@ data class VisualVertexTransition(
                         ExecutionValue.fromCollection(it as Map<String, Any>)
                     },
                     collection[hasNextKey] as Boolean,
-                    collection[iterationKey] as Int,
+                    collection[epochKey] as Int,
                     (collection[loopKey] as List<String>).map { ObjectLocation.parse(it) },
                     (collection[clearedKey] as List<String>).map { ObjectLocation.parse(it) }
             )

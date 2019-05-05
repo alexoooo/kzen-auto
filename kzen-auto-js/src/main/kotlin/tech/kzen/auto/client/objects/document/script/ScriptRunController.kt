@@ -381,26 +381,24 @@ class ScriptRunController(
                     }
                 }
 
-                if (hasMoreToRun) {
-                    child(PlayArrowIcon::class) {
+                when {
+                    hasMoreToRun -> child(PlayArrowIcon::class) {
                         attrs {
                             style = reactStyle {
                                 fontSize = 3.em
                             }
                         }
                     }
-                }
-                else if (looping) {
-                    child(PauseIcon::class) {
+
+                    looping -> child(PauseIcon::class) {
                         attrs {
                             style = reactStyle {
                                 fontSize = 3.em
                             }
                         }
                     }
-                }
-                else {
-                    child(ReplayIcon::class) {
+
+                    else -> child(ReplayIcon::class) {
                         attrs {
                             style = reactStyle {
                                 fontSize = 3.em

@@ -29,7 +29,7 @@ data class VisualVertexModel(
         /**
          * Number of times executed in current block context, reset to zero and end of block
          */
-        val iteration: Int
+        val epoch: Int
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -39,7 +39,7 @@ data class VisualVertexModel(
         private const val stateKey = "state"
         private const val messageKey = "message"
         private const val hasNextKey = "hasNext"
-        private const val iterationKey = "iteration"
+        private const val epochKey = "epoch"
 
 
         fun toCollection(model: VisualVertexModel): Map<String, Any?> {
@@ -48,7 +48,7 @@ data class VisualVertexModel(
                     stateKey to model.state?.toCollection(),
                     messageKey to model.message?.toCollection(),
                     hasNextKey to model.hasNext,
-                    iterationKey to model.iteration
+                    epochKey to model.epoch
             )
         }
 
@@ -66,7 +66,7 @@ data class VisualVertexModel(
                         ExecutionValue.fromCollection(it as Map<String, Any>)
                     },
                     collection[hasNextKey] as Boolean,
-                    collection[iterationKey] as Int
+                    collection[epochKey] as Int
             )
         }
     }
@@ -79,7 +79,7 @@ data class VisualVertexModel(
             running ->
                 VisualVertexPhase.Running
 
-            iteration == 0 ->
+            epoch == 0 ->
                 VisualVertexPhase.Pending
 
             hasNext ->
@@ -103,7 +103,7 @@ data class VisualVertexModel(
 
         digest.addBoolean(hasNext)
 
-        digest.addInt(iteration)
+        digest.addInt(epoch)
 
         return digest.digest()
     }

@@ -669,7 +669,7 @@ class VertexController(
 
     private fun RBuilder.predecessorAvailable() {
 //        console.log("^^^^ renderState", props.visualVertexModel)
-        val iteration = visalVertexModel()?.iteration
+        val iteration = visalVertexModel()?.epoch
                 ?: return
 
         if (iteration != 0) {
@@ -701,7 +701,7 @@ class VertexController(
     private fun RBuilder.renderIterations() {
 //        console.log("^^^^ renderState", props.visualVertexModel)
 
-        val iteration = visalVertexModel()?.iteration
+        val iteration = visalVertexModel()?.epoch
                 ?: return
 
         div {

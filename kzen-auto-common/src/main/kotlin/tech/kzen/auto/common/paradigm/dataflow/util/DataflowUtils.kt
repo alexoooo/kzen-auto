@@ -110,7 +110,7 @@ object DataflowUtils {
             val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
                     ?: continue
 
-            if (visualVertexModel.iteration != 0) {
+            if (visualVertexModel.epoch != 0) {
                 continue
             }
 
