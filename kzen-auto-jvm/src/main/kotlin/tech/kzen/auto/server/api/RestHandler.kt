@@ -581,13 +581,13 @@ class RestHandler {
         val documentPath: DocumentPath = serverRequest.getParam(
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
-        val digest = runBlocking {
+        val visualDataflowModel = runBlocking {
             ServerContext.visualDataflowManager.reset(documentPath)
         }
 
         return ServerResponse
                 .ok()
-                .body(Mono.just(digest.asString()))
+                .body(Mono.just(VisualDataflowModel.toCollection(visualDataflowModel)))
     }
 
 

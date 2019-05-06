@@ -6,15 +6,12 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.persistentMapOf
 
 
-// TODO: add reset, unify Initializer/Executor/Reset
 class VisualDataflowManager(
-        private val visualDataflowInitializer: VisualDataflowInitializer,
-        private val visualDataflowExecutor: VisualDataflowExecutor
+        private val visualDataflowProvider: VisualDataflowProvider
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
@@ -58,7 +55,7 @@ class VisualDataflowManager(
             return
         }
 
-        initiateModel(host)
+        inspect(host)
     }
 
 
@@ -100,23 +97,27 @@ class VisualDataflowManager(
             return existing
         }
 
-        return initiateModel(host)
+        return inspect(host)
     }
 
 
-    private suspend fun initiateModel(host: DocumentPath): VisualDataflowModel {
-        val initial = visualDataflowInitializer.initialModel(host)
-        models = models.put(host, initial)
-        publishModel(host, initial)
-        return initial
+    private suspend fun inspect(
+            host: DocumentPath
+    ): VisualDataflowModel {
+        val model = visualDataflowProvider.inspect(host)
+        models = models.put(host, model)
+        publishModel(host, model)
+        return model
     }
 
 
     suspend fun reset(
             host: DocumentPath
-    ): Digest {
-        models = models.remove(host)
-        return get(host).digest()
+    ): VisualDataflowModel {
+        val model = visualDataflowProvider.reset(host)
+        models = models.put(host, model)
+        publishModel(host, model)
+        return model
     }
 
 
@@ -132,7 +133,7 @@ class VisualDataflowManager(
             delay(waitAfterRunningMillis.toLong())
         }
 
-        val visualVertexTransition = visualDataflowExecutor
+        val visualVertexTransition = visualDataflowProvider
                 .execute(host, objectLocation)
 
         didExecute(host, objectLocation, visualVertexTransition)

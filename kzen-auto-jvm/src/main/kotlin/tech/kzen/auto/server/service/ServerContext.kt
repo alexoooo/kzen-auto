@@ -73,7 +73,7 @@ object ServerContext {
             activeDataflowManager)
 
     val visualDataflowManager = VisualDataflowManager(
-            activeVisualProvider, activeVisualProvider)
+            activeVisualProvider)
 
 
     //-----------------------------------------------------------------------------------------------------------------

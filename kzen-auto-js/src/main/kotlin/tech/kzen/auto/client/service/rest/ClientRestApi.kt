@@ -335,11 +335,10 @@ class ClientRestApi(
     suspend fun visualDataflowModel(
             host: DocumentPath
     ): VisualDataflowModel {
-        val responseText = get(
+        val responseJson = getJson(
                 CommonRestApi.execModel,
                 CommonRestApi.paramDocumentPath to host.asString())
 
-        val responseJson = JSON.parse<Json>(responseText)
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
         @Suppress("UNCHECKED_CAST")
@@ -350,10 +349,16 @@ class ClientRestApi(
 
     suspend fun resetDataflowExecution(
             host: DocumentPath
-    ): Digest {
-        return getDigest(
+    ): VisualDataflowModel {
+        val responseJson = getJson(
                 CommonRestApi.execReset,
                 CommonRestApi.paramDocumentPath to host.asString())
+
+        @Suppress("UNCHECKED_CAST")
+        val responseCollection = ClientJsonUtils.toMap(responseJson) as Map<String, Any>
+
+        return VisualDataflowModel.fromCollection(
+                responseCollection)
     }
 
 

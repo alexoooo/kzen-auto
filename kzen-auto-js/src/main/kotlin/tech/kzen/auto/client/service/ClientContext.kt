@@ -47,7 +47,7 @@ object ClientContext {
     private val restExecutionInitializer = ClientRestExecutionInitializer(
             restClient)
 
-    val restActionExecutor = ClientRestActionExecutor(
+    private val restActionExecutor = ClientRestActionExecutor(
             restClient)
 
     val executionManager = ExecutionManager(
@@ -63,15 +63,11 @@ object ClientContext {
 
     val navigationManager = NavigationManager()
 
-    private val clientRestVisualDataflowInitializer = ClientRestVisualDataflowInitializer(
-            restClient)
-
-    private val clientRestVisualDataflowExecutor = ClientRestVisualDataflowExecutor(
+    private val clientRestVisualDataflowProvider = ClientRestVisualDataflowProvider(
             restClient)
 
     val visualDataflowManager = VisualDataflowManager(
-            clientRestVisualDataflowInitializer,
-            clientRestVisualDataflowExecutor)
+            clientRestVisualDataflowProvider)
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -42,7 +42,7 @@ class ActiveDataflowManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun get(
+    private suspend fun getOrInit(
             host: DocumentPath
     ): ActiveDataflowModel {
         models[host]?.let {
@@ -90,8 +90,10 @@ class ActiveDataflowManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun inspect(host: DocumentPath): VisualDataflowModel {
-        val activeDataflowModel = get(host)
+    suspend fun inspect(
+            host: DocumentPath
+    ): VisualDataflowModel {
+        val activeDataflowModel = getOrInit(host)
 
         val builder = mutableMapOf<ObjectLocation, VisualVertexModel>()
 
@@ -115,8 +117,7 @@ class ActiveDataflowManager(
         }
 
         return VisualDataflowModel(
-                builder.toPersistentMap()/*,
-                activeDataflowModel.dataflowDag*/)
+                builder.toPersistentMap())
     }
 
 
@@ -130,12 +131,20 @@ class ActiveDataflowManager(
     }
 
 
+    suspend fun reset(
+            host: DocumentPath
+    ): VisualDataflowModel {
+        models.remove(host)
+        return inspect(host)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun executeVisual(
             host: DocumentPath,
             vertexLocation: ObjectLocation
     ): VisualVertexTransition {
-        val activeDataflowModel = get(host)
+        val activeDataflowModel = getOrInit(host)
         val activeVertexModel = activeDataflowModel.vertices[vertexLocation]!!
 
         val previousStateView = activeVertexModel.state?.let {
@@ -184,7 +193,7 @@ class ActiveDataflowManager(
             loopConsumer: (ObjectLocation) -> Unit = {},
             clearedConsumer: (ObjectLocation) -> Unit = {}
     ) {
-        val activeDataflowModel = get(host)
+        val activeDataflowModel = getOrInit(host)
         executeDirect(activeDataflowModel, vertexLocation, dataflowDag)
 
         val visualDataflowModel = inspect(host)
