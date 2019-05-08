@@ -11,6 +11,7 @@ import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
@@ -567,13 +568,28 @@ class RestHandler {
         val documentPath: DocumentPath = serverRequest.getParam(
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
+        val objectPath: ObjectPath? = serverRequest.tryGetParam(
+                CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
+
         val visualDataflowModel = runBlocking {
             ServerContext.visualDataflowManager.get(documentPath)
         }
 
+        val result =
+                if (objectPath == null) {
+                    VisualDataflowModel.toCollection(visualDataflowModel)
+                }
+                else {
+                    val objectLocation = ObjectLocation(documentPath, objectPath)
+                    val visualVertexModel = visualDataflowModel.vertices[objectLocation]
+                            ?: throw IllegalArgumentException("Object location not found: $objectLocation")
+
+                    VisualVertexModel.toCollection(visualVertexModel)
+                }
+
         return ServerResponse
                 .ok()
-                .body(Mono.just(VisualDataflowModel.toCollection(visualDataflowModel)))
+                .body(Mono.just(result))
     }
 
 
@@ -690,7 +706,7 @@ class RestHandler {
         for (root in resourceDirectories) {
             val candidate = root.resolve(relativePath)
             if (! Files.exists(candidate)) {
-                println("%%%%% no file at: ${candidate.toAbsolutePath()}")
+//                println("%%%%% no file at: ${candidate.toAbsolutePath()}")
                 continue
             }
 
@@ -699,7 +715,7 @@ class RestHandler {
             return body
         }
 
-        println("%%%%% not read: ${relativePath}")
+//        println("%%%%% not read: $relativePath")
         return null
     }
 
@@ -712,5 +728,15 @@ class RestHandler {
         return queryParam(parameterName)
                 .map { parser(it) }
                 .orElseThrow { IllegalArgumentException("'$parameterName' required") }
+    }
+
+
+    private fun <T> ServerRequest.tryGetParam(
+            parameterName: String,
+            parser: (String) -> T
+    ): T? {
+        return queryParam(parameterName)
+                .map { parser(it) }
+                .orElse(null)
     }
 }

@@ -84,7 +84,6 @@ object ServerContext {
     val webDriverContext = WebDriverContext()
 
 
-
     //-----------------------------------------------------------------------------------------------------------------
     init {
         downloadManager.initialize()
@@ -92,9 +91,10 @@ object ServerContext {
         runBlocking {
             graphStructureManager.observe(executionManager)
             graphStructureManager.observe(graphInstanceManager)
+            graphStructureManager.observe(activeDataflowManager)
+            graphStructureManager.observe(visualDataflowManager)
         }
     }
-
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -29,14 +29,14 @@ class GraphStructureManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun observe(subscriber: Observer) {
-        subscribers.add(subscriber)
+    suspend fun observe(observer: Observer) {
+        subscribers.add(observer)
 
 //        if (mostRecent != null) {
 //            subscriber.handleModel(mostRecent!!, null)
 //        }
 
-        subscriber.handleModel(serverGraphStructure(), null)
+        observer.handleModel(serverGraphStructure(), null)
     }
 
 

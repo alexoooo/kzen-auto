@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.dataflow.api.input.RequiredInput
 import tech.kzen.auto.common.paradigm.dataflow.api.output.OptionalOutput
 
 
+@Suppress("unused")
 class PrimeFilter(
         private val input: RequiredInput<Int>,
         private val output: OptionalOutput<Int>

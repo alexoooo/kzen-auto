@@ -4,15 +4,20 @@ import kotlinx.coroutines.delay
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
+import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.persistentMapOf
 
 
 class VisualDataflowManager(
         private val visualDataflowProvider: VisualDataflowProvider
-) {
+):
+        GraphStructureManager.Observer
+{
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         suspend fun beforeDataflowExecution(host: DocumentPath, vertexLocation: ObjectLocation)
@@ -21,27 +26,17 @@ class VisualDataflowManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private val observers = mutableSetOf<Pair<DocumentPath, Observer>>()
     private val observers = mutableSetOf<Observer>()
     private var models: PersistentMap<DocumentPath, VisualDataflowModel> = persistentMapOf()
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun observe(/*host: DocumentPath,*/ observer: Observer) {
-//        observers.add(host to observer)
+    suspend fun observe(observer: Observer) {
         observers.add(observer)
 
         for ((host, model) in models) {
             observer.onVisualDataflowModel(host, model)
         }
-
-//        val model = models[host]
-//        if (model != null) {
-//            observer.onVisualDataflowModel(host, model)
-//        }
-//        else {
-//            initiateModel(host)
-//        }
     }
 
 
@@ -64,10 +59,6 @@ class VisualDataflowManager(
             vertexLocation: ObjectLocation
     ) {
         for (observer in observers) {
-//            if (host != hostKey) {
-//                continue
-//            }
-
             observer.beforeDataflowExecution(host, vertexLocation)
         }
     }
@@ -77,13 +68,131 @@ class VisualDataflowManager(
             host: DocumentPath,
             model: VisualDataflowModel
     ) {
-//        for ((hostKey, observer) in observers) {
         for (observer in observers) {
-//            if (host != hostKey) {
-//                continue
-//            }
-
             observer.onVisualDataflowModel(host, model)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun handleModel(
+            graphStructure: GraphStructure,
+            event: NotationEvent?
+    ) {
+        if (event == null) {
+            return
+        }
+
+        for (host in models.keys) {
+//            val model = modelOrInit(host)
+
+//            val model = models[host]!!
+            val newModels = apply(host, /*model,*/ event)
+
+            if (models != newModels) {
+                models = newModels
+//                publishExecutionModel(host, models[host]!!)
+                if (host in models) {
+                    publishModel(host, models[host]!!)
+                }
+            }
+        }
+    }
+
+
+    private suspend fun apply(
+            documentPath: DocumentPath,
+            event: NotationEvent
+    ): PersistentMap<DocumentPath, VisualDataflowModel> {
+        return when (event) {
+            is SingularNotationEvent ->
+                applySingular(documentPath, models, event)
+
+            is CompoundNotationEvent -> {
+                applyCompound(documentPath, event)
+            }
+        }
+    }
+
+
+    private suspend fun applySingular(
+            documentPath: DocumentPath,
+            currentModels: PersistentMap<DocumentPath, VisualDataflowModel>,
+            event: SingularNotationEvent
+    ): PersistentMap<DocumentPath, VisualDataflowModel> {
+        val model = currentModels[documentPath]!!
+
+        return when (event) {
+            is RemovedObjectEvent ->
+                currentModels.put(documentPath,
+                        model.remove(event.objectLocation))
+
+            is RenamedObjectEvent ->
+                currentModels.put(documentPath,
+                        model.rename(event.objectLocation, event.newName))
+
+            is AddedObjectEvent -> {
+                val initialVertexModel = visualDataflowProvider.inspectVertex(documentPath, event.objectLocation)
+
+                currentModels.put(documentPath,
+                        model.put(event.objectLocation, initialVertexModel))
+            }
+
+            is DeletedDocumentEvent ->
+                if (event.documentPath == documentPath) {
+                    currentModels.remove(documentPath)
+                }
+                else {
+                    currentModels
+                }
+
+            else ->
+                currentModels
+        }
+    }
+
+
+    private suspend fun applyCompound(
+            documentPath: DocumentPath,
+            event: CompoundNotationEvent
+    ): PersistentMap<DocumentPath, VisualDataflowModel> {
+        val model = models[documentPath]!!
+        val appliedWithDependentEvents = applyCompoundWithDependentEvents(
+                documentPath, model, event)
+        if (models != appliedWithDependentEvents) {
+            return appliedWithDependentEvents
+        }
+
+        var builder = models
+        for (singularEvent in event.singularEvents) {
+            builder = applySingular(documentPath, builder, singularEvent)
+        }
+        return builder
+    }
+
+
+    private fun applyCompoundWithDependentEvents(
+            documentPath: DocumentPath,
+            model: VisualDataflowModel,
+            event: CompoundNotationEvent
+    ): PersistentMap<DocumentPath, VisualDataflowModel> {
+        return when (event) {
+            is RenamedDocumentRefactorEvent -> {
+//                println("^^^^^ applyCompoundWithDependentEvents - $documentPath - $event")
+                if (event.removedUnderOldName.documentPath == documentPath) {
+                    val newModel = model.move(
+                            event.removedUnderOldName.documentPath, event.createdWithNewName.destination)
+
+                    val removed = models.remove(event.removedUnderOldName.documentPath)
+                    removed.put(event.createdWithNewName.destination, newModel)
+                }
+                else {
+                    models
+                }
+            }
+
+            else ->
+                models
         }
     }
 
@@ -104,7 +213,7 @@ class VisualDataflowManager(
     private suspend fun inspect(
             host: DocumentPath
     ): VisualDataflowModel {
-        val model = visualDataflowProvider.inspect(host)
+        val model = visualDataflowProvider.inspectDataflow(host)
         models = models.put(host, model)
         publishModel(host, model)
         return model
@@ -114,7 +223,7 @@ class VisualDataflowManager(
     suspend fun reset(
             host: DocumentPath
     ): VisualDataflowModel {
-        val model = visualDataflowProvider.reset(host)
+        val model = visualDataflowProvider.resetDataflow(host)
         models = models.put(host, model)
         publishModel(host, model)
         return model
@@ -134,7 +243,7 @@ class VisualDataflowManager(
         }
 
         val visualVertexTransition = visualDataflowProvider
-                .execute(host, objectLocation)
+                .executeVertex(host, objectLocation)
 
         didExecute(host, objectLocation, visualVertexTransition)
 

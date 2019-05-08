@@ -4,6 +4,7 @@ import tech.kzen.auto.client.util.encodeURIComponent
 import tech.kzen.auto.client.util.httpGet
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
@@ -344,6 +345,22 @@ class ClientRestApi(
         @Suppress("UNCHECKED_CAST")
         return VisualDataflowModel.fromCollection(
                 responseCollection as Map<String, Any>)
+    }
+
+
+    suspend fun visualVertexModel(
+            host: DocumentPath,
+            vertexLocation: ObjectLocation
+    ): VisualVertexModel {
+        val responseJson = getJson(
+                CommonRestApi.execModel,
+                CommonRestApi.paramDocumentPath to host.asString(),
+                CommonRestApi.paramObjectPath to vertexLocation.objectPath.asString())
+
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
+
+        return VisualVertexModel.fromCollection(
+                responseCollection)
     }
 
 

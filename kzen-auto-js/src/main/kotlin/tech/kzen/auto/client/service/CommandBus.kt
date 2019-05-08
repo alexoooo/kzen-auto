@@ -53,7 +53,11 @@ class CommandBus(
     suspend fun apply(command: NotationCommand) {
 //        console.log("CommandBus - applying command: $command", command)
 
-        val event = try {
+        // NB: for now, this has to happen before clientEvent for VisualDataflowProvider.inspectVertex
+        // TODO: make this parallel with client processing via VisualDataflowProvider.initialVertexState
+        val restDigest = applyRest(command)
+
+        val clientEvent = try {
             clientRepository.apply(command)
         }
         catch (e: Throwable) {
@@ -73,16 +77,15 @@ class CommandBus(
         val clientDigest = clientRepository.digest()
 //        println("CommandBus - applied in client: $clientDigest")
 
-        graphStructureManager.onEvent(event)
+        graphStructureManager.onEvent(clientEvent)
 
-        val restDigest = applyRest(command)
 //        println("CommandBus - applied in REST: $restDigest")
 
         if (clientDigest != restDigest) {
             graphStructureManager.refresh()
         }
 
-        onCommandSuccess(command, event)
+        onCommandSuccess(command, clientEvent)
     }
 
 

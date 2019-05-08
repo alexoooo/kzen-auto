@@ -14,6 +14,8 @@ import tech.kzen.auto.common.service.GraphInstanceManager
 import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.platform.collect.toPersistentMap
 
 
@@ -21,8 +23,8 @@ class ActiveDataflowManager(
         private val instanceManager: GraphInstanceManager,
         private val dataflowMessageInspector: DataflowMessageInspector,
         private val graphStructureManager: GraphStructureManager
-)//:
-//        GraphStructureManager.Observer
+) :
+        GraphStructureManager.Observer
 {
 //    //-----------------------------------------------------------------------------------------------------------------
 //    private class Handle(
@@ -36,9 +38,129 @@ class ActiveDataflowManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    override suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?) {
-//
-//    }
+    override suspend fun handleModel(
+            graphStructure: GraphStructure,
+            event: NotationEvent?
+    ) {
+        if (event == null) {
+            return
+        }
+
+        // NB: avoid concurrent modification for DeletedDocumentEvent handling
+        val modelHosts = models.keys.toList()
+
+        for (host in modelHosts) {
+            apply(host, event)
+        }
+    }
+
+
+    private suspend fun apply(
+            documentPath: DocumentPath,
+            event: NotationEvent
+    ) {
+        return when (event) {
+            is SingularNotationEvent ->
+                applySingular(documentPath, event)
+
+            is CompoundNotationEvent -> {
+                applyCompound(documentPath, event)
+            }
+        }
+    }
+
+
+    private suspend fun applySingular(
+            documentPath: DocumentPath,
+            event: SingularNotationEvent
+    ) {
+        val model = models[documentPath]!!
+
+        when (event) {
+            is RemovedObjectEvent -> {
+                if (event.objectLocation.documentPath != documentPath) {
+                    return
+                }
+
+                model.vertices.remove(event.objectLocation)
+            }
+
+            is RenamedObjectEvent -> {
+                if (event.objectLocation.documentPath != documentPath) {
+                    return
+                }
+
+                val activeVertexModel = model.vertices.remove(event.objectLocation)!!
+                val newObjectPath = event.objectLocation.objectPath.copy(name = event.newName)
+                val newLocation = ObjectLocation(documentPath, newObjectPath)
+                model.vertices[newLocation] = activeVertexModel
+            }
+
+            is AddedObjectEvent -> {
+                if (event.objectLocation.documentPath != documentPath) {
+                    return
+                }
+
+                val initialVertexModel = initializeVertex(event.objectLocation)
+                model.vertices[event.objectLocation] = initialVertexModel
+            }
+
+            is DeletedDocumentEvent -> {
+                if (event.documentPath != documentPath) {
+                    return
+                }
+
+                models.remove(event.documentPath)
+            }
+        }
+    }
+
+
+    private suspend fun applyCompound(
+            documentPath: DocumentPath,
+            event: CompoundNotationEvent
+    ) {
+        val appliedWithDependentEvents = applyCompoundWithDependentEvents(
+                documentPath, event)
+        if (appliedWithDependentEvents) {
+            return
+        }
+
+        for (singularEvent in event.singularEvents) {
+             applySingular(documentPath, singularEvent)
+        }
+    }
+
+
+    private fun applyCompoundWithDependentEvents(
+            documentPath: DocumentPath,
+            event: CompoundNotationEvent
+    ): Boolean {
+        val model = models[documentPath]!!
+
+        return when (event) {
+            is RenamedDocumentRefactorEvent -> {
+//                println("^^^^^ applyCompoundWithDependentEvents - $documentPath - $event")
+                if (event.removedUnderOldName.documentPath == documentPath) {
+//                    model.
+
+                    model.move(
+                            event.removedUnderOldName.documentPath, event.createdWithNewName.destination)
+
+                    models.remove(event.removedUnderOldName.documentPath)
+                    models[event.createdWithNewName.destination] = model
+
+                    true
+                }
+                else {
+                    false
+                }
+            }
+
+            else ->
+                false
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -57,36 +179,38 @@ class ActiveDataflowManager(
 
         val builder = mutableMapOf<ObjectLocation, ActiveVertexModel>()
         for (vertexLocation in vertexMatrix.byLocation().keys) {
-            val vertexInstance = instanceManager.get(vertexLocation).reference as Dataflow<*>
-
-            val initialState = vertexInstance.initialState()
-            val initialStateOrNull =
-                    if (initialState == Unit) {
-                        null
-                    }
-                    else {
-                        initialState
-                    }
-
-            builder[vertexLocation] = ActiveVertexModel(
-                    initialStateOrNull,
-                    null,
-                    mutableListOf(),
-                    false,
-                    0)
+            builder[vertexLocation] = initializeVertex(vertexLocation)
         }
 
-        val dataflowDag = DataflowDag.of(vertexMatrix)
+//        val dataflowDag = DataflowDag.of(vertexMatrix)
 
-        val activeDataflowModel = ActiveDataflowModel(builder, dataflowDag)
+        val activeDataflowModel = ActiveDataflowModel(builder/*, dataflowDag*/)
         models[host] = activeDataflowModel
         return activeDataflowModel
     }
 
 
-//    private fun buildHandle(): Handle {
-//
-//    }
+    private suspend fun initializeVertex(
+            vertexLocation: ObjectLocation
+    ): ActiveVertexModel {
+        val vertexInstance = instanceManager.get(vertexLocation).reference as Dataflow<*>
+
+        val initialState = vertexInstance.initialState()
+        val initialStateOrNull =
+                if (initialState == Unit) {
+                    null
+                }
+                else {
+                    initialState
+                }
+
+        return ActiveVertexModel(
+                initialStateOrNull,
+                null,
+                mutableListOf(),
+                false,
+                0)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -98,26 +222,47 @@ class ActiveDataflowManager(
         val builder = mutableMapOf<ObjectLocation, VisualVertexModel>()
 
         for ((vertexLocation, activeVertexModel) in activeDataflowModel.vertices) {
-            val stateInspection = activeVertexModel.state?.let {
-                inspectState(vertexLocation, it)
-            }
-
-            val messageInspection = activeVertexModel.message
-                    ?.let(dataflowMessageInspector::inspectMessage)
-
-            val hasNext = activeVertexModel.streamHasNext ||
-                    activeVertexModel.remainingBatch.isNotEmpty()
-
-            builder[vertexLocation] = VisualVertexModel(
-                    false,
-                    stateInspection,
-                    messageInspection,
-                    hasNext,
-                    activeVertexModel.epoch.toInt())
+            builder[vertexLocation] = inspectActiveVertexModel(
+                    vertexLocation, activeVertexModel)
         }
 
         return VisualDataflowModel(
                 builder.toPersistentMap())
+    }
+
+
+    suspend fun inspectVertex(
+            host: DocumentPath,
+            vertexLocation: ObjectLocation
+    ): VisualVertexModel {
+        val activeDataflowModel = getOrInit(host)
+        val activeVertexModel = activeDataflowModel.vertices[vertexLocation]!!
+
+        return inspectActiveVertexModel(
+                vertexLocation, activeVertexModel)
+    }
+
+
+    private suspend fun inspectActiveVertexModel(
+            vertexLocation: ObjectLocation,
+            activeVertexModel: ActiveVertexModel
+    ): VisualVertexModel {
+        val stateInspection = activeVertexModel.state?.let {
+            inspectState(vertexLocation, it)
+        }
+
+        val messageInspection = activeVertexModel.message
+                ?.let(dataflowMessageInspector::inspectMessage)
+
+        val hasNext = activeVertexModel.streamHasNext ||
+                activeVertexModel.remainingBatch.isNotEmpty()
+
+        return VisualVertexModel(
+                false,
+                stateInspection,
+                messageInspection,
+                hasNext,
+                activeVertexModel.epoch.toInt())
     }
 
 
@@ -156,7 +301,7 @@ class ActiveDataflowManager(
 
         execute(host,
                 vertexLocation,
-                activeDataflowModel.dataflowDag,
+//                activeDataflowModel.dataflowDag,
                 { loop.add(it) },
                 { cleared.add(it) })
 
@@ -189,10 +334,14 @@ class ActiveDataflowManager(
     suspend fun execute(
             host: DocumentPath,
             vertexLocation: ObjectLocation,
-            dataflowDag: DataflowDag,
+//            dataflowDag: DataflowDag,
             loopConsumer: (ObjectLocation) -> Unit = {},
             clearedConsumer: (ObjectLocation) -> Unit = {}
     ) {
+        val serverGraphStructure = graphStructureManager.serverGraphStructure()
+        val vertexMatrix = VertexMatrix.ofQueryDocument(host, serverGraphStructure.graphNotation)
+        val dataflowDag = DataflowDag.of(vertexMatrix)
+
         val activeDataflowModel = getOrInit(host)
         executeDirect(activeDataflowModel, vertexLocation, dataflowDag)
 

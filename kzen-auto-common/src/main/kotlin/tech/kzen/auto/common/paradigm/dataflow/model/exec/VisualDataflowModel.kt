@@ -1,6 +1,8 @@
 package tech.kzen.auto.common.paradigm.dataflow.model.exec
 
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.persistentMapOf
@@ -51,6 +53,35 @@ data class VisualDataflowModel(
     ): VisualDataflowModel {
         return VisualDataflowModel(
                 vertices.put(vertexLocation, newModel))
+    }
+
+
+    fun remove(
+            objectLocation: ObjectLocation
+    ): VisualDataflowModel {
+        return VisualDataflowModel(
+                vertices.remove(objectLocation))
+    }
+
+
+    fun rename(from: ObjectLocation, newName: ObjectName): VisualDataflowModel {
+        val state = vertices[from]
+                ?: return this
+
+        val newNamePath = from.objectPath.copy(name = newName)
+        val newNameLocation = from.copy(objectPath = newNamePath)
+
+        val removedAtOldName = vertices.remove(from)
+        val addedAtNewName = removedAtOldName.put(newNameLocation, state)
+
+        return VisualDataflowModel(addedAtNewName)
+    }
+
+
+    fun move(from: DocumentPath, newPath: DocumentPath): VisualDataflowModel {
+        return VisualDataflowModel(vertices.mapKeys {
+            it.key.copy(documentPath = newPath)
+        }.toPersistentMap())
     }
 
 

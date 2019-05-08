@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.paradigm.dataflow.service.active
 
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowProvider
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -12,14 +13,22 @@ class ActiveVisualProvider(
 ):
         VisualDataflowProvider
 {
-    override suspend fun inspect(
+    override suspend fun inspectDataflow(
             host: DocumentPath
     ): VisualDataflowModel {
         return activeDataflowManager.inspect(host)
     }
 
 
-    override suspend fun execute(
+    override suspend fun inspectVertex(
+            host: DocumentPath,
+            vertexLocation: ObjectLocation
+    ): VisualVertexModel {
+        return activeDataflowManager.inspectVertex(host, vertexLocation)
+    }
+
+
+    override suspend fun executeVertex(
             host: DocumentPath,
             vertexLocation: ObjectLocation
     ): VisualVertexTransition {
@@ -27,7 +36,7 @@ class ActiveVisualProvider(
     }
 
 
-    override suspend fun reset(host: DocumentPath): VisualDataflowModel {
+    override suspend fun resetDataflow(host: DocumentPath): VisualDataflowModel {
         return activeDataflowManager.reset(host)
     }
 }

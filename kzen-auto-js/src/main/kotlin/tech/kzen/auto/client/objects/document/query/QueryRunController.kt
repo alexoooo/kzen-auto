@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.query
 
+import kotlinx.css.Color
 import kotlinx.css.Visibility
 import kotlinx.css.em
 import kotlinx.html.js.onMouseOutFunction
@@ -211,7 +212,7 @@ class QueryRunController(
                 }
             }
 
-            if (isInProgress) {
+            if (isInProgress && hasNextToRun) {
                 child(MaterialIconButton::class) {
                     attrs {
                         title = "Reset"
@@ -251,6 +252,19 @@ class QueryRunController(
                         else {
                             onReset()
                         }
+                    }
+
+                    style = reactStyle {
+                        backgroundColor =
+                                if (hasNextToRun) {
+                                    Color.gold
+                                }
+                                else {
+                                    Color.white
+                                }
+
+                        width = 5.em
+                        height = 5.em
                     }
                 }
 
