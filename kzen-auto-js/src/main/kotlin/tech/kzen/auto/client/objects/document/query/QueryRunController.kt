@@ -290,7 +290,7 @@ class QueryRunController(
                         "Run all"
 
                     else ->
-                        phase.name
+                        "Run all (continue)"
                 }
 
 

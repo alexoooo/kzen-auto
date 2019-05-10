@@ -1,6 +1,8 @@
 package tech.kzen.auto.common.paradigm.dataflow.util
 
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
+import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexMatrix
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -164,19 +166,22 @@ object DataflowUtils {
             layer: List<ObjectLocation>,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
-        if (layer.size == 1) {
+        if (layer.isEmpty()) {
+            return null
+        }
+        else if (layer.size == 1) {
             return layer.first()
         }
 
-        TODO()
-//        for (vertexLocation in layer) {
-//            val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
-//                    ?: VisualVertexModel.empty
-//
-//            if (visualVertexModel.phase() == VisualVertexPhase.Pending) {
-//                return vertexLocation
-//            }
-//        }
-//        return null
+        // TODO: handle more than one vertex per layer
+        for (vertexLocation in layer) {
+            val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
+                    ?: VisualVertexModel.empty
+
+            if (visualVertexModel.phase() == VisualVertexPhase.Pending) {
+                return vertexLocation
+            }
+        }
+        return null
     }
 }
