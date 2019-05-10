@@ -242,7 +242,7 @@ class QueryRunController(
             return
         }
 
-        +"phase: $phase"
+//        +"phase: $phase"
 
         div {
             attrs {

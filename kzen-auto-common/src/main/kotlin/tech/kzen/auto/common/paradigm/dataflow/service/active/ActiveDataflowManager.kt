@@ -382,10 +382,9 @@ class ActiveDataflowManager(
             for (layer in dataflowDag.layers) {
                 for (vertexName in layer) {
                     val vertexModel = activeDataflowModel.vertices[vertexName]!!
-                    if (vertexModel.epoch > 0) {
-                        vertexModel.epoch = 0
+                    if (vertexModel.message != null) {
                         vertexModel.message = null
-                        clearedConsumer.invoke(vertexName)
+                        loopConsumer.invoke(vertexName)
                     }
                 }
             }
