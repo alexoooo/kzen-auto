@@ -215,7 +215,14 @@ external class SettingsInputComponentIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 
+
 @JsName("FilterList")
 external class FilterListIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Redo")
+external class RedoIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }

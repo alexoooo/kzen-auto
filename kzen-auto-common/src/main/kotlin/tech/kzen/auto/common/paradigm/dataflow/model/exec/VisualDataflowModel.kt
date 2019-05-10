@@ -91,6 +91,11 @@ data class VisualDataflowModel(
     }
 
 
+    fun isRunning(): Boolean {
+        return vertices.values.any { it.running }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun digest(): Digest {
         val digest = Digest.Streaming()

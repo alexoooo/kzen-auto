@@ -2,6 +2,7 @@ package tech.kzen.auto.client.service
 
 import tech.kzen.auto.client.service.rest.*
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
@@ -69,6 +70,11 @@ object ClientContext {
     val visualDataflowManager = VisualDataflowManager(
             clientRestVisualDataflowProvider)
 
+    val visualDataflowLoop = VisualDataflowLoop(
+            modelManager,
+            visualDataflowManager,
+            150)
+
 
     //-----------------------------------------------------------------------------------------------------------------
     fun init() {
@@ -83,7 +89,9 @@ object ClientContext {
 
             modelManager.observe(executionManager)
             modelManager.observe(visualDataflowManager)
+
             executionManager.observe(executionLoop)
+            visualDataflowManager.observe(visualDataflowLoop)
         }
     }
 }

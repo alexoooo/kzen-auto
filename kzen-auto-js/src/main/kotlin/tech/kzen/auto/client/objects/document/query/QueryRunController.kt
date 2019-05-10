@@ -41,14 +41,14 @@ class QueryRunController(
     ): RState
 
 
-//    enum class Phase {
-//        Empty,
-//        Pending,
-//        Partial,
-//        Running,
-//        Looping,
-//        Done
-//    }
+    enum class Phase {
+        Empty,
+        Pending,
+        Partial,
+        Running,
+        Looping,
+        Done
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -141,6 +141,42 @@ class QueryRunController(
 //        }
     }
 
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun phase(): Phase {
+        val host = props.documentPath
+                ?: return Phase.Empty
+
+        val visualDataflowModel = state.visualDataflowModel
+                ?: return Phase.Empty
+
+        if (visualDataflowModel.vertices.isEmpty()) {
+            return Phase.Empty
+        }
+
+        if (visualDataflowModel.isRunning()) {
+            if (ClientContext.visualDataflowLoop.running(host)) {
+                return Phase.Looping
+            }
+            return Phase.Running
+        }
+
+        val nextVertex = DataflowUtils.next(
+                host,
+                props.graphStructure!!.graphNotation,
+                visualDataflowModel)
+
+        @Suppress("FoldInitializerAndIfToElvis")
+        if (nextVertex == null) {
+            return Phase.Done
+        }
+
+        if (visualDataflowModel.isInProgress()) {
+            return Phase.Partial
+        }
+
+        return Phase.Pending
+    }
+
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRun() {
@@ -166,9 +202,31 @@ class QueryRunController(
     }
 
 
+    private fun onRunAll() {
+        val host = props.documentPath
+                ?: return
+
+        async {
+            ClientContext.executionIntent.clear()
+            ClientContext.visualDataflowLoop.loop(host)
+        }
+    }
+
+
+    private fun onPause() {
+        val host = props.documentPath
+                ?: return
+
+        ClientContext.visualDataflowLoop.pause(host)
+    }
+
+
     private fun onReset() {
         val host = props.documentPath
                 ?: return
+
+        ClientContext.executionIntent.clear()
+        onPause()
 
         async {
             ClientContext.visualDataflowManager.reset(host)
@@ -178,29 +236,13 @@ class QueryRunController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val isInProgress = state.visualDataflowModel?.isInProgress() ?: false
+        val phase = phase()
 
-        val hasNextToRun: Boolean = run block@{
-            val documentPath = props.documentPath
-                    ?: return@block false
-
-            val graphNotation = props.graphStructure?.graphNotation
-                    ?: return@block false
-
-            val visualDataflowModel = state.visualDataflowModel
-                    ?: return@block false
-
-            val nextToRun = DataflowUtils.next(
-                    documentPath,
-                    graphNotation,
-                    visualDataflowModel)
-
-            nextToRun != null
-        }
-
-        if (! isInProgress && ! hasNextToRun) {
+        if (phase == Phase.Empty) {
             return
         }
+
+        +"phase: $phase"
 
         div {
             attrs {
@@ -212,67 +254,152 @@ class QueryRunController(
                 }
             }
 
-            if (isInProgress && hasNextToRun) {
-                child(MaterialIconButton::class) {
-                    attrs {
-                        title = "Reset"
+            renderInner(phase)
+        }
+    }
 
-                        style = reactStyle {
-                            if (! state.fabHover) {
-                                visibility = Visibility.hidden
-                            }
 
-//                            marginLeft = (-0.5).em
-                            marginRight = (-0.5).em
-                        }
+    private fun RBuilder.renderInner(
+            phase: Phase
+    ) {
+        renderSecondaryActions(phase)
 
-                        onClick = ::onReset
+        renderMainAction(phase)
+    }
+
+
+    private fun RBuilder.renderMainAction(
+            phase: Phase
+    ) {
+        val hasMoreToRun = phase == Phase.Pending || phase == Phase.Partial
+        val looping = phase == Phase.Looping
+
+        child(MaterialFab::class) {
+            attrs {
+                onMouseOver = ::onFabEnter
+                onMouseOut = ::onFabLeave
+
+                title = when {
+                    phase == Phase.Done ->
+                        "Reset"
+
+                    looping || phase == Phase.Running ->
+                        "Pause"
+
+                    phase == Phase.Pending ->
+                        "Run all"
+
+                    else ->
+                        phase.name
+                }
+
+
+                onClick = {
+                    when {
+                        looping || phase == Phase.Running ->
+                            onPause()
+
+                        hasMoreToRun ->
+                            onRunAll()
+
+                        phase == Phase.Done ->
+                            onReset()
                     }
+                }
 
-                    child(ReplayIcon::class) {
-                        attrs {
-                            style = reactStyle {
-                                //                                marginTop = 1.em
-                                fontSize = 1.5.em
+                style = reactStyle {
+                    backgroundColor =
+                            if (hasMoreToRun || looping) {
+                                Color.gold
                             }
+                            else {
+                                Color.white
+                            }
+
+                    width = 5.em
+                    height = 5.em
+                }
+            }
+
+            when {
+                hasMoreToRun -> child(PlayArrowIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+                    }
+                }
+
+                looping -> child(PauseIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+                    }
+                }
+
+                else -> child(ReplayIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
                         }
                     }
                 }
             }
+        }
+    }
 
-            child(MaterialFab::class) {
+
+    private fun RBuilder.renderSecondaryActions(
+            phase: Phase
+    ) {
+        val hasReset = phase == Phase.Partial
+        child(MaterialIconButton::class) {
+            attrs {
+                title = "Reset"
+
+                style = reactStyle {
+                    if (! state.fabHover || ! hasReset) {
+                        visibility = Visibility.hidden
+                    }
+
+                    marginRight = (-0.5).em
+                }
+
+                onClick = ::onReset
+            }
+
+            child(ReplayIcon::class) {
                 attrs {
-                    onMouseOver = ::onFabEnter
-                    onMouseOut = ::onFabLeave
-
-                    onClick = {
-                        if (hasNextToRun) {
-                            onRun()
-                        }
-                        else {
-                            onReset()
-                        }
-                    }
-
                     style = reactStyle {
-                        backgroundColor =
-                                if (hasNextToRun) {
-                                    Color.gold
-                                }
-                                else {
-                                    Color.white
-                                }
-
-                        width = 5.em
-                        height = 5.em
+                        fontSize = 1.5.em
                     }
                 }
+            }
+        }
 
-                if (hasNextToRun) {
-                    +"Next"
+        val hasRunNext = phase == Phase.Partial || phase == Phase.Pending
+        child(MaterialIconButton::class) {
+            attrs {
+                title = "Run next"
+
+                style = reactStyle {
+                    if (! state.fabHover || ! hasRunNext) {
+                        visibility = Visibility.hidden
+                    }
+
+//                    marginRight = (-0.5).em
+//                    marginRight = (-0.1).em
                 }
-                else {
-                    +"Reset"
+
+                onClick = ::onRun
+            }
+
+            child(RedoIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        fontSize = 1.5.em
+                    }
                 }
             }
         }

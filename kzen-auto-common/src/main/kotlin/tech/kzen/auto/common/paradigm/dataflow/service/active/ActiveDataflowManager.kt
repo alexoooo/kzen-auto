@@ -334,7 +334,6 @@ class ActiveDataflowManager(
     suspend fun execute(
             host: DocumentPath,
             vertexLocation: ObjectLocation,
-//            dataflowDag: DataflowDag,
             loopConsumer: (ObjectLocation) -> Unit = {},
             clearedConsumer: (ObjectLocation) -> Unit = {}
     ) {
@@ -380,28 +379,38 @@ class ActiveDataflowManager(
                 }
 
         if (lastRowWithNextMessage == -1) {
-            return
-        }
-
-        for (followingVertex in dataflowDag.layers[lastRowWithNextMessage]) {
-            val vertexModel = activeDataflowModel.vertices[followingVertex]!!
-
-            if (vertexModel.message != null) {
-                vertexModel.message = null
-                loopConsumer.invoke(followingVertex)
+            for (layer in dataflowDag.layers) {
+                for (vertexName in layer) {
+                    val vertexModel = activeDataflowModel.vertices[vertexName]!!
+                    if (vertexModel.epoch > 0) {
+                        vertexModel.epoch = 0
+                        vertexModel.message = null
+                        clearedConsumer.invoke(vertexName)
+                    }
+                }
             }
         }
-
-        val followingLayers = dataflowDag.layers.subList(
-                lastRowWithNextMessage + 1, dataflowDag.layers.size)
-        for (followingLayer in followingLayers) {
-            for (followingVertex in followingLayer) {
+        else {
+            for (followingVertex in dataflowDag.layers[lastRowWithNextMessage]) {
                 val vertexModel = activeDataflowModel.vertices[followingVertex]!!
 
-                if (vertexModel.epoch > 0) {
-                    vertexModel.epoch = 0
+                if (vertexModel.message != null) {
                     vertexModel.message = null
-                    clearedConsumer.invoke(followingVertex)
+                    loopConsumer.invoke(followingVertex)
+                }
+            }
+
+            val followingLayers = dataflowDag.layers.subList(
+                    lastRowWithNextMessage + 1, dataflowDag.layers.size)
+            for (followingLayer in followingLayers) {
+                for (followingVertex in followingLayer) {
+                    val vertexModel = activeDataflowModel.vertices[followingVertex]!!
+
+                    if (vertexModel.epoch > 0) {
+                        vertexModel.epoch = 0
+                        vertexModel.message = null
+                        clearedConsumer.invoke(followingVertex)
+                    }
                 }
             }
         }

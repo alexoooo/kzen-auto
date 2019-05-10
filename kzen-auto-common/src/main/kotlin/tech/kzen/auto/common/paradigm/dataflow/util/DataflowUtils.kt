@@ -61,7 +61,7 @@ object DataflowUtils {
                 firstLayerReady = index
             }
         }
-        println("^^^^^ next: dataflowDag - $lastLayerInProgress / $firstLayerReady")
+//        println("^^^^^ next: dataflowDag - $lastLayerInProgress / $firstLayerReady")
 
         val nextLayerIndex = when {
             lastLayerInProgress != -1 ->
