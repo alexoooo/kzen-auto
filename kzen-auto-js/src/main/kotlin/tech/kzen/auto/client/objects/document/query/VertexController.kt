@@ -230,7 +230,8 @@ class VertexController(
                 Color.white
 
             VisualVertexPhase.Remaining ->
-                Color("#00a457")
+//                Color("#00a457")
+                Color.white
 
             VisualVertexPhase.Error ->
                 Color.red
@@ -249,16 +250,18 @@ class VertexController(
             }
 
             if (isPipe) {
-                renderPipe()
+                renderPipe(cardColor)
             }
             else {
-                renderFitting(phase)
+                renderFitting(phase, cardColor)
             }
         }
     }
 
 
-    private fun RBuilder.renderPipe() {
+    private fun RBuilder.renderPipe(
+            cardColor: Color
+    ) {
         renderIngress()
 
         styledDiv {
@@ -283,12 +286,13 @@ class VertexController(
             }
         }
 
-        renderEgress()
+        renderEgress(cardColor)
     }
 
 
     private fun RBuilder.renderFitting(
-            phase: VisualVertexPhase?
+            phase: VisualVertexPhase?,
+            cardColor: Color
     ) {
         val objectMetadata = props.graphStructure.graphMetadata.get(props.objectLocation)!!
         val hasInput = objectMetadata.attributes.values.containsKey(DataflowUtils.inputAttributeName)
@@ -301,7 +305,7 @@ class VertexController(
         renderContent(phase)
 
         if (hasOutput) {
-            renderEgress()
+            renderEgress(cardColor)
         }
     }
 
@@ -327,7 +331,12 @@ class VertexController(
                 renderHeader(phase)
             }
 
-            renderBody()
+            styledDiv {
+                css {
+                    paddingBottom = 0.5.em
+                }
+                renderBody()
+            }
         }
     }
 
@@ -335,10 +344,10 @@ class VertexController(
     private fun RBuilder.renderBody() {
         renderAttributes()
 
-//        predecessorAvailable()
+        renderPredecessorAvailable()
 //        renderIterations()
         renderState()
-        renderMessage()
+//        renderMessage()
     }
 
 
@@ -620,17 +629,19 @@ class VertexController(
     }
 
 
-    private fun RBuilder.renderEgress() {
+    private fun RBuilder.renderEgress(
+            cardColor: Color
+    ) {
         styledDiv {
             css {
-                backgroundColor = Color.white
+                backgroundColor = cardColor
                 position = Position.absolute
 
-                width = 10.px
-                height = 10.px
+                width = 2.em
+                height = 2.em
 
-                bottom = (-10).px
-                left = (105).px
+                bottom = (-2).em
+                left = cardWidth.div(2).minus(1.em)
             }
         }
 
@@ -641,18 +652,87 @@ class VertexController(
                 width = 0.px
                 height = 0.px
 
-//                borderBottom(10.px, BorderStyle.solid, Color.white)
-//                borderLeft(5.px, BorderStyle.solid, Color.transparent)
-//                borderRight(5.px, BorderStyle.solid, Color.transparent)
+                borderTop(2.em, BorderStyle.solid, cardColor)
+                borderLeft(2.em, BorderStyle.solid, Color.transparent)
+                borderRight(2.em, BorderStyle.solid, Color.transparent)
 
-                borderTop(10.px, BorderStyle.solid, Color.white)
-                borderLeft(10.px, BorderStyle.solid, Color.transparent)
-                borderRight(10.px, BorderStyle.solid, Color.transparent)
+                bottom = (-3).em
+                left = cardWidth.div(2).minus(2.em)
+            }
+        }
 
-//                bottom = (-19).px
-                bottom = (-19).px
-                left = (100).px
-//                zIndex = 999
+        val hasNext = visualVertexModel()?.hasNext ?: false
+        if (hasNext) {
+            styledDiv {
+                css {
+                    position = Position.absolute
+
+                    width = 1.em
+                    height = 1.em
+
+                    bottom = (-5).px
+                    left = cardWidth.div(2).minus(0.75.em)
+                }
+                attrs {
+                    title = "Has more messages"
+                }
+
+                child(KeyboardArrowDownIcon::class) {}
+            }
+        }
+
+        val vertexMessage = visualVertexModel()?.message
+        if (vertexMessage != null) {
+            val successors = props.dataflowDag.successors[props.objectLocation]
+                    ?: listOf()
+
+            val isMessagePending = successors.all {
+                props.visualDataflowModel.vertices[it]!!.epoch == 0
+            }
+
+            if (isMessagePending) {
+                styledDiv {
+                    css {
+                        position = Position.absolute
+
+                        width = 1.em
+                        height = 1.em
+
+                        bottom = (-1).em
+                        left = cardWidth.div(2).minus(1.5.em)
+                    }
+
+                    child(MaterialIconButton::class) {
+                        attrs {
+                            title = "Message"
+
+                            style = reactStyle {
+                                color = Color.black
+                                backgroundColor = Color("rgba(255, 215, 0, 0.175)")
+                            }
+                        }
+
+                        child(MailIcon::class) {}
+                    }
+                }
+
+                styledDiv {
+                    css {
+                        position = Position.absolute
+
+                        width = 0.em
+                        height = 1.em
+
+                        bottom = (-2).em
+                        left = cardWidth.div(2).plus(2.em)
+                    }
+
+                    attrs {
+                        title = "Message content"
+                    }
+
+                    +"${vertexMessage.get()}"
+                }
             }
         }
     }
@@ -742,7 +822,7 @@ class VertexController(
     }
 
 
-    private fun RBuilder.predecessorAvailable() {
+    private fun RBuilder.renderPredecessorAvailable() {
 //        console.log("^^^^ renderState", props.visualVertexModel)
         val iteration = visualVertexModel()?.epoch
                 ?: return
@@ -793,28 +873,6 @@ class VertexController(
 
         div {
             +"State: ${vertexState.get()}"
-        }
-    }
-
-
-    private fun RBuilder.renderMessage() {
-//        console.log("^^^^ renderState", props.visualVertexModel)
-
-        val vertexMessage = visualVertexModel()?.message
-        val hasNext = visualVertexModel()?.hasNext ?: false
-
-        if (vertexMessage == null && ! hasNext) {
-            return
-        }
-
-        div {
-            vertexMessage?.let {
-                +"Message: ${it.get()}"
-            }
-
-            if (hasNext) {
-                +" [Has more messages]"
-            }
         }
     }
 

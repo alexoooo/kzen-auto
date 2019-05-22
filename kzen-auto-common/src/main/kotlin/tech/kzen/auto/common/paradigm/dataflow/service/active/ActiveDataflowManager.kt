@@ -435,8 +435,10 @@ class ActiveDataflowManager(
 
             val input = instance.constructorAttributes[DataflowUtils.inputAttributeName] as? MutableRequiredInput<*>
             if (input != null) {
-                val inputLocation: ObjectLocation =
-                        dataflowDag.predecessors[vertexLocation]?.first()!!
+                val inputLocation: ObjectLocation = dataflowDag
+                        .predecessors[vertexLocation]
+                        ?.first()
+                        ?: throw IllegalArgumentException("Unknown vertexLocation: $vertexLocation")
 
                 val inputActiveModel = activeDataflowModel.vertices[inputLocation]!!
 

@@ -297,9 +297,12 @@ class QueryController:
                     tr {
                         for (column in 0 .. vertexMatrix.usedColumns) {
                             styledTd {
-//                                css {
-//                                    padding(1.em)
-//                                }
+                                css {
+                                    padding(1.em)
+                                    borderStyle = BorderStyle.solid
+                                    borderColor = Color.black
+                                    borderWidth = 1.px
+                                }
 
                                 val vertexInfo = vertexMatrix.get(row, column)
                                 if (vertexInfo == null) {

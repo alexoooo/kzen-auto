@@ -106,7 +106,7 @@ class QueryRunController(
     }
 
 
-    private fun onFabEnter() {
+    private fun onRunEnter() {
         val nextToRun = state.visualDataflowModel?.let {
             DataflowUtils.next(
                     props.documentPath!!,
@@ -126,7 +126,7 @@ class QueryRunController(
     }
 
 
-    private fun onFabLeave() {
+    private fun onRunLeave() {
         ClientContext.executionIntent.clear()
 ////        val nextToRun = state.execution?.next()
 //        val nextToRun = state.visualDataflowModel?.let {
@@ -276,8 +276,8 @@ class QueryRunController(
 
         child(MaterialFab::class) {
             attrs {
-                onMouseOver = ::onFabEnter
-                onMouseOut = ::onFabLeave
+                onMouseOver = ::onRunEnter
+                onMouseOut = ::onRunLeave
 
                 title = when {
                     phase == Phase.Done ->
@@ -292,7 +292,6 @@ class QueryRunController(
                     else ->
                         "Run all (continue)"
                 }
-
 
                 onClick = {
                     when {
@@ -381,6 +380,9 @@ class QueryRunController(
         val hasRunNext = phase == Phase.Partial || phase == Phase.Pending
         child(MaterialIconButton::class) {
             attrs {
+                onMouseOver = ::onRunEnter
+                onMouseOut = ::onRunLeave
+
                 title = "Run next"
 
                 style = reactStyle {

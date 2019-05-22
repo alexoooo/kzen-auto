@@ -48,6 +48,23 @@ PrimeFilter:
       by: DataflowWiring
 
 
+DivisibleFilter:
+  abstract: true
+  is: Dataflow
+  class: tech.kzen.auto.server.objects.query.DivisibleFilter
+  icon: FilterList
+  description: "Filter divisible by"
+  divisor: 1
+  meta:
+    input:
+      is: RequiredInput
+      by: DataflowWiring
+    output:
+      is: OptionalOutput
+      by: DataflowWiring
+    divisor: Int
+
+
 CountSink:
   abstract: true
   is: Dataflow

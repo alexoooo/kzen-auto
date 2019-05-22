@@ -226,3 +226,9 @@ external class FilterListIcon: Component<IconProps, RState> {
 external class RedoIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("Mail")
+external class MailIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
