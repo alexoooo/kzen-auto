@@ -13,6 +13,7 @@ import react.setState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.script.action.AttributeEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.util.async
@@ -22,8 +23,10 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexInfo
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -31,6 +34,9 @@ import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
+import tech.kzen.lib.common.structure.notation.model.AttributeNotation
+import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
+import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 
 
 class VertexController(
@@ -49,6 +55,7 @@ class VertexController(
 
         private val cardWidth = 20.em
     }
+
 
     class Props(
             var attributeNesting: AttributeNesting,
@@ -174,7 +181,7 @@ class VertexController(
 //    }
 
 
-    private fun visalVertexModel(): VisualVertexModel? {
+    private fun visualVertexModel(): VisualVertexModel? {
         return props.visualDataflowModel.vertices[props.objectLocation]
     }
 
@@ -208,21 +215,19 @@ class VertexController(
         val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
         val isPipe = parentLocation.objectPath.name.value.endsWith("Pipe")
 
-        val phase = visalVertexModel()?.phase()
+        val phase = visualVertexModel()?.phase()
 
         val cardColor = when (phase) {
             VisualVertexPhase.Pending ->
-//                    Color("#649fff")
+//                Color("#649fff")
                 Color.white
 
             VisualVertexPhase.Running ->
                 Color.gold
 
             VisualVertexPhase.Done ->
-//                    Color("#00a457")
-                Color("#00b467")
-//                    Color("#13aa59")
-//                    Color("#1faf61")
+//                Color("#00b467")
+                Color.white
 
             VisualVertexPhase.Remaining ->
                 Color("#00a457")
@@ -328,10 +333,80 @@ class VertexController(
 
 
     private fun RBuilder.renderBody() {
-        predecessorAvailable()
-        renderIterations()
+        renderAttributes()
+
+//        predecessorAvailable()
+//        renderIterations()
         renderState()
         renderMessage()
+    }
+
+
+    private fun RBuilder.renderAttributes() {
+        val objectMetadata = props.graphStructure.graphMetadata.objectMetadata[props.objectLocation]!!
+
+        for (e in objectMetadata.attributes.values) {
+            if (e.key == AutoConventions.iconAttributePath.attribute ||
+                    e.key == AutoConventions.descriptionAttributePath.attribute ||
+                    e.key == VertexInfo.rowAttributeName ||
+                    e.key == VertexInfo.columnAttributeName) {
+                continue
+            }
+
+            val keyAttributePath = AttributePath.ofName(e.key)
+
+            val value = props.graphStructure.graphNotation.transitiveAttribute(
+                    props.objectLocation, keyAttributePath
+            ) ?: continue
+
+            styledDiv {
+                css {
+                    marginBottom = 0.5.em
+                }
+
+                renderAttribute(e.key,value)
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderAttribute(
+            attributeName: AttributeName,
+            attributeValue: AttributeNotation
+    ) {
+        when (attributeValue) {
+            is ScalarAttributeNotation -> {
+                val scalarValue = attributeValue.value
+
+                child(AttributeEditor::class) {
+                    attrs {
+                        objectLocation = props.objectLocation
+                        this.attributeName = attributeName
+                        value = scalarValue
+                    }
+                }
+            }
+
+            is ListAttributeNotation -> {
+                if (attributeValue.values.all { it.asString() != null }) {
+                    val stringValues = attributeValue.values.map { it.asString()!! }
+
+                    child(AttributeEditor::class) {
+                        attrs {
+                            objectLocation = props.objectLocation
+                            this.attributeName = attributeName
+                            values = stringValues
+                        }
+                    }
+                }
+                else {
+                    +"$attributeName: $attributeValue"
+                }
+            }
+
+            else ->
+                +"$attributeValue"
+        }
     }
 
 
@@ -669,7 +744,7 @@ class VertexController(
 
     private fun RBuilder.predecessorAvailable() {
 //        console.log("^^^^ renderState", props.visualVertexModel)
-        val iteration = visalVertexModel()?.epoch
+        val iteration = visualVertexModel()?.epoch
                 ?: return
 
         if (iteration != 0) {
@@ -701,7 +776,7 @@ class VertexController(
     private fun RBuilder.renderIterations() {
 //        console.log("^^^^ renderState", props.visualVertexModel)
 
-        val iteration = visalVertexModel()?.epoch
+        val iteration = visualVertexModel()?.epoch
                 ?: return
 
         div {
@@ -713,7 +788,7 @@ class VertexController(
     private fun RBuilder.renderState() {
 //        console.log("^^^^ renderState", props.visualVertexModel)
 
-        val vertexState = visalVertexModel()?.state
+        val vertexState = visualVertexModel()?.state
                 ?: return
 
         div {
@@ -725,8 +800,8 @@ class VertexController(
     private fun RBuilder.renderMessage() {
 //        console.log("^^^^ renderState", props.visualVertexModel)
 
-        val vertexMessage = visalVertexModel()?.message
-        val hasNext = visalVertexModel()?.hasNext ?: false
+        val vertexMessage = visualVertexModel()?.message
+        val hasNext = visualVertexModel()?.hasNext ?: false
 
         if (vertexMessage == null && ! hasNext) {
             return

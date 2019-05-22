@@ -28,7 +28,6 @@ import tech.kzen.lib.platform.collect.toPersistentList
 class AttributeEditor(
         props: Props
 ):
-//        RComponent<AttributeEditor.Props, AttributeEditor.State>(props),
         RPureComponent<AttributeEditor.Props, AttributeEditor.State>(props),
         ExecutionManager.Observer
 {
