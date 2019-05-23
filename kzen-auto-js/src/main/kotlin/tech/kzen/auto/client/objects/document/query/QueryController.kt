@@ -299,9 +299,9 @@ class QueryController:
                             styledTd {
                                 css {
                                     padding(1.em)
-                                    borderStyle = BorderStyle.solid
-                                    borderColor = Color.black
-                                    borderWidth = 1.px
+//                                    borderStyle = BorderStyle.solid
+//                                    borderColor = Color.black
+//                                    borderWidth = 1.px
                                 }
 
                                 val vertexInfo = vertexMatrix.get(row, column)

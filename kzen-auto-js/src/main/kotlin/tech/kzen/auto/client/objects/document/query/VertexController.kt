@@ -262,7 +262,7 @@ class VertexController(
     private fun RBuilder.renderPipe(
             cardColor: Color
     ) {
-        renderIngress()
+        renderIngress(cardColor)
 
         styledDiv {
             css {
@@ -299,10 +299,10 @@ class VertexController(
         val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.outputAttributeName)
 
         if (hasInput) {
-            renderIngress()
+            renderIngress(cardColor)
         }
 
-        renderContent(phase)
+        renderContent(phase, hasOutput)
 
         if (hasOutput) {
             renderEgress(cardColor)
@@ -311,17 +311,17 @@ class VertexController(
 
 
     private fun RBuilder.renderContent(
-            phase: VisualVertexPhase?
+            phase: VisualVertexPhase?,
+            hasOutput: Boolean
     ) {
         styledDiv {
             css {
                 display = Display.block
-//                marginTop = 1.5.em
-//                marginBottom = 1.em
-//                marginLeft = 1.em
-//                marginRight = 1.em
                 margin(1.em)
-//                backgroundColor = cardColor
+
+                if (hasOutput) {
+                    marginBottom = 2.em
+                }
             }
 
             styledDiv {
@@ -344,7 +344,7 @@ class VertexController(
     private fun RBuilder.renderBody() {
         renderAttributes()
 
-        renderPredecessorAvailable()
+//        renderPredecessorAvailable()
 //        renderIterations()
         renderState()
 //        renderMessage()
@@ -596,34 +596,36 @@ class VertexController(
     }
 
 
-    private fun RBuilder.renderIngress() {
+    private fun RBuilder.renderIngress(
+            cardColor: Color
+    ) {
         styledDiv {
             css {
                 position = Position.absolute
 
-                width = 10.px
+//                width = 10.px
+                width = 0.px
                 height = 0.px
 
-                borderTop(10.px, BorderStyle.solid, Color.white)
-                borderLeft(5.px, BorderStyle.solid, Color.transparent)
-                borderRight(5.px, BorderStyle.solid, Color.transparent)
+                borderTop(2.em, BorderStyle.solid, cardColor)
+                borderLeft(2.em, BorderStyle.solid, Color.transparent)
+                borderRight(2.em, BorderStyle.solid, Color.transparent)
 
-                top = (-19).px
-                left = (100).px
-//                zIndex = -999
+                top = (-2).em
+                left = cardWidth.div(2).minus(2.em)
             }
         }
 
         styledDiv {
             css {
-                backgroundColor = Color.white
+                backgroundColor = cardColor
                 position = Position.absolute
 
-                width = 10.px
-                height = 10.px
+                width = 2.em
+                height = 2.em
 
-                top = (-10).px
-                left = (105).px
+                top = (-2).em
+                left = cardWidth.div(2).minus(1.em)
             }
         }
     }
