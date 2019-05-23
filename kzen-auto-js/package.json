@@ -10,17 +10,17 @@
     "styled-components": "4.2.0"
   },
   "devDependencies": {
-    "browser-sync": "2.26.3",
+    "browser-sync": "2.26.5",
     "browser-sync-webpack-plugin": "2.2.2",
     "browserify": "16.2.3",
-    "css-loader": "0.28.11",
+    "css-loader": "2.1.1",
     "html-webpack-plugin": "3.2.0",
-    "karma": "4.0.1",
+    "karma": "4.1.0",
     "karma-browserify": "6.0.0",
     "karma-chrome-launcher": "2.2.0",
     "karma-mocha": "1.3.0",
     "karma-mocha-reporter": "2.2.5",
-    "mocha": "6.1.2",
+    "mocha": "6.1.4",
     "style-loader": "0.23.1",
     "watchify": "3.11.1",
     "webpack": "3.11.0"

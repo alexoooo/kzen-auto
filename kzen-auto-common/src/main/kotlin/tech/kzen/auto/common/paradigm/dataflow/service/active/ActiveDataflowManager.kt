@@ -112,6 +112,9 @@ class ActiveDataflowManager(
 
                 models.remove(event.documentPath)
             }
+
+            else ->
+                Unit
         }
     }
 
