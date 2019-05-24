@@ -18,6 +18,12 @@ module.exports = {
         path: dist,
         publicPath: ""
     },
+
+    mode: "production",
+    optimization: {
+        minimize: false
+    },
+
     module: {
         rules: [{
             test: /\.css$/,

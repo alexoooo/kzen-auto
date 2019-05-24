@@ -22,6 +22,12 @@ module.exports = {
         path: dist,
         publicPath: ""
     },
+
+    mode: "development",
+    optimization: {
+        minimize: false
+    },
+
     watch: true,
     module: {
         rules: [{
@@ -43,10 +49,10 @@ module.exports = {
     plugins: [
         // TODO: https://github.com/nuxt/nuxt.js/issues/3042
         //  seems to be holding back webpack upgrade
-        new webpack.optimize.CommonsChunkPlugin({
-            name: 'vendor',
-            filename: 'vendor.bundle.js'
-        }),
+//        new webpack.optimize.CommonsChunkPlugin({
+//            name: 'vendor',
+//            filename: 'vendor.bundle.js'
+//        }),
         new BrowserSyncPlugin({
             host: 'localhost',
             port: 8081,
