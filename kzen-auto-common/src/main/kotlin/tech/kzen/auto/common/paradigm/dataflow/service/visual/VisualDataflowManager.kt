@@ -260,7 +260,10 @@ class VisualDataflowManager(
         val visualVertexModel = model.vertices[objectLocation]
                 ?: return
 
-        val updatedVertex = visualVertexModel.copy(running = true)
+        val updatedVertex = visualVertexModel.copy(
+                running = true,
+                error = null)
+
         val updatedModel = model.put(objectLocation, updatedVertex)
 
         models = models.put(host, updatedModel)
@@ -290,7 +293,8 @@ class VisualDataflowManager(
                 updatedState,
                 visualDataflowTransition.message,
                 visualDataflowTransition.hasNext,
-                visualDataflowTransition.iteration)
+                visualDataflowTransition.iteration,
+                visualDataflowTransition.error)
 
         val updatedModel = model.put(objectLocation, updatedVertex)
 

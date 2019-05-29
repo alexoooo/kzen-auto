@@ -4,6 +4,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
+// TODO: add error handling and logging
 // TODO: stateChange and message are required, but can the rest be inferred on the client?
 data class VisualVertexTransition(
         val stateChange: ExecutionValue?,
@@ -11,7 +12,8 @@ data class VisualVertexTransition(
         val hasNext: Boolean,
         val iteration: Int,
         val loop: List<ObjectLocation>,
-        val cleared: List<ObjectLocation>
+        val cleared: List<ObjectLocation>,
+        val error: String?
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -21,6 +23,7 @@ data class VisualVertexTransition(
         private const val epochKey = "epoch"
         private const val loopKey = "loop"
         private const val clearedKey = "cleared"
+        private const val errorKey = "error"
 
 
         fun toCollection(model: VisualVertexTransition): Map<String, Any?> {
@@ -30,7 +33,8 @@ data class VisualVertexTransition(
                     hasNextKey to model.hasNext,
                     epochKey to model.iteration,
                     loopKey to model.loop.map { it.asString() },
-                    clearedKey to model.cleared.map { it.asString() }
+                    clearedKey to model.cleared.map { it.asString() },
+                    errorKey to model.error
             )
         }
 
@@ -49,7 +53,8 @@ data class VisualVertexTransition(
                     collection[hasNextKey] as Boolean,
                     collection[epochKey] as Int,
                     (collection[loopKey] as List<String>).map { ObjectLocation.parse(it) },
-                    (collection[clearedKey] as List<String>).map { ObjectLocation.parse(it) }
+                    (collection[clearedKey] as List<String>).map { ObjectLocation.parse(it) },
+                    collection[errorKey] as? String
             )
         }
     }

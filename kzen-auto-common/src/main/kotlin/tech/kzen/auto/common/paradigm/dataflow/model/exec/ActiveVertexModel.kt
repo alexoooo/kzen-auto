@@ -6,7 +6,10 @@ class ActiveVertexModel(
         var message: Any?,
         val remainingBatch: MutableList<Any>,
         var streamHasNext: Boolean,
-        var epoch: Long
+        var epoch: Long,
+
+        // TODO: consider factor out to be visual-only for performance
+        var error: String?
 ) {
     fun hasNext(): Boolean {
         return remainingBatch.isNotEmpty() || streamHasNext

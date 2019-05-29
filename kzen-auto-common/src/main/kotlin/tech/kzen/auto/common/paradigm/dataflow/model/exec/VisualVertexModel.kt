@@ -29,17 +29,29 @@ data class VisualVertexModel(
         /**
          * Number of times executed in current block context, reset to zero and end of block
          */
-        val epoch: Int
+        val epoch: Int,
+
+        /**
+         * If present, means something went wrong
+         */
+        val error: String?
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val empty = VisualVertexModel(false, null, null, false, 0)
+        val empty = VisualVertexModel(
+                false,
+                null,
+                null,
+                false,
+                0,
+                null)
 
         private const val runningKey = "running"
         private const val stateKey = "state"
         private const val messageKey = "message"
         private const val hasNextKey = "hasNext"
         private const val epochKey = "epoch"
+        private const val errorKey = "error"
 
 
         fun toCollection(model: VisualVertexModel): Map<String, Any?> {
@@ -48,7 +60,8 @@ data class VisualVertexModel(
                     stateKey to model.state?.toCollection(),
                     messageKey to model.message?.toCollection(),
                     hasNextKey to model.hasNext,
-                    epochKey to model.epoch
+                    epochKey to model.epoch,
+                    errorKey to model.error
             )
         }
 
@@ -66,7 +79,8 @@ data class VisualVertexModel(
                         ExecutionValue.fromCollection(it as Map<String, Any>)
                     },
                     collection[hasNextKey] as Boolean,
-                    collection[epochKey] as Int
+                    collection[epochKey] as Int,
+                    collection[errorKey] as? String
             )
         }
     }

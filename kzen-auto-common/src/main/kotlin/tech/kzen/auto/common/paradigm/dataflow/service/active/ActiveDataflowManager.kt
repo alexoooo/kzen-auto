@@ -212,7 +212,8 @@ class ActiveDataflowManager(
                 null,
                 mutableListOf(),
                 false,
-                0)
+                0,
+                null)
     }
 
 
@@ -265,7 +266,8 @@ class ActiveDataflowManager(
                 stateInspection,
                 messageInspection,
                 hasNext,
-                activeVertexModel.epoch.toInt())
+                activeVertexModel.epoch.toInt(),
+                activeVertexModel.error)
     }
 
 
@@ -302,11 +304,22 @@ class ActiveDataflowManager(
         val loop = mutableListOf<ObjectLocation>()
         val cleared = mutableListOf<ObjectLocation>()
 
-        execute(host,
-                vertexLocation,
-//                activeDataflowModel.dataflowDag,
-                { loop.add(it) },
-                { cleared.add(it) })
+        try {
+            execute(host,
+                    vertexLocation,
+                    { loop.add(it) },
+                    { cleared.add(it) })
+        }
+        catch (e: Throwable) {
+            return VisualVertexTransition(
+                    null,
+                    null,
+                    activeVertexModel.hasNext(),
+                    activeVertexModel.epoch.toInt(),
+                    loop,
+                    cleared,
+                    e.message ?: "Error")
+        }
 
         val nextStateView = activeVertexModel.state?.let {
             inspectState(vertexLocation, it)
@@ -330,7 +343,8 @@ class ActiveDataflowManager(
                 activeVertexModel.hasNext(),
                 activeVertexModel.epoch.toInt(),
                 loop,
-                cleared)
+                cleared,
+                null)
     }
 
 
@@ -438,10 +452,9 @@ class ActiveDataflowManager(
 
             val input = instance.constructorAttributes[DataflowUtils.inputAttributeName] as? MutableRequiredInput<*>
             if (input != null) {
-                val inputLocation: ObjectLocation = dataflowDag
-                        .predecessors[vertexLocation]
-                        ?.first()
-                        ?: throw IllegalArgumentException("Unknown vertexLocation: $vertexLocation")
+                val predecessors = dataflowDag.predecessors[vertexLocation]
+                val inputLocation: ObjectLocation = predecessors?.first()
+                        ?: throw IllegalArgumentException("Unknown vertexLocation $vertexLocation: $predecessors")
 
                 val inputActiveModel = activeDataflowModel.vertices[inputLocation]!!
 
