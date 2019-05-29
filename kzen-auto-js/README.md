@@ -1,7 +1,7 @@
 
 For dev mode, run:
 > ./gradlew -t kzen-auto-js:watch
-> cd client
+> cd kzen-auto-js
 > yarn run start
 
 

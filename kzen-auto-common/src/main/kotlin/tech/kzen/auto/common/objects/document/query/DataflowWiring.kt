@@ -3,7 +3,7 @@ package tech.kzen.auto.common.objects.document.query
 import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableDataflowOutput
 import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableRequiredInput
 import tech.kzen.lib.common.api.AttributeDefiner
-import tech.kzen.lib.common.context.definition.AttributeDefinition
+import tech.kzen.lib.common.context.definition.AttributeDefinitionAttempt
 import tech.kzen.lib.common.context.definition.GraphDefinition
 import tech.kzen.lib.common.context.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.context.instance.GraphInstance
@@ -44,7 +44,7 @@ class DataflowWiring: AttributeDefiner {
             graphStructure: GraphStructure,
             partialGraphDefinition: GraphDefinition,
             partialGraphInstance: GraphInstance
-    ): AttributeDefinition {
+    ): AttributeDefinitionAttempt {
         @Suppress("MoveVariableDeclarationIntoWhen")
         val attributeClass: ClassName = graphStructure
                 .graphMetadata
@@ -80,6 +80,7 @@ class DataflowWiring: AttributeDefiner {
                 TODO("Unknown: $attributeClass")
         }
 
-        return ValueAttributeDefinition(value)
+        return AttributeDefinitionAttempt.success(
+                ValueAttributeDefinition(value))
     }
 }
