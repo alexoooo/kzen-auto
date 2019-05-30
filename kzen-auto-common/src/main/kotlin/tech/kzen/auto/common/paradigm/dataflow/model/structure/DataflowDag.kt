@@ -130,10 +130,10 @@ data class DataflowDag(
                 val bInfo = vertexMap[b]!!
 
                 if (aInfo.row != bInfo.row) {
-                    bInfo.row.compareTo(bInfo.row)
+                    aInfo.row.compareTo(bInfo.row)
                 }
                 else {
-                    bInfo.column.compareTo(bInfo.column)
+                    aInfo.column.compareTo(bInfo.column)
                 }
             })
         }

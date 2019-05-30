@@ -173,15 +173,28 @@ object DataflowUtils {
             return layer.first()
         }
 
-        // TODO: handle more than one vertex per layer
+        var minEpoch = Int.MAX_VALUE
+        var candidate: ObjectLocation? = null
+
         for (vertexLocation in layer) {
             val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
                     ?: VisualVertexModel.empty
 
-            if (visualVertexModel.phase() == VisualVertexPhase.Pending) {
-                return vertexLocation
+            val phase = visualVertexModel.phase()
+
+            if (phase != VisualVertexPhase.Pending &&
+                    phase != VisualVertexPhase.Remaining) {
+                continue
             }
+
+            if (minEpoch <= visualVertexModel.epoch) {
+                continue
+            }
+
+            minEpoch = visualVertexModel.epoch
+            candidate = vertexLocation
         }
-        return null
+
+        return candidate
     }
 }
