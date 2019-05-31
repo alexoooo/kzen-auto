@@ -1,0 +1,66 @@
+
+#######################################################################################################################
+
+EdgesDefiner:
+  class: tech.kzen.auto.common.objects.document.query.EdgesDefiner
+
+
+EdgeDescriptor:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
+
+
+#######################################################################################################################
+
+# NB: referenced in QueryController
+EdgePipe:
+  abstract: true
+  description: "Pipe"
+  meta:
+    icon: String
+    description: String
+    orientation: String
+
+
+TopToBottomPipe:
+  abstract: true
+  is: EdgePipe
+  icon: ArrowDownward
+  description: "Down"
+  orientation: TopToBottom
+
+
+TopToRightPipe:
+  abstract: true
+  is: EdgePipe
+  icon: SubdirectoryArrowRight
+  description: "Down to the right"
+  orientation: TopToRight
+
+
+#LeftToBottomPipe:
+#  abstract: true
+#  is: EdgePipe
+#  icon: ArrowDownward
+#  description: "Down"
+#  orientation: LeftToBottom
+
+
+#CountSink:
+#  abstract: true
+#  is: Dataflow
+#  class: tech.kzen.auto.server.objects.query.CountSink
+#  icon: ExposurePlus1
+#  description: "Counter"
+#  meta:
+#    input:
+#      is: RequiredInput
+#      by: DataflowWiring
+
+
+#enum class EdgeOrientation {
+#  TopToBottom,
+#  TopToBottomAndRight,
+#  LeftToBottomAndRight,
+#  LeftToBottom
+#}

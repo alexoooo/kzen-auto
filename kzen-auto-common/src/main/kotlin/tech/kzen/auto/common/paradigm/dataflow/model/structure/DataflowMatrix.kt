@@ -2,15 +2,13 @@ package tech.kzen.auto.common.paradigm.dataflow.model.structure
 
 import tech.kzen.auto.common.objects.document.query.QueryDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellDescriptor
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.notation.NotationConventions
-import tech.kzen.lib.common.structure.notation.model.DocumentNotation
-import tech.kzen.lib.common.structure.notation.model.GraphNotation
-import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
-import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import tech.kzen.lib.common.structure.notation.model.*
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
@@ -31,15 +29,16 @@ data class DataflowMatrix(
                     ?: return empty
 
             val verticesNotation = verticesNotation(documentNotation)
-                    ?: return empty
+            val edgesNotation = edgesNotation(documentNotation)
 
-            return vertexInfoLayers(graphNotation,  verticesNotation)
+            return cellDescriptorLayers(
+                    graphNotation,  verticesNotation, edgesNotation)
         }
 
 
         fun verticesNotation(
                 documentNotation: DocumentNotation
-        ): ListAttributeNotation? {
+        ): ListAttributeNotation {
             return documentNotation
                     .objects
                     .values[NotationConventions.mainObjectPath]
@@ -51,39 +50,64 @@ data class DataflowMatrix(
         }
 
 
-        fun vertexInfoLayers(
+        fun edgesNotation(
+                documentNotation: DocumentNotation
+        ): ListAttributeNotation {
+            return documentNotation
+                    .objects
+                    .values[NotationConventions.mainObjectPath]
+                    ?.attributes
+                    ?.values
+                    ?.get(QueryDocument.edgesAttributeName)
+                    as? ListAttributeNotation
+                    ?: ListAttributeNotation(persistentListOf())
+        }
+
+
+        fun cellDescriptorLayers(
                 graphNotation: GraphNotation,
-                verticesNotation: ListAttributeNotation
+                verticesNotation: ListAttributeNotation,
+                edgesNotation: ListAttributeNotation
         ): DataflowMatrix {
-            val vertexInfos = verticesNotation.values.withIndex().map {
-                val vertexReference = ObjectReference.parse((it.value as ScalarAttributeNotation).value)
+            val vertexDescriptors = verticesNotation.values.withIndex().map {
+                val vertexNotation = it.value as ScalarAttributeNotation
+                val vertexReference = ObjectReference.parse(vertexNotation.value)
                 val objectLocation = graphNotation.coalesce.locate(vertexReference)
-                val objectNotation = graphNotation.coalesce.get(objectLocation)!!
+                val objectNotation = graphNotation.coalesce[objectLocation]!!
                 VertexDescriptor.fromNotation(
                         it.index,
                         objectLocation,
                         objectNotation)
             }
 
-            return ofUnorderedDescriptors(vertexInfos)
+            val edgeDescriptors = edgesNotation.values.withIndex().map {
+                @Suppress("CAST_NEVER_SUCCEEDS")
+                val edgeNotation = it.value as MapAttributeNotation
+
+                EdgeDescriptor.fromNotation(
+                        it.index,
+                        edgeNotation)
+            }
+
+            return ofUnorderedDescriptors(vertexDescriptors, edgeDescriptors)
         }
 
 
-        fun ofUnorderedDescriptors(
-                unorderedInfos: List<VertexDescriptor>
+        private fun ofUnorderedDescriptors(
+                vertexDescriptors: List<VertexDescriptor>,
+                edgeDescriptors: List<EdgeDescriptor>
         ): DataflowMatrix {
-            val sortedByRowThenColumn = unorderedInfos.sortedWith(CellDescriptor.byRowThenColumn)
+            val sortedByRowThenColumn = mutableListOf<CellDescriptor>()
+            sortedByRowThenColumn.addAll(vertexDescriptors)
+            sortedByRowThenColumn.addAll(edgeDescriptors)
+            sortedByRowThenColumn.sortWith(CellDescriptor.byRowThenColumn)
 
-            val matrix = mutableListOf<List<VertexDescriptor>>()
-            val row = mutableListOf<VertexDescriptor>()
+            val matrix = mutableListOf<List<CellDescriptor>>()
+            val row = mutableListOf<CellDescriptor>()
             var previousRow = -1
             for (vertexDescriptor in sortedByRowThenColumn) {
-                if (/*previousRow != -1 &&*/
-                        previousRow != vertexDescriptor.coordinate.row &&
+                if (previousRow != vertexDescriptor.coordinate.row &&
                         row.isNotEmpty()) {
-//                    for (skipped in previousRow until vertexInfo.row) {
-//                        matrix.add(listOf())
-//                    }
                     matrix.add(row.toList())
                     row.clear()
                 }
@@ -115,13 +139,15 @@ data class DataflowMatrix(
             ?: 0
 
 
-
-    fun byLocation(): Map<ObjectLocation, VertexDescriptor> {
+    fun verticesByLocation(): Map<ObjectLocation, VertexDescriptor> {
         val builder = mutableMapOf<ObjectLocation, VertexDescriptor>()
 
         for (row in rows) {
             for (vertexInfo in row) {
-                builder[(vertexInfo as VertexDescriptor).objectLocation] = vertexInfo
+                if (vertexInfo !is VertexDescriptor) {
+                    continue
+                }
+                builder[vertexInfo.objectLocation] = vertexInfo
             }
         }
 
@@ -134,7 +160,7 @@ data class DataflowMatrix(
     }
 
 
-    fun get(rowIndex: Int, columnIndex: Int): VertexDescriptor? {
+    fun get(rowIndex: Int, columnIndex: Int): CellDescriptor? {
         for (row in rows) {
             if (row.first().coordinate.row != rowIndex) {
                 continue
@@ -144,7 +170,7 @@ data class DataflowMatrix(
                 if (cell.coordinate.column != columnIndex) {
                     continue
                 }
-                return cell as VertexDescriptor
+                return cell
             }
 
             return null

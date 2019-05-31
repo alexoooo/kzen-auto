@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.paradigm.dataflow.model.structure
 
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellDescriptor
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.platform.collect.toPersistentList
@@ -14,7 +15,7 @@ data class DataflowDag(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         fun of(vertexMatrix: DataflowMatrix): DataflowDag {
-            val vertexMap = vertexMatrix.byLocation()
+            val vertexMap = vertexMatrix.verticesByLocation()
             val successors = successors(vertexMatrix, vertexMap)
             val predecessors = predecessors(successors)
             val layers = layers(successors, vertexMap, predecessors)
@@ -46,16 +47,18 @@ data class DataflowDag(
                 vertexDescriptor: VertexDescriptor,
                 vertexMatrix: DataflowMatrix
         ): List<ObjectLocation> {
+            @Suppress("MoveVariableDeclarationIntoWhen")
             val vertexBelow = vertexMatrix.get(
                     vertexDescriptor.coordinate.row + 1,
-                    vertexDescriptor.coordinate.column)
+                    vertexDescriptor.coordinate.column
+            ) ?: return listOf()
 
-            return if (vertexBelow == null) {
-                listOf()
-            } else {
-                // TODO: take into account edges (pipes), in order
+            return when (vertexBelow) {
+                is EdgeDescriptor ->
+                    listOf()
 
-                listOf(vertexBelow.objectLocation)
+                is VertexDescriptor ->
+                    listOf(vertexBelow.objectLocation)
             }
         }
 

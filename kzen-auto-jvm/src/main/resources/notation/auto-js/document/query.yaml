@@ -14,6 +14,13 @@ QueryGroup:
   title: "Insert"
   documentArchetype: Query
 
+
+PipeGroup:
+  is: RibbonGroup
+  title: "Pipes"
+  documentArchetype: Query
+
+
 ###########################################################
 
 #CsvSourceTool:
@@ -48,9 +55,14 @@ CountSinkTool:
 
 ###########################################################
 
-# TODO: bring back pipes
-#DownPipeTool:
-#  is: RibbonTool
-#  parent: QueryGroup
-#  delegate: DownPipe
+TopToBottomPipeTool:
+  is: RibbonTool
+  parent: PipeGroup
+  delegate: TopToBottomPipe
+
+
+TopToRightPipeTool:
+  is: RibbonTool
+  parent: PipeGroup
+  delegate: TopToRightPipe
 

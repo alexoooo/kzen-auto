@@ -24,25 +24,28 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeOrientation
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
+import tech.kzen.lib.common.structure.notation.edit.RemoveInAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.AttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 
 
-class VertexController(
+class CellController(
         props: Props
 ):
-        RPureComponent<VertexController.Props, VertexController.State>(props),
+        RPureComponent<CellController.Props, CellController.State>(props),
         ExecutionIntent.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -58,10 +61,12 @@ class VertexController(
 
 
     class Props(
-            var attributeNesting: AttributeNesting,
-            var objectLocation: ObjectLocation,
-            var graphStructure: GraphStructure,
+            var vertexLocation: ObjectLocation?,
+            var edgeOrientation: EdgeOrientation?,
 
+            var documentPath: DocumentPath,
+            var attributeNesting: AttributeNesting,
+            var graphStructure: GraphStructure,
             var visualDataflowModel: VisualDataflowModel,
             var dataflowDag: DataflowDag
     ): RProps
@@ -119,7 +124,7 @@ class VertexController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun onExecutionIntent(actionLocation: ObjectLocation?) {
         setState {
-            intentToRun = actionLocation == props.objectLocation
+            intentToRun = actionLocation == props.vertexLocation
         }
     }
 
@@ -158,15 +163,25 @@ class VertexController(
     private fun onRemove() {
         async {
             val sourceMain = ObjectLocation(
-                    props.objectLocation.documentPath,
+                    props.documentPath,
                     NotationConventions.mainObjectPath)
 
-            val objectAttributePath = AttributePath(
-                    QueryDocument.verticesAttributeName,
-                    props.attributeNesting)
+            if (isVertex()) {
+                val objectAttributePath = AttributePath(
+                        QueryDocument.verticesAttributeName,
+                        props.attributeNesting)
 
-            ClientContext.commandBus.apply(RemoveObjectInAttributeCommand(
-                    sourceMain, objectAttributePath))
+                ClientContext.commandBus.apply(RemoveObjectInAttributeCommand(
+                        sourceMain, objectAttributePath))
+            }
+            else {
+                val objectAttributePath = AttributePath(
+                        QueryDocument.edgesAttributeName,
+                        props.attributeNesting)
+
+                ClientContext.commandBus.apply(RemoveInAttributeCommand(
+                        sourceMain, objectAttributePath))
+            }
         }
     }
 
@@ -181,9 +196,15 @@ class VertexController(
 //    }
 
 
-    private fun visualVertexModel(): VisualVertexModel? {
-        return props.visualDataflowModel.vertices[props.objectLocation]
+    private fun isVertex(): Boolean {
+        return props.vertexLocation != null
     }
+
+
+    private fun visualVertexModel(): VisualVertexModel? {
+        return props.visualDataflowModel.vertices[props.vertexLocation]
+    }
+
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -209,11 +230,11 @@ class VertexController(
 
 
     private fun RBuilder.renderCard() {
-        val objectNotation = props.graphStructure.graphNotation.coalesce[props.objectLocation]!!
-        val parentReference = ObjectReference.parse(
-                objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
-        val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
-        val isPipe = parentLocation.objectPath.name.value.endsWith("Pipe")
+//        val objectNotation = props.graphStructure.graphNotation.coalesce[props.vertexLocation]!!
+//        val parentReference = ObjectReference.parse(
+//                objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
+//        val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
+//        val isPipe = parentLocation.objectPath.name.value.endsWith("Pipe")
 
         val phase = visualVertexModel()?.phase()
 
@@ -249,17 +270,17 @@ class VertexController(
                 width = 20.em
             }
 
-            if (isPipe) {
-                renderPipe(cardColor)
+            if (isVertex()) {
+                renderVertex(phase, cardColor)
             }
             else {
-                renderFitting(phase, cardColor)
+                renderEdge(cardColor)
             }
         }
     }
 
 
-    private fun RBuilder.renderPipe(
+    private fun RBuilder.renderEdge(
             cardColor: Color
     ) {
         renderIngress(cardColor)
@@ -290,11 +311,11 @@ class VertexController(
     }
 
 
-    private fun RBuilder.renderFitting(
+    private fun RBuilder.renderVertex(
             phase: VisualVertexPhase?,
             cardColor: Color
     ) {
-        val objectMetadata = props.graphStructure.graphMetadata.get(props.objectLocation)!!
+        val objectMetadata = props.graphStructure.graphMetadata.get(props.vertexLocation!!)!!
         val hasInput = objectMetadata.attributes.values.containsKey(DataflowUtils.inputAttributeName)
         val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.outputAttributeName)
 
@@ -352,7 +373,7 @@ class VertexController(
 
 
     private fun RBuilder.renderAttributes() {
-        val objectMetadata = props.graphStructure.graphMetadata.objectMetadata[props.objectLocation]!!
+        val objectMetadata = props.graphStructure.graphMetadata.objectMetadata[props.vertexLocation!!]!!
 
         for (e in objectMetadata.attributes.values) {
             if (e.key == AutoConventions.iconAttributePath.attribute ||
@@ -365,7 +386,7 @@ class VertexController(
             val keyAttributePath = AttributePath.ofName(e.key)
 
             val value = props.graphStructure.graphNotation.transitiveAttribute(
-                    props.objectLocation, keyAttributePath
+                    props.vertexLocation!!, keyAttributePath
             ) ?: continue
 
             styledDiv {
@@ -389,7 +410,7 @@ class VertexController(
 
                 child(AttributeEditor::class) {
                     attrs {
-                        objectLocation = props.objectLocation
+                        objectLocation = props.vertexLocation!!
                         this.attributeName = attributeName
                         value = scalarValue
                     }
@@ -402,7 +423,7 @@ class VertexController(
 
                     child(AttributeEditor::class) {
                         attrs {
-                            objectLocation = props.objectLocation
+                            objectLocation = props.vertexLocation!!
                             this.attributeName = attributeName
                             values = stringValues
                         }
@@ -423,7 +444,7 @@ class VertexController(
             phase: VisualVertexPhase?
     ) {
         val description = props.graphStructure.graphNotation
-                .transitiveAttribute(props.objectLocation, AutoConventions.descriptionAttributePath)
+                .transitiveAttribute(props.vertexLocation!!, AutoConventions.descriptionAttributePath)
                 ?.asString()
 
         styledDiv {
@@ -545,7 +566,7 @@ class VertexController(
             phase: VisualVertexPhase?
     ) {
         val icon = props.graphStructure.graphNotation
-                .transitiveAttribute(props.objectLocation, AutoConventions.iconAttributePath)
+                .transitiveAttribute(props.vertexLocation!!, AutoConventions.iconAttributePath)
                 ?.asString()
                 ?: defaultIcon
 
@@ -685,7 +706,7 @@ class VertexController(
 
         val vertexMessage = visualVertexModel()?.message
         if (vertexMessage != null) {
-            val successors = props.dataflowDag.successors[props.objectLocation]
+            val successors = props.dataflowDag.successors[props.vertexLocation]
                     ?: listOf()
 
             val isMessagePending = successors.all {
@@ -754,10 +775,10 @@ class VertexController(
 //            }
 //        }
 
-        val name = props.objectLocation.objectPath.name
+        val name = props.vertexLocation!!.objectPath.name
         val displayName =
                 if (AutoConventions.isAnonymous(name)) {
-                    val objectNotation = props.graphStructure.graphNotation.coalesce[props.objectLocation]!!
+                    val objectNotation = props.graphStructure.graphNotation.coalesce[props.vertexLocation!!]!!
                     val parentReference = ObjectReference.parse(
                             objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
                     val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
@@ -824,52 +845,8 @@ class VertexController(
     }
 
 
-    private fun RBuilder.renderPredecessorAvailable() {
-//        console.log("^^^^ renderState", props.visualVertexModel)
-        val iteration = visualVertexModel()?.epoch
-                ?: return
-
-        if (iteration != 0) {
-            return
-        }
-
-        val predecessors = props.dataflowDag.predecessors[props.objectLocation]
-                ?: return
-
-        if (predecessors.isEmpty()) {
-            return
-        }
-
-        val hasInputsAvailable = predecessors
-                .map { props.visualDataflowModel.vertices[it] }
-                .any { it?.message != null }
-
-        div {
-            if (hasInputsAvailable) {
-                +"[Input available]"
-            }
-            else {
-                +"[Input missing]"
-            }
-        }
-    }
-
-
-    private fun RBuilder.renderIterations() {
-//        console.log("^^^^ renderState", props.visualVertexModel)
-
-        val iteration = visualVertexModel()?.epoch
-                ?: return
-
-        div {
-            +"Iteration: $iteration"
-        }
-    }
-
-
     private fun RBuilder.renderState() {
 //        console.log("^^^^ renderState", props.visualVertexModel)
-
         val vertexState = visualVertexModel()?.state
                 ?: return
 
@@ -877,28 +854,4 @@ class VertexController(
             +"State: ${vertexState.get()}"
         }
     }
-
-
-//    private fun RBuilder.renderResult(executionResult: ExecutionResult) {
-//        styledDiv {
-//            css {
-//                marginTop = 1.em
-//            }
-//
-//            when (executionResult) {
-//                is ExecutionError -> {
-//                    styledDiv {
-//                        css {
-//                            color = Color.red
-//                        }
-//                        +executionResult.errorMessage
-//                    }
-//                }
-//
-//                is ExecutionSuccess -> {
-//                    +executionResult.value.get().toString()
-//                }
-//            }
-//        }
-//    }
 }

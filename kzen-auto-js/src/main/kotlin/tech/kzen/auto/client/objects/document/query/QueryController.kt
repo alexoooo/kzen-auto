@@ -23,6 +23,8 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellDescriptor
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.service.GraphStructureManager
@@ -32,26 +34,28 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
+import tech.kzen.lib.common.structure.notation.edit.InsertListItemInAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
-import tech.kzen.lib.common.structure.notation.model.DocumentNotation
-import tech.kzen.lib.common.structure.notation.model.ObjectNotation
-import tech.kzen.lib.common.structure.notation.model.PositionIndex
-import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import tech.kzen.lib.common.structure.notation.model.*
 import tech.kzen.lib.platform.collect.persistentListOf
+import tech.kzen.lib.platform.collect.persistentMapOf
 
 
 @Suppress("unused")
 class QueryController:
-//        RComponent<RProps, QueryController.State>(),
         RPureComponent<RProps, QueryController.State>(),
         GraphStructureManager.Observer,
-//        ExecutionManager.Observer,
         InsertionManager.Observer,
         NavigationManager.Observer,
         VisualDataflowManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private const val edgePipeName = "EdgePipe"
+    }
+
+
     class State(
             var documentPath: DocumentPath?,
             var graphStructure: GraphStructure?,
@@ -204,31 +208,58 @@ class QueryController:
             row: Int,
             column: Int
     ) {
-        val archetypeLocation = ClientContext.insertionManager.getAndClearSelection()
-                ?: return
-
         val documentNotation = documentNotation()
                 ?: return
 
-        val verticesNotation = DataflowMatrix.verticesNotation(documentNotation)
+        val archetypeLocation = ClientContext.insertionManager.getAndClearSelection()
                 ?: return
 
-        val objectNotation = ObjectNotation
-                .ofParent(archetypeLocation.objectPath.name)
-                .upsertAttribute(CellCoordinate.rowAttributeName, ScalarAttributeNotation(row.toString()))
-                .upsertAttribute(CellCoordinate.columnAttributeName, ScalarAttributeNotation(column.toString()))
+        val archetypeNotation = state.graphStructure!!.graphNotation.coalesce[archetypeLocation]!!
+        val archetypeIs = archetypeNotation.get(NotationConventions.isAttributeName)?.asString()!!
 
         val containingObjectLocation = ObjectLocation(
                 state.documentPath!!, NotationConventions.mainObjectPath)
 
-        val command = InsertObjectInListAttributeCommand(
-                containingObjectLocation,
-                QueryDocument.verticesAttributePath,
-                PositionIndex(verticesNotation.values.size),
-                NameConventions.randomAnonymous(),
-                PositionIndex(documentNotation.objects.values.size),
-                objectNotation
-        )
+        val isPipe = archetypeIs == edgePipeName
+
+        val command =
+                if (isPipe) {
+                    val orientationName = archetypeNotation
+                            .get(EdgeDescriptor.orientationAttributeName)
+                            ?.asString()!!
+
+                    val attributeNotation = MapAttributeNotation(persistentMapOf(
+                            EdgeDescriptor.orientationAttributeSegment to ScalarAttributeNotation(orientationName),
+                            CellCoordinate.rowAttributeSegment to ScalarAttributeNotation(row.toString()),
+                            CellCoordinate.columnAttributeSegment to ScalarAttributeNotation(column.toString())
+                    ))
+
+                    val edgesNotation = DataflowMatrix.edgesNotation(documentNotation)
+
+                    InsertListItemInAttributeCommand(
+                            containingObjectLocation,
+                            QueryDocument.edgesAttributePath,
+                            PositionIndex(edgesNotation.values.size),
+                            attributeNotation
+                    )
+                }
+                else {
+                    val objectNotation = ObjectNotation
+                            .ofParent(archetypeLocation.objectPath.name)
+                            .upsertAttribute(CellCoordinate.rowAttributeName, ScalarAttributeNotation(row.toString()))
+                            .upsertAttribute(CellCoordinate.columnAttributeName, ScalarAttributeNotation(column.toString()))
+
+                    val verticesNotation = DataflowMatrix.verticesNotation(documentNotation)
+
+                    InsertObjectInListAttributeCommand(
+                            containingObjectLocation,
+                            QueryDocument.verticesAttributePath,
+                            PositionIndex(verticesNotation.values.size),
+                            NameConventions.randomAnonymous(),
+                            PositionIndex(documentNotation.objects.values.size),
+                            objectNotation
+                    )
+                }
 
         async {
             ClientContext.commandBus.apply(command)
@@ -250,12 +281,12 @@ class QueryController:
     private fun RBuilder.renderGraph(
             documentNotation: DocumentNotation
     ) {
-        val vertexInfos =
-                DataflowMatrix.verticesNotation(documentNotation)?.let {
-                    DataflowMatrix.vertexInfoLayers(state.graphStructure!!.graphNotation,  it)
-                }
+        val verticesNotation = DataflowMatrix.verticesNotation(documentNotation)
+        val edgesNotation = DataflowMatrix.edgesNotation(documentNotation)
+        val dataflowMatrix = DataflowMatrix.cellDescriptorLayers(
+                state.graphStructure!!.graphNotation,  verticesNotation, edgesNotation)
 
-        if (vertexInfos?.isEmpty() != false) {
+        if (dataflowMatrix.isEmpty()) {
             styledH3 {
                 css {
                     paddingTop = 1.em
@@ -279,7 +310,7 @@ class QueryController:
                 nonEmptyDag(
                         state.graphStructure!!,
                         visualDataflowModel,
-                        vertexInfos)
+                        dataflowMatrix)
             }
         }
     }
@@ -288,15 +319,15 @@ class QueryController:
     private fun RBuilder.nonEmptyDag(
             graphStructure: GraphStructure,
             visualDataflowModel: VisualDataflowModel,
-            vertexMatrix: DataflowMatrix
+            dataflowMatrix: DataflowMatrix
     ) {
-        val dataflowDag = DataflowDag.of(vertexMatrix)
+        val dataflowDag = DataflowDag.of(dataflowMatrix)
 
         table {
             tbody {
-                for (row in 0 .. vertexMatrix.usedRows) {
+                for (row in 0 .. dataflowMatrix.usedRows) {
                     tr {
-                        for (column in 0 .. vertexMatrix.usedColumns) {
+                        for (column in 0 .. dataflowMatrix.usedColumns) {
                             styledTd {
                                 css {
                                     padding(1.em)
@@ -305,12 +336,12 @@ class QueryController:
 //                                    borderWidth = 1.px
                                 }
 
-                                val vertexInfo = vertexMatrix.get(row, column)
-                                if (vertexInfo == null) {
-                                    absentVertex(row, column)
+                                val cellDescriptor = dataflowMatrix.get(row, column)
+                                if (cellDescriptor == null) {
+                                    absentCell(row, column)
                                 }
                                 else {
-                                    vertex(vertexInfo,
+                                    cell(cellDescriptor,
                                             graphStructure,
                                             visualDataflowModel,
                                             dataflowDag)
@@ -324,7 +355,7 @@ class QueryController:
     }
 
 
-    private fun RBuilder.absentVertex(
+    private fun RBuilder.absentCell(
             row: Int,
             column: Int
     ) {
@@ -370,29 +401,33 @@ class QueryController:
     }
 
 
-    private fun RBuilder.vertex(
-            vertexDescriptor: VertexDescriptor,
+    private fun RBuilder.cell(
+            cellDescriptor: CellDescriptor,
             graphStructure: GraphStructure,
             visualDataflowModel: VisualDataflowModel,
             dataflowDag: DataflowDag
     ) {
-        child(VertexController::class) {
-            key = vertexDescriptor.objectLocation.toReference().asString()
+        child(CellController::class) {
+            key = cellDescriptor.coordinate.toString()
+//            key = vertexDescriptor.objectLocation.toReference().asString()
 
             attrs {
+                when (cellDescriptor) {
+                    is VertexDescriptor ->
+                        this.vertexLocation = cellDescriptor.objectLocation
+
+                    is EdgeDescriptor ->
+                        this.edgeOrientation = cellDescriptor.orientation
+                }
+
                 attributeNesting = AttributeNesting(persistentListOf(
-                        AttributeSegment.ofIndex(vertexDescriptor.indexInVertices)))
+                        AttributeSegment.ofIndex(cellDescriptor.indexInContainer)))
 
-                this.objectLocation = vertexDescriptor.objectLocation
+                documentPath = state.documentPath!!
+
                 this.graphStructure = graphStructure
-
-//                this.visualVertexModel = visualDataflowModel.vertices[vertexInfo.objectLocation]
-//                        ?: VisualVertexModel.empty
-
                 this.visualDataflowModel = visualDataflowModel
                 this.dataflowDag = dataflowDag
-//                        ?: throw IllegalStateException(
-//                                "Visual vertex state missing: ${vertexInfo.objectLocation}")
             }
         }
     }

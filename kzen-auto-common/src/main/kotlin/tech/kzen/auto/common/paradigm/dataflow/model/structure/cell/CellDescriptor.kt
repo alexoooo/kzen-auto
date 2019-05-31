@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.paradigm.dataflow.model.structure.cell
 
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.notation.model.MapAttributeNotation
@@ -17,17 +18,19 @@ sealed class CellDescriptor {
 
 
     abstract val coordinate: CellCoordinate
+    abstract val indexInContainer: Int
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 data class EdgeDescriptor(
-        val indexInEdges: Int,
         val orientation: EdgeOrientation,
+        override val indexInContainer: Int,
         override val coordinate: CellCoordinate
 ): CellDescriptor() {
     companion object {
         const val orientationAttributeKey = "orientation"
+        val orientationAttributeName = AttributeName(orientationAttributeKey)
         val orientationAttributeSegment = AttributeSegment.ofKey(orientationAttributeKey)
 
 
@@ -43,8 +46,8 @@ data class EdgeDescriptor(
                     ?: throw IllegalArgumentException("Orientation missing: $attributeNotation")
 
             return EdgeDescriptor(
-                    indexInEdges,
                     orientation,
+                    indexInEdges,
                     coordinate)
         }
     }
@@ -53,8 +56,8 @@ data class EdgeDescriptor(
 
 //---------------------------------------------------------------------------------------------------------------------
 data class VertexDescriptor(
-        val indexInVertices: Int,
         val objectLocation: ObjectLocation,
+        override val indexInContainer: Int,
         override val coordinate: CellCoordinate
 ): CellDescriptor() {
     companion object {
@@ -66,8 +69,8 @@ data class VertexDescriptor(
             val coordinate = CellCoordinate.fromObjectNotation(objectNotation)
 
             return VertexDescriptor(
-                    indexInVertices,
                     objectLocation,
+                    indexInVertices,
                     coordinate)
         }
     }
