@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.paradigm.dataflow.model.chanel
+package tech.kzen.auto.common.paradigm.dataflow.model.channel
 
 import tech.kzen.auto.common.paradigm.dataflow.api.input.RequiredInput
 

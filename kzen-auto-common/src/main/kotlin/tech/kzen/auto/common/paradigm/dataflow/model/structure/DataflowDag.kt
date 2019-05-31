@@ -1,5 +1,7 @@
 package tech.kzen.auto.common.paradigm.dataflow.model.structure
 
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellDescriptor
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.platform.collect.toPersistentList
 
@@ -11,7 +13,7 @@ data class DataflowDag(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        fun of(vertexMatrix: VertexMatrix): DataflowDag {
+        fun of(vertexMatrix: DataflowMatrix): DataflowDag {
             val vertexMap = vertexMatrix.byLocation()
             val successors = successors(vertexMatrix, vertexMap)
             val predecessors = predecessors(successors)
@@ -21,8 +23,8 @@ data class DataflowDag(
 
 
         private fun successors(
-                vertexMatrix: VertexMatrix,
-                vertexMap: Map<ObjectLocation, VertexInfo>
+                vertexMatrix: DataflowMatrix,
+                vertexMap: Map<ObjectLocation, VertexDescriptor>
         ): Map<ObjectLocation, List<ObjectLocation>> {
             val builder = mutableMapOf<ObjectLocation, List<ObjectLocation>>()
 
@@ -41,10 +43,12 @@ data class DataflowDag(
 
 
         private fun vertexSuccessors(
-                vertexInfo: VertexInfo,
-                vertexMatrix: VertexMatrix
+                vertexDescriptor: VertexDescriptor,
+                vertexMatrix: DataflowMatrix
         ): List<ObjectLocation> {
-            val vertexBelow = vertexMatrix.get(vertexInfo.row + 1, vertexInfo.column)
+            val vertexBelow = vertexMatrix.get(
+                    vertexDescriptor.coordinate.row + 1,
+                    vertexDescriptor.coordinate.column)
 
             return if (vertexBelow == null) {
                 listOf()
@@ -58,7 +62,7 @@ data class DataflowDag(
 
         private fun layers(
                 successors: Map<ObjectLocation, List<ObjectLocation>>,
-                vertexMap: Map<ObjectLocation, VertexInfo>,
+                vertexMap: Map<ObjectLocation, VertexDescriptor>,
                 predecessors: Map<ObjectLocation, List<ObjectLocation>>
         ): List<List<ObjectLocation>> {
             if (successors.isEmpty()) {
@@ -123,18 +127,13 @@ data class DataflowDag(
         @Suppress("MapGetWithNotNullAssertionOperator")
         private fun sortedByMatrix(
                 vertexLocations: Iterable<ObjectLocation>,
-                vertexMap: Map<ObjectLocation, VertexInfo>
+                vertexMap: Map<ObjectLocation, VertexDescriptor>
         ): List<ObjectLocation> {
             return vertexLocations.sortedWith(Comparator { a, b ->
                 val aInfo = vertexMap[a]!!
                 val bInfo = vertexMap[b]!!
 
-                if (aInfo.row != bInfo.row) {
-                    aInfo.row.compareTo(bInfo.row)
-                }
-                else {
-                    aInfo.column.compareTo(bInfo.column)
-                }
+                CellDescriptor.byRowThenColumn.compare(aInfo, bInfo)
             })
         }
     }

@@ -3,11 +3,11 @@ package tech.kzen.auto.common.paradigm.dataflow.service.active
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.StreamDataflow
-import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableDataflowOutput
-import tech.kzen.auto.common.paradigm.dataflow.model.chanel.MutableRequiredInput
+import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableDataflowOutput
+import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableRequiredInput
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.*
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
-import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexMatrix
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
 import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageInspector
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.service.GraphInstanceManager
@@ -178,7 +178,7 @@ class ActiveDataflowManager(
 
         check(host in serverGraphStructure.graphNotation.documents)
 
-        val vertexMatrix = VertexMatrix.ofQueryDocument(host, serverGraphStructure.graphNotation)
+        val vertexMatrix = DataflowMatrix.ofQueryDocument(host, serverGraphStructure.graphNotation)
 
         val builder = mutableMapOf<ObjectLocation, ActiveVertexModel>()
         for (vertexLocation in vertexMatrix.byLocation().keys) {
@@ -355,7 +355,7 @@ class ActiveDataflowManager(
             clearedConsumer: (ObjectLocation) -> Unit = {}
     ) {
         val serverGraphStructure = graphStructureManager.serverGraphStructure()
-        val vertexMatrix = VertexMatrix.ofQueryDocument(host, serverGraphStructure.graphNotation)
+        val vertexMatrix = DataflowMatrix.ofQueryDocument(host, serverGraphStructure.graphNotation)
         val dataflowDag = DataflowDag.of(vertexMatrix)
 
         val activeDataflowModel = getOrInit(host)

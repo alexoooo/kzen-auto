@@ -62,12 +62,15 @@ DataflowWiring:
 
 #######################################################################################################################
 
+EdgesDefiner:
+  class: tech.kzen.auto.common.objects.document.query.EdgesDefiner
 
-DownPipe:
+
+EdgeDescriptor:
   abstract: true
-  class: tech.kzen.auto.common.objects.document.query.pipe.DataflowPipe
-  icon: ArrowDownward
-  description: "Connection pipe"
-  meta:
-    icon: String
-    description: String
+  class: tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
+#  icon: ArrowDownward
+#  description: "Connection pipe"
+#  meta:
+#    icon: String
+#    description: String

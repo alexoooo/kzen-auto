@@ -4,7 +4,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
-import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexMatrix
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -29,7 +29,7 @@ object DataflowUtils {
             graphNotation: GraphNotation,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
-        val vertexMatrix = VertexMatrix.ofQueryDocument(host, graphNotation)
+        val vertexMatrix = DataflowMatrix.ofQueryDocument(host, graphNotation)
 //        println("^^^^^ next: vertexMatrix - $vertexMatrix")
 
         val dataflowDag = DataflowDag.of(vertexMatrix)

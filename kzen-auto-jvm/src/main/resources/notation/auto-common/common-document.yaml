@@ -28,8 +28,13 @@ Query:
   class: tech.kzen.auto.common.objects.document.query.QueryDocument
   icon: Search
   vertices: []
+  edges: []
   meta:
     vertices:
       is: List
       of: Dataflow
+    edges:
+      is: List
+      of: EdgeDescriptor
+      by: EdgesDefiner
 

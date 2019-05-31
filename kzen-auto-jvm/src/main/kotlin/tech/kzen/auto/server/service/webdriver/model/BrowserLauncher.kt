@@ -50,7 +50,7 @@ enum class BrowserLauncher(
             listOf(
                     "MicrosoftWebDriver.exe"
             ),
-            "webdriver.edge.driver"
+            "webdriver.cell.driver"
     ),
 
     Firefox(

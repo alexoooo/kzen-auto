@@ -21,8 +21,9 @@ import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.query.QueryDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
-import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexInfo
-import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexMatrix
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -209,13 +210,13 @@ class QueryController:
         val documentNotation = documentNotation()
                 ?: return
 
-        val verticesNotation = VertexMatrix.verticesNotation(documentNotation)
+        val verticesNotation = DataflowMatrix.verticesNotation(documentNotation)
                 ?: return
 
         val objectNotation = ObjectNotation
                 .ofParent(archetypeLocation.objectPath.name)
-                .upsertAttribute(VertexInfo.rowAttributeName, ScalarAttributeNotation(row.toString()))
-                .upsertAttribute(VertexInfo.columnAttributeName, ScalarAttributeNotation(column.toString()))
+                .upsertAttribute(CellCoordinate.rowAttributeName, ScalarAttributeNotation(row.toString()))
+                .upsertAttribute(CellCoordinate.columnAttributeName, ScalarAttributeNotation(column.toString()))
 
         val containingObjectLocation = ObjectLocation(
                 state.documentPath!!, NotationConventions.mainObjectPath)
@@ -250,8 +251,8 @@ class QueryController:
             documentNotation: DocumentNotation
     ) {
         val vertexInfos =
-                VertexMatrix.verticesNotation(documentNotation)?.let {
-                    VertexMatrix.vertexInfoLayers(state.graphStructure!!.graphNotation,  it)
+                DataflowMatrix.verticesNotation(documentNotation)?.let {
+                    DataflowMatrix.vertexInfoLayers(state.graphStructure!!.graphNotation,  it)
                 }
 
         if (vertexInfos?.isEmpty() != false) {
@@ -287,7 +288,7 @@ class QueryController:
     private fun RBuilder.nonEmptyDag(
             graphStructure: GraphStructure,
             visualDataflowModel: VisualDataflowModel,
-            vertexMatrix: VertexMatrix
+            vertexMatrix: DataflowMatrix
     ) {
         val dataflowDag = DataflowDag.of(vertexMatrix)
 
@@ -370,19 +371,19 @@ class QueryController:
 
 
     private fun RBuilder.vertex(
-            vertexInfo: VertexInfo,
+            vertexDescriptor: VertexDescriptor,
             graphStructure: GraphStructure,
             visualDataflowModel: VisualDataflowModel,
             dataflowDag: DataflowDag
     ) {
         child(VertexController::class) {
-            key = vertexInfo.objectLocation.toReference().asString()
+            key = vertexDescriptor.objectLocation.toReference().asString()
 
             attrs {
                 attributeNesting = AttributeNesting(persistentListOf(
-                        AttributeSegment.ofIndex(vertexInfo.indexInVertices)))
+                        AttributeSegment.ofIndex(vertexDescriptor.indexInVertices)))
 
-                this.objectLocation = vertexInfo.objectLocation
+                this.objectLocation = vertexDescriptor.objectLocation
                 this.graphStructure = graphStructure
 
 //                this.visualVertexModel = visualDataflowModel.vertices[vertexInfo.objectLocation]

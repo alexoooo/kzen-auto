@@ -23,7 +23,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
-import tech.kzen.auto.common.paradigm.dataflow.model.structure.VertexInfo
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -162,7 +162,7 @@ class VertexController(
                     NotationConventions.mainObjectPath)
 
             val objectAttributePath = AttributePath(
-                    QueryDocument.verticesAttributePath.attribute,
+                    QueryDocument.verticesAttributeName,
                     props.attributeNesting)
 
             ClientContext.commandBus.apply(RemoveObjectInAttributeCommand(
@@ -357,8 +357,8 @@ class VertexController(
         for (e in objectMetadata.attributes.values) {
             if (e.key == AutoConventions.iconAttributePath.attribute ||
                     e.key == AutoConventions.descriptionAttributePath.attribute ||
-                    e.key == VertexInfo.rowAttributeName ||
-                    e.key == VertexInfo.columnAttributeName) {
+                    e.key == CellCoordinate.rowAttributeName ||
+                    e.key == CellCoordinate.columnAttributeName) {
                 continue
             }
 
