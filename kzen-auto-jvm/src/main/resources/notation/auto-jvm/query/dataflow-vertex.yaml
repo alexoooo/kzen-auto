@@ -22,6 +22,7 @@ IntRangeSource:
   is: Dataflow
   class: tech.kzen.auto.server.objects.query.IntRangeSource
   icon: TripOrigin
+  title: "Range"
   description: "Range of numbers"
   from: 1
   to: 10
@@ -38,6 +39,7 @@ PrimeFilter:
   is: Dataflow
   class: tech.kzen.auto.server.objects.query.PrimeFilter
   icon: FilterList
+  title: "Prime Filter"
   description: "Filter prime numbers"
   meta:
     input:
@@ -53,6 +55,7 @@ DivisibleFilter:
   is: Dataflow
   class: tech.kzen.auto.server.objects.query.DivisibleFilter
   icon: FilterList
+  title: "Divisible Filter"
   description: "Filter divisible by"
   divisor: 1
   meta:
@@ -70,6 +73,7 @@ CountSink:
   is: Dataflow
   class: tech.kzen.auto.server.objects.query.CountSink
   icon: ExposurePlus1
+  title: "Count"
   description: "Counter"
   meta:
     input:

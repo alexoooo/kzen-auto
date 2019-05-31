@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.query
 
 import kotlinx.css.*
+import kotlinx.css.properties.borderBottom
 import kotlinx.css.properties.borderLeft
 import kotlinx.css.properties.borderRight
 import kotlinx.css.properties.borderTop
@@ -230,12 +231,6 @@ class CellController(
 
 
     private fun RBuilder.renderCard() {
-//        val objectNotation = props.graphStructure.graphNotation.coalesce[props.vertexLocation]!!
-//        val parentReference = ObjectReference.parse(
-//                objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
-//        val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
-//        val isPipe = parentLocation.objectPath.name.value.endsWith("Pipe")
-
         val phase = visualVertexModel()?.phase()
 
         val cardColor = when (phase) {
@@ -258,22 +253,36 @@ class CellController(
                 Color.red
 
             null ->
-                Color.gray
+                if (isVertex()) {
+                    Color.gray
+                }
+                else {
+                    Color.white
+                }
         }
 
-        styledDiv {
-            css {
-                backgroundColor = cardColor
-                borderRadius = 3.px
-                position = Position.relative
-                filter = "drop-shadow(0 1px 1px gray)"
-                width = 20.em
-            }
 
-            if (isVertex()) {
+        if (isVertex()) {
+            styledDiv {
+                css {
+                    backgroundColor = cardColor
+                    borderRadius = 3.px
+                    position = Position.relative
+                    filter = "drop-shadow(0 1px 1px gray)"
+                    width = 20.em
+                }
+
                 renderVertex(phase, cardColor)
             }
-            else {
+        }
+        else {
+            styledDiv {
+                css {
+                    position = Position.relative
+                    filter = "drop-shadow(0 1px 1px gray)"
+                    width = 20.em
+                }
+
                 renderEdge(cardColor)
             }
         }
@@ -283,7 +292,8 @@ class CellController(
     private fun RBuilder.renderEdge(
             cardColor: Color
     ) {
-        renderIngress(cardColor)
+        val orientation = props.edgeOrientation
+                ?: return
 
         styledDiv {
             css {
@@ -307,7 +317,36 @@ class CellController(
             }
         }
 
-        renderEgress(cardColor)
+        if (orientation.hasTop()) {
+            renderIngress(cardColor)
+        }
+
+        styledDiv {
+            css {
+                backgroundColor = cardColor
+//                position = Position.absolute
+
+                width = 2.em
+                height = 2.em
+                marginLeft = cardWidth.div(2).minus(1.em)
+
+                if (orientation.hasBottom()) {
+                    marginBottom = 2.em
+                }
+            }
+        }
+
+        if (orientation.hasLeftIngress()) {
+            renderIngressLeft(cardColor)
+        }
+
+        if (orientation.hasRightEgress()) {
+            renderEgressRight(cardColor)
+        }
+
+        if (orientation.hasBottom()) {
+            renderEgress(cardColor)
+        }
     }
 
 
@@ -327,6 +366,7 @@ class CellController(
 
         if (hasOutput) {
             renderEgress(cardColor)
+            renderVertexEgressMessage()
         }
     }
 
@@ -624,7 +664,6 @@ class CellController(
             css {
                 position = Position.absolute
 
-//                width = 10.px
                 width = 0.px
                 height = 0.px
 
@@ -683,7 +722,10 @@ class CellController(
                 left = cardWidth.div(2).minus(2.em)
             }
         }
+    }
 
+
+    private fun RBuilder.renderVertexEgressMessage() {
         val hasNext = visualVertexModel()?.hasNext ?: false
         if (hasNext) {
             styledDiv {
@@ -756,6 +798,72 @@ class CellController(
 
                     +"${vertexMessage.get()}"
                 }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderEgressRight(
+            cardColor: Color
+    ) {
+        styledDiv {
+            css {
+                backgroundColor = cardColor
+                position = Position.absolute
+
+                width = 2.em
+                height = 2.em
+                bottom = 0.em
+                left = cardWidth.div(2).plus(1.em)
+            }
+        }
+
+        styledDiv {
+            css {
+                position = Position.absolute
+
+                width = 0.px
+                height = 0.px
+
+                borderLeft(2.em, BorderStyle.solid, cardColor)
+                borderTop(2.em, BorderStyle.solid, Color.transparent)
+                borderBottom(2.em, BorderStyle.solid, Color.transparent)
+
+                bottom = (-1).em
+                left = cardWidth.div(2).plus(2.em)
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderIngressLeft(
+            cardColor: Color
+    ) {
+        styledDiv {
+            css {
+                backgroundColor = cardColor
+                position = Position.absolute
+
+                width = 2.em
+                height = 2.em
+                bottom = 0.em
+                left = cardWidth.div(2).minus(2.em)
+            }
+        }
+
+        styledDiv {
+            css {
+                position = Position.absolute
+
+                width = 0.px
+                height = 0.px
+
+                borderLeft(2.em, BorderStyle.solid, cardColor)
+                borderTop(2.em, BorderStyle.solid, Color.transparent)
+                borderBottom(2.em, BorderStyle.solid, Color.transparent)
+
+                bottom = (-1).em
+                left = cardWidth.div(2).minus(3.em)
             }
         }
     }

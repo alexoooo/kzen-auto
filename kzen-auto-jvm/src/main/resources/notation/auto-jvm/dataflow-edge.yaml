@@ -15,8 +15,10 @@ EdgeDescriptor:
 # NB: referenced in QueryController
 EdgePipe:
   abstract: true
+  title: "Pipe"
   description: "Pipe"
   meta:
+    title: String
     icon: String
     description: String
     orientation: String
@@ -26,41 +28,37 @@ TopToBottomPipe:
   abstract: true
   is: EdgePipe
   icon: ArrowDownward
-  description: "Down"
+  title: "Down"
   orientation: TopToBottom
+
+
+TopToBottomAndRightPipe:
+  abstract: true
+  is: EdgePipe
+  icon: SubdirectoryArrowRight
+  title: "Down and right"
+  orientation: TopToBottomAndRight
 
 
 TopToRightPipe:
   abstract: true
   is: EdgePipe
   icon: SubdirectoryArrowRight
-  description: "Down to the right"
+  title: "Right"
   orientation: TopToRight
 
 
-#LeftToBottomPipe:
-#  abstract: true
-#  is: EdgePipe
-#  icon: ArrowDownward
-#  description: "Down"
-#  orientation: LeftToBottom
+LeftToBottomPipe:
+  abstract: true
+  is: EdgePipe
+  icon: SubdirectoryArrowRight
+  title: "Left to Bottom"
+  orientation: LeftToBottom
 
 
-#CountSink:
-#  abstract: true
-#  is: Dataflow
-#  class: tech.kzen.auto.server.objects.query.CountSink
-#  icon: ExposurePlus1
-#  description: "Counter"
-#  meta:
-#    input:
-#      is: RequiredInput
-#      by: DataflowWiring
-
-
-#enum class EdgeOrientation {
-#  TopToBottom,
-#  TopToBottomAndRight,
-#  LeftToBottomAndRight,
-#  LeftToBottom
-#}
+LeftToBottomAndRightPipe:
+  abstract: true
+  is: EdgePipe
+  icon: SubdirectoryArrowRight
+  title: "Left to Bottom And Right"
+  orientation: LeftToBottomAndRight
