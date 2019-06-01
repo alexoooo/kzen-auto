@@ -48,17 +48,69 @@ data class DataflowDag(
                 vertexMatrix: DataflowMatrix
         ): List<ObjectLocation> {
             @Suppress("MoveVariableDeclarationIntoWhen")
-            val vertexBelow = vertexMatrix.get(
+            val cellBelow = vertexMatrix.get(
                     vertexDescriptor.coordinate.row + 1,
                     vertexDescriptor.coordinate.column
             ) ?: return listOf()
 
-            return when (vertexBelow) {
+            return when (cellBelow) {
                 is EdgeDescriptor ->
-                    listOf()
+                    traceEdge(cellBelow, vertexMatrix)
 
                 is VertexDescriptor ->
-                    listOf(vertexBelow.objectLocation)
+                    listOf(cellBelow.objectLocation)
+            }
+        }
+
+
+        private fun traceEdge(
+                edgeDescriptor: EdgeDescriptor,
+                vertexMatrix: DataflowMatrix
+        ): List<ObjectLocation> {
+            if (! edgeDescriptor.orientation.hasTop()) {
+                return listOf()
+            }
+
+            val buffer = mutableListOf<ObjectLocation>()
+            traceEdge(edgeDescriptor, vertexMatrix, buffer)
+            return buffer
+        }
+
+
+        private fun traceEdge(
+                edgeDescriptor: EdgeDescriptor,
+                vertexMatrix: DataflowMatrix,
+                buffer: MutableList<ObjectLocation>
+        ) {
+            if (edgeDescriptor.orientation.hasBottom()) {
+                @Suppress("MoveVariableDeclarationIntoWhen")
+                val cellBelow = vertexMatrix.get(
+                        edgeDescriptor.coordinate.row + 1,
+                        edgeDescriptor.coordinate.column)
+
+                when (cellBelow) {
+                    is VertexDescriptor ->
+                        buffer.add(cellBelow.objectLocation)
+
+                    is EdgeDescriptor ->
+                        if (cellBelow.orientation.hasTop()) {
+                            traceEdge(cellBelow, vertexMatrix, buffer)
+                        }
+                }
+            }
+
+            if (edgeDescriptor.orientation.hasRightEgress()) {
+                @Suppress("MoveVariableDeclarationIntoWhen")
+                val cellRight = vertexMatrix.get(
+                        edgeDescriptor.coordinate.row,
+                        edgeDescriptor.coordinate.column + 1)
+
+                when (cellRight) {
+                    is EdgeDescriptor ->
+                        if (cellRight.orientation.hasLeftIngress()) {
+                            traceEdge(cellRight, vertexMatrix, buffer)
+                        }
+                }
             }
         }
 

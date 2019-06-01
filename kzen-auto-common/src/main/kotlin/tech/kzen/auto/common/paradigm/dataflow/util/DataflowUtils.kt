@@ -37,19 +37,12 @@ object DataflowUtils {
         return next(dataflowDag, visualDataflowModel)
     }
 
+
     fun next(
-//            host: DocumentPath,
             dataflowDag: DataflowDag,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
 //        println("^^^^^ next: visualDataflowModel - $visualDataflowModel")
-
-//        val vertexMatrix = VertexMatrix.ofQueryDocument(host, graphNotation)
-//        println("^^^^^ next: vertexMatrix - $vertexMatrix")
-
-//        val dataflowDag = DataflowDag.of(vertexMatrix)
-//        println("^^^^^ next: dataflowDag - $dataflowDag")
-
         var lastLayerInProgress: Int = -1
         var firstLayerReady: Int = -1
 
@@ -78,7 +71,7 @@ object DataflowUtils {
 
         val nextLayer = dataflowDag.layers[nextLayerIndex]
 
-        return nextInLayer(nextLayer, visualDataflowModel)
+        return nextInLayer(nextLayer, dataflowDag, visualDataflowModel)
     }
 
 
@@ -164,6 +157,7 @@ object DataflowUtils {
 
     private fun nextInLayer(
             layer: List<ObjectLocation>,
+            dataflowDag: DataflowDag,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
         if (layer.isEmpty()) {
@@ -176,6 +170,7 @@ object DataflowUtils {
         var minEpoch = Int.MAX_VALUE
         var candidate: ObjectLocation? = null
 
+        nextVertex@
         for (vertexLocation in layer) {
             val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
                     ?: VisualVertexModel.empty
@@ -189,6 +184,15 @@ object DataflowUtils {
 
             if (minEpoch <= visualVertexModel.epoch) {
                 continue
+            }
+
+            val predecessors = dataflowDag.predecessors[vertexLocation]
+                    ?: continue
+
+            for (predecessor in predecessors) {
+                if (visualDataflowModel.vertices[predecessor]?.message == null) {
+                    continue@nextVertex
+                }
             }
 
             minEpoch = visualVertexModel.epoch

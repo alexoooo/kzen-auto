@@ -240,7 +240,8 @@ class ActiveDataflowManager(
             vertexLocation: ObjectLocation
     ): VisualVertexModel {
         val activeDataflowModel = getOrInit(host)
-        val activeVertexModel = activeDataflowModel.vertices[vertexLocation]!!
+        val activeVertexModel = activeDataflowModel.vertices[vertexLocation]
+                ?: initializeVertex(vertexLocation)
 
         return inspectActiveVertexModel(
                 vertexLocation, activeVertexModel)
