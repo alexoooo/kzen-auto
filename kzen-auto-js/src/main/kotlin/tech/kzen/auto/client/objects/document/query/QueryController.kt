@@ -114,11 +114,18 @@ class QueryController:
     ) {
 //        console.log("ProjectController componentDidUpdate", state, prevState)
 
-        if (state.documentPath != prevState.documentPath) {
-            state.documentPath?.let {
-                async {
-                    val visualDataflowModel = ClientContext.visualDataflowManager.get(it)
+        val documentPath = state.documentPath
+        if (documentPath != prevState.documentPath) {
+//            console.log("ProjectController componentDidUpdate", state.documentPath, prevState.documentPath)
 
+            if (documentPath == null) {
+                setState {
+                    visualDataflowModel = null
+                }
+            }
+            else {
+                async {
+                    val visualDataflowModel = ClientContext.visualDataflowManager.get(documentPath)
                     setState {
                         this.visualDataflowModel = visualDataflowModel
                     }
@@ -272,6 +279,8 @@ class QueryController:
         val documentNotation = documentNotation()
                 ?: return
 
+//        +"QueryController documentPath: ${state.documentPath}"
+
         renderGraph(documentNotation)
 
         runController()
@@ -337,10 +346,13 @@ class QueryController:
                                 }
 
                                 val cellDescriptor = dataflowMatrix.get(row, column)
+
                                 if (cellDescriptor == null) {
+                                    key = "absent-$row-$column"
                                     absentCell(row, column)
                                 }
                                 else {
+                                    key = cellDescriptor.key()
                                     cell(cellDescriptor,
                                             graphStructure,
                                             visualDataflowModel,
@@ -408,7 +420,7 @@ class QueryController:
             dataflowDag: DataflowDag
     ) {
         child(CellController::class) {
-            key = cellDescriptor.coordinate.toString()
+//            key = cellDescriptor.coordinate.toString()
 //            key = vertexDescriptor.objectLocation.toReference().asString()
 
             attrs {
@@ -448,6 +460,7 @@ class QueryController:
                 attrs {
                     documentPath = state.documentPath
                     graphStructure = state.graphStructure
+                    visualDataflowModel = state.visualDataflowModel
                 }
             }
         }

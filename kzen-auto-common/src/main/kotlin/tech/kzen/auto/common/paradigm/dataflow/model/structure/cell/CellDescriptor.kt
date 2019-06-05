@@ -19,6 +19,8 @@ sealed class CellDescriptor {
 
     abstract val coordinate: CellCoordinate
     abstract val indexInContainer: Int
+
+    abstract fun key(): String
 }
 
 
@@ -51,6 +53,10 @@ data class EdgeDescriptor(
                     coordinate)
         }
     }
+
+    override fun key(): String {
+        return coordinate.toString() + "-" + orientation.name
+    }
 }
 
 
@@ -73,5 +79,9 @@ data class VertexDescriptor(
                     indexInVertices,
                     coordinate)
         }
+    }
+
+    override fun key(): String {
+        return objectLocation.asString()
     }
 }

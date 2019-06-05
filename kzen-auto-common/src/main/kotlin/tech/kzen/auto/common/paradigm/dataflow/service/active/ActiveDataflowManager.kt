@@ -74,22 +74,18 @@ class ActiveDataflowManager(
             documentPath: DocumentPath,
             event: SingularNotationEvent
     ) {
+        if (documentPath != event.documentPath) {
+            return
+        }
+
         val model = models[documentPath]!!
 
         when (event) {
             is RemovedObjectEvent -> {
-                if (event.objectLocation.documentPath != documentPath) {
-                    return
-                }
-
                 model.vertices.remove(event.objectLocation)
             }
 
             is RenamedObjectEvent -> {
-                if (event.objectLocation.documentPath != documentPath) {
-                    return
-                }
-
                 val activeVertexModel = model.vertices.remove(event.objectLocation)!!
                 val newObjectPath = event.objectLocation.objectPath.copy(name = event.newName)
                 val newLocation = ObjectLocation(documentPath, newObjectPath)
@@ -97,19 +93,11 @@ class ActiveDataflowManager(
             }
 
             is AddedObjectEvent -> {
-                if (event.objectLocation.documentPath != documentPath) {
-                    return
-                }
-
                 val initialVertexModel = initializeVertex(event.objectLocation)
                 model.vertices[event.objectLocation] = initialVertexModel
             }
 
             is DeletedDocumentEvent -> {
-                if (event.documentPath != documentPath) {
-                    return
-                }
-
                 models.remove(event.documentPath)
             }
 
@@ -139,25 +127,21 @@ class ActiveDataflowManager(
             documentPath: DocumentPath,
             event: CompoundNotationEvent
     ): Boolean {
+        if (documentPath != event.documentPath) {
+            return false
+        }
+
         val model = models[documentPath]!!
 
         return when (event) {
             is RenamedDocumentRefactorEvent -> {
-//                println("^^^^^ applyCompoundWithDependentEvents - $documentPath - $event")
-                if (event.removedUnderOldName.documentPath == documentPath) {
-//                    model.
+                model.move(
+                        event.removedUnderOldName.documentPath, event.createdWithNewName.destination)
 
-                    model.move(
-                            event.removedUnderOldName.documentPath, event.createdWithNewName.destination)
+                models.remove(event.removedUnderOldName.documentPath)
+                models[event.createdWithNewName.destination] = model
 
-                    models.remove(event.removedUnderOldName.documentPath)
-                    models[event.createdWithNewName.destination] = model
-
-                    true
-                }
-                else {
-                    false
-                }
+                true
             }
 
             else ->

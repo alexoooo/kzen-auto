@@ -14,29 +14,25 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
-import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 
 
 class QueryRunController(
         props: Props
 ):
-        RPureComponent<QueryRunController.Props, QueryRunController.State>(props),
-        VisualDataflowManager.Observer
+        RPureComponent<QueryRunController.Props, QueryRunController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var documentPath: DocumentPath?,
-            var graphStructure: GraphStructure?//,
-//            var
+            var graphStructure: GraphStructure?,
+            var visualDataflowModel: VisualDataflowModel?
     ): RProps
 
 
     class State(
-            var visualDataflowModel: VisualDataflowModel?,
             var fabHover: Boolean
     ): RState
 
@@ -52,35 +48,37 @@ class QueryRunController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-//        val documentPath = props.documentPath
-//                ?: return
-
-        async {
-            ClientContext.visualDataflowManager.observe(this)
-        }
-    }
-
-
-    override fun componentWillUnmount() {
-        ClientContext.visualDataflowManager.unobserve(this)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun beforeDataflowExecution(host: DocumentPath, vertexLocation: ObjectLocation) {}
+//    override fun componentDidMount() {
+////        val documentPath = props.documentPath
+////                ?: return
+//
+//        async {
+//            ClientContext.visualDataflowManager.observe(this)
+//        }
+//    }
+//
+//
+//    override fun componentWillUnmount() {
+//        ClientContext.visualDataflowManager.unobserve(this)
+//    }
 
 
-    override suspend fun onVisualDataflowModel(host: DocumentPath, visualDataflowModel: VisualDataflowModel) {
-        setState {
-            this.visualDataflowModel = visualDataflowModel
-        }
+    override fun componentDidUpdate(
+            prevProps: Props,
+            prevState: State,
+            snapshot: Any
+    ) {
+        if (props.visualDataflowModel != prevProps.visualDataflowModel) {
+            // NB: only update executionIntent to next-to-run
 
-        if (ClientContext.executionIntent.actionLocation() != null) {
+            if (ClientContext.executionIntent.actionLocation() == null) {
+                return
+            }
+
             val nextToRun = DataflowUtils.next(
                     props.documentPath!!,
                     props.graphStructure!!.graphNotation,
-                    visualDataflowModel)
+                    props.visualDataflowModel!!)
 
             if (nextToRun != null) {
                 ClientContext.executionIntent.set(nextToRun)
@@ -107,7 +105,7 @@ class QueryRunController(
 
 
     private fun onRunEnter() {
-        val nextToRun = state.visualDataflowModel?.let {
+        val nextToRun = props.visualDataflowModel?.let {
             DataflowUtils.next(
                     props.documentPath!!,
                     props.graphStructure!!.graphNotation,
@@ -146,7 +144,7 @@ class QueryRunController(
         val host = props.documentPath
                 ?: return Phase.Empty
 
-        val visualDataflowModel = state.visualDataflowModel
+        val visualDataflowModel = props.visualDataflowModel
                 ?: return Phase.Empty
 
         if (visualDataflowModel.vertices.isEmpty()) {
@@ -183,7 +181,7 @@ class QueryRunController(
         val documentPath = props.documentPath
                 ?: return
 
-        val visualDataflowModel = state.visualDataflowModel
+        val visualDataflowModel = props.visualDataflowModel
                 ?: return
 
         val nextToRun = DataflowUtils.next(

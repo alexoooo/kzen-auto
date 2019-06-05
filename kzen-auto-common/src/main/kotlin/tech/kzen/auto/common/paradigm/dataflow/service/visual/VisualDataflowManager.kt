@@ -45,13 +45,13 @@ class VisualDataflowManager(
     }
 
 
-    suspend fun ping(host: DocumentPath) {
-        if (host in models) {
-            return
-        }
-
-        inspect(host)
-    }
+//    suspend fun ping(host: DocumentPath) {
+//        if (host in models) {
+//            return
+//        }
+//
+//        inspect(host)
+//    }
 
 
     private suspend fun publishBeforeExecution(
@@ -87,7 +87,7 @@ class VisualDataflowManager(
 //            val model = modelOrInit(host)
 
 //            val model = models[host]!!
-            val newModels = apply(host, /*model,*/ event)
+            val newModels = apply(host, event)
 
             if (models != newModels) {
                 models = newModels
@@ -120,6 +120,10 @@ class VisualDataflowManager(
             currentModels: PersistentMap<DocumentPath, VisualDataflowModel>,
             event: SingularNotationEvent
     ): PersistentMap<DocumentPath, VisualDataflowModel> {
+        if (documentPath != event.documentPath) {
+            return currentModels
+        }
+
         val model = currentModels[documentPath]!!
 
         return when (event) {
@@ -176,19 +180,18 @@ class VisualDataflowManager(
             model: VisualDataflowModel,
             event: CompoundNotationEvent
     ): PersistentMap<DocumentPath, VisualDataflowModel> {
+        if (documentPath != event.documentPath) {
+            return models
+        }
+
         return when (event) {
             is RenamedDocumentRefactorEvent -> {
 //                println("^^^^^ applyCompoundWithDependentEvents - $documentPath - $event")
-                if (event.removedUnderOldName.documentPath == documentPath) {
-                    val newModel = model.move(
-                            event.removedUnderOldName.documentPath, event.createdWithNewName.destination)
+                val newModel = model.move(
+                        event.removedUnderOldName.documentPath, event.createdWithNewName.destination)
 
-                    val removed = models.remove(event.removedUnderOldName.documentPath)
-                    removed.put(event.createdWithNewName.destination, newModel)
-                }
-                else {
-                    models
-                }
+                val removed = models.remove(event.removedUnderOldName.documentPath)
+                removed.put(event.createdWithNewName.destination, newModel)
             }
 
             else ->
