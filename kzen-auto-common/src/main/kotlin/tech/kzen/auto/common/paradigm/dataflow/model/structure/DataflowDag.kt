@@ -14,9 +14,9 @@ data class DataflowDag(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        fun of(vertexMatrix: DataflowMatrix): DataflowDag {
-            val vertexMap = vertexMatrix.verticesByLocation()
-            val successors = successors(vertexMatrix, vertexMap)
+        fun of(dataflowMatrix: DataflowMatrix): DataflowDag {
+            val vertexMap = dataflowMatrix.verticesByLocation
+            val successors = successors(dataflowMatrix, vertexMap)
             val predecessors = predecessors(successors)
             val layers = layers(successors, vertexMap, predecessors)
             return DataflowDag(successors, predecessors, layers)
@@ -24,7 +24,7 @@ data class DataflowDag(
 
 
         private fun successors(
-                vertexMatrix: DataflowMatrix,
+                dataflowMatrix: DataflowMatrix,
                 vertexMap: Map<ObjectLocation, VertexDescriptor>
         ): Map<ObjectLocation, List<ObjectLocation>> {
             val builder = mutableMapOf<ObjectLocation, List<ObjectLocation>>()
@@ -32,7 +32,7 @@ data class DataflowDag(
             for (vertexInfo in vertexMap.values) {
                 val successorBuilder = mutableListOf<ObjectLocation>()
 
-                for (successor in vertexSuccessors(vertexInfo, vertexMatrix)) {
+                for (successor in vertexSuccessors(vertexInfo, dataflowMatrix)) {
                     successorBuilder.add(successor)
                 }
 
@@ -45,17 +45,17 @@ data class DataflowDag(
 
         private fun vertexSuccessors(
                 vertexDescriptor: VertexDescriptor,
-                vertexMatrix: DataflowMatrix
+                dataflowMatrix: DataflowMatrix
         ): List<ObjectLocation> {
             @Suppress("MoveVariableDeclarationIntoWhen")
-            val cellBelow = vertexMatrix.get(
+            val cellBelow = dataflowMatrix.get(
                     vertexDescriptor.coordinate.row + 1,
                     vertexDescriptor.coordinate.column
             ) ?: return listOf()
 
             return when (cellBelow) {
                 is EdgeDescriptor ->
-                    traceEdge(cellBelow, vertexMatrix)
+                    traceEdge(cellBelow, dataflowMatrix)
 
                 is VertexDescriptor ->
                     listOf(cellBelow.objectLocation)
@@ -65,26 +65,26 @@ data class DataflowDag(
 
         private fun traceEdge(
                 edgeDescriptor: EdgeDescriptor,
-                vertexMatrix: DataflowMatrix
+                dataflowMatrix: DataflowMatrix
         ): List<ObjectLocation> {
             if (! edgeDescriptor.orientation.hasTop()) {
                 return listOf()
             }
 
             val buffer = mutableListOf<ObjectLocation>()
-            traceEdge(edgeDescriptor, vertexMatrix, buffer)
+            traceEdge(edgeDescriptor, dataflowMatrix, buffer)
             return buffer
         }
 
 
         private fun traceEdge(
                 edgeDescriptor: EdgeDescriptor,
-                vertexMatrix: DataflowMatrix,
+                dataflowMatrix: DataflowMatrix,
                 buffer: MutableList<ObjectLocation>
         ) {
             if (edgeDescriptor.orientation.hasBottom()) {
                 @Suppress("MoveVariableDeclarationIntoWhen")
-                val cellBelow = vertexMatrix.get(
+                val cellBelow = dataflowMatrix.get(
                         edgeDescriptor.coordinate.row + 1,
                         edgeDescriptor.coordinate.column)
 
@@ -94,21 +94,21 @@ data class DataflowDag(
 
                     is EdgeDescriptor ->
                         if (cellBelow.orientation.hasTop()) {
-                            traceEdge(cellBelow, vertexMatrix, buffer)
+                            traceEdge(cellBelow, dataflowMatrix, buffer)
                         }
                 }
             }
 
             if (edgeDescriptor.orientation.hasRightEgress()) {
                 @Suppress("MoveVariableDeclarationIntoWhen")
-                val cellRight = vertexMatrix.get(
+                val cellRight = dataflowMatrix.get(
                         edgeDescriptor.coordinate.row,
                         edgeDescriptor.coordinate.column + 1)
 
                 when (cellRight) {
                     is EdgeDescriptor ->
                         if (cellRight.orientation.hasLeftIngress()) {
-                            traceEdge(cellRight, vertexMatrix, buffer)
+                            traceEdge(cellRight, dataflowMatrix, buffer)
                         }
                 }
             }

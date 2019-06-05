@@ -96,6 +96,11 @@ data class VisualDataflowModel(
     }
 
 
+    fun running(): ObjectLocation? {
+        return vertices.filter { it.value.running }.keys.firstOrNull()
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun digest(): Digest {
         val digest = Digest.Streaming()

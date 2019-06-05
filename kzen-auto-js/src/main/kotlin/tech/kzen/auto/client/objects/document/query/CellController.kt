@@ -24,8 +24,11 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
-import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeOrientation
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellDescriptor
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -62,13 +65,13 @@ class CellController(
 
 
     class Props(
-            var vertexLocation: ObjectLocation?,
-            var edgeOrientation: EdgeOrientation?,
+            var cellDescriptor: CellDescriptor,
 
             var documentPath: DocumentPath,
             var attributeNesting: AttributeNesting,
             var graphStructure: GraphStructure,
             var visualDataflowModel: VisualDataflowModel,
+            var dataflowMatrix: DataflowMatrix,
             var dataflowDag: DataflowDag
     ): RProps
 
@@ -82,6 +85,14 @@ class CellController(
 
 //            var visualVertexModel: VisualVertexModel?
     ): RState
+
+
+    private fun Props.vertexLocation() =
+            (cellDescriptor as? VertexDescriptor)?.objectLocation
+
+
+    private fun Props.edgeOrientation() =
+            (cellDescriptor as? EdgeDescriptor)?.orientation
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -125,7 +136,7 @@ class CellController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun onExecutionIntent(actionLocation: ObjectLocation?) {
         setState {
-            intentToRun = actionLocation == props.vertexLocation
+            intentToRun = actionLocation == props.vertexLocation()
         }
     }
 
@@ -198,14 +209,34 @@ class CellController(
 
 
     private fun isVertex(): Boolean {
-        return props.vertexLocation != null
+        return props.vertexLocation() != null
     }
 
 
     private fun visualVertexModel(): VisualVertexModel? {
-        return props.visualDataflowModel.vertices[props.vertexLocation]
+        return props.visualDataflowModel.vertices[props.vertexLocation()]
     }
 
+
+    private fun isEdgePredecessorOfNextToRun(): Boolean {
+        if (props.visualDataflowModel.isRunning()) {
+
+        }
+
+        val flowTarget = props.visualDataflowModel.running()
+                ?: DataflowUtils.next(
+                        props.documentPath,
+                        props.graphStructure.graphNotation,
+                        props.visualDataflowModel)
+                ?: return false
+
+        @Suppress("MapGetWithNotNullAssertionOperator")
+        val targetDescriptor = props.dataflowMatrix.verticesByLocation[flowTarget]!!
+
+        val leadingEdges = props.dataflowMatrix.leadingEdges(targetDescriptor.coordinate)
+
+        return leadingEdges.contains(props.cellDescriptor)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -231,38 +262,36 @@ class CellController(
 
 
     private fun RBuilder.renderCard() {
-        val phase = visualVertexModel()?.phase()
-
-        val cardColor = when (phase) {
-            VisualVertexPhase.Pending ->
-//                Color("#649fff")
-                Color.white
-
-            VisualVertexPhase.Running ->
-                Color.gold
-
-            VisualVertexPhase.Done ->
-//                Color("#00b467")
-                Color.white
-
-            VisualVertexPhase.Remaining ->
-//                Color("#00a457")
-                Color.white
-
-            VisualVertexPhase.Error ->
-                Color.red
-
-            null ->
-                if (isVertex()) {
-                    Color.gray
-                }
-                else {
-                    Color.white
-                }
-        }
-
+//        +"vertexLocation: ${props.vertexLocation()}"
 
         if (isVertex()) {
+            val phase = visualVertexModel()?.phase()
+
+            val cardColor = when (phase) {
+                VisualVertexPhase.Pending ->
+                    Color.white
+
+                VisualVertexPhase.Running ->
+                    Color.gold
+
+                VisualVertexPhase.Done ->
+                    Color.white
+
+                VisualVertexPhase.Remaining ->
+                    Color.white
+
+                VisualVertexPhase.Error ->
+                    Color.red
+
+                null ->
+                    if (isVertex()) {
+                        Color.gray
+                    }
+                    else {
+                        Color.white
+                    }
+            }
+
             styledDiv {
                 css {
                     backgroundColor = cardColor
@@ -283,17 +312,23 @@ class CellController(
                     width = 20.em
                 }
 
-                renderEdge(cardColor)
+                renderEdge()
             }
         }
     }
 
 
-    private fun RBuilder.renderEdge(
-            cardColor: Color
-    ) {
-        val orientation = props.edgeOrientation
+    private fun RBuilder.renderEdge() {
+        val orientation = props.edgeOrientation()
                 ?: return
+
+        val edgeColor =
+                if (isEdgePredecessorOfNextToRun()) {
+                    Color.gold
+                }
+                else {
+                    Color.white
+                }
 
         styledDiv {
             css {
@@ -318,13 +353,12 @@ class CellController(
         }
 
         if (orientation.hasTop()) {
-            renderIngress(cardColor)
+            renderIngress(edgeColor)
         }
 
         styledDiv {
             css {
-                backgroundColor = cardColor
-//                position = Position.absolute
+                backgroundColor = edgeColor
 
                 width = 2.em
                 height = 2.em
@@ -337,15 +371,15 @@ class CellController(
         }
 
         if (orientation.hasLeftIngress()) {
-            renderIngressLeft(cardColor)
+            renderIngressLeft(edgeColor)
         }
 
         if (orientation.hasRightEgress()) {
-            renderEgressRight(cardColor)
+            renderEgressRight(edgeColor)
         }
 
         if (orientation.hasBottom()) {
-            renderEgress(cardColor)
+            renderEgress(edgeColor)
         }
     }
 
@@ -354,7 +388,7 @@ class CellController(
             phase: VisualVertexPhase?,
             cardColor: Color
     ) {
-        val objectMetadata = props.graphStructure.graphMetadata.get(props.vertexLocation!!)!!
+        val objectMetadata = props.graphStructure.graphMetadata.get(props.vertexLocation()!!)!!
         val hasInput = objectMetadata.attributes.values.containsKey(DataflowUtils.inputAttributeName)
         val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.outputAttributeName)
 
@@ -413,7 +447,7 @@ class CellController(
 
 
     private fun RBuilder.renderAttributes() {
-        val objectMetadata = props.graphStructure.graphMetadata.objectMetadata[props.vertexLocation!!]!!
+        val objectMetadata = props.graphStructure.graphMetadata.objectMetadata[props.vertexLocation()!!]!!
 
         for (e in objectMetadata.attributes.values) {
             if (e.key == AutoConventions.iconAttributePath.attribute ||
@@ -426,7 +460,7 @@ class CellController(
             val keyAttributePath = AttributePath.ofName(e.key)
 
             val value = props.graphStructure.graphNotation.transitiveAttribute(
-                    props.vertexLocation!!, keyAttributePath
+                    props.vertexLocation()!!, keyAttributePath
             ) ?: continue
 
             styledDiv {
@@ -450,7 +484,7 @@ class CellController(
 
                 child(AttributeEditor::class) {
                     attrs {
-                        objectLocation = props.vertexLocation!!
+                        objectLocation = props.vertexLocation()!!
                         this.attributeName = attributeName
                         value = scalarValue
                     }
@@ -463,7 +497,7 @@ class CellController(
 
                     child(AttributeEditor::class) {
                         attrs {
-                            objectLocation = props.vertexLocation!!
+                            objectLocation = props.vertexLocation()!!
                             this.attributeName = attributeName
                             values = stringValues
                         }
@@ -484,7 +518,7 @@ class CellController(
             phase: VisualVertexPhase?
     ) {
         val description = props.graphStructure.graphNotation
-                .transitiveAttribute(props.vertexLocation!!, AutoConventions.descriptionAttributePath)
+                .transitiveAttribute(props.vertexLocation()!!, AutoConventions.descriptionAttributePath)
                 ?.asString()
 
         styledDiv {
@@ -606,7 +640,7 @@ class CellController(
             phase: VisualVertexPhase?
     ) {
         val icon = props.graphStructure.graphNotation
-                .transitiveAttribute(props.vertexLocation!!, AutoConventions.iconAttributePath)
+                .transitiveAttribute(props.vertexLocation()!!, AutoConventions.iconAttributePath)
                 ?.asString()
                 ?: defaultIcon
 
@@ -748,12 +782,14 @@ class CellController(
 
         val vertexMessage = visualVertexModel()?.message
         if (vertexMessage != null) {
-            val successors = props.dataflowDag.successors[props.vertexLocation]
+            val successors = props.dataflowDag.successors[props.vertexLocation()]
                     ?: listOf()
 
-            val isMessagePending = successors.all {
-                props.visualDataflowModel.vertices[it]!!.epoch == 0
-            }
+            val isMessagePending =
+                    successors.isEmpty() ||
+                            successors.any {
+                                props.visualDataflowModel.vertices[it]!!.epoch == 0
+                            }
 
             if (isMessagePending) {
                 styledDiv {
@@ -773,7 +809,9 @@ class CellController(
 
                             style = reactStyle {
                                 color = Color.black
+
                                 backgroundColor = Color("rgba(255, 215, 0, 0.175)")
+//                                backgroundColor = Color("rgba(255, 215, 0, 0.5)")
                             }
                         }
 
@@ -883,10 +921,10 @@ class CellController(
 //            }
 //        }
 
-        val name = props.vertexLocation!!.objectPath.name
+        val name = props.vertexLocation()!!.objectPath.name
         val displayName =
                 if (AutoConventions.isAnonymous(name)) {
-                    val objectNotation = props.graphStructure.graphNotation.coalesce[props.vertexLocation!!]!!
+                    val objectNotation = props.graphStructure.graphNotation.coalesce[props.vertexLocation()!!]!!
                     val parentReference = ObjectReference.parse(
                             objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
                     val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)

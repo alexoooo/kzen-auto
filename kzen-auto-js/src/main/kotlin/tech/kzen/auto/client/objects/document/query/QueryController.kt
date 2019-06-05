@@ -25,7 +25,6 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
-import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -344,6 +343,7 @@ class QueryController:
 //                                    borderColor = Color.black
 //                                    borderWidth = 1.px
                                 }
+//                                +"[$row, $column]"
 
                                 val cellDescriptor = dataflowMatrix.get(row, column)
 
@@ -356,6 +356,7 @@ class QueryController:
                                     cell(cellDescriptor,
                                             graphStructure,
                                             visualDataflowModel,
+                                            dataflowMatrix,
                                             dataflowDag)
                                 }
                             }
@@ -417,20 +418,12 @@ class QueryController:
             cellDescriptor: CellDescriptor,
             graphStructure: GraphStructure,
             visualDataflowModel: VisualDataflowModel,
+            dataflowMatrix: DataflowMatrix,
             dataflowDag: DataflowDag
     ) {
         child(CellController::class) {
-//            key = cellDescriptor.coordinate.toString()
-//            key = vertexDescriptor.objectLocation.toReference().asString()
-
             attrs {
-                when (cellDescriptor) {
-                    is VertexDescriptor ->
-                        this.vertexLocation = cellDescriptor.objectLocation
-
-                    is EdgeDescriptor ->
-                        this.edgeOrientation = cellDescriptor.orientation
-                }
+                this.cellDescriptor = cellDescriptor
 
                 attributeNesting = AttributeNesting(persistentListOf(
                         AttributeSegment.ofIndex(cellDescriptor.indexInContainer)))
@@ -439,6 +432,7 @@ class QueryController:
 
                 this.graphStructure = graphStructure
                 this.visualDataflowModel = visualDataflowModel
+                this.dataflowMatrix = dataflowMatrix
                 this.dataflowDag = dataflowDag
             }
         }

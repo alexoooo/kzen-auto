@@ -53,4 +53,9 @@ data class CellCoordinate(
                     rows, columns)
         }
     }
+
+
+    fun offset(rows: Int, columns: Int): CellCoordinate {
+        return CellCoordinate(row + rows, column + columns)
+    }
 }

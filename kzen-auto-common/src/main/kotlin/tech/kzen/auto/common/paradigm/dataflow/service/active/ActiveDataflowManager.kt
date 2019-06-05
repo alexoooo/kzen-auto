@@ -165,7 +165,7 @@ class ActiveDataflowManager(
         val vertexMatrix = DataflowMatrix.ofQueryDocument(host, serverGraphStructure.graphNotation)
 
         val builder = mutableMapOf<ObjectLocation, ActiveVertexModel>()
-        for (vertexLocation in vertexMatrix.verticesByLocation().keys) {
+        for (vertexLocation in vertexMatrix.verticesByLocation.keys) {
             builder[vertexLocation] = initializeVertex(vertexLocation)
         }
 
