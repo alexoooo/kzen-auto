@@ -68,6 +68,24 @@ DivisibleFilter:
     divisor: Int
 
 
+ReplaceProcessor:
+  abstract: true
+  is: Dataflow
+  class: tech.kzen.auto.server.objects.query.ReplaceProcessor
+  icon: FilterList
+  title: "Replace Processor"
+  description: "Substitute the input value (which is ignored) with the given replacement"
+  replacement: "Foo"
+  meta:
+    input:
+      is: RequiredInput
+      by: DataflowWiring
+    output:
+      is: OptionalOutput
+      by: DataflowWiring
+    replacement: String
+
+
 CountSink:
   abstract: true
   is: Dataflow
@@ -101,6 +119,25 @@ AppendText:
   icon: ExposurePlus1
   title: "Append text"
   description: "Concatenate two (or possibly one) text inputs"
+  meta:
+    first:
+      is: OptionalInput
+      by: DataflowWiring
+    second:
+      is: OptionalInput
+      by: DataflowWiring
+    output:
+      is: RequiredOutput
+      by: DataflowWiring
+
+
+SelectLast:
+  abstract: true
+  is: Dataflow
+  class: tech.kzen.auto.server.objects.query.SelectLast
+  icon: ExposurePlus1
+  title: "Select Last"
+  description: "Second if it's available, otherwise first"
   meta:
     first:
       is: OptionalInput

@@ -18,7 +18,16 @@ data class DataflowDag(
             val vertexMap = dataflowMatrix.verticesByLocation
             val successors = successors(dataflowMatrix, vertexMap)
             val predecessors = predecessors(successors)
-            val layers = layers(successors, vertexMap, predecessors)
+
+            val layers = dataflowMatrix
+                    .rows
+                    .map { row -> row
+                            .mapNotNull { it as? VertexDescriptor }
+                            .map { it.objectLocation }
+                    }
+
+//            val layers = layers(successors, vertexMap, predecessors)
+
             return DataflowDag(successors, predecessors, layers)
         }
 
@@ -48,17 +57,16 @@ data class DataflowDag(
                 dataflowMatrix: DataflowMatrix
         ): List<ObjectLocation> {
             @Suppress("MoveVariableDeclarationIntoWhen")
-            val cellBelow = dataflowMatrix.get(
-                    vertexDescriptor.coordinate.row + 1,
-                    vertexDescriptor.coordinate.column
+            val cellBelow = findCellBelow(
+                    vertexDescriptor, dataflowMatrix
             ) ?: return listOf()
 
             return when (cellBelow) {
-                is EdgeDescriptor ->
-                    traceEdge(cellBelow, dataflowMatrix)
-
                 is VertexDescriptor ->
                     listOf(cellBelow.objectLocation)
+
+                is EdgeDescriptor ->
+                    traceEdge(cellBelow, dataflowMatrix)
             }
         }
 
@@ -83,20 +91,7 @@ data class DataflowDag(
                 buffer: MutableList<ObjectLocation>
         ) {
             if (edgeDescriptor.orientation.hasBottom()) {
-                @Suppress("MoveVariableDeclarationIntoWhen")
-                val cellBelow = dataflowMatrix.get(
-                        edgeDescriptor.coordinate.row + 1,
-                        edgeDescriptor.coordinate.column)
-
-                when (cellBelow) {
-                    is VertexDescriptor ->
-                        buffer.add(cellBelow.objectLocation)
-
-                    is EdgeDescriptor ->
-                        if (cellBelow.orientation.hasTop()) {
-                            traceEdge(cellBelow, dataflowMatrix, buffer)
-                        }
-                }
+                traceCellBelow(edgeDescriptor, dataflowMatrix, buffer)
             }
 
             if (edgeDescriptor.orientation.hasRightEgress()) {
@@ -111,6 +106,64 @@ data class DataflowDag(
                             traceEdge(cellRight, dataflowMatrix, buffer)
                         }
                 }
+            }
+        }
+
+        private fun findCellBelow(
+                cellDescriptor: CellDescriptor,
+                dataflowMatrix: DataflowMatrix
+        ): CellDescriptor? {
+            @Suppress("MoveVariableDeclarationIntoWhen")
+            val cellBelow = dataflowMatrix.get(
+                    cellDescriptor.coordinate.row + 1,
+                    cellDescriptor.coordinate.column)
+
+            when (cellBelow) {
+                is VertexDescriptor ->
+                    return cellBelow
+
+                is EdgeDescriptor ->
+                    return cellBelow
+
+                null -> {
+                    for (i in cellDescriptor.coordinate.column - 1 downTo 0) {
+                        val possibleMultiCell = dataflowMatrix.get(
+                                cellDescriptor.coordinate.row + 1,
+                                i
+                        ) ?: continue
+
+                        if (possibleMultiCell is VertexDescriptor) {
+                            if (possibleMultiCell.inputNames.size > cellDescriptor.coordinate.column - i) {
+                                return possibleMultiCell
+                            }
+                            else {
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+
+            return null
+        }
+
+
+        private fun traceCellBelow(
+                edgeDescriptor: EdgeDescriptor,
+                dataflowMatrix: DataflowMatrix,
+                buffer: MutableList<ObjectLocation>
+        ) {
+            @Suppress("MoveVariableDeclarationIntoWhen")
+            val cellBelow = findCellBelow(edgeDescriptor, dataflowMatrix)
+
+            when (cellBelow) {
+                is VertexDescriptor ->
+                    buffer.add(cellBelow.objectLocation)
+
+                is EdgeDescriptor ->
+                    if (cellBelow.orientation.hasTop()) {
+                        traceEdge(cellBelow, dataflowMatrix, buffer)
+                    }
             }
         }
 

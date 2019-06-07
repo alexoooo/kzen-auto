@@ -47,6 +47,12 @@ DivisibleFilterTool:
   delegate: DivisibleFilter
 
 
+ReplaceProcessorTool:
+  is: RibbonTool
+  parent: QueryGroup
+  delegate: ReplaceProcessor
+
+
 CountSinkTool:
   is: RibbonTool
   parent: QueryGroup
@@ -63,6 +69,12 @@ AppendTextTool:
   is: RibbonTool
   parent: QueryGroup
   delegate: AppendText
+
+
+SelectLastTool:
+  is: RibbonTool
+  parent: QueryGroup
+  delegate: SelectLast
 
 
 ###########################################################
