@@ -9,7 +9,6 @@ import kotlinx.html.title
 import react.RBuilder
 import react.RProps
 import react.RState
-import react.dom.div
 import react.setState
 import styled.css
 import styled.styledDiv
@@ -19,6 +18,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.query.DataflowWiring
 import tech.kzen.auto.common.objects.document.query.QueryDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
@@ -61,6 +61,7 @@ class CellController(
         private val menuIconOffset = 12.px
 
         private val cardWidth = 20.em
+        private val cellWidth = cardWidth.plus(2.em)
     }
 
 
@@ -118,20 +119,6 @@ class CellController(
         ClientContext.executionIntent.unobserve(this)
     }
 
-
-//    override fun componentDidUpdate(
-//            prevProps: Props,
-//            prevState: State,
-//            snapshot: Any
-//    ) {
-////        console.log("ProjectController componentDidUpdate", state, prevState)
-//
-//        if (props.visualDataflowModel != prevProps.visualDataflowModel) {
-//            setState {
-//                visualVertexModel = props.visualDataflowModel.vertices[props.objectLocation]
-//            }
-//        }
-//    }
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onExecutionIntent(actionLocation: ObjectLocation?) {
@@ -219,52 +206,43 @@ class CellController(
 
 
     private fun isEdgePredecessorOfNextToRun(): Boolean {
-        if (props.visualDataflowModel.isRunning()) {
-
-        }
-
         val flowTarget = props.visualDataflowModel.running()
                 ?: DataflowUtils.next(
                         props.documentPath,
-                        props.graphStructure.graphNotation,
+                        props.graphStructure,
                         props.visualDataflowModel)
                 ?: return false
 
         @Suppress("MapGetWithNotNullAssertionOperator")
-        val targetDescriptor = props.dataflowMatrix.verticesByLocation[flowTarget]!!
+        val targetVertexDescriptor = props.dataflowMatrix.verticesByLocation[flowTarget]!!
 
-        val leadingEdges = props.dataflowMatrix.leadingEdges(targetDescriptor.coordinate)
+        for ((i, inputName) in targetVertexDescriptor.inputNames.withIndex()) {
+            val sourceVertex = props.dataflowMatrix.traceVertexBackFrom(targetVertexDescriptor, inputName)
+                    ?: continue
 
-        return leadingEdges.contains(props.cellDescriptor)
+            val sourceVisualModel = props.visualDataflowModel.vertices[sourceVertex.objectLocation]
+                    ?: continue
+
+            if (sourceVisualModel.message == null) {
+                continue
+            }
+
+            val leadingEdges = props.dataflowMatrix.traceEdgeBackFrom(targetVertexDescriptor, i)
+            if (leadingEdges.contains(props.cellDescriptor)) {
+                return true
+            }
+        }
+
+        return false
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        styledSpan {
-            css {
-                width = cardWidth
-            }
-
-//            attrs {
-//                onMouseOverFunction = {
-//                    onMouseOver(true)
-//                }
-//
-//                onMouseOutFunction = {
-//                    onMouseOut(true)
-//                }
-//            }
-
-            renderCard()
-        }
-    }
-
-
-    private fun RBuilder.renderCard() {
-//        +"vertexLocation: ${props.vertexLocation()}"
-
         if (isVertex()) {
+            val cellDescriptor = props.cellDescriptor as VertexDescriptor
+            val inputAttributes = DataflowWiring.findInputs(cellDescriptor.objectLocation, props.graphStructure)
+
             val phase = visualVertexModel()?.phase()
 
             val cardColor = when (phase) {
@@ -298,10 +276,10 @@ class CellController(
                     borderRadius = 3.px
                     position = Position.relative
                     filter = "drop-shadow(0 1px 1px gray)"
-                    width = 20.em
+                    width = cardWidth
                 }
 
-                renderVertex(phase, cardColor)
+                renderVertex(phase, cardColor, inputAttributes)
             }
         }
         else {
@@ -309,7 +287,7 @@ class CellController(
                 css {
                     position = Position.relative
                     filter = "drop-shadow(0 1px 1px gray)"
-                    width = 20.em
+                    width = cardWidth
                 }
 
                 renderEdge()
@@ -353,7 +331,7 @@ class CellController(
         }
 
         if (orientation.hasTop()) {
-            renderIngress(edgeColor)
+            renderIngress(DataflowUtils.mainInputAttributeName, edgeColor)
         }
 
         styledDiv {
@@ -386,14 +364,19 @@ class CellController(
 
     private fun RBuilder.renderVertex(
             phase: VisualVertexPhase?,
-            cardColor: Color
+            cardColor: Color,
+            inputAttributes: List<AttributeName>
     ) {
         val objectMetadata = props.graphStructure.graphMetadata.get(props.vertexLocation()!!)!!
-        val hasInput = objectMetadata.attributes.values.containsKey(DataflowUtils.inputAttributeName)
-        val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.outputAttributeName)
+        val hasInput = inputAttributes.isNotEmpty()
+        val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.mainOutputAttributeName)
 
         if (hasInput) {
-            renderIngress(cardColor)
+            renderIngress(inputAttributes[0], cardColor)
+        }
+
+        if (inputAttributes.size > 1) {
+            renderAdditionalInputs(cardColor, inputAttributes)
         }
 
         renderContent(phase, hasOutput)
@@ -401,6 +384,33 @@ class CellController(
         if (hasOutput) {
             renderEgress(cardColor)
             renderVertexEgressMessage()
+        }
+    }
+
+
+    private fun RBuilder.renderAdditionalInputs(
+            cardColor: Color,
+            inputAttributes: List<AttributeName>
+    ) {
+        styledDiv {
+            css {
+                backgroundColor = cardColor
+                position = Position.absolute
+
+                borderBottomRightRadius = 3.px
+                width = cellWidth.times(inputAttributes.size - 1)
+                        .minus(cellWidth.div(2))
+                        .plus(2.em).plus(3.px)
+                height = 2.em
+
+                top = 0.em
+                left = cardWidth.minus(3.px)
+            }
+        }
+
+        for (i in 1 until inputAttributes.size) {
+            val inputAttribute = inputAttributes[i]
+            renderIngress(inputAttribute, cardColor, cellWidth.times(i))
         }
     }
 
@@ -692,7 +702,9 @@ class CellController(
 
 
     private fun RBuilder.renderIngress(
-            cardColor: Color
+            attributeName: AttributeName,
+            cardColor: Color,
+            leftOffset: LinearDimension = 0.px
     ) {
         styledDiv {
             css {
@@ -706,7 +718,7 @@ class CellController(
                 borderRight(2.em, BorderStyle.solid, Color.transparent)
 
                 top = (-2).em
-                left = cardWidth.div(2).minus(2.em)
+                left = cardWidth.div(2).minus(2.em).plus(leftOffset)
             }
         }
 
@@ -719,7 +731,23 @@ class CellController(
                 height = 2.em
 
                 top = (-2).em
-                left = cardWidth.div(2).minus(1.em)
+                left = cardWidth.div(2).minus(1.em).plus(leftOffset)
+            }
+        }
+
+        if (attributeName != DataflowUtils.mainInputAttributeName) {
+            styledDiv {
+                css {
+                    position = Position.absolute
+
+//                    width = 2.em
+                    height = 1.em
+
+                    top = (-1.25).em
+                    right = cardWidth.div(2).plus(1.5.em).minus(leftOffset)
+                }
+
+                +attributeName.value
             }
         }
     }
@@ -996,8 +1024,12 @@ class CellController(
         val vertexState = visualVertexModel()?.state
                 ?: return
 
-        div {
-            +"State: ${vertexState.get()}"
+        styledDiv {
+            css {
+                backgroundColor = Color("rgba(0, 0, 0, 0.05)")
+            }
+//            +"State: ${vertexState.get()}"
+            +"${vertexState.get()}"
         }
     }
 }

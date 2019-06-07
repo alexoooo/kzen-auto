@@ -63,12 +63,14 @@ data class EdgeDescriptor(
 //---------------------------------------------------------------------------------------------------------------------
 data class VertexDescriptor(
         val objectLocation: ObjectLocation,
+        val inputNames: List<AttributeName>,
         override val indexInContainer: Int,
         override val coordinate: CellCoordinate
 ): CellDescriptor() {
     companion object {
         fun fromNotation(
                 indexInVertices: Int,
+                inputNames: List<AttributeName>,
                 objectLocation: ObjectLocation,
                 objectNotation: ObjectNotation
         ): VertexDescriptor {
@@ -76,6 +78,7 @@ data class VertexDescriptor(
 
             return VertexDescriptor(
                     objectLocation,
+                    inputNames,
                     indexInVertices,
                     coordinate)
         }

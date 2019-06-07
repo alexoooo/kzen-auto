@@ -8,13 +8,13 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.structure.notation.model.GraphNotation
+import tech.kzen.lib.common.structure.GraphStructure
 
 
 object DataflowUtils {
     //-----------------------------------------------------------------------------------------------------------------
-    val inputAttributeName = AttributeName("input")
-    val outputAttributeName = AttributeName("output")
+    val mainInputAttributeName = AttributeName("input")
+    val mainOutputAttributeName = AttributeName("output")
 
 
 //    private enum class LayerClassification {
@@ -26,10 +26,10 @@ object DataflowUtils {
 
     fun next(
             host: DocumentPath,
-            graphNotation: GraphNotation,
+            graphStructure: GraphStructure,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
-        val vertexMatrix = DataflowMatrix.ofQueryDocument(host, graphNotation)
+        val vertexMatrix = DataflowMatrix.ofQueryDocument(host, graphStructure)
 //        println("^^^^^ next: vertexMatrix - $vertexMatrix")
 
         val dataflowDag = DataflowDag.of(vertexMatrix)

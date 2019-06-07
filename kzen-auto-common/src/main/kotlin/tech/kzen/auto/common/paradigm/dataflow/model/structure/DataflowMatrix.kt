@@ -1,15 +1,21 @@
 package tech.kzen.auto.common.paradigm.dataflow.model.structure
 
+import tech.kzen.auto.common.objects.document.query.DataflowWiring
 import tech.kzen.auto.common.objects.document.query.QueryDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
+import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
-import tech.kzen.lib.common.structure.notation.model.*
+import tech.kzen.lib.common.structure.notation.model.DocumentNotation
+import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
+import tech.kzen.lib.common.structure.notation.model.MapAttributeNotation
+import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
@@ -24,16 +30,16 @@ data class DataflowMatrix(
 
         fun ofQueryDocument(
                 host: DocumentPath,
-                graphNotation: GraphNotation
+                graphStructure: GraphStructure
         ): DataflowMatrix {
-            val documentNotation = graphNotation.documents.get(host)
+            val documentNotation = graphStructure.graphNotation.documents.get(host)
                     ?: return empty
 
             val verticesNotation = verticesNotation(documentNotation)
             val edgesNotation = edgesNotation(documentNotation)
 
             return cellDescriptorLayers(
-                    graphNotation,  verticesNotation, edgesNotation)
+                    graphStructure,  verticesNotation, edgesNotation)
         }
 
 
@@ -66,17 +72,21 @@ data class DataflowMatrix(
 
 
         fun cellDescriptorLayers(
-                graphNotation: GraphNotation,
+                graphStructure: GraphStructure,
                 verticesNotation: ListAttributeNotation,
                 edgesNotation: ListAttributeNotation
         ): DataflowMatrix {
             val vertexDescriptors = verticesNotation.values.withIndex().map {
                 val vertexNotation = it.value as ScalarAttributeNotation
                 val vertexReference = ObjectReference.parse(vertexNotation.value)
-                val objectLocation = graphNotation.coalesce.locate(vertexReference)
-                val objectNotation = graphNotation.coalesce[objectLocation]!!
+                val objectLocation = graphStructure.graphNotation.coalesce.locate(vertexReference)
+                val objectNotation = graphStructure.graphNotation.coalesce[objectLocation]!!
+
+                val inputNames = DataflowWiring.findInputs(objectLocation, graphStructure)
+
                 VertexDescriptor.fromNotation(
                         it.index,
+                        inputNames,
                         objectLocation,
                         objectNotation)
             }
@@ -186,14 +196,67 @@ data class DataflowMatrix(
     }
 
 
-    fun leadingEdges(
-            coordinate: CellCoordinate
-    ): List<EdgeDescriptor> {
-        if (get(coordinate) !is VertexDescriptor) {
-            return listOf()
-        }
+    //-----------------------------------------------------------------------------------------------------------------
+    fun traceVertexBackFrom(
+            vertexDescriptor: VertexDescriptor,
+            inputName: AttributeName
+    ): VertexDescriptor? {
+        val leftOffset = vertexDescriptor.inputNames.indexOf(inputName)
 
-        val edgeDescriptorAbove = get(coordinate.offset(-1, 0)) as? EdgeDescriptor
+        val above = vertexDescriptor.coordinate.offset(-1, leftOffset)
+
+        return when (val cellAbove = get(above)) {
+            null ->
+                null
+
+            else ->
+                traceVertexBackFrom(cellAbove)
+        }
+    }
+
+
+    private fun traceVertexBackFrom(
+            descriptor: CellDescriptor
+    ): VertexDescriptor? {
+        when (descriptor) {
+            is VertexDescriptor ->
+                return descriptor
+
+            is EdgeDescriptor -> {
+                if (descriptor.orientation.hasTop()) {
+                    val coordinateAbove = descriptor.coordinate.offset(-1, 0)
+                    val descriptorAbove = get(coordinateAbove)
+                    if (descriptorAbove is VertexDescriptor ||
+                            (descriptorAbove as? EdgeDescriptor)?.orientation?.hasBottom() == true) {
+                        return traceVertexBackFrom(descriptorAbove)
+                    }
+                }
+
+                if (descriptor.orientation.hasLeftIngress()) {
+                    val coordinateLeft = descriptor.coordinate.offset(0, -1)
+                    val edgeDescriptorLeft = get(coordinateLeft) as? EdgeDescriptor
+                    if (edgeDescriptorLeft != null && edgeDescriptorLeft.orientation.hasRightEgress()) {
+                        val vertexLeft = traceVertexBackFrom(edgeDescriptorLeft)
+                        if (vertexLeft != null) {
+                            return vertexLeft
+                        }
+                    }
+                }
+
+                return null
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun traceEdgeBackFrom(
+            vertexDescriptor: VertexDescriptor,
+            offsetLeft: Int
+    ): List<EdgeDescriptor> {
+        val above = vertexDescriptor.coordinate.offset(-1, offsetLeft)
+
+        val edgeDescriptorAbove = get(above) as? EdgeDescriptor
                 ?: return listOf()
 
         if (! edgeDescriptorAbove.orientation.hasBottom()) {
@@ -202,13 +265,13 @@ data class DataflowMatrix(
 
         val edges = mutableListOf<EdgeDescriptor>()
 
-        traceBackFrom(edgeDescriptorAbove, edges)
+        traceEdgeBackFrom(edgeDescriptorAbove, edges)
 
         return edges
     }
 
 
-    private fun traceBackFrom(
+    private fun traceEdgeBackFrom(
             descriptor: EdgeDescriptor,
             buffer: MutableList<EdgeDescriptor>
     ) {
@@ -218,7 +281,7 @@ data class DataflowMatrix(
             val coordinateAbove = descriptor.coordinate.offset(-1, 0)
             val edgeDescriptorAbove = get(coordinateAbove) as? EdgeDescriptor
             if (edgeDescriptorAbove != null && edgeDescriptorAbove.orientation.hasBottom()) {
-                traceBackFrom(edgeDescriptorAbove, buffer)
+                traceEdgeBackFrom(edgeDescriptorAbove, buffer)
             }
         }
 
@@ -226,7 +289,7 @@ data class DataflowMatrix(
             val coordinateLeft = descriptor.coordinate.offset(0, -1)
             val edgeDescriptorLeft = get(coordinateLeft) as? EdgeDescriptor
             if (edgeDescriptorLeft != null && edgeDescriptorLeft.orientation.hasRightEgress()) {
-                traceBackFrom(edgeDescriptorLeft, buffer)
+                traceEdgeBackFrom(edgeDescriptorLeft, buffer)
             }
         }
     }

@@ -79,3 +79,35 @@ CountSink:
     input:
       is: RequiredInput
       by: DataflowWiring
+
+
+AccumulateSink:
+  abstract: true
+  is: Dataflow
+  class: tech.kzen.auto.server.objects.query.AccumulateSink
+  icon: ExposurePlus1
+  title: "Accumulate"
+  description: "List of all seen values"
+  meta:
+    input:
+      is: RequiredInput
+      by: DataflowWiring
+
+
+AppendText:
+  abstract: true
+  is: Dataflow
+  class: tech.kzen.auto.server.objects.query.AppendText
+  icon: ExposurePlus1
+  title: "Append text"
+  description: "Concatenate two (or possibly one) text inputs"
+  meta:
+    first:
+      is: OptionalInput
+      by: DataflowWiring
+    second:
+      is: OptionalInput
+      by: DataflowWiring
+    output:
+      is: RequiredOutput
+      by: DataflowWiring

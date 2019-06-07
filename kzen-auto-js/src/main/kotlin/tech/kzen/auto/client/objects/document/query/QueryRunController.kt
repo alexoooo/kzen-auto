@@ -77,7 +77,7 @@ class QueryRunController(
 
             val nextToRun = DataflowUtils.next(
                     props.documentPath!!,
-                    props.graphStructure!!.graphNotation,
+                    props.graphStructure!!,
                     props.visualDataflowModel!!)
 
             if (nextToRun != null) {
@@ -108,7 +108,7 @@ class QueryRunController(
         val nextToRun = props.visualDataflowModel?.let {
             DataflowUtils.next(
                     props.documentPath!!,
-                    props.graphStructure!!.graphNotation,
+                    props.graphStructure!!,
                     it)
         }
 //        console.log("^$%^$%^% onFabEnter - $nextToRun - ${state.visualDataflowModel}")
@@ -160,7 +160,7 @@ class QueryRunController(
 
         val nextVertex = DataflowUtils.next(
                 host,
-                props.graphStructure!!.graphNotation,
+                props.graphStructure!!,
                 visualDataflowModel)
 
         @Suppress("FoldInitializerAndIfToElvis")
@@ -186,7 +186,7 @@ class QueryRunController(
 
         val nextToRun = DataflowUtils.next(
                 documentPath,
-                props.graphStructure!!.graphNotation,
+                props.graphStructure!!,
                 visualDataflowModel
         ) ?: return
 

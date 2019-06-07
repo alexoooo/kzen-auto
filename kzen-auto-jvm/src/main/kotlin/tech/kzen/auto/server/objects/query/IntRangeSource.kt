@@ -1,6 +1,5 @@
 package tech.kzen.auto.server.objects.query
 
-import tech.kzen.auto.common.paradigm.common.api.ValidatedObject
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.dataflow.api.StreamDataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.output.StreamOutput
@@ -12,8 +11,8 @@ class IntRangeSource(
         private val from: Int,
         private val to: Int
 ):
-        StreamDataflow<IntRangeSource.State>,
-        ValidatedObject
+        StreamDataflow<IntRangeSource.State>/*,
+        ValidatedObject*/
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
@@ -27,18 +26,19 @@ class IntRangeSource(
 
 
     override fun inspectState(state: State): ExecutionValue {
-        return ExecutionValue.of(state.next)
+        return ExecutionValue.of(
+                mapOf("next" to state.next))
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun validate(): String? {
-        if (from > to) {
-            return "'From' must be less than or equal to 'To'"
-        }
-
-        return null
-    }
+//    //-----------------------------------------------------------------------------------------------------------------
+//    override fun validate(): String? {
+//        if (from > to) {
+//            return "'From' must be less than or equal to 'To'"
+//        }
+//
+//        return null
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

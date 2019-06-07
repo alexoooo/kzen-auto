@@ -4,7 +4,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.StreamDataflow
 import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableDataflowOutput
-import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableRequiredInput
+import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableInput
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.*
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
@@ -12,6 +12,7 @@ import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageIns
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.service.GraphInstanceManager
 import tech.kzen.auto.common.service.GraphStructureManager
+import tech.kzen.lib.common.context.instance.ObjectInstance
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
@@ -162,7 +163,7 @@ class ActiveDataflowManager(
 
         check(host in serverGraphStructure.graphNotation.documents)
 
-        val vertexMatrix = DataflowMatrix.ofQueryDocument(host, serverGraphStructure.graphNotation)
+        val vertexMatrix = DataflowMatrix.ofQueryDocument(host, serverGraphStructure)
 
         val builder = mutableMapOf<ObjectLocation, ActiveVertexModel>()
         for (vertexLocation in vertexMatrix.verticesByLocation.keys) {
@@ -340,11 +341,15 @@ class ActiveDataflowManager(
             clearedConsumer: (ObjectLocation) -> Unit = {}
     ) {
         val serverGraphStructure = graphStructureManager.serverGraphStructure()
-        val vertexMatrix = DataflowMatrix.ofQueryDocument(host, serverGraphStructure.graphNotation)
-        val dataflowDag = DataflowDag.of(vertexMatrix)
+        val dataflowMatrix = DataflowMatrix.ofQueryDocument(host, serverGraphStructure)
+        val dataflowDag = DataflowDag.of(dataflowMatrix)
 
         val activeDataflowModel = getOrInit(host)
-        executeDirect(activeDataflowModel, vertexLocation, dataflowDag)
+
+        executeDirect(
+                activeDataflowModel,
+                vertexLocation,
+                dataflowMatrix)
 
         val visualDataflowModel = inspect(host)
 
@@ -421,7 +426,7 @@ class ActiveDataflowManager(
     private suspend fun executeDirect(
             activeDataflowModel: ActiveDataflowModel,
             vertexLocation: ObjectLocation,
-            dataflowDag: DataflowDag
+            dataflowMatrix: DataflowMatrix
     ) {
         val activeVertexModel = activeDataflowModel.vertices[vertexLocation]!!
 
@@ -435,17 +440,11 @@ class ActiveDataflowManager(
             @Suppress("UNCHECKED_CAST")
             val dataflow = instance.reference as Dataflow<Any?>
 
-            val input = instance.constructorAttributes[DataflowUtils.inputAttributeName] as? MutableRequiredInput<*>
-            if (input != null) {
-                val predecessors = dataflowDag.predecessors[vertexLocation]
-                val inputLocation: ObjectLocation = predecessors?.first()
-                        ?: throw IllegalArgumentException("Unknown vertexLocation $vertexLocation: $predecessors")
-
-                val inputActiveModel = activeDataflowModel.vertices[inputLocation]!!
-
-                val message = inputActiveModel.message
-                input.set(message)
-            }
+            populateInputs(
+                    instance,
+                    activeDataflowModel,
+                    vertexLocation,
+                    dataflowMatrix)
 
             val nextState =
                     when {
@@ -461,7 +460,7 @@ class ActiveDataflowManager(
                             dataflow.process(activeVertexModel.state)
                     }
 
-            val output = instance.constructorAttributes[DataflowUtils.outputAttributeName] as? MutableDataflowOutput<*>
+            val output = instance.constructorAttributes[DataflowUtils.mainOutputAttributeName] as? MutableDataflowOutput<*>
             if (output != null) {
                 if (output.bufferHasMultiple()) {
                     output.consumeAndClear {
@@ -483,5 +482,42 @@ class ActiveDataflowManager(
         }
 
         activeVertexModel.epoch++
+    }
+
+
+    private fun populateInputs(
+            dataflowInstance: ObjectInstance,
+            activeDataflowModel: ActiveDataflowModel,
+            vertexLocation: ObjectLocation,
+            dataflowMatrix: DataflowMatrix
+    ) {
+        val vertexDescriptor = dataflowMatrix.verticesByLocation[vertexLocation]
+                ?: throw IllegalStateException("Vertex not found in matrix: $vertexLocation")
+
+        val inputAttributes = vertexDescriptor.inputNames
+        if (inputAttributes.isEmpty()) {
+            return
+        }
+
+        var populatedInputCount = 0
+        for (inputAttribute in inputAttributes) {
+            val sourceVertex = dataflowMatrix.traceVertexBackFrom(vertexDescriptor, inputAttribute)
+                    ?: continue
+
+            val input = dataflowInstance.constructorAttributes[inputAttribute] as? MutableInput<*>
+                    ?: throw IllegalArgumentException("Unknown vertexLocation $vertexLocation: $sourceVertex")
+
+            val inputLocation = sourceVertex.objectLocation
+            val inputActiveModel = activeDataflowModel.vertices[inputLocation]!!
+            val message = inputActiveModel.message
+            input.set(message)
+
+            populatedInputCount++
+        }
+
+        // TODO: enforce optional/required contracts
+        check(populatedInputCount > 0) {
+            "Vertex must receive at least one input"
+        }
     }
 }

@@ -18,6 +18,7 @@ import tech.kzen.auto.client.wrap.MaterialIconButton
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
+import tech.kzen.auto.common.objects.document.query.DataflowWiring
 import tech.kzen.auto.common.objects.document.query.QueryDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
@@ -25,8 +26,10 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.service.GraphStructureManager
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -292,7 +295,7 @@ class QueryController:
         val verticesNotation = DataflowMatrix.verticesNotation(documentNotation)
         val edgesNotation = DataflowMatrix.edgesNotation(documentNotation)
         val dataflowMatrix = DataflowMatrix.cellDescriptorLayers(
-                state.graphStructure!!.graphNotation,  verticesNotation, edgesNotation)
+                state.graphStructure!!,  verticesNotation, edgesNotation)
 
         if (dataflowMatrix.isEmpty()) {
             styledH3 {
@@ -331,11 +334,17 @@ class QueryController:
     ) {
         val dataflowDag = DataflowDag.of(dataflowMatrix)
 
+        var colspanRemaining = 0
         table {
             tbody {
                 for (row in 0 .. dataflowMatrix.usedRows) {
                     tr {
                         for (column in 0 .. dataflowMatrix.usedColumns) {
+                            if (colspanRemaining > 0) {
+                                colspanRemaining--
+                                continue
+                            }
+
                             styledTd {
                                 css {
                                     padding(1.em)
@@ -343,16 +352,38 @@ class QueryController:
 //                                    borderColor = Color.black
 //                                    borderWidth = 1.px
                                 }
-//                                +"[$row, $column]"
 
                                 val cellDescriptor = dataflowMatrix.get(row, column)
 
                                 if (cellDescriptor == null) {
-                                    key = "absent-$row-$column"
+                                    key = "$row-$column"
                                     absentCell(row, column)
                                 }
                                 else {
                                     key = cellDescriptor.key()
+
+                                    if (cellDescriptor is VertexDescriptor) {
+                                        val cellMetadata = graphStructure
+                                                .graphMetadata.objectMetadata[cellDescriptor.objectLocation]!!
+
+                                        val inputAttributes: List<AttributeName> = cellMetadata
+                                                .attributes
+                                                .values
+                                                .filter {
+                                                    DataflowWiring.isInput(it.value.attributeMetadataNotation)
+                                                }
+                                                .map {
+                                                    it.key
+                                                }
+
+                                        if (inputAttributes.size > 1) {
+                                            colspanRemaining = inputAttributes.size - 1
+                                            attrs {
+                                                colSpan = inputAttributes.size.toString()
+                                            }
+                                        }
+                                    }
+
                                     cell(cellDescriptor,
                                             graphStructure,
                                             visualDataflowModel,

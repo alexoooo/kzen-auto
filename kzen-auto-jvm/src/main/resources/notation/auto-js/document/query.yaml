@@ -53,6 +53,18 @@ CountSinkTool:
   delegate: CountSink
 
 
+AccumulateSinkTool:
+  is: RibbonTool
+  parent: QueryGroup
+  delegate: AccumulateSink
+
+
+AppendTextTool:
+  is: RibbonTool
+  parent: QueryGroup
+  delegate: AppendText
+
+
 ###########################################################
 
 TopToBottomPipeTool:

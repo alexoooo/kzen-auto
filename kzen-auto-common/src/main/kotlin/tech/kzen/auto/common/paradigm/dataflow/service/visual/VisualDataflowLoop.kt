@@ -47,7 +47,7 @@ class VisualDataflowLoop(
 
         val next = DataflowUtils.next(
                 host,
-                graphStructureManager.serverGraphStructure().graphNotation,
+                graphStructureManager.serverGraphStructure(),
                 visualDataflowModel
         ) ?: return
 
@@ -73,7 +73,7 @@ class VisualDataflowLoop(
         val next = state.visualDataflowModel?.let {
             DataflowUtils.next(
                     host,
-                    graphStructureManager.serverGraphStructure().graphNotation,
+                    graphStructureManager.serverGraphStructure(),
                     it)
         }
         if (next == null) {

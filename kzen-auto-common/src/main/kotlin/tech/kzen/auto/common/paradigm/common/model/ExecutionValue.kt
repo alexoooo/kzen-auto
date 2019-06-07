@@ -47,7 +47,7 @@ sealed class ExecutionValue {
                     }.toMap())
 
                 else ->
-                    null
+                    TODO("Not supported: $value")
             }
         }
 

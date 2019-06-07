@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.query
 
 import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableDataflowOutput
+import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableOptionalInput
 import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableRequiredInput
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.context.definition.AttributeDefinitionAttempt
@@ -9,7 +10,11 @@ import tech.kzen.lib.common.context.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.context.instance.GraphInstance
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.notation.NotationConventions
+import tech.kzen.lib.common.structure.notation.model.MapAttributeNotation
+import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames
 
@@ -17,6 +22,39 @@ import tech.kzen.lib.platform.ClassNames
 @Suppress("unused")
 class DataflowWiring: AttributeDefiner {
     companion object {
+        val objectName = ObjectName("DataflowWiring")
+        val optionalInputName = ObjectName("OptionalInput")
+        val requiredInputName = ObjectName("RequiredInput")
+
+
+        fun isInput(attributeMetadataMap: MapAttributeNotation): Boolean {
+            val isSegment = attributeMetadataMap.values[NotationConventions.isAttributeSegment]
+                    as? ScalarAttributeNotation
+                    ?: return false
+
+            return isSegment.value == optionalInputName.value ||
+                    isSegment.value == requiredInputName.value
+        }
+
+
+        fun findInputs(
+                vertexLocation: ObjectLocation,
+                graphStructure: GraphStructure
+        ): List<AttributeName> {
+            val cellMetadata = graphStructure.graphMetadata.objectMetadata[vertexLocation]!!
+
+            return cellMetadata
+                    .attributes
+                    .values
+                    .filter {
+                        isInput(it.value.attributeMetadataNotation)
+                    }
+                    .map {
+                        it.key
+                    }
+        }
+
+
         private val optionalOutputClass = ClassName(
                 "tech.kzen.auto.common.paradigm.dataflow.api.OptionalOutput")
 
@@ -57,7 +95,7 @@ class DataflowWiring: AttributeDefiner {
 
         val value: Any? = when (attributeClass) {
             optionalInputClass ->
-                MutableRequiredInput<Any>()
+                MutableOptionalInput<Any>()
 
             requiredInputClass ->
                 MutableRequiredInput<Any>()
