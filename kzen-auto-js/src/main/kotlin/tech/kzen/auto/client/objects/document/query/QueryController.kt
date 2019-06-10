@@ -351,6 +351,8 @@ class QueryController:
 //                                    borderStyle = BorderStyle.solid
 //                                    borderColor = Color.black
 //                                    borderWidth = 1.px
+                                    verticalAlign = VerticalAlign.top
+                                    height = 100.pct
                                 }
 
                                 val cellDescriptor = dataflowMatrix.get(row, column)

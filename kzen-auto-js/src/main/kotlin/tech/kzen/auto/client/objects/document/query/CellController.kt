@@ -272,9 +272,9 @@ class CellController(
 
             styledDiv {
                 css {
+                    position = Position.relative
                     backgroundColor = cardColor
                     borderRadius = 3.px
-                    position = Position.relative
                     filter = "drop-shadow(0 1px 1px gray)"
                     width = cardWidth
                 }
@@ -286,8 +286,14 @@ class CellController(
             styledDiv {
                 css {
                     position = Position.relative
+//                    display = Display.inlineBlock
+
                     filter = "drop-shadow(0 1px 1px gray)"
                     width = cardWidth
+
+                    minHeight = 2.em
+                    height = 100.pct
+//                    backgroundColor = Color.purple
                 }
 
                 renderEdge()
@@ -339,7 +345,15 @@ class CellController(
                 backgroundColor = edgeColor
 
                 width = 2.em
-                height = 2.em
+
+                minHeight = 2.em
+                height = 100.pct
+
+//                position = Position.absolute
+//                top = 0.px
+//                bottom = 0.px
+////                height = 100.pct
+
                 marginLeft = cardWidth.div(2).minus(1.em)
 
                 if (orientation.hasBottom()) {
@@ -357,7 +371,7 @@ class CellController(
         }
 
         if (orientation.hasBottom()) {
-            renderEgress(edgeColor)
+            renderEgress(edgeColor, true)
         }
     }
 
@@ -754,7 +768,8 @@ class CellController(
 
 
     private fun RBuilder.renderEgress(
-            cardColor: Color
+            cardColor: Color,
+            inline: Boolean = false
     ) {
         styledDiv {
             css {
@@ -764,7 +779,13 @@ class CellController(
                 width = 2.em
                 height = 2.em
 
-                bottom = (-2).em
+                if (inline) {
+                    bottom = (0).em
+                }
+                else {
+                    bottom = (-2).em
+                }
+
                 left = cardWidth.div(2).minus(1.em)
             }
         }
@@ -780,7 +801,13 @@ class CellController(
                 borderLeft(2.em, BorderStyle.solid, Color.transparent)
                 borderRight(2.em, BorderStyle.solid, Color.transparent)
 
-                bottom = (-3).em
+                if (inline) {
+                    bottom = (-1).em
+                }
+                else {
+                    bottom = (-3).em
+                }
+
                 left = cardWidth.div(2).minus(2.em)
             }
         }
@@ -877,10 +904,11 @@ class CellController(
                 backgroundColor = cardColor
                 position = Position.absolute
 
-                width = 2.em
+                width = cardWidth.div(2).minus(1.em)
+
                 height = 2.em
-                bottom = 0.em
-                left = cardWidth.div(2).plus(1.em)
+                top = 0.em
+                left = cardWidth.div(2)//.plus(1.em)
             }
         }
 
@@ -895,8 +923,8 @@ class CellController(
                 borderTop(2.em, BorderStyle.solid, Color.transparent)
                 borderBottom(2.em, BorderStyle.solid, Color.transparent)
 
-                bottom = (-1).em
-                left = cardWidth.div(2).plus(2.em)
+                top = (-1).em
+                left = cardWidth.minus(1.em)
             }
         }
     }
@@ -910,10 +938,17 @@ class CellController(
                 backgroundColor = cardColor
                 position = Position.absolute
 
-                width = 2.em
+//                width = 2.em
+                width = cardWidth.div(2)
+
                 height = 2.em
-                bottom = 0.em
-                left = cardWidth.div(2).minus(2.em)
+
+//                bottom = 0.em
+                top = 0.em
+
+//                left = cardWidth.div(2).minus(2.em)
+//                left = 1.em
+                left = 0.em
             }
         }
 
@@ -928,8 +963,12 @@ class CellController(
                 borderTop(2.em, BorderStyle.solid, Color.transparent)
                 borderBottom(2.em, BorderStyle.solid, Color.transparent)
 
-                bottom = (-1).em
-                left = cardWidth.div(2).minus(3.em)
+//                bottom = (-1).em
+                top = (-1).em
+
+//                left = cardWidth.div(2).minus(3.em)
+//                left = 0.em
+                left = (-1).em
             }
         }
     }

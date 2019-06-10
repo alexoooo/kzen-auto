@@ -19,14 +19,14 @@ data class DataflowDag(
             val successors = successors(dataflowMatrix, vertexMap)
             val predecessors = predecessors(successors)
 
-            val layers = dataflowMatrix
-                    .rows
-                    .map { row -> row
-                            .mapNotNull { it as? VertexDescriptor }
-                            .map { it.objectLocation }
-                    }
+//            val layers = dataflowMatrix
+//                    .rows
+//                    .map { row -> row
+//                            .mapNotNull { it as? VertexDescriptor }
+//                            .map { it.objectLocation }
+//                    }
 
-//            val layers = layers(successors, vertexMap, predecessors)
+            val layers = layers(successors, vertexMap, predecessors)
 
             return DataflowDag(successors, predecessors, layers)
         }
