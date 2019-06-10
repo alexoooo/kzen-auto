@@ -3,7 +3,6 @@ package tech.kzen.auto.client.objects.document.query
 import kotlinx.css.*
 import kotlinx.html.title
 import react.*
-import react.dom.table
 import react.dom.tbody
 import react.dom.tr
 import styled.*
@@ -335,7 +334,12 @@ class QueryController:
         val dataflowDag = DataflowDag.of(dataflowMatrix)
 
         var colspanRemaining = 0
-        table {
+        styledTable {
+            css {
+                // https://stackoverflow.com/a/24594811/1941359
+                height = 100.pct
+            }
+
             tbody {
                 for (row in 0 .. dataflowMatrix.usedRows) {
                     tr {
@@ -351,6 +355,7 @@ class QueryController:
 //                                    borderStyle = BorderStyle.solid
 //                                    borderColor = Color.black
 //                                    borderWidth = 1.px
+
                                     verticalAlign = VerticalAlign.top
                                     height = 100.pct
                                 }

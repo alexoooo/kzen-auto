@@ -292,7 +292,7 @@ class CellController(
                     width = cardWidth
 
                     minHeight = 2.em
-                    height = 100.pct
+                    height = 100.pct.minus(1.em)
 //                    backgroundColor = Color.purple
                 }
 
@@ -358,6 +358,7 @@ class CellController(
 
                 if (orientation.hasBottom()) {
                     marginBottom = 2.em
+//                    marginBottom = 1.em
                 }
             }
         }
