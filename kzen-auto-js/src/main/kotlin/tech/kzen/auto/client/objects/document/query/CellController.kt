@@ -293,6 +293,8 @@ class CellController(
 
                     minHeight = 2.em
                     height = 100.pct.minus(1.em)
+
+                    marginTop = (-8).px
 //                    backgroundColor = Color.purple
                 }
 
