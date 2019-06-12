@@ -56,12 +56,17 @@ class CellController(
     companion object {
         private const val defaultIcon = "SettingsInputComponent"
 
-        val headerHeight = 2.5.em
+//        val headerHeight = 3.3.em
+        val headerHeight = 55.px
         private val mainIconWidth = 40.px
         private val menuIconOffset = 12.px
 
+        private val cardHorizontalMargin = 1.em
+        private val arrowSide = cardHorizontalMargin.times(2)
+        private val ingressLength = arrowSide
+        private val egressLength = arrowSide.plus(cardHorizontalMargin)
         private val cardWidth = 20.em
-        private val cellWidth = cardWidth.plus(2.em)
+        private val cellWidth = cardWidth.plus(cardHorizontalMargin.times(2))
     }
 
 
@@ -239,65 +244,22 @@ class CellController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        if (isVertex()) {
-            val cellDescriptor = props.cellDescriptor as VertexDescriptor
-            val inputAttributes = DataflowWiring.findInputs(cellDescriptor.objectLocation, props.graphStructure)
+        styledDiv {
+            css {
+                position = Position.relative
+                filter = "drop-shadow(0 1px 1px gray)"
+                width = cardWidth
 
-            val phase = visualVertexModel()?.phase()
+//                margin(ingressLength, cardHorizontalMargin, egressLength, cardHorizontalMargin)
 
-            val cardColor = when (phase) {
-                VisualVertexPhase.Pending ->
-                    Color.white
-
-                VisualVertexPhase.Running ->
-                    Color.gold
-
-                VisualVertexPhase.Done ->
-                    Color.white
-
-                VisualVertexPhase.Remaining ->
-                    Color.white
-
-                VisualVertexPhase.Error ->
-                    Color.red
-
-                null ->
-                    if (isVertex()) {
-                        Color.gray
-                    }
-                    else {
-                        Color.white
-                    }
+                height = 100.pct
+//                backgroundColor = Color.maroon
             }
 
-            styledDiv {
-                css {
-                    position = Position.relative
-                    backgroundColor = cardColor
-                    borderRadius = 3.px
-                    filter = "drop-shadow(0 1px 1px gray)"
-                    width = cardWidth
-                }
-
-                renderVertex(phase, cardColor, inputAttributes)
+            if (isVertex()) {
+                renderVertex()
             }
-        }
-        else {
-            styledDiv {
-                css {
-                    position = Position.relative
-//                    display = Display.inlineBlock
-
-                    filter = "drop-shadow(0 1px 1px gray)"
-                    width = cardWidth
-
-                    minHeight = 2.em
-                    height = 100.pct.minus(1.em)
-
-                    marginTop = (-8).px
-//                    backgroundColor = Color.purple
-                }
-
+            else {
                 renderEdge()
             }
         }
@@ -316,74 +278,104 @@ class CellController(
                     Color.white
                 }
 
-        styledDiv {
-            css {
-                display = Display.block
-                marginTop = 1.5.em
-            }
-
-            child(MaterialIconButton::class) {
-                attrs {
-                    title = "Remove"
-
-                    style = reactStyle {
-                        float = Float.right
-                        marginTop = (-1).em
-                    }
-
-                    onClick = ::onRemove
-                }
-
-                child(DeleteIcon::class) {}
-            }
-        }
-
         if (orientation.hasTop()) {
             renderIngress(DataflowUtils.mainInputAttributeName, edgeColor)
         }
-
-        styledDiv {
-            css {
-                backgroundColor = edgeColor
-
-                width = 2.em
-
-                minHeight = 2.em
-                height = 100.pct
-
-//                position = Position.absolute
-//                top = 0.px
-//                bottom = 0.px
-////                height = 100.pct
-
-                marginLeft = cardWidth.div(2).minus(1.em)
-
-                if (orientation.hasBottom()) {
-                    marginBottom = 2.em
-//                    marginBottom = 1.em
+        else {
+            styledDiv {
+                css {
+                    height = ingressLength
                 }
             }
         }
 
-        if (orientation.hasLeftIngress()) {
-            renderIngressLeft(edgeColor)
-        }
+        styledDiv {
+            css {
+                width = cardWidth
+                marginBottom = (-5).px
+            }
 
-        if (orientation.hasRightEgress()) {
-            renderEgressRight(edgeColor)
+            if (orientation.hasLeftIngress()) {
+                renderIngressLeft(edgeColor)
+            }
+            else {
+                styledDiv {
+                    css {
+                        display = Display.inlineBlock
+                        width = cardWidth.div(2).minus(cardHorizontalMargin)
+                        height = arrowSide
+                    }
+                }
+            }
+
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+                    width = arrowSide
+                    height = arrowSide
+
+                    backgroundColor = edgeColor
+                }
+
+                child(MaterialIconButton::class) {
+                    attrs {
+                        title = "Remove"
+
+                        style = reactStyle {
+                            marginTop = (-0.25).em
+                            marginRight = (-8).px
+                            float = Float.right
+                        }
+
+                        onClick = ::onRemove
+                    }
+
+                    child(DeleteIcon::class) {}
+                }
+            }
+
+            if (orientation.hasRightEgress()) {
+                renderEgressRight(edgeColor)
+            }
         }
 
         if (orientation.hasBottom()) {
-            renderEgress(edgeColor, true)
+            renderEgress(edgeColor)
         }
     }
 
 
-    private fun RBuilder.renderVertex(
-            phase: VisualVertexPhase?,
-            cardColor: Color,
-            inputAttributes: List<AttributeName>
-    ) {
+    private fun RBuilder.renderVertex() {
+        val cellDescriptor = props.cellDescriptor as VertexDescriptor
+        val inputAttributes = DataflowWiring.findInputs(cellDescriptor.objectLocation, props.graphStructure)
+
+        val phase = visualVertexModel()?.phase()
+
+        val cardColor = when (phase) {
+            VisualVertexPhase.Pending ->
+                Color.white
+
+            VisualVertexPhase.Running ->
+                Color.gold
+
+            VisualVertexPhase.Done ->
+                Color.white
+
+            VisualVertexPhase.Remaining ->
+                Color.white
+
+            VisualVertexPhase.Error ->
+                Color.red
+
+            null ->
+                if (isVertex()) {
+                    Color.gray
+                }
+                else {
+                    Color.white
+                }
+        }
+
         val objectMetadata = props.graphStructure.graphMetadata.get(props.vertexLocation()!!)!!
         val hasInput = inputAttributes.isNotEmpty()
         val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.mainOutputAttributeName)
@@ -391,16 +383,23 @@ class CellController(
         if (hasInput) {
             renderIngress(inputAttributes[0], cardColor)
         }
+        else {
+            styledDiv {
+                css {
+                    height = ingressLength
+                }
+            }
+        }
 
         if (inputAttributes.size > 1) {
             renderAdditionalInputs(cardColor, inputAttributes)
         }
 
-        renderContent(phase, hasOutput)
+        renderContent(cardColor, phase)
 
         if (hasOutput) {
-            renderEgress(cardColor)
             renderVertexEgressMessage()
+            renderEgress(cardColor)
         }
     }
 
@@ -420,82 +419,89 @@ class CellController(
                         .plus(2.em).plus(3.px)
                 height = 2.em
 
-                top = 0.em
-                left = cardWidth.minus(3.px)
+                top = ingressLength
+                left = cardWidth.minus(1.5.em).minus(5.px)
             }
         }
 
         for (i in 1 until inputAttributes.size) {
             val inputAttribute = inputAttributes[i]
-            renderIngress(inputAttribute, cardColor, cellWidth.times(i))
+            styledDiv {
+                css {
+                    position = Position.absolute
+                    top = 0.em
+                    left = cellWidth.times(i).minus(1.5.em).minus(2.px)
+                }
+
+                key = inputAttribute.value
+                renderIngress(inputAttribute, cardColor)
+            }
         }
     }
 
 
     private fun RBuilder.renderContent(
-            phase: VisualVertexPhase?,
-            hasOutput: Boolean
+            cardColor: Color,
+            phase: VisualVertexPhase?/*,
+            hasOutput: Boolean*/
     ) {
         styledDiv {
             css {
-                display = Display.block
-                margin(1.em)
-
-                if (hasOutput) {
-                    marginBottom = 2.em
-                }
+                borderRadius = 3.px
+                backgroundColor = cardColor
+                width = cardWidth.minus(2.em)
+                marginLeft = cardHorizontalMargin
+                marginRight = cardHorizontalMargin
             }
 
-            styledDiv {
-                css {
-                    paddingTop = 1.em
-                }
-                renderHeader(phase)
-            }
-
-            styledDiv {
-                css {
-                    paddingBottom = 0.5.em
-                }
-                renderBody()
-            }
+            renderHeader(phase)
+            renderAttributes()
+            renderState()
         }
     }
 
 
-    private fun RBuilder.renderBody() {
-        renderAttributes()
-
-//        renderPredecessorAvailable()
-//        renderIterations()
-        renderState()
-//        renderMessage()
-    }
-
-
     private fun RBuilder.renderAttributes() {
-        val objectMetadata = props.graphStructure.graphMetadata.objectMetadata[props.vertexLocation()!!]!!
+        val vertexLocation = props.vertexLocation()!!
+        val objectMetadata = props.graphStructure.graphMetadata.objectMetadata[vertexLocation]!!
+        val userAttributes = objectMetadata.attributes.values.keys.filterNot {
+            it == AutoConventions.iconAttributePath.attribute ||
+                    it == AutoConventions.descriptionAttributePath.attribute ||
+                    it == CellCoordinate.rowAttributeName ||
+                    it == CellCoordinate.columnAttributeName
+        }
 
-        for (e in objectMetadata.attributes.values) {
-            if (e.key == AutoConventions.iconAttributePath.attribute ||
-                    e.key == AutoConventions.descriptionAttributePath.attribute ||
-                    e.key == CellCoordinate.rowAttributeName ||
-                    e.key == CellCoordinate.columnAttributeName) {
-                continue
+        val userAttributeValues: Map<AttributeName, AttributeNotation> =
+                userAttributes.mapNotNull { attribute ->
+                    props.graphStructure.graphNotation.transitiveAttribute(
+                            vertexLocation, AttributePath.ofName(attribute)
+                    )?.let { notation -> attribute to notation }
+                }.toMap()
+
+        if (userAttributeValues.isEmpty()) {
+            return
+        }
+
+        styledDiv {
+            css {
+                paddingLeft = 1.em
+                paddingRight = 1.em
+                paddingBottom = 1.em
             }
 
-            val keyAttributePath = AttributePath.ofName(e.key)
+            var index = 0
+            for ((attribute, notation) in userAttributeValues) {
+                styledDiv {
+                    key = attribute.value
 
-            val value = props.graphStructure.graphNotation.transitiveAttribute(
-                    props.vertexLocation()!!, keyAttributePath
-            ) ?: continue
+                    css {
+                        if (index++ != 0) {
+                            marginTop = 0.5.em
+                        }
+                    }
 
-            styledDiv {
-                css {
-                    marginBottom = 0.5.em
+                    renderAttribute(attribute, notation)
                 }
-
-                renderAttribute(e.key,value)
             }
         }
     }
@@ -553,6 +559,7 @@ class CellController(
                 position = Position.relative
                 height = headerHeight
                 width = 100.pct
+//                margin(1.em)
             }
 
 
@@ -561,8 +568,10 @@ class CellController(
                     position = Position.absolute
                     height = headerHeight
                     width = mainIconWidth
-                    top = (-12).px
-                    left = (-20).px
+//                    top = (-12).px
+//                    left = (-20).px
+                    left = (-4).px
+                    top = (3).px
                 }
 
                 renderIcon(description, phase)
@@ -574,9 +583,9 @@ class CellController(
                     position = Position.absolute
                     height = headerHeight
                     width = 100.pct.minus(mainIconWidth).minus(menuIconOffset)
-//                    top = (-11).px
-                    top = (-13).px
+                    top = 0.px
                     left = mainIconWidth
+                    marginLeft = 1.em
                 }
 
                 renderName(description)
@@ -589,12 +598,10 @@ class CellController(
                     height = headerHeight
                     width = 23.px
 
-//                    top = (-20).px
-//                    top = (-15).px
-                    top = (-16).px
-
+//                    top = (-16).px
+                    right = 1.5.em
+                    top = 0.px
 //                    right = 0.px
-                    right = 9.px
                 }
 
                 renderOptionsMenu()
@@ -720,76 +727,62 @@ class CellController(
 
     private fun RBuilder.renderIngress(
             attributeName: AttributeName,
-            cardColor: Color,
-            leftOffset: LinearDimension = 0.px
+            cardColor: Color
     ) {
         styledDiv {
             css {
-                position = Position.absolute
-
-                width = 0.px
-                height = 0.px
-
-                borderTop(2.em, BorderStyle.solid, cardColor)
-                borderLeft(2.em, BorderStyle.solid, Color.transparent)
-                borderRight(2.em, BorderStyle.solid, Color.transparent)
-
-                top = (-2).em
-                left = cardWidth.div(2).minus(2.em).plus(leftOffset)
+                width = cardWidth.div(2).plus(arrowSide)
+                height = ingressLength
+//                backgroundColor = Color.green
             }
-        }
 
-        styledDiv {
-            css {
-                backgroundColor = cardColor
-                position = Position.absolute
-
-                width = 2.em
-                height = 2.em
-
-                top = (-2).em
-                left = cardWidth.div(2).minus(1.em).plus(leftOffset)
-            }
-        }
-
-        if (attributeName != DataflowUtils.mainInputAttributeName) {
             styledDiv {
                 css {
-                    position = Position.absolute
+                    width = 0.px
+                    height = 0.px
 
-//                    width = 2.em
-                    height = 1.em
+                    borderTop(arrowSide, BorderStyle.solid, cardColor)
+                    borderLeft(arrowSide, BorderStyle.solid, Color.transparent)
+                    borderRight(arrowSide, BorderStyle.solid, Color.transparent)
 
-                    top = (-1.25).em
-                    right = cardWidth.div(2).plus(1.5.em).minus(leftOffset)
+                    float = Float.right
                 }
+            }
 
-                +attributeName.value
+            styledDiv {
+                css {
+                    backgroundColor = cardColor
+
+                    width = arrowSide
+                    height = arrowSide
+                    marginRight = (arrowSide.plus(cardHorizontalMargin)).unaryMinus()
+
+                    float = Float.right
+                }
+            }
+
+            if (attributeName != DataflowUtils.mainInputAttributeName) {
+                styledDiv {
+                    css {
+                        float = Float.right
+                        height = 1.em
+                        marginTop = 0.5.em
+//                        marginRight = 0.5.em
+                    }
+
+                    +attributeName.value
+                }
             }
         }
     }
 
 
     private fun RBuilder.renderEgress(
-            cardColor: Color,
-            inline: Boolean = false
+            cardColor: Color
     ) {
         styledDiv {
             css {
-                backgroundColor = cardColor
-                position = Position.absolute
-
-                width = 2.em
-                height = 2.em
-
-                if (inline) {
-                    bottom = (0).em
-                }
-                else {
-                    bottom = (-2).em
-                }
-
-                left = cardWidth.div(2).minus(1.em)
+                height = egressLength
             }
         }
 
@@ -797,21 +790,49 @@ class CellController(
             css {
                 position = Position.absolute
 
-                width = 0.px
-                height = 0.px
+                width = arrowSide
+//                height = 1.em
 
-                borderTop(2.em, BorderStyle.solid, cardColor)
-                borderLeft(2.em, BorderStyle.solid, Color.transparent)
-                borderRight(2.em, BorderStyle.solid, Color.transparent)
+                bottom = 2.em
+                top = 3.em
+                left = cardWidth.div(2).minus(1.em)
+                zIndex = -1
 
-                if (inline) {
-                    bottom = (-1).em
+                backgroundColor = cardColor
+            }
+        }
+
+        styledDiv {
+            css {
+                position = Position.absolute
+                bottom = 0.em
+
+                width = cardWidth.div(2).plus(arrowSide)
+                height = egressLength
+            }
+
+            styledDiv {
+                css {
+                    backgroundColor = cardColor
+
+                    width = arrowSide
+                    height = arrowSide.div(2)
+
+                    marginLeft = cardWidth.div(2).minus(cardHorizontalMargin)
                 }
-                else {
-                    bottom = (-3).em
-                }
+            }
 
-                left = cardWidth.div(2).minus(2.em)
+            styledDiv {
+                css {
+                    width = 0.px
+                    height = 0.px
+
+                    borderTop(arrowSide, BorderStyle.solid, cardColor)
+                    borderLeft(arrowSide, BorderStyle.solid, Color.transparent)
+                    borderRight(arrowSide, BorderStyle.solid, Color.transparent)
+
+                    marginLeft = cardWidth.div(2).minus(arrowSide)
+                }
             }
         }
     }
@@ -827,8 +848,9 @@ class CellController(
                     width = 1.em
                     height = 1.em
 
-                    bottom = (-5).px
+                    bottom = (2.25).em
                     left = cardWidth.div(2).minus(0.75.em)
+                    zIndex = 999
                 }
                 attrs {
                     title = "Has more messages"
@@ -857,8 +879,9 @@ class CellController(
                         width = 1.em
                         height = 1.em
 
-                        bottom = (-1).em
+                        bottom = (1).em
                         left = cardWidth.div(2).minus(1.5.em)
+                        zIndex = 999
                     }
 
                     child(MaterialIconButton::class) {
@@ -869,7 +892,6 @@ class CellController(
                                 color = Color.black
 
                                 backgroundColor = Color("rgba(255, 215, 0, 0.175)")
-//                                backgroundColor = Color("rgba(255, 215, 0, 0.5)")
                             }
                         }
 
@@ -884,7 +906,8 @@ class CellController(
                         width = 0.em
                         height = 1.em
 
-                        bottom = (-2).em
+//                        bottom = (-2).em
+                        bottom = 0.em
                         left = cardWidth.div(2).plus(2.em)
                     }
 
@@ -904,20 +927,22 @@ class CellController(
     ) {
         styledDiv {
             css {
+                display = Display.inlineBlock
                 backgroundColor = cardColor
-                position = Position.absolute
+//                position = Position.absolute
 
-                width = cardWidth.div(2).minus(1.em)
+                width = cardWidth.div(2).minus(egressLength)
 
                 height = 2.em
-                top = 0.em
-                left = cardWidth.div(2)//.plus(1.em)
+//                top = 0.em
+//                left = cardWidth.div(2)
             }
         }
 
         styledDiv {
             css {
-                position = Position.absolute
+                display = Display.inlineBlock
+//                position = Position.absolute
 
                 width = 0.px
                 height = 0.px
@@ -926,8 +951,10 @@ class CellController(
                 borderTop(2.em, BorderStyle.solid, Color.transparent)
                 borderBottom(2.em, BorderStyle.solid, Color.transparent)
 
-                top = (-1).em
-                left = cardWidth.minus(1.em)
+                marginTop = (-1).em
+                marginBottom = (-1).em
+//                top = (-1).em
+//                left = cardWidth.minus(1.em)
             }
         }
     }
@@ -938,40 +965,32 @@ class CellController(
     ) {
         styledDiv {
             css {
-                backgroundColor = cardColor
-                position = Position.absolute
-
-//                width = 2.em
-                width = cardWidth.div(2)
-
-                height = 2.em
-
-//                bottom = 0.em
-                top = 0.em
-
-//                left = cardWidth.div(2).minus(2.em)
-//                left = 1.em
-                left = 0.em
+                display = Display.inlineBlock
+                marginTop = cardHorizontalMargin.unaryMinus()
+//                backgroundColor = Color.aqua
             }
-        }
 
-        styledDiv {
-            css {
-                position = Position.absolute
+            styledDiv {
+                css {
+                    width = 0.px
+                    height = 0.px
 
-                width = 0.px
-                height = 0.px
+                    borderLeft(arrowSide, BorderStyle.solid, cardColor)
+                    borderTop(arrowSide, BorderStyle.solid, Color.transparent)
+                    borderBottom(arrowSide, BorderStyle.solid, Color.transparent)
 
-                borderLeft(2.em, BorderStyle.solid, cardColor)
-                borderTop(2.em, BorderStyle.solid, Color.transparent)
-                borderBottom(2.em, BorderStyle.solid, Color.transparent)
+//                    marginTop = arrowSide.unaryMinus()
+                }
+            }
 
-//                bottom = (-1).em
-                top = (-1).em
+            styledDiv {
+                css {
+                    backgroundColor = cardColor
 
-//                left = cardWidth.div(2).minus(3.em)
-//                left = 0.em
-                left = (-1).em
+                    width = cardWidth.div(2).minus(cardHorizontalMargin)
+                    height = arrowSide
+                    marginTop = (-3).em
+                }
             }
         }
     }
@@ -1068,10 +1087,17 @@ class CellController(
 
         styledDiv {
             css {
-                backgroundColor = Color("rgba(0, 0, 0, 0.05)")
+                padding(0.em, 0.5.em, 0.5.em, 0.5.em)
             }
-//            +"State: ${vertexState.get()}"
-            +"${vertexState.get()}"
+
+            styledDiv {
+                css {
+                    backgroundColor = Color("rgba(0, 0, 0, 0.04)")
+                    padding(0.5.em)
+                }
+
+                +"${vertexState.get()}"
+            }
         }
     }
 }

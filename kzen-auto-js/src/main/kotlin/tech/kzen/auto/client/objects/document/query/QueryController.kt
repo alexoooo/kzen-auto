@@ -351,7 +351,6 @@ class QueryController:
 
                             styledTd {
                                 css {
-                                    padding(1.em)
 //                                    borderStyle = BorderStyle.solid
 //                                    borderColor = Color.black
 //                                    borderWidth = 1.px
@@ -413,10 +412,17 @@ class QueryController:
         styledDiv {
             css {
                 width = 100.pct
+                height = 100.pct
                 textAlign = TextAlign.center
+                verticalAlign = VerticalAlign.middle
             }
 
 //            +"[$row, $column]"
+            styledDiv {
+                css {
+                    height = 50.pct.minus(2.em)
+                }
+            }
             insertionPoint(row, column)
         }
     }
