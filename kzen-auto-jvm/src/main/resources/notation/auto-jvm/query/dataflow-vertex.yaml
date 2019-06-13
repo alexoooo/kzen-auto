@@ -22,8 +22,8 @@ IntRangeSource:
   is: Dataflow
   class: tech.kzen.auto.server.objects.query.IntRangeSource
   icon: TripOrigin
-  title: "Range"
-  description: "Range of numbers"
+  title: "Number Range"
+  description: "Range of integers, starting at 'from' and ending at 'to' (inclusively)"
   from: 1
   to: 10
   meta:
@@ -34,20 +34,20 @@ IntRangeSource:
     to: Int
 
 
-PrimeFilter:
-  abstract: true
-  is: Dataflow
-  class: tech.kzen.auto.server.objects.query.PrimeFilter
-  icon: FilterList
-  title: "Prime Filter"
-  description: "Filter prime numbers"
-  meta:
-    input:
-      is: RequiredInput
-      by: DataflowWiring
-    output:
-      is: OptionalOutput
-      by: DataflowWiring
+#PrimeFilter:
+#  abstract: true
+#  is: Dataflow
+#  class: tech.kzen.auto.server.objects.query.PrimeFilter
+#  icon: FilterList
+#  title: "Prime Filter"
+#  description: "Filter prime numbers"
+#  meta:
+#    input:
+#      is: RequiredInput
+#      by: DataflowWiring
+#    output:
+#      is: OptionalOutput
+#      by: DataflowWiring
 
 
 DivisibleFilter:
@@ -72,8 +72,8 @@ ReplaceProcessor:
   abstract: true
   is: Dataflow
   class: tech.kzen.auto.server.objects.query.ReplaceProcessor
-  icon: FilterList
-  title: "Replace Processor"
+  icon: Forward
+  title: "Replace"
   description: "Substitute the input value (which is ignored) with the given replacement"
   replacement: "Foo"
   meta:
@@ -103,8 +103,9 @@ AccumulateSink:
   abstract: true
   is: Dataflow
   class: tech.kzen.auto.server.objects.query.AccumulateSink
-  icon: ExposurePlus1
-  title: "Accumulate"
+#  icon: PlaylistAdd
+  icon: Print
+  title: "Display"
   description: "List of all seen values"
   meta:
     input:
@@ -116,14 +117,14 @@ AppendText:
   abstract: true
   is: Dataflow
   class: tech.kzen.auto.server.objects.query.AppendText
-  icon: ExposurePlus1
-  title: "Append text"
+  icon: Add
+  title: "Append Text"
   description: "Concatenate two (or possibly one) text inputs"
   meta:
-    first:
+    prefix:
       is: OptionalInput
       by: DataflowWiring
-    second:
+    suffix:
       is: OptionalInput
       by: DataflowWiring
     output:
@@ -135,7 +136,7 @@ SelectLast:
   abstract: true
   is: Dataflow
   class: tech.kzen.auto.server.objects.query.SelectLast
-  icon: ExposurePlus1
+  icon: CompareArrows
   title: "Select Last"
   description: "Second if it's available, otherwise first"
   meta:

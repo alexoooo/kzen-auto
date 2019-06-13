@@ -35,10 +35,10 @@ IntRangeSourceTool:
   delegate: IntRangeSource
 
 
-PrimeFilterTool:
-  is: RibbonTool
-  parent: QueryGroup
-  delegate: PrimeFilter
+#PrimeFilterTool:
+#  is: RibbonTool
+#  parent: QueryGroup
+#  delegate: PrimeFilter
 
 
 DivisibleFilterTool:

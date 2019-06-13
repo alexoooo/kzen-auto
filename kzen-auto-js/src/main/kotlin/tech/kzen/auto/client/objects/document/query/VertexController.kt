@@ -508,6 +508,12 @@ class VertexController(
     private fun RBuilder.renderHeader(
             phase: VisualVertexPhase?
     ) {
+        val title = props.graphStructure.graphNotation
+                .transitiveAttribute(
+                        props.cellDescriptor.objectLocation,
+                        AutoConventions.titleAttributePath
+                )?.asString()
+
         val description = props.graphStructure.graphNotation
                 .transitiveAttribute(
                         props.cellDescriptor.objectLocation,
@@ -547,7 +553,7 @@ class VertexController(
                     marginLeft = 1.em
                 }
 
-                renderName(description)
+                renderName(title, description)
             }
 
 
@@ -788,7 +794,10 @@ class VertexController(
     }
 
 
-    private fun RBuilder.renderName(description: String?) {
+    private fun RBuilder.renderName(
+            title: String?,
+            description: String?
+    ) {
 //        child(ActionNameEditor::class) {
 //            attrs {
 //                objectLocation = props.objectLocation
@@ -805,13 +814,18 @@ class VertexController(
         val name = props.cellDescriptor.objectLocation.objectPath.name
         val displayName =
                 if (AutoConventions.isAnonymous(name)) {
-                    val objectNotation =
-                            props.graphStructure.graphNotation.coalesce[props.cellDescriptor.objectLocation]!!
-                    val parentReference = ObjectReference.parse(
-                            objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
-                    val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
+                    if (title != null) {
+                        title
+                    }
+                    else {
+                        val objectNotation =
+                                props.graphStructure.graphNotation.coalesce[props.cellDescriptor.objectLocation]!!
+                        val parentReference = ObjectReference.parse(
+                                objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
+                        val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
 
-                    parentLocation.objectPath.name.value
+                        parentLocation.objectPath.name.value
+                    }
                 }
                 else {
                     name.value
@@ -836,7 +850,7 @@ class VertexController(
 
                 attrs {
                     if (description != null) {
-                        title = description
+                        this.title = description
                     }
 
 //                    onMouseOverFunction = {

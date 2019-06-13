@@ -228,6 +228,36 @@ external class FilterListIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("Forward")
+external class ForwardIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Add")
+external class AddIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("CompareArrows")
+external class CompareArrowsIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("PlaylistAdd")
+external class PlaylistAddIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Print")
+external class PrintIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("Redo")
 external class RedoIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?

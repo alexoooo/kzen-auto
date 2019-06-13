@@ -63,6 +63,21 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "FilterList" ->
             FilterListIcon::class
 
+        "Forward" ->
+            ForwardIcon::class
+
+        "Add" ->
+            AddIcon::class
+
+        "CompareArrows" ->
+            CompareArrowsIcon::class
+
+        "PlaylistAdd" ->
+            PlaylistAddIcon::class
+
+        "Print" ->
+            PrintIcon::class
+
         else ->
             TextureIcon::class
     }

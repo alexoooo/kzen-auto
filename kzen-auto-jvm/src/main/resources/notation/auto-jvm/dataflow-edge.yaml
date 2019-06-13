@@ -35,8 +35,8 @@ TopToBottomPipe:
 TopToBottomAndRightPipe:
   abstract: true
   is: EdgePipe
-  icon: SubdirectoryArrowRight
-  title: "Down and right"
+#  icon: SubdirectoryArrowRight
+  title: "╠» Down and right"
   orientation: TopToBottomAndRight
 
 
@@ -51,14 +51,14 @@ TopToRightPipe:
 LeftToBottomPipe:
   abstract: true
   is: EdgePipe
-  icon: SubdirectoryArrowRight
-  title: "Left to Bottom"
+#  icon: SubdirectoryArrowRight
+  title: "»╗ Left to Bottom"
   orientation: LeftToBottom
 
 
 LeftToBottomAndRightPipe:
   abstract: true
   is: EdgePipe
-  icon: SubdirectoryArrowRight
-  title: "Left to Bottom And Right"
+#  icon: SubdirectoryArrowRight
+  title: "»╦» Left to Bottom And Right"
   orientation: LeftToBottomAndRight
