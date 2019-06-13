@@ -566,6 +566,7 @@ class VertexController(
                         color = Color.black
 
                         marginTop = (-9).px
+//                        marginTop = (-7).px
                         fontSize = 1.75.em
                         borderRadius = 20.px
 

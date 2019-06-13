@@ -41,7 +41,7 @@ class BottomEgress(
                 bottom = 2.em
                 top = 3.em
                 left = CellController.cardWidth.div(2).minus(1.em)
-                zIndex = -1
+                zIndex = -2
 
                 backgroundColor = props.egressColor
             }
@@ -54,6 +54,7 @@ class BottomEgress(
 
                 width = CellController.cardWidth.div(2).plus(CellController.arrowSide)
                 height = CellController.egressLength
+                zIndex = -1
             }
 
             styledDiv {

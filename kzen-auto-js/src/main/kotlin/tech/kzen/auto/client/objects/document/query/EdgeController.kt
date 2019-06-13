@@ -4,9 +4,12 @@ import kotlinx.css.*
 import kotlinx.css.properties.borderBottom
 import kotlinx.css.properties.borderLeft
 import kotlinx.css.properties.borderTop
+import kotlinx.html.js.onMouseOutFunction
+import kotlinx.html.js.onMouseOverFunction
 import react.RBuilder
 import react.RProps
 import react.RState
+import react.setState
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.query.edge.BottomEgress
@@ -49,13 +52,28 @@ class EdgeController(
 
 
     class State(
-            var hover: Boolean
+            var edgeHover: Boolean
     ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        hover = false
+        edgeHover = false
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onMouseOver() {
+        setState {
+            edgeHover = true
+        }
+    }
+
+
+    private fun onMouseOut() {
+        setState {
+            edgeHover = false
+        }
     }
 
 
@@ -117,6 +135,16 @@ class EdgeController(
                 width = CellController.cardWidth
 
                 height = 100.pct
+            }
+
+            attrs {
+                onMouseOverFunction = {
+                    onMouseOver()
+                }
+
+                onMouseOutFunction = {
+                    onMouseOut()
+                }
             }
 
             renderEdge()
@@ -186,6 +214,10 @@ class EdgeController(
                             marginTop = (-0.25).em
                             marginRight = (-8).px
                             float = Float.right
+
+                            if (! state.edgeHover) {
+                                visibility = Visibility.hidden
+                            }
                         }
 
                         onClick = ::onRemove
