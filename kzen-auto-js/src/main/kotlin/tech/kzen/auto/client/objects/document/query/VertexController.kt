@@ -1,7 +1,10 @@
 package tech.kzen.auto.client.objects.document.query
 
 import kotlinx.css.*
+import kotlinx.html.js.onMouseOutFunction
+import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
+import org.w3c.dom.HTMLButtonElement
 import react.RBuilder
 import react.RProps
 import react.RState
@@ -38,6 +41,7 @@ import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeComma
 import tech.kzen.lib.common.structure.notation.model.AttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import kotlin.js.Date
 
 
 class VertexController(
@@ -54,6 +58,8 @@ class VertexController(
 
         private val mainIconWidth = 40.px
         private val menuIconOffset = 12.px
+
+        private const val menuDanglingTimeout = 300
     }
 
 
@@ -76,6 +82,15 @@ class VertexController(
 
             var optionsOpen: Boolean
     ) : RState
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private var buttonRef: HTMLButtonElement? = null
+//    private var mainDocumentsCache: List<DocumentPath>? = null
+
+    // NB: workaround for open options icon remaining after click with drag away from item
+    private var processingOption: Boolean = false
+    private var optionCompletedTime: Double? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -103,6 +118,89 @@ class VertexController(
     override fun onExecutionIntent(actionLocation: ObjectLocation?) {
         setState {
             intentToRun = actionLocation == props.cellDescriptor.objectLocation
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onMouseOver(cardOrActions: Boolean) {
+        if (state.optionsOpen || processingOption) {
+//            console.log("^^^ onMouseOver hoverItem - skip due to optionsOpen")
+            return
+        }
+
+        optionCompletedTime?.let {
+            val now = Date.now()
+            val elapsed = now - it
+//            console.log("^^^ onMouseOver hoverItem - elapsed", elapsed)
+
+            if (elapsed < menuDanglingTimeout) {
+                return
+            }
+            else {
+                optionCompletedTime = null
+            }
+        }
+
+        if (cardOrActions) {
+            setState {
+                hoverCard = true
+            }
+        }
+        else {
+            setState {
+                hoverMenu = true
+            }
+        }
+    }
+
+
+    private fun onMouseOut(cardOrActions: Boolean) {
+        if (cardOrActions) {
+            setState {
+                hoverCard = false
+            }
+        }
+        else {
+            setState {
+                hoverMenu = false
+            }
+        }
+    }
+
+
+    private fun onOptionsOpen() {
+        setState {
+            optionsOpen = true
+        }
+    }
+
+
+    private fun onOptionsClose() {
+        setState {
+            optionsOpen = false
+            hoverCard = false
+            hoverMenu = false
+        }
+    }
+
+
+    private fun onOptionsCancel() {
+//        console.log("^^^^^^ onOptionsCancel")
+        onOptionsClose()
+        optionCompletedTime = Date.now()
+    }
+
+
+    private fun performOption(action: suspend () -> Unit) {
+        processingOption = true
+        onOptionsClose()
+
+        async {
+            action.invoke()
+        }.then {
+            optionCompletedTime = Date.now()
+            processingOption = false
         }
     }
 
@@ -178,6 +276,16 @@ class VertexController(
                 width = CellController.cardWidth
 
                 height = 100.pct
+            }
+
+            attrs {
+                onMouseOverFunction = {
+                    onMouseOver(true)
+                }
+
+                onMouseOutFunction = {
+                    onMouseOut(true)
+                }
             }
 
             renderVertex()
@@ -467,57 +575,76 @@ class VertexController(
                 // NB: blinks in and out without this
                 backgroundColor = Color.transparent
 
-//                if (! (state.hoverCard || state.hoverMenu)) {
-//                    display = Display.none
-//                }
+                if (! (state.hoverCard || state.hoverMenu)) {
+                    display = Display.none
+                }
             }
 
-//            attrs {
-//                onMouseOverFunction = {
-//                    onMouseOver(false)
-//                }
-//
-//                onMouseOutFunction = {
-//                    onMouseOut(false)
-//                }
-//            }
-
-
-            child(MaterialIconButton::class) {
-                attrs {
-                    title = "Remove"
-
-                    onClick = ::onRemove
+            attrs {
+                onMouseOverFunction = {
+                    onMouseOver(false)
                 }
 
-                child(DeleteIcon::class) {}
+                onMouseOutFunction = {
+                    onMouseOut(false)
+                }
             }
+
 
 //            child(MaterialIconButton::class) {
 //                attrs {
-//                    title = "Options..."
-//                    onClick = ::onOptionsOpen
+//                    title = "Remove"
 //
-//                    buttonRef = {
-//                        this@ActionController.buttonRef = it
-//                    }
+//                    onClick = ::onRemove
 //                }
 //
-//                child(MoreVertIcon::class) {}
+//                child(DeleteIcon::class) {}
 //            }
+
+            child(MaterialIconButton::class) {
+                attrs {
+                    title = "Options..."
+                    onClick = ::onOptionsOpen
+
+                    buttonRef = {
+                        this@VertexController.buttonRef = it
+                    }
+                }
+
+                child(MoreVertIcon::class) {}
+            }
         }
 
-//        child(MaterialMenu::class) {
-//            attrs {
-//                open = state.optionsOpen
-//
-//                onClose = ::onOptionsCancel
-//
-//                anchorEl = buttonRef
-//            }
-//
-//            renderMenuItems()
-//        }
+        child(MaterialMenu::class) {
+            attrs {
+                open = state.optionsOpen
+
+                onClose = ::onOptionsCancel
+
+                anchorEl = buttonRef
+            }
+
+            renderMenuItems()
+        }
+    }
+
+
+    private fun RBuilder.renderMenuItems() {
+        val iconStyle = reactStyle {
+            marginRight = 1.em
+        }
+
+        child(MaterialMenuItem::class) {
+            attrs {
+                onClick = ::onRemove
+            }
+            child(DeleteIcon::class) {
+                attrs {
+                    style = iconStyle
+                }
+            }
+            +"Delete"
+        }
     }
 
 
