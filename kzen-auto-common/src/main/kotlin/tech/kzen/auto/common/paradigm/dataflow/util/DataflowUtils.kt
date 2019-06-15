@@ -34,15 +34,16 @@ object DataflowUtils {
 
         val dataflowDag = DataflowDag.of(vertexMatrix)
 
-        return next(dataflowDag, visualDataflowModel)
+        return next(vertexMatrix, dataflowDag, visualDataflowModel)
     }
 
 
     fun next(
+            dataflowMatrix: DataflowMatrix,
             dataflowDag: DataflowDag,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
-//        println("^^^^^ next: visualDataflowModel - $visualDataflowModel")
+//        println("^^^^^ next: dataflowDag.layers - ${dataflowDag.layers}")
         var lastLayerInProgress: Int = -1
         var firstLayerReady: Int = -1
 
@@ -52,7 +53,7 @@ object DataflowUtils {
             }
 
             if (firstLayerReady == -1 &&
-                    isLayerReady(layer, visualDataflowModel, dataflowDag)) {
+                    isLayerReady(layer, visualDataflowModel, dataflowMatrix, dataflowDag)) {
                 firstLayerReady = index
             }
         }
@@ -71,7 +72,12 @@ object DataflowUtils {
 
         val nextLayer = dataflowDag.layers[nextLayerIndex]
 
-        return nextInLayer(nextLayer, dataflowDag, visualDataflowModel)
+//        println("^^^^^ got nextLayer: $nextLayer")
+        return nextInLayer(
+                nextLayer,
+                dataflowMatrix,
+                dataflowDag,
+                visualDataflowModel)
     }
 
 
@@ -99,9 +105,12 @@ object DataflowUtils {
     private fun isLayerReady(
             layer: List<ObjectLocation>,
             visualDataflowModel: VisualDataflowModel,
+            dataflowMatrix: DataflowMatrix,
             dataflowDag: DataflowDag
     ): Boolean {
         for (vertexLocation in layer) {
+//            println("^^^^^^ isLayerReady vertexLocation $vertexLocation")
+
             val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
                     ?: continue
 
@@ -109,8 +118,16 @@ object DataflowUtils {
                 continue
             }
 
+            val vertexDescriptor = dataflowMatrix.verticesByLocation[vertexLocation]
+                    ?: continue
+
             val predecessors = dataflowDag.predecessors[vertexLocation]
-                    ?: return true
+                    ?: listOf()
+
+            if (vertexDescriptor.inputNames.size != predecessors.size) {
+                // TODO: unify with nextInLayer
+                continue
+            }
 
 //            println("^^^^^^ isLayerReady $visualVertexModel - $predecessors")
 
@@ -157,6 +174,7 @@ object DataflowUtils {
 
     private fun nextInLayer(
             layer: List<ObjectLocation>,
+            dataflowMatrix: DataflowMatrix,
             dataflowDag: DataflowDag,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
@@ -170,7 +188,7 @@ object DataflowUtils {
         var minEpoch = Int.MAX_VALUE
         var candidate: ObjectLocation? = null
 
-        nextVertex@
+//        nextVertex@
         for (vertexLocation in layer) {
             val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
                     ?: VisualVertexModel.empty
@@ -182,16 +200,28 @@ object DataflowUtils {
                 continue
             }
 
+//            println("^^^^ Looking at ($minEpoch - ${visualVertexModel.epoch}): $vertexLocation")
             if (minEpoch <= visualVertexModel.epoch) {
                 continue
             }
 
             val predecessors = dataflowDag.predecessors[vertexLocation]
+                    ?: listOf()
+
+            val vertexDescriptor = dataflowMatrix.verticesByLocation[vertexLocation]
                     ?: continue
+
+//            println("^^^^ Inputs: ${vertexDescriptor.inputNames.size} vs ${predecessors.size}")
+            if (vertexDescriptor.inputNames.size != predecessors.size) {
+                // TODO: consider handling optional OptionalInput
+                continue
+            }
+
+//            println("^^^^^&& predecessors - $predecessors")
 
             for (predecessor in predecessors) {
                 if (visualDataflowModel.vertices[predecessor]?.message == null) {
-                    continue@nextVertex
+                    continue//@nextVertex
                 }
             }
 
@@ -199,6 +229,7 @@ object DataflowUtils {
             candidate = vertexLocation
         }
 
+//        println("^^^^^ next is: $candidate")
         return candidate
     }
 }

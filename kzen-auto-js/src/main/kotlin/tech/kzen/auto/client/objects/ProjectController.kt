@@ -2,7 +2,6 @@ package tech.kzen.auto.client.objects
 
 import kotlinx.coroutines.delay
 import kotlinx.css.*
-import kotlinx.css.properties.boxShadow
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.Event
 import react.*
@@ -31,7 +30,6 @@ import kotlin.browser.window
 class ProjectController(
         props: Props
 ):
-//        RComponent<ProjectController.Props, ProjectController.State>(props),
         RPureComponent<ProjectController.Props, ProjectController.State>(props),
         GraphStructureManager.Observer,
         CommandBus.Subscriber,
@@ -39,7 +37,7 @@ class ProjectController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val shadowWidth = 12.px
+        private const val shadowWidth = 6
         private val sidebarWidth = 16.em
     }
 
@@ -103,15 +101,6 @@ class ProjectController(
             ClientContext.commandBus.subscribe(this)
             ClientContext.navigationManager.observe(this)
         }
-
-//        async {
-//            delay(1)
-//
-//            val height = headerElement?.clientHeight ?: 0
-//            setState {
-//                headerHeight = height
-//            }
-//        }
 
         window.addEventListener("resize", handleResize)
     }
@@ -188,35 +177,29 @@ class ProjectController(
                 +"Loading..."
             }
             else {
-                renderHeader(graphNotation)
-
-                renderSidebar()
-
-                renderStage(/*graphNotation*/)
+                renderBody(graphNotation)
             }
         }
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderHeader(
+    private fun RBuilder.renderBody(
             graphNotation: GraphNotation
     ) {
         styledDiv {
             css {
-//                position = Position.sticky
                 position = Position.fixed
                 width = 100.pct
                 left = 0.px
                 top = 0.px
                 zIndex = 999
-                boxShadow(Color.gray, 0.px, 0.px, shadowWidth)
+                filter = "drop-shadow(0 1px ${shadowWidth}px gray)"
             }
+
 
             div {
                 ref {
                     headerElement = it as? HTMLElement
-//                    console.log("^^^^^^^ ref - foo", headerElement, headerElement?.clientHeight)
                 }
 
                 props.ribbonController.child(this) {
@@ -225,78 +208,40 @@ class ProjectController(
                     }
                 }
             }
-        }
-
-        // NB: cover up shadow from sidebar
-        styledDiv {
-            val headerHeight = (state.headerHeight ?: 64).px
-            css {
-                position = Position.fixed
-                width = 100.vw.minus(10.em)
-                height = shadowWidth
-                left = 10.em
-                top = headerHeight.minus(shadowWidth)
-                zIndex = 1000
-                backgroundColor = Color.white
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderSidebar() {
-        styledDiv {
-            val headerHeight = (state.headerHeight ?: 64).px
-
-            css {
-                width = sidebarWidth
-
-                height = 100.vh.minus(headerHeight).plus(shadowWidth)
-                position = Position.fixed
-                left = 0.px
-                top = headerHeight.minus(shadowWidth)
-
-                zIndex = 999
-                boxShadow(Color.gray, 0.px, shadowWidth, shadowWidth)
-            }
 
             styledDiv {
                 css {
                     backgroundColor = Color.white
-
-                    height = 100.pct.minus(shadowWidth)
-                    overflowY = Overflow.auto
+                    width = sidebarWidth
 
                     borderTopWidth = 1.px
                     borderTopStyle = BorderStyle.solid
                     borderTopColor = Color.lightGray
 
-                    marginTop = shadowWidth
+                    bottom = 0.px
+                    height = 100.pct
                 }
 
                 props.sidebarController.child(this) {}
             }
+
+            styledDiv {
+                css {
+                    position = Position.absolute
+                    backgroundColor = Color.white
+                    width = sidebarWidth
+                    top = 0.px
+                    left = 0.px
+                    height = 100.vh
+                    zIndex = -999
+                }
+            }
         }
-    }
 
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderStage(
-//            graphNotation: GraphNotation
-    ) {
         styledDiv {
-            val headerHeight = (state.headerHeight ?: 64).px
-            val leftPad = 1.em
-
             css {
-//                display = Display.inlineBlock
-                width = 100.pct.minus(sidebarWidth).minus(leftPad)
-                minHeight = 100.vh.minus(headerHeight)
-
-                marginTop = headerHeight
                 marginLeft = sidebarWidth
-
-                paddingLeft = leftPad
+                marginTop = (state.headerHeight ?: 64).px
             }
 
             if (state.commandError != null) {

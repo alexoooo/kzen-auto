@@ -353,17 +353,18 @@ class ActiveDataflowManager(
 
         val visualDataflowModel = inspect(host)
 
-        if (isDone(dataflowDag, visualDataflowModel)) {
+        if (isDone(dataflowMatrix, dataflowDag, visualDataflowModel)) {
             clearIteration(dataflowDag, activeDataflowModel, loopConsumer, clearedConsumer)
         }
     }
 
 
     private fun isDone(
+            dataflowMatrix: DataflowMatrix,
             dataflowDag: DataflowDag,
             visualDataflowModel: VisualDataflowModel
     ): Boolean {
-        val next = DataflowUtils.next(dataflowDag, visualDataflowModel)
+        val next = DataflowUtils.next(dataflowMatrix, dataflowDag, visualDataflowModel)
         return next == null
     }
 

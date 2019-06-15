@@ -741,7 +741,7 @@ class VertexController(
             val isMessagePending =
                     successors.isEmpty() ||
                             successors.any {
-                                props.visualDataflowModel.vertices[it]!!.epoch == 0
+                                (props.visualDataflowModel.vertices[it]?.epoch ?: -1) == 0
                             }
 
             if (isMessagePending) {
