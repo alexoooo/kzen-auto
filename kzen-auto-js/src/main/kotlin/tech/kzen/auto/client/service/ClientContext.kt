@@ -62,8 +62,6 @@ object ClientContext {
     val insertionManager = InsertionManager()
     val executionIntent = ExecutionIntent()
 
-    val navigationManager = NavigationManager()
-
     private val clientRestVisualDataflowProvider = ClientRestVisualDataflowProvider(
             restClient)
 
@@ -74,6 +72,10 @@ object ClientContext {
             modelManager,
             visualDataflowManager,
             150)
+
+    val navigationManager = NavigationManager(
+            executionLoop,
+            visualDataflowLoop)
 
 
     //-----------------------------------------------------------------------------------------------------------------

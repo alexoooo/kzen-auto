@@ -121,4 +121,12 @@ class VisualDataflowLoop(
 
         state.looping = false
     }
+
+
+    fun pauseAll() {
+//        println("^^^^^ pauseAll - $states")
+        for (state in states) {
+            state.value.looping = false
+        }
+    }
 }

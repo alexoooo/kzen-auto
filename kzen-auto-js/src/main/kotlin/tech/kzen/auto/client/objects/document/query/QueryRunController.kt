@@ -212,6 +212,7 @@ class QueryRunController(
 
 
     private fun onPause() {
+//        console.log("^^^^^^^ onPause")
         val host = props.documentPath
                 ?: return
 
@@ -272,6 +273,20 @@ class QueryRunController(
         val hasMoreToRun = phase == Phase.Pending || phase == Phase.Partial
         val looping = phase == Phase.Looping
 
+        val clickHandle = {
+//            console.log("^^^^^ FAB click - $phase")
+            when {
+                looping || phase == Phase.Running ->
+                    onPause()
+
+                hasMoreToRun ->
+                    onRunAll()
+
+                phase == Phase.Done ->
+                    onReset()
+            }
+        }
+
         child(MaterialFab::class) {
             attrs {
                 onMouseOver = ::onRunEnter
@@ -291,18 +306,7 @@ class QueryRunController(
                         "Run all (continue)"
                 }
 
-                onClick = {
-                    when {
-                        looping || phase == Phase.Running ->
-                            onPause()
-
-                        hasMoreToRun ->
-                            onRunAll()
-
-                        phase == Phase.Done ->
-                            onReset()
-                    }
-                }
+                onClick = clickHandle
 
                 style = reactStyle {
                     backgroundColor =
@@ -324,6 +328,7 @@ class QueryRunController(
                         style = reactStyle {
                             fontSize = 3.em
                         }
+                        onClick = clickHandle
                     }
                 }
 
@@ -332,6 +337,7 @@ class QueryRunController(
                         style = reactStyle {
                             fontSize = 3.em
                         }
+                        onClick = clickHandle
                     }
                 }
 
@@ -340,6 +346,7 @@ class QueryRunController(
                         style = reactStyle {
                             fontSize = 3.em
                         }
+                        onClick = clickHandle
                     }
                 }
             }
@@ -387,9 +394,6 @@ class QueryRunController(
                     if (! state.fabHover || ! hasRunNext) {
                         visibility = Visibility.hidden
                     }
-
-//                    marginRight = (-0.5).em
-//                    marginRight = (-0.1).em
                 }
 
                 onClick = ::onRun

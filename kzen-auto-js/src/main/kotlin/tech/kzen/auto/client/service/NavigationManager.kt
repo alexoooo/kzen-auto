@@ -1,11 +1,16 @@
 package tech.kzen.auto.client.service
 
+import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.structure.notation.edit.*
 import kotlin.browser.window
 
 
-class NavigationManager:
+class NavigationManager(
+        val executionLoop: ExecutionLoop,
+        val visualDataflowLoop: VisualDataflowLoop
+):
         CommandBus.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -34,7 +39,9 @@ class NavigationManager:
 
 
     private fun publish() {
-//        console.log("^^^^ nav publishing")
+        executionLoop.pauseAll()
+        visualDataflowLoop.pauseAll()
+
         val observersCopy = observers.toList()
         for (observer in observersCopy) {
             if (observer !in observers) {

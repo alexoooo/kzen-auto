@@ -20,7 +20,7 @@ class ExecutionLoop(
     private val states = mutableMapOf<DocumentPath, State>()
 
     private class State {
-        var running: Boolean = false
+        var looping: Boolean = false
         var executionModel: ImperativeModel? = null
     }
 
@@ -42,7 +42,7 @@ class ExecutionLoop(
 
         state.executionModel = executionModel
 
-        if (! state.running) {
+        if (! state.looping) {
             return
         }
 
@@ -62,11 +62,11 @@ class ExecutionLoop(
         val state = getOrCreate(host)
 //        println("ExecutionLoop | Run request")
 
-        if (state.running) {
+        if (state.looping) {
 //            println("ExecutionLoop | Already running")
             return
         }
-        state.running = true
+        state.looping = true
 
 //        println("ExecutionLoop | executionModel is $executionModel")
 
@@ -77,7 +77,7 @@ class ExecutionLoop(
 //            println("ExecutionLoop | pausing at end of loop")
 
             // NB: auto-pause
-            state.running = false
+            state.looping = false
             return
         }
 
@@ -92,6 +92,7 @@ class ExecutionLoop(
             next: ObjectLocation
     ) {
         // NB: break cycle, is there a cleaner way to do this?
+        @Suppress("DeferredResultUnused")
         GlobalScope.async {
             // NB: this will trigger ExecutionManager.Observer onExecutionModel method above
             executionManager.execute(host, next, delayMillis)
@@ -101,21 +102,29 @@ class ExecutionLoop(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun running(host: DocumentPath): Boolean {
-        return getOrCreate(host).running
+        return getOrCreate(host).looping
     }
 
 
     fun pause(host: DocumentPath) {
         val state = getOrCreate(host)
-//        println("ExecutionLoop | Pause request")
+//        println("ExecutionLoop | Pause request - $states")
 
-        if (! state.running) {
+        if (! state.looping) {
 //            println("ExecutionLoop | Already paused")
             return
         }
 
 //        println("ExecutionLoop | Pausing")
 
-        state.running = false
+        state.looping = false
+    }
+
+
+    fun pauseAll() {
+//        println("^^^^^ pauseAll - $states")
+        for (state in states) {
+            state.value.looping = false
+        }
     }
 }
