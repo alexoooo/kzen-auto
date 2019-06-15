@@ -85,16 +85,46 @@ TopToBottomPipeTool:
   delegate: TopToBottomPipe
 
 
-TopToBottomAndRightPipeTool:
+TopToLeftPipeTool:
   is: RibbonTool
   parent: PipeGroup
-  delegate: TopToBottomAndRightPipe
+  delegate: TopToLeftPipe
 
 
 TopToRightPipeTool:
   is: RibbonTool
   parent: PipeGroup
   delegate: TopToRightPipe
+
+
+TopToLeftAndRightPipeTool:
+  is: RibbonTool
+  parent: PipeGroup
+  delegate: TopToLeftAndRightPipe
+
+
+TopToBottomAndLeftPipeTool:
+  is: RibbonTool
+  parent: PipeGroup
+  delegate: TopToBottomAndLeftPipe
+
+
+TopToBottomAndRightPipeTool:
+  is: RibbonTool
+  parent: PipeGroup
+  delegate: TopToBottomAndRightPipe
+
+
+TopToBottomAndLeftAndRightPipeTool:
+  is: RibbonTool
+  parent: PipeGroup
+  delegate: TopToBottomAndLeftAndRightPipe
+
+
+LeftToRightPipeTool:
+  is: RibbonTool
+  parent: PipeGroup
+  delegate: LeftToRightPipe
 
 
 LeftToBottomPipeTool:
@@ -108,3 +138,20 @@ LeftToBottomAndRightPipeTool:
   parent: PipeGroup
   delegate: LeftToBottomAndRightPipe
 
+
+RightToLeftPipeTool:
+  is: RibbonTool
+  parent: PipeGroup
+  delegate: RightToLeftPipe
+
+
+RightToBottomPipeTool:
+  is: RibbonTool
+  parent: PipeGroup
+  delegate: RightToBottomPipe
+
+
+RightToLeftAndBottomPipeTool:
+  is: RibbonTool
+  parent: PipeGroup
+  delegate: RightToLeftAndBottomPipe

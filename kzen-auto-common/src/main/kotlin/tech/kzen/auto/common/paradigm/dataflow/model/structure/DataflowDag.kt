@@ -100,11 +100,21 @@ data class DataflowDag(
                         edgeDescriptor.coordinate.row,
                         edgeDescriptor.coordinate.column + 1)
 
-                when (cellRight) {
-                    is EdgeDescriptor ->
-                        if (cellRight.orientation.hasLeftIngress()) {
-                            traceEdge(cellRight, dataflowMatrix, buffer)
-                        }
+                if (cellRight is EdgeDescriptor &&
+                        cellRight.orientation.hasLeftIngress()) {
+                    traceEdge(cellRight, dataflowMatrix, buffer)
+                }
+            }
+
+            if (edgeDescriptor.orientation.hasLeftEgress()) {
+                @Suppress("MoveVariableDeclarationIntoWhen")
+                val cellLeft = dataflowMatrix.get(
+                        edgeDescriptor.coordinate.row,
+                        edgeDescriptor.coordinate.column - 1)
+
+                if (cellLeft is EdgeDescriptor &&
+                        cellLeft.orientation.hasRightIngress()) {
+                    traceEdge(cellLeft, dataflowMatrix, buffer)
                 }
             }
         }

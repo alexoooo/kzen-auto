@@ -243,6 +243,17 @@ data class DataflowMatrix(
                     }
                 }
 
+                if (descriptor.orientation.hasRightIngress()) {
+                    val coordinateRight = descriptor.coordinate.offset(0, 1)
+                    val edgeDescriptorRight = get(coordinateRight) as? EdgeDescriptor
+                    if (edgeDescriptorRight != null && edgeDescriptorRight.orientation.hasLeftEgress()) {
+                        val vertexRight = traceVertexBackFrom(edgeDescriptorRight)
+                        if (vertexRight != null) {
+                            return vertexRight
+                        }
+                    }
+                }
+
                 return null
             }
         }
@@ -290,6 +301,14 @@ data class DataflowMatrix(
             val edgeDescriptorLeft = get(coordinateLeft) as? EdgeDescriptor
             if (edgeDescriptorLeft != null && edgeDescriptorLeft.orientation.hasRightEgress()) {
                 traceEdgeBackFrom(edgeDescriptorLeft, buffer)
+            }
+        }
+
+        if (descriptor.orientation.hasRightIngress()) {
+            val coordinateRight = descriptor.coordinate.offset(0, 1)
+            val edgeDescriptorRight = get(coordinateRight) as? EdgeDescriptor
+            if (edgeDescriptorRight != null && edgeDescriptorRight.orientation.hasLeftEgress()) {
+                traceEdgeBackFrom(edgeDescriptorRight, buffer)
             }
         }
     }

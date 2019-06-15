@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.query
 import kotlinx.css.*
 import kotlinx.css.properties.borderBottom
 import kotlinx.css.properties.borderLeft
+import kotlinx.css.properties.borderRight
 import kotlinx.css.properties.borderTop
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
@@ -184,11 +185,14 @@ class EdgeController(
                 marginBottom = (-5).px
             }
 
-            if (orientation.hasLeftIngress()) {
-                renderIngressLeft(edgeColor)
-            }
-            else {
-                styledDiv {
+            when {
+                orientation.hasLeftIngress() ->
+                    renderIngressLeft(edgeColor)
+
+                orientation.hasLeftEgress() ->
+                    renderEgressLeft(edgeColor)
+
+                else -> styledDiv {
                     css {
                         display = Display.inlineBlock
                         width = CellController.cardWidth.div(2).minus(CellController.cardHorizontalMargin)
@@ -230,6 +234,9 @@ class EdgeController(
             if (orientation.hasRightEgress()) {
                 renderEgressRight(edgeColor)
             }
+            else if (orientation.hasRightIngress()) {
+                renderIngressRight(edgeColor)
+            }
         }
 
         if (orientation.hasBottom()) {
@@ -243,6 +250,42 @@ class EdgeController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderEgressLeft(
+            cardColor: Color
+    ) {
+        styledDiv {
+            css {
+                display = Display.inlineBlock
+                marginTop = CellController.cardHorizontalMargin.unaryMinus()
+            }
+
+            styledDiv {
+                css {
+                    width = 0.px
+                    height = 0.px
+
+                    borderRight(CellController.arrowSide, BorderStyle.solid, cardColor)
+                    borderTop(CellController.arrowSide, BorderStyle.solid, Color.transparent)
+                    borderBottom(CellController.arrowSide, BorderStyle.solid, Color.transparent)
+                }
+            }
+
+            styledDiv {
+                css {
+                    backgroundColor = cardColor
+
+                    width = CellController.cardWidth.div(2)
+                            .minus(CellController.cardHorizontalMargin)
+                            .minus(CellController.arrowSide)
+                    height = CellController.arrowSide
+                    marginTop = (-3).em
+                    marginLeft = CellController.arrowSide
+                }
+            }
+        }
+    }
+
+
     private fun RBuilder.renderEgressRight(
             cardColor: Color
     ) {
@@ -303,6 +346,42 @@ class EdgeController(
                     height = CellController.arrowSide
                     marginTop = (-3).em
                 }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderIngressRight(
+            cardColor: Color
+    ) {
+        styledDiv {
+            css {
+                display = Display.inlineBlock
+                backgroundColor = cardColor
+//                backgroundColor = Color.burlyWood
+
+                width = CellController.cardWidth.div(2)
+                        .minus(CellController.arrowSide).plus(3.px)
+                //.minus(CellController.egressLength)
+
+                height = 2.em
+            }
+        }
+
+        styledDiv {
+            css {
+                display = Display.inlineBlock
+
+                width = 0.px
+                height = 0.px
+
+                borderRight(2.em, BorderStyle.solid, cardColor)
+                borderTop(2.em, BorderStyle.solid, Color.transparent)
+                borderBottom(2.em, BorderStyle.solid, Color.transparent)
+
+                marginTop = (-3).em.minus(3.px)
+                marginBottom = (-1).em
+                float = Float.right
             }
         }
     }

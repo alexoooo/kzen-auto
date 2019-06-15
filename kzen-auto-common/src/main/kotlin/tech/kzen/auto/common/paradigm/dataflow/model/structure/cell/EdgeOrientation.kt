@@ -3,10 +3,20 @@ package tech.kzen.auto.common.paradigm.dataflow.model.structure.cell
 
 enum class EdgeOrientation {
     TopToBottom,
-    TopToBottomAndRight,
+    TopToLeft,
     TopToRight,
-    LeftToBottomAndRight,
-    LeftToBottom;
+    TopToLeftAndRight,
+    TopToBottomAndLeft,
+    TopToBottomAndRight,
+    TopToBottomAndLeftAndRight,
+
+    LeftToRight,
+    LeftToBottom,
+    LeftToRightAndBottom,
+
+    RightToLeft,
+    RightToBottom,
+    RightToLeftAndBottom;
 
 
     fun hasTop(): Boolean {
@@ -17,7 +27,19 @@ enum class EdgeOrientation {
             TopToBottomAndRight ->
                 true
 
+            TopToBottomAndLeft ->
+                true
+
+            TopToBottomAndLeftAndRight ->
+                true
+
+            TopToLeft ->
+                true
+
             TopToRight ->
+                true
+
+            TopToLeftAndRight ->
                 true
 
             else ->
@@ -34,10 +56,19 @@ enum class EdgeOrientation {
             TopToBottomAndRight ->
                 true
 
-            LeftToBottomAndRight ->
+            TopToBottomAndLeftAndRight ->
+                true
+
+            LeftToRightAndBottom ->
                 true
 
             LeftToBottom ->
+                true
+
+            RightToBottom ->
+                true
+
+            RightToLeftAndBottom ->
                 true
 
             else ->
@@ -48,10 +79,56 @@ enum class EdgeOrientation {
 
     fun hasLeftIngress(): Boolean {
         return when (this) {
-            LeftToBottomAndRight ->
+            LeftToRight ->
                 true
 
             LeftToBottom ->
+                true
+
+            LeftToRightAndBottom ->
+                true
+
+            else ->
+                false
+        }
+    }
+
+
+    fun hasLeftEgress(): Boolean {
+        return when (this) {
+            TopToBottomAndLeft ->
+                true
+
+            TopToBottomAndLeftAndRight ->
+                true
+
+            TopToLeft ->
+                true
+
+            TopToLeftAndRight ->
+                true
+
+            RightToLeft ->
+                true
+
+            RightToLeftAndBottom ->
+                true
+
+            else ->
+                false
+        }
+    }
+
+
+    fun hasRightIngress(): Boolean {
+        return when (this) {
+            RightToLeft ->
+                true
+
+            RightToBottom ->
+                true
+
+            RightToLeftAndBottom ->
                 true
 
             else ->
@@ -65,16 +142,23 @@ enum class EdgeOrientation {
             TopToBottomAndRight ->
                 true
 
+            TopToBottomAndLeftAndRight ->
+                true
+
             TopToRight ->
                 true
 
-            LeftToBottomAndRight ->
+            TopToLeftAndRight ->
+                true
+
+            LeftToRightAndBottom ->
+                true
+
+            LeftToRight ->
                 true
 
             else ->
                 false
         }
     }
-
-
 }

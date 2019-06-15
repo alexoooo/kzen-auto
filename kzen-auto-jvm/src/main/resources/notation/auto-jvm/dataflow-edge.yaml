@@ -24,41 +24,113 @@ EdgePipe:
     orientation: String
 
 
+# for ascii table, see:
+#  https://theasciicode.com.ar/extended-ascii-code/box-drawings-double-line-vertical-right-character-ascii-code-204.html
+
 TopToBottomPipe:
   abstract: true
   is: EdgePipe
   icon: ArrowDownward
-  title: "Down"
+  title: ""
+  description: "From top to down"
   orientation: TopToBottom
 
 
-TopToBottomAndRightPipe:
+TopToLeftPipe:
   abstract: true
   is: EdgePipe
-#  icon: SubdirectoryArrowRight
-  title: "╠» Down and right"
-  orientation: TopToBottomAndRight
+  icon: SubdirectoryArrowLeft
+  title: ""
+  description: "From top to left"
+  orientation: TopToLeft
 
 
 TopToRightPipe:
   abstract: true
   is: EdgePipe
   icon: SubdirectoryArrowRight
-  title: "Right"
+  title: ""
+  description: "From top to right"
   orientation: TopToRight
+
+
+TopToLeftAndRightPipe:
+  abstract: true
+  is: EdgePipe
+  title: "«╩»"
+  description: "From top to left and right"
+  orientation: TopToLeftAndRight
+
+
+TopToBottomAndLeftPipe:
+  abstract: true
+  is: EdgePipe
+  title: "«╣"
+  description: "From top to down and left"
+  orientation: TopToBottomAndLeft
+
+
+TopToBottomAndRightPipe:
+  abstract: true
+  is: EdgePipe
+  title: "╠»"
+  description: "From top to down and right"
+  orientation: TopToBottomAndRight
+
+
+TopToBottomAndLeftAndRightPipe:
+  abstract: true
+  is: EdgePipe
+  title: "«╬»"
+  description: "From top to bottom and left and right"
+  orientation: TopToBottomAndLeftAndRight
+
+
+LeftToRightPipe:
+  abstract: true
+  is: EdgePipe
+  icon: ArrowForward
+  title: ""
+  description: "From left to right"
+  orientation: LeftToRight
 
 
 LeftToBottomPipe:
   abstract: true
   is: EdgePipe
-#  icon: SubdirectoryArrowRight
-  title: "»╗ Left to Bottom"
+  title: "»╗"
+  description: "From left to bottom"
   orientation: LeftToBottom
 
 
 LeftToBottomAndRightPipe:
   abstract: true
   is: EdgePipe
-#  icon: SubdirectoryArrowRight
-  title: "»╦» Left to Bottom And Right"
-  orientation: LeftToBottomAndRight
+  title: "»╦»"
+  description: "From left to bottom and right"
+  orientation: LeftToRightAndBottom
+
+
+RightToLeftPipe:
+  abstract: true
+  is: EdgePipe
+  icon: ArrowBack
+  title: ""
+  description: "From right to left"
+  orientation: RightToLeft
+
+
+RightToBottomPipe:
+  abstract: true
+  is: EdgePipe
+  title: "╔«"
+  description: "From right to bottom"
+  orientation: RightToBottom
+
+
+RightToLeftAndBottomPipe:
+  abstract: true
+  is: EdgePipe
+  title: "«╦«"
+  description: "From right to left and bottom"
+  orientation: RightToLeftAndBottom

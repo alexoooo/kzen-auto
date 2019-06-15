@@ -25,7 +25,6 @@ import tech.kzen.lib.common.structure.notation.model.GraphNotation
 class RibbonController(
         props: Props
 ):
-//        RComponent<RibbonController.Props, RibbonController.State>(props),
         RPureComponent<RibbonController.Props, RibbonController.State>(props),
         InsertionManager.Observer,
         NavigationManager.Observer
@@ -244,10 +243,15 @@ class RibbonController(
                     }
                 }
 
-                val title = props.notation
-                        .transitiveAttribute(ribbonTool.delegate, AutoConventions.titleAttributePath)
+                val description = props.notation
+                        .transitiveAttribute(ribbonTool.delegate, AutoConventions.descriptionAttributePath)
                         ?.asString()
-                        ?: ribbonTool.delegate.objectPath.name.value
+
+                if (description != null) {
+                    attrs {
+                        this.title = description
+                    }
+                }
 
                 val icon = props.notation
                         .transitiveAttribute(ribbonTool.delegate, AutoConventions.iconAttributePath)
@@ -262,6 +266,11 @@ class RibbonController(
                         }
                     }
                 }
+
+                val title = props.notation
+                        .transitiveAttribute(ribbonTool.delegate, AutoConventions.titleAttributePath)
+                        ?.asString()
+                        ?: ribbonTool.delegate.objectPath.name.value
 
                 +title
             }

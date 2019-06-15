@@ -90,6 +90,18 @@ external class SubdirectoryArrowRightIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("ArrowForward")
+external class ArrowForwardIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("ArrowBack")
+external class ArrowBackIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("OpenInNew")
 external class OpenInNewIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
