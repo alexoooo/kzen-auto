@@ -23,10 +23,12 @@ Script:
       of: Action
 
 
-Query:
+Graph:
+#Query:
   is: Document
   class: tech.kzen.auto.common.objects.document.query.QueryDocument
-  icon: Search
+#  icon: Search
+  icon: CallSplit
   vertices: []
   edges: []
   meta:

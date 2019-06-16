@@ -216,6 +216,12 @@ external class SearchIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("CallSplit")
+external class CallSplitIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("TripOrigin")
 external class TripOriginIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?

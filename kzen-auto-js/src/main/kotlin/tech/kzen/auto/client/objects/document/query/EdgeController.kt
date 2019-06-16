@@ -246,6 +246,13 @@ class EdgeController(
                 }
             }
         }
+        else {
+            styledDiv {
+                css {
+                    height = CellController.egressLength
+                }
+            }
+        }
     }
 
 

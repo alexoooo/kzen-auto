@@ -189,22 +189,27 @@ class ProjectController(
         styledDiv {
             css {
                 position = Position.fixed
-                width = 100.pct
+                width = 0.px
                 left = 0.px
                 top = 0.px
                 zIndex = 999
                 filter = "drop-shadow(0 1px ${shadowWidth}px gray)"
             }
 
-
-            div {
-                ref {
-                    headerElement = it as? HTMLElement
+            styledDiv {
+                css {
+                    width = 100.vw
                 }
 
-                props.ribbonController.child(this) {
-                    attrs {
-                        notation = graphNotation
+                div {
+                    ref {
+                        headerElement = it as? HTMLElement
+                    }
+
+                    props.ribbonController.child(this) {
+                        attrs {
+                            notation = graphNotation
+                        }
                     }
                 }
             }

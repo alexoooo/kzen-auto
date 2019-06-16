@@ -48,6 +48,9 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "Search" ->
             SearchIcon::class
 
+        "CallSplit" ->
+            CallSplitIcon::class
+
         "TripOrigin" ->
             TripOriginIcon::class
 

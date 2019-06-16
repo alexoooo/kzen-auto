@@ -297,15 +297,18 @@ class QueryController:
                 state.graphStructure!!,  verticesNotation, edgesNotation)
 
         if (dataflowMatrix.isEmpty()) {
-            styledH3 {
+            styledDiv {
                 css {
-                    paddingTop = 1.em
+                    paddingTop = 1.5.em
+                    paddingLeft = 2.em
+//                    backgroundColor = Color.blue
+                }
+                styledH3 {
+                    +"Empty graph, please add a source from the toolbar (above)"
                 }
 
-                +"Empty query, please add a source from the toolbar (above)"
+                insertionPoint(0, 0)
             }
-
-            insertionPoint(0, 0)
         }
         else {
             styledDiv {
@@ -435,8 +438,6 @@ class QueryController:
                     title = "Insert here"
                 }
             }
-
-//            +"Index: $index"
 
             child(MaterialIconButton::class) {
                 attrs {

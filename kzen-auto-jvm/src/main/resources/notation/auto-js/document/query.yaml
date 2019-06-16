@@ -3,7 +3,7 @@
 QueryController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.query.QueryController$Wrapper
-  type: Query
+  type: Graph
 
 
 #######################################################################################################################
@@ -12,13 +12,13 @@ QueryController:
 QueryGroup:
   is: RibbonGroup
   title: "Insert"
-  documentArchetype: Query
+  documentArchetype: Graph
 
 
 PipeGroup:
   is: RibbonGroup
   title: "Pipes"
-  documentArchetype: Query
+  documentArchetype: Graph
 
 
 ###########################################################

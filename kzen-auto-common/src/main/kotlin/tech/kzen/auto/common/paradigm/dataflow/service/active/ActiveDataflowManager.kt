@@ -79,7 +79,9 @@ class ActiveDataflowManager(
             return
         }
 
-        val model = models[documentPath]!!
+//        val model = models[documentPath]!!
+        val model = models[documentPath]
+                ?: return
 
         when (event) {
             is RemovedObjectEvent -> {
