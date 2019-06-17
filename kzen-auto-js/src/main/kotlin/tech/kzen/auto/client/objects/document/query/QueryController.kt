@@ -299,11 +299,15 @@ class QueryController:
         if (dataflowMatrix.isEmpty()) {
             styledDiv {
                 css {
-                    paddingTop = 1.5.em
+                    paddingTop = 2.em
                     paddingLeft = 2.em
 //                    backgroundColor = Color.blue
                 }
-                styledH3 {
+
+                styledDiv {
+                    css {
+                        fontSize = 1.5.em
+                    }
                     +"Empty graph, please add a source from the toolbar (above)"
                 }
 
@@ -314,6 +318,7 @@ class QueryController:
             styledDiv {
                 css {
                     paddingTop = 2.em
+                    paddingLeft = 2.em
 //                    backgroundColor = Color.blue
                 }
 

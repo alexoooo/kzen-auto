@@ -53,6 +53,9 @@ enum class EdgeOrientation {
             TopToBottom ->
                 true
 
+            TopToBottomAndLeft ->
+                true
+
             TopToBottomAndRight ->
                 true
 

@@ -66,7 +66,7 @@ TopToBottomAndLeftPipe:
   abstract: true
   is: EdgePipe
   title: "«╣"
-  description: "From top to down and left"
+  description: "From top to bottom and left"
   orientation: TopToBottomAndLeft
 
 
@@ -74,7 +74,7 @@ TopToBottomAndRightPipe:
   abstract: true
   is: EdgePipe
   title: "╠»"
-  description: "From top to down and right"
+  description: "From top to bottom and right"
   orientation: TopToBottomAndRight
 
 

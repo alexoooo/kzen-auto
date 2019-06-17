@@ -122,10 +122,10 @@ class StageController(
                     ?: listOf()
 
             if (mainDocuments.isEmpty()) {
-                +"Please create a file from the sidebar (left)"
+                +"Please create a document from the sidebar (left)"
             }
             else {
-                +"Please select a file from the sidebar (left)"
+                +"Please select a document from the sidebar (left)"
             }
         }
     }

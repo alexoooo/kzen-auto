@@ -103,8 +103,10 @@ class EdgeController(
                         props.visualDataflowModel)
                 ?: return false
 
+        // NB: might be null when navigating to new document while running
         @Suppress("MapGetWithNotNullAssertionOperator")
-        val targetVertexDescriptor = props.dataflowMatrix.verticesByLocation[flowTarget]!!
+        val targetVertexDescriptor = props.dataflowMatrix.verticesByLocation[flowTarget]
+                ?: return false
 
         for ((i, inputName) in targetVertexDescriptor.inputNames.withIndex()) {
             val sourceVertex = props.dataflowMatrix.traceVertexBackFrom(targetVertexDescriptor, inputName)

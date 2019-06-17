@@ -9,7 +9,6 @@ import react.*
 import react.dom.span
 import styled.css
 import styled.styledDiv
-import styled.styledH3
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.script.action.ActionController
@@ -42,7 +41,6 @@ import tech.kzen.lib.platform.collect.persistentListOf
 
 @Suppress("unused")
 class ScriptController:
-//        RComponent<RProps, ScriptController.State>(),
         RPureComponent<RProps, ScriptController.State>(),
         GraphStructureManager.Observer,
         ExecutionManager.Observer,
@@ -225,7 +223,7 @@ class ScriptController:
 
         styledDiv {
             css {
-                marginLeft = 1.em
+                marginLeft = 2.em
             }
 
             steps(structure, documentPath)
@@ -251,18 +249,28 @@ class ScriptController:
         val stepReferences = stepsNotation.values.map { ObjectReference.parse(it.asString()!!) }
 
         if (stepReferences.isEmpty()) {
-            styledH3 {
+            styledDiv {
                 css {
-                    paddingTop = 1.em
+                    paddingTop = 2.em
                 }
 
-                +"Empty script, please add steps from the toolbar (above)"
-            }
+                styledDiv {
+                    css {
+                        fontSize = 1.5.em
+                    }
+                    +"Empty script, please add steps from the toolbar (above)"
+                }
 
-            insertionPoint(0)
+                insertionPoint(0)
+            }
         }
         else {
-            nonEmptySteps(graphStructure, documentPath, stepReferences)
+            styledDiv {
+                css {
+                    paddingLeft = 1.em
+                }
+                nonEmptySteps(graphStructure, documentPath, stepReferences)
+            }
         }
     }
 

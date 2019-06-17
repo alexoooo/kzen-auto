@@ -188,7 +188,8 @@ object DataflowUtils {
         var minEpoch = Int.MAX_VALUE
         var candidate: ObjectLocation? = null
 
-//        nextVertex@
+//        println("^^^############^^ nextInLayer: $layer")
+        nextVertex@
         for (vertexLocation in layer) {
             val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
                     ?: VisualVertexModel.empty
@@ -221,7 +222,7 @@ object DataflowUtils {
 
             for (predecessor in predecessors) {
                 if (visualDataflowModel.vertices[predecessor]?.message == null) {
-                    continue//@nextVertex
+                    continue@nextVertex
                 }
             }
 
