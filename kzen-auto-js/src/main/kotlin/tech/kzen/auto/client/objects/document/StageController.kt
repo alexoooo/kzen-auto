@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document
 import kotlinx.css.em
 import react.*
 import styled.css
-import styled.styledH3
+import styled.styledDiv
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.NavigationManager
@@ -109,10 +109,10 @@ class StageController(
 
 
     private fun RBuilder.renderMissingDocument() {
-        styledH3 {
+        styledDiv {
             css {
-                marginLeft = 1.em
-                paddingTop = 1.em
+                marginLeft = 2.em
+                paddingTop = 2.em
             }
 
             val mainDocuments = state
@@ -121,11 +121,17 @@ class StageController(
                     ?.let { AutoConventions.mainDocuments(it) }
                     ?: listOf()
 
-            if (mainDocuments.isEmpty()) {
-                +"Please create a document from the sidebar (left)"
-            }
-            else {
-                +"Please select a document from the sidebar (left)"
+            styledDiv {
+                css {
+                    fontSize = 1.5.em
+                }
+
+                if (mainDocuments.isEmpty()) {
+                    +"Please create a document from the sidebar (left)"
+                }
+                else {
+                    +"Please select a document from the sidebar (left)"
+                }
             }
         }
     }
