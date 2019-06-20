@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.sidebar
 
-import kotlinx.css.em
+import kotlinx.css.*
 import react.*
 import styled.css
 import styled.styledDiv
@@ -111,7 +111,7 @@ class SidebarController(
             css {
                 paddingTop = 1.em
                 paddingRight = 1.em
-                paddingBottom = 1.em
+                paddingBottom = 0.5.em
                 paddingLeft = 1.em
             }
 

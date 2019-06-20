@@ -1,8 +1,6 @@
 package tech.kzen.auto.client.objects.document.query
 
-import kotlinx.css.Color
-import kotlinx.css.Visibility
-import kotlinx.css.em
+import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import react.RBuilder

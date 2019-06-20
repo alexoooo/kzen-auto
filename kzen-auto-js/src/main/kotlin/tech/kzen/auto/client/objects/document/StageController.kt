@@ -1,6 +1,9 @@
 package tech.kzen.auto.client.objects.document
 
 import kotlinx.css.em
+import kotlinx.css.fontSize
+import kotlinx.css.marginLeft
+import kotlinx.css.paddingTop
 import react.*
 import styled.css
 import styled.styledDiv

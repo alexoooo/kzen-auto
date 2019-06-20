@@ -2,8 +2,6 @@ package tech.kzen.auto.client.objects.sidebar
 
 import kotlinx.coroutines.delay
 import kotlinx.css.*
-import kotlinx.css.properties.TextDecorationLine
-import kotlinx.css.properties.textDecoration
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
 import react.RBuilder
@@ -11,7 +9,6 @@ import react.RProps
 import react.RState
 import react.setState
 import styled.css
-import styled.styledA
 import styled.styledDiv
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
@@ -25,12 +22,14 @@ import tech.kzen.lib.common.structure.notation.edit.RenameDocumentRefactorComman
 class DocumentNameEditor(
         props: Props
 ):
-//        RComponent<DocumentNameEditor.Props, DocumentNameEditor.State>(props)
         RPureComponent<DocumentNameEditor.Props, DocumentNameEditor.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var documentPath: DocumentPath
+            var documentPath: DocumentPath,
+
+            var initialEditing: Boolean,
+            var onEditing: (Boolean) -> Unit
     ): RProps
 
 
@@ -50,32 +49,32 @@ class DocumentNameEditor(
 //        console.log("ObjectNameEditor | State.init - ${props.objectName}", Date.now())
         name = displayPath()
 
-        editing = false
+        editing = props.initialEditing
         saving = false
 //        readerHover = false
     }
 
 
-    override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: State,
-            snapshot: Any
-    ) {
-        if (state.saving && ! prevState.saving) {
-            saveAsync()
-        }
-    }
-
-
-    private fun saveAsync() {
-        async {
-            val nameWithExtension = DocumentName.ofYaml(state.name)
-            ClientContext.commandBus.apply(RenameDocumentRefactorCommand(
-                    props.documentPath, nameWithExtension))
-
-//            // NB: no need to set saving = false, the component will un-mount?
-        }
-    }
+//    override fun componentDidUpdate(
+//            prevProps: Props,
+//            prevState: State,
+//            snapshot: Any
+//    ) {
+//        if (state.saving && ! prevState.saving) {
+//            saveAsync()
+//        }
+//    }
+//
+//
+//    private fun saveAsync() {
+//        async {
+//            val nameWithExtension = DocumentName.ofYaml(state.name)
+//            ClientContext.commandBus.apply(RenameDocumentRefactorCommand(
+//                    props.documentPath, nameWithExtension))
+//
+////            // NB: no need to set saving = false, the component will un-mount?
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -83,6 +82,7 @@ class DocumentNameEditor(
         setState {
             editing = true
         }
+        props.onEditing(true)
     }
 
 
@@ -121,7 +121,9 @@ class DocumentNameEditor(
     private fun onCancel() {
         setState {
             editing = false
+            name = displayPath()
         }
+        props.onEditing(false)
     }
 
 
@@ -131,9 +133,19 @@ class DocumentNameEditor(
             return
         }
 
+        val nameWithExtension = DocumentName.ofYaml(state.name)
+
         setState {
             editing = false
             saving = true
+        }
+        props.onEditing(false)
+
+        async {
+            ClientContext.commandBus.apply(RenameDocumentRefactorCommand(
+                    props.documentPath, nameWithExtension))
+
+            // NB: no need to set saving = false, the component will un-mount
         }
     }
 
@@ -162,38 +174,18 @@ class DocumentNameEditor(
 
 
     private fun RBuilder.renderReader() {
-        styledA {
+        styledDiv {
             css {
-                color = Color.inherit
-                textDecoration(TextDecorationLine.initial)
+                marginTop = 2.px
+                width = 100.pct
             }
 
-            attrs {
-                href = "#" + props.documentPath.asString()
-            }
-
-            styledDiv {
-                css {
-                    marginTop = 2.px
-//                    backgroundColor = Color.blue
-                    width = 100.pct
-                }
-
-                +state.name
-            }
+            +state.name
         }
     }
 
 
     private fun RBuilder.renderEditor() {
-//        styledDiv {
-//            css {
-//                backgroundColor = Color.blue
-//            }
-//            +"foo"
-//        }
-
-
         styledDiv {
             css {
                 display = Display.inlineBlock

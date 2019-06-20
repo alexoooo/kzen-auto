@@ -26,7 +26,6 @@ import kotlin.random.Random
 class SidebarFolder(
         props: Props
 ):
-//        RComponent<SidebarFolder.Props, SidebarFolder.State>(props)
         RPureComponent<SidebarFolder.Props, SidebarFolder.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -34,7 +33,6 @@ class SidebarFolder(
         private val documentBase = NotationConventions.mainDocumentPath
         private const val menuDanglingTimeout = 300
 
-//        val indent = 2.em
         val indent = (2).em.minus(4.px)
     }
 

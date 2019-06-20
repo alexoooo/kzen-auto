@@ -1,9 +1,6 @@
 package tech.kzen.auto.client.objects.document.script
 
-import kotlinx.css.Cursor
-import kotlinx.css.Position
-import kotlinx.css.em
-import kotlinx.css.px
+import kotlinx.css.*
 import kotlinx.html.title
 import react.*
 import react.dom.span

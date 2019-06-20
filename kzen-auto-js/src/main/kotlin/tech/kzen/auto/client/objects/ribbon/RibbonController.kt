@@ -1,9 +1,6 @@
 package tech.kzen.auto.client.objects.ribbon
 
-import kotlinx.css.Color
-import kotlinx.css.Float
-import kotlinx.css.em
-import kotlinx.css.px
+import kotlinx.css.*
 import kotlinx.html.title
 import react.*
 import styled.*
@@ -157,11 +154,9 @@ class RibbonController(
             css {
                 backgroundColor = Color.white
 
-//                paddingTop = 1.em
                 paddingRight = 1.75.em
-                paddingBottom = 1.em
+                paddingBottom = 1.px
                 paddingLeft = 1.75.em
-
             }
 
             styledSpan {
@@ -240,6 +235,7 @@ class RibbonController(
                         }
 
                         marginRight = 0.5.em
+                        marginBottom = 0.5.em
                     }
                 }
 

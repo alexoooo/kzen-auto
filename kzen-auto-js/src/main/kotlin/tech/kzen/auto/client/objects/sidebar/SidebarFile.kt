@@ -1,11 +1,14 @@
 package tech.kzen.auto.client.objects.sidebar
 
 import kotlinx.css.*
+import kotlinx.css.properties.TextDecorationLine
+import kotlinx.css.properties.textDecoration
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import org.w3c.dom.HTMLButtonElement
 import react.*
 import styled.css
+import styled.styledA
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
@@ -15,6 +18,7 @@ import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.DeleteDocumentCommand
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
@@ -25,11 +29,12 @@ class SidebarFile(
         props: Props
 ):
         RPureComponent<SidebarFile.Props, SidebarFile.State>(props)
-//        RComponent<SidebarFile.Props, SidebarFile.State>(props)
 {
     companion object {
         val iconAttribute = AttributePath.ofName(AttributeName("icon"))
         private const val menuDanglingTimeout = 300
+
+        private val iconWidth = 22.px
     }
 
 
@@ -45,7 +50,8 @@ class SidebarFile(
     class State(
             var hoverItem: Boolean,
             var hoverOptions: Boolean,
-            var optionsOpen: Boolean
+            var optionsOpen: Boolean,
+            var editing: Boolean
     ): RState
 
 
@@ -60,6 +66,7 @@ class SidebarFile(
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
         optionsOpen = false
+        editing = false
     }
 
 
@@ -169,13 +176,6 @@ class SidebarFile(
                 .archetypeLocation(props.structure.graphNotation, props.documentPath)
                 ?: return
 
-        val icon = (props.structure.graphNotation.coalesce
-                .get(archetypeLocation)!!
-                .get(iconAttribute) as ScalarAttributeNotation
-                ).value
-
-        val iconWidth = 22.px
-
         styledDiv {
             css {
                 position = Position.relative
@@ -196,48 +196,23 @@ class SidebarFile(
                 }
             }
 
-            styledDiv {
-                css {
-                    position = Position.absolute
-//                    width = 100.pct
-                    top = 0.px
-                    left = 0.px
-
-                    height = iconWidth
-                }
-
-                child(iconClassForName(icon)) {
-                    attrs {
-                        title = archetypeLocation.objectPath.name.value
-                    }
-                }
+            if (state.editing) {
+                renderIconAndName(archetypeLocation)
             }
-
-            styledDiv {
-                css {
-                    position = Position.absolute
-//                    width = 100.pct
-                    top = 0.px
-                    left = iconWidth
-                    width = 100.pct.minus(iconWidth)
-                    marginLeft = 6.px
-
-//                    marginTop = 2.px
-
-                    if (props.selected) {
-                        fontWeight = FontWeight.bold
+            else {
+                styledA {
+                    css {
+                        color = Color.inherit
+                        textDecoration(TextDecorationLine.initial)
+                        width = 100.pct
+                        height = 100.pct
                     }
-                }
 
-                child(DocumentNameEditor::class) {
                     attrs {
-                        ref<DocumentNameEditor> {
-//                            console.log("^^^^^ BundleNameEditor ref", it)
-                            nameEditorRef = it
-                        }
-
-                        this.documentPath = props.documentPath
+                        href = "#" + props.documentPath.asString()
                     }
+
+                    renderIconAndName(archetypeLocation)
                 }
             }
 
@@ -249,6 +224,65 @@ class SidebarFile(
                 }
 
                 renderOptionsMenu()
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderIconAndName(
+            archetypeLocation: ObjectLocation
+    ) {
+        val icon = (props.structure.graphNotation.coalesce[archetypeLocation]!!
+                .get(iconAttribute) as ScalarAttributeNotation
+                ).value
+
+        styledDiv {
+            css {
+                position = Position.absolute
+                top = 0.px
+                left = 0.px
+
+                height = iconWidth
+            }
+
+            child(iconClassForName(icon)) {
+                attrs {
+                    title = archetypeLocation.objectPath.name.value
+                }
+            }
+        }
+
+        styledDiv {
+            css {
+                position = Position.absolute
+                top = 0.px
+                left = iconWidth
+                width = 100.pct.minus(iconWidth)
+                marginLeft = 6.px
+
+                if (props.selected) {
+                    fontWeight = FontWeight.bold
+                }
+
+                height = 2.em
+            }
+
+            child(DocumentNameEditor::class) {
+                attrs {
+                    ref<DocumentNameEditor> {
+                        nameEditorRef = it
+                    }
+
+                    this.documentPath = props.documentPath
+
+                    initialEditing = state.editing
+
+                    onEditing = {
+                        setState {
+                            editing = it
+                        }
+                    }
+                }
             }
         }
     }

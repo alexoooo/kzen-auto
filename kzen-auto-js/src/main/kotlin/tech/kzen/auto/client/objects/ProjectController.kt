@@ -190,10 +190,13 @@ class ProjectController(
             css {
                 position = Position.fixed
                 width = 0.px
+                height = 100.vh
                 left = 0.px
                 top = 0.px
                 zIndex = 999
                 filter = "drop-shadow(0 1px ${shadowWidth}px gray)"
+                display = Display.flex
+                flexDirection = FlexDirection.column
             }
 
             styledDiv {
@@ -223,23 +226,11 @@ class ProjectController(
                     borderTopStyle = BorderStyle.solid
                     borderTopColor = Color.lightGray
 
-                    bottom = 0.px
-                    height = 100.pct
+                    flexGrow = 1.0
+                    overflow = Overflow.auto
                 }
 
                 props.sidebarController.child(this) {}
-            }
-
-            styledDiv {
-                css {
-                    position = Position.absolute
-                    backgroundColor = Color.white
-                    width = sidebarWidth
-                    top = 0.px
-                    left = 0.px
-                    height = 100.vh
-                    zIndex = -999
-                }
             }
         }
 
