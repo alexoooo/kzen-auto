@@ -194,7 +194,8 @@ class RibbonController(
 
             styledDiv {
                 css {
-                    marginTop = 16.px
+//                    marginTop = 16.px
+                    marginTop = 0.5.em
                 }
                 renderSubActions()
             }
@@ -282,7 +283,8 @@ class RibbonController(
 
             styledImg(src = "logo.png") {
                 css {
-                    height = 52.px
+//                    height = 52.px
+                    height = 42.px
                 }
 
                 attrs {
