@@ -103,7 +103,7 @@ class VisualDataflowLoop(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun running(host: DocumentPath): Boolean {
+    fun isLooping(host: DocumentPath): Boolean {
         return getOrCreate(host).looping
     }
 

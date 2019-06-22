@@ -3,11 +3,8 @@ package tech.kzen.auto.client.objects.document.query
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
-import react.RBuilder
-import react.RProps
-import react.RState
+import react.*
 import react.dom.div
-import react.setState
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
@@ -15,6 +12,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
+import kotlin.reflect.KClass
 
 
 class QueryRunController(
@@ -46,21 +44,6 @@ class QueryRunController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    override fun componentDidMount() {
-////        val documentPath = props.documentPath
-////                ?: return
-//
-//        async {
-//            ClientContext.visualDataflowManager.observe(this)
-//        }
-//    }
-//
-//
-//    override fun componentWillUnmount() {
-//        ClientContext.visualDataflowManager.unobserve(this)
-//    }
-
-
     override fun componentDidUpdate(
             prevProps: Props,
             prevState: State,
@@ -150,7 +133,7 @@ class QueryRunController(
         }
 
         if (visualDataflowModel.isRunning()) {
-            if (ClientContext.visualDataflowLoop.running(host)) {
+            if (ClientContext.visualDataflowLoop.isLooping(host)) {
                 return Phase.Looping
             }
             return Phase.Running
@@ -202,6 +185,10 @@ class QueryRunController(
         val host = props.documentPath
                 ?: return
 
+        if (ClientContext.visualDataflowLoop.isLooping(host)) {
+            return
+        }
+
         async {
             ClientContext.executionIntent.clear()
             ClientContext.visualDataflowLoop.loop(host)
@@ -213,6 +200,10 @@ class QueryRunController(
 //        console.log("^^^^^^^ onPause")
         val host = props.documentPath
                 ?: return
+
+        if (! ClientContext.visualDataflowLoop.isLooping(host)) {
+            return
+        }
 
         ClientContext.visualDataflowLoop.pause(host)
     }
@@ -235,11 +226,11 @@ class QueryRunController(
     override fun RBuilder.render() {
         val phase = phase()
 
+//        +"phase: $phase"
+
         if (phase == Phase.Empty) {
             return
         }
-
-//        +"phase: $phase"
 
         div {
             attrs {
@@ -272,7 +263,7 @@ class QueryRunController(
         val looping = phase == Phase.Looping
 
         val clickHandle = {
-//            console.log("^^^^^ FAB click - $phase")
+//            console.log("^^^^^!! FAB click - $phase")
             when {
                 looping || phase == Phase.Running ->
                     onPause()
@@ -320,34 +311,39 @@ class QueryRunController(
                 }
             }
 
-            when {
-                hasMoreToRun -> child(PlayArrowIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            fontSize = 3.em
-                        }
-                        onClick = clickHandle
-                    }
-                }
+            val icon: KClass<out Component<IconProps, RState>> = when {
+                hasMoreToRun ->
+                    PlayArrowIcon::class
 
-                looping -> child(PauseIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            fontSize = 3.em
-                        }
-                        onClick = clickHandle
-                    }
-                }
+                looping ->
+                    PauseIcon::class
 
-                else -> child(ReplayIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            fontSize = 3.em
-                        }
-                        onClick = clickHandle
-                    }
-                }
+                else ->
+                    ReplayIcon::class
             }
+
+//            styledDiv {
+//                css {
+//                    backgroundColor = Color.red
+//                }
+//                attrs {
+//                    onClickFunction = {
+//                        console.log("&^%&^%&%&^% click !!")
+//                    }
+//                }
+                child(icon) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+
+//                    onClick = clickHandle
+//                        onClick = {
+//                            console.log("&^%&^%&%&^% click")
+//                        }
+                    }
+                }
+//            }
         }
     }
 

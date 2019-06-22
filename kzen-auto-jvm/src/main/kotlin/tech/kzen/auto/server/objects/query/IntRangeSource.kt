@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.dataflow.api.StreamDataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.output.StreamOutput
 
 
+@Suppress("unused")
 class IntRangeSource(
         private val output: StreamOutput<Int>,
 

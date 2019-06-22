@@ -53,6 +53,12 @@ ReplaceProcessorTool:
   delegate: ReplaceProcessor
 
 
+RepeatProcessorTool:
+  is: RibbonTool
+  parent: QueryGroup
+  delegate: RepeatProcessor
+
+
 CountSinkTool:
   is: RibbonTool
   parent: QueryGroup

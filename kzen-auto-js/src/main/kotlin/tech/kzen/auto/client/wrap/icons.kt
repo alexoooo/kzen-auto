@@ -252,6 +252,12 @@ external class ForwardIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("FileCopy")
+external class FileCopyIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("Add")
 external class AddIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?

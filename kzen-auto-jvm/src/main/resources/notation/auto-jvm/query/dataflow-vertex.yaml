@@ -86,6 +86,24 @@ ReplaceProcessor:
     replacement: String
 
 
+RepeatProcessor:
+  abstract: true
+  is: Dataflow
+  class: tech.kzen.auto.server.objects.query.RepeatProcessor
+  icon: FileCopy
+  title: "Repeat"
+  description: "Repeat the input value a given number of times"
+  times: 2
+  meta:
+    input:
+      is: RequiredInput
+      by: DataflowWiring
+    output:
+      is: BatchOutput
+      by: DataflowWiring
+    times: Int
+
+
 CountSink:
   abstract: true
   is: Dataflow

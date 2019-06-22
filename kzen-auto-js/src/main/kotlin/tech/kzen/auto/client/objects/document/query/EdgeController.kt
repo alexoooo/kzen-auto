@@ -95,7 +95,7 @@ class EdgeController(
     }
 
 
-    private fun isEdgePredecessorOfNextToRun(): Boolean {
+    private fun isEdgePredecessorOfNextToConsumeMessage(): Boolean {
         val flowTarget = props.visualDataflowModel.running()
                 ?: DataflowUtils.next(
                         props.documentPath,
@@ -107,6 +107,11 @@ class EdgeController(
         @Suppress("MapGetWithNotNullAssertionOperator")
         val targetVertexDescriptor = props.dataflowMatrix.verticesByLocation[flowTarget]
                 ?: return false
+
+        val visualVertexModel = props.visualDataflowModel.vertices[targetVertexDescriptor.objectLocation]!!
+        if (visualVertexModel.epoch != 0) {
+            return false
+        }
 
         for ((i, inputName) in targetVertexDescriptor.inputNames.withIndex()) {
             val sourceVertex = props.dataflowMatrix.traceVertexBackFrom(targetVertexDescriptor, inputName)
@@ -159,7 +164,7 @@ class EdgeController(
         val orientation = props.cellDescriptor.orientation
 
         val edgeColor =
-                if (isEdgePredecessorOfNextToRun()) {
+                if (isEdgePredecessorOfNextToConsumeMessage()) {
                     Color.gold
                 }
                 else {

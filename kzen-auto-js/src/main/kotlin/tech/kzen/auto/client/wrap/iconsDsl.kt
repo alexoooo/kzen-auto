@@ -78,6 +78,9 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "Forward" ->
             ForwardIcon::class
 
+        "FileCopy" ->
+            FileCopyIcon::class
+
         "Add" ->
             AddIcon::class
 
