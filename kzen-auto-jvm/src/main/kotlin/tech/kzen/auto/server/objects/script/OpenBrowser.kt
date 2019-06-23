@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.script
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
 import tech.kzen.auto.server.service.ServerContext
@@ -14,7 +15,9 @@ import java.nio.file.Paths
 class OpenBrowser(
         private val extensionFiles: List<String>
 ): ExecutionAction {
-    override suspend fun perform(): ImperativeResult {
+    override suspend fun perform(
+            imperativeModel: ImperativeModel
+    ): ImperativeResult {
         closeIfAlreadyOpen()
 
         val webDriverOption = ServerContext.webDriverRepo.latest(BrowserLauncher.GoogleChrome)

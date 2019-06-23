@@ -24,11 +24,10 @@ Script:
 
 
 Graph:
-#Query:
   is: Document
   class: tech.kzen.auto.common.objects.document.query.QueryDocument
-#  icon: Search
-  icon: CallSplit
+#  icon: CallSplit
+  icon: DeviceHub
   vertices: []
   edges: []
   meta:

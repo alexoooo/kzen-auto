@@ -71,3 +71,26 @@ FormSubmit:
   xpath: ""
   meta:
     xpath: String
+
+
+TextLiteral:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.TextLiteral
+  icon: Textsms
+  title: "Text"
+  value: "Bar"
+  meta:
+    value: String
+
+
+DisplayValue:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.DisplayValue
+  icon: Print
+  title: "Display"
+  meta:
+    reference:
+      is: ObjectLocation
+      by: Nominal

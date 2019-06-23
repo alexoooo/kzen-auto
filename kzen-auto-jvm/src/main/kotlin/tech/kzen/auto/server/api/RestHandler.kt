@@ -32,6 +32,7 @@ import tech.kzen.lib.common.structure.notation.model.ObjectNotation
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.IoUtils
+import tech.kzen.lib.platform.collect.persistentListOf
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -554,7 +555,9 @@ class RestHandler {
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
         val execution: ImperativeResult = runBlocking {
-            ServerContext.actionExecutor.execute(objectLocation)
+            ServerContext.actionExecutor.execute(
+                    objectLocation,
+                    ImperativeModel(persistentListOf()))
         }
 
         return ServerResponse

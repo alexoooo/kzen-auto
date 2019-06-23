@@ -34,20 +34,35 @@ GoToTool:
   parent: ScriptGroup
   delegate: GoTo
 
+
 LeftClickTool:
   is: RibbonTool
   parent: ScriptGroup
   delegate: LeftClick
+
 
 SendKeysTool:
   is: RibbonTool
   parent: ScriptGroup
   delegate: SendKeys
 
+
 FormSubmitTool:
   is: RibbonTool
   parent: ScriptGroup
   delegate: FormSubmit
+
+
+TextLiteralTool:
+  is: RibbonTool
+  parent: ScriptGroup
+  delegate: TextLiteral
+
+
+DisplayValueTool:
+  is: RibbonTool
+  parent: ScriptGroup
+  delegate: DisplayValue
 
 
 #######################################################################################################################

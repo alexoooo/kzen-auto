@@ -302,7 +302,8 @@ class ExecutionManager(
             delay(delayMillis.toLong())
         }
 
-        val response = actionExecutor.execute(objectLocation)
+        val imperativeModel = executionModel(host)
+        val response = actionExecutor.execute(objectLocation, imperativeModel)
 
         val digest = modelOrInit(host).digest()
 

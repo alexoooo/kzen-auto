@@ -27,6 +27,7 @@ import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
 import tech.kzen.lib.common.structure.metadata.model.ObjectMetadata
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
@@ -42,7 +43,6 @@ import kotlin.js.Date
 class ActionController(
         props: Props
 ):
-//        RComponent<ActionController.Props, ActionController.State>(props),
         RPureComponent<ActionController.Props, ActionController.State>(props),
         ExecutionIntent.Observer
 {
@@ -447,7 +447,7 @@ class ActionController(
                     marginBottom = 0.5.em
                 }
 
-                renderAttribute(e.key, /*e.value, */value)
+                renderAttribute(e.key, e.value, value)
             }
         }
 
@@ -636,7 +636,7 @@ class ActionController(
 
     private fun RBuilder.renderAttribute(
             attributeName: AttributeName,
-//            attributeMetadata: AttributeMetadata,
+            attributeMetadata: AttributeMetadata,
             attributeValue: AttributeNotation
     ) {
         when (attributeValue) {

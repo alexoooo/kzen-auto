@@ -120,6 +120,12 @@ external class KeyboardIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("DeviceHub")
+external class DeviceHubIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("TouchApp")
 external class TouchAppIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
@@ -158,6 +164,12 @@ external class PauseIcon: Component<IconProps, RState> {
 
 @JsName("Send")
 external class SendIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Textsms")
+external class TextsmsIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 

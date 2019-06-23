@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.service.rest
 
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeError
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
 import tech.kzen.auto.common.paradigm.imperative.service.ActionExecutor
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -17,7 +18,10 @@ class ClientRestActionExecutor(
 //        TODO()
 //    }
 
-    override suspend fun execute(actionLocation: ObjectLocation): ImperativeResult {
+    override suspend fun execute(
+            actionLocation: ObjectLocation,
+            activeModel: ImperativeModel
+    ): ImperativeResult {
         return try {
             restClient.performAction(actionLocation).executionResult
         }
