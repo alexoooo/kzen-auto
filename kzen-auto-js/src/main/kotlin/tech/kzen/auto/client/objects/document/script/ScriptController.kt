@@ -8,6 +8,7 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.objects.document.script.action.ActionController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
@@ -38,13 +39,18 @@ import tech.kzen.lib.platform.collect.persistentListOf
 
 @Suppress("unused")
 class ScriptController:
-        RPureComponent<RProps, ScriptController.State>(),
+        RPureComponent<ScriptController.Props, ScriptController.State>(),
         GraphStructureManager.Observer,
         ExecutionManager.Observer,
         InsertionManager.Observer,
         NavigationManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
+    class Props(
+            var attributeController: AttributeController.Wrapper
+    ): RProps
+
+
     class State(
             var documentPath: DocumentPath?,
             var structure: GraphStructure?,
@@ -55,7 +61,8 @@ class ScriptController:
 
     @Suppress("unused")
     class Wrapper(
-            private val type: DocumentArchetype
+            private val type: DocumentArchetype,
+            private val attributeController: AttributeController.Wrapper
     ):
             DocumentController
     {
@@ -65,6 +72,10 @@ class ScriptController:
 
         override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
             return input.child(ScriptController::class) {
+                attrs {
+                    this.attributeController = this@Wrapper.attributeController
+                }
+
                 handler()
             }
         }
@@ -72,7 +83,7 @@ class ScriptController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: RProps) {
+    override fun State.init(props: Props) {
         documentPath = null
         structure = null
         execution = null
@@ -106,7 +117,7 @@ class ScriptController:
 
 
     override fun componentDidUpdate(
-            prevProps: RProps,
+            prevProps: Props,
             prevState: State,
             snapshot: Any
     ) {
@@ -393,28 +404,19 @@ class ScriptController:
             graphStructure: GraphStructure,
             executionState: ImperativeState?
     ) {
-        // todo:
-//        val actionUiWrapper: ActionWrapper =
-//                ActionController.Wrapper()
-
         span {
             key = objectLocation.toReference().asString()
 
             child(ActionController::class) {
                 attrs {
+                    attributeController = props.attributeController
+
                     attributeNesting = AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index)))
                     this.objectLocation = objectLocation
                     this.graphStructure = graphStructure
                     state = executionState
                 }
             }
-
-//            actionUiWrapper.render(
-//                    this,
-//
-//                    objectLocation,
-//                    graphStructure,
-//                    executionState)
         }
     }
 

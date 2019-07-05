@@ -12,6 +12,7 @@ import react.setState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.util.async
@@ -33,9 +34,7 @@ import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.ShiftInAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.AttributeNotation
-import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
-import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import tech.kzen.lib.platform.IoUtils
 import kotlin.js.Date
 
@@ -61,6 +60,8 @@ class ActionController(
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
+            var attributeController: AttributeController.Wrapper,
+
             var attributeNesting: AttributeNesting,
             var objectLocation: ObjectLocation,
             var graphStructure: GraphStructure,
@@ -637,40 +638,14 @@ class ActionController(
     private fun RBuilder.renderAttribute(
             attributeName: AttributeName,
             attributeMetadata: AttributeMetadata,
-            attributeValue: AttributeNotation
+            attributeNotation: AttributeNotation
     ) {
-        when (attributeValue) {
-            is ScalarAttributeNotation -> {
-                val scalarValue = attributeValue.value
-
-                child(AttributeEditor::class) {
-                    attrs {
-                        objectLocation = props.objectLocation
-                        this.attributeName = attributeName
-                        value = scalarValue
-                    }
-                }
+        props.attributeController.child(this) {
+            attrs {
+                this.attributeName = attributeName
+                this.attributeMetadata = attributeMetadata
+                this.attributeNotation = attributeNotation
             }
-
-            is ListAttributeNotation -> {
-                if (attributeValue.values.all { it.asString() != null }) {
-                    val stringValues = attributeValue.values.map { it.asString()!! }
-
-                    child(AttributeEditor::class) {
-                        attrs {
-                            objectLocation = props.objectLocation
-                            this.attributeName = attributeName
-                            values = stringValues
-                        }
-                    }
-                }
-                else {
-                    +"$attributeName: $attributeValue"
-                }
-            }
-
-            else ->
-                +"$attributeValue"
         }
     }
 }

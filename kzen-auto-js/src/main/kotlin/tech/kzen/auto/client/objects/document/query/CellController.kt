@@ -5,6 +5,7 @@ import react.RBuilder
 import react.RProps
 import react.RState
 import react.setState
+import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -38,6 +39,8 @@ class CellController(
 
 
     class Props(
+            var attributeController: AttributeController.Wrapper,
+
             var cellDescriptor: CellDescriptor,
 
             var documentPath: DocumentPath,
@@ -105,6 +108,8 @@ class CellController(
         if (isVertex()) {
             child(VertexController::class) {
                 attrs {
+                    attributeController = props.attributeController
+
                     cellDescriptor = props.cellDescriptor as VertexDescriptor
 
                     documentPath = props.documentPath

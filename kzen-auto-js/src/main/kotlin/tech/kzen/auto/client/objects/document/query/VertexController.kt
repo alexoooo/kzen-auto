@@ -12,9 +12,9 @@ import react.setState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.objects.document.query.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.query.edge.TopIngress
-import tech.kzen.auto.client.objects.document.script.action.AttributeEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.util.async
@@ -36,11 +36,10 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.AttributeNotation
-import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
-import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import kotlin.js.Date
 
 
@@ -65,6 +64,8 @@ class VertexController(
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
+            var attributeController: AttributeController.Wrapper,
+
             var cellDescriptor: VertexDescriptor,
 
             var documentPath: DocumentPath,
@@ -448,9 +449,9 @@ class VertexController(
             }
 
             var index = 0
-            for ((attribute, notation) in userAttributeValues) {
+            for ((attributeName, attributeNotation) in userAttributeValues) {
                 styledDiv {
-                    key = attribute.value
+                    key = attributeName.value
 
                     css {
                         if (index++ != 0) {
@@ -458,7 +459,10 @@ class VertexController(
                         }
                     }
 
-                    renderAttribute(attribute, notation)
+                    val attributeMetadata = objectMetadata.attributes[attributeName]
+                            ?: throw IllegalStateException("Attribute metadata not found: $attributeName")
+
+                    renderAttribute(attributeName, attributeMetadata, attributeNotation)
                 }
             }
         }
@@ -467,40 +471,15 @@ class VertexController(
 
     private fun RBuilder.renderAttribute(
             attributeName: AttributeName,
-            attributeValue: AttributeNotation
+            attributeMetadata: AttributeMetadata,
+            attributeNotation: AttributeNotation
     ) {
-        when (attributeValue) {
-            is ScalarAttributeNotation -> {
-                val scalarValue = attributeValue.value
-
-                child(AttributeEditor::class) {
-                    attrs {
-                        objectLocation = props.cellDescriptor.objectLocation
-                        this.attributeName = attributeName
-                        value = scalarValue
-                    }
-                }
+        props.attributeController.child(this) {
+            attrs {
+                this.attributeName = attributeName
+                this.attributeMetadata = attributeMetadata
+                this.attributeNotation = attributeNotation
             }
-
-            is ListAttributeNotation -> {
-                if (attributeValue.values.all { it.asString() != null }) {
-                    val stringValues = attributeValue.values.map { it.asString()!! }
-
-                    child(AttributeEditor::class) {
-                        attrs {
-                            objectLocation = props.cellDescriptor.objectLocation
-                            this.attributeName = attributeName
-                            values = stringValues
-                        }
-                    }
-                }
-                else {
-                    +"$attributeName: $attributeValue"
-                }
-            }
-
-            else ->
-                +"$attributeValue"
         }
     }
 

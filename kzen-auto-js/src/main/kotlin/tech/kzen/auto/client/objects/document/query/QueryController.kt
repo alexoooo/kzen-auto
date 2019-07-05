@@ -7,6 +7,7 @@ import react.dom.tbody
 import react.dom.tr
 import styled.*
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
@@ -45,7 +46,7 @@ import tech.kzen.lib.platform.collect.persistentMapOf
 
 @Suppress("unused")
 class QueryController:
-        RPureComponent<RProps, QueryController.State>(),
+        RPureComponent<QueryController.Props, QueryController.State>(),
         GraphStructureManager.Observer,
         InsertionManager.Observer,
         NavigationManager.Observer,
@@ -55,6 +56,11 @@ class QueryController:
     companion object {
         private const val edgePipeName = "EdgePipe"
     }
+
+
+    class Props(
+            var attributeController: AttributeController.Wrapper
+    ): RProps
 
 
     class State(
@@ -68,7 +74,8 @@ class QueryController:
 
     @Suppress("unused")
     class Wrapper(
-            private val type: DocumentArchetype
+            private val type: DocumentArchetype,
+            private val attributeController: AttributeController.Wrapper
     ):
             DocumentController
     {
@@ -78,6 +85,10 @@ class QueryController:
 
         override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
             return input.child(QueryController::class) {
+                attrs {
+                    this.attributeController = this@Wrapper.attributeController
+                }
+
                 handler()
             }
         }
@@ -109,7 +120,7 @@ class QueryController:
 
 
     override fun componentDidUpdate(
-            prevProps: RProps,
+            prevProps: Props,
             prevState: State,
             snapshot: Any
     ) {
@@ -473,6 +484,8 @@ class QueryController:
     ) {
         child(CellController::class) {
             attrs {
+                this.attributeController = props.attributeController
+
                 this.cellDescriptor = cellDescriptor
 
                 attributeNesting = AttributeNesting(persistentListOf(

@@ -1,12 +1,9 @@
-package tech.kzen.auto.client.objects.document.script.action
+package tech.kzen.auto.client.objects.document.common
 
 
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLTextAreaElement
-import react.RBuilder
-import react.RProps
-import react.RState
-import react.setState
+import react.*
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
@@ -15,30 +12,35 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
-import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.structure.notation.edit.UpsertAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import tech.kzen.lib.platform.collect.toPersistentList
 
 
-// TODO: inject type-based editor
-class AttributeEditor(
-        props: Props
+class DefaultAttributeEditor(
+        props: AttributeEditorWrapper.Props
 ):
-        RPureComponent<AttributeEditor.Props, AttributeEditor.State>(props),
+        RPureComponent<AttributeEditorWrapper.Props, DefaultAttributeEditor.State>(props),
         ExecutionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var objectLocation: ObjectLocation,
-            var attributeName: AttributeName,
+    companion object {
+        val wrapperName = ObjectName("DefaultAttributeEditor")
+    }
 
-            var value: String?,
-            var values: List<String>?
-    ): RProps
+
+//    class Props(
+//            var objectLocation: ObjectLocation,
+//            var attributeName: AttributeName,
+//            var attributeMetadata: AttributeMetadata,
+//
+//            var value: String?,
+//            var values: List<String>?
+//    ): RProps
 
 
     class State(
@@ -51,17 +53,44 @@ class AttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-//        console.log("ParameterEditor | State.init - ${props.name}")
-        if (props.value == null) {
-            value = null
-            values = props.values!!
+    @Suppress("unused")
+    class Wrapper(
+            objectLocation: ObjectLocation
+    ):
+            AttributeEditorWrapper(objectLocation)
+    {
+        override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
+            return input.child(DefaultAttributeEditor::class) {
+                handler()
+            }
         }
-        else {
-            value = props.value
-            values = null
-        }
+    }
 
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: AttributeEditorWrapper.Props) {
+//        console.log("ParameterEditor | State.init - ${props.name}")
+
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val attributeNotation = props.attributeNotation
+
+        when (attributeNotation) {
+            is ScalarAttributeNotation -> {
+                val scalarValue = attributeNotation.value
+
+                value = scalarValue
+                values = null
+            }
+
+            is ListAttributeNotation -> {
+                if (attributeNotation.values.all { it.asString() != null }) {
+                    val stringValues = attributeNotation.values.map { it.asString()!! }
+
+                    value = null
+                    values = stringValues
+                }
+            }
+        }
 
         submitDebounce = lodash.debounce({
             editParameterCommandAsync()
@@ -94,7 +123,7 @@ class AttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun flush() {
+    private suspend fun flush() {
 //        println("ParameterEditor | flush")
 
         state.submitDebounce.cancel()
@@ -166,11 +195,17 @@ class AttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        if (state.value != null) {
-            renderString(state.value!!)
-        }
-        else {
-            renderListOfString(state.values!!)
+//        +"type: ${props.attributeMetadata.type}"
+
+        when {
+            state.value != null ->
+                renderString(state.value!!)
+
+            state.values != null ->
+                renderListOfString(state.values!!)
+
+            else ->
+                +"${props.attributeName} - ${props.attributeNotation}"
         }
     }
 
