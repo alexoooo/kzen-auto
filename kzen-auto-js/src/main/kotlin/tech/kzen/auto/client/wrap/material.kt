@@ -207,6 +207,17 @@ external interface TextFieldProps: RProps {
 }
 
 
+@JsName("InputLabel")
+external class MaterialInputLabel : Component<MaterialInputLabelProps, RState> {
+    override fun render(): ReactElement?
+}
+
+external interface MaterialInputLabelProps : RProps {
+    var htmlFor: String
+    var style: Json
+}
+
+
 //@JsName("FormControl")
 //external class MaterialFormControl : Component<MaterialFormControlProps, RState> {
 //    override fun render(): ReactElement?

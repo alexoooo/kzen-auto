@@ -6,6 +6,11 @@ ScriptController:
   type: Script
 
 
+SelectStepEditor:
+  is: AttributeEditorWrapper
+  class: tech.kzen.auto.client.objects.document.script.action.SelectStepEditor$Wrapper
+
+
 #######################################################################################################################
 
 

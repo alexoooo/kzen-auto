@@ -28,12 +28,10 @@ import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
 import tech.kzen.lib.common.structure.metadata.model.ObjectMetadata
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.ShiftInAttributeCommand
-import tech.kzen.lib.common.structure.notation.model.AttributeNotation
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.platform.IoUtils
 import kotlin.js.Date
@@ -436,19 +434,17 @@ class ActionController(
                 continue
             }
 
-            val keyAttributePath = AttributePath.ofName(e.key)
+//            val keyAttributePath = AttributePath.ofName(e.key)
 
-            val value =
-                    props.graphStructure.graphNotation.transitiveAttribute(
-                            props.objectLocation, keyAttributePath)
-                            ?: continue
+//            val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
+//                    props.objectLocation, keyAttributePath)
 
             styledDiv {
                 css {
                     marginBottom = 0.5.em
                 }
 
-                renderAttribute(e.key, e.value, value)
+                renderAttribute(e.key/*, e.value, attributeNotation*/)
             }
         }
 
@@ -636,15 +632,17 @@ class ActionController(
 
 
     private fun RBuilder.renderAttribute(
-            attributeName: AttributeName,
-            attributeMetadata: AttributeMetadata,
-            attributeNotation: AttributeNotation
+            attributeName: AttributeName//,
+//            attributeMetadata: AttributeMetadata,
+//            attributeNotation: AttributeNotation?
     ) {
         props.attributeController.child(this) {
             attrs {
+                this.graphStructure = props.graphStructure
+                this.objectLocation = props.objectLocation
                 this.attributeName = attributeName
-                this.attributeMetadata = attributeMetadata
-                this.attributeNotation = attributeNotation
+//                this.attributeMetadata = attributeMetadata
+//                this.attributeNotation = attributeNotation
             }
         }
     }

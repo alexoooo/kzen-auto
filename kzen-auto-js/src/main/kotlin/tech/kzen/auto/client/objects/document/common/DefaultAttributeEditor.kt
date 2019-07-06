@@ -4,6 +4,8 @@ package tech.kzen.auto.client.objects.document.common
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLTextAreaElement
 import react.*
+import react.dom.br
+import react.dom.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
@@ -15,33 +17,24 @@ import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
 import tech.kzen.lib.common.structure.notation.edit.UpsertAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.collect.toPersistentList
 
 
 class DefaultAttributeEditor(
-        props: AttributeEditorWrapper.Props
+        props: AttributeEditorProps
 ):
-        RPureComponent<AttributeEditorWrapper.Props, DefaultAttributeEditor.State>(props),
+        RPureComponent<AttributeEditorProps, DefaultAttributeEditor.State>(props),
         ExecutionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val wrapperName = ObjectName("DefaultAttributeEditor")
     }
-
-
-//    class Props(
-//            var objectLocation: ObjectLocation,
-//            var attributeName: AttributeName,
-//            var attributeMetadata: AttributeMetadata,
-//
-//            var value: String?,
-//            var values: List<String>?
-//    ): RProps
-
 
     class State(
             var value: String?,
@@ -59,7 +52,7 @@ class DefaultAttributeEditor(
     ):
             AttributeEditorWrapper(objectLocation)
     {
-        override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
+        override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>): ReactElement {
             return input.child(DefaultAttributeEditor::class) {
                 handler()
             }
@@ -68,11 +61,13 @@ class DefaultAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: AttributeEditorWrapper.Props) {
+    override fun State.init(props: AttributeEditorProps) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val attributeNotation = props.attributeNotation
+//        val attributeNotation = props.attributeNotation
+        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
+                props.objectLocation, props.attributeName)
 
         when (attributeNotation) {
             is ScalarAttributeNotation -> {
@@ -93,7 +88,7 @@ class DefaultAttributeEditor(
         }
 
         submitDebounce = lodash.debounce({
-            editParameterCommandAsync()
+            editAttributeCommandAsync()
         }, 1000)
 
         pending = false
@@ -128,7 +123,7 @@ class DefaultAttributeEditor(
 
         state.submitDebounce.cancel()
         if (state.pending) {
-            editParameterCommand()
+            editAttributeCommand()
         }
     }
 
@@ -163,14 +158,14 @@ class DefaultAttributeEditor(
 
 
 
-    private fun editParameterCommandAsync() {
+    private fun editAttributeCommandAsync() {
         async {
-            editParameterCommand()
+            editAttributeCommand()
         }
     }
 
 
-    private suspend fun editParameterCommand() {
+    private suspend fun editAttributeCommand() {
         if (state.value != null) {
             ClientContext.commandBus.apply(UpsertAttributeCommand(
                     props.objectLocation,
@@ -195,17 +190,48 @@ class DefaultAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-//        +"type: ${props.attributeMetadata.type}"
+        val attributeMetadata: AttributeMetadata = props
+                .graphStructure
+                .graphMetadata
+                .get(props.objectLocation)
+                ?.attributes
+                ?.get(props.attributeName)
+                ?: return
 
-        when {
-            state.value != null ->
-                renderString(state.value!!)
+        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
+                props.objectLocation, props.attributeName)
 
-            state.values != null ->
-                renderListOfString(state.values!!)
+//        val type = props.attributeMetadata.type
+        val type = attributeMetadata.type
 
-            else ->
-                +"${props.attributeName} - ${props.attributeNotation}"
+        if (type == null) {
+//            +"${props.attributeName} - ${props.attributeNotation}"
+            +"${props.attributeName} - $attributeNotation"
+        }
+        else if (type.className == ClassNames.kotlinString) {
+//            val textValue = props.attributeNotation?.asString() ?: ""
+            val textValue = attributeNotation?.asString() ?: ""
+            renderString(textValue)
+        }
+        else if (type.className == ClassNames.kotlinList) {
+            val listGeneric = type.generics.getOrNull(0)
+            if (listGeneric?.className == ClassNames.kotlinString) {
+//                val textValues = (props.attributeNotation as ListAttributeNotation)
+                val textValues = (attributeNotation as ListAttributeNotation)
+                        .values.map { it.asString() ?: "" }
+
+                renderListOfString(textValues)
+            }
+        }
+        else {
+            div {
+//                +"type: ${props.attributeMetadata.type?.className?.get()}"
+                +"type: ${attributeMetadata.type?.className?.get()}"
+                br {}
+                +"generics: ${attributeMetadata.type?.generics?.map { it.className.get() }}"
+            }
+
+            +"${props.attributeName} - $attributeNotation"
         }
     }
 

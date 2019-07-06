@@ -36,7 +36,6 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.AttributeNotation
@@ -459,10 +458,10 @@ class VertexController(
                         }
                     }
 
-                    val attributeMetadata = objectMetadata.attributes[attributeName]
-                            ?: throw IllegalStateException("Attribute metadata not found: $attributeName")
+//                    val attributeMetadata = objectMetadata.attributes[attributeName]
+//                            ?: throw IllegalStateException("Attribute metadata not found: $attributeName")
 
-                    renderAttribute(attributeName, attributeMetadata, attributeNotation)
+                    renderAttribute(attributeName/*, attributeMetadata, attributeNotation*/)
                 }
             }
         }
@@ -470,15 +469,17 @@ class VertexController(
 
 
     private fun RBuilder.renderAttribute(
-            attributeName: AttributeName,
-            attributeMetadata: AttributeMetadata,
-            attributeNotation: AttributeNotation
+            attributeName: AttributeName//,
+//            attributeMetadata: AttributeMetadata,
+//            attributeNotation: AttributeNotation
     ) {
         props.attributeController.child(this) {
             attrs {
+                this.graphStructure = props.graphStructure
+                this.objectLocation = props.cellDescriptor.objectLocation
                 this.attributeName = attributeName
-                this.attributeMetadata = attributeMetadata
-                this.attributeNotation = attributeNotation
+//                this.attributeMetadata = attributeMetadata
+//                this.attributeNotation = attributeNotation
             }
         }
     }

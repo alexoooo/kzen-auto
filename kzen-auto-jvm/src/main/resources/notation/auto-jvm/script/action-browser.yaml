@@ -94,3 +94,4 @@ DisplayValue:
     reference:
       is: ObjectLocation
       by: Nominal
+      editor: SelectStepEditor

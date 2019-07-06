@@ -1,14 +1,17 @@
 package tech.kzen.auto.client.objects.document.common
 
-import react.*
+import react.RBuilder
+import react.RHandler
+import react.RState
+import react.ReactElement
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
-import tech.kzen.lib.common.structure.notation.model.AttributeNotation
 
 
 class AttributeController(
@@ -25,11 +28,15 @@ class AttributeController(
     class Props(
             var attributeEditors: List<AttributeEditorWrapper>,
 
-            var objectLocation: ObjectLocation,
-            var attributeName: AttributeName,
-            var attributeMetadata: AttributeMetadata,
-            var attributeNotation: AttributeNotation
-    ): RProps
+            graphStructure: GraphStructure,
+            objectLocation: ObjectLocation,
+            attributeName: AttributeName/*,
+            attributeMetadata: AttributeMetadata,
+            attributeNotation: AttributeNotation?*/
+    ): AttributeEditorProps(
+            graphStructure,
+            objectLocation, attributeName//, attributeMetadata, attributeNotation
+    )
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -53,10 +60,24 @@ class AttributeController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val editorWrapperName = props
-                .attributeMetadata
+        val attributeMetadata: AttributeMetadata = props
+                .graphStructure
+                .graphMetadata
+                .get(props.objectLocation)
+                ?.attributes
+                ?.get(props.attributeName)
+                ?: return
+
+        val editorAttributeNotation = attributeMetadata
                 .attributeMetadataNotation
                 .get(editorAttributePath)
+
+//        +"%% editorAttributeNotation: $editorAttributeNotation"
+//        br {}
+//        +"%% props.attributeEditors: ${props.attributeEditors.map { it.name().value }}"
+
+
+        val editorWrapperName = editorAttributeNotation
                 ?.asString()
                 ?.let { ObjectName(it) }
                 ?: DefaultAttributeEditor.wrapperName
@@ -66,10 +87,11 @@ class AttributeController(
 
         editorWrapper.child(this) {
             attrs {
+                graphStructure = props.graphStructure
                 objectLocation = props.objectLocation
                 attributeName = props.attributeName
-                attributeMetadata = props.attributeMetadata
-                attributeNotation = props.attributeNotation
+//                attributeMetadata = props.attributeMetadata
+//                attributeNotation = props.attributeNotation
             }
         }
     }
