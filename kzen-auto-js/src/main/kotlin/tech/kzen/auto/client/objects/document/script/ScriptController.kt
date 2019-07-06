@@ -46,6 +46,27 @@ class ScriptController:
         NavigationManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        fun stepLocations(
+                graphStructure: GraphStructure,
+                documentPath: DocumentPath
+        ): List<ObjectLocation>? {
+            val mainObjectLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+
+            val stepsNotation = graphStructure
+                    .graphNotation
+                    .transitiveAttribute(mainObjectLocation, ScriptDocument.stepsAttributePath)
+                    as? ListAttributeNotation
+                    ?: return null
+
+            return stepsNotation
+                    .values
+                    .map { ObjectReference.parse(it.asString()!!) }
+                    .map { graphStructure.graphNotation.coalesce.locate(it) }
+        }
+    }
+
+
     class Props(
             var attributeController: AttributeController.Wrapper
     ): RProps
@@ -246,17 +267,10 @@ class ScriptController:
             graphStructure: GraphStructure,
             documentPath: DocumentPath
     ) {
-        val mainObjectLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
-
-        val stepsNotation = graphStructure
-                .graphNotation
-                .transitiveAttribute(mainObjectLocation, ScriptDocument.stepsAttributePath)
-                as? ListAttributeNotation
+        val stepLocations = stepLocations(graphStructure, documentPath)
                 ?: return
 
-        val stepReferences = stepsNotation.values.map { ObjectReference.parse(it.asString()!!) }
-
-        if (stepReferences.isEmpty()) {
+        if (stepLocations.isEmpty()) {
             styledDiv {
                 css {
                     paddingTop = 2.em
@@ -277,7 +291,7 @@ class ScriptController:
                 css {
                     paddingLeft = 1.em
                 }
-                nonEmptySteps(graphStructure, documentPath, stepReferences)
+                nonEmptySteps(graphStructure, documentPath, stepLocations)
             }
         }
     }
@@ -286,7 +300,7 @@ class ScriptController:
     private fun RBuilder.nonEmptySteps(
             graphStructure: GraphStructure,
             documentPath: DocumentPath,
-            stepReferences: List<ObjectReference>
+            stepLocations: List<ObjectLocation>
     ) {
         insertionPoint(0)
 
@@ -295,12 +309,7 @@ class ScriptController:
                 width = 20.em
             }
 
-            for ((index, stepReference) in stepReferences.withIndex()) {
-//                console.log("^^^^^ Locating", stepReference, stepReference.asString(),
-//                        graphStructure.graphNotation.coalesce.values.keys.toList())
-//                        graphStructure.graphNotation.coalesce.values.keys.map { it.objectPath.asString() }.toString())
-
-                val stepLocation = graphStructure.graphNotation.coalesce.locate(stepReference)
+            for ((index, stepLocation) in stepLocations.withIndex()) {
                 val objectPath = stepLocation.objectPath
 
                 val executionState: ImperativeState? =
@@ -313,13 +322,13 @@ class ScriptController:
                         graphStructure,
                         executionState)
 
-                if (index < stepReferences.size - 1) {
+                if (index < stepLocations.size - 1) {
                     downArrowWithInsertionPoint(index + 1)
                 }
             }
         }
 
-        insertionPoint(stepReferences.size)
+        insertionPoint(stepLocations.size)
     }
 
 

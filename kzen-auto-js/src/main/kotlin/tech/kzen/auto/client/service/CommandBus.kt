@@ -51,7 +51,7 @@ class CommandBus(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun apply(command: NotationCommand) {
-//        console.log("CommandBus - applying command: $command", command)
+        console.log("CommandBus - applying command: $command", command)
 
         // NB: for now, this has to happen before clientEvent for VisualDataflowProvider.inspectVertex
         // TODO: make this parallel with client processing via VisualDataflowProvider.initialVertexState

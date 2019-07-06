@@ -37,6 +37,8 @@ external interface ReactSelectProps: RProps {
 
     var menuContainerStyle: Json
 
+    var styles: Json
+
 //    var id: String
 //    var variant: String
 //    var color: String

@@ -19,6 +19,8 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
+import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.auto.common.paradigm.common.model.ScalarExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
@@ -336,7 +338,8 @@ class ActionController(
 //            }
         }
 
-        child(MaterialCard::class) {
+//        child(MaterialCard::class) {
+        child(MaterialPaper::class) {
             attrs {
                 style = reactStyles
             }
@@ -450,22 +453,29 @@ class ActionController(
 
 //                    console.log("^^^^^ props.state - ", props.state)
         (props.state?.previous as? ImperativeSuccess)?.detail?.let {
-            if (it is BinaryExecutionValue) {
-                val binary = it
+            renderDetail(it)
+        }
+    }
 
-                val screenshotPngUrl = binary.cache("img") {
-                    val base64 = IoUtils.base64Encode(binary.value)
-                    "data:png/png;base64,$base64"
-                }
+
+    private fun RBuilder.renderDetail(detail: ExecutionValue) {
+        if (detail is BinaryExecutionValue) {
+
+            val screenshotPngUrl = detail.cache("img") {
+                val base64 = IoUtils.base64Encode(detail.value)
+                "data:png/png;base64,$base64"
+            }
 
 //                            val screenshotPngBase64 = it.asBase64()
-                img {
-                    attrs {
-                        width = "100%"
-                        src = screenshotPngUrl
-                    }
+            img {
+                attrs {
+                    width = "100%"
+                    src = screenshotPngUrl
                 }
             }
+        }
+        else if (detail is ScalarExecutionValue) {
+            +"${detail.get()}"
         }
     }
 

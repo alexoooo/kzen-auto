@@ -198,32 +198,36 @@ class DefaultAttributeEditor(
                 ?.get(props.attributeName)
                 ?: return
 
-        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
-                props.objectLocation, props.attributeName)
+//        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
+//                props.objectLocation, props.attributeName)
 
 //        val type = props.attributeMetadata.type
         val type = attributeMetadata.type
 
         if (type == null) {
 //            +"${props.attributeName} - ${props.attributeNotation}"
-            +"${props.attributeName} - $attributeNotation"
+            +"${props.attributeName} (type missing)"
         }
         else if (type.className == ClassNames.kotlinString) {
 //            val textValue = props.attributeNotation?.asString() ?: ""
-            val textValue = attributeNotation?.asString() ?: ""
+//            val textValue = attributeNotation?.asString() ?: ""
+            val textValue = state.value ?: ""
             renderString(textValue)
         }
         else if (type.className == ClassNames.kotlinList) {
             val listGeneric = type.generics.getOrNull(0)
             if (listGeneric?.className == ClassNames.kotlinString) {
 //                val textValues = (props.attributeNotation as ListAttributeNotation)
-                val textValues = (attributeNotation as ListAttributeNotation)
-                        .values.map { it.asString() ?: "" }
+//                val textValues = (attributeNotation as ListAttributeNotation)
+//                        .values.map { it.asString() ?: "" }
+                val textValues = state.values ?: listOf()
 
                 renderListOfString(textValues)
             }
         }
         else {
+            +"${props.attributeName} (type not supported)"
+
             div {
 //                +"type: ${props.attributeMetadata.type?.className?.get()}"
                 +"type: ${attributeMetadata.type?.className?.get()}"
@@ -231,7 +235,7 @@ class DefaultAttributeEditor(
                 +"generics: ${attributeMetadata.type?.generics?.map { it.className.get() }}"
             }
 
-            +"${props.attributeName} - $attributeNotation"
+//            +"${props.attributeName} - $attributeNotation"
         }
     }
 

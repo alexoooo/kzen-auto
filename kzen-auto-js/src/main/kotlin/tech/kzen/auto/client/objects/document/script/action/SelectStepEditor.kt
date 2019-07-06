@@ -4,18 +4,18 @@ package tech.kzen.auto.client.objects.document.script.action
 
 import kotlinx.css.em
 import kotlinx.css.fontSize
-import react.RBuilder
-import react.RHandler
-import react.RState
-import react.ReactElement
+import react.*
 import tech.kzen.auto.client.objects.document.common.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
+import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.notation.edit.UpsertAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import kotlin.js.Json
+import kotlin.js.json
 
 
 @Suppress("unused")
@@ -81,6 +81,16 @@ class SelectStepEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun componentDidUpdate(
+            prevProps: AttributeEditorProps,
+            prevState: State,
+            snapshot: Any
+    ) {
+        if (state.value != prevState.value) {
+            editAttributeCommandAsync()
+        }
+    }
+
 //    override fun componentDidMount() {
 //        async {
 //            ClientContext.executionManager.observe(this)
@@ -114,33 +124,21 @@ class SelectStepEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private fun onValueChange(newValue: String) {
-//        setState {
-//            value = newValue
-//            pending = true
-//        }
-//
-////        console.log("onValueChange")
-//
-//        state.submitDebounce.apply()
-//    }
-//
-//
-//    private fun onValuesChange(newValues: List<String>) {
-//        if (state.values == newValues) {
-//            return
-//        }
-//
-//        setState {
-//            values = newValues
-//            pending = true
-//        }
-//
-////        console.log("onValueChange")
-//
-//        state.submitDebounce.apply()
-//    }
+    private fun onValueChange(value: ObjectLocation?) {
+        console.log("onValueChange - $value")
 
+        setState {
+            this.value = value
+        }
+
+//        setState {
+//            this.value = value
+//            pending = true
+//        }
+
+
+//        state.submitDebounce.apply()
+    }
 
 
     private fun editAttributeCommandAsync() {
@@ -166,25 +164,23 @@ class SelectStepEditor(
 
 
     private fun predecessors(): List<ObjectLocation> {
+        val stepLocations = ScriptController.stepLocations(
+                props.graphStructure, props.objectLocation.documentPath)!!
 
-
-//        props.graphStructure
-
-        return listOf()
-//        TODO()
+        return stepLocations.takeWhile { it != props.objectLocation }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
-                props.objectLocation, props.attributeName)
-
-        +"^^ SELECT: ${props.attributeName} - $attributeNotation"
+//        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
+//                props.objectLocation, props.attributeName)
 
         val selectOptions = predecessors()
                 .map { ReactSelectOption(it.asString(), it.objectPath.name.value) }
                 .toTypedArray()
+
+//        +"^^ SELECT: ${props.attributeName} - $attributeNotation - ${selectOptions.map { it.value }}"
 
         val selectId = "material-react-select-id"
 
@@ -196,19 +192,43 @@ class SelectStepEditor(
                     fontSize = 0.8.em
                 }
             }
-            +"Value"
+
+            +formattedLabel()
+//            +"Value"
         }
+
+//        val firstOption = ReactSelectOption("foo", "Foo")
+//        val secondOption = ReactSelectOption("bar", "Boo")
+//        val optionsArray: Array<ReactSelectOption> = arrayOf(firstOption, secondOption)
 
         child(ReactSelect::class) {
             attrs {
                 id = selectId
-//                value = selectOptions.find { it.value == state.type }
-//
-//                options = selectOptions
-//
-//                onChange = {
+
+                value = selectOptions.find { it.value == state.value?.asString() }
+//                value = firstOption
+
+                options = selectOptions
+//                options = optionsArray
+
+                onChange = {
+//                    console.log("^^^^^ selected: $it")
+
+                    onValueChange(ObjectLocation.parse(it.value))
 //                    onTypeChange(it.value)
-//                }
+                }
+
+                // https://stackoverflow.com/a/51844542/1941359
+                val styleTransformer: (Json, Json) -> Json = { base, state ->
+                    val transformed = json()
+                    transformed.add(base)
+                    transformed["background"] = "transparent"
+                    transformed
+                }
+
+                val reactStyles = json()
+                reactStyles["control"] = styleTransformer
+                styles = reactStyles
             }
         }
     }

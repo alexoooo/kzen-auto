@@ -225,25 +225,19 @@ external interface MaterialInputLabelProps : RProps {
 //
 //external interface MaterialFormControlProps : RProps {
 //}
-//
-//@JsName("InputLabel")
-//external class MaterialInputLabel: Component<InputLabelProps, RState> {
-//    override fun render(): ReactElement?
-//}
-//
-//external interface InputLabelProps: RProps {
-//    var style: Json
-//}
-//
-//@JsName("Select")
-//external class MaterialSelect : Component<MaterialSelectProps, RState> {
-//    override fun render(): ReactElement?
-//}
-//
-//external interface MaterialSelectProps : RProps {
-//    var value: String
-//    var onChange: ()->Unit
-//}
+
+@JsName("Select")
+external class MaterialSelect : Component<MaterialSelectProps, RState> {
+    override fun render(): ReactElement?
+}
+
+external interface MaterialSelectProps : RProps {
+    var value: String
+    var onChange: ()->Unit
+
+    var inputProps: Json
+}
+
 
 @JsName("Menu")
 external class MaterialMenu: Component<MenuProps, RState> {
