@@ -8,8 +8,8 @@ import kotlin.browser.window
 
 
 class NavigationManager(
-        val executionLoop: ExecutionLoop,
-        val visualDataflowLoop: VisualDataflowLoop
+        private val executionLoop: ExecutionLoop,
+        private val visualDataflowLoop: VisualDataflowLoop
 ):
         CommandBus.Subscriber
 {

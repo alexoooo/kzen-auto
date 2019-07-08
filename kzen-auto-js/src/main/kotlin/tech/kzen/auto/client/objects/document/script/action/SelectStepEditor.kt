@@ -9,10 +9,11 @@ import tech.kzen.auto.client.objects.document.common.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.structure.notation.edit.UpsertAttributeCommand
+import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import kotlin.js.Json
 import kotlin.js.json
@@ -22,12 +23,13 @@ import kotlin.js.json
 class SelectStepEditor(
         props: AttributeEditorProps
 ):
-        RPureComponent<AttributeEditorProps, SelectStepEditor.State>(props)/*,
-        ExecutionManager.Observer*/
+        RPureComponent<AttributeEditorProps, SelectStepEditor.State>(props),
+        CommandBus.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
-            var value: ObjectLocation?
+            var value: ObjectLocation?,
+            var renaming: Boolean
     ): RState
 
 
@@ -60,23 +62,7 @@ class SelectStepEditor(
             value = ObjectLocation.parse(attributeNotation.value)
         }
 
-//        when (attributeNotation) {
-//            is ScalarAttributeNotation -> {
-//                val scalarValue = attributeNotation.value
-//
-//                value = scalarValue
-//                values = null
-//            }
-//
-//            is ListAttributeNotation -> {
-//                if (attributeNotation.values.all { it.asString() != null }) {
-//                    val stringValues = attributeNotation.values.map { it.asString()!! }
-//
-//                    value = null
-//                    values = stringValues
-//                }
-//            }
-//        }
+        renaming = false
     }
 
 
@@ -87,20 +73,25 @@ class SelectStepEditor(
             snapshot: Any
     ) {
         if (state.value != prevState.value) {
-            editAttributeCommandAsync()
+            if (state.renaming) {
+                setState {
+                    renaming = false
+                }
+            }
+            else {
+                editAttributeCommandAsync()
+            }
         }
     }
 
-//    override fun componentDidMount() {
-//        async {
-//            ClientContext.executionManager.observe(this)
-//        }
-//    }
-//
-//
-//    override fun componentWillUnmount() {
-//        ClientContext.executionManager.unobserve(this)
-//    }
+    override fun componentDidMount() {
+        ClientContext.commandBus.subscribe(this)
+    }
+
+
+    override fun componentWillUnmount() {
+        ClientContext.commandBus.unsubscribe(this)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -110,6 +101,28 @@ class SelectStepEditor(
 //
 //
 //    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {}
+
+
+    override fun onCommandFailedInClient(command: NotationCommand, cause: Throwable) {}
+
+
+    override fun onCommandSuccess(
+            command: NotationCommand,
+            event: NotationEvent
+    ) {
+        when (command) {
+            is RenameObjectRefactorCommand -> {
+                val renamedEvent = event as RenamedObjectRefactorEvent
+
+                if (renamedEvent.renamedObject.objectLocation == state.value) {
+                    setState {
+                        value = renamedEvent.renamedObject.newLocation()
+                        renaming = true
+                    }
+                }
+            }
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -156,10 +169,6 @@ class SelectStepEditor(
                 props.objectLocation,
                 props.attributeName,
                 ScalarAttributeNotation(value.asString())))
-
-//        setState {
-//            pending = false
-//        }
     }
 
 
