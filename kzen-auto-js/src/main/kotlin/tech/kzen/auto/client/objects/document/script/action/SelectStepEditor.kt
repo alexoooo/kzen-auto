@@ -13,6 +13,7 @@ import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import kotlin.js.Json
@@ -59,7 +60,10 @@ class SelectStepEditor(
                         props.objectLocation, props.attributeName)
 
         if (attributeNotation is ScalarAttributeNotation) {
-            value = ObjectLocation.parse(attributeNotation.value)
+            val reference = ObjectReference.parse(attributeNotation.value)
+            val objectLocation = props.graphStructure.graphNotation.coalesce.locate(props.objectLocation, reference)
+
+            value = objectLocation
         }
 
         renaming = false
@@ -95,14 +99,6 @@ class SelectStepEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
-//        flush()
-//    }
-//
-//
-//    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {}
-
-
     override fun onCommandFailedInClient(command: NotationCommand, cause: Throwable) {}
 
 
@@ -126,31 +122,12 @@ class SelectStepEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private suspend fun flush() {
-////        println("ParameterEditor | flush")
-//
-//        state.submitDebounce.cancel()
-//        if (state.pending) {
-//            editAttributeCommand()
-//        }
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private fun onValueChange(value: ObjectLocation?) {
         console.log("onValueChange - $value")
 
         setState {
             this.value = value
         }
-
-//        setState {
-//            this.value = value
-//            pending = true
-//        }
-
-
-//        state.submitDebounce.apply()
     }
 
 
@@ -165,10 +142,13 @@ class SelectStepEditor(
         val value = state.value
                 ?: return
 
+        val localReference = value.toReference()
+                .crop(retainNesting = true, retainPath = false)
+
         ClientContext.commandBus.apply(UpsertAttributeCommand(
                 props.objectLocation,
                 props.attributeName,
-                ScalarAttributeNotation(value.asString())))
+                ScalarAttributeNotation(localReference.asString())))
     }
 
 
@@ -203,12 +183,7 @@ class SelectStepEditor(
             }
 
             +formattedLabel()
-//            +"Value"
         }
-
-//        val firstOption = ReactSelectOption("foo", "Foo")
-//        val secondOption = ReactSelectOption("bar", "Boo")
-//        val optionsArray: Array<ReactSelectOption> = arrayOf(firstOption, secondOption)
 
         child(ReactSelect::class) {
             attrs {
@@ -241,54 +216,6 @@ class SelectStepEditor(
             }
         }
     }
-
-
-//    private fun RBuilder.renderString(stateValue: String) {
-//        child(MaterialTextField::class) {
-//            attrs {
-//                fullWidth = true
-//
-//                label = formattedLabel()
-//                value = stateValue
-//
-//                // https://stackoverflow.com/questions/54052525/how-to-change-material-ui-textfield-bottom-and-label-color-on-error-and-on-focus
-////                InputLabelProps = NestedInputLabelProps(reactStyle {
-////                    color = Color("rgb(66, 66, 66)")
-////                })
-//
-//                onChange = {
-//                    val target = it.target as HTMLInputElement
-//                    onValueChange(target.value)
-//                }
-//            }
-//        }
-//    }
-//
-//
-//    private fun RBuilder.renderListOfString(stateValues: List<String>) {
-//        child(MaterialTextField::class) {
-//            attrs {
-//                fullWidth = true
-//                multiline = true
-//
-//                label = formattedLabel() + " (one per line)"
-//                value = stateValues.joinToString("\n")
-//
-//                onChange = {
-//                    val target = it.target as HTMLTextAreaElement
-//                    val lines = target.value.split(Regex("\\n+"))
-//                    val values =
-//                            if (lines.size == 1 && lines[0].isEmpty()) {
-//                                listOf()
-//                            }
-//                            else {
-//                                lines
-//                            }
-//                    onValuesChange(values)
-//                }
-//            }
-//        }
-//    }
 
 
     private fun formattedLabel(): String {

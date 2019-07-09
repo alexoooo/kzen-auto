@@ -423,8 +423,7 @@ class VertexController(
         val vertexLocation = props.cellDescriptor.objectLocation
         val objectMetadata = props.graphStructure.graphMetadata.objectMetadata[vertexLocation]!!
         val userAttributes = objectMetadata.attributes.values.keys.filterNot {
-            it == AutoConventions.iconAttributePath.attribute ||
-                    it == AutoConventions.descriptionAttributePath.attribute ||
+            AutoConventions.isManaged(it) ||
                     it == CellCoordinate.rowAttributeName ||
                     it == CellCoordinate.columnAttributeName
         }
