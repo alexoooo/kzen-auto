@@ -8,13 +8,11 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
-import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
@@ -36,7 +34,6 @@ class RibbonController(
 
 
     class State(
-            var name: ObjectName?,
             var type: ObjectLocation?,
             var tabIndex: Int = 0,
 
@@ -64,7 +61,6 @@ class RibbonController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        name = null
         type = null
         tabIndex = 0
         currentRibbonGroups = listOf()
@@ -87,7 +83,7 @@ class RibbonController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun onSelected(action: ObjectLocation) {
         setState {
-            name = NameConventions.randomAnonymous()
+//            name = NameConventions.randomAnonymous()
             type = action
         }
     }
@@ -106,7 +102,6 @@ class RibbonController(
 
         if (documentPath == null) {
             setState {
-                name = null
                 type = null
                 tabIndex = 0
                 currentRibbonGroups = listOf()

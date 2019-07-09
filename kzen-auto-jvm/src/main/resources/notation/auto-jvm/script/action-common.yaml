@@ -9,6 +9,7 @@ Action:
   description: "Perform action"
   meta:
     icon: String
+    title: String
     description: String
 
 

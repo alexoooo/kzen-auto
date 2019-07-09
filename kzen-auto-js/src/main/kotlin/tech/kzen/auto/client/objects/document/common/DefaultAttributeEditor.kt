@@ -208,7 +208,8 @@ class DefaultAttributeEditor(
 //            +"${props.attributeName} - ${props.attributeNotation}"
             +"${props.attributeName} (type missing)"
         }
-        else if (type.className == ClassNames.kotlinString) {
+        else if (type.className == ClassNames.kotlinString ||
+                type.className == ClassNames.kotlinInt) {
 //            val textValue = props.attributeNotation?.asString() ?: ""
 //            val textValue = attributeNotation?.asString() ?: ""
             val textValue = state.value ?: ""

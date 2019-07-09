@@ -269,20 +269,17 @@ class ScriptController:
                 ?.asString()
                 ?: archetypeObjectLocation.objectPath.name.value
 
-        // TODO: graph definition fails on directObjectName
+        val directObjectName = ObjectName(namePrefix)
+        val directObjectPath = toObjectPath(containingObjectLocation, directObjectName)
 
-//        val directObjectName = ObjectName(namePrefix)
-//        val directObjectPath = toObjectPath(containingObjectLocation, directObjectName)
-//
         val documentObjects =
                 state.structure!!.graphNotation.documents.get(state.documentPath!!)!!.objects
 
-//        if (! documentObjects.values.containsKey(directObjectPath)) {
-//            return directObjectName
-//        }
+        if (! documentObjects.values.containsKey(directObjectPath)) {
+            return directObjectName
+        }
 
-//        for (i in 2 .. 1000) {
-        for (i in 1 .. 1000) {
+        for (i in 2 .. 1000) {
             val numberedObjectName = ObjectName("$namePrefix $i")
             val numberedObjectPath = toObjectPath(containingObjectLocation, numberedObjectName)
 

@@ -16,7 +16,6 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.util.AutoConventions
@@ -105,28 +104,38 @@ class ActionNameEditor(
     }
 
 
-    private fun saveAsync() {
-        val adjustedName =
-                if (state.objectName.isBlank()) {
-                    NameConventions.randomAnonymous()
-                }
-                else {
-                    ObjectName(state.objectName)
-                }
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun isBlank(): Boolean {
+        return state.objectName.isBlank()
+    }
 
-        if (state.objectName != adjustedName.value) {
-//            console.log("$$$$$$ saveAsync - '${state.objectName}' != '$adjustedName'")
-            setState {
-                objectName = adjustedName.value
-            }
-        }
+
+    private fun isModified(): Boolean {
+        return props.objectLocation.objectPath.name.value != state.objectName
+    }
+
+
+    private fun actionTitle(): String {
+        return props
+                .notation
+                .transitiveAttribute(
+                        props.objectLocation, AutoConventions.titleAttributePath)
+                ?.asString()
+                ?: props.notation.getString(
+                        props.objectLocation, NotationConventions.isAttributePath)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun saveAsync() {
+        val objectName = ObjectName(state.objectName)
 
         async {
              // NB: not sure why this is necessary, without it state.saving doesn't show
              delay(1)
 
              ClientContext.commandBus.apply(RenameObjectRefactorCommand(
-                    props.objectLocation, adjustedName))
+                    props.objectLocation, objectName))
 
              // NB: no need to set saving = false, the component will un-mount
         }
@@ -164,6 +173,10 @@ class ActionNameEditor(
     private fun onRename() {
         if (! isModified()) {
             onCancel()
+            return
+        }
+
+        if (isBlank()) {
             return
         }
 
@@ -212,25 +225,6 @@ class ActionNameEditor(
 
     private fun onRunLeave() {
         ClientContext.executionIntent.clearIf(props.objectLocation)
-    }
-
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun isModified(): Boolean {
-        return props.objectLocation.objectPath.name.value != state.objectName
-    }
-
-
-    private fun title(): String {
-        val type = props.notation.getString(
-                props.objectLocation, NotationConventions.isAttributePath)
-
-        return props
-                .notation
-                .transitiveAttribute(props.objectLocation, AutoConventions.titleAttributePath)
-                ?.asString()
-                ?: type
     }
 
 
@@ -305,7 +299,7 @@ class ActionNameEditor(
                         }
 
                 if (AutoConventions.isAnonymous(objectName)) {
-                    +title()
+                    +actionTitle()
                 }
                 else {
                     +objectName.value
