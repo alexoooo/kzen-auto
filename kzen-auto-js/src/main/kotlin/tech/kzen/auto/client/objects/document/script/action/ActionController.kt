@@ -432,8 +432,7 @@ class ActionController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderBody(objectMetadata: ObjectMetadata) {
         for (e in objectMetadata.attributes.values) {
-            if (e.key == AutoConventions.iconAttributePath.attribute ||
-                    e.key == AutoConventions.descriptionAttributePath.attribute) {
+            if (AutoConventions.isManaged(e.key)) {
                 continue
             }
 

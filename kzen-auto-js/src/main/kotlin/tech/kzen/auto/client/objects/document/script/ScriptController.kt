@@ -22,11 +22,14 @@ import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.GraphStructureManager
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
+import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.InsertObjectInListAttributeCommand
@@ -215,23 +218,28 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(index: Int) {
-        val objectNotation = ClientContext.insertionManager
+        val archetypeObjectLocation = ClientContext.insertionManager
                 .getAndClearSelection()
-                ?.let { ObjectNotation.ofParent(it.toReference().name) }
                 ?: return
 
         val containingObjectLocation = ObjectLocation(
                 state.documentPath!!, NotationConventions.mainObjectPath)
 
+        val newName = findNextAvailable(
+                containingObjectLocation, archetypeObjectLocation)
+
         // NB: +1 offset for main Script object
         val endOfDocumentPosition =
                 state.structure!!.graphNotation.documents.get(state.documentPath!!)!!.objects.values.size
+
+        val objectNotation = ObjectNotation.ofParent(
+                archetypeObjectLocation.toReference().name)
 
         val command = InsertObjectInListAttributeCommand(
                 containingObjectLocation,
                 ScriptDocument.stepsAttributePath,
                 PositionIndex(index),
-                NameConventions.randomAnonymous(),
+                newName,
                 PositionIndex(endOfDocumentPosition),
                 objectNotation
         )
@@ -239,6 +247,51 @@ class ScriptController:
         async {
             ClientContext.commandBus.apply(command)
         }
+    }
+
+
+    private fun toObjectPath(
+            containingObjectLocation: ObjectLocation,
+            objectName: ObjectName
+    ): ObjectPath {
+        return containingObjectLocation.objectPath.nest(
+                ScriptDocument.stepsAttributePath, objectName)
+    }
+
+
+    private fun findNextAvailable(
+            containingObjectLocation: ObjectLocation,
+            archetypeObjectLocation: ObjectLocation
+    ): ObjectName {
+        val namePrefix = state.structure
+                ?.graphNotation
+                ?.transitiveAttribute(archetypeObjectLocation, AutoConventions.titleAttributePath)
+                ?.asString()
+                ?: archetypeObjectLocation.objectPath.name.value
+
+        // TODO: graph definition fails on directObjectName
+
+//        val directObjectName = ObjectName(namePrefix)
+//        val directObjectPath = toObjectPath(containingObjectLocation, directObjectName)
+//
+        val documentObjects =
+                state.structure!!.graphNotation.documents.get(state.documentPath!!)!!.objects
+
+//        if (! documentObjects.values.containsKey(directObjectPath)) {
+//            return directObjectName
+//        }
+
+//        for (i in 2 .. 1000) {
+        for (i in 1 .. 1000) {
+            val numberedObjectName = ObjectName("$namePrefix $i")
+            val numberedObjectPath = toObjectPath(containingObjectLocation, numberedObjectName)
+
+            if (! documentObjects.values.containsKey(numberedObjectPath)) {
+                return numberedObjectName
+            }
+        }
+
+        return NameConventions.randomAnonymous()
     }
 
 

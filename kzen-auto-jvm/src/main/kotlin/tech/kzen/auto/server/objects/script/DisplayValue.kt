@@ -10,13 +10,13 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 @Suppress("unused")
 class DisplayValue(
-        private val reference: ObjectLocation
+        private val text: ObjectLocation
 ): ExecutionAction {
     override suspend fun perform(
             imperativeModel: ImperativeModel
     ): ImperativeResult {
-        val frame = imperativeModel.findLast(reference)
-        val state = frame?.states?.get(reference.objectPath)
+        val frame = imperativeModel.findLast(text)
+        val state = frame?.states?.get(text.objectPath)
         val result = state?.previous as? ImperativeSuccess
         val value = result?.value ?: NullExecutionValue
 

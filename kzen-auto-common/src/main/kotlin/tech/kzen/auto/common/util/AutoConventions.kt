@@ -22,6 +22,20 @@ object AutoConventions {
     }
 
 
+    fun isManaged(attributeName: AttributeName): Boolean {
+        return attributeName == iconAttributePath.attribute ||
+                attributeName == titleAttributePath.attribute ||
+                attributeName == descriptionAttributePath.attribute
+    }
+
+
+//    fun isManaged(attributePath: AttributePath): Boolean {
+//        return attributePath == iconAttributePath ||
+//                attributePath == titleAttributePath ||
+//                attributePath == descriptionAttributePath
+//    }
+
+
     fun mainDocuments(graphNotation: GraphNotation): List<DocumentPath> {
         return graphNotation
                 .documents

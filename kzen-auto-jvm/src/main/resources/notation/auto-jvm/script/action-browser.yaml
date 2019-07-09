@@ -91,7 +91,7 @@ DisplayValue:
   icon: Print
   title: "Display"
   meta:
-    reference:
+    text:
       is: ObjectLocation
       by: Nominal
       editor: SelectStepEditor
