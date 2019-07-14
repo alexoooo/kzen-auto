@@ -14,72 +14,103 @@ SelectStepEditor:
 #######################################################################################################################
 
 
-ScriptGroup:
+#ScriptGroup:
+#  is: RibbonGroup
+#  title: "Insert"
+#  documentArchetype: Script
+
+#######################################################################################################################
+
+
+InputOutputGroup:
   is: RibbonGroup
-  title: "Insert"
+  title: "Input / Output"
+  documentArchetype: Script
+
+
+###########################################################
+
+DisplayValueTool:
+  is: RibbonTool
+  parent: InputOutputGroup
+  delegate: DisplayValue
+
+
+TextLiteralTool:
+  is: RibbonTool
+  parent: InputOutputGroup
+  delegate: TextLiteral
+
+
+BooleanLiteralTool:
+  is: RibbonTool
+  parent: InputOutputGroup
+  delegate: BooleanLiteral
+
+
+PrintlnActionTool:
+  is: RibbonTool
+  parent: InputOutputGroup
+  delegate: PrintlnAction
+
+
+#######################################################################################################################
+
+LogicGroup:
+  is: RibbonGroup
+  title: "Logic"
+  documentArchetype: Script
+
+###########################################################
+
+LogicalNotTool:
+  is: RibbonTool
+  parent: LogicGroup
+  delegate: LogicalNot
+
+
+#######################################################################################################################
+
+
+BrowserGroup:
+  is: RibbonGroup
+  title: "Browser"
   documentArchetype: Script
 
 ###########################################################
 
 OpenBrowserTool:
   is: RibbonTool
-  parent: ScriptGroup
+  parent: BrowserGroup
   delegate: OpenBrowser
 
 
 CloseBrowserTool:
   is: RibbonTool
-  parent: ScriptGroup
+  parent: BrowserGroup
   delegate: CloseBrowser
 
-###########################################################
 
 GoToTool:
   is: RibbonTool
-  parent: ScriptGroup
+  parent: BrowserGroup
   delegate: GoTo
 
 
 LeftClickTool:
   is: RibbonTool
-  parent: ScriptGroup
+  parent: BrowserGroup
   delegate: LeftClick
 
 
 SendKeysTool:
   is: RibbonTool
-  parent: ScriptGroup
+  parent: BrowserGroup
   delegate: SendKeys
 
 
 FormSubmitTool:
   is: RibbonTool
-  parent: ScriptGroup
+  parent: BrowserGroup
   delegate: FormSubmit
 
-
-TextLiteralTool:
-  is: RibbonTool
-  parent: ScriptGroup
-  delegate: TextLiteral
-
-
-DisplayValueTool:
-  is: RibbonTool
-  parent: ScriptGroup
-  delegate: DisplayValue
-
-
-#######################################################################################################################
-
-
-CommonScriptGroup:
-  is: RibbonGroup
-  title: "Basic"
-  documentArchetype: Script
-
-
-PrintlnActionTool:
-  is: RibbonTool
-  parent: CommonScriptGroup
-  delegate: PrintlnAction

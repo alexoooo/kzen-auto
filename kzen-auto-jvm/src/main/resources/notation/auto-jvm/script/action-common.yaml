@@ -27,18 +27,55 @@ PrintlnAction:
     message: String
 
 
-#Double:
-#  abstract: true
-#  class: kotlin.Double
-#
-#
-#SleepAction:
-#  abstract: true
-#  is: Action
-#  class: tech.kzen.auto.common.objects.SleepAction
-#  icon: Timer
-#  title: "Sleep"
-#  seconds: 1.0
-#  meta:
-#    seconds: Double
+################################################################
 
+
+BooleanLiteral:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.logic.BooleanLiteral
+  icon: ToggleOn
+  title: "True or false"
+  value: false
+  meta:
+    value: Boolean
+
+
+LogicalNot:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.logic.LogicalNot
+  icon: Flip
+  title: "Logical NOT"
+  meta:
+    negate:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+
+
+################################################################
+
+
+TextLiteral:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.TextLiteral
+  icon: Textsms
+  title: "Text"
+  value: "Bar"
+  meta:
+    value: String
+
+
+DisplayValue:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.DisplayValue
+  icon: Print
+  title: "Display"
+  meta:
+    text:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor

@@ -99,6 +99,12 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "Print" ->
             PrintIcon::class
 
+        "ToggleOn" ->
+            ToggleOnIcon::class
+
+        "Flip" ->
+            FlipIcon::class
+
         else ->
             TextureIcon::class
     }

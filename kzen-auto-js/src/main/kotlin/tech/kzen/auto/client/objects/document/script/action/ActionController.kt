@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.script.action
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
+import kotlinx.html.title
 import org.w3c.dom.HTMLButtonElement
 import react.RBuilder
 import react.RProps
@@ -450,9 +451,37 @@ class ActionController(
             }
         }
 
+        (props.state?.previous as? ImperativeSuccess)?.value?.let {
+            renderValue(it)
+        }
+
 //                    console.log("^^^^^ props.state - ", props.state)
         (props.state?.previous as? ImperativeSuccess)?.detail?.let {
             renderDetail(it)
+        }
+    }
+
+
+    private fun RBuilder.renderValue(value: ExecutionValue) {
+        if (value is ScalarExecutionValue) {
+            styledDiv {
+                attrs {
+                    title = "Value"
+                }
+
+                css {
+                    padding(0.em, 0.5.em, 0.5.em, 0.5.em)
+                }
+
+                styledDiv {
+                    css {
+                        backgroundColor = Color("rgba(0, 0, 0, 0.04)")
+                        padding(0.5.em)
+                    }
+
+                    +"${value.get()}"
+                }
+            }
         }
     }
 

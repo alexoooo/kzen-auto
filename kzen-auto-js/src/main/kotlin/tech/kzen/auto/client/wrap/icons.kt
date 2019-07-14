@@ -304,3 +304,15 @@ external class RedoIcon: Component<IconProps, RState> {
 external class MailIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("ToggleOn")
+external class ToggleOnIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Flip")
+external class FlipIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

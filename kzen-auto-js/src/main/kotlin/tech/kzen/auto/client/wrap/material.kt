@@ -218,6 +218,38 @@ external interface MaterialInputLabelProps : RProps {
 }
 
 
+
+
+@JsName("Switch")
+external class MaterialSwitch: Component<SwitchProps, RState> {
+    override fun render(): ReactElement?
+}
+
+external interface SwitchProps: RProps {
+//    var style: Json
+
+    var id: String
+
+    var checked: Boolean
+    var onChange: (e: Event) -> Unit
+
+//    var onKeyDown: (e: KeyboardEvent) -> Unit
+//    var onKeyPress: (e: KeyboardEvent) -> Unit
+//
+//    var autoFocus: Boolean
+//    var inputRef: (e: HTMLInputElement?) -> Unit
+//
+//    var InputLabelProps: NestedInputLabelProps
+//
+//    var id: String
+//
+//    var label: String
+//    var rows: Int
+//    var multiline: Boolean
+//    var fullWidth: Boolean
+//    var margin: String
+}
+
 //@JsName("FormControl")
 //external class MaterialFormControl : Component<MaterialFormControlProps, RState> {
 //    override fun render(): ReactElement?

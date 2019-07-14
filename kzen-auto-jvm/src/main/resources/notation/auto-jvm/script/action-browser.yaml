@@ -5,7 +5,7 @@
 OpenBrowser:
   abstract: true
   is: Action
-  class: tech.kzen.auto.server.objects.script.OpenBrowser
+  class: tech.kzen.auto.server.objects.script.browser.OpenBrowser
   icon: OpenInNew
   title: "Open browser"
   description: "Open a new browser window"
@@ -20,7 +20,7 @@ OpenBrowser:
 CloseBrowser:
   abstract: true
   is: Action
-  class: tech.kzen.auto.server.objects.script.CloseBrowser
+  class: tech.kzen.auto.server.objects.script.browser.CloseBrowser
   icon: Close
   title: "Close browser"
   description: "Close a browser window"
@@ -29,7 +29,7 @@ CloseBrowser:
 GoTo:
   abstract: true
   is: Action
-  class: tech.kzen.auto.server.objects.script.GoTo
+  class: tech.kzen.auto.server.objects.script.browser.GoTo
   location: "https://www.google.com/"
   icon: Http
   title: "Browse to URL"
@@ -41,7 +41,7 @@ GoTo:
 LeftClick:
   abstract: true
   is: Action
-  class: tech.kzen.auto.server.objects.script.LeftClick
+  class: tech.kzen.auto.server.objects.script.browser.LeftClick
   icon: TouchApp
   title: "Click"
   xpath: ""
@@ -52,7 +52,7 @@ LeftClick:
 SendKeys:
   abstract: true
   is: Action
-  class: tech.kzen.auto.server.objects.script.SendKeys
+  class: tech.kzen.auto.server.objects.script.browser.SendKeys
   icon: Keyboard
   title: "Type"
   xpath: ""
@@ -65,33 +65,9 @@ SendKeys:
 FormSubmit:
   abstract: true
   is: Action
-  class: tech.kzen.auto.server.objects.script.FormSubmit
+  class: tech.kzen.auto.server.objects.script.browser.FormSubmit
   icon: Send
   title: "Submit"
   xpath: ""
   meta:
     xpath: String
-
-
-TextLiteral:
-  abstract: true
-  is: Action
-  class: tech.kzen.auto.server.objects.script.TextLiteral
-  icon: Textsms
-  title: "Text"
-  value: "Bar"
-  meta:
-    value: String
-
-
-DisplayValue:
-  abstract: true
-  is: Action
-  class: tech.kzen.auto.server.objects.script.DisplayValue
-  icon: Print
-  title: "Display"
-  meta:
-    text:
-      is: ObjectLocation
-      by: Nominal
-      editor: SelectStepEditor

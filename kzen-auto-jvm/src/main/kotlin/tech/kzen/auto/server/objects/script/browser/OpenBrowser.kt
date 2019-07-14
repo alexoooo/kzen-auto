@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.script
+package tech.kzen.auto.server.objects.script.browser
 
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions

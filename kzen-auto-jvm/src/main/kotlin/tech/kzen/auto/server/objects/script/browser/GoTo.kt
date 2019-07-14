@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.script
+package tech.kzen.auto.server.objects.script.browser
 
 import org.openqa.selenium.OutputType
 import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue

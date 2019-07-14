@@ -1,6 +1,8 @@
 package tech.kzen.auto.client.objects.document.common
 
 
+import kotlinx.css.em
+import kotlinx.css.fontSize
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLTextAreaElement
 import react.*
@@ -8,10 +10,7 @@ import react.dom.br
 import react.dom.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.FunctionWithDebounce
-import tech.kzen.auto.client.wrap.MaterialTextField
-import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.lodash
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -226,6 +225,10 @@ class DefaultAttributeEditor(
                 renderListOfString(textValues)
             }
         }
+        else if (type.className == ClassNames.kotlinBoolean) {
+            val booleanValue = state.value == "true"
+            renderBoolean(booleanValue)
+        }
         else {
             +"${props.attributeName} (type not supported)"
 
@@ -257,6 +260,36 @@ class DefaultAttributeEditor(
                 onChange = {
                     val target = it.target as HTMLInputElement
                     onValueChange(target.value)
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderBoolean(stateValue: Boolean) {
+        val inputId = "material-react-switch-id"
+
+        child(MaterialInputLabel::class) {
+            attrs {
+                htmlFor = inputId
+
+                style = reactStyle {
+                    fontSize = 0.8.em
+                }
+            }
+
+            +formattedLabel()
+        }
+
+        child(MaterialSwitch::class) {
+            attrs {
+                id = inputId
+
+                checked = stateValue
+
+                onChange = {
+                    val target = it.target as HTMLInputElement
+                    onValueChange(target.checked.toString())
                 }
             }
         }
