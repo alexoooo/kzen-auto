@@ -69,6 +69,12 @@ LogicalNotTool:
   delegate: LogicalNot
 
 
+ConditionalExpressionTool:
+  is: RibbonTool
+  parent: LogicGroup
+  delegate: ConditionalExpression
+
+
 #######################################################################################################################
 
 

@@ -316,3 +316,9 @@ external class ToggleOnIcon: Component<IconProps, RState> {
 external class FlipIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("Share")
+external class ShareIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

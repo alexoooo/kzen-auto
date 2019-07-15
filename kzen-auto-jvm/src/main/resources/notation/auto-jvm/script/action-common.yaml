@@ -54,6 +54,27 @@ LogicalNot:
       editor: SelectStepEditor
 
 
+ConditionalExpression:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.control.ConditionalExpression
+  icon: Share
+  title: "If"
+  meta:
+    condition:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+    then:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+    else:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+
+
 ################################################################
 
 

@@ -466,7 +466,7 @@ class ActionController(
         if (value is ScalarExecutionValue) {
             styledDiv {
                 attrs {
-                    title = "Value"
+                    title = "Result"
                 }
 
                 css {
