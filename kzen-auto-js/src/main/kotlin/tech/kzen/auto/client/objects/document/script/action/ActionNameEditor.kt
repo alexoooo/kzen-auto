@@ -232,7 +232,7 @@ class ActionNameEditor(
     override fun RBuilder.render() {
         styledDiv {
             css {
-                height = ActionController.headerHeight
+                height = StepHeader.headerHeight
                 width = 100.pct
 
 //                backgroundColor = Color.blue
@@ -254,7 +254,7 @@ class ActionNameEditor(
                 display = Display.inlineBlock
 
                 cursor = Cursor.pointer
-                height = ActionController.headerHeight
+                height = StepHeader.headerHeight
                 width = 100.pct
 
                 marginTop = 10.px
@@ -279,7 +279,7 @@ class ActionNameEditor(
             styledSpan {
                 css {
                     width = 100.pct
-                    height = ActionController.headerHeight
+                    height = StepHeader.headerHeight
 
                     fontSize = LinearDimension("1.5em")
                     fontWeight = FontWeight.bold
@@ -315,7 +315,7 @@ class ActionNameEditor(
                 display = Display.inlineBlock
 
                 width = 100.pct.minus(4.em)
-                height = ActionController.headerHeight
+                height = StepHeader.headerHeight
 
 //                marginTop = 10.px
                 marginTop = 8.px

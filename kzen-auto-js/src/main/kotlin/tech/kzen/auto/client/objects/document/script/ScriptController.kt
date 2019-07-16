@@ -473,7 +473,7 @@ class ScriptController:
                     attributeNesting = AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index)))
                     this.objectLocation = objectLocation
                     this.graphStructure = graphStructure
-                    state = executionState
+                    imperativeState = executionState
                 }
             }
         }
