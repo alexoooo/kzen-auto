@@ -4,11 +4,45 @@ ScriptController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.script.ScriptController$Wrapper
   type: Script
+  stepController: StepController
+
+
+################################################################
+
+
+StepController:
+  class: tech.kzen.auto.client.objects.document.script.step.StepController$Wrapper
+  meta:
+    stepDisplays:
+      is: List
+      of: StepDisplay
+      by: Autowired
+
+
+################################################################
+
+
+StepDisplay:
+  abstract: true
+  class: tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
+  meta:
+    objectLocation:
+      is: ObjectLocation
+      by: SelfLocation
+
+
+DefaultStepDisplay:
+  is: StepDisplay
+  class: tech.kzen.auto.client.objects.document.script.step.display.DefaultStepDisplay$Wrapper
+  attributeController: AttributeController
+
+
+################################################################
 
 
 SelectStepEditor:
   is: AttributeEditorWrapper
-  class: tech.kzen.auto.client.objects.document.script.action.SelectStepEditor$Wrapper
+  class: tech.kzen.auto.client.objects.document.script.step.attribute.StepSelectEditor$Wrapper
 
 
 #######################################################################################################################

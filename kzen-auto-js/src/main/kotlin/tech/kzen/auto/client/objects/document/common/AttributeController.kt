@@ -30,12 +30,9 @@ class AttributeController(
 
             graphStructure: GraphStructure,
             objectLocation: ObjectLocation,
-            attributeName: AttributeName/*,
-            attributeMetadata: AttributeMetadata,
-            attributeNotation: AttributeNotation?*/
+            attributeName: AttributeName
     ): AttributeEditorProps(
-            graphStructure,
-            objectLocation, attributeName//, attributeMetadata, attributeNotation
+            graphStructure, objectLocation, attributeName
     )
 
 
@@ -72,11 +69,6 @@ class AttributeController(
                 .attributeMetadataNotation
                 .get(editorAttributePath)
 
-//        +"%% editorAttributeNotation: $editorAttributeNotation"
-//        br {}
-//        +"%% props.attributeEditors: ${props.attributeEditors.map { it.name().value }}"
-
-
         val editorWrapperName = editorAttributeNotation
                 ?.asString()
                 ?.let { ObjectName(it) }
@@ -90,8 +82,6 @@ class AttributeController(
                 graphStructure = props.graphStructure
                 objectLocation = props.objectLocation
                 attributeName = props.attributeName
-//                attributeMetadata = props.attributeMetadata
-//                attributeNotation = props.attributeNotation
             }
         }
     }

@@ -183,10 +183,12 @@ data class DataflowMatrix(
             }
 
             for (cell in row) {
-                if (cell.coordinate.column != columnIndex) {
-                    continue
+                if (cell.coordinate.column == columnIndex ||
+                        cell is VertexDescriptor &&
+                        columnIndex >= cell.coordinate.column &&
+                        columnIndex < cell.coordinate.column + cell.inputNames.size) {
+                    return cell
                 }
-                return cell
             }
 
             return null
@@ -197,6 +199,22 @@ data class DataflowMatrix(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun traceVertexBackFrom(vertexLocation: ObjectLocation): Set<VertexDescriptor> {
+        val vertexDescriptor = verticesByLocation[vertexLocation]
+                ?: return setOf()
+
+        val buffer = mutableSetOf<VertexDescriptor>()
+        for (inputName in vertexDescriptor.inputNames) {
+            val sourceVertex = traceVertexBackFrom(vertexDescriptor, inputName)
+
+            if (sourceVertex != null) {
+                buffer.add(sourceVertex)
+            }
+        }
+        return buffer
+    }
+
+
     fun traceVertexBackFrom(
             vertexDescriptor: VertexDescriptor,
             inputName: AttributeName

@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.script.action
+package tech.kzen.auto.client.objects.document.script.step.header
 
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
@@ -100,7 +100,7 @@ class StepHeader(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var editSignal = ActionNameEditor.EditSignal()
+    private var editSignal = StepNameEditor.EditSignal()
     private var buttonRef: HTMLElement? = null
 
     private var processingOption: Boolean = false
@@ -334,7 +334,7 @@ class StepHeader(
                     left = runIconWidth
                 }
 
-                child(ActionNameEditor::class) {
+                child(StepNameEditor::class) {
                     attrs {
                         objectLocation = props.objectLocation
                         notation = props.graphStructure.graphNotation

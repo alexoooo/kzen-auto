@@ -71,7 +71,7 @@ object ClientContext {
     val visualDataflowLoop = VisualDataflowLoop(
             modelManager,
             visualDataflowManager,
-            250)
+            300)
 
     val navigationManager = NavigationManager(
             executionLoop,

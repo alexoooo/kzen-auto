@@ -1,17 +1,19 @@
-package tech.kzen.auto.client.objects.document.script.action
+package tech.kzen.auto.client.objects.document.script.step.display
 
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
 import react.RBuilder
-import react.RProps
+import react.RHandler
 import react.RState
+import react.ReactElement
 import react.dom.img
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.common.AttributeController
+import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.wrap.MaterialCardContent
 import tech.kzen.auto.client.wrap.MaterialPaper
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -31,26 +33,51 @@ import tech.kzen.lib.common.structure.metadata.model.ObjectMetadata
 import tech.kzen.lib.platform.IoUtils
 
 
-class ActionController(
+class DefaultStepDisplay(
         props: Props
 ):
-        RPureComponent<ActionController.Props, ActionController.State>(props)
+        RPureComponent<DefaultStepDisplay.Props, DefaultStepDisplay.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+//    companion object {
+//        val wrapperName = ObjectName("DefaultStepDisplay")
+//    }
+
+
     class Props(
             var attributeController: AttributeController.Wrapper,
 
-            var attributeNesting: AttributeNesting,
-            var objectLocation: ObjectLocation,
-            var graphStructure: GraphStructure,
-
-            var imperativeState: ImperativeState?
-    ): RProps
+            graphStructure: GraphStructure,
+            objectLocation: ObjectLocation,
+            attributeNesting: AttributeNesting,
+            imperativeState: ImperativeState?
+    ): StepDisplayProps(
+            graphStructure, objectLocation, attributeNesting, imperativeState
+    )
 
 
     class State(
 //            var hoverCard: Boolean
     ): RState
+
+
+    @Suppress("unused")
+    class Wrapper(
+            objectLocation: ObjectLocation,
+            private val attributeController: AttributeController.Wrapper
+    ):
+            StepDisplayWrapper(objectLocation)
+    {
+        override fun child(input: RBuilder, handler: RHandler<StepDisplayProps>): ReactElement {
+            return input.child(DefaultStepDisplay::class) {
+                attrs {
+                    this.attributeController = this@Wrapper.attributeController
+                }
+
+                handler()
+            }
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -128,7 +155,7 @@ class ActionController(
             child(MaterialCardContent::class) {
                 child(StepHeader::class) {
                     attrs {
-                        hoverSignal = this@ActionController.hoverSignal
+                        hoverSignal = this@DefaultStepDisplay.hoverSignal
 
                         attributeNesting = props.attributeNesting
                         objectLocation = props.objectLocation
@@ -221,7 +248,6 @@ class ActionController(
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderAttribute(
             attributeName: AttributeName
     ) {

@@ -24,7 +24,9 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.query.QueryDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -95,24 +97,29 @@ class EdgeController(
     }
 
 
-    private fun isEdgePredecessorOfNextToConsumeMessage(): Boolean {
-        val flowTarget = props.visualDataflowModel.running()
+    private fun nextToRun(): ObjectLocation? {
+        return props.visualDataflowModel.running()
                 ?: DataflowUtils.next(
                         props.documentPath,
                         props.graphStructure,
                         props.visualDataflowModel)
-                ?: return false
+    }
 
+
+    private fun edgesLeadingToNextToRun(
+            nextToRun: ObjectLocation
+    ): Set<EdgeDescriptor> {
         // NB: might be null when navigating to new document while running
         @Suppress("MapGetWithNotNullAssertionOperator")
-        val targetVertexDescriptor = props.dataflowMatrix.verticesByLocation[flowTarget]
-                ?: return false
+        val targetVertexDescriptor = props.dataflowMatrix.verticesByLocation[nextToRun]
+                ?: return setOf()
 
         val visualVertexModel = props.visualDataflowModel.vertices[targetVertexDescriptor.objectLocation]!!
         if (visualVertexModel.epoch != 0) {
-            return false
+            return setOf()
         }
 
+        val buffer = mutableSetOf<EdgeDescriptor>()
         for ((i, inputName) in targetVertexDescriptor.inputNames.withIndex()) {
             val sourceVertex = props.dataflowMatrix.traceVertexBackFrom(targetVertexDescriptor, inputName)
                     ?: continue
@@ -125,12 +132,46 @@ class EdgeController(
             }
 
             val leadingEdges = props.dataflowMatrix.traceEdgeBackFrom(targetVertexDescriptor, i)
-            if (leadingEdges.contains(props.cellDescriptor)) {
-                return true
-            }
+            buffer.addAll(leadingEdges)
+        }
+        return buffer
+    }
+
+
+    fun isEgressActive(
+            nextToRun: ObjectLocation,
+            edgesLeadingToNextToRun: Set<EdgeDescriptor>,
+            coordinate: CellCoordinate
+    ): Boolean {
+        if (edgesLeadingToNextToRun.any { it.coordinate == coordinate }) {
+            return true
         }
 
-        return false
+        return nextToRun ==
+                (props.dataflowMatrix.get(coordinate) as? VertexDescriptor)?.objectLocation
+    }
+
+
+    fun egressColor(
+            nextToRun: ObjectLocation?,
+            edgesLeadingToNextToRun: Set<EdgeDescriptor>,
+            rowOffset: Int,
+            columnOffset: Int
+    ): Color {
+        if (nextToRun == null) {
+            return Color.white
+        }
+
+        val coordinate = props.cellDescriptor.coordinate.offset(rowOffset, columnOffset)
+        val isActive = isEgressActive(nextToRun, edgesLeadingToNextToRun, coordinate)
+        return (
+            if (isActive) {
+                Color.gold
+            }
+            else {
+                Color.white
+            }
+        )
     }
 
 
@@ -163,8 +204,16 @@ class EdgeController(
     private fun RBuilder.renderEdge() {
         val orientation = props.cellDescriptor.orientation
 
-        val edgeColor =
-                if (isEdgePredecessorOfNextToConsumeMessage()) {
+        val nextToRun = nextToRun()
+        val edgesLeadingToNextToRun = nextToRun
+                ?.let { edgesLeadingToNextToRun(nextToRun) }
+                ?: setOf()
+
+        val isEdgePredecessorOfNextToRun =
+                props.cellDescriptor in edgesLeadingToNextToRun
+
+        val ingressAndCentreColor =
+                if (isEdgePredecessorOfNextToRun) {
                     Color.gold
                 }
                 else {
@@ -174,7 +223,7 @@ class EdgeController(
         if (orientation.hasTop()) {
             child(TopIngress::class) {
                 attrs {
-                    ingressColor = edgeColor
+                    ingressColor = ingressAndCentreColor
                 }
             }
         }
@@ -194,10 +243,12 @@ class EdgeController(
 
             when {
                 orientation.hasLeftIngress() ->
-                    renderIngressLeft(edgeColor)
+                    renderIngressLeft(ingressAndCentreColor)
 
-                orientation.hasLeftEgress() ->
+                orientation.hasLeftEgress() -> {
+                    val edgeColor = egressColor(nextToRun, edgesLeadingToNextToRun, 0, -1)
                     renderEgressLeft(edgeColor)
+                }
 
                 else -> styledDiv {
                     css {
@@ -214,7 +265,7 @@ class EdgeController(
                     width = CellController.arrowSide
                     height = CellController.arrowSide
 
-                    backgroundColor = edgeColor
+                    backgroundColor = ingressAndCentreColor
                 }
 
                 child(MaterialIconButton::class) {
@@ -239,14 +290,16 @@ class EdgeController(
             }
 
             if (orientation.hasRightEgress()) {
+                val edgeColor = egressColor(nextToRun, edgesLeadingToNextToRun, 0, 1)
                 renderEgressRight(edgeColor)
             }
             else if (orientation.hasRightIngress()) {
-                renderIngressRight(edgeColor)
+                renderIngressRight(ingressAndCentreColor)
             }
         }
 
         if (orientation.hasBottom()) {
+            val edgeColor = egressColor(nextToRun, edgesLeadingToNextToRun, 1, 0)
             child(BottomEgress::class) {
                 attrs {
                     egressColor = edgeColor

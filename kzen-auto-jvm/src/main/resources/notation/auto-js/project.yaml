@@ -76,6 +76,5 @@ StageController:
 DocumentController:
   abstract: true
   is: ReactWrapper
-  attributeController: AttributeController
   meta:
     type: Document

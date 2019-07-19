@@ -25,6 +25,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
@@ -71,6 +72,7 @@ class VertexController(
             var attributeNesting: AttributeNesting,
             var graphStructure: GraphStructure,
             var visualDataflowModel: VisualDataflowModel,
+            var dataflowMatrix: DataflowMatrix,
             var dataflowDag: DataflowDag
     ) : RProps
 
@@ -299,24 +301,46 @@ class VertexController(
 
         val phase = visualVertexModel()?.phase()
 
-        val cardColor = when (phase) {
-            VisualVertexPhase.Pending ->
-                Color.white
+        val nextToRun = DataflowUtils.next(
+                props.documentPath,
+                props.graphStructure,
+                props.visualDataflowModel)
 
-            VisualVertexPhase.Running ->
+        val isNextToRun = props.cellDescriptor.objectLocation == nextToRun
+        val isPredecessorOfNextToRun =
+                ! isNextToRun &&
+                nextToRun != null &&
+                props.cellDescriptor in props.dataflowMatrix.traceVertexBackFrom(nextToRun)
+
+        val cardColor = when {
+            phase == VisualVertexPhase.Running ->
                 Color.gold
 
-            VisualVertexPhase.Done ->
-                Color.white
+            isNextToRun ->
+                Color.gold.lighten(75)
 
-            VisualVertexPhase.Remaining ->
-                Color.white
+            isPredecessorOfNextToRun ->
+                Color.gold.lighten(93)
 
-            VisualVertexPhase.Error ->
-                Color.red
+            else -> when (phase) {
+                VisualVertexPhase.Pending ->
+                    Color.white
 
-            null ->
-                Color.gray
+                VisualVertexPhase.Done ->
+                    Color.white
+
+                VisualVertexPhase.Remaining ->
+                    Color.white
+
+                VisualVertexPhase.Error ->
+                    Color.red
+
+                null ->
+                    Color.gray
+
+                else ->
+                    throw IllegalStateException()
+            }
         }
 
         val objectMetadata = props.graphStructure.graphMetadata.get(props.cellDescriptor.objectLocation)!!
@@ -324,11 +348,23 @@ class VertexController(
         val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.mainOutputAttributeName)
 
         if (hasInput) {
+            val ingressColor =
+                    if (isNextToRun) {
+                        Color.gold
+                    }
+                    else {
+                        cardColor
+                    }
+
             child(TopIngress::class) {
                 attrs {
                     attributeName = inputAttributes[0]
-                    ingressColor = cardColor
+                    this.ingressColor = ingressColor
                 }
+            }
+
+            if (inputAttributes.size > 1) {
+                renderAdditionalInputs(cardColor, inputAttributes)
             }
         }
         else {
@@ -339,16 +375,23 @@ class VertexController(
             }
         }
 
-        if (inputAttributes.size > 1) {
-            renderAdditionalInputs(cardColor, inputAttributes)
-        }
-
         renderContent(cardColor, phase)
 
         if (hasOutput) {
+            val egressColor = when {
+                isNextToRun ->
+                    Color.white
+
+                isPredecessorOfNextToRun ->
+                    Color.gold
+
+                else ->
+                    cardColor
+            }
+
             child(BottomEgress::class) {
                 attrs {
-                    egressColor = cardColor
+                    this.egressColor = egressColor
                 }
             }
 
@@ -374,6 +417,8 @@ class VertexController(
 
                 top = CellController.ingressLength
                 left = CellController.cardWidth.minus(1.5.em).minus(5.px)
+
+                zIndex = -99
             }
         }
 

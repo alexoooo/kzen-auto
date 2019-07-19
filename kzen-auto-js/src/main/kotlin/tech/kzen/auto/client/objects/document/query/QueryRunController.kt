@@ -132,10 +132,11 @@ class QueryRunController(
             return Phase.Empty
         }
 
+        if (ClientContext.visualDataflowLoop.isLooping(host)) {
+            return Phase.Looping
+        }
+
         if (visualDataflowModel.isRunning()) {
-            if (ClientContext.visualDataflowLoop.isLooping(host)) {
-                return Phase.Looping
-            }
             return Phase.Running
         }
 

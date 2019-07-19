@@ -8,8 +8,7 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.objects.document.common.AttributeController
-import tech.kzen.auto.client.objects.document.script.action.ActionController
+import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
@@ -71,7 +70,7 @@ class ScriptController:
 
 
     class Props(
-            var attributeController: AttributeController.Wrapper
+            var stepController: StepController.Wrapper
     ): RProps
 
 
@@ -86,7 +85,7 @@ class ScriptController:
     @Suppress("unused")
     class Wrapper(
             private val type: DocumentArchetype,
-            private val attributeController: AttributeController.Wrapper
+            private val stepController: StepController.Wrapper
     ):
             DocumentController
     {
@@ -97,7 +96,7 @@ class ScriptController:
         override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
             return input.child(ScriptController::class) {
                 attrs {
-                    this.attributeController = this@Wrapper.attributeController
+                    this.stepController = this@Wrapper.stepController
                 }
 
                 handler()
@@ -466,10 +465,8 @@ class ScriptController:
         span {
             key = objectLocation.toReference().asString()
 
-            child(ActionController::class) {
+            props.stepController.child(this) {
                 attrs {
-                    attributeController = props.attributeController
-
                     attributeNesting = AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index)))
                     this.objectLocation = objectLocation
                     this.graphStructure = graphStructure

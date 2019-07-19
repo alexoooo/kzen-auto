@@ -116,6 +116,7 @@ class CellController(
                     attributeNesting = props.attributeNesting
                     graphStructure = props.graphStructure
                     visualDataflowModel = props.visualDataflowModel
+                    dataflowMatrix = props.dataflowMatrix
                     dataflowDag = props.dataflowDag
                 }
             }

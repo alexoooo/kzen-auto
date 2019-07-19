@@ -239,10 +239,14 @@ class VisualDataflowManager(
             objectLocation: ObjectLocation,
             waitAfterRunningMillis: Int = 0
     ): VisualVertexTransition {
+        if (waitAfterRunningMillis > 0) {
+            delay(waitAfterRunningMillis.toLong() / 2)
+        }
+
         willExecute(host, objectLocation)
 
         if (waitAfterRunningMillis > 0) {
-            delay(waitAfterRunningMillis.toLong())
+            delay(waitAfterRunningMillis.toLong() / 2)
         }
 
         val visualVertexTransition = visualDataflowProvider

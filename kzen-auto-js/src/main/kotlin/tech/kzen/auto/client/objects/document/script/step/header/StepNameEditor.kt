@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.script.action
+package tech.kzen.auto.client.objects.document.script.step.header
 
 import kotlinx.coroutines.delay
 import kotlinx.css.*
@@ -26,11 +26,10 @@ import tech.kzen.lib.common.structure.notation.edit.RenameObjectRefactorCommand
 import tech.kzen.lib.common.structure.notation.model.GraphNotation
 
 
-class ActionNameEditor(
+class StepNameEditor(
         props: Props
 ):
-//        RComponent<ActionNameEditor.Props, ActionNameEditor.State>(props)
-        RPureComponent<ActionNameEditor.Props, ActionNameEditor.State>(props)
+        RPureComponent<StepNameEditor.Props, StepNameEditor.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(

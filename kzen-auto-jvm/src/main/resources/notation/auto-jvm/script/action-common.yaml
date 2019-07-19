@@ -7,10 +7,12 @@ Action:
   abstract: true
   class: tech.kzen.auto.common.api.ExecutionAction
   description: "Perform action"
+  display: DefaultStepDisplay
   meta:
     icon: String
     title: String
     description: String
+    display: String
 
 
 ###########################################################

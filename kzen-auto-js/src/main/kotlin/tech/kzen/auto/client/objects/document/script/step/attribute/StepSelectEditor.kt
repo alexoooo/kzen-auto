@@ -1,6 +1,4 @@
-package tech.kzen.auto.client.objects.document.script.action
-
-
+package tech.kzen.auto.client.objects.document.script.step.attribute
 
 import kotlinx.css.em
 import kotlinx.css.fontSize
@@ -21,10 +19,10 @@ import kotlin.js.json
 
 
 @Suppress("unused")
-class SelectStepEditor(
+class StepSelectEditor(
         props: AttributeEditorProps
 ):
-        RPureComponent<AttributeEditorProps, SelectStepEditor.State>(props),
+        RPureComponent<AttributeEditorProps, StepSelectEditor.State>(props),
         CommandBus.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -42,7 +40,7 @@ class SelectStepEditor(
             AttributeEditorWrapper(objectLocation)
     {
         override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>): ReactElement {
-            return input.child(SelectStepEditor::class) {
+            return input.child(StepSelectEditor::class) {
                 handler()
             }
         }
