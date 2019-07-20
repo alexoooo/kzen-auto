@@ -228,6 +228,21 @@ class VertexController(
     }
 
 
+    private fun isMessagePending(): Boolean {
+        if (visualVertexModel()?.message == null) {
+            return false
+        }
+
+        val successors = props.dataflowDag.successors[props.cellDescriptor.objectLocation]
+                ?: return false
+
+        return successors.isEmpty() ||
+                successors.any {
+                    (props.visualDataflowModel.vertices[it]?.epoch ?: -1) == 0
+                }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         styledDiv {
@@ -260,28 +275,33 @@ class VertexController(
 
         val visualVertexModel = visualVertexModel()
         val phase = visualVertexModel?.phase()
-
         val nextToRun = DataflowUtils.next(
                 props.documentPath,
                 props.graphStructure,
                 props.visualDataflowModel)
 
         val isNextToRun = props.cellDescriptor.objectLocation == nextToRun
-        val isPredecessorOfNextToRun =
-                ! isNextToRun &&
-                nextToRun != null &&
-                visualVertexModel?.message != null &&
-                props.cellDescriptor in props.dataflowMatrix.traceVertexBackFrom(nextToRun)
+
+        val isSendingMessage =
+                isMessagePending()
+//                ! isNextToRun &&
+//                nextToRun != null &&
+//                visualVertexModel?.message != null &&
+//                props.cellDescriptor in props.dataflowMatrix.traceVertexBackFrom(nextToRun)
 
         val cardColor = when {
             phase == VisualVertexPhase.Running ->
                 Color.gold
 
             isNextToRun ->
+//                Color.gold.lighten(75)
+                Color.gold.lighten(50)
+
+            isSendingMessage ->
                 Color.gold.lighten(75)
 
-            isPredecessorOfNextToRun ->
-                Color.gold.lighten(93)
+            visualVertexModel?.hasNext ?: false ->
+                Color.gold.lighten(90)
 
             else -> when (phase) {
                 VisualVertexPhase.Pending ->
@@ -326,15 +346,20 @@ class VertexController(
         renderContent(cardColor, phase)
 
         if (hasOutput) {
+            val isMessagePending = isMessagePending()
+
             val egressColor = when {
                 isNextToRun ->
                     Color.white
 
-                isPredecessorOfNextToRun ->
+                isSendingMessage ->
                     Color.gold
 
                 phase == VisualVertexPhase.Running ->
                     Color.white
+
+                isMessagePending ->
+                    Color.gold
 
                 else ->
                     cardColor
@@ -346,7 +371,7 @@ class VertexController(
                 }
             }
 
-            renderVertexEgressMessage()
+            renderVertexEgressMessage(isMessagePending)
         }
     }
 
@@ -392,7 +417,7 @@ class VertexController(
                 height = 2.em
 
                 top = CellController.ingressLength
-                left = CellController.cardWidth.minus(1.5.em).minus(5.px)
+                left = CellController.cardWidth.minus(1.5.em).minus(7.px)
 
                 zIndex = -99
             }
@@ -406,7 +431,7 @@ class VertexController(
                 css {
                     position = Position.absolute
                     top = 0.em
-                    left = CellController.cellWidth.times(i).minus(1.5.em).minus(2.px)
+                    left = CellController.cellWidth.times(i).minus(1.5.em).minus(4.px)
                 }
 
                 renderInput(inputAttribute, isNextToRun, phase)
@@ -681,7 +706,9 @@ class VertexController(
     }
 
 
-    private fun RBuilder.renderVertexEgressMessage() {
+    private fun RBuilder.renderVertexEgressMessage(
+            isMessagePending: Boolean
+    ) {
         val hasNext = visualVertexModel()?.hasNext ?: false
         if (hasNext) {
             styledDiv {
@@ -703,62 +730,52 @@ class VertexController(
             }
         }
 
-        val vertexMessage = visualVertexModel()?.message
-        if (vertexMessage != null) {
-            val successors = props.dataflowDag.successors[props.cellDescriptor.objectLocation]
-                    ?: listOf()
+        if (isMessagePending) {
+            val vertexMessage = visualVertexModel()?.message!!
 
-            val isMessagePending =
-                    successors.isEmpty() ||
-                            successors.any {
-                                (props.visualDataflowModel.vertices[it]?.epoch ?: -1) == 0
-                            }
+            styledDiv {
+                css {
+                    position = Position.absolute
 
-            if (isMessagePending) {
-                styledDiv {
-                    css {
-                        position = Position.absolute
+                    width = 1.em
+                    height = 1.em
 
-                        width = 1.em
-                        height = 1.em
-
-                        bottom = (1).em
-                        left = CellController.cardWidth.div(2).minus(1.5.em)
-                        zIndex = 999
-                    }
-
-                    child(MaterialIconButton::class) {
-                        attrs {
-                            title = "Message"
-
-                            style = reactStyle {
-                                color = Color.black
-
-                                backgroundColor = Color("rgba(255, 215, 0, 0.175)")
-                            }
-                        }
-
-                        child(MailIcon::class) {}
-                    }
+                    bottom = (1).em
+                    left = CellController.cardWidth.div(2).minus(1.5.em)
+                    zIndex = 999
                 }
 
-                styledDiv {
-                    css {
-                        position = Position.absolute
-
-                        width = 0.em
-                        height = 1.em
-
-                        bottom = 0.em
-                        left = CellController.cardWidth.div(2).plus(2.em)
-                    }
-
+                child(MaterialIconButton::class) {
                     attrs {
-                        title = "Message content"
+                        title = "Message"
+
+                        style = reactStyle {
+                            color = Color.black
+
+                            backgroundColor = Color("rgba(255, 215, 0, 0.175)")
+                        }
                     }
 
-                    +"${vertexMessage.get()}"
+                    child(MailIcon::class) {}
                 }
+            }
+
+            styledDiv {
+                css {
+                    position = Position.absolute
+
+                    width = 0.em
+                    height = 1.em
+
+                    bottom = 0.em
+                    left = CellController.cardWidth.div(2).plus(2.em)
+                }
+
+                attrs {
+                    title = "Message content"
+                }
+
+                +"${vertexMessage.get()}"
             }
         }
     }
