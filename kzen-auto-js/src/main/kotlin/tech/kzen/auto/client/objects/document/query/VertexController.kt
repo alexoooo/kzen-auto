@@ -39,7 +39,6 @@ import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
-import tech.kzen.lib.common.structure.notation.model.AttributeNotation
 import kotlin.js.Date
 
 
@@ -194,49 +193,6 @@ class VertexController(
     }
 
 
-    private fun performOption(action: suspend () -> Unit) {
-        processingOption = true
-        onOptionsClose()
-
-        async {
-            action.invoke()
-        }.then {
-            optionCompletedTime = Date.now()
-            processingOption = false
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    private fun editParameterCommandAsync() {
-//        async {
-//            editParameterCommand()
-//        }
-//    }
-
-
-//    private suspend fun editParameterCommand() {
-//        ClientContext.commandBus.apply(UpsertAttributeCommand(
-//                props.objectLocation,
-//                filePathAttribute.attribute,
-//                ScalarAttributeNotation(state.value)))
-//
-//        setState {
-//            pending = false
-//        }
-//
-//        executeAction()
-//    }
-
-
-//    private suspend fun executeAction() {
-//        val executionResult = ClientContext.restClient.performDetached(props.objectLocation)
-//        setState {
-//            this.executionResult = executionResult
-//        }
-//    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRemove() {
         async {
@@ -254,18 +210,21 @@ class VertexController(
     }
 
 
-//    private fun onValueChange(newValue: String) {
-//        setState {
-//            value = newValue
-//            pending = true
-//        }
-//
-//        state.submitDebounce.apply()
-//    }
-
-
     private fun visualVertexModel(): VisualVertexModel? {
         return props.visualDataflowModel.vertices[props.cellDescriptor.objectLocation]
+    }
+
+
+    private fun hasInputMessage(
+            inputName: AttributeName
+    ): Boolean {
+        val sourceVertex = props.dataflowMatrix.traceVertexBackFrom(props.cellDescriptor, inputName)
+                ?: return false
+
+        val sourceVisualModel = props.visualDataflowModel.vertices[sourceVertex.objectLocation]
+                ?: return false
+
+        return sourceVisualModel.message != null
     }
 
 
@@ -299,7 +258,8 @@ class VertexController(
         val cellDescriptor = props.cellDescriptor
         val inputAttributes = DataflowWiring.findInputs(cellDescriptor.objectLocation, props.graphStructure)
 
-        val phase = visualVertexModel()?.phase()
+        val visualVertexModel = visualVertexModel()
+        val phase = visualVertexModel?.phase()
 
         val nextToRun = DataflowUtils.next(
                 props.documentPath,
@@ -310,6 +270,7 @@ class VertexController(
         val isPredecessorOfNextToRun =
                 ! isNextToRun &&
                 nextToRun != null &&
+                visualVertexModel?.message != null &&
                 props.cellDescriptor in props.dataflowMatrix.traceVertexBackFrom(nextToRun)
 
         val cardColor = when {
@@ -348,23 +309,10 @@ class VertexController(
         val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.mainOutputAttributeName)
 
         if (hasInput) {
-            val ingressColor =
-                    if (isNextToRun) {
-                        Color.gold
-                    }
-                    else {
-                        cardColor
-                    }
-
-            child(TopIngress::class) {
-                attrs {
-                    attributeName = inputAttributes[0]
-                    this.ingressColor = ingressColor
-                }
-            }
+            renderInput(inputAttributes[0], isNextToRun, phase)
 
             if (inputAttributes.size > 1) {
-                renderAdditionalInputs(cardColor, inputAttributes)
+                renderAdditionalInputs(cardColor, inputAttributes, isNextToRun, phase)
             }
         }
         else {
@@ -385,6 +333,9 @@ class VertexController(
                 isPredecessorOfNextToRun ->
                     Color.gold
 
+                phase == VisualVertexPhase.Running ->
+                    Color.white
+
                 else ->
                     cardColor
             }
@@ -400,9 +351,34 @@ class VertexController(
     }
 
 
+    private fun RBuilder.renderInput(
+            inputName: AttributeName,
+            isNextToRun: Boolean,
+            phase: VisualVertexPhase?
+    ) {
+        val ingressColor =
+                if ((isNextToRun || phase == VisualVertexPhase.Running) &&
+                        hasInputMessage(inputName)) {
+                    Color.gold
+                }
+                else {
+                    Color.white
+                }
+
+        child(TopIngress::class) {
+            attrs {
+                attributeName = inputName
+                this.ingressColor = ingressColor
+            }
+        }
+    }
+
+
     private fun RBuilder.renderAdditionalInputs(
             cardColor: Color,
-            inputAttributes: List<AttributeName>
+            inputAttributes: List<AttributeName>,
+            isNextToRun: Boolean,
+            phase: VisualVertexPhase?
     ) {
         styledDiv {
             css {
@@ -433,12 +409,7 @@ class VertexController(
                     left = CellController.cellWidth.times(i).minus(1.5.em).minus(2.px)
                 }
 
-                child(TopIngress::class) {
-                    attrs {
-                        attributeName = inputAttribute
-                        ingressColor = cardColor
-                    }
-                }
+                renderInput(inputAttribute, isNextToRun, phase)
             }
         }
     }
@@ -467,20 +438,23 @@ class VertexController(
     private fun RBuilder.renderAttributes() {
         val vertexLocation = props.cellDescriptor.objectLocation
         val objectMetadata = props.graphStructure.graphMetadata.objectMetadata[vertexLocation]!!
-        val userAttributes = objectMetadata.attributes.values.keys.filterNot {
+
+        val editableAttributes = objectMetadata.attributes.values.keys.filterNot {
             AutoConventions.isManaged(it) ||
                     it == CellCoordinate.rowAttributeName ||
-                    it == CellCoordinate.columnAttributeName
-        }
-
-        val userAttributeValues: Map<AttributeName, AttributeNotation> =
-                userAttributes.mapNotNull { attribute ->
+                    it == CellCoordinate.columnAttributeName ||
                     props.graphStructure.graphNotation.transitiveAttribute(
-                            vertexLocation, AttributePath.ofName(attribute)
-                    )?.let { notation -> attribute to notation }
-                }.toMap()
+                            vertexLocation, AttributePath.ofName(it)
+                    ) == null
+        }
+//        val userAttributeValues: Map<AttributeName, AttributeNotation> =
+//                editableAttributes.mapNotNull { attribute ->
+//                    props.graphStructure.graphNotation.transitiveAttribute(
+//                            vertexLocation, AttributePath.ofName(attribute)
+//                    )?.let { notation -> attribute to notation }
+//                }.toMap()
 
-        if (userAttributeValues.isEmpty()) {
+        if (editableAttributes.isEmpty()) {
             return
         }
 
@@ -492,7 +466,7 @@ class VertexController(
             }
 
             var index = 0
-            for ((attributeName, attributeNotation) in userAttributeValues) {
+            for (attributeName in editableAttributes) {
                 styledDiv {
                     key = attributeName.value
 
@@ -502,10 +476,7 @@ class VertexController(
                         }
                     }
 
-//                    val attributeMetadata = objectMetadata.attributes[attributeName]
-//                            ?: throw IllegalStateException("Attribute metadata not found: $attributeName")
-
-                    renderAttribute(attributeName/*, attributeMetadata, attributeNotation*/)
+                    renderAttribute(attributeName)
                 }
             }
         }
@@ -513,17 +484,13 @@ class VertexController(
 
 
     private fun RBuilder.renderAttribute(
-            attributeName: AttributeName//,
-//            attributeMetadata: AttributeMetadata,
-//            attributeNotation: AttributeNotation
+            attributeName: AttributeName
     ) {
         props.attributeController.child(this) {
             attrs {
                 this.graphStructure = props.graphStructure
                 this.objectLocation = props.cellDescriptor.objectLocation
                 this.attributeName = attributeName
-//                this.attributeMetadata = attributeMetadata
-//                this.attributeNotation = attributeNotation
             }
         }
     }
@@ -549,9 +516,7 @@ class VertexController(
                 position = Position.relative
                 height = headerHeight
                 width = 100.pct
-//                margin(1.em)
             }
-
 
             styledDiv {
                 css {
@@ -566,7 +531,6 @@ class VertexController(
                 renderIcon(description, phase)
             }
 
-
             styledDiv {
                 css {
                     position = Position.absolute
@@ -580,17 +544,13 @@ class VertexController(
                 renderName(title, description)
             }
 
-
             styledDiv {
                 css {
                     position = Position.absolute
                     height = headerHeight
                     width = 23.px
-
-//                    top = (-16).px
                     right = 1.5.em
                     top = 0.px
-//                    right = 0.px
                 }
 
                 renderOptionsMenu()
@@ -619,17 +579,6 @@ class VertexController(
                     onMouseOut(false)
                 }
             }
-
-
-//            child(MaterialIconButton::class) {
-//                attrs {
-//                    title = "Remove"
-//
-//                    onClick = ::onRemove
-//                }
-//
-//                child(DeleteIcon::class) {}
-//            }
 
             child(MaterialIconButton::class) {
                 attrs {
@@ -668,11 +617,13 @@ class VertexController(
             attrs {
                 onClick = ::onRemove
             }
+
             child(DeleteIcon::class) {
                 attrs {
                     style = iconStyle
                 }
             }
+
             +"Delete"
         }
     }
@@ -711,10 +662,6 @@ class VertexController(
 
                     backgroundColor = highlight
                 }
-
-//                onClick = ::onRun
-//                onMouseOver = ::onRunEnter
-//                onMouseOut = ::onRunLeave
             }
 
             child(iconClassForName(icon)) {
@@ -723,7 +670,6 @@ class VertexController(
                         color = Color.black
 
                         marginTop = (-9).px
-//                        marginTop = (-7).px
                         fontSize = 1.75.em
                         borderRadius = 20.px
 
