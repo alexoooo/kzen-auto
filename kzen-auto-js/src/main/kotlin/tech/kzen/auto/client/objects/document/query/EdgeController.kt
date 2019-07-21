@@ -111,6 +111,13 @@ class EdgeController(
     private fun edgesSendingMessages(
             nextToRun: ObjectLocation
     ): Set<EdgeDescriptor> {
+        val nextToRunVisualVertexModel = props.visualDataflowModel.vertices[nextToRun]
+                ?: return setOf()
+
+        if (nextToRunVisualVertexModel.epoch > 0) {
+            return setOf()
+        }
+
         // NB: might be null when navigating to new document while running
         @Suppress("MapGetWithNotNullAssertionOperator")
         val nextToRunVertexDescriptor = props.dataflowMatrix.verticesByLocation[nextToRun]
@@ -119,7 +126,7 @@ class EdgeController(
         val edgesLeadingToNextToRun = edgesLeadingTo(nextToRunVertexDescriptor)
 
         val edgesFlowingToPending = edgesFlowingToPending(
-                nextToRunVertexDescriptor/*, edgesLeadingToNextToRun*/)
+                nextToRunVertexDescriptor)
 
         return edgesLeadingToNextToRun + edgesFlowingToPending
     }
@@ -154,6 +161,45 @@ class EdgeController(
         }
 
         return builder
+    }
+
+
+    private fun pendingWithAvailableMessage(): Set<ObjectLocation> {
+        return props.visualDataflowModel.vertices
+                .filter { it.value.message != null }
+                .flatMap { pendingSuccessors(it.key) }
+                .toSet()
+    }
+
+
+    private fun edgesAvailableToPending(
+            pendingWithAvailableMessage: Collection<ObjectLocation>
+    ): Set<EdgeDescriptor> {
+        return pendingWithAvailableMessage
+                .mapNotNull { props.dataflowMatrix.verticesByLocation[it] }
+                .flatMap { edgesLeadingTo(it) }
+                .toSet()
+
+//        val builder = mutableSetOf<EdgeDescriptor>()
+//
+//        for ((objectLocation, vertexVisualModel) in props.visualDataflowModel.vertices) {
+//            if (vertexVisualModel.message == null) {
+//                continue
+//            }
+//
+//            val pendingSuccessors = pendingSuccessors(objectLocation)
+//
+//            for (pendingSuccessor in pendingSuccessors) {
+//                val successorVertexDescriptor = props.dataflowMatrix.verticesByLocation[pendingSuccessor]
+//                        ?: throw IllegalStateException()
+//
+//                val edgesToSuccessor = edgesLeadingTo(successorVertexDescriptor)
+//
+//                builder.addAll(edgesToSuccessor)
+//            }
+//        }
+//
+//        return builder
     }
 
 
@@ -201,40 +247,69 @@ class EdgeController(
     }
 
 
-    fun isEgressActive(
+    private fun isEgressActive(
+            coordinate: CellCoordinate,
             nextToRun: ObjectLocation,
-            edgesLeadingToNextToRun: Set<EdgeDescriptor>,
-            coordinate: CellCoordinate
+            edgesLeadingToNextToRun: Set<EdgeDescriptor>
     ): Boolean {
         if (edgesLeadingToNextToRun.any { it.coordinate == coordinate }) {
             return true
         }
 
-        return nextToRun ==
-                (props.dataflowMatrix.get(coordinate) as? VertexDescriptor)?.objectLocation
+        val vertexDescriptor = props.dataflowMatrix.get(coordinate) as? VertexDescriptor
+                ?: return false
+
+        return nextToRun == vertexDescriptor.objectLocation &&
+                props.visualDataflowModel.vertices[nextToRun]?.epoch == 0
     }
 
 
-    fun egressColor(
+    private fun isEgressAvailable(
+            coordinate: CellCoordinate,
+            edgesLeadingToNextToRun: Set<EdgeDescriptor>,
+            pendingWithAvailableMessage: Set<ObjectLocation>
+    ): Boolean {
+        if (edgesLeadingToNextToRun.any { it.coordinate == coordinate }) {
+            return true
+        }
+
+        val vertexDescriptor = props.dataflowMatrix.get(coordinate) as? VertexDescriptor
+                ?: return false
+
+        return vertexDescriptor.objectLocation in pendingWithAvailableMessage
+    }
+
+
+    private fun egressColor(
+            rowOffset: Int,
+            columnOffset: Int,
             nextToRun: ObjectLocation?,
             edgesLeadingToNextToRun: Set<EdgeDescriptor>,
-            rowOffset: Int,
-            columnOffset: Int
+            edgesAvailableToPending: Set<EdgeDescriptor>,
+            pendingWithAvailableMessage: Set<ObjectLocation>
     ): Color {
         if (nextToRun == null) {
             return Color.white
         }
 
         val coordinate = props.cellDescriptor.coordinate.offset(rowOffset, columnOffset)
-        val isActive = isEgressActive(nextToRun, edgesLeadingToNextToRun, coordinate)
-        return (
-            if (isActive) {
+
+        val isActive = isEgressActive(
+                coordinate, nextToRun, edgesLeadingToNextToRun)
+
+        val isEdgeMessageAvailable = isEgressAvailable(
+                coordinate, edgesAvailableToPending, pendingWithAvailableMessage)
+
+        return when {
+            isActive ->
                 Color.gold
-            }
-            else {
+
+            isEdgeMessageAvailable ->
+                Color.gold.lighten(90)
+
+            else ->
                 Color.white
-            }
-        )
+        }
     }
 
 
@@ -275,13 +350,21 @@ class EdgeController(
         val isEdgeSendingMessage =
                 props.cellDescriptor in edgesSendingMessages
 
-        val ingressAndCentreColor =
-                if (isEdgeSendingMessage) {
-                    Color.gold
-                }
-                else {
-                    Color.white
-                }
+        val pendingWithAvailableMessage = pendingWithAvailableMessage()
+        val edgesAvailableToPending = edgesAvailableToPending(pendingWithAvailableMessage)
+        val isEdgeMessageAvailable =
+                props.cellDescriptor in edgesAvailableToPending
+
+        val ingressAndCentreColor = when {
+            isEdgeSendingMessage ->
+                Color.gold
+
+            isEdgeMessageAvailable ->
+                Color.gold.lighten(90)
+
+            else ->
+                Color.white
+        }
 
         if (orientation.hasTop()) {
             child(TopIngress::class) {
@@ -309,7 +392,9 @@ class EdgeController(
                     renderIngressLeft(ingressAndCentreColor)
 
                 orientation.hasLeftEgress() -> {
-                    val edgeColor = egressColor(nextToRun, edgesSendingMessages, 0, -1)
+                    val edgeColor = egressColor(
+                            0, -1,
+                            nextToRun, edgesSendingMessages, edgesAvailableToPending, pendingWithAvailableMessage)
                     renderEgressLeft(edgeColor)
                 }
 
@@ -353,7 +438,9 @@ class EdgeController(
             }
 
             if (orientation.hasRightEgress()) {
-                val edgeColor = egressColor(nextToRun, edgesSendingMessages, 0, 1)
+                val edgeColor = egressColor(
+                        0, 1,
+                        nextToRun, edgesSendingMessages, edgesAvailableToPending, pendingWithAvailableMessage)
                 renderEgressRight(edgeColor)
             }
             else if (orientation.hasRightIngress()) {
@@ -362,7 +449,9 @@ class EdgeController(
         }
 
         if (orientation.hasBottom()) {
-            val edgeColor = egressColor(nextToRun, edgesSendingMessages, 1, 0)
+            val edgeColor = egressColor(
+                    1, 0,
+                    nextToRun, edgesSendingMessages, edgesAvailableToPending, pendingWithAvailableMessage)
             child(BottomEgress::class) {
                 attrs {
                     egressColor = edgeColor

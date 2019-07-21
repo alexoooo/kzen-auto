@@ -329,10 +329,10 @@ class VertexController(
         val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.mainOutputAttributeName)
 
         if (hasInput) {
-            renderInput(inputAttributes[0], isNextToRun, phase)
+            renderInput(inputAttributes[0], isNextToRun, visualVertexModel)
 
             if (inputAttributes.size > 1) {
-                renderAdditionalInputs(cardColor, inputAttributes, isNextToRun, phase)
+                renderAdditionalInputs(cardColor, inputAttributes, isNextToRun, visualVertexModel)
             }
         }
         else {
@@ -350,7 +350,12 @@ class VertexController(
 
             val egressColor = when {
                 isNextToRun ->
-                    Color.white
+                    if ((visualVertexModel?.epoch ?: 0) > 0) {
+                        cardColor
+                    }
+                    else {
+                        Color.white
+                    }
 
                 isSendingMessage ->
                     Color.gold
@@ -379,10 +384,11 @@ class VertexController(
     private fun RBuilder.renderInput(
             inputName: AttributeName,
             isNextToRun: Boolean,
-            phase: VisualVertexPhase?
+            visualVertexModel: VisualVertexModel?
     ) {
         val ingressColor =
-                if ((isNextToRun || phase == VisualVertexPhase.Running) &&
+                if ((visualVertexModel?.epoch ?: 0) == 0 &&
+                        (isNextToRun || visualVertexModel?.phase() == VisualVertexPhase.Running) &&
                         hasInputMessage(inputName)) {
                     Color.gold
                 }
@@ -403,7 +409,7 @@ class VertexController(
             cardColor: Color,
             inputAttributes: List<AttributeName>,
             isNextToRun: Boolean,
-            phase: VisualVertexPhase?
+            visualVertexModel: VisualVertexModel?
     ) {
         styledDiv {
             css {
@@ -434,7 +440,7 @@ class VertexController(
                     left = CellController.cellWidth.times(i).minus(1.5.em).minus(4.px)
                 }
 
-                renderInput(inputAttribute, isNextToRun, phase)
+                renderInput(inputAttribute, isNextToRun, visualVertexModel)
             }
         }
     }
