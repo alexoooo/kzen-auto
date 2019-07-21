@@ -132,11 +132,13 @@ class QueryRunController(
             return Phase.Empty
         }
 
-        if (ClientContext.visualDataflowLoop.isLooping(host)) {
-            return Phase.Looping
-        }
+        // NB: could be stale due to async
+        val isLooping = ClientContext.visualDataflowLoop.isLooping(host)
 
         if (visualDataflowModel.isRunning()) {
+            if (isLooping) {
+                return Phase.Looping
+            }
             return Phase.Running
         }
 
@@ -148,6 +150,10 @@ class QueryRunController(
         @Suppress("FoldInitializerAndIfToElvis")
         if (nextVertex == null) {
             return Phase.Done
+        }
+
+        if (isLooping) {
+            return Phase.Looping
         }
 
         if (visualDataflowModel.isInProgress()) {
@@ -176,7 +182,8 @@ class QueryRunController(
             ClientContext.visualDataflowManager.execute(
                     documentPath,
                     nextToRun,
-                    250
+                    0,
+                    150
             )
         }
     }

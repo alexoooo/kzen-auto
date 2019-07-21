@@ -108,27 +108,18 @@ class EdgeController(
     }
 
 
-    private fun edgesSendingMessages(
+    private fun pendingToRunVertexDescriptor(
             nextToRun: ObjectLocation
-    ): Set<EdgeDescriptor> {
+    ): VertexDescriptor? {
         val nextToRunVisualVertexModel = props.visualDataflowModel.vertices[nextToRun]
-                ?: return setOf()
+                ?: return null
 
         if (nextToRunVisualVertexModel.epoch > 0) {
-            return setOf()
+            return null
         }
 
         // NB: might be null when navigating to new document while running
-        @Suppress("MapGetWithNotNullAssertionOperator")
-        val nextToRunVertexDescriptor = props.dataflowMatrix.verticesByLocation[nextToRun]
-                ?: return setOf()
-
-        val edgesLeadingToNextToRun = edgesLeadingTo(nextToRunVertexDescriptor)
-
-        val edgesFlowingToPending = edgesFlowingToPending(
-                nextToRunVertexDescriptor)
-
-        return edgesLeadingToNextToRun + edgesFlowingToPending
+        return props.dataflowMatrix.verticesByLocation[nextToRun]
     }
 
 
@@ -280,11 +271,14 @@ class EdgeController(
     }
 
 
+    // TODO: refactor
     private fun egressColor(
             rowOffset: Int,
             columnOffset: Int,
+            isRunning: Boolean,
             nextToRun: ObjectLocation?,
             edgesLeadingToNextToRun: Set<EdgeDescriptor>,
+            edgesInFlightToPending: Set<EdgeDescriptor>,
             edgesAvailableToPending: Set<EdgeDescriptor>,
             pendingWithAvailableMessage: Set<ObjectLocation>
     ): Color {
@@ -294,15 +288,26 @@ class EdgeController(
 
         val coordinate = props.cellDescriptor.coordinate.offset(rowOffset, columnOffset)
 
-        val isActive = isEgressActive(
+        val isSending = isEgressActive(
                 coordinate, nextToRun, edgesLeadingToNextToRun)
+
+        val isInFlight = isEgressActive(
+                coordinate, nextToRun, edgesInFlightToPending)
 
         val isEdgeMessageAvailable = isEgressAvailable(
                 coordinate, edgesAvailableToPending, pendingWithAvailableMessage)
 
         return when {
-            isActive ->
-                Color.gold
+            isSending ->
+                if (isRunning) {
+                    Color.gold.lighten(25)
+                }
+                else {
+                    Color.gold
+                }
+
+            isInFlight ->
+                Color.gold.lighten(50)
 
             isEdgeMessageAvailable ->
                 Color.gold.lighten(90)
@@ -342,22 +347,38 @@ class EdgeController(
     private fun RBuilder.renderEdge() {
         val orientation = props.cellDescriptor.orientation
 
+        val isRunning = props.visualDataflowModel.isRunning()
         val nextToRun = nextToRun()
-        val edgesSendingMessages = nextToRun
-                ?.let { edgesSendingMessages(nextToRun) }
+        val pendingToRunVertexDescriptor = nextToRun?.let { pendingToRunVertexDescriptor(it) }
+
+        val edgesLeadingToNextToRun = pendingToRunVertexDescriptor
+                ?.let { edgesLeadingTo(it) }
                 ?: setOf()
 
-        val isEdgeSendingMessage =
-                props.cellDescriptor in edgesSendingMessages
+        val edgesInFlightToPending = pendingToRunVertexDescriptor
+                ?.let { edgesFlowingToPending(it) }
+                ?: setOf()
+
+//        val edgesSendingMessages = edgesLeadingToNextToRun + edgesInFlightToPending
+
+        val isEdgeSendingMessage = props.cellDescriptor in edgesLeadingToNextToRun
+        val isEdgeInFlightMessage = props.cellDescriptor in edgesInFlightToPending
 
         val pendingWithAvailableMessage = pendingWithAvailableMessage()
         val edgesAvailableToPending = edgesAvailableToPending(pendingWithAvailableMessage)
-        val isEdgeMessageAvailable =
-                props.cellDescriptor in edgesAvailableToPending
+        val isEdgeMessageAvailable = props.cellDescriptor in edgesAvailableToPending
 
         val ingressAndCentreColor = when {
             isEdgeSendingMessage ->
-                Color.gold
+                if (isRunning) {
+                    Color.gold.lighten(25)
+                }
+                else {
+                    Color.gold
+                }
+
+            isEdgeInFlightMessage ->
+                Color.gold.lighten(50)
 
             isEdgeMessageAvailable ->
                 Color.gold.lighten(90)
@@ -394,7 +415,12 @@ class EdgeController(
                 orientation.hasLeftEgress() -> {
                     val edgeColor = egressColor(
                             0, -1,
-                            nextToRun, edgesSendingMessages, edgesAvailableToPending, pendingWithAvailableMessage)
+                            isRunning,
+                            nextToRun,
+                            edgesLeadingToNextToRun,
+                            edgesInFlightToPending,
+                            edgesAvailableToPending,
+                            pendingWithAvailableMessage)
                     renderEgressLeft(edgeColor)
                 }
 
@@ -440,7 +466,12 @@ class EdgeController(
             if (orientation.hasRightEgress()) {
                 val edgeColor = egressColor(
                         0, 1,
-                        nextToRun, edgesSendingMessages, edgesAvailableToPending, pendingWithAvailableMessage)
+                        isRunning,
+                        nextToRun,
+                        edgesLeadingToNextToRun,
+                        edgesInFlightToPending,
+                        edgesAvailableToPending,
+                        pendingWithAvailableMessage)
                 renderEgressRight(edgeColor)
             }
             else if (orientation.hasRightIngress()) {
@@ -451,7 +482,12 @@ class EdgeController(
         if (orientation.hasBottom()) {
             val edgeColor = egressColor(
                     1, 0,
-                    nextToRun, edgesSendingMessages, edgesAvailableToPending, pendingWithAvailableMessage)
+                    isRunning,
+                    nextToRun,
+                    edgesLeadingToNextToRun,
+                    edgesInFlightToPending,
+                    edgesAvailableToPending,
+                    pendingWithAvailableMessage)
             child(BottomEgress::class) {
                 attrs {
                     egressColor = edgeColor

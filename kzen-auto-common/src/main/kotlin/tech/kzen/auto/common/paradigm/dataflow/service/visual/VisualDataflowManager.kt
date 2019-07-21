@@ -237,16 +237,17 @@ class VisualDataflowManager(
     suspend fun execute(
             host: DocumentPath,
             objectLocation: ObjectLocation,
+            waitBeforeRunningMillis: Int = 0,
             waitAfterRunningMillis: Int = 0
     ): VisualVertexTransition {
-        if (waitAfterRunningMillis > 0) {
-            delay(waitAfterRunningMillis.toLong() / 2)
+        if (waitBeforeRunningMillis > 0) {
+            delay(waitBeforeRunningMillis.toLong())
         }
 
         willExecute(host, objectLocation)
 
         if (waitAfterRunningMillis > 0) {
-            delay(waitAfterRunningMillis.toLong() / 2)
+            delay(waitAfterRunningMillis.toLong())
         }
 
         val visualVertexTransition = visualDataflowProvider

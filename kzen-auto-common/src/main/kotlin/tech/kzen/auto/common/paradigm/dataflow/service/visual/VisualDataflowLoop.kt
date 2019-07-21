@@ -97,7 +97,11 @@ class VisualDataflowLoop(
         // NB: break cycle, is there a cleaner way to do this?
         GlobalScope.async {
             // NB: this will trigger VisualDataflowManager.Observer onExecutionModel method above
-            visualDataflowManager.execute(host, next, delayMillis)
+            visualDataflowManager.execute(
+                    host,
+                    next,
+                    delayMillis / 2,
+                    delayMillis / 2)
         }
     }
 

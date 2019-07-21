@@ -273,6 +273,7 @@ class VertexController(
         val cellDescriptor = props.cellDescriptor
         val inputAttributes = DataflowWiring.findInputs(cellDescriptor.objectLocation, props.graphStructure)
 
+        val isRunning = props.visualDataflowModel.isRunning()
         val visualVertexModel = visualVertexModel()
         val phase = visualVertexModel?.phase()
         val nextToRun = DataflowUtils.next(
@@ -283,18 +284,15 @@ class VertexController(
         val isNextToRun = props.cellDescriptor.objectLocation == nextToRun
 
         val isSendingMessage =
-                isMessagePending()
-//                ! isNextToRun &&
-//                nextToRun != null &&
-//                visualVertexModel?.message != null &&
-//                props.cellDescriptor in props.dataflowMatrix.traceVertexBackFrom(nextToRun)
+                isMessagePending() &&
+                nextToRun != null &&
+                props.cellDescriptor in props.dataflowMatrix.traceVertexBackFrom(nextToRun)
 
         val cardColor = when {
             phase == VisualVertexPhase.Running ->
                 Color.gold
 
             isNextToRun ->
-//                Color.gold.lighten(75)
                 Color.gold.lighten(50)
 
             isSendingMessage ->
@@ -329,10 +327,10 @@ class VertexController(
         val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.mainOutputAttributeName)
 
         if (hasInput) {
-            renderInput(inputAttributes[0], isNextToRun, visualVertexModel)
+            renderInput(inputAttributes[0], isRunning, isNextToRun, visualVertexModel)
 
             if (inputAttributes.size > 1) {
-                renderAdditionalInputs(cardColor, inputAttributes, isNextToRun, visualVertexModel)
+                renderAdditionalInputs(cardColor, inputAttributes, isRunning, isNextToRun, visualVertexModel)
             }
         }
         else {
@@ -358,13 +356,18 @@ class VertexController(
                     }
 
                 isSendingMessage ->
-                    Color.gold
+                    if (isRunning) {
+                        Color.gold.lighten(25)
+                    }
+                    else {
+                        Color.gold
+                    }
 
                 phase == VisualVertexPhase.Running ->
                     Color.white
 
                 isMessagePending ->
-                    Color.gold
+                    Color.gold.lighten(50)
 
                 else ->
                     cardColor
@@ -383,6 +386,7 @@ class VertexController(
 
     private fun RBuilder.renderInput(
             inputName: AttributeName,
+            isRunning: Boolean,
             isNextToRun: Boolean,
             visualVertexModel: VisualVertexModel?
     ) {
@@ -390,7 +394,12 @@ class VertexController(
                 if ((visualVertexModel?.epoch ?: 0) == 0 &&
                         (isNextToRun || visualVertexModel?.phase() == VisualVertexPhase.Running) &&
                         hasInputMessage(inputName)) {
-                    Color.gold
+                    if (isRunning) {
+                        Color.gold.lighten(25)
+                    }
+                    else {
+                        Color.gold
+                    }
                 }
                 else {
                     Color.white
@@ -408,6 +417,7 @@ class VertexController(
     private fun RBuilder.renderAdditionalInputs(
             cardColor: Color,
             inputAttributes: List<AttributeName>,
+            isRunning: Boolean,
             isNextToRun: Boolean,
             visualVertexModel: VisualVertexModel?
     ) {
@@ -440,7 +450,7 @@ class VertexController(
                     left = CellController.cellWidth.times(i).minus(1.5.em).minus(4.px)
                 }
 
-                renderInput(inputAttribute, isNextToRun, visualVertexModel)
+                renderInput(inputAttribute, isRunning, isNextToRun, visualVertexModel)
             }
         }
     }
