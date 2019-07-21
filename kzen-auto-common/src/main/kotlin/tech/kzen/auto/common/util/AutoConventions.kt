@@ -12,6 +12,7 @@ object AutoConventions {
     val iconAttributePath = AttributePath.ofName(AttributeName("icon"))
     val titleAttributePath = AttributePath.ofName(AttributeName("title"))
     val descriptionAttributePath = AttributePath.ofName(AttributeName("description"))
+    val displayAttributePath = AttributePath.ofName(AttributeName("display"))
 
 
     const val anonymousPrefix = "__ANON__"
@@ -25,7 +26,8 @@ object AutoConventions {
     fun isManaged(attributeName: AttributeName): Boolean {
         return attributeName == iconAttributePath.attribute ||
                 attributeName == titleAttributePath.attribute ||
-                attributeName == descriptionAttributePath.attribute
+                attributeName == descriptionAttributePath.attribute ||
+                attributeName == displayAttributePath.attribute
     }
 
 

@@ -5,9 +5,8 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
-import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeNesting
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.structure.GraphStructure
@@ -19,11 +18,6 @@ class StepController(
         RPureComponent<StepController.Props, RState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        val displayAttributePath = AttributePath.ofName(AttributeName("display"))
-    }
-
-
     class Props(
             var stepDisplays: List<StepDisplayWrapper>,
 
@@ -51,10 +45,12 @@ class StepController(
         }
     }
 
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val displayWrapperName = ObjectName(
-                props.graphStructure.graphNotation.getString(props.objectLocation, displayAttributePath))
+                props.graphStructure.graphNotation.getString(
+                        props.objectLocation, AutoConventions.displayAttributePath))
 
         val displayWrapper = props.stepDisplays.find { it.name() == displayWrapperName }
                 ?: throw IllegalStateException("Step display not found: $displayWrapperName")

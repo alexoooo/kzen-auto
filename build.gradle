@@ -6,15 +6,17 @@ buildscript {
         }
         mavenCentral()
     }
+    
     dependencies {
         classpath group: 'org.jetbrains.kotlin', name: 'kotlin-gradle-plugin', version: kotlinVersion
         classpath group: 'com.moowork.gradle', name: 'gradle-node-plugin', version: nodePluginVersion
     }
 }
 
+
 subprojects {
     group = 'tech.kzen.auto'
-    version = '0.8.0'
+    version = '0.8.1'
 
     repositories {
         mavenLocal()
