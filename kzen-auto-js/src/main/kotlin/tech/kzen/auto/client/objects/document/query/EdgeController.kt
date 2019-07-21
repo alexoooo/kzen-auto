@@ -23,6 +23,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.query.QueryDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
@@ -50,7 +51,8 @@ class EdgeController(
             var attributeNesting: AttributeNesting,
             var graphStructure: GraphStructure,
             var visualDataflowModel: VisualDataflowModel,
-            var dataflowMatrix: DataflowMatrix
+            var dataflowMatrix: DataflowMatrix,
+            var dataflowDag: DataflowDag
     ): RProps
 
 
@@ -106,22 +108,83 @@ class EdgeController(
     }
 
 
-    private fun edgesLeadingToNextToRun(
+    private fun edgesSendingMessages(
             nextToRun: ObjectLocation
     ): Set<EdgeDescriptor> {
         // NB: might be null when navigating to new document while running
         @Suppress("MapGetWithNotNullAssertionOperator")
-        val targetVertexDescriptor = props.dataflowMatrix.verticesByLocation[nextToRun]
+        val nextToRunVertexDescriptor = props.dataflowMatrix.verticesByLocation[nextToRun]
                 ?: return setOf()
 
-        val visualVertexModel = props.visualDataflowModel.vertices[targetVertexDescriptor.objectLocation]!!
-        if (visualVertexModel.epoch != 0) {
-            return setOf()
+        val edgesLeadingToNextToRun = edgesLeadingTo(nextToRunVertexDescriptor)
+
+        val edgesFlowingToPending = edgesFlowingToPending(
+                nextToRunVertexDescriptor/*, edgesLeadingToNextToRun*/)
+
+        return edgesLeadingToNextToRun + edgesFlowingToPending
+    }
+
+
+    private fun edgesFlowingToPending(
+            nextToRun: VertexDescriptor
+    ): Set<EdgeDescriptor> {
+        val builder = mutableSetOf<EdgeDescriptor>()
+
+        for ((objectLocation, vertexVisualModel) in props.visualDataflowModel.vertices) {
+            if (vertexVisualModel.message == null) {
+                continue
+            }
+
+            val pendingSuccessors = pendingSuccessors(objectLocation)
+            if (nextToRun.objectLocation in pendingSuccessors) {
+                continue
+            }
+
+            for (pendingSuccessor in pendingSuccessors) {
+                val successorVertexDescriptor = props.dataflowMatrix.verticesByLocation[pendingSuccessor]
+                        ?: throw IllegalStateException()
+
+                val edgesToSuccessor = edgesLeadingTo(successorVertexDescriptor)
+
+                val successorsUpToNextToRun = edgesToSuccessor
+                        .filter { it.coordinate.row <= nextToRun.coordinate.row }
+
+                builder.addAll(successorsUpToNextToRun)
+            }
         }
 
+        return builder
+    }
+
+
+    private fun pendingSuccessors(
+            objectLocation: ObjectLocation
+    ): List<ObjectLocation> {
+        val successors = props.dataflowDag.successors[objectLocation]
+                ?: return listOf()
+
+        val builder = mutableListOf<ObjectLocation>()
+
+        for (successor in successors) {
+            val successorVisualVertexModel =
+                    props.visualDataflowModel.vertices[successor]
+                    ?: continue
+
+            if (successorVisualVertexModel.epoch == 0) {
+                builder.add(successor)
+            }
+        }
+
+        return builder
+    }
+
+
+    private fun edgesLeadingTo(
+            nextToRun: VertexDescriptor
+    ): Set<EdgeDescriptor> {
         val buffer = mutableSetOf<EdgeDescriptor>()
-        for ((i, inputName) in targetVertexDescriptor.inputNames.withIndex()) {
-            val sourceVertex = props.dataflowMatrix.traceVertexBackFrom(targetVertexDescriptor, inputName)
+        for ((i, inputName) in nextToRun.inputNames.withIndex()) {
+            val sourceVertex = props.dataflowMatrix.traceVertexBackFrom(nextToRun, inputName)
                     ?: continue
 
             val sourceVisualModel = props.visualDataflowModel.vertices[sourceVertex.objectLocation]
@@ -131,7 +194,7 @@ class EdgeController(
                 continue
             }
 
-            val leadingEdges = props.dataflowMatrix.traceEdgeBackFrom(targetVertexDescriptor, i)
+            val leadingEdges = props.dataflowMatrix.traceEdgeBackFrom(nextToRun, i)
             buffer.addAll(leadingEdges)
         }
         return buffer
@@ -205,15 +268,15 @@ class EdgeController(
         val orientation = props.cellDescriptor.orientation
 
         val nextToRun = nextToRun()
-        val edgesLeadingToNextToRun = nextToRun
-                ?.let { edgesLeadingToNextToRun(nextToRun) }
+        val edgesSendingMessages = nextToRun
+                ?.let { edgesSendingMessages(nextToRun) }
                 ?: setOf()
 
-        val isEdgePredecessorOfNextToRun =
-                props.cellDescriptor in edgesLeadingToNextToRun
+        val isEdgeSendingMessage =
+                props.cellDescriptor in edgesSendingMessages
 
         val ingressAndCentreColor =
-                if (isEdgePredecessorOfNextToRun) {
+                if (isEdgeSendingMessage) {
                     Color.gold
                 }
                 else {
@@ -246,7 +309,7 @@ class EdgeController(
                     renderIngressLeft(ingressAndCentreColor)
 
                 orientation.hasLeftEgress() -> {
-                    val edgeColor = egressColor(nextToRun, edgesLeadingToNextToRun, 0, -1)
+                    val edgeColor = egressColor(nextToRun, edgesSendingMessages, 0, -1)
                     renderEgressLeft(edgeColor)
                 }
 
@@ -290,7 +353,7 @@ class EdgeController(
             }
 
             if (orientation.hasRightEgress()) {
-                val edgeColor = egressColor(nextToRun, edgesLeadingToNextToRun, 0, 1)
+                val edgeColor = egressColor(nextToRun, edgesSendingMessages, 0, 1)
                 renderEgressRight(edgeColor)
             }
             else if (orientation.hasRightIngress()) {
@@ -299,7 +362,7 @@ class EdgeController(
         }
 
         if (orientation.hasBottom()) {
-            val edgeColor = egressColor(nextToRun, edgesLeadingToNextToRun, 1, 0)
+            val edgeColor = egressColor(nextToRun, edgesSendingMessages, 1, 0)
             child(BottomEgress::class) {
                 attrs {
                     egressColor = edgeColor

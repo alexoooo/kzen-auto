@@ -131,6 +131,7 @@ class CellController(
                     graphStructure = props.graphStructure
                     visualDataflowModel = props.visualDataflowModel
                     dataflowMatrix = props.dataflowMatrix
+                    dataflowDag = props.dataflowDag
                 }
             }
         }
