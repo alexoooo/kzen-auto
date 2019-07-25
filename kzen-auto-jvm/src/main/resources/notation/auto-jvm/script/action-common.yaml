@@ -62,6 +62,7 @@ ConditionalExpression:
   class: tech.kzen.auto.server.objects.script.control.ConditionalExpression
   icon: Share
   title: "If"
+  display: ConditionalStepDisplay
   meta:
     condition:
       is: ObjectLocation

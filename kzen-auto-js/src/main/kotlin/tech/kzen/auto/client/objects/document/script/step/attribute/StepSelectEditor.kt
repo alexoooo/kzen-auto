@@ -14,6 +14,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import kotlin.browser.document
 import kotlin.js.Json
 import kotlin.js.json
 
@@ -211,6 +212,10 @@ class StepSelectEditor(
                 val reactStyles = json()
                 reactStyles["control"] = styleTransformer
                 styles = reactStyles
+
+                // NB: this was causing clipping when used in ConditionalStepDisplay table,
+                //   see: https://react-select.com/advanced#portaling
+                menuPortalTarget = document.body!!
             }
         }
     }

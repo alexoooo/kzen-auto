@@ -1,20 +1,12 @@
 @file:JsModule("react-select")
 package tech.kzen.auto.client.wrap
 
+import org.w3c.dom.HTMLElement
 import react.Component
 import react.RProps
 import react.RState
 import react.ReactElement
 import kotlin.js.Json
-
-
-//@JsName("Select")
-//external class ReactSelect : Component<ReactSelectProps, RState> {
-//    override fun render(): ReactElement?
-//}
-//@JsModule("react-select")
-//@JsName("Select")
-//@JsName("SelectBase")
 
 
 // see: https://codesandbox.io/s/ly87zo23kl
@@ -38,6 +30,8 @@ external interface ReactSelectProps: RProps {
     var menuContainerStyle: Json
 
     var styles: Json
+
+    var menuPortalTarget: HTMLElement
 
 //    var id: String
 //    var variant: String

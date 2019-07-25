@@ -136,10 +136,6 @@ class StepHeader(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private fun onRun() {
-//        props.onRun()
-//    }
-
     private fun onRun() {
         async {
             ClientContext.executionManager.execute(
@@ -216,7 +212,6 @@ class StepHeader(
     private fun onOptionsClose() {
         setState {
             optionsOpen = false
-//            hoverCard = false
             hoverMenu = false
         }
     }
@@ -324,7 +319,6 @@ class StepHeader(
                 renderRunIcon(actionDescription)
             }
 
-
             styledDiv {
                 css {
                     position = Position.absolute
@@ -348,18 +342,12 @@ class StepHeader(
                 }
             }
 
-
             styledDiv {
                 css {
                     position = Position.absolute
                     height = headerHeight
                     width = 23.px
-
-//                    top = (-20).px
-//                    top = (-15).px
                     top = (-16).px
-
-//                    right = 0.px
                     right = 9.px
                 }
 
@@ -449,10 +437,6 @@ class StepHeader(
                 }
             }
 
-//            ref {
-//                buttonRef = it as? HTMLElement
-//            }
-
             child(MaterialIconButton::class) {
                 attrs {
                     title = "Options..."
@@ -478,11 +462,6 @@ class StepHeader(
 
             renderMenuItems()
         }
-
-//        // TODO: remove hack
-//        if (state.optionsOpen) {
-//            buttonRef = null
-//        }
     }
 
 

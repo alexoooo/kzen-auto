@@ -25,6 +25,7 @@ StepController:
 StepDisplay:
   abstract: true
   class: tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
+  attributeController: AttributeController
   meta:
     objectLocation:
       is: ObjectLocation
@@ -34,7 +35,11 @@ StepDisplay:
 DefaultStepDisplay:
   is: StepDisplay
   class: tech.kzen.auto.client.objects.document.script.step.display.DefaultStepDisplay$Wrapper
-  attributeController: AttributeController
+
+
+ConditionalStepDisplay:
+  is: StepDisplay
+  class: tech.kzen.auto.client.objects.document.script.step.display.ConditionalStepDisplay$Wrapper
 
 
 ################################################################

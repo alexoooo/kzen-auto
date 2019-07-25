@@ -33,6 +33,7 @@ import tech.kzen.lib.common.structure.metadata.model.ObjectMetadata
 import tech.kzen.lib.platform.IoUtils
 
 
+@Suppress("unused")
 class DefaultStepDisplay(
         props: Props
 ):
