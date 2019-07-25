@@ -692,30 +692,24 @@ class RestHandler {
 
 
     private fun readResource(relativePath: Path): ByteArray? {
+        // NB: moving up to help with auto-reload of js, TODO: this used to work below classPathRoots
+        for (root in resourceDirectories) {
+            val candidate = root.resolve(relativePath)
+            if (! Files.exists(candidate)) {
+                continue
+            }
+
+            return Files.readAllBytes(candidate)
+        }
+
         for (root in classPathRoots) {
             try {
                 val resourceLocation: URI = root.resolve(relativePath.toString())
                 val relativeResource = resourceLocation.path.substring(1)
-
-//                println("%%%%% looking at resource: $relativeResource")
                 val resourceUrl = Resources.getResource(relativeResource)
-                val body = Resources.toByteArray(resourceUrl)
-//                println("%%%%% read resource: relativePath")
-                return body
+                return Resources.toByteArray(resourceUrl)
             }
             catch (ignored: Exception) {}
-        }
-
-        for (root in resourceDirectories) {
-            val candidate = root.resolve(relativePath)
-            if (! Files.exists(candidate)) {
-//                println("%%%%% no file at: ${candidate.toAbsolutePath()}")
-                continue
-            }
-
-            val body = Files.readAllBytes(candidate)
-//            println("%%%%% read file: ${candidate.toAbsolutePath()}")
-            return body
         }
 
 //        println("%%%%% not read: $relativePath")

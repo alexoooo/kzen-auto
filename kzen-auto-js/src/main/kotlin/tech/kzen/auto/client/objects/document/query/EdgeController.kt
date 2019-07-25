@@ -310,6 +310,7 @@ class EdgeController(
                 }
                 else {
                     Color.gold
+//                    Color.green
                 }
 
             isInFlight ->
