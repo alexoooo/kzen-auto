@@ -27,6 +27,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
+import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDirection
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -239,42 +240,47 @@ class EdgeController(
 
 
     private fun isEgressActive(
-            coordinate: CellCoordinate,
+            edgeDirection: EdgeDirection,
+            offsetCoordinate: CellCoordinate,
             nextToRun: ObjectLocation,
-            edgesLeadingToNextToRun: Set<EdgeDescriptor>
+            edgesLeadingToActive: Set<EdgeDescriptor>
     ): Boolean {
-        if (edgesLeadingToNextToRun.any { it.coordinate == coordinate }) {
-            return true
+        val activeEdgeAtOffset = edgesLeadingToActive.find { it.coordinate == offsetCoordinate }
+        if (activeEdgeAtOffset != null) {
+            return activeEdgeAtOffset.orientation.hasIngress(edgeDirection.reverse())
         }
 
-        val vertexDescriptor = props.dataflowMatrix.get(coordinate) as? VertexDescriptor
+        val vertexDescriptor = props.dataflowMatrix.get(offsetCoordinate) as? VertexDescriptor
                 ?: return false
 
-        return nextToRun == vertexDescriptor.objectLocation &&
+        return edgeDirection == EdgeDirection.Bottom &&
+                nextToRun == vertexDescriptor.objectLocation &&
                 props.visualDataflowModel.vertices[nextToRun]?.epoch == 0
     }
 
 
     private fun isEgressAvailable(
-            coordinate: CellCoordinate,
+            edgeDirection: EdgeDirection,
+            offsetCoordinate: CellCoordinate,
             edgesLeadingToNextToRun: Set<EdgeDescriptor>,
             pendingWithAvailableMessage: Set<ObjectLocation>
     ): Boolean {
-        if (edgesLeadingToNextToRun.any { it.coordinate == coordinate }) {
-            return true
+        val nextToRunEdgeAtOffset = edgesLeadingToNextToRun.find { it.coordinate == offsetCoordinate }
+        if (nextToRunEdgeAtOffset != null) {
+            return nextToRunEdgeAtOffset.orientation.hasIngress(edgeDirection.reverse())
         }
 
-        val vertexDescriptor = props.dataflowMatrix.get(coordinate) as? VertexDescriptor
+        val vertexDescriptor = props.dataflowMatrix.get(offsetCoordinate) as? VertexDescriptor
                 ?: return false
 
-        return vertexDescriptor.objectLocation in pendingWithAvailableMessage
+        return edgeDirection == EdgeDirection.Bottom &&
+                vertexDescriptor.objectLocation in pendingWithAvailableMessage
     }
 
 
     // TODO: refactor
     private fun egressColor(
-            rowOffset: Int,
-            columnOffset: Int,
+            edgeDirection: EdgeDirection,
             isRunning: Boolean,
             nextToRun: ObjectLocation?,
             edgesLeadingToNextToRun: Set<EdgeDescriptor>,
@@ -286,16 +292,16 @@ class EdgeController(
             return Color.white
         }
 
-        val coordinate = props.cellDescriptor.coordinate.offset(rowOffset, columnOffset)
+        val coordinate = props.cellDescriptor.coordinate.offset(edgeDirection)
 
         val isSending = isEgressActive(
-                coordinate, nextToRun, edgesLeadingToNextToRun)
+                edgeDirection, coordinate, nextToRun, edgesLeadingToNextToRun)
 
         val isInFlight = isEgressActive(
-                coordinate, nextToRun, edgesInFlightToPending)
+                edgeDirection, coordinate, nextToRun, edgesInFlightToPending)
 
         val isEdgeMessageAvailable = isEgressAvailable(
-                coordinate, edgesAvailableToPending, pendingWithAvailableMessage)
+                edgeDirection, coordinate, edgesAvailableToPending, pendingWithAvailableMessage)
 
         return when {
             isSending ->
@@ -414,7 +420,7 @@ class EdgeController(
 
                 orientation.hasLeftEgress() -> {
                     val edgeColor = egressColor(
-                            0, -1,
+                            EdgeDirection.Left,
                             isRunning,
                             nextToRun,
                             edgesLeadingToNextToRun,
@@ -465,7 +471,7 @@ class EdgeController(
 
             if (orientation.hasRightEgress()) {
                 val edgeColor = egressColor(
-                        0, 1,
+                        EdgeDirection.Right,
                         isRunning,
                         nextToRun,
                         edgesLeadingToNextToRun,
@@ -481,7 +487,7 @@ class EdgeController(
 
         if (orientation.hasBottom()) {
             val edgeColor = egressColor(
-                    1, 0,
+                    EdgeDirection.Bottom,
                     isRunning,
                     nextToRun,
                     edgesLeadingToNextToRun,

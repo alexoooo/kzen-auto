@@ -19,6 +19,40 @@ enum class EdgeOrientation {
     RightToLeftAndBottom;
 
 
+    fun hasIngress(direction: EdgeDirection): Boolean {
+        return when (direction) {
+            EdgeDirection.Top ->
+                hasTop()
+
+            EdgeDirection.Right ->
+                hasRightIngress()
+
+            EdgeDirection.Bottom ->
+                false
+
+            EdgeDirection.Left ->
+                hasLeftIngress()
+        }
+    }
+
+
+    fun hasEgress(direction: EdgeDirection): Boolean {
+        return when (direction) {
+            EdgeDirection.Top ->
+                false
+
+            EdgeDirection.Right ->
+                hasRightEgress()
+
+            EdgeDirection.Bottom ->
+                hasBottom()
+
+            EdgeDirection.Left ->
+                hasLeftEgress()
+        }
+    }
+
+
     fun hasTop(): Boolean {
         return when (this) {
             TopToBottom ->

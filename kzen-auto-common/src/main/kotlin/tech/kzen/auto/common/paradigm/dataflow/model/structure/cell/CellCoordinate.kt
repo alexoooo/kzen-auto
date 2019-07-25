@@ -55,6 +55,10 @@ data class CellCoordinate(
     }
 
 
+    fun offset(edgeDirection: EdgeDirection): CellCoordinate {
+        return offset(edgeDirection.rowOffset, edgeDirection.columnOffset)
+    }
+
     fun offset(rows: Int, columns: Int): CellCoordinate {
         return CellCoordinate(row + rows, column + columns)
     }
