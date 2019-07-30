@@ -63,19 +63,21 @@ ConditionalExpression:
   icon: Share
   title: "If"
   display: ConditionalStepDisplay
+  then: []
+  else: []
   meta:
     condition:
       is: ObjectLocation
       by: Nominal
       editor: SelectStepEditor
     then:
-      is: ObjectLocation
+      is: List
+      of: ObjectLocation
       by: Nominal
-      editor: SelectStepEditor
     else:
-      is: ObjectLocation
+      is: List
+      of: ObjectLocation
       by: Nominal
-      editor: SelectStepEditor
 
 
 ################################################################

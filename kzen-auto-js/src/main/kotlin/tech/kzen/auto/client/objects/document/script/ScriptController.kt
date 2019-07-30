@@ -191,14 +191,14 @@ class ScriptController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onSelected(action: ObjectLocation) {
+    override fun onInsertionSelected(action: ObjectLocation) {
         setState {
             creating = true
         }
     }
 
 
-    override fun onUnselected() {
+    override fun onInsertionUnselected() {
         setState {
             creating = false
         }
@@ -366,7 +366,8 @@ class ScriptController:
 
                 val keyLocation = ObjectLocation(documentPath, objectPath)
 
-                action(index,
+                renderStep(
+                        index,
                         keyLocation,
                         graphStructure,
                         executionState)
@@ -456,7 +457,7 @@ class ScriptController:
     }
 
 
-    private fun RBuilder.action(
+    private fun RBuilder.renderStep(
             index: Int,
             objectLocation: ObjectLocation,
             graphStructure: GraphStructure,

@@ -6,9 +6,8 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 class InsertionManager {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
-        fun onSelected(action: ObjectLocation)
-//        fun onInserted(auto-jvm: ObjectLocation)
-        fun onUnselected()
+        fun onInsertionSelected(action: ObjectLocation)
+        fun onInsertionUnselected()
     }
 
 
@@ -34,7 +33,7 @@ class InsertionManager {
         selected = action
 
         for (observer in subscribers) {
-            observer.onSelected(action)
+            observer.onInsertionSelected(action)
         }
     }
 
@@ -43,7 +42,7 @@ class InsertionManager {
         selected = null
 
         for (observer in subscribers) {
-            observer.onUnselected()
+            observer.onInsertionUnselected()
         }
     }
 

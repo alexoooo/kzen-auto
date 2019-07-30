@@ -183,7 +183,7 @@ class QueryRunController(
                     documentPath,
                     nextToRun,
                     0,
-                    150
+                    200
             )
         }
     }

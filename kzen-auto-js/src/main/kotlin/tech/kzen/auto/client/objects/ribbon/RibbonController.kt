@@ -81,7 +81,7 @@ class RibbonController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onSelected(action: ObjectLocation) {
+    override fun onInsertionSelected(action: ObjectLocation) {
         setState {
 //            name = NameConventions.randomAnonymous()
             type = action
@@ -89,7 +89,7 @@ class RibbonController(
     }
 
 
-    override fun onUnselected() {
+    override fun onInsertionUnselected() {
         setState {
             type = null
         }

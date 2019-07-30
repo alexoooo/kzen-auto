@@ -185,14 +185,14 @@ class QueryController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onSelected(action: ObjectLocation) {
+    override fun onInsertionSelected(action: ObjectLocation) {
         setState {
             creating = true
         }
     }
 
 
-    override fun onUnselected() {
+    override fun onInsertionUnselected() {
         setState {
             creating = false
         }

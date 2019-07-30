@@ -12,7 +12,8 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 class VisualDataflowLoop(
         private val graphStructureManager: GraphStructureManager,
         private val visualDataflowManager: VisualDataflowManager,
-        private val delayMillis: Int = 0
+        private val delayBeforeRunningMillis: Int,
+        private val delayAfterRunningMillis: Int
 ):
         VisualDataflowManager.Observer
 {
@@ -100,8 +101,8 @@ class VisualDataflowLoop(
             visualDataflowManager.execute(
                     host,
                     next,
-                    delayMillis / 2,
-                    delayMillis / 2)
+                    delayBeforeRunningMillis,
+                    delayAfterRunningMillis)
         }
     }
 

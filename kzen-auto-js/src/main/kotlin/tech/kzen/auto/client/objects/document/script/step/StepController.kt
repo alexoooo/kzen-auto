@@ -30,10 +30,15 @@ class StepController(
 
     @Suppress("unused")
     class Wrapper(
-            private val stepDisplays: List<StepDisplayWrapper>
+            private val stepDisplays: List<StepDisplayWrapper>,
+            handle: Handle
     ):
             ReactWrapper<Props>
     {
+        init {
+            handle.wrapper = this
+        }
+
         override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
             return input.child(StepController::class) {
                 attrs {
@@ -43,6 +48,14 @@ class StepController(
                 handler()
             }
         }
+    }
+
+
+    /**
+     * NB: lazy reference to avoid loop
+     */
+    class Handle {
+        var wrapper: Wrapper? = null
     }
 
 

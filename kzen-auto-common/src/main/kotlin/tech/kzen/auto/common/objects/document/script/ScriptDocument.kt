@@ -2,6 +2,7 @@ package tech.kzen.auto.common.objects.document.script
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
@@ -15,6 +16,7 @@ class ScriptDocument(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val stepsAttributePath = AttributePath.parse("steps")
+        val stepsAttributeName = AttributeName("steps")
+        val stepsAttributePath = AttributePath.ofName(stepsAttributeName)
     }
 }

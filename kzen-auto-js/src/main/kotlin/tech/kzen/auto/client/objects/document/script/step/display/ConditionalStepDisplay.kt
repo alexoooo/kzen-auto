@@ -8,15 +8,19 @@ import react.RBuilder
 import react.RHandler
 import react.RState
 import react.ReactElement
+import react.dom.br
 import react.dom.td
 import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributeController
+import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.wrap.ArrowForwardIcon
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 
@@ -40,6 +44,7 @@ class ConditionalStepDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var attributeController: AttributeController.Wrapper,
+            var stepControllerHandle: StepController.Handle,
 
             graphStructure: GraphStructure,
             objectLocation: ObjectLocation,
@@ -53,7 +58,8 @@ class ConditionalStepDisplay(
     @Suppress("unused")
     class Wrapper(
             objectLocation: ObjectLocation,
-            private val attributeController: AttributeController.Wrapper
+            private val attributeController: AttributeController.Wrapper,
+            private val stepControllerHandle: StepController.Handle
     ):
             StepDisplayWrapper(objectLocation)
     {
@@ -64,6 +70,7 @@ class ConditionalStepDisplay(
             return input.child(ConditionalStepDisplay::class) {
                 attrs {
                     this.attributeController = this@Wrapper.attributeController
+                    this.stepControllerHandle = this@Wrapper.stepControllerHandle
                 }
 
                 handler()
@@ -118,7 +125,11 @@ class ConditionalStepDisplay(
 
                         renderCondition()
                     }
-                    td {
+                    styledTd {
+                        css {
+//                            borderWidth = 1.px
+//                            borderStyle = BorderStyle.solid
+                        }
                         renderThenBranch()
                     }
                 }
@@ -195,18 +206,42 @@ class ConditionalStepDisplay(
     private fun RBuilder.renderThenBranch() {
         styledDiv {
             css {
-                width = 10.em
+//                width = 30.em
                 marginBottom = overlapTop
             }
 
-            +"Then"
-            child(ArrowForwardIcon::class) {}
+            styledDiv {
+                css {
+                    width = 10.em
+                    display = Display.inlineBlock
+                }
 
-            props.attributeController.child(this) {
-                attrs {
-                    this.graphStructure = props.graphStructure
-                    this.objectLocation = props.objectLocation
-                    this.attributeName = thenAttributeName
+                +"Then"
+                br {}
+                child(ArrowForwardIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+                    }
+                }
+            }
+
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+                    marginTop = (-4.5).em
+                }
+
+                child(ConditionalBranchDisplay::class) {
+                    attrs {
+                        branchAttributePath = AttributePath.ofName(thenAttributeName)
+
+                        this.stepController = props.stepControllerHandle.wrapper!!
+                        this.graphStructure = props.graphStructure
+                        this.objectLocation = props.objectLocation
+                        this.imperativeState = props.imperativeState
+                    }
                 }
             }
         }

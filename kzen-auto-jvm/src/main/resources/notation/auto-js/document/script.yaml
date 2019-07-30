@@ -12,11 +12,16 @@ ScriptController:
 
 StepController:
   class: tech.kzen.auto.client.objects.document.script.step.StepController$Wrapper
+  handle: StepControllerHandle
   meta:
     stepDisplays:
       is: List
       of: StepDisplay
       by: Autowired
+
+
+StepControllerHandle:
+  class: tech.kzen.auto.client.objects.document.script.step.StepController$Handle
 
 
 ################################################################
@@ -40,6 +45,7 @@ DefaultStepDisplay:
 ConditionalStepDisplay:
   is: StepDisplay
   class: tech.kzen.auto.client.objects.document.script.step.display.ConditionalStepDisplay$Wrapper
+  stepControllerHandle: StepControllerHandle
 
 
 ################################################################
