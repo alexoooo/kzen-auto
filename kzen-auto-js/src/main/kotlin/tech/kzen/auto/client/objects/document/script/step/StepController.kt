@@ -61,6 +61,8 @@ class StepController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+//        +">> ${props.objectLocation.asString()}"
+
         val displayWrapperName = ObjectName(
                 props.graphStructure.graphNotation.getString(
                         props.objectLocation, AutoConventions.displayAttributePath))

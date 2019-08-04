@@ -15,7 +15,6 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.util.AutoConventions
@@ -23,7 +22,6 @@ import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.ShiftInAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
@@ -36,7 +34,6 @@ class StepHeader(
         RPureComponent<StepHeader.Props, StepHeader.State>(props),
         ExecutionIntent.Observer
 {
-
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         const val defaultRunIcon = "PlayArrowIcon"
@@ -55,6 +52,8 @@ class StepHeader(
             var hoverSignal: HoverSignal,
 
             var attributeNesting: AttributeNesting,
+//            var attributePath: AttributePath,
+
             var objectLocation: ObjectLocation,
             var graphStructure: GraphStructure,
 
@@ -226,16 +225,19 @@ class StepHeader(
 
     private fun onRemove() {
         performOption {
-            val scriptMain = ObjectLocation(
-                    props.objectLocation.documentPath,
-                    NotationConventions.mainObjectPath)
+//            val scriptMain = ObjectLocation(
+//                    props.objectLocation.documentPath,
+//                    NotationConventions.mainObjectPath)
 
-            val objectAttributePath = AttributePath(
-                    ScriptDocument.stepsAttributePath.attribute,
-                    props.attributeNesting)
+            val containingObjectLocation = props.objectLocation.parent()!!
+            val objectAttributePath = attributePathInContainer()
+//            val objectAttributePath = AttributePath(
+//                    ScriptDocument.stepsAttributePath.attribute,
+//                    props.attributeNesting)
 
             ClientContext.commandBus.apply(RemoveObjectInAttributeCommand(
-                    scriptMain, objectAttributePath))
+                    containingObjectLocation, objectAttributePath))
+//                    scriptMain, props.attributePath))
         }
     }
 
@@ -261,20 +263,27 @@ class StepHeader(
             // NB: makes onOptionsClose take effect faster
 //            delay(1)
 
-            val scriptMain = ObjectLocation(
-                    props.objectLocation.documentPath,
-                    NotationConventions.mainObjectPath)
+//            val scriptMain = ObjectLocation(
+//                    props.objectLocation.documentPath,
+//                    NotationConventions.mainObjectPath)
+//
+//            val objectAttributePath = AttributePath(
+//                    ScriptDocument.stepsAttributePath.attribute,
+//                    props.attributeNesting)
 
-            val objectAttributePath = AttributePath(
-                    ScriptDocument.stepsAttributePath.attribute,
-                    props.attributeNesting)
+            val containingObjectLocation = props.objectLocation.parent()!!
+            val objectAttributePath = attributePathInContainer()
 
-            val index = props.attributeNesting.segments.last().asIndex()!!
+//            val index = props.attributeNesting.segments.last().asIndex()!!
+            val index =
+//                    props.attributePath.nesting.segments.last().asIndex()!!
+                    props.attributeNesting.segments.last().asIndex()!!
 //            console.log("^^^^ onShift", index, offset, props.attributeNesting)
 
             ClientContext.commandBus.apply(ShiftInAttributeCommand(
-                    scriptMain,
+                    containingObjectLocation,
                     objectAttributePath,
+//                    props.attributePath,
                     PositionIndex(index + offset)))
         }
     }
@@ -293,8 +302,58 @@ class StepHeader(
     }
 
 
+    private fun attributePathInContainer(): AttributePath {
+        val containingAttribute = props.objectLocation.objectPath.nesting.segments.last().attributePath
+        return AttributePath(
+                containingAttribute.attribute,
+                containingAttribute.nesting.push(props.attributeNesting))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+//        fun parent(): ObjectPath? {
+//            if (segments.isEmpty()) {
+//                return null
+//            }
+//
+//            val leadingSegments = segments.subList(0, segments.size - 2)
+//            val lastSegment = segments.last()
+//
+//            return ObjectPath(
+//                    lastSegment.objectName,
+//                    ObjectNesting(leadingSegments.toPersistentList())
+//            )
+//        }
+
+//        val nestingSegments = props.objectLocation.objectPath.nesting.segments
+//        val lastSegment = nestingSegments.last()
+//        val leadingSegments = nestingSegments.subList(0, nestingSegments.size - 1)
+//        val containingObjectPath = ObjectPath(
+//                lastSegment.objectName,
+//                ObjectNesting(leadingSegments)
+//        )
+//        +"$$ ${containingObjectPath}"
+
+//        val containingObjectLocation = props.objectLocation.parent()!!
+//        val objectAttributePath = attributePathInContainer()
+
+//        val containingAttribute = props.objectLocation.objectPath.nesting.segments.last().attributePath
+//        val objectAttributePath = AttributePath(
+//                containingAttribute.attribute,
+//                containingAttribute.nesting.push(props.attributeNesting))
+
+//        props.objectLocation.objectPath.nesting.segments.last().attributePath
+
+//        +"^^ ${containingObjectLocation} | ${objectAttributePath}"
+//        +"!! ${props.objectLocation.objectPath.nesting.segments.last().attributePath} | "
+//        +"!! ${objectAttributePath} | "
+//
+//        val parentObjectPath = props.objectLocation.objectPath.nesting.parent()!!
+//        val parentObjectLocation = ObjectLocation(props.objectLocation.documentPath, parentObjectPath)
+//
+//        +"${parentObjectLocation}"
+
         val actionDescription = props.graphStructure.graphNotation
                 .transitiveAttribute(props.objectLocation, AutoConventions.descriptionAttributePath)
                 ?.asString()
@@ -357,7 +416,6 @@ class StepHeader(
     }
 
 
-
     private fun RBuilder.renderRunIcon(
             actionDescription: String
     ) {
@@ -412,7 +470,6 @@ class StepHeader(
             }
         }
     }
-
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -380,7 +380,9 @@ class ConditionalBranchDisplay(
 
             props.stepController.child(this) {
                 attrs {
+
                     attributeNesting = AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index)))
+
                     this.objectLocation = stepLocation
                     this.graphStructure = props.graphStructure
                     imperativeState = props.imperativeState
