@@ -225,19 +225,11 @@ class StepHeader(
 
     private fun onRemove() {
         performOption {
-//            val scriptMain = ObjectLocation(
-//                    props.objectLocation.documentPath,
-//                    NotationConventions.mainObjectPath)
-
             val containingObjectLocation = props.objectLocation.parent()!!
             val objectAttributePath = attributePathInContainer()
-//            val objectAttributePath = AttributePath(
-//                    ScriptDocument.stepsAttributePath.attribute,
-//                    props.attributeNesting)
 
             ClientContext.commandBus.apply(RemoveObjectInAttributeCommand(
                     containingObjectLocation, objectAttributePath))
-//                    scriptMain, props.attributePath))
         }
     }
 
@@ -262,14 +254,6 @@ class StepHeader(
         performOption {
             // NB: makes onOptionsClose take effect faster
 //            delay(1)
-
-//            val scriptMain = ObjectLocation(
-//                    props.objectLocation.documentPath,
-//                    NotationConventions.mainObjectPath)
-//
-//            val objectAttributePath = AttributePath(
-//                    ScriptDocument.stepsAttributePath.attribute,
-//                    props.attributeNesting)
 
             val containingObjectLocation = props.objectLocation.parent()!!
             val objectAttributePath = attributePathInContainer()
@@ -312,46 +296,6 @@ class StepHeader(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-//        fun parent(): ObjectPath? {
-//            if (segments.isEmpty()) {
-//                return null
-//            }
-//
-//            val leadingSegments = segments.subList(0, segments.size - 2)
-//            val lastSegment = segments.last()
-//
-//            return ObjectPath(
-//                    lastSegment.objectName,
-//                    ObjectNesting(leadingSegments.toPersistentList())
-//            )
-//        }
-
-//        val nestingSegments = props.objectLocation.objectPath.nesting.segments
-//        val lastSegment = nestingSegments.last()
-//        val leadingSegments = nestingSegments.subList(0, nestingSegments.size - 1)
-//        val containingObjectPath = ObjectPath(
-//                lastSegment.objectName,
-//                ObjectNesting(leadingSegments)
-//        )
-//        +"$$ ${containingObjectPath}"
-
-//        val containingObjectLocation = props.objectLocation.parent()!!
-//        val objectAttributePath = attributePathInContainer()
-
-//        val containingAttribute = props.objectLocation.objectPath.nesting.segments.last().attributePath
-//        val objectAttributePath = AttributePath(
-//                containingAttribute.attribute,
-//                containingAttribute.nesting.push(props.attributeNesting))
-
-//        props.objectLocation.objectPath.nesting.segments.last().attributePath
-
-//        +"^^ ${containingObjectLocation} | ${objectAttributePath}"
-//        +"!! ${props.objectLocation.objectPath.nesting.segments.last().attributePath} | "
-//        +"!! ${objectAttributePath} | "
-//
-//        val parentObjectPath = props.objectLocation.objectPath.nesting.parent()!!
-//        val parentObjectLocation = ObjectLocation(props.objectLocation.documentPath, parentObjectPath)
-//
 //        +"${parentObjectLocation}"
 
         val actionDescription = props.graphStructure.graphNotation

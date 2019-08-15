@@ -269,18 +269,41 @@ class ConditionalStepDisplay(
     private fun RBuilder.renderElseBranch() {
         styledDiv {
             css {
-                width = 10.em
                 marginBottom = overlapTop.times(2)
             }
 
-            +"Else"
-            child(ArrowForwardIcon::class) {}
+            styledDiv {
+                css {
+                    width = 10.em
+                    display = Display.inlineBlock
+                }
 
-            props.attributeController.child(this) {
-                attrs {
-                    this.graphStructure = props.graphStructure
-                    this.objectLocation = props.objectLocation
-                    this.attributeName = elseAttributeName
+                +"Else"
+                br {}
+                child(ArrowForwardIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+                    }
+                }
+            }
+
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+                    marginTop = (-4.5).em
+                }
+
+                child(ConditionalBranchDisplay::class) {
+                    attrs {
+                        branchAttributePath = AttributePath.ofName(elseAttributeName)
+
+                        this.stepController = props.stepControllerHandle.wrapper!!
+                        this.graphStructure = props.graphStructure
+                        this.objectLocation = props.objectLocation
+                        this.imperativeState = props.imperativeState
+                    }
                 }
             }
         }

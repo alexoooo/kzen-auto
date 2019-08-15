@@ -6,11 +6,11 @@ sealed class ControlTransition
 object EvaluateControlTransition : ControlTransition()
 
 
-class InternalExecutionTransition(
-        index: Int
+data class InternalExecutionTransition(
+        val index: Int
 ) : ControlTransition()
 
 
-class BranchExecutionTransition(
-        index: Int
+data class BranchExecutionTransition(
+        val index: Int
 ) : ControlTransition()

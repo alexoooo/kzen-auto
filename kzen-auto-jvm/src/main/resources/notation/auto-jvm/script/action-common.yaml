@@ -74,10 +74,12 @@ ConditionalExpression:
       is: List
       of: ObjectLocation
       by: Nominal
+      branch: 0
     else:
       is: List
       of: ObjectLocation
       by: Nominal
+      branch: 1
 
 
 ################################################################

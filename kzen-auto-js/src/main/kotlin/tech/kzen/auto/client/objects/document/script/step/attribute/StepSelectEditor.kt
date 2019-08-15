@@ -5,11 +5,11 @@ import kotlinx.css.fontSize
 import react.*
 import tech.kzen.auto.client.objects.document.common.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
-import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTree
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.structure.notation.edit.*
@@ -152,10 +152,10 @@ class StepSelectEditor(
 
 
     private fun predecessors(): List<ObjectLocation> {
-        val stepLocations = ScriptController.stepLocations(
-                props.graphStructure, props.objectLocation.documentPath)!!
+        val steps = ControlTree.readSteps(
+                props.graphStructure, props.objectLocation.documentPath)
 
-        return stepLocations.takeWhile { it != props.objectLocation }
+        return steps.predecessors(props.objectLocation)
     }
 
 
