@@ -117,12 +117,14 @@ class StepHeader(
 
     override fun componentDidMount() {
         props.hoverSignal.attach(this)
+        ClientContext.executionIntent.observe(this)
     }
 
 
     override fun componentWillUnmount() {
         props.hoverSignal.detach()
         optionCompletedTime = null
+        ClientContext.executionIntent.unobserve(this)
     }
 
 
@@ -297,6 +299,7 @@ class StepHeader(
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
 //        +"${parentObjectLocation}"
+//        +"state.intentToRun ${state.intentToRun}"
 
         val actionDescription = props.graphStructure.graphNotation
                 .transitiveAttribute(props.objectLocation, AutoConventions.descriptionAttributePath)

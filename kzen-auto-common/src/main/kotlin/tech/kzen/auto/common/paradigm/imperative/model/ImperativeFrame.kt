@@ -74,52 +74,18 @@ data class ImperativeFrame(
         val addedAtNewName = removedAtOldName.put(newNamePath, state)
 
         return copy(states = addedAtNewName)
-//        val renamed = mutableMapOf<ObjectPath, ExecutionState>()
-//        for (e in states) {
-//            val key =
-//                    if (e.key == from) {
-//                        from.copy(name = newName)
-//                    }
-//                    else {
-//                        e.key
-//                    }
-//
-//            renamed[key] = e.value
-//        }
-//
-//        states.clear()
-//        states.putAll(renamed)
-//
-//        return true
     }
 
 
-    fun add(objectPath: ObjectPath/*, index: Int*/): ImperativeFrame {
+    fun add(objectPath: ObjectPath, state: ImperativeState): ImperativeFrame {
         check(objectPath !in states) { "Already present: $objectPath" }
 
         return copy(states = states.put(
-                objectPath, ImperativeState.initial))
-//        val added = mutableMapOf<ObjectPath, ExecutionState>()
-//
-//        for ((i, entry) in states.entries.withIndex()) {
-//            if (i == index) {
-//                added[objectPath] = ExecutionState.initial
-//            }
-//            added[entry.key] = entry.value
-//        }
-//
-//        if (added.size == states.size) {
-//            added[objectPath] = ExecutionState.initial
-//        }
-//
-//        states.clear()
-//        states.putAll(added)
+                objectPath, state))
     }
 
 
     fun remove(objectPath: ObjectPath): ImperativeFrame {
-//        val previous = states.remove(objectPath)
-//        return previous != null
         return copy(states = states.remove(objectPath))
     }
 }

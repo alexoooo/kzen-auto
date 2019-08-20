@@ -10,6 +10,7 @@ sealed class ImperativeResult {
         const val errorKey = "error"
         const val valueKey = "value"
         const val detailKey = "detail"
+//        const val transitionKey = "transition"
 
         @Suppress("UNCHECKED_CAST")
         fun fromCollection(collection: Map<String, Any?>): ImperativeResult {
@@ -72,3 +73,17 @@ data class ImperativeSuccess(
     }
 }
 
+
+//data class ImperativeTransition(
+//        val transition: ControlTransition
+//): ImperativeResult() {
+//    override fun toCollection(): Map<String, Any?> {
+//        return mapOf(
+//                transitionKey to errorMessage
+//        )
+//    }
+//
+//    override fun digest(): Digest {
+//        return Digest.ofXoShiRo256StarStar(transition.toString())
+//    }
+//}

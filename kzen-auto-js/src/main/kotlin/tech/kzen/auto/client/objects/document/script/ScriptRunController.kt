@@ -74,7 +74,7 @@ class ScriptRunController(
         }
 
         if (! executionModel.containsStatus(ImperativePhase.Running)) {
-            val next = ImperativeUtils.next(props.structure!!.graphNotation, executionModel)
+            val next = ImperativeUtils.next(props.structure!!, executionModel)
             if (next == null &&
                     ClientContext.executionLoop.running(host)) {
 //                console.log("!@#!#!@#!@#!@ onExecutionModel - pause at end")
@@ -189,7 +189,7 @@ class ScriptRunController(
             return Phase.Running
         }
 
-        ImperativeUtils.next(props.structure!!.graphNotation, executionModel)
+        ImperativeUtils.next(props.structure!!, executionModel)
                 ?: return Phase.Done
 
         if (executionModel.containsStatus(ImperativePhase.Success) ||
@@ -252,7 +252,7 @@ class ScriptRunController(
     private fun onFabEnter() {
 //        val nextToRun = state.execution?.next()
         val nextToRun = props.execution?.let {
-            ImperativeUtils.next(props.structure!!.graphNotation, it)
+            ImperativeUtils.next(props.structure!!, it)
         }
         if (nextToRun == ClientContext.executionIntent.actionLocation()) {
             return
@@ -268,7 +268,7 @@ class ScriptRunController(
     private fun onFabLeave() {
 //        val nextToRun = state.execution?.next()
         val nextToRun = props.execution?.let {
-            ImperativeUtils.next(props.structure!!.graphNotation, it)
+            ImperativeUtils.next(props.structure!!, it)
         }
 //        println("^$%^$%^% onRunAllLeave - $nextToRun")
         if (nextToRun != null) {

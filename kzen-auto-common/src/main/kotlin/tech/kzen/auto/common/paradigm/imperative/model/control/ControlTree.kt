@@ -99,6 +99,17 @@ data class BranchControlNode(
     }
 
 
+    fun traverseDepthFirst(visitor: (ObjectLocation) -> Unit) {
+        for (node in nodes) {
+            visitor.invoke(node.step)
+
+            for (branch in node.branches) {
+                branch.traverseDepthFirst(visitor)
+            }
+        }
+    }
+
+
     fun contains(target: ObjectLocation): Boolean {
         for (node in nodes) {
             if (node.step == target) {

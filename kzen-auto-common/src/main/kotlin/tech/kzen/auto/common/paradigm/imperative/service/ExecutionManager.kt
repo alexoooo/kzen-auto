@@ -1,16 +1,15 @@
 package tech.kzen.auto.common.paradigm.imperative.service
 
 import kotlinx.coroutines.delay
-import tech.kzen.auto.common.objects.document.script.ScriptDocument
+import tech.kzen.auto.common.paradigm.imperative.api.ControlFlow
 import tech.kzen.auto.common.paradigm.imperative.model.*
+import tech.kzen.auto.common.paradigm.imperative.model.control.*
 import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.*
-import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.persistentListOf
@@ -100,18 +99,11 @@ class ExecutionManager(
             return
         }
 
-        // NB: avoid concurrent modification for DeletedDocumentEvent handling
-//        val modelHosts = models.keys.toList()
-
         for (host in models.keys) {
-//            val model = modelOrInit(host)
-
-//            val model = models[host]!!
-            val newModels = apply(host, /*model,*/ event)
+            val newModels = apply(host, event, graphStructure)
 
             if (models != newModels) {
                 models = newModels
-//                publishExecutionModel(host, models[host]!!)
                 if (host in models) {
                     publishExecutionModel(host, models[host]!!)
                 }
@@ -122,14 +114,15 @@ class ExecutionManager(
 
     private fun apply(
             documentPath: DocumentPath,
-            event: NotationEvent
+            event: NotationEvent,
+            graphStructure: GraphStructure
     ): PersistentMap<DocumentPath, ImperativeModel> {
         return when (event) {
             is SingularNotationEvent ->
-                applySingular(documentPath, models, event)
+                applySingular(documentPath, models, event, graphStructure)
 
             is CompoundNotationEvent -> {
-                applyCompound(documentPath, event)
+                applyCompound(documentPath, event ,graphStructure)
             }
         }
     }
@@ -137,7 +130,8 @@ class ExecutionManager(
 
     private fun applyCompound(
             documentPath: DocumentPath,
-            event: CompoundNotationEvent
+            event: CompoundNotationEvent,
+            graphStructure: GraphStructure
     ): PersistentMap<DocumentPath, ImperativeModel> {
         val model = models[documentPath]!!
         val appliedWithDependentEvents = applyCompoundWithDependentEvents(
@@ -148,7 +142,7 @@ class ExecutionManager(
 
         var builder = models
         for (singularEvent in event.singularEvents) {
-            builder = applySingular(documentPath, builder, singularEvent)
+            builder = applySingular(documentPath, builder, singularEvent, graphStructure)
         }
         return builder
     }
@@ -183,7 +177,8 @@ class ExecutionManager(
     private fun applySingular(
             documentPath: DocumentPath,
             currentModels: PersistentMap<DocumentPath, ImperativeModel>,
-            event: SingularNotationEvent
+            event: SingularNotationEvent,
+            graphStructure: GraphStructure
     ): PersistentMap<DocumentPath, ImperativeModel> {
         val model = currentModels[documentPath]!!
 
@@ -196,9 +191,12 @@ class ExecutionManager(
                 currentModels.put(documentPath,
                         model.rename(event.objectLocation, event.newName))
 
-            is AddedObjectEvent ->
+            is AddedObjectEvent -> {
+                val initialState = initialState(event.objectLocation, graphStructure)
+
                 currentModels.put(documentPath,
-                        model.add(event.objectLocation))
+                        model.add(event.objectLocation, initialState))
+            }
 
             is DeletedDocumentEvent ->
                 if (event.documentPath == documentPath) {
@@ -229,18 +227,6 @@ class ExecutionManager(
     }
 
 
-//    fun readExecutionModel(
-//            host: DocumentPath,
-//            prototype: ExecutionModel
-//    ) {
-//        models = models.put(host, prototype)
-//
-////        val model = modelOrInit(host)
-////        model.frames.clear()
-////        model.frames.addAll(prototype.frames)
-//    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun reset(
             host: DocumentPath
@@ -258,30 +244,56 @@ class ExecutionManager(
             host: DocumentPath,
             graphStructure: GraphStructure
     ): Digest {
-        val documentNotation = graphStructure.graphNotation.documents.values[host]
+        val initialState = initializeFrame(host, graphStructure)
 
-        if (documentNotation != null) {
-            val steps = graphStructure.graphNotation.transitiveAttribute(
-                    ObjectLocation(host, NotationConventions.mainObjectPath),
-                    ScriptDocument.stepsAttributePath
-            ) as ListAttributeNotation
+        val frame = ImperativeFrame(host, initialState.toPersistentMap())
+        val executionModel = ImperativeModel(persistentListOf(frame))
 
-            val values = mutableMapOf<ObjectPath, ImperativeState>()
-            for (i in steps.values) {
-                val objectPath = ObjectPath.parse(i.asString()!!)
-                values[objectPath] = ImperativeState.initial
-            }
-
-            val frame = ImperativeFrame(host, values.toPersistentMap())
-            val executionModel = ImperativeModel(persistentListOf(frame))
-
-            models = models.put(host, executionModel)
-//            model.frames.add(frame)
-        }
+        models = models.put(host, executionModel)
 
         val model = modelOrInit(host)
         publishExecutionModel(host, model)
         return model.digest()
+    }
+
+
+    private fun initializeFrame(
+            host: DocumentPath,
+            graphStructure: GraphStructure
+    ): PersistentMap<ObjectPath, ImperativeState> {
+        val controlTree = ControlTree.readSteps(graphStructure, host)
+
+        val values = mutableMapOf<ObjectPath, ImperativeState>()
+
+        controlTree.traverseDepthFirst { stepObjectLocation ->
+            values[stepObjectLocation.objectPath] = initialState(stepObjectLocation, graphStructure)
+        }
+
+        return values.toPersistentMap()
+    }
+
+
+    private fun initialState(
+            objectLocation: ObjectLocation,
+            graphStructure: GraphStructure
+    ): ImperativeState {
+        val isControlFlow = isControlFlow(objectLocation, graphStructure)
+
+        return if (isControlFlow) {
+            ImperativeState.initialControlFlow
+        }
+        else {
+            ImperativeState.initialSingular
+        }
+    }
+
+
+    private fun isControlFlow(
+            objectLocation: ObjectLocation,
+            graphStructure: GraphStructure
+    ): Boolean {
+        val inheritanceChain = graphStructure.graphNotation.inheritanceChain(objectLocation)
+        return inheritanceChain.any { it.objectPath.name == ControlFlow.objectName }
     }
 
 
@@ -303,18 +315,44 @@ class ExecutionManager(
         }
 
         val imperativeModel = executionModel(host)
-        val response = actionExecutor.execute(objectLocation, imperativeModel)
 
-        val digest = modelOrInit(host).digest()
+        val state = imperativeModel.frames.last().states[objectLocation.objectPath]!!
 
-        val executionState = ImperativeState(
-                false,
-                response
-        )
+        if (state.controlState == null || state.controlState == FinalControlState) {
+            val result = actionExecutor.execute(objectLocation, imperativeModel)
 
-        didExecute(host, objectLocation, executionState)
+            val executionState = ImperativeState(
+                    false,
+                    result,
+                    null
+            )
 
-        return ImperativeResponse(response, digest)
+            val digest = modelOrInit(host).digest()
+            didExecute(host, objectLocation, executionState)
+            return ImperativeResponse(result, null, digest)
+        }
+        else {
+            @Suppress("MoveVariableDeclarationIntoWhen")
+            val controlTransition = actionExecutor.control(objectLocation, imperativeModel)
+
+            val controlState = when (controlTransition) {
+                EvaluateControlTransition ->
+                    FinalControlState
+
+                is BranchExecutionTransition ->
+                    BranchEvaluationState(controlTransition.index)
+            }
+
+            val executionState = ImperativeState(
+                    false,
+                    state.previous,
+                    controlState
+            )
+
+            val digest = modelOrInit(host).digest()
+            didExecute(host, objectLocation, executionState)
+            return ImperativeResponse(null, controlTransition, digest)
+        }
     }
 
 

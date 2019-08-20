@@ -5,7 +5,7 @@
 
 Action:
   abstract: true
-  class: tech.kzen.auto.common.api.ExecutionAction
+  class: tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
   description: "Perform action"
   display: DefaultStepDisplay
   meta:
@@ -13,6 +13,13 @@ Action:
     title: String
     description: String
     display: String
+
+
+ControlFlow:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.common.paradigm.imperative.api.ControlFlow
+  description: "Control flow"
 
 
 ###########################################################
@@ -58,7 +65,7 @@ LogicalNot:
 
 ConditionalExpression:
   abstract: true
-  is: Action
+  is: ControlFlow
   class: tech.kzen.auto.server.objects.script.control.ConditionalExpression
   icon: Share
   title: "If"

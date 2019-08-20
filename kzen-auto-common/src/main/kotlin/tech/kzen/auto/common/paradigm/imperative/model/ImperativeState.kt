@@ -1,21 +1,30 @@
 package tech.kzen.auto.common.paradigm.imperative.model
 
+import tech.kzen.auto.common.paradigm.imperative.model.control.ControlState
+import tech.kzen.auto.common.paradigm.imperative.model.control.InitialControlState
 import tech.kzen.lib.common.util.Digest
 
 
 data class ImperativeState(
         val running: Boolean,
-        val previous: ImperativeResult?
+        val previous: ImperativeResult?,
+        val controlState: ControlState?
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val initial = ImperativeState(false, null)
+        private const val runningKey = "running"
+        private const val previousKey = "previous"
+        private const val controlStateKey = "controlState"
+
+        val initialSingular = ImperativeState(false, null, null)
+        val initialControlFlow = ImperativeState(false, null, InitialControlState)
 
 
-        fun toCollection(result: ImperativeState): Map<String, Any?> {
+        fun toCollection(state: ImperativeState): Map<String, Any?> {
             return mapOf(
-                    "running" to result.running,
-                    "previous" to result.previous?.toCollection()
+                    runningKey to state.running,
+                    previousKey to state.previous?.toCollection(),
+                    controlStateKey to state.controlState?.toCollection()
             )
         }
 
@@ -23,9 +32,12 @@ data class ImperativeState(
         @Suppress("UNCHECKED_CAST")
         fun fromCollection(collection: Map<String, Any?>): ImperativeState {
             return ImperativeState(
-                    collection["running"] as Boolean,
-                    collection["previous"]?.let {
+                    collection[runningKey] as Boolean,
+                    collection[previousKey]?.let {
                         ImperativeResult.fromCollection(it as Map<String, Any>)
+                    },
+                    collection[controlStateKey]?.let {
+                        ControlState.fromCollection(it as Map<String, Any>)
                     }
             )
         }
@@ -58,6 +70,8 @@ data class ImperativeState(
         digest.addBoolean(running)
 
         digest.addDigest(previous?.digest())
+
+        digest.addDigest(controlState?.digest())
 
         return digest.digest()
     }

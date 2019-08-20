@@ -47,7 +47,7 @@ class ExecutionLoop(
         }
 
         val next = ImperativeUtils.next(
-                graphStructureManager.serverGraphStructure().graphNotation,
+                graphStructureManager.serverGraphStructure(),
                 executionModel
         ) ?: return
 
@@ -71,7 +71,7 @@ class ExecutionLoop(
 //        println("ExecutionLoop | executionModel is $executionModel")
 
         val next = state.executionModel?.let {
-            ImperativeUtils.next(graphStructureManager.serverGraphStructure().graphNotation, it)
+            ImperativeUtils.next(graphStructureManager.serverGraphStructure(), it)
         }
         if (next == null) {
 //            println("ExecutionLoop | pausing at end of loop")

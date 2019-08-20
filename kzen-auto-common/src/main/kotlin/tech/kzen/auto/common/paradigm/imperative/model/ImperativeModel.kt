@@ -90,14 +90,15 @@ data class ImperativeModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(objectLocation: ObjectLocation/*, indexInFrame: Int*/): ImperativeModel {
+    fun add(objectLocation: ObjectLocation, state: ImperativeState): ImperativeModel {
         var builder = frames
         for ((index, frame) in frames.withIndex()) {
             if (frame.path != objectLocation.documentPath) {
                 continue
             }
 
-            val added = frame.add(objectLocation.objectPath/*, indexInFrame*/)
+            val added = frame.add(objectLocation.objectPath, state)
+
             builder = builder.set(index, added)
         }
 

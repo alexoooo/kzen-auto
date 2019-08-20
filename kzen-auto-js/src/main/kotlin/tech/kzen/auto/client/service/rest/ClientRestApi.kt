@@ -309,9 +309,6 @@ class ClientRestApi(
         @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
-//        val status = responseJson[CommonRestApi.fieldStatus] as String
-//        val digest = responseJson[CommonRestApi.fieldDigest] as String
-
         return ImperativeResponse.fromCollection(responseCollection)
     }
 
