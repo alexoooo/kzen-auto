@@ -12,7 +12,6 @@ import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
-import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
@@ -21,21 +20,15 @@ import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.GraphStructureManager
-import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
-import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
-import tech.kzen.lib.common.structure.notation.edit.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
-import tech.kzen.lib.common.structure.notation.model.ObjectNotation
-import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
@@ -76,8 +69,8 @@ class ScriptController:
 
     class State(
             var documentPath: DocumentPath?,
-            var structure: GraphStructure?,
-            var execution: ImperativeModel?,
+            var graphStructure: GraphStructure?,
+            var imperativeModel: ImperativeModel?,
             var creating: Boolean
     ): RState
 
@@ -108,8 +101,8 @@ class ScriptController:
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
         documentPath = null
-        structure = null
-        execution = null
+        graphStructure = null
+        imperativeModel = null
         creating = false
     }
 
@@ -154,7 +147,7 @@ class ScriptController:
 //                        executionModel)
 
                 setState {
-                    execution = executionModel
+                    imperativeModel = executionModel
                 }
             }
         }
@@ -169,7 +162,7 @@ class ScriptController:
 //                "${autoModel.graphNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
 
         setState {
-            structure = graphStructure
+            this.graphStructure = graphStructure
         }
     }
 
@@ -185,7 +178,7 @@ class ScriptController:
 
 //        console.log("^^^^ onExecutionModel: $host - ${state.documentPath} - $executionModel")
         setState {
-            execution = executionModel
+            imperativeModel = executionModel
         }
     }
 
@@ -221,26 +214,16 @@ class ScriptController:
                 .getAndClearSelection()
                 ?: return
 
+        val documentPath = state.documentPath!!
         val containingObjectLocation = ObjectLocation(
-                state.documentPath!!, NotationConventions.mainObjectPath)
+                documentPath, NotationConventions.mainObjectPath)
 
-        val newName = findNextAvailable(
-                containingObjectLocation, archetypeObjectLocation)
-
-        // NB: +1 offset for main Script object
-        val endOfDocumentPosition =
-                state.structure!!.graphNotation.documents.get(state.documentPath!!)!!.objects.values.size
-
-        val objectNotation = ObjectNotation.ofParent(
-                archetypeObjectLocation.toReference().name)
-
-        val command = InsertObjectInListAttributeCommand(
+        val command = ScriptDocument.createCommand(
                 containingObjectLocation,
                 ScriptDocument.stepsAttributePath,
-                PositionIndex(index),
-                newName,
-                PositionIndex(endOfDocumentPosition),
-                objectNotation
+                index,
+                archetypeObjectLocation,
+                state.graphStructure!!
         )
 
         async {
@@ -249,51 +232,9 @@ class ScriptController:
     }
 
 
-    private fun toObjectPath(
-            containingObjectLocation: ObjectLocation,
-            objectName: ObjectName
-    ): ObjectPath {
-        return containingObjectLocation.objectPath.nest(
-                ScriptDocument.stepsAttributePath, objectName)
-    }
-
-
-    private fun findNextAvailable(
-            containingObjectLocation: ObjectLocation,
-            archetypeObjectLocation: ObjectLocation
-    ): ObjectName {
-        val namePrefix = state.structure
-                ?.graphNotation
-                ?.transitiveAttribute(archetypeObjectLocation, AutoConventions.titleAttributePath)
-                ?.asString()
-                ?: archetypeObjectLocation.objectPath.name.value
-
-        val directObjectName = ObjectName(namePrefix)
-        val directObjectPath = toObjectPath(containingObjectLocation, directObjectName)
-
-        val documentObjects =
-                state.structure!!.graphNotation.documents.get(state.documentPath!!)!!.objects
-
-        if (! documentObjects.values.containsKey(directObjectPath)) {
-            return directObjectName
-        }
-
-        for (i in 2 .. 1000) {
-            val numberedObjectName = ObjectName("$namePrefix $i")
-            val numberedObjectPath = toObjectPath(containingObjectLocation, numberedObjectName)
-
-            if (! documentObjects.values.containsKey(numberedObjectPath)) {
-                return numberedObjectName
-            }
-        }
-
-        return NameConventions.randomAnonymous()
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val structure = state.structure
+        val structure = state.graphStructure
                 ?: return
 
         val documentPath: DocumentPath = state.documentPath
@@ -362,7 +303,7 @@ class ScriptController:
                 val objectPath = stepLocation.objectPath
 
                 val executionState: ImperativeState? =
-                        state.execution?.frames?.lastOrNull()?.states?.get(objectPath)
+                        state.imperativeModel?.frames?.lastOrNull()?.states?.get(objectPath)
 
                 val keyLocation = ObjectLocation(documentPath, objectPath)
 
@@ -492,8 +433,8 @@ class ScriptController:
             child(ScriptRunController::class) {
                 attrs {
                     documentPath = state.documentPath
-                    structure = state.structure
-                    execution = state.execution
+                    structure = state.graphStructure
+                    execution = state.imperativeModel
                 }
             }
         }

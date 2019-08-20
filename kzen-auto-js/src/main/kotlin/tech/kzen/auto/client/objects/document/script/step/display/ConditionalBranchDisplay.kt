@@ -13,23 +13,17 @@ import styled.styledSpan
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
-import tech.kzen.auto.client.util.NameConventions
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
-import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
-import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.edit.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
-import tech.kzen.lib.common.structure.notation.model.ObjectNotation
-import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
@@ -137,75 +131,17 @@ class ConditionalBranchDisplay(
                 .getAndClearSelection()
                 ?: return
 
-//        val containingObjectLocation = ObjectLocation(
-//                props.objectLocation.documentPath, NotationConventions.mainObjectPath)
-
-        val newName = findNextAvailable(archetypeObjectLocation)
-
-        // NB: +1 offset for main Script object
-        val endOfDocumentPosition =
-                props.graphStructure.graphNotation.documents.get(props.objectLocation.documentPath)!!.objects.values.size
-
-        val objectNotation = ObjectNotation.ofParent(
-                archetypeObjectLocation.toReference().name)
-
-        val command = InsertObjectInListAttributeCommand(
+        val command = ScriptDocument.createCommand(
                 props.objectLocation,
                 props.branchAttributePath,
-                PositionIndex(index),
-                newName,
-                PositionIndex(endOfDocumentPosition),
-                objectNotation
+                index,
+                archetypeObjectLocation,
+                props.graphStructure
         )
 
         async {
             ClientContext.commandBus.apply(command)
         }
-    }
-
-
-    private fun toObjectPath(
-            objectName: ObjectName
-    ): ObjectPath {
-        return props.objectLocation.objectPath.nest(
-                props.branchAttributePath, objectName)
-    }
-
-
-    private fun findNextAvailable(
-            archetypeObjectLocation: ObjectLocation
-    ): ObjectName {
-        val namePrefix = props
-                .graphStructure
-                .graphNotation
-                .transitiveAttribute(archetypeObjectLocation, AutoConventions.titleAttributePath)
-                ?.asString()
-                ?: archetypeObjectLocation.objectPath.name.value
-
-        val directObjectName = ObjectName(namePrefix)
-        val directObjectPath = toObjectPath(directObjectName)
-
-        val documentObjects = props
-                .graphStructure
-                .graphNotation
-                .documents
-                .get(props.objectLocation.documentPath)!!
-                .objects
-
-        if (! documentObjects.values.containsKey(directObjectPath)) {
-            return directObjectName
-        }
-
-        for (i in 2 .. 1000) {
-            val numberedObjectName = ObjectName("$namePrefix $i")
-            val numberedObjectPath = toObjectPath(numberedObjectName)
-
-            if (! documentObjects.values.containsKey(numberedObjectPath)) {
-                return numberedObjectName
-            }
-        }
-
-        return NameConventions.randomAnonymous()
     }
 
 
