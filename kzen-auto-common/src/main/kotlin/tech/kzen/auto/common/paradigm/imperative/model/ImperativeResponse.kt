@@ -36,7 +36,7 @@ data class ImperativeResponse(
     fun toCollection(): Map<String, Any?> {
         return mapOf(
                 resultKey to executionResult?.toCollection(),
-                transitionKey to executionResult?.toCollection(),
+                transitionKey to controlTransition?.toCollection(),
                 CommonRestApi.fieldDigest to executionModelDigest.asString()
         )
     }

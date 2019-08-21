@@ -54,7 +54,6 @@ object CommonRestApi {
     const val actionStart = "${actionPrefix}start"
     const val actionReset = "${actionPrefix}reset"
     const val actionPerform = "${actionPrefix}perform"
-    const val actionControl = "${actionPrefix}control"
     const val actionDetached = "${actionPrefix}detached"
 
 

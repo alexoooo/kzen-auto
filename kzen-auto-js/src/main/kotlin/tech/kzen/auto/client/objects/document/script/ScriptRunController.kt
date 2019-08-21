@@ -44,7 +44,7 @@ class ScriptRunController(
     ): RState
 
 
-    enum class Phase {
+    private enum class Phase {
         Empty,
         Pending,
         Partial,
@@ -130,17 +130,17 @@ class ScriptRunController(
     //-----------------------------------------------------------------------------------------------------------------
 
     // TODO: refresh manager?
-    private fun onRefresh() {
-        val host = props.documentPath
-                ?: return
-
-        ClientContext.executionLoop.pause(host)
-
-        async {
-            ClientContext.modelManager.refresh()
-            ClientContext.executionManager.reset(host)
-        }
-    }
+//    private fun onRefresh() {
+//        val host = props.documentPath
+//                ?: return
+//
+//        ClientContext.executionLoop.pause(host)
+//
+//        async {
+//            ClientContext.modelManager.refresh()
+//            ClientContext.executionManager.reset(host)
+//        }
+//    }
 
 
     private suspend fun executionStateToFreshStart() {
@@ -202,6 +202,29 @@ class ScriptRunController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onRun() {
+        val nextToRun = ImperativeUtils.next(
+                props.structure!!, props.execution!!)!!
+
+        async {
+            ClientContext.executionManager.execute(
+                    props.documentPath!!,
+                    nextToRun)
+        }
+    }
+
+
+    private fun onRunAll() {
+        val host = props.documentPath
+                ?: return
+
+        async {
+            ClientContext.executionIntent.clear()
+            ClientContext.executionLoop.run(host)
+        }
+    }
+
+
     private fun onPause() {
         val host = props.documentPath
                 ?: return
@@ -210,7 +233,7 @@ class ScriptRunController(
     }
 
 
-    private fun onClear() {
+    private fun onReset() {
         val host = props.documentPath
                 ?: return
 
@@ -223,24 +246,12 @@ class ScriptRunController(
     }
 
 
-    private fun onRunAll() {
-        val host = props.documentPath
-                ?: return
-
-        async {
-//            executionStateToFreshStart()
-
-            ClientContext.executionIntent.clear()
-            ClientContext.executionLoop.run(host)
-        }
-    }
-
-
     private fun onOuterEnter() {
         setState {
             fabHover = true
         }
     }
+
 
     private fun onOuterLeave() {
         setState {
@@ -249,7 +260,7 @@ class ScriptRunController(
     }
 
 
-    private fun onFabEnter() {
+    private fun onRunEnter() {
 //        val nextToRun = state.execution?.next()
         val nextToRun = props.execution?.let {
             ImperativeUtils.next(props.structure!!, it)
@@ -265,7 +276,7 @@ class ScriptRunController(
     }
 
 
-    private fun onFabLeave() {
+    private fun onRunLeave() {
 //        val nextToRun = state.execution?.next()
         val nextToRun = props.execution?.let {
             ImperativeUtils.next(props.structure!!, it)
@@ -300,106 +311,151 @@ class ScriptRunController(
                 }
             }
 
-            if (phase == Phase.Partial) {
-                child(MaterialIconButton::class) {
-                    attrs {
-                        title = "Reset"
+            renderInner(phase)
+        }
+    }
 
-                        style = reactStyle {
-                            if (! state.fabHover) {
-                                visibility = Visibility.hidden
-                            }
 
-                            marginRight = (-0.5).em
-                        }
+    private fun RBuilder.renderInner(
+            phase: Phase
+    ) {
+        renderSecondaryActions(phase)
 
-                        onClick = ::onClear
+        renderMainAction(phase)
+    }
+
+
+    private fun RBuilder.renderSecondaryActions(
+            phase: Phase
+    ) {
+        val hasReset = phase == Phase.Partial
+        child(MaterialIconButton::class) {
+            attrs {
+                title = "Reset"
+
+                style = reactStyle {
+                    if (! state.fabHover || ! hasReset) {
+                        visibility = Visibility.hidden
                     }
 
-                    child(ReplayIcon::class) {
-                        attrs {
-                            style = reactStyle {
-//                                marginTop = 1.em
-                                fontSize = 1.5.em
-                            }
-                        }
+                    marginRight = (-0.5).em
+                }
+
+                onClick = ::onReset
+            }
+
+            child(ReplayIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        fontSize = 1.5.em
                     }
                 }
             }
+        }
 
-            child(MaterialFab::class) {
-                val hasMoreToRun = phase == Phase.Pending || phase == Phase.Partial
-                val looping = phase == Phase.Looping
+        val hasRunNext = hasReset || phase == Phase.Pending
+        child(MaterialIconButton::class) {
+            attrs {
+                onMouseOver = ::onRunEnter
+                onMouseOut = ::onRunLeave
 
-                attrs {
-                    title = when {
-                        phase == Phase.Done ->
-                            "Reset"
+                title = "Run next"
 
-                        looping ->
-                            "Pause"
-
-                        phase == Phase.Pending ->
-                            "Run all"
-
-                        else ->
-                            "Continue"
-                    }
-
-                    onClick = {
-                        when {
-                            hasMoreToRun ->
-                                onRunAll()
-
-                            phase == Phase.Done ->
-                                onClear()
-
-                            looping ->
-                                onPause()
-                        }
-                    }
-
-                    onMouseOver = ::onFabEnter
-                    onMouseOut = ::onFabLeave
-
-                    style = reactStyle {
-                        backgroundColor =
-                                if (hasMoreToRun || looping) {
-                                    Color.gold
-//                                    Color("#ffb82d")
-                                }
-                                else {
-//                                Color("#649fff")
-                                    Color.white
-                                }
-
-                        width = 5.em
-                        height = 5.em
+                style = reactStyle {
+                    if (! state.fabHover || ! hasRunNext) {
+                        visibility = Visibility.hidden
                     }
                 }
 
-                when {
-                    hasMoreToRun -> child(PlayArrowIcon::class) {
-                        attrs {
-                            style = reactStyle {
-                                fontSize = 3.em
+                onClick = ::onRun
+            }
+
+            child(RedoIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        fontSize = 1.5.em
+                    }
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderMainAction(
+            phase: Phase
+    ) {
+        child(MaterialFab::class) {
+            val hasMoreToRun = phase == Phase.Pending || phase == Phase.Partial
+            val looping = phase == Phase.Looping
+
+            attrs {
+                title = when {
+                    phase == Phase.Done ->
+                        "Reset"
+
+                    looping ->
+                        "Pause"
+
+                    phase == Phase.Pending ->
+                        "Run all"
+
+                    else ->
+                        "Continue"
+                }
+
+                onClick = {
+                    when {
+                        hasMoreToRun ->
+                            onRunAll()
+
+                        phase == Phase.Done ->
+                            onReset()
+
+                        looping ->
+                            onPause()
+                    }
+                }
+
+                onMouseOver = ::onRunEnter
+                onMouseOut = ::onRunLeave
+
+                style = reactStyle {
+                    backgroundColor =
+                            if (hasMoreToRun || looping) {
+                                Color.gold
+//                                    Color("#ffb82d")
                             }
+                            else {
+//                                Color("#649fff")
+                                Color.white
+                            }
+
+                    width = 5.em
+                    height = 5.em
+                }
+            }
+
+            when {
+                hasMoreToRun -> child(PlayArrowIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
                         }
                     }
+                }
 
-                    looping -> child(PauseIcon::class) {
-                        attrs {
-                            style = reactStyle {
-                                fontSize = 3.em
-                            }
+                looping -> child(PauseIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
                         }
                     }
+                }
 
-                    else -> child(ReplayIcon::class) {
-                        attrs {
-                            style = reactStyle {
-                                fontSize = 3.em
-                            }
+                else -> child(ReplayIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
                         }
                     }
                 }

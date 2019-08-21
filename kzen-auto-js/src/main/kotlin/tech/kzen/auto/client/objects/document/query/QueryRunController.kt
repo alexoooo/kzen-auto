@@ -33,7 +33,7 @@ class QueryRunController(
     ): RState
 
 
-    enum class Phase {
+    private enum class Phase {
         Empty,
         Pending,
         Partial,

@@ -57,7 +57,8 @@ object ClientContext {
 
     val executionLoop = ExecutionLoop(
             modelManager,
-            executionManager)
+            executionManager,
+            250)
 
     val insertionManager = InsertionManager()
     val executionIntent = ExecutionIntent()
