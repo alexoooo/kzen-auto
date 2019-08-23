@@ -17,7 +17,11 @@ import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.wrap.ArrowForwardIcon
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.imperative.model.control.BranchEvaluationState
+import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -49,9 +53,9 @@ class ConditionalStepDisplay(
             graphStructure: GraphStructure,
             objectLocation: ObjectLocation,
             attributeNesting: AttributeNesting,
-            imperativeState: ImperativeState?
+            imperativeModel: ImperativeModel
     ): StepDisplayProps(
-            graphStructure, objectLocation, attributeNesting, imperativeState
+            graphStructure, objectLocation, attributeNesting, imperativeModel
     )
 
 
@@ -96,6 +100,17 @@ class ConditionalStepDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        val imperativeState = props
+                .imperativeModel
+                .frames
+                .last()
+                .states[props.objectLocation.objectPath]!!
+
+        val nextToRun = ImperativeUtils.next(
+                props.graphStructure, props.imperativeModel)
+
+        val isNextToRun = nextToRun == props.objectLocation
+
         styledTable {
             css {
                 // https://stackoverflow.com/a/24594811/1941359
@@ -110,7 +125,7 @@ class ConditionalStepDisplay(
                             onMouseOutFunction = ::onMouseOut
                         }
 
-                        renderHeader()
+                        renderHeader(isNextToRun, imperativeState)
                     }
 
                     td {}
@@ -123,7 +138,7 @@ class ConditionalStepDisplay(
                             height = 100.pct
                         }
 
-                        renderCondition()
+                        renderCondition(isNextToRun, imperativeState)
                     }
                     styledTd {
                         css {
@@ -141,11 +156,11 @@ class ConditionalStepDisplay(
                             height = 100.pct
                         }
 
-                        renderElseSegment()
+                        renderElseSegment(isNextToRun, imperativeState)
                     }
 
                     td {
-                        renderElseBranch()
+                        renderElseBranch(/*imperativeState*/)
                     }
                 }
             }
@@ -153,7 +168,10 @@ class ConditionalStepDisplay(
     }
 
 
-    private fun RBuilder.renderHeader() {
+    private fun RBuilder.renderHeader(
+            isNextToRun: Boolean,
+            imperativeState: ImperativeState
+    ) {
         styledDiv {
             css {
                 width = 18.em
@@ -162,7 +180,16 @@ class ConditionalStepDisplay(
                 borderTopRightRadius = 3.px
                 filter = "drop-shadow(0 1px 1px gray)"
 
-                backgroundColor = Color.white
+                backgroundColor = when {
+                    imperativeState.previous is ImperativeSuccess ->
+                        Color("#00b467")
+
+                    isNextToRun ->
+                        Color.gold.lighten(50)
+
+                    else ->
+                        Color.white
+                }
             }
 
             child(StepHeader::class) {
@@ -173,14 +200,22 @@ class ConditionalStepDisplay(
                     objectLocation = props.objectLocation
                     graphStructure = props.graphStructure
 
-                    imperativeState = props.imperativeState
+                    this.imperativeState = imperativeState
                 }
             }
         }
     }
 
 
-    private fun RBuilder.renderCondition() {
+    private fun RBuilder.renderCondition(
+            isNextToRun: Boolean,
+            imperativeState: ImperativeState
+    ) {
+        val inThenBranch = ! isNextToRun &&
+                ! imperativeState.running &&
+                imperativeState.controlState is BranchEvaluationState &&
+                imperativeState.controlState.index == 0
+
         styledDiv {
             css {
                 width = stepWidth
@@ -189,7 +224,17 @@ class ConditionalStepDisplay(
                 filter = "drop-shadow(0 1px 1px gray)"
 
                 height = 100.pct
-                backgroundColor = Color.white
+
+                backgroundColor = when {
+                    imperativeState.previous is ImperativeSuccess ->
+                        Color("#00b467")
+
+                    inThenBranch ->
+                        Color.gold.lighten(75)
+
+                    else ->
+                        Color.white
+                }
             }
 
             props.attributeController.child(this) {
@@ -203,7 +248,9 @@ class ConditionalStepDisplay(
     }
 
 
-    private fun RBuilder.renderThenBranch() {
+    private fun RBuilder.renderThenBranch(
+//            imperativeState: ImperativeState
+    ) {
         styledDiv {
             css {
 //                width = 30.em
@@ -240,7 +287,7 @@ class ConditionalStepDisplay(
                         this.stepController = props.stepControllerHandle.wrapper!!
                         this.graphStructure = props.graphStructure
                         this.objectLocation = props.objectLocation
-                        this.imperativeState = props.imperativeState
+                        this.imperativeModel = props.imperativeModel
                     }
                 }
             }
@@ -248,7 +295,15 @@ class ConditionalStepDisplay(
     }
 
 
-    private fun RBuilder.renderElseSegment() {
+    private fun RBuilder.renderElseSegment(
+            isNextToRun: Boolean,
+            imperativeState: ImperativeState
+    ) {
+        val inElseBranch = ! isNextToRun &&
+                ! imperativeState.running &&
+                imperativeState.controlState is BranchEvaluationState &&
+                imperativeState.controlState.index == 1
+
         styledDiv {
             css {
                 marginTop = overlapTop.times(2).unaryMinus()
@@ -258,7 +313,17 @@ class ConditionalStepDisplay(
                 borderBottomRightRadius = 3.px
                 filter = "drop-shadow(0 1px 1px gray)"
 
-                backgroundColor = Color.white
+                backgroundColor = when {
+                    imperativeState.previous is ImperativeSuccess ->
+                        Color("#00b467")
+
+                    inElseBranch ->
+                        Color.gold.lighten(75)
+
+                    else ->
+                        Color.white
+                }
+
                 height = 100.pct
             }
             +"Otherwise"
@@ -266,7 +331,9 @@ class ConditionalStepDisplay(
     }
 
 
-    private fun RBuilder.renderElseBranch() {
+    private fun RBuilder.renderElseBranch(
+//            imperativeState: ImperativeState
+    ) {
         styledDiv {
             css {
                 marginBottom = overlapTop.times(2)
@@ -302,7 +369,7 @@ class ConditionalStepDisplay(
                         this.stepController = props.stepControllerHandle.wrapper!!
                         this.graphStructure = props.graphStructure
                         this.objectLocation = props.objectLocation
-                        this.imperativeState = props.imperativeState
+                        this.imperativeModel = props.imperativeModel
                     }
                 }
             }

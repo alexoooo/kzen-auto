@@ -21,9 +21,11 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.ScalarExecutionValue
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -51,9 +53,9 @@ class DefaultStepDisplay(
             graphStructure: GraphStructure,
             objectLocation: ObjectLocation,
             attributeNesting: AttributeNesting,
-            imperativeState: ImperativeState?
+            imperativeModel: ImperativeModel
     ): StepDisplayProps(
-            graphStructure, objectLocation, attributeNesting, imperativeState
+            graphStructure, objectLocation, attributeNesting, imperativeModel
     )
 
 
@@ -125,12 +127,22 @@ class DefaultStepDisplay(
 
 
     private fun RBuilder.renderCard() {
+        val imperativeState = props.imperativeModel.frames.last().states[props.objectLocation.objectPath]
+        val nextToRun = ImperativeUtils.next(
+                props.graphStructure, props.imperativeModel)
+        val isNextToRun = props.objectLocation == nextToRun
+
         val objectMetadata = props.graphStructure.graphMetadata.objectMetadata[props.objectLocation]!!
 
         val reactStyles = reactStyle {
-            val cardColor = when (props.imperativeState?.phase()) {
+            val cardColor = when (imperativeState?.phase()) {
                 ImperativePhase.Pending ->
-                    Color.white
+                    if (isNextToRun) {
+                        Color.gold.lighten(50)
+                    }
+                    else {
+                        Color.white
+                    }
 
                 ImperativePhase.Running ->
                     Color.gold
@@ -162,7 +174,7 @@ class DefaultStepDisplay(
                         objectLocation = props.objectLocation
                         graphStructure = props.graphStructure
 
-                        imperativeState = props.imperativeState
+                        this.imperativeState = imperativeState
                     }
                 }
 
@@ -171,7 +183,7 @@ class DefaultStepDisplay(
                         marginBottom = (-1.5).em
                     }
 
-                    renderBody(objectMetadata)
+                    renderBody(objectMetadata, imperativeState)
                 }
             }
         }
@@ -179,7 +191,10 @@ class DefaultStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderBody(objectMetadata: ObjectMetadata) {
+    private fun RBuilder.renderBody(
+            objectMetadata: ObjectMetadata,
+            imperativeState: ImperativeState?
+    ) {
         for (e in objectMetadata.attributes.values) {
             if (AutoConventions.isManaged(e.key)) {
                 continue
@@ -194,11 +209,11 @@ class DefaultStepDisplay(
             }
         }
 
-        (props.imperativeState?.previous as? ImperativeSuccess)?.value?.let {
+        (imperativeState?.previous as? ImperativeSuccess)?.value?.let {
             renderValue(it)
         }
 
-        (props.imperativeState?.previous as? ImperativeSuccess)?.detail?.let {
+        (imperativeState?.previous as? ImperativeSuccess)?.detail?.let {
             renderDetail(it)
         }
     }

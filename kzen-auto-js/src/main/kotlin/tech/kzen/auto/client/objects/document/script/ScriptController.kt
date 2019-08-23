@@ -17,7 +17,6 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -292,6 +291,9 @@ class ScriptController:
             documentPath: DocumentPath,
             stepLocations: List<ObjectLocation>
     ) {
+        val imperativeModel = state.imperativeModel
+                ?: return
+
         insertionPoint(0)
 
         styledDiv {
@@ -302,16 +304,13 @@ class ScriptController:
             for ((index, stepLocation) in stepLocations.withIndex()) {
                 val objectPath = stepLocation.objectPath
 
-                val executionState: ImperativeState? =
-                        state.imperativeModel?.frames?.lastOrNull()?.states?.get(objectPath)
-
                 val keyLocation = ObjectLocation(documentPath, objectPath)
 
                 renderStep(
                         index,
                         keyLocation,
                         graphStructure,
-                        executionState)
+                        imperativeModel)
 
                 if (index < stepLocations.size - 1) {
                     downArrowWithInsertionPoint(index + 1)
@@ -402,7 +401,7 @@ class ScriptController:
             index: Int,
             objectLocation: ObjectLocation,
             graphStructure: GraphStructure,
-            executionState: ImperativeState?
+            imperativeModel: ImperativeModel
     ) {
         span {
             key = objectLocation.toReference().asString()
@@ -412,7 +411,7 @@ class ScriptController:
                     attributeNesting = AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index)))
                     this.objectLocation = objectLocation
                     this.graphStructure = graphStructure
-                    imperativeState = executionState
+                    this.imperativeModel = imperativeModel
                 }
             }
         }

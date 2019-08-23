@@ -16,7 +16,7 @@ import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -63,24 +63,17 @@ class ConditionalBranchDisplay(
             var stepController: StepController.Wrapper,
             var graphStructure: GraphStructure,
             var objectLocation: ObjectLocation,
-//            var attributeNesting: AttributeNesting,
-            var imperativeState: ImperativeState?
+            var imperativeModel: ImperativeModel
     ): RProps
 
 
     class State(
-//            var documentPath: DocumentPath?,
-//            var structure: GraphStructure?,
-//            var execution: ImperativeModel?,
             var creating: Boolean
     ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-//        documentPath = null
-//        structure = null
-//        execution = null
         creating = false
     }
 
@@ -319,9 +312,9 @@ class ConditionalBranchDisplay(
 
                     attributeNesting = AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index)))
 
-                    this.objectLocation = stepLocation
-                    this.graphStructure = props.graphStructure
-                    imperativeState = props.imperativeState
+                    objectLocation = stepLocation
+                    graphStructure = props.graphStructure
+                    imperativeModel = props.imperativeModel
                 }
             }
         }

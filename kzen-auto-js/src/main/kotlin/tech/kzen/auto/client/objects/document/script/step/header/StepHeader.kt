@@ -52,7 +52,6 @@ class StepHeader(
             var hoverSignal: HoverSignal,
 
             var attributeNesting: AttributeNesting,
-//            var attributePath: AttributePath,
 
             var objectLocation: ObjectLocation,
             var graphStructure: GraphStructure,

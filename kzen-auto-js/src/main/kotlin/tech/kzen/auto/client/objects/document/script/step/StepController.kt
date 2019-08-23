@@ -4,7 +4,7 @@ import react.*
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -24,7 +24,7 @@ class StepController(
             var graphStructure: GraphStructure,
             var objectLocation: ObjectLocation,
             var attributeNesting: AttributeNesting,
-            var imperativeState: ImperativeState?
+            var imperativeModel: ImperativeModel
     ): RProps
 
 
@@ -75,7 +75,7 @@ class StepController(
                 graphStructure = props.graphStructure
                 objectLocation = props.objectLocation
                 attributeNesting = props.attributeNesting
-                imperativeState = props.imperativeState
+                imperativeModel = props.imperativeModel
             }
         }
     }
