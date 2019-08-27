@@ -87,6 +87,18 @@ TextLiteralTool:
   delegate: TextLiteral
 
 
+NumberLiteralTool:
+  is: RibbonTool
+  parent: InputOutputGroup
+  delegate: NumberLiteral
+
+
+ReferenceActionTool:
+  is: RibbonTool
+  parent: InputOutputGroup
+  delegate: ReferenceAction
+
+
 BooleanLiteralTool:
   is: RibbonTool
   parent: InputOutputGroup
@@ -112,6 +124,18 @@ LogicalNotTool:
   is: RibbonTool
   parent: LogicGroup
   delegate: LogicalNot
+
+
+LogicalAndTool:
+  is: RibbonTool
+  parent: LogicGroup
+  delegate: LogicalAnd
+
+
+DivisibleCheckTool:
+  is: RibbonTool
+  parent: LogicGroup
+  delegate: DivisibleCheck
 
 
 ConditionalExpressionTool:

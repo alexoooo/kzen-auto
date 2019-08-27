@@ -63,6 +63,38 @@ LogicalNot:
       editor: SelectStepEditor
 
 
+LogicalAnd:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.logic.LogicalAnd
+  icon: Flip
+  title: "Logical AND"
+  meta:
+    condition:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+    and:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+
+
+DivisibleCheck:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.logic.DivisibleCheck
+  icon: Flip
+  title: "Is divisible by"
+  divisor: 1
+  meta:
+    number:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+    divisor: Int
+
+
 ConditionalExpression:
   abstract: true
   is: ControlFlow
@@ -98,9 +130,33 @@ TextLiteral:
   class: tech.kzen.auto.server.objects.script.TextLiteral
   icon: Textsms
   title: "Text"
-  value: "Bar"
+  value: ""
   meta:
     value: String
+
+
+NumberLiteral:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.NumberLiteral
+  icon: Textsms
+  title: "Number"
+  value: 1
+  meta:
+    value: Int
+
+
+ReferenceAction:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.common.objects.document.script.action.ReferenceAction
+  icon: Textsms
+  title: "Previous value"
+  meta:
+    value:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
 
 
 DisplayValue:
