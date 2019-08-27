@@ -174,6 +174,18 @@ external class TextsmsIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("Input")
+external class InputIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("LooksOne")
+external class LooksOneIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("MoreVert")
 external class MoreVertIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
@@ -314,6 +326,12 @@ external class ToggleOnIcon: Component<IconProps, RState> {
 
 @JsName("Flip")
 external class FlipIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("AddBox")
+external class AddBoxIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 

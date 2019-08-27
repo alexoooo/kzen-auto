@@ -67,7 +67,7 @@ LogicalAnd:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.script.logic.LogicalAnd
-  icon: Flip
+  icon: AddBox
   title: "Logical AND"
   meta:
     condition:
@@ -84,7 +84,7 @@ DivisibleCheck:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.script.logic.DivisibleCheck
-  icon: Flip
+  icon: FilterList
   title: "Is divisible by"
   divisor: 1
   meta:
@@ -139,7 +139,7 @@ NumberLiteral:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.script.NumberLiteral
-  icon: Textsms
+  icon: LooksOne
   title: "Number"
   value: 1
   meta:
@@ -150,7 +150,7 @@ ReferenceAction:
   abstract: true
   is: Action
   class: tech.kzen.auto.common.objects.document.script.action.ReferenceAction
-  icon: Textsms
+  icon: Input
   title: "Previous value"
   meta:
     value:

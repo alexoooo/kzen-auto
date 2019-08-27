@@ -45,6 +45,12 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "Textsms" ->
             TextsmsIcon::class
 
+        "Input" ->
+            InputIcon::class
+
+        "LooksOne" ->
+            LooksOneIcon::class
+
         "PlaylistPlay" ->
             PlaylistPlayIcon::class
 
@@ -104,6 +110,9 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
 
         "Flip" ->
             FlipIcon::class
+
+        "AddBox" ->
+            AddBoxIcon::class
 
         "Share" ->
             ShareIcon::class
