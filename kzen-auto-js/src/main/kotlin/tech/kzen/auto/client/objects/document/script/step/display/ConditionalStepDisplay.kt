@@ -1,6 +1,9 @@
 package tech.kzen.auto.client.objects.document.script.step.display
 
 import kotlinx.css.*
+import kotlinx.css.properties.deg
+import kotlinx.css.properties.rotate
+import kotlinx.css.properties.transform
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import org.w3c.dom.events.Event
@@ -14,9 +17,7 @@ import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
-import tech.kzen.auto.client.wrap.ArrowForwardIcon
-import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
@@ -103,8 +104,9 @@ class ConditionalStepDisplay(
         val imperativeState = props
                 .imperativeModel
                 .frames
-                .last()
-                .states[props.objectLocation.objectPath]!!
+                .lastOrNull()
+                ?.states
+                ?.get(props.objectLocation.objectPath)
 
         val nextToRun = ImperativeUtils.next(
                 props.graphStructure, props.imperativeModel)
@@ -115,11 +117,25 @@ class ConditionalStepDisplay(
             css {
                 // https://stackoverflow.com/a/24594811/1941359
                 height = 100.pct
+
+//                borderWidth = 1.px
+//                borderStyle = BorderStyle.solid
+
+                borderCollapse = BorderCollapse.collapse
             }
 
             styledTbody {
+//                css {
+//                    borderWidth = 1.px
+//                    borderStyle = BorderStyle.solid
+//                }
+
                 styledTr {
                     styledTd {
+                        css {
+                            padding(0.px)
+                        }
+
                         attrs {
                             onMouseOverFunction = ::onMouseOver
                             onMouseOutFunction = ::onMouseOut
@@ -129,6 +145,7 @@ class ConditionalStepDisplay(
                     }
 
                     td {}
+                    td {}
                 }
 
                 styledTr {
@@ -136,6 +153,7 @@ class ConditionalStepDisplay(
                         css {
                             verticalAlign = VerticalAlign.top
                             height = 100.pct
+                            padding(0.px)
                         }
 
                         renderCondition(isNextToRun, imperativeState)
@@ -144,8 +162,29 @@ class ConditionalStepDisplay(
                         css {
 //                            borderWidth = 1.px
 //                            borderStyle = BorderStyle.solid
+
+//                            padding(0.px)
                         }
                         renderThenBranch()
+                    }
+
+                    styledTd {
+                        css {
+                            verticalAlign = VerticalAlign.bottom
+                            padding(0.px)
+                        }
+
+                        child(SubdirectoryArrowLeftIcon::class) {
+                            attrs {
+                                style = reactStyle {
+                                    fontSize = 3.em
+
+                                    transform {
+                                        rotate((-90).deg)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -154,6 +193,9 @@ class ConditionalStepDisplay(
                         css {
                             verticalAlign = VerticalAlign.top
                             height = 100.pct
+                            padding(0.px)
+//                            borderWidth = 1.px
+//                            borderStyle = BorderStyle.solid
                         }
 
                         renderElseSegment(isNextToRun, imperativeState)
@@ -161,6 +203,89 @@ class ConditionalStepDisplay(
 
                     td {
                         renderElseBranch(/*imperativeState*/)
+                    }
+
+                    styledTd {
+                        css {
+//                            borderWidth = 1.px
+//                            borderStyle = BorderStyle.solid
+
+//                            position = Position.relative
+//                            height = 100.pct
+                            verticalAlign = VerticalAlign.bottom
+                        }
+
+//                        child(ArrowDownwardIcon::class) {
+//                            attrs {
+//                                style = reactStyle {
+//                                    fontSize = 3.em
+//
+////                                    position = Position.absolute
+////                                    top = 0.px
+//                                }
+//                            }
+//                        }
+
+                        child(SubdirectoryArrowLeftIcon::class) {
+                            attrs {
+                                style = reactStyle {
+                                    fontSize = 3.em
+
+//                                    position = Position.absolute
+//                                    bottom = 0.px
+
+                                    transform {
+                                        rotate((-90).deg)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                renderEgressRow()
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderEgressRow() {
+        styledTr {
+            styledTd {
+                css {
+                    textAlign = TextAlign.center
+                }
+
+                child(SubdirectoryArrowRightIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                            marginLeft = 6.px
+
+                            transform {
+                                rotate(90.deg)
+                            }
+                        }
+                    }
+                }
+            }
+
+            td {
+                child(ArrowBackIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+                    }
+                }
+            }
+
+            td {
+                child(SubdirectoryArrowLeftIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
                     }
                 }
             }
@@ -170,7 +295,7 @@ class ConditionalStepDisplay(
 
     private fun RBuilder.renderHeader(
             isNextToRun: Boolean,
-            imperativeState: ImperativeState
+            imperativeState: ImperativeState?
     ) {
         styledDiv {
             css {
@@ -181,7 +306,7 @@ class ConditionalStepDisplay(
                 filter = "drop-shadow(0 1px 1px gray)"
 
                 backgroundColor = when {
-                    imperativeState.previous is ImperativeSuccess ->
+                    imperativeState?.previous is ImperativeSuccess ->
                         Color("#00b467")
 
                     isNextToRun ->
@@ -209,24 +334,24 @@ class ConditionalStepDisplay(
 
     private fun RBuilder.renderCondition(
             isNextToRun: Boolean,
-            imperativeState: ImperativeState
+            imperativeState: ImperativeState?
     ) {
         val inThenBranch = ! isNextToRun &&
-                ! imperativeState.running &&
-                imperativeState.controlState is BranchEvaluationState &&
+                ! (imperativeState?.running ?: false) &&
+                imperativeState?.controlState is BranchEvaluationState &&
                 imperativeState.controlState.index == 0
 
         styledDiv {
             css {
                 width = stepWidth
-                padding(1.em)
-                marginTop = overlapTop.unaryMinus()
+                padding(left = 1.em, right = 1.em/*, top = 1.em*/)
+//                marginTop = overlapTop.unaryMinus()
                 filter = "drop-shadow(0 1px 1px gray)"
 
                 height = 100.pct
 
                 backgroundColor = when {
-                    imperativeState.previous is ImperativeSuccess ->
+                    imperativeState?.previous is ImperativeSuccess ->
                         Color("#00b467")
 
                     inThenBranch ->
@@ -261,6 +386,7 @@ class ConditionalStepDisplay(
                 css {
                     width = 10.em
                     display = Display.inlineBlock
+                    marginLeft = 3.px
                 }
 
                 +"Then"
@@ -297,24 +423,24 @@ class ConditionalStepDisplay(
 
     private fun RBuilder.renderElseSegment(
             isNextToRun: Boolean,
-            imperativeState: ImperativeState
+            imperativeState: ImperativeState?
     ) {
         val inElseBranch = ! isNextToRun &&
-                ! imperativeState.running &&
-                imperativeState.controlState is BranchEvaluationState &&
+                ! (imperativeState?.running ?: false) &&
+                imperativeState?.controlState is BranchEvaluationState &&
                 imperativeState.controlState.index == 1
 
         styledDiv {
             css {
-                marginTop = overlapTop.times(2).unaryMinus()
+//                marginTop = overlapTop.times(2).unaryMinus()
                 width = stepWidth
-                padding(1.em)
+                padding(left = 1.em, right = 1.em/*, top = 1.em*/)
                 borderBottomLeftRadius = 3.px
                 borderBottomRightRadius = 3.px
                 filter = "drop-shadow(0 1px 1px gray)"
 
                 backgroundColor = when {
-                    imperativeState.previous is ImperativeSuccess ->
+                    imperativeState?.previous is ImperativeSuccess ->
                         Color("#00b467")
 
                     inElseBranch ->
@@ -343,6 +469,7 @@ class ConditionalStepDisplay(
                 css {
                     width = 10.em
                     display = Display.inlineBlock
+                    marginLeft = 3.px
                 }
 
                 +"Else"
