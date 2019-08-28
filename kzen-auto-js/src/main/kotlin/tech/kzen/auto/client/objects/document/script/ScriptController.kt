@@ -24,6 +24,7 @@ import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
+import tech.kzen.lib.common.model.locate.ObjectReferenceHost
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
@@ -53,10 +54,12 @@ class ScriptController:
                     as? ListAttributeNotation
                     ?: return null
 
+            val objectReferenceHost = ObjectReferenceHost.ofLocation(mainObjectLocation)
+
             return stepsNotation
                     .values
                     .map { ObjectReference.parse(it.asString()!!) }
-                    .map { graphStructure.graphNotation.coalesce.locate(it) }
+                    .map { graphStructure.graphNotation.coalesce.locate(it, objectReferenceHost) }
         }
     }
 

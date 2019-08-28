@@ -6,6 +6,7 @@ import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
+import tech.kzen.lib.common.model.locate.ObjectReferenceHost
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
@@ -40,10 +41,11 @@ sealed class ControlTree {
                     as? ListAttributeNotation
                     ?: return BranchControlNode(listOf())
 
+            val objectReferenceHost = ObjectReferenceHost.ofLocation(stepLocation)
             val topLevelLocations = stepsNotation
                     .values
                     .map { ObjectReference.parse(it.asString()!!) }
-                    .map { graphStructure.graphNotation.coalesce.locate(it) }
+                    .map { graphStructure.graphNotation.coalesce.locate(it, objectReferenceHost) }
                     .map { readStep(graphStructure, it) }
 
             return BranchControlNode(topLevelLocations)

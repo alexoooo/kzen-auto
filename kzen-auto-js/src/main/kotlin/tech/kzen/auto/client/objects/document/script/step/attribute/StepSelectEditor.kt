@@ -12,6 +12,7 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTree
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
+import tech.kzen.lib.common.model.locate.ObjectReferenceHost
 import tech.kzen.lib.common.structure.notation.edit.*
 import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import kotlin.browser.document
@@ -58,9 +59,12 @@ class StepSelectEditor(
                 props.graphStructure.graphNotation.transitiveAttribute(
                         props.objectLocation, props.attributeName)
 
+        val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
+
         if (attributeNotation is ScalarAttributeNotation) {
             val reference = ObjectReference.parse(attributeNotation.value)
-            val objectLocation = props.graphStructure.graphNotation.coalesce.locate(props.objectLocation, reference)
+            val objectLocation = props.graphStructure.graphNotation.coalesce.locate(
+                    reference, objectReferenceHost)
 
             value = objectLocation
         }
