@@ -2,7 +2,7 @@
 #######################################################################################################################
 
 EdgesDefiner:
-  class: tech.kzen.auto.common.objects.document.query.EdgesDefiner
+  class: tech.kzen.auto.common.objects.document.graph.EdgesDefiner
 
 
 EdgeDescriptor:

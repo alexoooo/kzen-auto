@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.query
+package tech.kzen.auto.client.objects.document.graph
 
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
@@ -13,14 +13,14 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.common.AttributeController
-import tech.kzen.auto.client.objects.document.query.edge.BottomEgress
-import tech.kzen.auto.client.objects.document.query.edge.TopIngress
+import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
+import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.ExecutionIntent
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.query.DataflowWiring
-import tech.kzen.auto.common.objects.document.query.QueryDocument
+import tech.kzen.auto.common.objects.document.graph.DataflowWiring
+import tech.kzen.auto.common.objects.document.graph.GraphDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexPhase
@@ -201,7 +201,7 @@ class VertexController(
                     NotationConventions.mainObjectPath)
 
             val objectAttributePath = AttributePath(
-                    QueryDocument.verticesAttributeName,
+                    GraphDocument.verticesAttributeName,
                     props.attributeNesting)
 
             ClientContext.commandBus.apply(RemoveObjectInAttributeCommand(

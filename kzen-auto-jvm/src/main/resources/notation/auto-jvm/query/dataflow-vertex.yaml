@@ -20,7 +20,7 @@
 IntRangeSource:
   abstract: true
   is: Dataflow
-  class: tech.kzen.auto.server.objects.query.IntRangeSource
+  class: tech.kzen.auto.server.objects.graph.IntRangeSource
   icon: TripOrigin
   title: "Number Range"
   description: "Range of integers, starting at 'from' and ending at 'to' (inclusively)"
@@ -53,7 +53,7 @@ IntRangeSource:
 DivisibleFilter:
   abstract: true
   is: Dataflow
-  class: tech.kzen.auto.server.objects.query.DivisibleFilter
+  class: tech.kzen.auto.server.objects.graph.DivisibleFilter
   icon: FilterList
   title: "Divisible Filter"
   description: "Filter divisible by"
@@ -71,7 +71,7 @@ DivisibleFilter:
 ReplaceProcessor:
   abstract: true
   is: Dataflow
-  class: tech.kzen.auto.server.objects.query.ReplaceProcessor
+  class: tech.kzen.auto.server.objects.graph.ReplaceProcessor
   icon: Forward
   title: "Replace"
   description: "Substitute the input value (which is ignored) with the given replacement"
@@ -89,7 +89,7 @@ ReplaceProcessor:
 RepeatProcessor:
   abstract: true
   is: Dataflow
-  class: tech.kzen.auto.server.objects.query.RepeatProcessor
+  class: tech.kzen.auto.server.objects.graph.RepeatProcessor
   icon: FileCopy
   title: "Repeat"
   description: "Repeat the input value a given number of times"
@@ -107,7 +107,7 @@ RepeatProcessor:
 CountSink:
   abstract: true
   is: Dataflow
-  class: tech.kzen.auto.server.objects.query.CountSink
+  class: tech.kzen.auto.server.objects.graph.CountSink
   icon: ExposurePlus1
   title: "Count"
   description: "Counter"
@@ -120,7 +120,7 @@ CountSink:
 AccumulateSink:
   abstract: true
   is: Dataflow
-  class: tech.kzen.auto.server.objects.query.AccumulateSink
+  class: tech.kzen.auto.server.objects.graph.AccumulateSink
 #  icon: PlaylistAdd
   icon: Print
   title: "Display"
@@ -134,7 +134,7 @@ AccumulateSink:
 AppendText:
   abstract: true
   is: Dataflow
-  class: tech.kzen.auto.server.objects.query.AppendText
+  class: tech.kzen.auto.server.objects.graph.AppendText
   icon: Add
   title: "Append Text"
   description: "Concatenate two (or possibly one) text inputs"
@@ -153,7 +153,7 @@ AppendText:
 SelectLast:
   abstract: true
   is: Dataflow
-  class: tech.kzen.auto.server.objects.query.SelectLast
+  class: tech.kzen.auto.server.objects.graph.SelectLast
   icon: CompareArrows
   title: "Select Last"
   description: "Second if it's available, otherwise first"

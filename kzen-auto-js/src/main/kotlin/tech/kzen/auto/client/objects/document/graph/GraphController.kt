@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.query
+package tech.kzen.auto.client.objects.document.graph
 
 import kotlinx.css.*
 import kotlinx.html.title
@@ -11,15 +11,14 @@ import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
-import tech.kzen.auto.common.util.NameConventions
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.auto.common.objects.document.query.DataflowWiring
-import tech.kzen.auto.common.objects.document.query.QueryDocument
+import tech.kzen.auto.common.objects.document.graph.DataflowWiring
+import tech.kzen.auto.common.objects.document.graph.GraphDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
@@ -29,6 +28,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescript
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.service.GraphStructureManager
+import tech.kzen.auto.common.util.NameConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -45,8 +45,8 @@ import tech.kzen.lib.platform.collect.persistentMapOf
 
 
 @Suppress("unused")
-class QueryController:
-        RPureComponent<QueryController.Props, QueryController.State>(),
+class GraphController:
+        RPureComponent<GraphController.Props, GraphController.State>(),
         GraphStructureManager.Observer,
         InsertionManager.Observer,
         NavigationManager.Observer,
@@ -84,7 +84,7 @@ class QueryController:
         }
 
         override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
-            return input.child(QueryController::class) {
+            return input.child(GraphController::class) {
                 attrs {
                     this.attributeController = this@Wrapper.attributeController
                 }
@@ -257,7 +257,7 @@ class QueryController:
 
                     InsertListItemInAttributeCommand(
                             containingObjectLocation,
-                            QueryDocument.edgesAttributePath,
+                            GraphDocument.edgesAttributePath,
                             PositionIndex(edgesNotation.values.size),
                             attributeNotation
                     )
@@ -272,7 +272,7 @@ class QueryController:
 
                     InsertObjectInListAttributeCommand(
                             containingObjectLocation,
-                            QueryDocument.verticesAttributePath,
+                            GraphDocument.verticesAttributePath,
                             PositionIndex(verticesNotation.values.size),
                             NameConventions.randomAnonymous(),
                             PositionIndex(documentNotation.objects.values.size),
@@ -513,7 +513,7 @@ class QueryController:
                 marginBottom = 2.em
             }
 
-            child(QueryRunController::class) {
+            child(GraphRunController::class) {
                 attrs {
                     documentPath = state.documentPath
                     graphStructure = state.graphStructure

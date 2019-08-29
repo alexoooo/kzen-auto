@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.query
+package tech.kzen.auto.client.objects.document.graph
 
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
@@ -15,10 +15,10 @@ import tech.kzen.lib.common.structure.GraphStructure
 import kotlin.reflect.KClass
 
 
-class QueryRunController(
+class GraphRunController(
         props: Props
 ):
-        RPureComponent<QueryRunController.Props, QueryRunController.State>(props)
+        RPureComponent<GraphRunController.Props, GraphRunController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(

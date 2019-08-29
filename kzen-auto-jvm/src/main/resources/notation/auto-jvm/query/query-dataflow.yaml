@@ -57,5 +57,5 @@ StreamDataflow:
 
 
 DataflowWiring:
-  class: tech.kzen.auto.common.objects.document.query.DataflowWiring
+  class: tech.kzen.auto.common.objects.document.graph.DataflowWiring
 

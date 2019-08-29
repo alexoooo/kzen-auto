@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.query
+package tech.kzen.auto.common.objects.document.graph
 
 import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableDataflowOutput
 import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableOptionalInput

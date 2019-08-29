@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.paradigm.dataflow.model.structure
 
-import tech.kzen.auto.common.objects.document.query.DataflowWiring
-import tech.kzen.auto.common.objects.document.query.QueryDocument
+import tech.kzen.auto.common.objects.document.graph.DataflowWiring
+import tech.kzen.auto.common.objects.document.graph.GraphDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
@@ -28,7 +28,7 @@ data class DataflowMatrix(
         val empty = DataflowMatrix(listOf())
 
 
-        fun ofQueryDocument(
+        fun ofGraphDocument(
                 host: DocumentPath,
                 graphStructure: GraphStructure
         ): DataflowMatrix {
@@ -51,7 +51,7 @@ data class DataflowMatrix(
                     .values[NotationConventions.mainObjectPath]
                     ?.attributes
                     ?.values
-                    ?.get(QueryDocument.verticesAttributeName)
+                    ?.get(GraphDocument.verticesAttributeName)
                     as? ListAttributeNotation
                     ?: ListAttributeNotation(persistentListOf())
         }
@@ -65,7 +65,7 @@ data class DataflowMatrix(
                     .values[NotationConventions.mainObjectPath]
                     ?.attributes
                     ?.values
-                    ?.get(QueryDocument.edgesAttributeName)
+                    ?.get(GraphDocument.edgesAttributeName)
                     as? ListAttributeNotation
                     ?: ListAttributeNotation(persistentListOf())
         }

@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.query.edge
+package tech.kzen.auto.client.objects.document.graph.edge
 
 import kotlinx.css.*
 import kotlinx.css.properties.borderLeft
@@ -9,7 +9,7 @@ import react.RProps
 import react.RState
 import styled.css
 import styled.styledDiv
-import tech.kzen.auto.client.objects.document.query.CellController
+import tech.kzen.auto.client.objects.document.graph.CellController
 import tech.kzen.auto.client.wrap.RPureComponent
 
 

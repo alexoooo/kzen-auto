@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.query
+package tech.kzen.auto.common.objects.document.graph
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
@@ -9,7 +9,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 @Suppress("unused")
-class QueryDocument(
+class GraphDocument(
         val vertices: List<Dataflow<*>>,
         val edges: List<EdgeDescriptor>,
 

@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.query
+package tech.kzen.auto.common.objects.document.graph
 
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
 import tech.kzen.lib.common.api.AttributeDefiner
@@ -23,13 +23,13 @@ class EdgesDefiner: AttributeDefiner {
             partialGraphDefinition: GraphDefinition,
             partialGraphInstance: GraphInstance
     ): AttributeDefinitionAttempt {
-        check(attributeName == QueryDocument.edgesAttributeName) {
+        check(attributeName == GraphDocument.edgesAttributeName) {
             "Unexpected attribute name: $attributeName"
         }
 
         val edgesNotation = graphStructure
                 .graphNotation
-                .transitiveAttribute(objectLocation, QueryDocument.edgesAttributeName)
+                .transitiveAttribute(objectLocation, GraphDocument.edgesAttributeName)
                 as? ListAttributeNotation
                 ?: return AttributeDefinitionAttempt.failure(
                         "'Edges' attribute notation not found: $objectLocation - $attributeName")

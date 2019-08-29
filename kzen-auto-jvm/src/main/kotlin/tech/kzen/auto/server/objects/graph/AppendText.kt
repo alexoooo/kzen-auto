@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.query
+package tech.kzen.auto.server.objects.graph
 
 import tech.kzen.auto.common.paradigm.dataflow.api.StatelessDataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.input.OptionalInput

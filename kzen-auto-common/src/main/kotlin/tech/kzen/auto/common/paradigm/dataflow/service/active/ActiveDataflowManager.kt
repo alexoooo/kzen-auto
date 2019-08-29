@@ -165,7 +165,7 @@ class ActiveDataflowManager(
 
         check(host in serverGraphStructure.graphNotation.documents)
 
-        val vertexMatrix = DataflowMatrix.ofQueryDocument(host, serverGraphStructure)
+        val vertexMatrix = DataflowMatrix.ofGraphDocument(host, serverGraphStructure)
 
         val builder = mutableMapOf<ObjectLocation, ActiveVertexModel>()
         for (vertexLocation in vertexMatrix.verticesByLocation.keys) {
@@ -343,7 +343,7 @@ class ActiveDataflowManager(
             clearedConsumer: (ObjectLocation) -> Unit = {}
     ) {
         val serverGraphStructure = graphStructureManager.serverGraphStructure()
-        val dataflowMatrix = DataflowMatrix.ofQueryDocument(host, serverGraphStructure)
+        val dataflowMatrix = DataflowMatrix.ofGraphDocument(host, serverGraphStructure)
         val dataflowDag = DataflowDag.of(dataflowMatrix)
 
         val activeDataflowModel = getOrInit(host)

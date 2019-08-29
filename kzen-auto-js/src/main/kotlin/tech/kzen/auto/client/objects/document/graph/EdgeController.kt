@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.query
+package tech.kzen.auto.client.objects.document.graph
 
 import kotlinx.css.*
 import kotlinx.css.properties.borderBottom
@@ -13,15 +13,15 @@ import react.RState
 import react.setState
 import styled.css
 import styled.styledDiv
-import tech.kzen.auto.client.objects.document.query.edge.BottomEgress
-import tech.kzen.auto.client.objects.document.query.edge.TopIngress
+import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
+import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.DeleteIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.query.QueryDocument
+import tech.kzen.auto.common.objects.document.graph.GraphDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
@@ -91,7 +91,7 @@ class EdgeController(
                     NotationConventions.mainObjectPath)
 
             val objectAttributePath = AttributePath(
-                    QueryDocument.edgesAttributeName,
+                    GraphDocument.edgesAttributeName,
                     props.attributeNesting)
 
             ClientContext.commandBus.apply(RemoveInAttributeCommand(

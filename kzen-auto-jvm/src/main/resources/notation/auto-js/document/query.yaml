@@ -1,8 +1,8 @@
 
 
-QueryController:
+GraphController:
   is: DocumentController
-  class: tech.kzen.auto.client.objects.document.query.QueryController$Wrapper
+  class: tech.kzen.auto.client.objects.document.graph.GraphController$Wrapper
   type: Graph
   attributeController: AttributeController
 
@@ -10,7 +10,7 @@ QueryController:
 #######################################################################################################################
 
 
-QueryGroup:
+GraphGroup:
   is: RibbonGroup
   title: "Insert"
   documentArchetype: Graph
@@ -32,7 +32,7 @@ PipeGroup:
 
 IntRangeSourceTool:
   is: RibbonTool
-  parent: QueryGroup
+  parent: GraphGroup
   delegate: IntRangeSource
 
 
@@ -44,43 +44,43 @@ IntRangeSourceTool:
 
 DivisibleFilterTool:
   is: RibbonTool
-  parent: QueryGroup
+  parent: GraphGroup
   delegate: DivisibleFilter
 
 
 ReplaceProcessorTool:
   is: RibbonTool
-  parent: QueryGroup
+  parent: GraphGroup
   delegate: ReplaceProcessor
 
 
 RepeatProcessorTool:
   is: RibbonTool
-  parent: QueryGroup
+  parent: GraphGroup
   delegate: RepeatProcessor
 
 
 CountSinkTool:
   is: RibbonTool
-  parent: QueryGroup
+  parent: GraphGroup
   delegate: CountSink
 
 
 AccumulateSinkTool:
   is: RibbonTool
-  parent: QueryGroup
+  parent: GraphGroup
   delegate: AccumulateSink
 
 
 AppendTextTool:
   is: RibbonTool
-  parent: QueryGroup
+  parent: GraphGroup
   delegate: AppendText
 
 
 SelectLastTool:
   is: RibbonTool
-  parent: QueryGroup
+  parent: GraphGroup
   delegate: SelectLast
 
 

@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.query
+package tech.kzen.auto.server.objects.graph
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
@@ -6,34 +6,31 @@ import tech.kzen.auto.common.paradigm.dataflow.api.input.RequiredInput
 
 
 @Suppress("unused")
-class AccumulateSink (
-        private val input: RequiredInput<Any>
+class CountSink(
+        private val input: RequiredInput<*>
 ):
-        Dataflow<AccumulateSink.State>
+        Dataflow<CountSink.State>
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
-            var values: MutableList<Any>
+            var count: Long = 0
     )
 
 
     override fun inspectState(state: State): ExecutionValue {
-        return ExecutionValue.of(
-                state.values.map {
-                    it.toString()
-                })
+        return ExecutionValue.of(state.count)
     }
 
 
     override fun initialState(): State {
-        return State(mutableListOf())
+        return State()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun process(state: State): State {
-        val value: Any = input.get()
-        state.values.add(value)
+        input.get()
+        state.count++
         return state
     }
 }

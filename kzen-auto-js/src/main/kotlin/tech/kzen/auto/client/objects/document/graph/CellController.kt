@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.query
+package tech.kzen.auto.client.objects.document.graph
 
 import kotlinx.css.em
 import react.RBuilder

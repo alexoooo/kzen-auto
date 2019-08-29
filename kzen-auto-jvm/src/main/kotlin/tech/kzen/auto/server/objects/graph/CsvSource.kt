@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.query
+package tech.kzen.auto.server.objects.graph
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue

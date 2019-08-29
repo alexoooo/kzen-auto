@@ -25,7 +25,7 @@ Script:
 
 Graph:
   is: Document
-  class: tech.kzen.auto.common.objects.document.query.QueryDocument
+  class: tech.kzen.auto.common.objects.document.graph.GraphDocument
 #  icon: CallSplit
   icon: DeviceHub
   vertices: []

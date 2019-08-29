@@ -29,7 +29,7 @@ object DataflowUtils {
             graphStructure: GraphStructure,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
-        val vertexMatrix = DataflowMatrix.ofQueryDocument(host, graphStructure)
+        val vertexMatrix = DataflowMatrix.ofGraphDocument(host, graphStructure)
 //        println("^^^^^ next: vertexMatrix - $vertexMatrix")
 
         val dataflowDag = DataflowDag.of(vertexMatrix)
