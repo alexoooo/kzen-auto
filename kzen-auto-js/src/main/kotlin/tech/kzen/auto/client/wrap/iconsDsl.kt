@@ -120,6 +120,9 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "Crop" ->
             CropIcon::class
 
+        "CameraAlt" ->
+            CameraAltIcon::class
+
         else ->
             TextureIcon::class
     }

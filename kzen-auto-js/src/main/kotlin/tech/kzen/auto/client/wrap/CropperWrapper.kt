@@ -1,9 +1,10 @@
 package tech.kzen.auto.client.wrap
 
 import kotlinx.css.*
+import org.w3c.dom.CustomEvent
+import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLImageElement
 import react.RBuilder
-import react.RComponent
 import react.RProps
 import react.RState
 import styled.css
@@ -13,8 +14,14 @@ import kotlin.js.json
 
 
 class CropperWrapper:
-        RComponent<RProps, RState>()
+        RPureComponent<CropperWrapper.Props, RState>()
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    class Props(
+            var crop: (event: CustomEvent) -> Unit
+    ): RProps
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private var imageElement: HTMLImageElement? = null
     private var cropper: Cropper? = null
@@ -28,11 +35,9 @@ class CropperWrapper:
 
 //        options["aspectRatio"] = Double.NaN
         options["autoCropArea"] = 0.05
+        options["crop"] = props.crop
 
-//        async {
-//            delay(1000)
-            cropper = Cropper(imageElement!!, options)
-//        }
+        cropper = Cropper(imageElement!!, options)
     }
 
 
@@ -44,20 +49,30 @@ class CropperWrapper:
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun getCroppedCanvas(): HTMLCanvasElement {
+        val options = json()
+
+        // https://github.com/fengyuanchen/cropperjs/blob/master/README.md#getcroppedcanvasoptions
+        options["imageSmoothingEnabled"] = false
+        options["maxWidth"] = 4096
+        options["maxHeight"] = 4096
+
+        return cropper!!.getCroppedCanvas(options)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         styledDiv {
             css {
-//                position: relative; width: 100%; max-height: 497px; min-height: 200px;
                 position = Position.relative
                 width = 100.pct
                 height = 100.pct
-//                maxHeight = 300.px
-//                minHeight = 200.px
             }
 
             styledImg {
                 css {
-                    // opacity = 0
+                    opacity = 0
                     maxWidth = 100.pct
                     maxHeight = 100.pct
                 }

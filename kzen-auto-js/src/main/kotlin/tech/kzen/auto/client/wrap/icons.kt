@@ -346,3 +346,8 @@ external class ShareIcon: Component<IconProps, RState> {
 external class CropIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+@JsName("CameraAlt")
+external class CameraAltIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
