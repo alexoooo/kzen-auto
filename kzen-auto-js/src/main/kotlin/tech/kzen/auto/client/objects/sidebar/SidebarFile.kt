@@ -15,8 +15,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
@@ -30,8 +29,8 @@ class SidebarFile(
 ):
         RPureComponent<SidebarFile.Props, SidebarFile.State>(props)
 {
+    //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val iconAttribute = AttributePath.ofName(AttributeName("icon"))
         private const val menuDanglingTimeout = 300
 
         private val iconWidth = 22.px
@@ -233,7 +232,7 @@ class SidebarFile(
             archetypeLocation: ObjectLocation
     ) {
         val icon = (props.structure.graphNotation.coalesce[archetypeLocation]!!
-                .get(iconAttribute) as ScalarAttributeNotation
+                .get(AutoConventions.iconAttributePath) as ScalarAttributeNotation
                 ).value
 
         styledDiv {

@@ -171,7 +171,7 @@ class ProjectController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        styledDiv {
+//        styledDiv {
             val graphNotation = state.structure?.graphNotation
             if (graphNotation == null) {
                 +"Loading..."
@@ -179,7 +179,7 @@ class ProjectController(
             else {
                 renderBody(graphNotation)
             }
-        }
+//        }
     }
 
 

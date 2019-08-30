@@ -34,8 +34,6 @@ fun main() {
                     as? ReactWrapper<*>
                     ?: throw IllegalStateException("Missing root object")
 
-//            console.log("^^^ main rootInstance", rootInstance)
-
             val rootElement = document.getElementById("root")
                     ?: throw IllegalStateException("'root' element not found")
 

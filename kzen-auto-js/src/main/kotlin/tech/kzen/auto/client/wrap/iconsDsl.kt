@@ -117,6 +117,9 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "Share" ->
             ShareIcon::class
 
+        "Crop" ->
+            CropIcon::class
+
         else ->
             TextureIcon::class
     }

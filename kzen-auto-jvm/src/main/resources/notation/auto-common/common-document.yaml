@@ -2,7 +2,9 @@
 Document:
   abstract: true
   class: tech.kzen.auto.common.objects.document.DocumentArchetype
+  title: "Document"
   meta:
+    title: String
     icon: String
     objectLocation:
       is: ObjectLocation
@@ -26,7 +28,6 @@ Script:
 Graph:
   is: Document
   class: tech.kzen.auto.common.objects.document.graph.GraphDocument
-#  icon: CallSplit
   icon: DeviceHub
   vertices: []
   edges: []
@@ -39,3 +40,9 @@ Graph:
       of: EdgeDescriptor
       by: EdgesDefiner
 
+
+Feature:
+  is: Document
+  class: tech.kzen.auto.common.objects.document.feature.FeatureDocument
+  title: "Visual Target"
+  icon: Crop

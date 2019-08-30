@@ -340,3 +340,9 @@ external class AddBoxIcon: Component<IconProps, RState> {
 external class ShareIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("Crop")
+external class CropIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

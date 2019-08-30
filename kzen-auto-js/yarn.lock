@@ -1572,6 +1572,11 @@ create-hmac@^1.1.0, create-hmac@^1.1.2, create-hmac@^1.1.4:
     safe-buffer "^5.0.1"
     sha.js "^2.4.8"
 
+cropperjs@1.5.5:
+  version "1.5.5"
+  resolved "https://registry.yarnpkg.com/cropperjs/-/cropperjs-1.5.5.tgz#07d04c64244ab88c1bfc382a848ec346ef50b7b9"
+  integrity sha512-aJF6GuGk0K+nxYpmK9ZEc0p8foHcrM3DAAK/1F66qe0h/b08hBNbjpZRM0JbPNHw452LCxzS8NndG5VMv+/hLA==
+
 cross-spawn@6.0.5, cross-spawn@^6.0.0:
   version "6.0.5"
   resolved "https://registry.yarnpkg.com/cross-spawn/-/cross-spawn-6.0.5.tgz#4a5ec7c64dfae22c3a14124dbacdee846d80cbc4"

@@ -117,7 +117,7 @@ class SidebarController(
 
             child(SidebarFolder::class) {
                 attrs {
-                    this.structure = structure
+                    this.graphStructure = structure
                     selectedDocumentPath = state.documentPath
                     documentArchetypes = props.documentArchetypes
                 }
