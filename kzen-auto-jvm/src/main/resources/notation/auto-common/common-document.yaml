@@ -13,8 +13,10 @@ Document:
 
 ###########################################################
 
+# TODO: factor out DocumentArchetype (concrete) vs DocumentRoot (concrete)
 
 Script:
+#  abstract: true
   is: Document
   class: tech.kzen.auto.common.objects.document.script.ScriptDocument
   icon: PlaylistPlay
@@ -26,6 +28,7 @@ Script:
 
 
 Graph:
+#  abstract: true
   is: Document
   class: tech.kzen.auto.common.objects.document.graph.GraphDocument
   icon: DeviceHub
@@ -42,6 +45,7 @@ Graph:
 
 
 Feature:
+#  abstract: true
   is: Document
   class: tech.kzen.auto.common.objects.document.feature.FeatureDocument
   title: "Visual Target"

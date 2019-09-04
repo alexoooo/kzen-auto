@@ -143,6 +143,7 @@ class StageController(
     private fun RBuilder.renderDocumentController(
             archetypeName: ObjectName
     ) {
+        console.log("%%%%%% renderDocumentController", props.documentControllers)
         val documentController = props.documentControllers
                 .single { archetypeName == it.type().name() }
 

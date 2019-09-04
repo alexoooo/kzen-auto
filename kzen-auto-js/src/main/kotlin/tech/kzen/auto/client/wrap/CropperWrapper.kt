@@ -18,6 +18,7 @@ class CropperWrapper:
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
+            var src: String?,
             var crop: (event: CustomEvent) -> Unit
     ): RProps
 
@@ -78,7 +79,7 @@ class CropperWrapper:
                 }
 
                 attrs {
-                    src = "screenshot.png"
+                    src = props.src ?: "Screenshot"
                 }
 
                 ref {

@@ -1,14 +1,4 @@
 
-#######################################################################################################################
-
-EdgesDefiner:
-  class: tech.kzen.auto.common.objects.document.graph.EdgesDefiner
-
-
-EdgeDescriptor:
-  abstract: true
-  class: tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
-
 
 #######################################################################################################################
 

@@ -24,7 +24,7 @@ SidebarController:
 
 
 RibbonController:
-  class: tech.kzen.auto.client.objects.ribbon.RibbonController.Wrapper
+  class: tech.kzen.auto.client.objects.ribbon.RibbonController$Wrapper
   meta:
     actionTypes:
       is: List
@@ -49,6 +49,9 @@ RibbonGroup:
       is: List
       of: RibbonTool
       by: ParentChild
+    documentArchetype:
+      is: Document
+#      by: Nominal
 
 
 RibbonTool:
@@ -65,7 +68,7 @@ RibbonTool:
 
 
 StageController:
-  class: tech.kzen.auto.client.objects.document.StageController.Wrapper
+  class: tech.kzen.auto.client.objects.document.StageController$Wrapper
   meta:
     documentControllers:
       is: List
@@ -76,5 +79,8 @@ StageController:
 DocumentController:
   abstract: true
   is: ReactWrapper
+  class: tech.kzen.auto.client.objects.document.DocumentController
   meta:
-    type: Document
+    type:
+      is: Document
+#      by: Nominal

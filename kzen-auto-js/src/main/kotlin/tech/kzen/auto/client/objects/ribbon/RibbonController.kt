@@ -112,7 +112,7 @@ class RibbonController(
         val typeName = DocumentArchetype.archetypeName(props.notation, documentPath)
                 ?: return
 
-//        console.log("^^^^^ handleNavigation - typeName", typeName)
+        console.log("^^^^^ handleNavigation - ribbonGroups", typeName, props.ribbonGroups)
 
         val documentRibbonGroups = props
                 .ribbonGroups

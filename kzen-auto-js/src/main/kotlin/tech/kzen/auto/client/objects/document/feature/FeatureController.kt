@@ -7,29 +7,44 @@ import react.dom.img
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
+import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.obj.ObjectNesting
+import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.platform.IoUtils
 
 
-class FeatureController:
-        RPureComponent<RProps, FeatureController.State>()
+@Suppress("unused")
+class FeatureController(
+        props: Props
+):
+        RPureComponent<FeatureController.Props, FeatureController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        val screenshotTakerLocation = ObjectLocation(
+                DocumentPath.parse("auto-jvm/feature/feature.yaml"),
+                ObjectPath(ObjectName("ScreenshotTaker"), ObjectNesting.root))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    class Props: RProps
+
+
     class State(
             var detail: CropperDetail?,
-            var dataUrl: String?
+            var screenshotDataUrl: String?,
+            var capturedDataUrl: String?,
+            var requestingScreenshot: Boolean?
     ): RState
-
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private var cropperWrapper: CropperWrapper? = null
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: RProps) {
-        detail = null
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -45,11 +60,74 @@ class FeatureController:
 
         override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
             return input.child(FeatureController::class) {
-//                attrs {
+                //                attrs {
 //                    this.attributeController = this@Wrapper.attributeController
 //                }
 
                 handler()
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private var cropperWrapper: CropperWrapper? = null
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: Props) {
+        console.log("^^^^ State.init")
+        detail = null
+        screenshotDataUrl = null
+        capturedDataUrl = null
+        requestingScreenshot = false
+    }
+
+
+    override fun componentDidUpdate(
+            prevProps: Props,
+            prevState: State,
+            snapshot: Any
+    ) {
+        console.log("^^^^ componentDidUpdate", state.requestingScreenshot, prevState.requestingScreenshot)
+        if (state.screenshotDataUrl == null && state.requestingScreenshot != true) {
+            setState {
+                requestingScreenshot = true
+            }
+        }
+
+        if (state.requestingScreenshot == true && prevState.requestingScreenshot != true) {
+            doRequestScreenshot()
+        }
+    }
+
+
+    override fun componentDidMount() {
+//        console.log("^^^^^^ componentDidMount", state.requestingScreenshot)
+        if (state.screenshotDataUrl == null) {
+            setState {
+                requestingScreenshot = true
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun doRequestScreenshot() {
+        async {
+//            console.log("doRequestScreenshot", screenshotTakerLocation.toString())
+            val result= ClientContext.restClient.performDetached(
+                    screenshotTakerLocation)
+
+            if (result is ImperativeSuccess) {
+                val screenshotPng = result.value as BinaryExecutionValue
+                val base64 = IoUtils.base64Encode(screenshotPng.value)
+                val screenshotPngUrl = "data:png/png;base64,$base64"
+
+                setState {
+                    screenshotDataUrl = screenshotPngUrl
+                    requestingScreenshot = false
+                }
             }
         }
     }
@@ -74,14 +152,16 @@ class FeatureController:
         console.log("canvas", canvas)
 
         setState {
-            dataUrl = canvas.toDataURL()
+            capturedDataUrl = canvas.toDataURL()
+
+            requestingScreenshot = true
         }
     }
 
 
     private fun onCapture() {
         setState {
-            dataUrl = null
+            capturedDataUrl = null
         }
     }
 
@@ -93,20 +173,31 @@ class FeatureController:
                 padding(1.em, 1.em, 0.px, 1.em)
             }
 
-            val dataUrl = state.dataUrl
-            if (dataUrl != null) {
-                renderCapture()
+            val capturedDataUrl = state.capturedDataUrl
+            val screenshotDataUrl = state.screenshotDataUrl
+//                    ?: "screenshot.png"
 
-                br {}
+            +"requestingScreenshot: ${state.requestingScreenshot}"
 
-                renderDataUrl(dataUrl)
-            }
-            else {
-                renderSave()
+            when {
+                capturedDataUrl != null -> {
+                    renderCapture()
 
-                br {}
+                    br {}
 
-                renderCropper()
+                    renderDataUrl(capturedDataUrl)
+                }
+
+                screenshotDataUrl != null -> {
+                    renderSave()
+
+                    br {}
+
+                    renderCropper(screenshotDataUrl)
+                }
+
+                else ->
+                    +"<taking screenshot>"
             }
         }
     }
@@ -175,7 +266,9 @@ class FeatureController:
     }
 
 
-    private fun RBuilder.renderCropper() {
+    private fun RBuilder.renderCropper(
+            screenshotDataUrl: String
+    ) {
         styledDiv {
             css {
                 width = 100.pct
@@ -186,6 +279,8 @@ class FeatureController:
 
             child(CropperWrapper::class) {
                 attrs {
+                    src = screenshotDataUrl
+
                     crop = {event ->
                         @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
                         val detail = event.detail as CropperDetail

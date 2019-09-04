@@ -1,0 +1,8 @@
+
+
+ScreenshotTaker:
+#  is: Action
+#  abstract: true
+  class: tech.kzen.auto.server.objects.feature.ScreenshotTaker
+
+

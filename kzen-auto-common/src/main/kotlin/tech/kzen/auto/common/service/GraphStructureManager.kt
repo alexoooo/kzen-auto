@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.service
 
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.metadata.read.NotationMetadataReader
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
@@ -18,6 +19,12 @@ class GraphStructureManager(
         private var notationMetadataReader: NotationMetadataReader
 ) {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        const val autoJvmPrefix = "auto-jvm/"
+        val autoJvmPrefixDocumentPath = DocumentPath.parse(autoJvmPrefix)
+    }
+
+
     interface Observer {
         suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?)
     }
@@ -61,6 +68,9 @@ class GraphStructureManager(
     suspend fun clientGraphStructure(): GraphStructure {
         val allNotation = notationRepository.notation()
         val clientGraphNotation = clientGraphNotation(allNotation)
+
+//        println("^^^^^^ clientGraphStructure: " + clientGraphNotation.documents.values.keys)
+
         val metadata = notationMetadataReader.read(clientGraphNotation)
         return GraphStructure(clientGraphNotation, metadata)
     }
@@ -71,10 +81,12 @@ class GraphStructureManager(
     ): GraphNotation {
         // TODO: use profiles instead
         return allNotation.filterPaths {
-            it.asRelativeFile().startsWith("base/") ||
-                    it.asRelativeFile().startsWith("auto-js/") ||
-                    it.asRelativeFile().startsWith("auto-common/") ||
-                    it.asRelativeFile().startsWith("auto-jvm/")
+            val relativeFile = it.asRelativeFile()
+
+            relativeFile.startsWith("base/") ||
+                    relativeFile.startsWith("auto-js/") ||
+                    relativeFile.startsWith("auto-common/") ||
+                    relativeFile.startsWith(autoJvmPrefix)
         }
     }
 

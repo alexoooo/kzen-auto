@@ -1,0 +1,49 @@
+
+
+###########################################################
+
+
+Action:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
+  description: "Perform action"
+  display: DefaultStepDisplay
+  meta:
+    icon: String
+    title: String
+    description: String
+    display: String
+
+
+ControlFlow:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.common.paradigm.imperative.api.ControlFlow
+  description: "Control flow"
+
+
+###########################################################
+
+
+PrintlnAction:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.common.objects.document.script.action.PrintlnAction
+  icon: Message
+  title: "Print line"
+  message: "default message"
+  meta:
+    message: String
+
+
+ReferenceAction:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.common.objects.document.script.action.ReferenceAction
+  icon: Input
+  title: "Previous value"
+  meta:
+    value:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
