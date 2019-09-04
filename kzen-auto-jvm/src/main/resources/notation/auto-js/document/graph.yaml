@@ -3,7 +3,7 @@
 GraphController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.graph.GraphController$Wrapper
-  type: Graph
+  archetype: Graph
   attributeController: AttributeController
 
 
@@ -13,13 +13,13 @@ GraphController:
 GraphGroup:
   is: RibbonGroup
   title: "Insert"
-  documentArchetype: Graph
+  archetype: Graph
 
 
 PipeGroup:
   is: RibbonGroup
   title: "Pipes"
-  documentArchetype: Graph
+  archetype: Graph
 
 
 ###########################################################

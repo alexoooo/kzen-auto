@@ -112,11 +112,11 @@ class RibbonController(
         val typeName = DocumentArchetype.archetypeName(props.notation, documentPath)
                 ?: return
 
-        console.log("^^^^^ handleNavigation - ribbonGroups", typeName, props.ribbonGroups)
+//        console.log("^^^^^ handleNavigation - ribbonGroups", typeName, props.ribbonGroups)
 
         val documentRibbonGroups = props
                 .ribbonGroups
-                .filter { it.documentArchetype.name() == typeName }
+                .filter { it.archetype.objectPath.name == typeName }
 
         setState {
             tabIndex = 0

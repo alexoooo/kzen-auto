@@ -15,7 +15,7 @@ import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.locate.ObjectReference
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.CreateDocumentCommand
@@ -41,7 +41,7 @@ class SidebarFolder(
     class Props(
             var graphStructure: GraphStructure,
             var selectedDocumentPath: DocumentPath?,
-            var documentArchetypes: List<DocumentArchetype>
+            var archetypeLocations: List<ObjectLocation>
     ): RProps
 
 
@@ -221,9 +221,9 @@ class SidebarFolder(
 
     private suspend fun createDocument(
             documentPath: DocumentPath,
-            archetype: DocumentArchetype
+            archetypeLocation: ObjectLocation
     ) {
-        val newDocument = archetype.newDocument()
+        val newDocument = DocumentArchetype.newDocument(archetypeLocation)
 //        console.log("^^^^^ createDocument", newDocument)
 
         ClientContext.commandBus.apply(
@@ -232,7 +232,7 @@ class SidebarFolder(
 
 
     private fun onAdd(
-            archetype: DocumentArchetype,
+            archetypeLocation: ObjectLocation,
             title: String
     ) {
         processingOption = true
@@ -240,7 +240,7 @@ class SidebarFolder(
 
         async {
             val newBundleName = generateDocumentName(title)
-            createDocument(newBundleName, archetype)
+            createDocument(newBundleName, archetypeLocation)
         }.then {
 //            console.log("Setting processingOption = false")
             optionCompletedTime = Date.now()
@@ -407,10 +407,7 @@ class SidebarFolder(
             marginRight = 1.em
         }
 
-        for (documentArchetype in props.documentArchetypes) {
-            val archetypeLocation = props.graphStructure.graphNotation.coalesce
-                    .locate(ObjectReference.ofName(documentArchetype.name()))
-
+        for (archetypeLocation in props.archetypeLocations) {
             val icon = props
                     .graphStructure
                     .graphNotation
@@ -425,13 +422,13 @@ class SidebarFolder(
                     .coalesce[archetypeLocation]!!
                     .get(AutoConventions.titleAttributePath)
                     ?.asString()
-                    ?: documentArchetype.name().value
+                    ?: archetypeLocation.objectPath.name.value
 
             child(MaterialMenuItem::class) {
                 attrs {
-                    key = documentArchetype.name().value
+                    key = archetypeLocation.objectPath.name.value
                     onClick = {
-                        onAdd(documentArchetype, title)
+                        onAdd(archetypeLocation, title)
                     }
                 }
 

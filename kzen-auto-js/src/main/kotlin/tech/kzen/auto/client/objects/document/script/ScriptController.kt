@@ -14,7 +14,6 @@ import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
@@ -79,13 +78,13 @@ class ScriptController:
 
     @Suppress("unused")
     class Wrapper(
-            private val type: DocumentArchetype,
+            private val archetype: ObjectLocation,
             private val stepController: StepController.Wrapper
     ):
             DocumentController
     {
-        override fun type(): DocumentArchetype {
-            return type
+        override fun archetypeLocation(): ObjectLocation {
+            return archetype
         }
 
         override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {

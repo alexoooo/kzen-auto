@@ -1,11 +1,11 @@
 package tech.kzen.auto.client.objects.ribbon
 
-import tech.kzen.auto.common.objects.document.DocumentArchetype
+import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 //@Suppress("unused")
 class RibbonGroup(
         val title: String,
-        val documentArchetype: DocumentArchetype,
+        val archetype: ObjectLocation,
         val children: List<RibbonTool>
 )

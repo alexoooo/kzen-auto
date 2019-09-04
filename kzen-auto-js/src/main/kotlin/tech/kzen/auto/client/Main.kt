@@ -35,7 +35,7 @@ fun main() {
                     .toPersistentMap()
                     .let { GraphDefinition(ObjectLocationMap(it)) }
 
-            console.log("^^^ filteredGraphDefinition - $filteredGraphDefinition")
+//            console.log("^^^ filteredGraphDefinition - $filteredGraphDefinition")
 
             val clientGraphInstance = GraphCreator.createGraph(
                     clientGraphStructure, filteredGraphDefinition)

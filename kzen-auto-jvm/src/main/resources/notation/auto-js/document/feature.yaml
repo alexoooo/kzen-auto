@@ -3,4 +3,4 @@
 FeatureController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.feature.FeatureController$Wrapper
-  type: Feature
+  archetype: Feature

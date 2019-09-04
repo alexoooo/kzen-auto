@@ -3,7 +3,7 @@
 ScriptController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.script.ScriptController$Wrapper
-  type: Script
+  archetype: Script
   stepController: StepController
 
 
@@ -70,7 +70,7 @@ SelectStepEditor:
 InputOutputGroup:
   is: RibbonGroup
   title: "Input / Output"
-  documentArchetype: Script
+  archetype: Script
 
 
 ###########################################################
@@ -116,7 +116,7 @@ PrintlnActionTool:
 LogicGroup:
   is: RibbonGroup
   title: "Logic"
-  documentArchetype: Script
+  archetype: Script
 
 ###########################################################
 
@@ -150,7 +150,7 @@ ConditionalExpressionTool:
 BrowserGroup:
   is: RibbonGroup
   title: "Browser"
-  documentArchetype: Script
+  archetype: Script
 
 ###########################################################
 

@@ -16,10 +16,10 @@ import tech.kzen.lib.common.structure.notation.model.PositionIndex
 
 @Suppress("unused")
 class ScriptDocument(
-        val steps: List<ExecutionAction>,
-        objectLocation: ObjectLocation
+        val steps: List<ExecutionAction>/*,
+        objectLocation: ObjectLocation*/
 ):
-        DocumentArchetype(objectLocation)
+        DocumentArchetype(/*objectLocation*/)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

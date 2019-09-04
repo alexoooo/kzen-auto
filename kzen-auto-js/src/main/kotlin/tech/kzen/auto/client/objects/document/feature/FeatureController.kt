@@ -10,7 +10,6 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -50,12 +49,12 @@ class FeatureController(
     //-----------------------------------------------------------------------------------------------------------------
     @Suppress("unused")
     class Wrapper(
-            private val type: DocumentArchetype
+            private val archetype: ObjectLocation
     ):
             DocumentController
     {
-        override fun type(): DocumentArchetype {
-            return type
+        override fun archetypeLocation(): ObjectLocation {
+            return archetype
         }
 
         override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
@@ -76,7 +75,7 @@ class FeatureController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        console.log("^^^^ State.init")
+//        console.log("^^^^ State.init")
         detail = null
         screenshotDataUrl = null
         capturedDataUrl = null
@@ -89,7 +88,7 @@ class FeatureController(
             prevState: State,
             snapshot: Any
     ) {
-        console.log("^^^^ componentDidUpdate", state.requestingScreenshot, prevState.requestingScreenshot)
+//        console.log("^^^^ componentDidUpdate", state.requestingScreenshot, prevState.requestingScreenshot)
         if (state.screenshotDataUrl == null && state.requestingScreenshot != true) {
             setState {
                 requestingScreenshot = true
@@ -177,7 +176,7 @@ class FeatureController(
             val screenshotDataUrl = state.screenshotDataUrl
 //                    ?: "screenshot.png"
 
-            +"requestingScreenshot: ${state.requestingScreenshot}"
+//            +"requestingScreenshot: ${state.requestingScreenshot}"
 
             when {
                 capturedDataUrl != null -> {

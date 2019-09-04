@@ -16,7 +16,6 @@ import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.graph.DataflowWiring
 import tech.kzen.auto.common.objects.document.graph.GraphDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
@@ -74,13 +73,13 @@ class GraphController:
 
     @Suppress("unused")
     class Wrapper(
-            private val type: DocumentArchetype,
+            private val archetype: ObjectLocation,
             private val attributeController: AttributeController.Wrapper
     ):
             DocumentController
     {
-        override fun type(): DocumentArchetype {
-            return type
+        override fun archetypeLocation(): ObjectLocation {
+            return archetype
         }
 
         override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {

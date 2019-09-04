@@ -9,10 +9,10 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 
@@ -20,14 +20,13 @@ import tech.kzen.lib.common.structure.notation.edit.NotationEvent
 class SidebarController(
         props: Props
 ):
-//        RComponent<SidebarController.Props, SidebarController.State>(props),
         RPureComponent<SidebarController.Props, SidebarController.State>(props),
         GraphStructureManager.Observer,
         NavigationManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-        var documentArchetypes: List<DocumentArchetype>
+        var archetypeLocations: List<ObjectLocation>
     ): RProps
 
 
@@ -39,12 +38,12 @@ class SidebarController(
 
     @Suppress("unused")
     class Wrapper(
-            private val documentArchetypes: List<DocumentArchetype>
+            private val archetypes: List<ObjectLocation>
     ): ReactWrapper<Props> {
         override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
             return input.child(SidebarController::class) {
                 attrs {
-                    documentArchetypes = this@Wrapper.documentArchetypes
+                    archetypeLocations = this@Wrapper.archetypes
                 }
 
                 handler()
@@ -119,7 +118,7 @@ class SidebarController(
                 attrs {
                     this.graphStructure = structure
                     selectedDocumentPath = state.documentPath
-                    documentArchetypes = props.documentArchetypes
+                    archetypeLocations = props.archetypeLocations
                 }
             }
         }

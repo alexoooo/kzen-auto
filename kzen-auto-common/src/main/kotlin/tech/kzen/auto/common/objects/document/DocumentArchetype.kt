@@ -13,7 +13,7 @@ import tech.kzen.lib.platform.collect.persistentMapOf
 
 
 abstract class DocumentArchetype(
-        private val objectLocation: ObjectLocation
+//        private val objectLocation: ObjectLocation
 ) {
     companion object {
         fun archetypeName(
@@ -42,18 +42,26 @@ abstract class DocumentArchetype(
 
             return graphNotation.coalesce.locate(ObjectReference.ofName(parentName))
         }
+
+
+        fun newDocument(archetypeLocation: ObjectLocation): DocumentNotation {
+            val mainObjectNotation = ObjectNotation.ofParent(archetypeLocation.objectPath.name)
+            return DocumentNotation(ObjectPathMap(persistentMapOf(
+                    NotationConventions.mainObjectPath to mainObjectNotation
+            )))
+        }
     }
 
 
-    fun name(): ObjectName {
-        return objectLocation.objectPath.name
-    }
+//    fun name(): ObjectName {
+//        return objectLocation.objectPath.name
+//    }
 
 
-    fun newDocument(): DocumentNotation {
-        val mainObjectNotation = ObjectNotation.ofParent(name())
-        return DocumentNotation(ObjectPathMap(persistentMapOf(
-                NotationConventions.mainObjectPath to mainObjectNotation
-        )))
-    }
+//    fun newDocument(): DocumentNotation {
+//        val mainObjectNotation = ObjectNotation.ofParent(name())
+//        return DocumentNotation(ObjectPathMap(persistentMapOf(
+//                NotationConventions.mainObjectPath to mainObjectNotation
+//        )))
+//    }
 }

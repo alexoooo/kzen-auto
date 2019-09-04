@@ -14,10 +14,10 @@ ProjectController:
 SidebarController:
   class: tech.kzen.auto.client.objects.sidebar.SidebarController$Wrapper
   meta:
-    documentArchetypes:
+    archetypes:
       is: List
       of: Document
-      by: Autowired
+      by: AutowiredNominal
 
 
 ###########################################################
@@ -42,16 +42,16 @@ RibbonGroup:
   is: ChildContainer
   class: tech.kzen.auto.client.objects.ribbon.RibbonGroup
   title: ''
-  documentArchetype: Document
+  archetype: Document
   meta:
     title: String
     children:
       is: List
       of: RibbonTool
       by: ParentChild
-    documentArchetype:
+    archetype:
       is: Document
-#      by: Nominal
+      by: Nominal
 
 
 RibbonTool:
@@ -81,6 +81,6 @@ DocumentController:
   is: ReactWrapper
   class: tech.kzen.auto.client.objects.document.DocumentController
   meta:
-    type:
+    archetype:
       is: Document
-#      by: Nominal
+      by: Nominal
