@@ -17,6 +17,8 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.structure.notation.io.model.DocumentScan
+import tech.kzen.lib.common.structure.notation.io.model.NotationScan
 import tech.kzen.lib.common.structure.notation.model.PositionIndex
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.IoUtils
@@ -29,18 +31,18 @@ class ClientRestApi(
         private val baseUrl: String
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun scanNotationPaths(): DocumentPathMap<Digest> {
+    suspend fun scanNotationPaths(): NotationScan {
         val scanText = get(CommonRestApi.scan)
 
-        val builder = mutableMapOf<DocumentPath, Digest>()
+        val builder = mutableMapOf<DocumentPath, DocumentScan>()
         // NB: using transform just to iterate the Json, is there a better way to do this?
         JSON.parse<Json>(scanText) { key: String, value: Any? ->
             if (value is String) {
-                builder[DocumentPath.parse(key)] = Digest.parse(value)
+                builder[DocumentPath.parse(key)] = DocumentScan(Digest.parse(value), null)
             }
             null
         }
-        return DocumentPathMap(builder.toPersistentMap())
+        return NotationScan(DocumentPathMap(builder.toPersistentMap()))
     }
 
 

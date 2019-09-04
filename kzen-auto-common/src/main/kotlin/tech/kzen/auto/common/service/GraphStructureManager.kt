@@ -127,8 +127,8 @@ class GraphStructureManager(
     suspend fun refresh() {
 //        println("ModelManager - Refreshing - ${mostRecent == null}")
 
-        val restScan = notationMedia.scan()
-        val clientScan = notationMediaCache.scan()
+        val restScan = notationMedia.scan().documents
+        val clientScan = notationMediaCache.scan().documents
 
 //        println("ModelManager - Refreshing - got scan - ${restScan.values.keys} vs ${clientScan.values.keys}")
 

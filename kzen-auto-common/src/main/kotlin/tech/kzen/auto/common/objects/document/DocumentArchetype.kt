@@ -48,7 +48,8 @@ abstract class DocumentArchetype(
             val mainObjectNotation = ObjectNotation.ofParent(archetypeLocation.objectPath.name)
             return DocumentNotation(ObjectPathMap(persistentMapOf(
                     NotationConventions.mainObjectPath to mainObjectNotation
-            )))
+            )),
+                    null)
         }
     }
 

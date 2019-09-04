@@ -117,8 +117,8 @@ class RestHandler {
 
         val asMap = mutableMapOf<String, String>()
 
-        for (e in documentTree.values) {
-            asMap[e.key.asRelativeFile()] = e.value.asString()
+        for (e in documentTree.documents.values) {
+            asMap[e.key.asRelativeFile()] = e.value.documentDigest.asString()
         }
 
         return ServerResponse
@@ -155,7 +155,9 @@ class RestHandler {
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val documentBody: DocumentNotation = serverRequest.getParam(CommonRestApi.paramDocumentNotation) {
-            ServerContext.yamlParser.parseDocument(IoUtils.utf8Encode(it))
+            DocumentNotation(
+                    ServerContext.yamlParser.parseDocumentObjects(IoUtils.utf8Encode(it)),
+                    null)
         }
 
         return applyAndDigest(

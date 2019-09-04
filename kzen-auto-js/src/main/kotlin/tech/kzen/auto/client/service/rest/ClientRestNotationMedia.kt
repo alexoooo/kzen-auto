@@ -3,13 +3,14 @@ package tech.kzen.auto.client.service.rest
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.structure.notation.io.NotationMedia
+import tech.kzen.lib.common.structure.notation.io.model.NotationScan
 import tech.kzen.lib.common.util.Digest
 
 
 class ClientRestNotationMedia(
         private val restClient: ClientRestApi
 ): NotationMedia {
-    override suspend fun scan(): DocumentPathMap<Digest> {
+    override suspend fun scan(): NotationScan {
         return restClient.scanNotationPaths()
     }
 
