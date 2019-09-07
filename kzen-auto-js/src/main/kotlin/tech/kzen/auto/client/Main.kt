@@ -31,7 +31,7 @@ fun main() {
             val filteredGraphDefinition = clientGraphDefinition
                     .objectDefinitions
                     .values
-                    .filterKeys { ! it.documentPath.startsWith(GraphStructureManager.autoJvmPrefixDocumentPath) }
+                    .filterKeys { ! it.documentPath.startsWith(GraphStructureManager.autoJvmPrefixDocumentNesting) }
                     .toPersistentMap()
                     .let { GraphDefinition(ObjectLocationMap(it)) }
 

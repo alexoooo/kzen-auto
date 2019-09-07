@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.service
 
-import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.document.DocumentNesting
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.metadata.read.NotationMetadataReader
 import tech.kzen.lib.common.structure.notation.edit.NotationEvent
@@ -21,7 +21,7 @@ class GraphStructureManager(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         const val autoJvmPrefix = "auto-jvm/"
-        val autoJvmPrefixDocumentPath = DocumentPath.parse(autoJvmPrefix)
+        val autoJvmPrefixDocumentNesting = DocumentNesting.parse(autoJvmPrefix)
     }
 
 

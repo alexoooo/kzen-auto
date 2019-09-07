@@ -77,14 +77,14 @@ sealed class ControlState {
 
 object InitialControlState : ControlState() {
     override fun digest(): Digest {
-        return Digest.ofXoShiRo256StarStar(InitialControlState::class.simpleName)
+        return Digest.ofUtf8(InitialControlState::class.simpleName)
     }
 }
 
 
 object FinalControlState : ControlState() {
     override fun digest(): Digest {
-        return Digest.ofXoShiRo256StarStar(FinalControlState::class.simpleName)
+        return Digest.ofUtf8(FinalControlState::class.simpleName)
     }
 }
 
@@ -105,7 +105,7 @@ class BranchEvaluationState(
 //) : IndexedEvaluationState(index)
 ) : ControlState() {
     override fun digest(): Digest {
-        val digest = Digest.Streaming()
+        val digest = Digest.Builder()
 
         digest.addUtf8(BranchEvaluationState::class.simpleName)
 

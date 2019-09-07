@@ -45,7 +45,7 @@ data class ImperativeError(
     }
 
     override fun digest(): Digest {
-        return Digest.ofXoShiRo256StarStar(errorMessage)
+        return Digest.ofUtf8(errorMessage)
     }
 }
 
@@ -66,7 +66,7 @@ data class ImperativeSuccess(
     }
 
     override fun digest(): Digest {
-        val digest = Digest.Streaming()
+        val digest = Digest.Builder()
         value.digest(digest)
         detail.digest(digest)
         return digest.digest()

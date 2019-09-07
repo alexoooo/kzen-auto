@@ -19,6 +19,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.structure.GraphStructure
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.edit.CreateDocumentCommand
+import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
 import kotlin.js.Date
 import kotlin.random.Random
 
@@ -30,7 +31,7 @@ class SidebarFolder(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val documentBase = NotationConventions.mainDocumentPath
+        private val documentBaseNesting = NotationConventions.mainDocumentNesting
         private const val menuDanglingTimeout = 300
 
         val indent = (2).em.minus(4.px)
@@ -89,7 +90,7 @@ class SidebarFolder(
                 .documents
                 .values
                 .keys
-                .filter { it.startsWith(documentBase) }
+                .filter { it.startsWith(documentBaseNesting) }
                 .sortedBy { it.asString().toLowerCase() }
     }
 
@@ -171,28 +172,30 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun generateDocumentName(
-            title: String
+            title: String,
+            directory: Boolean
     ): DocumentPath {
-        val suffix = findSuffix(title, props.graphStructure)
-        return resolve(title + suffix)
+        val suffix = findSuffix(title, props.graphStructure, directory)
+        return resolve(title + suffix, directory)
     }
 
 
     private fun findSuffix(
             prefix: String,
-            structure: GraphStructure?
+            structure: GraphStructure?,
+            directory: Boolean
     ): String {
         if (structure == null) {
             return "-" + Random.nextInt()
         }
         else {
-            if (testSuffix(structure, prefix, "")) {
+            if (testSuffix(structure, prefix, "", directory)) {
                 return ""
             }
 
             for (i in 1 .. 99) {
                 val candidateSuffix = "-$i"
-                if (! testSuffix(structure, prefix, candidateSuffix)) {
+                if (! testSuffix(structure, prefix, candidateSuffix, directory)) {
                     continue
                 }
 
@@ -207,15 +210,19 @@ class SidebarFolder(
     private fun testSuffix(
             structure: GraphStructure,
             prefix: String,
-            candidateSuffix: String
+            candidateSuffix: String,
+            directory: Boolean
     ): Boolean {
-        val candidatePath = resolve(prefix + candidateSuffix)
+        val candidatePath = resolve(prefix + candidateSuffix, directory)
         return candidatePath !in structure.graphNotation.documents.values
     }
 
 
-    private fun resolve(name: String): DocumentPath {
-        return documentBase.withName(DocumentName.ofYaml(name))
+    private fun resolve(name: String, directory: Boolean): DocumentPath {
+        return DocumentPath(
+                DocumentName(name),
+                documentBaseNesting,
+                directory)
     }
 
 
@@ -238,8 +245,14 @@ class SidebarFolder(
         processingOption = true
         onOptionsClose()
 
+        val directoryAttribute = props.graphStructure.graphNotation.transitiveAttribute(
+                archetypeLocation, AutoConventions.directoryAttributePath
+        ) as? ScalarAttributeNotation
+
+        val directory = directoryAttribute?.asBoolean() ?: false
+
         async {
-            val newBundleName = generateDocumentName(title)
+            val newBundleName = generateDocumentName(title, directory)
             createDocument(newBundleName, archetypeLocation)
         }.then {
 //            console.log("Setting processingOption = false")

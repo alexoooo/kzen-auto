@@ -157,40 +157,40 @@ sealed class ExecutionValue {
 
 
     fun digest(): Digest {
-        val digest = Digest.Streaming()
+        val digest = Digest.Builder()
         digest(digest)
         return digest.digest()
     }
 
 
-    fun digest(digest: Digest.Streaming) {
+    fun digest(builder: Digest.Builder) {
         when (this) {
             NullExecutionValue ->
-                digest.addMissing()
+                builder.addMissing()
 
             is TextExecutionValue ->
-                digest.addUtf8(value)
+                builder.addUtf8(value)
 
             is BooleanExecutionValue ->
-                digest.addBoolean(value)
+                builder.addBoolean(value)
 
             is NumberExecutionValue -> {
-                digest.addDouble(value)
+                builder.addDouble(value)
             }
 
             is BinaryExecutionValue ->
-                digest.addBytes(value)
+                builder.addBytes(value)
 
             is ListExecutionValue -> {
-                digest.addInt(values.size)
-                values.forEach { it.digest(digest) }
+                builder.addInt(values.size)
+                values.forEach { it.digest(builder) }
             }
 
             is MapExecutionValue -> {
-                digest.addInt(values.size)
+                builder.addInt(values.size)
                 values.forEach {
-                    digest.addUtf8(it.key)
-                    it.value.digest(digest)
+                    builder.addUtf8(it.key)
+                    it.value.digest(builder)
                 }
             }
         }

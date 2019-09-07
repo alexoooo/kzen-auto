@@ -133,7 +133,7 @@ class DocumentNameEditor(
             return
         }
 
-        val nameWithExtension = DocumentName.ofYaml(state.name)
+        val nameWithExtension = DocumentName(state.name)
 
         setState {
             editing = false

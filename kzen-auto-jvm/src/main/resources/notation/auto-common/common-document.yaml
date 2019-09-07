@@ -3,12 +3,14 @@ Document:
   abstract: true
   class: tech.kzen.auto.common.objects.document.DocumentArchetype
   title: "Document"
+  directory: false
   meta:
     title: String
     icon: String
     objectLocation:
       is: ObjectLocation
       by: SelfLocation
+    directory: Boolean
 
 
 ###########################################################
@@ -50,3 +52,4 @@ Feature:
   class: tech.kzen.auto.common.objects.document.feature.FeatureDocument
   title: "Visual Target"
   icon: Crop
+  directory: true

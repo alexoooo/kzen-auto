@@ -65,7 +65,7 @@ data class ImperativeState(
 
 
     fun digest(): Digest {
-        val digest = Digest.Streaming()
+        val digest = Digest.Builder()
 
         digest.addBoolean(running)
 

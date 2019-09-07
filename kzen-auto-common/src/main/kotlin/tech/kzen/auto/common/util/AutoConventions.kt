@@ -13,6 +13,7 @@ object AutoConventions {
     val titleAttributePath = AttributePath.ofName(AttributeName("title"))
     val descriptionAttributePath = AttributePath.ofName(AttributeName("description"))
     val displayAttributePath = AttributePath.ofName(AttributeName("display"))
+    val directoryAttributePath = AttributePath.ofName(AttributeName("directory"))
 
 
     const val anonymousPrefix = "__ANON__"
@@ -43,6 +44,6 @@ object AutoConventions {
                 .documents
                 .values
                 .keys
-                .filter { it.startsWith(NotationConventions.mainDocumentPath) }
+                .filter { it.startsWith(NotationConventions.mainDocumentNesting) }
     }
 }

@@ -131,7 +131,7 @@ data class ImperativeModel(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun digest(): Digest {
-        val digest = Digest.Streaming()
+        val digest = Digest.Builder()
 
         digest.addInt(frames.size)
 
