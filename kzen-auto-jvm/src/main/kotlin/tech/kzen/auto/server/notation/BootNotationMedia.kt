@@ -4,6 +4,7 @@ import com.google.common.base.MoreObjects
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.document.DocumentPathMap
+import tech.kzen.lib.common.model.locate.ResourceLocation
 import tech.kzen.lib.common.structure.notation.NotationConventions
 import tech.kzen.lib.common.structure.notation.io.NotationMedia
 import tech.kzen.lib.common.structure.notation.io.model.DocumentScan
@@ -33,7 +34,9 @@ class BootNotationMedia(
             val paths = scanPaths()
 
             for (path in paths) {
-                val bytes = read(path)
+                check(! path.directory)
+
+                val bytes = readDocument(path)
                 val digest = Digest.ofBytes(bytes)
                 cache[path] = DocumentScan(
                         digest,
@@ -94,18 +97,32 @@ class BootNotationMedia(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun read(location: DocumentPath): ByteArray {
-        val bytes = loader.getResource(prefix + location.asRelativeFile())!!.readBytes()
+    override suspend fun readDocument(documentPath: DocumentPath): ByteArray {
+        val bytes = loader.getResource(prefix + documentPath.asRelativeFile())!!.readBytes()
         println("ClasspathNotationMedia - read ${bytes.size}")
         return bytes
     }
 
 
-    override suspend fun write(location: DocumentPath, bytes: ByteArray) {
+    override suspend fun writeDocument(documentPath: DocumentPath, contents: ByteArray) {
         throw UnsupportedOperationException("Classpath writing not supported")
     }
 
-    override suspend fun delete(location: DocumentPath) {
+    override suspend fun deleteDocument(documentPath: DocumentPath) {
+        throw UnsupportedOperationException("Classpath deleting not supported")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun deleteResource(resourceLocation: ResourceLocation) {
+        TODO("not implemented")
+    }
+
+    override suspend fun readResource(resourceLocation: ResourceLocation): ByteArray {
+        throw UnsupportedOperationException("Classpath writing not supported")
+    }
+
+    override suspend fun writeResource(resourceLocation: ResourceLocation, contents: ByteArray) {
         throw UnsupportedOperationException("Classpath deleting not supported")
     }
 }

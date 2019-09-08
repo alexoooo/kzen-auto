@@ -134,7 +134,7 @@ class RestHandler {
 
         val notationPath = DocumentPath.parse(requestSuffix)
         val notationBytes = runBlocking {
-            ServerContext.notationMedia.read(notationPath)
+            ServerContext.notationMedia.readDocument(notationPath)
         }
 
         val notationText = IoUtils.utf8Decode(notationBytes)

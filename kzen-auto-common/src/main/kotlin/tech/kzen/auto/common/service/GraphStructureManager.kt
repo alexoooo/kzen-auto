@@ -134,7 +134,7 @@ class GraphStructureManager(
 
         var changed = false
         for (dangling in clientScan.values.keys.minus(restScan.values.keys)) {
-            notationMediaCache.delete(dangling)
+            notationMediaCache.deleteDocument(dangling)
             changed = true
         }
 
@@ -145,11 +145,11 @@ class GraphStructureManager(
             if (clientDigest != e.value) {
 //                println("ModelManager - Saving - ${e.key}")
 
-                val body = notationMedia.read(e.key)
+                val body = notationMedia.readDocument(e.key)
 
 //                println("ModelManager - read - ${body.size}")
 
-                notationMediaCache.write(e.key, body)
+                notationMediaCache.writeDocument(e.key, body)
                 changed = true
             }
         }
