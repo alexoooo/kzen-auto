@@ -19,10 +19,10 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.edit.NotationCommand
-import tech.kzen.lib.common.structure.notation.edit.NotationEvent
-import tech.kzen.lib.common.structure.notation.model.GraphNotation
+import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import kotlin.browser.window
 
 
@@ -57,7 +57,6 @@ class ProjectController(
     class State(
             var structure: GraphStructure?,
             var commandError: String?,
-//            var bundlePath: BundlePath?,
 
             var headerHeight: Int?
     ): RState

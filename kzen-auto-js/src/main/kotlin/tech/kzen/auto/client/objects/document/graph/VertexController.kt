@@ -36,9 +36,9 @@ import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
-import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.NotationConventions
-import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
+import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectInAttributeCommand
+import tech.kzen.lib.common.service.notation.NotationConventions
 import kotlin.js.Date
 
 

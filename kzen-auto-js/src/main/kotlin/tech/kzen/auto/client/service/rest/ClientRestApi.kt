@@ -17,11 +17,12 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.structure.notation.io.model.DocumentScan
-import tech.kzen.lib.common.structure.notation.io.model.NotationScan
-import tech.kzen.lib.common.structure.notation.model.PositionIndex
+import tech.kzen.lib.common.model.structure.notation.PositionIndex
+import tech.kzen.lib.common.model.structure.resource.ResourceListing
+import tech.kzen.lib.common.model.structure.resource.ResourcePath
+import tech.kzen.lib.common.model.structure.scan.DocumentScan
+import tech.kzen.lib.common.model.structure.scan.NotationScan
 import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.platform.IoUtils
 import tech.kzen.lib.platform.client.ClientJsonUtils
 import tech.kzen.lib.platform.collect.toPersistentMap
 import kotlin.js.Json
@@ -33,24 +34,40 @@ class ClientRestApi(
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun scanNotationPaths(): NotationScan {
         val scanText = get(CommonRestApi.scan)
+        val scanJson = JSON.parse<Json>(scanText)
+        val scanMap = ClientJsonUtils.toMap(scanJson)
 
         val builder = mutableMapOf<DocumentPath, DocumentScan>()
-        // NB: using transform just to iterate the Json, is there a better way to do this?
-        JSON.parse<Json>(scanText) { key: String, value: Any? ->
-            if (value is String) {
-                builder[DocumentPath.parse(key)] = DocumentScan(Digest.parse(value), null)
-            }
-            null
+
+        for ((key, value) in scanMap) {
+            @Suppress("UNCHECKED_CAST")
+            val valueMap = value as Map<String, Any>
+
+            val documentDigest = valueMap["documentDigest"] as String
+
+            @Suppress("UNCHECKED_CAST")
+            val resources = valueMap["resources"] as? Map<String, String>
+
+            builder[DocumentPath.parse(key)] = DocumentScan(
+                    Digest.parse(documentDigest),
+                    resources?.let {
+                        ResourceListing(
+                                it.map {e ->
+                                    ResourcePath.parse(e.key) to Digest.parse(e.value)
+                                }.toMap().toPersistentMap()
+                        )
+                    })
         }
+
         return NotationScan(DocumentPathMap(builder.toPersistentMap()))
     }
 
 
-    suspend fun readNotation(location: DocumentPath): ByteArray {
+    suspend fun readNotation(location: DocumentPath): String {
         @Suppress("UNUSED_VARIABLE")
         val response = get(CommonRestApi.notationPrefix + location.asRelativeFile())
 
-        return IoUtils.utf8Encode(response)
+        return response
     }
 
 

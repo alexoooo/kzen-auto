@@ -10,8 +10,8 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
+import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
 
 
 class AttributeController(

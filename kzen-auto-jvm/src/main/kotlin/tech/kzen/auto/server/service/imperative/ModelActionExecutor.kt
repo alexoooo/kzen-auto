@@ -7,13 +7,15 @@ import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
 import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTransition
 import tech.kzen.auto.common.paradigm.imperative.service.ActionExecutor
 import tech.kzen.auto.common.service.GraphStructureManager
-import tech.kzen.lib.common.context.GraphCreator
-import tech.kzen.lib.common.context.GraphDefiner
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.service.context.GraphCreator
+import tech.kzen.lib.common.service.context.GraphDefiner
 
 
 class ModelActionExecutor(
-        private val graphStructureManager: GraphStructureManager
+        private val graphStructureManager: GraphStructureManager,
+        private val graphDefiner: GraphDefiner,
+        private val graphCreator: GraphCreator
 ): ActionExecutor {
     override suspend fun execute(
             actionLocation: ObjectLocation,
@@ -21,9 +23,9 @@ class ModelActionExecutor(
     ): ImperativeResult {
         val graphStructure = graphStructureManager.serverGraphStructure()
 
-        val graphDefinition = GraphDefiner.define(graphStructure)
+        val graphDefinition = graphDefiner.define(graphStructure)
 
-        val objectGraph = GraphCreator.createGraph(
+        val objectGraph = graphCreator.createGraph(
                 graphStructure, graphDefinition)
 
         val instance = objectGraph.objects[actionLocation]?.reference
@@ -40,9 +42,9 @@ class ModelActionExecutor(
     ): ControlTransition {
         val graphStructure = graphStructureManager.serverGraphStructure()
 
-        val graphDefinition = GraphDefiner.define(graphStructure)
+        val graphDefinition = graphDefiner.define(graphStructure)
 
-        val objectGraph = GraphCreator.createGraph(
+        val objectGraph = graphCreator.createGraph(
                 graphStructure, graphDefinition)
 
         val instance = objectGraph.objects[actionLocation]?.reference

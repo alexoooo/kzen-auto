@@ -15,7 +15,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.structure.notation.edit.RenameDocumentRefactorCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.RenameDocumentRefactorCommand
 
 
 // TODO: error detection

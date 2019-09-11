@@ -24,20 +24,20 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.model.locate.ObjectReferenceHost
-import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.NotationConventions
-import tech.kzen.lib.common.structure.notation.edit.NotationEvent
-import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
+import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
 @Suppress("unused")
 class ScriptController:
         RPureComponent<ScriptController.Props, ScriptController.State>(),
+        NavigationManager.Observer,
         GraphStructureManager.Observer,
         ExecutionManager.Observer,
-        InsertionManager.Observer,
-        NavigationManager.Observer
+        InsertionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -158,17 +158,22 @@ class ScriptController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?) {
-//        println("ProjectController - && handled - " +
-//                "${autoModel.graphNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
+    override fun handleNavigation(documentPath: DocumentPath?) {
+//        console.log("^^^^^^ script - handleNavigation", documentPath)
 
+        setState {
+            this.documentPath = documentPath
+        }
+    }
+
+
+    override suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?) {
         setState {
             this.graphStructure = graphStructure
         }
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
     override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {}
 
 
@@ -198,15 +203,6 @@ class ScriptController:
         }
     }
 
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun handleNavigation(documentPath: DocumentPath?) {
-//        console.log("^^^^^^ script - handleNavigation", documentPath)
-
-        setState {
-            this.documentPath = documentPath
-        }
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

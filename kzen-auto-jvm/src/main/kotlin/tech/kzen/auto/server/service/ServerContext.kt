@@ -14,12 +14,14 @@ import tech.kzen.auto.server.service.imperative.ModelActionExecutor
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
 import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
-import tech.kzen.lib.common.structure.metadata.read.NotationMetadataReader
-import tech.kzen.lib.common.structure.notation.format.YamlNotationParser
-import tech.kzen.lib.common.structure.notation.io.NotationMedia
-import tech.kzen.lib.common.structure.notation.io.common.MapNotationMedia
-import tech.kzen.lib.common.structure.notation.io.common.MultiNotationMedia
-import tech.kzen.lib.common.structure.notation.repo.NotationRepository
+import tech.kzen.lib.common.service.context.GraphCreator
+import tech.kzen.lib.common.service.context.GraphDefiner
+import tech.kzen.lib.common.service.context.NotationRepository
+import tech.kzen.lib.common.service.media.MapNotationMedia
+import tech.kzen.lib.common.service.media.MultiNotationMedia
+import tech.kzen.lib.common.service.media.NotationMedia
+import tech.kzen.lib.common.service.metadata.NotationMetadataReader
+import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.GradleLocator
 
@@ -40,10 +42,14 @@ object ServerContext {
 
     val yamlParser = YamlNotationParser()
 
+    val graphDefiner = GraphDefiner()
+    val graphCreator = GraphCreator()
+
     val repository = NotationRepository(
             notationMedia,
             yamlParser,
-            notationMetadataReader)
+            notationMetadataReader,
+            graphDefiner)
 
 
     val graphStructureManager = GraphStructureManager(
@@ -52,7 +58,8 @@ object ServerContext {
             notationMedia,
             notationMetadataReader)
 
-    val actionExecutor = ModelActionExecutor(graphStructureManager)
+    val actionExecutor = ModelActionExecutor(
+            graphStructureManager, graphDefiner, graphCreator)
 
     val executionManager = ExecutionManager(
             EmptyExecutionInitializer,
@@ -60,7 +67,7 @@ object ServerContext {
 
 
     private val graphInstanceManager = GraphInstanceManager(
-            graphStructureManager)
+            graphStructureManager, graphDefiner, graphCreator)
 
     private val dataflowMessageInspector = DataflowMessageInspector()
 

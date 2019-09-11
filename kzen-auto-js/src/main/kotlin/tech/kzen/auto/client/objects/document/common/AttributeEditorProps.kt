@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document.common
 import react.RProps
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.GraphStructure
 
 
 open class AttributeEditorProps(

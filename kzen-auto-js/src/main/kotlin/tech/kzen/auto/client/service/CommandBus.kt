@@ -2,11 +2,10 @@ package tech.kzen.auto.client.service
 
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.common.service.GraphStructureManager
-import tech.kzen.lib.common.structure.notation.edit.*
-import tech.kzen.lib.common.structure.notation.io.NotationParser
-import tech.kzen.lib.common.structure.notation.repo.NotationRepository
+import tech.kzen.lib.common.model.structure.notation.cqrs.*
+import tech.kzen.lib.common.service.context.NotationRepository
+import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.platform.IoUtils
 
 
 // TODO: move to lib?
@@ -92,9 +91,9 @@ class CommandBus(
     private suspend fun applyRest(command: NotationCommand): Digest =
         when (command) {
             is CreateDocumentCommand -> {
-                val deparsed = notationParser.deparseDocument(command.documentNotation, ByteArray(0))
+                val unparsed = notationParser.unparseDocument(command.documentNotation, "")
                 restClient.createDocument(
-                        command.documentPath, IoUtils.utf8Decode(deparsed))
+                        command.documentPath, unparsed)
             }
 
 
@@ -104,9 +103,9 @@ class CommandBus(
 
 
             is AddObjectCommand -> {
-                val deparsed = notationParser.deparseObject(command.body)
+                val unparsed = notationParser.unparseObject(command.body)
                 restClient.addObject(
-                        command.objectLocation, command.indexInDocument, deparsed)
+                        command.objectLocation, command.indexInDocument, unparsed)
             }
 
 
@@ -126,14 +125,14 @@ class CommandBus(
 
 
             is InsertObjectInListAttributeCommand -> {
-                val deparsed = notationParser.deparseObject(command.body)
+                val unparsed = notationParser.unparseObject(command.body)
                 restClient.insertObjectInList(
                         command.containingObjectLocation,
                         command.containingList,
                         command.indexInList,
                         command.objectName,
                         command.positionInDocument,
-                        deparsed)
+                        unparsed)
             }
 
             is RemoveObjectInAttributeCommand -> {
@@ -144,30 +143,30 @@ class CommandBus(
 
 
             is UpsertAttributeCommand -> {
-                val deparsed = notationParser.deparseAttribute(command.attributeNotation)
+                val unparsed = notationParser.unparseAttribute(command.attributeNotation)
                 restClient.upsertAttribute(
-                        command.objectLocation, command.attributeName, deparsed)
+                        command.objectLocation, command.attributeName, unparsed)
             }
 
 
             is UpdateInAttributeCommand -> {
-                val deparsed = notationParser.deparseAttribute(command.attributeNotation)
+                val unparsed = notationParser.unparseAttribute(command.attributeNotation)
                 restClient.updateInAttribute(
-                        command.objectLocation, command.attributePath, deparsed)
+                        command.objectLocation, command.attributePath, unparsed)
             }
 
 
             is InsertListItemInAttributeCommand -> {
-                val deparsed = notationParser.deparseAttribute(command.item)
+                val unparsed = notationParser.unparseAttribute(command.item)
                 restClient.insertListItemInAttribute(
-                        command.objectLocation, command.containingList, command.indexInList, deparsed)
+                        command.objectLocation, command.containingList, command.indexInList, unparsed)
             }
 
 
             is InsertMapEntryInAttributeCommand -> {
-                val deparsed = notationParser.deparseAttribute(command.value)
+                val unparsed = notationParser.unparseAttribute(command.value)
                 restClient.insertMapEntryInAttribute(
-                        command.objectLocation, command.containingMap, command.indexInMap, command.mapKey, deparsed)
+                        command.objectLocation, command.containingMap, command.indexInMap, command.mapKey, unparsed)
             }
 
 

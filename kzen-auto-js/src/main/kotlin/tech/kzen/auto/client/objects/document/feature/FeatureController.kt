@@ -8,15 +8,19 @@ import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectNesting
 import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.platform.IoUtils
 
 
@@ -24,7 +28,9 @@ import tech.kzen.lib.platform.IoUtils
 class FeatureController(
         props: Props
 ):
-        RPureComponent<FeatureController.Props, FeatureController.State>(props)
+        RPureComponent<FeatureController.Props, FeatureController.State>(props),
+        NavigationManager.Observer,
+        GraphStructureManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -39,6 +45,9 @@ class FeatureController(
 
 
     class State(
+            var documentPath: DocumentPath?,
+            var graphStructure: GraphStructure?,
+
             var detail: CropperDetail?,
             var screenshotDataUrl: String?,
             var capturedDataUrl: String?,
@@ -59,7 +68,7 @@ class FeatureController(
 
         override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
             return input.child(FeatureController::class) {
-                //                attrs {
+//                attrs {
 //                    this.attributeController = this@Wrapper.attributeController
 //                }
 
@@ -75,11 +84,33 @@ class FeatureController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-//        console.log("^^^^ State.init")
+        documentPath = null
+        graphStructure = null
+
         detail = null
         screenshotDataUrl = null
         capturedDataUrl = null
         requestingScreenshot = false
+    }
+
+
+    override fun componentDidMount() {
+        async {
+            ClientContext.modelManager.observe(this)
+            ClientContext.navigationManager.observe(this)
+        }
+
+        if (state.screenshotDataUrl == null) {
+            setState {
+                requestingScreenshot = true
+            }
+        }
+    }
+
+
+    override fun componentWillUnmount() {
+        ClientContext.modelManager.unobserve(this)
+        ClientContext.navigationManager.unobserve(this)
     }
 
 
@@ -88,7 +119,6 @@ class FeatureController(
             prevState: State,
             snapshot: Any
     ) {
-//        console.log("^^^^ componentDidUpdate", state.requestingScreenshot, prevState.requestingScreenshot)
         if (state.screenshotDataUrl == null && state.requestingScreenshot != true) {
             setState {
                 requestingScreenshot = true
@@ -101,12 +131,18 @@ class FeatureController(
     }
 
 
-    override fun componentDidMount() {
-//        console.log("^^^^^^ componentDidMount", state.requestingScreenshot)
-        if (state.screenshotDataUrl == null) {
-            setState {
-                requestingScreenshot = true
-            }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun handleNavigation(documentPath: DocumentPath?) {
+        setState {
+            this.documentPath = documentPath
+        }
+    }
+
+
+    override suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?) {
+        setState {
+            this.graphStructure = graphStructure
         }
     }
 
@@ -167,6 +203,21 @@ class FeatureController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        val documentPath = state.documentPath
+                ?: return
+
+        val graphStructure = state.graphStructure
+                ?: return
+
+        val documentNotation = graphStructure.graphNotation.documents[documentPath]!!
+        val resources = documentNotation.resources!!
+
+        for (resource in resources.values) {
+            +"resource: ${resource.key}"
+            br {}
+        }
+
+
         styledDiv {
             css {
                 padding(1.em, 1.em, 0.px, 1.em)

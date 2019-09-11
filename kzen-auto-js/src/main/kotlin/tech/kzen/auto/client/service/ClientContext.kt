@@ -7,12 +7,14 @@ import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowMana
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.GraphStructureManager
-import tech.kzen.lib.common.structure.metadata.read.NotationMetadataReader
-import tech.kzen.lib.common.structure.notation.format.YamlNotationParser
-import tech.kzen.lib.common.structure.notation.io.NotationMedia
-import tech.kzen.lib.common.structure.notation.io.NotationParser
-import tech.kzen.lib.common.structure.notation.io.common.MapNotationMedia
-import tech.kzen.lib.common.structure.notation.repo.NotationRepository
+import tech.kzen.lib.common.service.context.GraphCreator
+import tech.kzen.lib.common.service.context.GraphDefiner
+import tech.kzen.lib.common.service.context.NotationRepository
+import tech.kzen.lib.common.service.media.MapNotationMedia
+import tech.kzen.lib.common.service.media.NotationMedia
+import tech.kzen.lib.common.service.metadata.NotationMetadataReader
+import tech.kzen.lib.common.service.parse.NotationParser
+import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.platform.client.ModuleRegistry
 import kotlin.browser.window
 
@@ -29,8 +31,11 @@ object ClientContext {
 
     val notationMetadataReader = NotationMetadataReader()
 
+    val graphDefiner = GraphDefiner()
+    val graphCreator = GraphCreator()
+
     private val clientRepository = NotationRepository(
-            notationMediaCache, notationParser, notationMetadataReader)
+            notationMediaCache, notationParser, notationMetadataReader, graphDefiner)
 
     val modelManager = GraphStructureManager(
             notationMediaCache,

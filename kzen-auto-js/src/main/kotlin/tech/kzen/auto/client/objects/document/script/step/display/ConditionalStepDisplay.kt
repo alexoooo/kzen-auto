@@ -27,7 +27,7 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.GraphStructure
 
 
 @Suppress("unused")

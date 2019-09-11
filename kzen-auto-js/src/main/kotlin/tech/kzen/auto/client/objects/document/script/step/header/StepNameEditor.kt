@@ -21,9 +21,9 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.structure.notation.NotationConventions
-import tech.kzen.lib.common.structure.notation.edit.RenameObjectRefactorCommand
-import tech.kzen.lib.common.structure.notation.model.GraphNotation
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.RenameObjectRefactorCommand
+import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 class StepNameEditor(

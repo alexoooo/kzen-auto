@@ -2,8 +2,8 @@ package tech.kzen.auto.common.paradigm.dataflow.model.structure.cell
 
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeSegment
-import tech.kzen.lib.common.structure.notation.model.MapAttributeNotation
-import tech.kzen.lib.common.structure.notation.model.ObjectNotation
+import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 
 
 data class CellCoordinate(

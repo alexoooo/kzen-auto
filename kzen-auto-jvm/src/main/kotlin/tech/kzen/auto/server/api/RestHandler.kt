@@ -25,13 +25,12 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
-import tech.kzen.lib.common.structure.notation.edit.*
-import tech.kzen.lib.common.structure.notation.model.AttributeNotation
-import tech.kzen.lib.common.structure.notation.model.DocumentNotation
-import tech.kzen.lib.common.structure.notation.model.ObjectNotation
-import tech.kzen.lib.common.structure.notation.model.PositionIndex
+import tech.kzen.lib.common.model.structure.notation.AttributeNotation
+import tech.kzen.lib.common.model.structure.notation.DocumentNotation
+import tech.kzen.lib.common.model.structure.notation.ObjectNotation
+import tech.kzen.lib.common.model.structure.notation.PositionIndex
+import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.platform.IoUtils
 import tech.kzen.lib.platform.collect.persistentListOf
 import java.net.URI
 import java.nio.file.Files
@@ -115,10 +114,15 @@ class RestHandler {
             ServerContext.notationMedia.scan()
         }
 
-        val asMap = mutableMapOf<String, String>()
+        val asMap = mutableMapOf<String, Any>()
 
         for (e in documentTree.documents.values) {
-            asMap[e.key.asRelativeFile()] = e.value.documentDigest.asString()
+            asMap[e.key.asRelativeFile()] = mapOf(
+                    "documentDigest" to e.value.documentDigest.asString(),
+                    "resources" to e.value.resources?.values?.map {
+                        it.key.asString() to it.value.asString()
+                    }?.toMap()
+            )
         }
 
         return ServerResponse
@@ -133,11 +137,9 @@ class RestHandler {
         val requestSuffix = URI(encodedRequestSuffix).path
 
         val notationPath = DocumentPath.parse(requestSuffix)
-        val notationBytes = runBlocking {
+        val notationText = runBlocking {
             ServerContext.notationMedia.readDocument(notationPath)
         }
-
-        val notationText = IoUtils.utf8Decode(notationBytes)
 
         val responseBuilder = ServerResponse.ok()
         return if (notationText.isEmpty()) {
@@ -156,7 +158,7 @@ class RestHandler {
 
         val documentBody: DocumentNotation = serverRequest.getParam(CommonRestApi.paramDocumentNotation) {
             DocumentNotation(
-                    ServerContext.yamlParser.parseDocumentObjects(IoUtils.utf8Encode(it)),
+                    ServerContext.yamlParser.parseDocumentObjects(it),
                     null)
         }
 

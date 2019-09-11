@@ -5,9 +5,7 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.service.GraphStructureManager
-import tech.kzen.lib.common.context.GraphCreator
-import tech.kzen.lib.common.context.GraphDefiner
-import tech.kzen.lib.common.context.definition.GraphDefinition
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocationMap
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.platform.collect.toPersistentMap
@@ -24,7 +22,7 @@ fun main() {
             ClientContext.modelManager.refresh()
 
             val clientGraphStructure = ClientContext.modelManager.clientGraphStructure()
-            val clientGraphDefinition = GraphDefiner.define(clientGraphStructure)
+            val clientGraphDefinition = ClientContext.graphDefiner.define(clientGraphStructure)
 
 //            val filteredGraphStructure = clientGraphStructure.
 
@@ -37,7 +35,7 @@ fun main() {
 
 //            console.log("^^^ filteredGraphDefinition - $filteredGraphDefinition")
 
-            val clientGraphInstance = GraphCreator.createGraph(
+            val clientGraphInstance = ClientContext.graphCreator.createGraph(
                     clientGraphStructure, filteredGraphDefinition)
 
 //            console.log("^^^ main autoGraph ^^ ", autoGraph.objects.values.keys.toString())

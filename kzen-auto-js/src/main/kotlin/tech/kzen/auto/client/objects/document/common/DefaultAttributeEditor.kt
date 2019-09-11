@@ -16,10 +16,10 @@ import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.structure.metadata.model.AttributeMetadata
-import tech.kzen.lib.common.structure.notation.edit.UpsertAttributeCommand
-import tech.kzen.lib.common.structure.notation.model.ListAttributeNotation
-import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
+import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.collect.toPersistentList
 

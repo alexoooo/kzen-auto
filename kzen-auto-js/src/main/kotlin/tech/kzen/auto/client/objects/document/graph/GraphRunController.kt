@@ -11,7 +11,7 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.GraphStructure
 import kotlin.reflect.KClass
 
 

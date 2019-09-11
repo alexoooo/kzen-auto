@@ -13,8 +13,8 @@ import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTree
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.model.locate.ObjectReferenceHost
-import tech.kzen.lib.common.structure.notation.edit.*
-import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import kotlin.browser.document
 import kotlin.js.Json
 import kotlin.js.json

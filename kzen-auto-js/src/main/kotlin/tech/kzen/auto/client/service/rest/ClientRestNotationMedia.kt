@@ -2,8 +2,8 @@ package tech.kzen.auto.client.service.rest
 
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ResourceLocation
-import tech.kzen.lib.common.structure.notation.io.NotationMedia
-import tech.kzen.lib.common.structure.notation.io.model.NotationScan
+import tech.kzen.lib.common.model.structure.scan.NotationScan
+import tech.kzen.lib.common.service.media.NotationMedia
 
 
 class ClientRestNotationMedia(
@@ -16,12 +16,12 @@ class ClientRestNotationMedia(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun readDocument(documentPath: DocumentPath): ByteArray {
+    override suspend fun readDocument(documentPath: DocumentPath): String {
         return restClient.readNotation(documentPath)
     }
 
 
-    override suspend fun writeDocument(documentPath: DocumentPath, contents: ByteArray) {
+    override suspend fun writeDocument(documentPath: DocumentPath, contents: String) {
 //        httpGet("$baseUrl/notation/${location.relativeLocation}")
         TODO("not implemented")
     }

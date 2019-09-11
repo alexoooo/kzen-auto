@@ -17,7 +17,7 @@ import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.GraphStructure
 
 
 // TODO: bugfix 'rename' causes 'Run all' to turn into 'Reset'?

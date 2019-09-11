@@ -4,8 +4,8 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.structure.notation.NotationConventions
-import tech.kzen.lib.common.structure.notation.model.GraphNotation
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 object AutoConventions {

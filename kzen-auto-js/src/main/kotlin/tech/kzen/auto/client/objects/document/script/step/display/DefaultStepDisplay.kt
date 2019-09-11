@@ -30,8 +30,8 @@ import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.metadata.model.ObjectMetadata
+import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.platform.IoUtils
 
 

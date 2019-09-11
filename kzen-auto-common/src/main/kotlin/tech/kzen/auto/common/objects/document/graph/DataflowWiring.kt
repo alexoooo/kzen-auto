@@ -4,17 +4,17 @@ import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableDataflowOutp
 import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableOptionalInput
 import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableRequiredInput
 import tech.kzen.lib.common.api.AttributeDefiner
-import tech.kzen.lib.common.context.definition.AttributeDefinitionAttempt
-import tech.kzen.lib.common.context.definition.GraphDefinition
-import tech.kzen.lib.common.context.definition.ValueAttributeDefinition
-import tech.kzen.lib.common.context.instance.GraphInstance
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.definition.AttributeDefinitionAttempt
+import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
+import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.NotationConventions
-import tech.kzen.lib.common.structure.notation.model.MapAttributeNotation
-import tech.kzen.lib.common.structure.notation.model.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames
 

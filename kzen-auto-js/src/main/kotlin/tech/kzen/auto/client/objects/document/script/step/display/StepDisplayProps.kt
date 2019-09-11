@@ -4,7 +4,7 @@ import react.RProps
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.GraphStructure
 
 
 open class StepDisplayProps(

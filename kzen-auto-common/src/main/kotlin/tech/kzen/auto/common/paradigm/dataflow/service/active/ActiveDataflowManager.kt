@@ -12,11 +12,11 @@ import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageIns
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.service.GraphInstanceManager
 import tech.kzen.auto.common.service.GraphStructureManager
-import tech.kzen.lib.common.context.instance.ObjectInstance
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.instance.ObjectInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.edit.*
+import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.platform.collect.toPersistentMap
 
 

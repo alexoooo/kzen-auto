@@ -1,14 +1,13 @@
 package tech.kzen.auto.common.service
 
 import tech.kzen.lib.common.model.document.DocumentNesting
-import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.metadata.read.NotationMetadataReader
-import tech.kzen.lib.common.structure.notation.edit.NotationEvent
-import tech.kzen.lib.common.structure.notation.io.NotationMedia
-import tech.kzen.lib.common.structure.notation.io.common.MapNotationMedia
-import tech.kzen.lib.common.structure.notation.model.GraphNotation
-import tech.kzen.lib.common.structure.notation.repo.NotationRepository
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.service.context.NotationRepository
+import tech.kzen.lib.common.service.media.MapNotationMedia
+import tech.kzen.lib.common.service.media.NotationMedia
+import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 
 
 // TODO: add profiles or something instead of using ad-hoc document path patterns
@@ -31,13 +30,13 @@ class GraphStructureManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val subscribers = mutableSetOf<Observer>()
+    private val observers = mutableSetOf<Observer>()
     private var serverGraphStructureCache: GraphStructure? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun observe(observer: Observer) {
-        subscribers.add(observer)
+        observers.add(observer)
 
 //        if (mostRecent != null) {
 //            subscriber.handleModel(mostRecent!!, null)
@@ -48,7 +47,7 @@ class GraphStructureManager(
 
 
     fun unobserve(subscriber: Observer) {
-        subscribers.remove(subscriber)
+        observers.remove(subscriber)
     }
 
 
@@ -58,7 +57,7 @@ class GraphStructureManager(
         serverGraphStructureCache = readServerGraphStructure()
 
 //        println("ModelManager - Publishing - $mostRecent")
-        for (subscriber in subscribers) {
+        for (subscriber in observers) {
             subscriber.handleModel(serverGraphStructureCache!!, event)
         }
     }
@@ -140,9 +139,8 @@ class GraphStructureManager(
 
         for (e in restScan.values) {
             val clientDigest = clientScan.values[e.key]
-                    ?: Digest.zero
 
-            if (clientDigest != e.value) {
+            if (clientDigest?.documentDigest != e.value.documentDigest) {
 //                println("ModelManager - Saving - ${e.key}")
 
                 val body = notationMedia.readDocument(e.key)

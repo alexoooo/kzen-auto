@@ -5,10 +5,10 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.model.locate.ResourceLocation
-import tech.kzen.lib.common.structure.notation.NotationConventions
-import tech.kzen.lib.common.structure.notation.io.NotationMedia
-import tech.kzen.lib.common.structure.notation.io.model.DocumentScan
-import tech.kzen.lib.common.structure.notation.io.model.NotationScan
+import tech.kzen.lib.common.model.structure.scan.DocumentScan
+import tech.kzen.lib.common.model.structure.scan.NotationScan
+import tech.kzen.lib.common.service.media.NotationMedia
+import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.collect.toPersistentMap
 
@@ -37,7 +37,7 @@ class BootNotationMedia(
                 check(! path.directory)
 
                 val bytes = readDocument(path)
-                val digest = Digest.ofBytes(bytes)
+                val digest = Digest.ofUtf8(bytes)
                 cache[path] = DocumentScan(
                         digest,
                         null)
@@ -97,14 +97,14 @@ class BootNotationMedia(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun readDocument(documentPath: DocumentPath): ByteArray {
-        val bytes = loader.getResource(prefix + documentPath.asRelativeFile())!!.readBytes()
-        println("ClasspathNotationMedia - read ${bytes.size}")
+    override suspend fun readDocument(documentPath: DocumentPath): String {
+        val bytes = loader.getResource(prefix + documentPath.asRelativeFile())!!.readText()
+        println("ClasspathNotationMedia - read ${bytes.length}")
         return bytes
     }
 
 
-    override suspend fun writeDocument(documentPath: DocumentPath, contents: ByteArray) {
+    override suspend fun writeDocument(documentPath: DocumentPath, contents: String) {
         throw UnsupportedOperationException("Classpath writing not supported")
     }
 

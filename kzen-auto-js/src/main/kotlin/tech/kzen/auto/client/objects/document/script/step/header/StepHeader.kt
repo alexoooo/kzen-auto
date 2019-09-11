@@ -21,10 +21,10 @@ import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.structure.GraphStructure
-import tech.kzen.lib.common.structure.notation.edit.RemoveObjectInAttributeCommand
-import tech.kzen.lib.common.structure.notation.edit.ShiftInAttributeCommand
-import tech.kzen.lib.common.structure.notation.model.PositionIndex
+import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.PositionIndex
+import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftInAttributeCommand
 import kotlin.js.Date
 
 

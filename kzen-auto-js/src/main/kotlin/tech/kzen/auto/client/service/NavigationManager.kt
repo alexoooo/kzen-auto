@@ -3,7 +3,7 @@ package tech.kzen.auto.client.service
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.structure.notation.edit.*
+import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import kotlin.browser.window
 
 
