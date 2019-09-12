@@ -13,6 +13,7 @@ import tech.kzen.lib.common.service.context.NotationRepository
 import tech.kzen.lib.common.service.media.MapNotationMedia
 import tech.kzen.lib.common.service.media.NotationMedia
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
+import tech.kzen.lib.common.service.notation.NotationReducer
 import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.platform.client.ModuleRegistry
@@ -33,9 +34,14 @@ object ClientContext {
 
     val graphDefiner = GraphDefiner()
     val graphCreator = GraphCreator()
+    val notationReducer = NotationReducer()
 
     private val clientRepository = NotationRepository(
-            notationMediaCache, notationParser, notationMetadataReader, graphDefiner)
+            notationMediaCache,
+            notationParser,
+            notationMetadataReader,
+            graphDefiner,
+            notationReducer)
 
     val modelManager = GraphStructureManager(
             notationMediaCache,

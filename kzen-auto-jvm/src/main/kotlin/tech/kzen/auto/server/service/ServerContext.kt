@@ -21,6 +21,7 @@ import tech.kzen.lib.common.service.media.MapNotationMedia
 import tech.kzen.lib.common.service.media.MultiNotationMedia
 import tech.kzen.lib.common.service.media.NotationMedia
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
+import tech.kzen.lib.common.service.notation.NotationReducer
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.GradleLocator
@@ -44,13 +45,14 @@ object ServerContext {
 
     val graphDefiner = GraphDefiner()
     val graphCreator = GraphCreator()
+    val notationReducer = NotationReducer()
 
     val repository = NotationRepository(
             notationMedia,
             yamlParser,
             notationMetadataReader,
-            graphDefiner)
-
+            graphDefiner,
+            notationReducer)
 
     val graphStructureManager = GraphStructureManager(
             notationMediaCache,

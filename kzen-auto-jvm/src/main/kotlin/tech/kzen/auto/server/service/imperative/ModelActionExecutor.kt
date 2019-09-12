@@ -28,7 +28,7 @@ class ModelActionExecutor(
         val objectGraph = graphCreator.createGraph(
                 graphStructure, graphDefinition)
 
-        val instance = objectGraph.objects[actionLocation]?.reference
+        val instance = objectGraph.objectInstances[actionLocation]?.reference
 
         val action = instance as ExecutionAction
 
@@ -47,7 +47,7 @@ class ModelActionExecutor(
         val objectGraph = graphCreator.createGraph(
                 graphStructure, graphDefinition)
 
-        val instance = objectGraph.objects[actionLocation]?.reference
+        val instance = objectGraph.objectInstances[actionLocation]?.reference
 
         val action = instance as ControlFlow
 

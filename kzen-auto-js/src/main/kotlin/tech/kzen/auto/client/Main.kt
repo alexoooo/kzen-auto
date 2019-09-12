@@ -31,7 +31,7 @@ fun main() {
                     .values
                     .filterKeys { ! it.documentPath.startsWith(GraphStructureManager.autoJvmPrefixDocumentNesting) }
                     .toPersistentMap()
-                    .let { GraphDefinition(ObjectLocationMap(it)) }
+                    .let { GraphDefinition(ObjectLocationMap(it), clientGraphStructure) }
 
 //            console.log("^^^ filteredGraphDefinition - $filteredGraphDefinition")
 
@@ -40,11 +40,11 @@ fun main() {
 
 //            console.log("^^^ main autoGraph ^^ ", autoGraph.objects.values.keys.toString())
             val rootLocation = clientGraphInstance
-                    .objects
+                    .objectInstances
                     .locate(ObjectReference.parse("root"))
 
             val rootInstance = clientGraphInstance
-                    .objects[rootLocation]
+                    .objectInstances[rootLocation]
                     ?.reference
                     as? ReactWrapper<*>
                     ?: throw IllegalStateException("Missing root object")
