@@ -125,4 +125,10 @@ class BootNotationMedia(
     override suspend fun writeResource(resourceLocation: ResourceLocation, contents: ByteArray) {
         throw UnsupportedOperationException("Classpath deleting not supported")
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun invalidate() {
+        cache.clear()
+    }
 }

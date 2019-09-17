@@ -46,4 +46,10 @@ class ClientRestNotationMedia(
     override suspend fun writeResource(resourceLocation: ResourceLocation, contents: ByteArray) {
         TODO("not implemented")
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun invalidate() {
+        // NB: no caching here
+    }
 }
