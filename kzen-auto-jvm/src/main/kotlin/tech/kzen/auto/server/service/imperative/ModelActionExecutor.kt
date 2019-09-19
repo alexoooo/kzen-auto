@@ -22,6 +22,7 @@ class ModelActionExecutor(
     ): ImperativeResult {
         val graphDefinition = graphStore
                 .graphDefinition()
+                .successful
                 .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator
@@ -41,6 +42,7 @@ class ModelActionExecutor(
     ): ControlTransition {
         val graphDefinition = graphStore
                 .graphDefinition()
+                .successful
                 .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator.createGraph(
