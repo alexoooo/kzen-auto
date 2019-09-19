@@ -4,6 +4,7 @@ package tech.kzen.auto.common.api
 object CommonRestApi {
     const val scan = "/scan"
     const val notationPrefix = "/notation/"
+    const val resource = "/resource"
 
 
     private const val commandPrefix = "/command/"
@@ -47,6 +48,7 @@ object CommonRestApi {
     const val paramAttributePath = "in-attribute"
     const val paramAttributeKey = "key"
     const val paramAttributeNotation = "value"
+    const val paramResourcePath = "resource"
 
 
     private const val actionPrefix = "/action/"

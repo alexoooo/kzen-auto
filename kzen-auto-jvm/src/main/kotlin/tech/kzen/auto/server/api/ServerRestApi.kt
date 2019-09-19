@@ -14,7 +14,7 @@ class ServerRestApi(
     fun counterRouter() = router {
         GET(CommonRestApi.scan, counterHandler::scan)
         GET("${CommonRestApi.notationPrefix}**", counterHandler::notation)
-
+        GET(CommonRestApi.resource, counterHandler::resource)
 
         GET(CommonRestApi.commandDocumentCreate, counterHandler::createDocument)
         GET(CommonRestApi.commandDocumentDelete, counterHandler::deleteDocument)
@@ -49,8 +49,7 @@ class ServerRestApi(
         // provide value from client
 //        GET("/auto-jvm/submit", counterHandler::actionSubmit)
 
-
-        GET("/", counterHandler::resource)
-        GET("/**", counterHandler::resource)
+        GET("/", counterHandler::staticResource)
+        GET("/**", counterHandler::staticResource)
     }
 }

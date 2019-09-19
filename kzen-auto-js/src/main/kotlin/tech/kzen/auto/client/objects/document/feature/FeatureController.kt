@@ -16,6 +16,7 @@ import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.locate.ResourceLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectNesting
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -227,6 +228,16 @@ class FeatureController(
 
         for (resource in resources.values) {
             +"resource: ${resource.key}"
+
+            val resourceLocation = ResourceLocation(documentPath, resource.key)
+            val resourceUri = ClientContext.restClient.resourceUri(resourceLocation)
+
+            img {
+                attrs {
+                    src = resourceUri
+                }
+            }
+
             br {}
         }
 

@@ -24,6 +24,7 @@ import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.locate.ResourceLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
@@ -31,6 +32,7 @@ import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionIndex
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
+import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.collect.persistentListOf
 import java.net.URI
@@ -129,6 +131,26 @@ class RestHandler {
         return ServerResponse
                 .ok()
                 .body(Mono.just(asMap))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun resource(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
+        val resourcePath: ResourcePath = serverRequest.getParam(
+                CommonRestApi.paramResourcePath, ResourcePath.Companion::parse)
+
+        val resourceLocation = ResourceLocation(documentPath, resourcePath)
+
+        val resourceContents = runBlocking {
+            ServerContext.notationMedia.readResource(resourceLocation)
+        }
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just(resourceContents))
     }
 
 
@@ -634,7 +656,7 @@ class RestHandler {
 
     //-----------------------------------------------------------------------------------------------------------------
     // TODO: is this secure?
-    fun resource(serverRequest: ServerRequest): Mono<ServerResponse> {
+    fun staticResource(serverRequest: ServerRequest): Mono<ServerResponse> {
         val excludingInitialSlash = serverRequest.path().substring(1)
 
         val resolvedPath =

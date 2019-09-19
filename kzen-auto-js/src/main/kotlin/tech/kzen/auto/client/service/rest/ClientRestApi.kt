@@ -2,6 +2,7 @@ package tech.kzen.auto.client.service.rest
 
 import tech.kzen.auto.client.util.encodeURIComponent
 import tech.kzen.auto.client.util.httpGet
+import tech.kzen.auto.client.util.httpGetBytes
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
@@ -16,6 +17,7 @@ import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.locate.ResourceLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.PositionIndex
 import tech.kzen.lib.common.model.structure.resource.ResourceListing
@@ -68,6 +70,25 @@ class ClientRestApi(
         val response = get(CommonRestApi.notationPrefix + location.asRelativeFile())
 
         return response
+    }
+
+
+    suspend fun readResource(location: ResourceLocation): ByteArray {
+        @Suppress("UNUSED_VARIABLE")
+        val response = getBytes(
+                CommonRestApi.resource,
+                CommonRestApi.paramDocumentPath to location.documentPath.asString(),
+                CommonRestApi.paramResourcePath to location.resourcePath.asString())
+
+        return response
+    }
+
+
+    fun resourceUri(location: ResourceLocation): String {
+        val suffix = paramSuffix(
+                CommonRestApi.paramDocumentPath to location.documentPath.asString(),
+                CommonRestApi.paramResourcePath to location.resourcePath.asString())
+        return "$baseUrl${CommonRestApi.resource}$suffix"
     }
 
 
@@ -433,16 +454,30 @@ class ClientRestApi(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): String {
-        val suffix =
-                if (parameters.isEmpty()) {
-                    ""
-                }
-                else {
-                    "?" + parameters.joinToString("&") {
-                        it.first + "=" + encodeURIComponent(it.second)
-                    }
-                }
-
+        val suffix = paramSuffix(*parameters)
         return httpGet("$baseUrl$commandPath$suffix")
+    }
+
+
+    private suspend fun getBytes(
+            commandPath: String,
+            vararg parameters: Pair<String, String>
+    ): ByteArray {
+        val suffix = paramSuffix(*parameters)
+        return httpGetBytes("$baseUrl$commandPath$suffix")
+    }
+
+
+    private fun paramSuffix(
+            vararg parameters: Pair<String, String>
+    ): String {
+        return if (parameters.isEmpty()) {
+            ""
+        }
+        else {
+            "?" + parameters.joinToString("&") {
+                it.first + "=" + encodeURIComponent(it.second)
+            }
+        }
     }
 }

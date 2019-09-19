@@ -39,7 +39,7 @@ class ClientRestNotationMedia(
 
 
     override suspend fun readResource(resourceLocation: ResourceLocation): ByteArray {
-        TODO("not implemented")
+        return restClient.readResource(resourceLocation)
     }
 
 
