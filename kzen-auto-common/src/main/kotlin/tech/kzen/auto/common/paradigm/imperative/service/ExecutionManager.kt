@@ -4,12 +4,13 @@ import kotlinx.coroutines.delay
 import tech.kzen.auto.common.paradigm.imperative.api.ControlFlow
 import tech.kzen.auto.common.paradigm.imperative.model.*
 import tech.kzen.auto.common.paradigm.imperative.model.control.*
-import tech.kzen.auto.common.service.GraphStructureManager
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
+import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.persistentListOf
@@ -21,7 +22,8 @@ class ExecutionManager(
         private val executionInitializer: ExecutionInitializer,
         private val actionExecutor: ActionExecutor
 ):
-        GraphStructureManager.Observer
+//        GraphStructureManager.Observer
+        LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
@@ -90,14 +92,10 @@ class ExecutionManager(
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(
-            graphStructure: GraphStructure,
-            event: NotationEvent?
+    override suspend fun onCommandSuccess(
+            event: NotationEvent, graphDefinition: GraphDefinition
     ) {
-        if (event == null) {
-            return
-        }
+        val graphStructure = graphDefinition.graphStructure
 
         for (host in models.keys) {
             val newModels = apply(host, event, graphStructure)
@@ -110,6 +108,11 @@ class ExecutionManager(
             }
         }
     }
+
+
+    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {}
 
 
     private fun apply(

@@ -133,7 +133,7 @@ class ConditionalBranchDisplay(
         )
 
         async {
-            ClientContext.commandBus.apply(command)
+            ClientContext.mirroredGraphStore.apply(command)
         }
     }
 

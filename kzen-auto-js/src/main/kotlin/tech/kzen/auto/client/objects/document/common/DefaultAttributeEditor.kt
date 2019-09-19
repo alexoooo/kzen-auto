@@ -167,13 +167,13 @@ class DefaultAttributeEditor(
 
     private suspend fun editAttributeCommand() {
         if (state.value != null) {
-            ClientContext.commandBus.apply(UpsertAttributeCommand(
+            ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
                     props.objectLocation,
                     props.attributeName,
                     ScalarAttributeNotation(state.value!!)))
         }
         else {
-            ClientContext.commandBus.apply(UpsertAttributeCommand(
+            ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
                     props.objectLocation,
                     props.attributeName,
                     ListAttributeNotation(

@@ -233,7 +233,7 @@ class SidebarFolder(
         val newDocument = DocumentArchetype.newDocument(archetypeLocation)
 //        console.log("^^^^^ createDocument", newDocument)
 
-        ClientContext.commandBus.apply(
+        ClientContext.mirroredGraphStore.apply(
                 CreateDocumentCommand(documentPath, newDocument))
     }
 

@@ -13,16 +13,16 @@ import tech.kzen.auto.client.objects.document.StageController
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.objects.sidebar.SidebarController
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.common.service.GraphStructureManager
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.service.store.LocalGraphStore
 import kotlin.browser.window
 
 
@@ -31,8 +31,7 @@ class ProjectController(
         props: Props
 ):
         RPureComponent<ProjectController.Props, ProjectController.State>(props),
-        GraphStructureManager.Observer,
-        CommandBus.Subscriber,
+        LocalGraphStore.Observer,
         NavigationManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -96,8 +95,7 @@ class ProjectController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         async {
-            ClientContext.modelManager.observe(this)
-            ClientContext.commandBus.subscribe(this)
+            ClientContext.mirroredGraphStore.observe(this)
             ClientContext.navigationManager.observe(this)
         }
 
@@ -107,8 +105,7 @@ class ProjectController(
 
     override fun componentWillUnmount() {
 //        println("ProjectController - Un-subscribed")
-        ClientContext.modelManager.unobserve(this)
-        ClientContext.commandBus.unsubscribe(this)
+        ClientContext.mirroredGraphStore.unobserve(this)
         ClientContext.navigationManager.unobserve(this)
 
         window.addEventListener("resize", handleResize)
@@ -131,29 +128,24 @@ class ProjectController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?) {
-//        println("ProjectController - && handled - " +
-//                "${projectStructure.graphNotation.bundles.values[NotationConventions.mainPath]?.objects?.values?.keys}")
-
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
         setState {
-            structure = graphStructure
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun onCommandSuccess(command: NotationCommand, event: NotationEvent) {
-//        console.log("%%%%%%% onCommandSuccess", command, event)
-        setState {
+            structure = graphDefinition.graphStructure
             commandError = null
         }
     }
 
 
-    override fun onCommandFailedInClient(command: NotationCommand, cause: Throwable) {
-//        console.log("%%%%%%% onCommandFailedInClient", command, cause)
+    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {
         setState {
             commandError = "${cause.message}"
+        }
+    }
+
+
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {
+        setState {
+            structure = graphDefinition.graphStructure
         }
     }
 

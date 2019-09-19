@@ -229,7 +229,7 @@ class StepHeader(
             val containingObjectLocation = props.objectLocation.parent()!!
             val objectAttributePath = attributePathInContainer()
 
-            ClientContext.commandBus.apply(RemoveObjectInAttributeCommand(
+            ClientContext.mirroredGraphStore.apply(RemoveObjectInAttributeCommand(
                     containingObjectLocation, objectAttributePath))
         }
     }
@@ -265,7 +265,7 @@ class StepHeader(
                     props.attributeNesting.segments.last().asIndex()!!
 //            console.log("^^^^ onShift", index, offset, props.attributeNesting)
 
-            ClientContext.commandBus.apply(ShiftInAttributeCommand(
+            ClientContext.mirroredGraphStore.apply(ShiftInAttributeCommand(
                     containingObjectLocation,
                     objectAttributePath,
 //                    props.attributePath,

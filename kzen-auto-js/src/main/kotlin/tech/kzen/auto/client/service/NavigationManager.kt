@@ -2,8 +2,11 @@ package tech.kzen.auto.client.service
 
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
+import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import kotlin.browser.window
 
 
@@ -11,7 +14,7 @@ class NavigationManager(
         private val executionLoop: ExecutionLoop,
         private val visualDataflowLoop: VisualDataflowLoop
 ):
-        CommandBus.Subscriber
+        LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
@@ -56,7 +59,7 @@ class NavigationManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun postConstruct(commandBus: CommandBus) {
+    suspend fun postConstruct(commandBus: MirroredGraphStore) {
         // var type = window.location.hash.substr(1);
 
         readAndPublishIfNecessary()
@@ -66,43 +69,41 @@ class NavigationManager(
             readAndPublishIfNecessary()
         })
 
-        commandBus.subscribe(this)
+//        commandBus.subscribe(this)
+        commandBus.observe(this)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onCommandFailedInClient(command: NotationCommand, cause: Throwable) {}
-
-
-    override fun onCommandSuccess(command: NotationCommand, event: NotationEvent) {
-        when (command) {
-            is RenameDocumentRefactorCommand -> {
-                val renamedEvent = event as RenamedDocumentRefactorEvent
-//                console.log("^^^^ RenameDocumentRefactorCommand",
-//                        documentPath?.asString(),
-//                        renamedEvent.removedUnderOldName.documentPath.asString(),
-//                        renamedEvent.createdWithNewName.destination.asString(),
-//                        event)
-                if (renamedEvent.removedUnderOldName.documentPath == documentPath) {
-                    goto(renamedEvent.createdWithNewName.destination)
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
+        when (event) {
+            is RenamedDocumentRefactorEvent -> {
+                if (event.removedUnderOldName.documentPath == documentPath) {
+                    goto(event.createdWithNewName.destination)
                 }
             }
 
 
-            is DeleteDocumentCommand ->
-                if (command.documentPath == documentPath) {
+            is DeletedDocumentEvent ->
+                if (event.documentPath == documentPath) {
                     clear()
                 }
 
 
             // NB: could have been pre-selected before creation
-            is CreateDocumentCommand -> {
-                if (command.documentPath == documentPath) {
+            is CreatedDocumentEvent -> {
+                if (event.documentPath == documentPath) {
                     publish()
                 }
             }
         }
     }
+
+
+    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+
+
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {}
 
 
     //-----------------------------------------------------------------------------------------------------------------

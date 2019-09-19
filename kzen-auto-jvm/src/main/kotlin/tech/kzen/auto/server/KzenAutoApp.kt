@@ -12,7 +12,6 @@ class KzenAutoApp
 
 fun main(args: Array<String>) {
     // NB: disable headless mode
-//    Robot()
     // https://stackoverflow.com/questions/40016683/spring-boot-forcing-headless-mode
     System.setProperty("java.awt.headless", "false")
 

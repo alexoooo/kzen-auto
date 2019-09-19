@@ -7,7 +7,6 @@ import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageIns
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.GraphInstanceManager
-import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.auto.server.notation.BootNotationMedia
 import tech.kzen.auto.server.service.imperative.EmptyExecutionInitializer
 import tech.kzen.auto.server.service.imperative.ModelActionExecutor
@@ -16,20 +15,18 @@ import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
 import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
-import tech.kzen.lib.common.service.context.NotationRepository
-import tech.kzen.lib.common.service.media.MapNotationMedia
 import tech.kzen.lib.common.service.media.MultiNotationMedia
 import tech.kzen.lib.common.service.media.NotationMedia
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.notation.NotationReducer
 import tech.kzen.lib.common.service.parse.YamlNotationParser
+import tech.kzen.lib.common.service.store.DirectGraphStore
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.GradleLocator
 
 
 object ServerContext {
     //-----------------------------------------------------------------------------------------------------------------
-    private val notationMediaCache = MapNotationMedia()
     private val notationMetadataReader = NotationMetadataReader()
 
 
@@ -47,21 +44,15 @@ object ServerContext {
     val graphCreator = GraphCreator()
     val notationReducer = NotationReducer()
 
-    val repository = NotationRepository(
+    val graphStore = DirectGraphStore(
             notationMedia,
             yamlParser,
             notationMetadataReader,
             graphDefiner,
             notationReducer)
 
-    val graphStructureManager = GraphStructureManager(
-            notationMediaCache,
-            repository,
-            notationMedia,
-            notationMetadataReader)
-
     val actionExecutor = ModelActionExecutor(
-            graphStructureManager, graphDefiner, graphCreator)
+            graphStore, graphCreator)
 
     val executionManager = ExecutionManager(
             EmptyExecutionInitializer,
@@ -69,14 +60,14 @@ object ServerContext {
 
 
     private val graphInstanceManager = GraphInstanceManager(
-            graphStructureManager, graphDefiner, graphCreator)
+            graphStore, graphCreator)
 
     private val dataflowMessageInspector = DataflowMessageInspector()
 
     private val activeDataflowManager = ActiveDataflowManager(
             graphInstanceManager,
             dataflowMessageInspector,
-            graphStructureManager)
+            graphStore)
 
     private val activeVisualProvider = ActiveVisualProvider(
             activeDataflowManager)
@@ -98,10 +89,9 @@ object ServerContext {
         downloadManager.initialize()
 
         runBlocking {
-            graphStructureManager.observe(executionManager)
-            graphStructureManager.observe(graphInstanceManager)
-            graphStructureManager.observe(activeDataflowManager)
-            graphStructureManager.observe(visualDataflowManager)
+            graphStore.observe(executionManager)
+            graphStore.observe(activeDataflowManager)
+            graphStore.observe(visualDataflowManager)
         }
     }
 

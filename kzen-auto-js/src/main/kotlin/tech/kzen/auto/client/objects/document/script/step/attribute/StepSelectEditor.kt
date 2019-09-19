@@ -6,15 +6,19 @@ import react.*
 import tech.kzen.auto.client.objects.document.common.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.CommandBus
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTree
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.model.locate.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.*
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedObjectRefactorEvent
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
+import tech.kzen.lib.common.service.store.LocalGraphStore
 import kotlin.browser.document
 import kotlin.js.Json
 import kotlin.js.json
@@ -25,7 +29,7 @@ class StepSelectEditor(
         props: AttributeEditorProps
 ):
         RPureComponent<AttributeEditorProps, StepSelectEditor.State>(props),
-        CommandBus.Subscriber
+        LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
@@ -92,36 +96,38 @@ class StepSelectEditor(
     }
 
     override fun componentDidMount() {
-        ClientContext.commandBus.subscribe(this)
+        async {
+            ClientContext.mirroredGraphStore.observe(this)
+        }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.commandBus.unsubscribe(this)
+        ClientContext.mirroredGraphStore.unobserve(this)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onCommandFailedInClient(command: NotationCommand, cause: Throwable) {}
-
-
-    override fun onCommandSuccess(
-            command: NotationCommand,
-            event: NotationEvent
-    ) {
-        when (command) {
-            is RenameObjectRefactorCommand -> {
-                val renamedEvent = event as RenamedObjectRefactorEvent
-
-                if (renamedEvent.renamedObject.objectLocation == state.value) {
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
+        when (event) {
+            is RenamedObjectRefactorEvent -> {
+                if (event.renamedObject.objectLocation == state.value) {
                     setState {
-                        value = renamedEvent.renamedObject.newLocation()
+                        value = event.renamedObject.newLocation()
                         renaming = true
                     }
                 }
             }
         }
     }
+
+
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+
+    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -148,7 +154,7 @@ class StepSelectEditor(
         val localReference = value.toReference()
                 .crop(retainNesting = true, retainPath = false)
 
-        ClientContext.commandBus.apply(UpsertAttributeCommand(
+        ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
                 props.objectLocation,
                 props.attributeName,
                 ScalarAttributeNotation(localReference.asString())))

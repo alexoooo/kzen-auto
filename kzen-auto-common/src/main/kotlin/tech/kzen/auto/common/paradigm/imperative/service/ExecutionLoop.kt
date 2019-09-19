@@ -4,13 +4,14 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
-import tech.kzen.auto.common.service.GraphStructureManager
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 
 class ExecutionLoop(
-        private val graphStructureManager: GraphStructureManager,
+        private val mirroredGraphStore: MirroredGraphStore,
         private val executionManager: ExecutionManager,
         private val delayMillis: Int = 0
 ):
@@ -46,8 +47,12 @@ class ExecutionLoop(
             return
         }
 
+        val serverGraphStructure = mirroredGraphStore
+                .graphStructure()
+                .filter(AutoConventions.serverAllowed)
+
         val next = ImperativeUtils.next(
-                graphStructureManager.serverGraphStructure(),
+                serverGraphStructure,
                 executionModel
         ) ?: return
 
@@ -71,7 +76,11 @@ class ExecutionLoop(
 //        println("ExecutionLoop | executionModel is $executionModel")
 
         val next = state.executionModel?.let {
-            ImperativeUtils.next(graphStructureManager.serverGraphStructure(), it)
+            val serverGraphStructure = mirroredGraphStore
+                    .graphStructure()
+                    .filter(AutoConventions.serverAllowed)
+
+            ImperativeUtils.next(serverGraphStructure, it)
         }
         if (next == null) {
 //            println("ExecutionLoop | pausing at end of loop")

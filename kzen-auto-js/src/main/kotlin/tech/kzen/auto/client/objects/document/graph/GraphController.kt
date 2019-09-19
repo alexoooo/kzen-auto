@@ -26,19 +26,21 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellDescript
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
-import tech.kzen.auto.common.service.GraphStructureManager
-import tech.kzen.auto.common.util.NameConventions
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.*
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertObjectInListAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.service.notation.NotationConventions
+import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.persistentListOf
 import tech.kzen.lib.platform.collect.persistentMapOf
 
@@ -46,7 +48,7 @@ import tech.kzen.lib.platform.collect.persistentMapOf
 @Suppress("unused")
 class GraphController:
         RPureComponent<GraphController.Props, GraphController.State>(),
-        GraphStructureManager.Observer,
+        LocalGraphStore.Observer,
         InsertionManager.Observer,
         NavigationManager.Observer,
         VisualDataflowManager.Observer
@@ -98,8 +100,7 @@ class GraphController:
     override fun componentDidMount() {
 //        println("ProjectController - Subscribed")
         async {
-            ClientContext.modelManager.observe(this)
-//            ClientContext.executionManager.subscribe(this)
+            ClientContext.mirroredGraphStore.observe(this)
             ClientContext.insertionManager.subscribe(this)
             ClientContext.navigationManager.observe(this)
 
@@ -110,7 +111,7 @@ class GraphController:
 
     override fun componentWillUnmount() {
 //        println("ProjectController - Un-subscribed")
-        ClientContext.modelManager.unobserve(this)
+        ClientContext.mirroredGraphStore.unobserve(this)
 //        ClientContext.executionManager.unsubscribe(this)
         ClientContext.insertionManager.unSubscribe(this)
         ClientContext.navigationManager.unobserve(this)
@@ -146,10 +147,19 @@ class GraphController:
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?) {
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
         setState {
-            this.graphStructure = graphStructure
+            this.graphStructure = graphDefinition.graphStructure
+        }
+    }
+
+
+    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+
+
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {
+        setState {
+            this.graphStructure = graphDefinition.graphStructure
         }
     }
 
@@ -273,14 +283,14 @@ class GraphController:
                             containingObjectLocation,
                             GraphDocument.verticesAttributePath,
                             PositionIndex(verticesNotation.values.size),
-                            NameConventions.randomAnonymous(),
+                            AutoConventions.randomAnonymous(),
                             PositionIndex(documentNotation.objects.values.size),
                             objectNotation
                     )
                 }
 
         async {
-            ClientContext.commandBus.apply(command)
+            ClientContext.mirroredGraphStore.apply(command)
         }
     }
 

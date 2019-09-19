@@ -16,6 +16,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -474,12 +475,8 @@ class RestHandler {
 
     fun applyCommand(command: NotationCommand): Digest {
         return runBlocking {
-            val event = ServerContext.repository.apply(command)
-
-            // TODO: consolidate with CommandBus?
-            ServerContext.graphStructureManager.onEvent(event)
-
-            ServerContext.repository.digest()
+            ServerContext.graphStore.apply(command)
+            ServerContext.graphStore.digest()
         }
     }
 
@@ -504,7 +501,9 @@ class RestHandler {
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val digest = runBlocking {
-            val graphStructure = ServerContext.graphStructureManager.serverGraphStructure()
+            val graphStructure = ServerContext.graphStore
+                    .graphStructure()
+                    .filter(AutoConventions.serverAllowed)
 
             ServerContext.executionManager.start(
                     documentPath, graphStructure)

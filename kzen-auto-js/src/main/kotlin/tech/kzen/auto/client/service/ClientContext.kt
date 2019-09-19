@@ -6,16 +6,16 @@ import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
-import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
-import tech.kzen.lib.common.service.context.NotationRepository
-import tech.kzen.lib.common.service.media.MapNotationMedia
 import tech.kzen.lib.common.service.media.NotationMedia
+import tech.kzen.lib.common.service.media.SeededNotationMedia
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.notation.NotationReducer
 import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.parse.YamlNotationParser
+import tech.kzen.lib.common.service.store.DirectGraphStore
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.client.ModuleRegistry
 import kotlin.browser.window
 
@@ -26,7 +26,6 @@ object ClientContext {
     val restClient = ClientRestApi(baseUrl)
 
     private val restNotationMedia: NotationMedia = ClientRestNotationMedia(restClient)
-    val notationMediaCache = MapNotationMedia()
 
     val notationParser: NotationParser = YamlNotationParser()
 
@@ -36,25 +35,21 @@ object ClientContext {
     val graphCreator = GraphCreator()
     val notationReducer = NotationReducer()
 
-    private val clientRepository = NotationRepository(
-            notationMediaCache,
+    private val seededNotationMedia = SeededNotationMedia(
+            restNotationMedia)
+
+    private val directGraphStore = DirectGraphStore(
+            seededNotationMedia,
             notationParser,
             notationMetadataReader,
             graphDefiner,
             notationReducer)
 
-    val modelManager = GraphStructureManager(
-            notationMediaCache,
-            clientRepository,
-            restNotationMedia,
-            notationMetadataReader)
+    private val remoteGraphStore = ClientRestGraphStore(
+            restClient, notationParser)
 
-    val commandBus = CommandBus(
-            clientRepository,
-            modelManager,
-            restClient,
-            notationParser)
-
+    val mirroredGraphStore = MirroredGraphStore(
+            directGraphStore, remoteGraphStore)
 
     private val restExecutionInitializer = ClientRestExecutionInitializer(
             restClient)
@@ -67,7 +62,7 @@ object ClientContext {
             restActionExecutor)
 
     val executionLoop = ExecutionLoop(
-            modelManager,
+            mirroredGraphStore,
             executionManager,
             250)
 
@@ -81,7 +76,7 @@ object ClientContext {
             clientRestVisualDataflowProvider)
 
     val visualDataflowLoop = VisualDataflowLoop(
-            modelManager,
+            mirroredGraphStore,
             visualDataflowManager,
             250,
             200)
@@ -100,10 +95,10 @@ object ClientContext {
         ModuleRegistry.add(kzenAutoJs)
 
         async {
-            navigationManager.postConstruct(commandBus)
+            navigationManager.postConstruct(mirroredGraphStore)
 
-            modelManager.observe(executionManager)
-            modelManager.observe(visualDataflowManager)
+            mirroredGraphStore.observe(executionManager)
+            mirroredGraphStore.observe(visualDataflowManager)
 
             executionManager.observe(executionLoop)
             visualDataflowManager.observe(visualDataflowLoop)

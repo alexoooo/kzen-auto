@@ -204,7 +204,7 @@ class VertexController(
                     GraphDocument.verticesAttributeName,
                     props.attributeNesting)
 
-            ClientContext.commandBus.apply(RemoveObjectInAttributeCommand(
+            ClientContext.mirroredGraphStore.apply(RemoveObjectInAttributeCommand(
                     sourceMain, objectAttributePath))
         }
     }

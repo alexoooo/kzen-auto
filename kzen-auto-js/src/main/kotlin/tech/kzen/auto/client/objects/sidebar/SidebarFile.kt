@@ -149,7 +149,7 @@ class SidebarFile(
 
     private fun onRemove() {
         performOption {
-            ClientContext.commandBus.apply(DeleteDocumentCommand(props.documentPath))
+            ClientContext.mirroredGraphStore.apply(DeleteDocumentCommand(props.documentPath))
         }
     }
 

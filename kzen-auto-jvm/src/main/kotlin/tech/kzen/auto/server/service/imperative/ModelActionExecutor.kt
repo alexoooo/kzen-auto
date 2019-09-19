@@ -6,27 +6,26 @@ import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
 import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTransition
 import tech.kzen.auto.common.paradigm.imperative.service.ActionExecutor
-import tech.kzen.auto.common.service.GraphStructureManager
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
-import tech.kzen.lib.common.service.context.GraphDefiner
+import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
 class ModelActionExecutor(
-        private val graphStructureManager: GraphStructureManager,
-        private val graphDefiner: GraphDefiner,
+        private val graphStore: LocalGraphStore,
         private val graphCreator: GraphCreator
 ): ActionExecutor {
     override suspend fun execute(
             actionLocation: ObjectLocation,
             imperativeModel: ImperativeModel
     ): ImperativeResult {
-        val graphStructure = graphStructureManager.serverGraphStructure()
+        val graphDefinition = graphStore
+                .graphDefinition()
+                .filterDefinitions(AutoConventions.serverAllowed)
 
-        val graphDefinition = graphDefiner.define(graphStructure)
-
-        val objectGraph = graphCreator.createGraph(
-                graphStructure, graphDefinition)
+        val objectGraph = graphCreator
+                .createGraph(graphDefinition)
 
         val instance = objectGraph.objectInstances[actionLocation]?.reference
 
@@ -40,12 +39,12 @@ class ModelActionExecutor(
             actionLocation: ObjectLocation,
             imperativeModel: ImperativeModel
     ): ControlTransition {
-        val graphStructure = graphStructureManager.serverGraphStructure()
-
-        val graphDefinition = graphDefiner.define(graphStructure)
+        val graphDefinition = graphStore
+                .graphDefinition()
+                .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator.createGraph(
-                graphStructure, graphDefinition)
+                graphDefinition)
 
         val instance = objectGraph.objectInstances[actionLocation]?.reference
 

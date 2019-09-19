@@ -133,7 +133,7 @@ class StepNameEditor(
              // NB: not sure why this is necessary, without it state.saving doesn't show
              delay(1)
 
-             ClientContext.commandBus.apply(RenameObjectRefactorCommand(
+             ClientContext.mirroredGraphStore.apply(RenameObjectRefactorCommand(
                     props.objectLocation, objectName))
 
              // NB: no need to set saving = false, the component will un-mount

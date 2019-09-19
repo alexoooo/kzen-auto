@@ -17,17 +17,19 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
-import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.model.locate.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.service.notation.NotationConventions
+import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
@@ -35,7 +37,7 @@ import tech.kzen.lib.platform.collect.persistentListOf
 class ScriptController:
         RPureComponent<ScriptController.Props, ScriptController.State>(),
         NavigationManager.Observer,
-        GraphStructureManager.Observer,
+        LocalGraphStore.Observer,
         ExecutionManager.Observer,
         InsertionManager.Observer
 {
@@ -114,7 +116,7 @@ class ScriptController:
 //        println("ProjectController - Subscribed")
         async {
 //            console.log("^^^^^^ script - adding observers")
-            ClientContext.modelManager.observe(this)
+            ClientContext.mirroredGraphStore.observe(this)
             ClientContext.executionManager.observe(this)
             ClientContext.insertionManager.subscribe(this)
             ClientContext.navigationManager.observe(this)
@@ -126,7 +128,7 @@ class ScriptController:
 //        console.log("^^^^^^ script - componentWillUnmount")
 
 //        println("ProjectController - Un-subscribed")
-        ClientContext.modelManager.unobserve(this)
+        ClientContext.mirroredGraphStore.unobserve(this)
         ClientContext.executionManager.unobserve(this)
         ClientContext.insertionManager.unSubscribe(this)
         ClientContext.navigationManager.unobserve(this)
@@ -167,11 +169,22 @@ class ScriptController:
     }
 
 
-    override suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?) {
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
         setState {
-            this.graphStructure = graphStructure
+            this.graphStructure = graphDefinition.graphStructure
         }
     }
+
+
+    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+
+
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {
+        setState {
+            this.graphStructure = graphDefinition.graphStructure
+        }
+    }
+
 
 
     override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {}
@@ -224,7 +237,7 @@ class ScriptController:
         )
 
         async {
-            ClientContext.commandBus.apply(command)
+            ClientContext.mirroredGraphStore.apply(command)
         }
     }
 

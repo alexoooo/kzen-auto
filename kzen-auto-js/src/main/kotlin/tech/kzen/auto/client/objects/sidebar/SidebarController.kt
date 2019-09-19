@@ -9,19 +9,21 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
 class SidebarController(
         props: Props
 ):
         RPureComponent<SidebarController.Props, SidebarController.State>(props),
-        GraphStructureManager.Observer,
+        LocalGraphStore.Observer,
         NavigationManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -56,7 +58,7 @@ class SidebarController(
     override fun componentDidMount() {
 //        println("ProjectController - Subscribed")
         async {
-            ClientContext.modelManager.observe(this)
+            ClientContext.mirroredGraphStore.observe(this)
             ClientContext.navigationManager.observe(this)
         }
     }
@@ -64,7 +66,7 @@ class SidebarController(
 
     override fun componentWillUnmount() {
 //        println("ProjectController - Un-subscribed")
-        ClientContext.modelManager.unobserve(this)
+        ClientContext.mirroredGraphStore.unobserve(this)
         ClientContext.navigationManager.unobserve(this)
     }
 
@@ -85,11 +87,20 @@ class SidebarController(
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(graphStructure: GraphStructure, event: NotationEvent?) {
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
 //        console.log("^ handleModel")
         setState {
-            structure = graphStructure
+            structure = graphDefinition.graphStructure
+        }
+    }
+
+
+    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+
+
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {
+        setState {
+            structure = graphDefinition.graphStructure
         }
     }
 

@@ -3,7 +3,6 @@ package tech.kzen.auto.common.objects.document.script
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.auto.common.util.NameConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -95,7 +94,7 @@ class ScriptDocument(
                 }
             }
 
-            return NameConventions.randomAnonymous()
+            return AutoConventions.randomAnonymous()
         }
     }
 }

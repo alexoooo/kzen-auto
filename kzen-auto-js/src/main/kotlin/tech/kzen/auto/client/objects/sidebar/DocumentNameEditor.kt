@@ -142,7 +142,7 @@ class DocumentNameEditor(
         props.onEditing(false)
 
         async {
-            ClientContext.commandBus.apply(RenameDocumentRefactorCommand(
+            ClientContext.mirroredGraphStore.apply(RenameDocumentRefactorCommand(
                     props.documentPath, nameWithExtension))
 
             // NB: no need to set saving = false, the component will un-mount

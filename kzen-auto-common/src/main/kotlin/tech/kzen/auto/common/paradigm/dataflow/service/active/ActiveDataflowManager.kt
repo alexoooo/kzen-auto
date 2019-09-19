@@ -11,21 +11,22 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
 import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageInspector
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.service.GraphInstanceManager
-import tech.kzen.auto.common.service.GraphStructureManager
+import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.instance.ObjectInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
+import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.toPersistentMap
 
 
 class ActiveDataflowManager(
         private val instanceManager: GraphInstanceManager,
         private val dataflowMessageInspector: DataflowMessageInspector,
-        private val graphStructureManager: GraphStructureManager
+        private val graphStore: LocalGraphStore
 ) :
-        GraphStructureManager.Observer
+        LocalGraphStore.Observer
 {
 //    //-----------------------------------------------------------------------------------------------------------------
 //    private class Handle(
@@ -38,15 +39,7 @@ class ActiveDataflowManager(
     private var models: MutableMap<DocumentPath, ActiveDataflowModel> = mutableMapOf()
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(
-            graphStructure: GraphStructure,
-            event: NotationEvent?
-    ) {
-        if (event == null) {
-            return
-        }
-
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
         // NB: avoid concurrent modification for DeletedDocumentEvent handling
         val modelHosts = models.keys.toList()
 
@@ -54,6 +47,11 @@ class ActiveDataflowManager(
             apply(host, event)
         }
     }
+
+
+    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {}
 
 
     private suspend fun apply(
@@ -79,7 +77,6 @@ class ActiveDataflowManager(
             return
         }
 
-//        val model = models[documentPath]!!
         val model = models[documentPath]
                 ?: return
 
@@ -161,7 +158,9 @@ class ActiveDataflowManager(
             return it
         }
 
-        val serverGraphStructure = graphStructureManager.serverGraphStructure()
+        val serverGraphStructure = graphStore
+                .graphStructure()
+                .filter(AutoConventions.serverAllowed)
 
         check(host in serverGraphStructure.graphNotation.documents)
 
@@ -342,7 +341,11 @@ class ActiveDataflowManager(
             loopConsumer: (ObjectLocation) -> Unit = {},
             clearedConsumer: (ObjectLocation) -> Unit = {}
     ) {
-        val serverGraphStructure = graphStructureManager.serverGraphStructure()
+//        val serverGraphStructure = graphStructureManager.serverGraphStructure()
+        val serverGraphStructure = graphStore
+                .graphStructure()
+                .filter(AutoConventions.serverAllowed)
+
         val dataflowMatrix = DataflowMatrix.ofGraphDocument(host, serverGraphStructure)
         val dataflowDag = DataflowDag.of(dataflowMatrix)
 

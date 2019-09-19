@@ -4,13 +4,14 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
-import tech.kzen.auto.common.service.GraphStructureManager
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 
 class VisualDataflowLoop(
-        private val graphStructureManager: GraphStructureManager,
+        private val mirroredGraphStore: MirroredGraphStore,
         private val visualDataflowManager: VisualDataflowManager,
         private val delayBeforeRunningMillis: Int,
         private val delayAfterRunningMillis: Int
@@ -46,9 +47,13 @@ class VisualDataflowLoop(
             return
         }
 
+        val serverGraphStructure = mirroredGraphStore
+                .graphStructure()
+                .filter(AutoConventions.serverAllowed)
+
         val next = DataflowUtils.next(
                 host,
-                graphStructureManager.serverGraphStructure(),
+                serverGraphStructure,
                 visualDataflowModel
         ) ?: return
 
@@ -72,9 +77,13 @@ class VisualDataflowLoop(
 //        println("ExecutionLoop | executionModel is $executionModel")
 
         val next = state.visualDataflowModel?.let {
+            val serverGraphStructure = mirroredGraphStore
+                    .graphStructure()
+                    .filter(AutoConventions.serverAllowed)
+
             DataflowUtils.next(
                     host,
-                    graphStructureManager.serverGraphStructure(),
+                    serverGraphStructure,
                     it)
         }
         if (next == null) {

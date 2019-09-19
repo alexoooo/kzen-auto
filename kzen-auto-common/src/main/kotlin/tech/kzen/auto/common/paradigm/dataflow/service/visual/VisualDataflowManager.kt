@@ -4,11 +4,11 @@ import kotlinx.coroutines.delay
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
-import tech.kzen.auto.common.service.GraphStructureManager
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
+import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.persistentMapOf
 
@@ -16,7 +16,8 @@ import tech.kzen.lib.platform.collect.persistentMapOf
 class VisualDataflowManager(
         private val visualDataflowProvider: VisualDataflowProvider
 ):
-        GraphStructureManager.Observer
+//        GraphStructureManager.Observer
+        LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
@@ -74,15 +75,7 @@ class VisualDataflowManager(
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun handleModel(
-            graphStructure: GraphStructure,
-            event: NotationEvent?
-    ) {
-        if (event == null) {
-            return
-        }
-
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
         for (host in models.keys) {
 //            val model = modelOrInit(host)
 
@@ -98,6 +91,12 @@ class VisualDataflowManager(
             }
         }
     }
+
+
+    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+
+
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {}
 
 
     private suspend fun apply(

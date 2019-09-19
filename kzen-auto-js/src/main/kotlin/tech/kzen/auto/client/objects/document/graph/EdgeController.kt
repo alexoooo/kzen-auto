@@ -94,7 +94,7 @@ class EdgeController(
                     GraphDocument.edgesAttributeName,
                     props.attributeNesting)
 
-            ClientContext.commandBus.apply(RemoveInAttributeCommand(
+            ClientContext.mirroredGraphStore.apply(RemoveInAttributeCommand(
                     sourceMain, objectAttributePath))
         }
     }
