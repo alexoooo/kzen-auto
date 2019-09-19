@@ -13,7 +13,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
-import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ResourceLocation
@@ -143,9 +143,9 @@ class FeatureController(
     }
 
 
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         setState {
-            this.graphStructure = graphDefinition.graphStructure
+            this.graphStructure = graphDefinition.successful.graphStructure
         }
     }
 
@@ -153,9 +153,9 @@ class FeatureController(
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
         setState {
-            this.graphStructure = graphDefinition.graphStructure
+            this.graphStructure = graphDefinition.successful.graphStructure
         }
     }
 

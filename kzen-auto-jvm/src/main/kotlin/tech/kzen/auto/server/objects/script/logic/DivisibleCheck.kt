@@ -10,6 +10,7 @@ import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
+@Suppress("unused")
 class DivisibleCheck (
         private val number: ObjectLocation,
         private val divisor: Double

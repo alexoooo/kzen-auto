@@ -15,6 +15,7 @@ class GraphInstanceManager(
     suspend fun get(objectLocation: ObjectLocation): ObjectInstance {
         val graphDefinition = graphStore
                 .graphDefinition()
+                .successful
                 .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator

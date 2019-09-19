@@ -30,7 +30,7 @@ import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
-import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
@@ -147,9 +147,9 @@ class GraphController:
     }
 
 
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         setState {
-            this.graphStructure = graphDefinition.graphStructure
+            this.graphStructure = graphDefinition.successful.graphStructure
         }
     }
 
@@ -157,9 +157,9 @@ class GraphController:
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
         setState {
-            this.graphStructure = graphDefinition.graphStructure
+            this.graphStructure = graphDefinition.successful.graphStructure
         }
     }
 

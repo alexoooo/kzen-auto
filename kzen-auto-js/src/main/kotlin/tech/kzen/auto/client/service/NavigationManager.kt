@@ -2,7 +2,7 @@ package tech.kzen.auto.client.service
 
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
-import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.service.store.LocalGraphStore
@@ -75,7 +75,7 @@ class NavigationManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         when (event) {
             is RenamedDocumentRefactorEvent -> {
                 if (event.removedUnderOldName.documentPath == documentPath) {
@@ -103,7 +103,7 @@ class NavigationManager(
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {}
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}
 
 
     //-----------------------------------------------------------------------------------------------------------------

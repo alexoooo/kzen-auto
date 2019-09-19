@@ -16,7 +16,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -128,9 +128,9 @@ class ProjectController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         setState {
-            structure = graphDefinition.graphStructure
+            structure = graphDefinition.successful.graphStructure
             commandError = null
         }
     }
@@ -143,9 +143,9 @@ class ProjectController(
     }
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
         setState {
-            structure = graphDefinition.graphStructure
+            structure = graphDefinition.successful.graphStructure
         }
     }
 

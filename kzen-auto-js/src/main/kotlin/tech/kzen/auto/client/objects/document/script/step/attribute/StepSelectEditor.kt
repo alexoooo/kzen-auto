@@ -9,7 +9,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTree
-import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.model.locate.ObjectReferenceHost
@@ -108,7 +108,7 @@ class StepSelectEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         when (event) {
             is RenamedObjectRefactorEvent -> {
                 if (event.renamedObject.objectLocation == state.value) {
@@ -122,9 +122,7 @@ class StepSelectEditor(
     }
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}
 
 
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}

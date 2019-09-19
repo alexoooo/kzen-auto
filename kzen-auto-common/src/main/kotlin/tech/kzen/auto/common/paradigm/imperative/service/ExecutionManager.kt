@@ -4,7 +4,7 @@ import kotlinx.coroutines.delay
 import tech.kzen.auto.common.paradigm.imperative.api.ControlFlow
 import tech.kzen.auto.common.paradigm.imperative.model.*
 import tech.kzen.auto.common.paradigm.imperative.model.control.*
-import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -93,9 +93,9 @@ class ExecutionManager(
 
 
     override suspend fun onCommandSuccess(
-            event: NotationEvent, graphDefinition: GraphDefinition
+            event: NotationEvent, graphDefinition: GraphDefinitionAttempt
     ) {
-        val graphStructure = graphDefinition.graphStructure
+        val graphStructure = graphDefinition.successful.graphStructure
 
         for (host in models.keys) {
             val newModels = apply(host, event, graphStructure)
@@ -112,7 +112,7 @@ class ExecutionManager(
 
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {}
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}
 
 
     private fun apply(

@@ -18,6 +18,7 @@ fun main() {
         async {
             val clientGraphDefinition = ClientContext.mirroredGraphStore
                     .graphDefinition()
+                    .successful
                     .filterDefinitions(AutoConventions.clientUiAllowed)
 //            console.log("^^^ filteredGraphDefinition - $clientGraphDefinition")
 

@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document
 
+//import tech.kzen.auto.common.service.GraphStructureManager
 import kotlinx.css.em
 import kotlinx.css.fontSize
 import kotlinx.css.marginLeft
@@ -13,9 +14,8 @@ import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-//import tech.kzen.auto.common.service.GraphStructureManager
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.GraphStructure
@@ -74,9 +74,9 @@ class StageController(
     }
 
 
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         setState {
-            structure = graphDefinition.graphStructure
+            structure = graphDefinition.successful.graphStructure
         }
     }
 
@@ -84,9 +84,9 @@ class StageController(
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
         setState {
-            structure = graphDefinition.graphStructure
+            structure = graphDefinition.successful.graphStructure
         }
     }
 

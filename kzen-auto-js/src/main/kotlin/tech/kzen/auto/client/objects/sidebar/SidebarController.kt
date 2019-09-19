@@ -10,7 +10,7 @@ import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
@@ -87,10 +87,10 @@ class SidebarController(
     }
 
 
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
 //        console.log("^ handleModel")
         setState {
-            structure = graphDefinition.graphStructure
+            structure = graphDefinition.successful.graphStructure
         }
     }
 
@@ -98,9 +98,9 @@ class SidebarController(
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
         setState {
-            structure = graphDefinition.graphStructure
+            structure = graphDefinition.successful.graphStructure
         }
     }
 

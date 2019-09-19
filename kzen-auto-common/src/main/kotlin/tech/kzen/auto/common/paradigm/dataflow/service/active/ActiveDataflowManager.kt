@@ -12,7 +12,7 @@ import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageIns
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.service.GraphInstanceManager
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.instance.ObjectInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -39,7 +39,7 @@ class ActiveDataflowManager(
     private var models: MutableMap<DocumentPath, ActiveDataflowModel> = mutableMapOf()
 
 
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinition) {
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         // NB: avoid concurrent modification for DeletedDocumentEvent handling
         val modelHosts = models.keys.toList()
 
@@ -51,7 +51,7 @@ class ActiveDataflowManager(
 
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinition) {}
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}
 
 
     private suspend fun apply(
