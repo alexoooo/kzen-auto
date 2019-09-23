@@ -35,6 +35,9 @@ object CommonRestApi {
     const val commandRefactorObjectRename = "${commandRefactorPrefix}rename"
     const val commandRefactorDocumentRename = "${commandRefactorPrefix}rename-doc"
 
+    private const val commandResourcePrefix = "${commandPrefix}resource/"
+    const val commandResourceAdd = "${commandResourcePrefix}add"
+    const val commandResourceRemove = "${commandResourcePrefix}remove"
 
     const val paramDocumentPath = "path"
     const val paramObjectPath = "object"

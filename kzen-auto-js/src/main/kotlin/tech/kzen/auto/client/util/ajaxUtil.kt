@@ -4,6 +4,7 @@ import org.khronos.webgl.ArrayBuffer
 import org.khronos.webgl.Uint8Array
 import org.khronos.webgl.get
 import org.w3c.xhr.ARRAYBUFFER
+import org.w3c.xhr.EMPTY
 import org.w3c.xhr.XMLHttpRequest
 import org.w3c.xhr.XMLHttpRequestResponseType
 import kotlin.coroutines.*
@@ -54,6 +55,48 @@ suspend fun httpGetBytes(url: String): ByteArray = suspendCoroutine { c ->
         null
     }
     xhr.open("GET", url)
+    xhr.send()
+}
+
+
+suspend fun httpPostBytes(url: String, body: ByteArray): String = suspendCoroutine { c ->
+//    console.log("^^^ httpGet", url)
+
+    val xhr = XMLHttpRequest()
+    xhr.responseType = XMLHttpRequestResponseType.EMPTY
+    xhr.onreadystatechange = {
+        if (xhr.readyState == XMLHttpRequest.DONE) {
+            if (xhr.status / 100 == 2) {
+                c.resume(xhr.response as String)
+            }
+            else {
+                c.resumeWithException(RuntimeException("HTTP error: ${xhr.status}"))
+            }
+        }
+        null
+    }
+    xhr.open("POST", url)
+    xhr.send(body)
+}
+
+
+suspend fun httpDelete(url: String): String = suspendCoroutine { c ->
+    //    console.log("^^^ httpGet", url)
+
+    val xhr = XMLHttpRequest()
+    xhr.onreadystatechange = {
+        if (xhr.readyState == XMLHttpRequest.DONE) {
+            if (xhr.status / 100 == 2) {
+//                console.log("^^^ httpGet - xhr.response", xhr.response)
+                c.resume(xhr.response as String)
+            }
+            else {
+                c.resumeWithException(RuntimeException("HTTP error: ${xhr.status}"))
+            }
+        }
+        null
+    }
+    xhr.open("DELETE", url)
     xhr.send()
 }
 

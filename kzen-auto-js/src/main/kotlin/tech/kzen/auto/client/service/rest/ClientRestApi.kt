@@ -1,8 +1,6 @@
 package tech.kzen.auto.client.service.rest
 
-import tech.kzen.auto.client.util.encodeURIComponent
-import tech.kzen.auto.client.util.httpGet
-import tech.kzen.auto.client.util.httpGetBytes
+import tech.kzen.auto.client.util.*
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
@@ -308,6 +306,27 @@ class ClientRestApi(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    suspend fun addResource(
+            resourceLocation: ResourceLocation,
+            contents: ByteArray
+    ): Digest {
+        return postDigest(
+                CommonRestApi.commandResourceAdd,
+                contents,
+                CommonRestApi.paramDocumentPath to resourceLocation.documentPath.asString(),
+                CommonRestApi.paramResourcePath to resourceLocation.resourcePath.asString())
+    }
+
+
+    suspend fun removeResource(location: ResourceLocation): Digest {
+        return getDigest(
+                CommonRestApi.commandResourceRemove,
+                CommonRestApi.paramDocumentPath to location.documentPath.asString(),
+                CommonRestApi.paramResourcePath to location.resourcePath.asString())
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     suspend fun executionModel(host: DocumentPath): ImperativeModel {
         val responseText = get(
                 CommonRestApi.actionModel,
@@ -432,11 +451,22 @@ class ClientRestApi(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // TODO: change to POST to better align with HTTP semantics?
     private suspend fun getDigest(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): Digest {
         val response = get(commandPath, *parameters)
+        return Digest.parse(response)
+    }
+
+
+    private suspend fun postDigest(
+            commandPath: String,
+            body: ByteArray,
+            vararg parameters: Pair<String, String>
+    ): Digest {
+        val response = postBytes(commandPath, body, *parameters)
         return Digest.parse(response)
     }
 
@@ -465,6 +495,25 @@ class ClientRestApi(
     ): ByteArray {
         val suffix = paramSuffix(*parameters)
         return httpGetBytes("$baseUrl$commandPath$suffix")
+    }
+
+
+    private suspend fun postBytes(
+            commandPath: String,
+            body: ByteArray,
+            vararg parameters: Pair<String, String>
+    ): String {
+        val suffix = paramSuffix(*parameters)
+        return httpPostBytes("$baseUrl$commandPath$suffix", body)
+    }
+
+
+    private suspend fun delete(
+            commandPath: String,
+            vararg parameters: Pair<String, String>
+    ) {
+        val suffix = paramSuffix(*parameters)
+        httpDelete("$baseUrl$commandPath$suffix")
     }
 
 

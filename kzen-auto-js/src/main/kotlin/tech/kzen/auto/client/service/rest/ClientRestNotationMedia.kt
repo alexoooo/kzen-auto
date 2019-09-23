@@ -34,6 +34,7 @@ class ClientRestNotationMedia(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun deleteResource(resourceLocation: ResourceLocation) {
+//        restClient.deleteResource(resourceLocation)
         TODO("not implemented")
     }
 
@@ -44,6 +45,7 @@ class ClientRestNotationMedia(
 
 
     override suspend fun writeResource(resourceLocation: ResourceLocation, contents: ByteArray) {
+//        restClient.writeResource(resourceLocation, contents)
         TODO("not implemented")
     }
 

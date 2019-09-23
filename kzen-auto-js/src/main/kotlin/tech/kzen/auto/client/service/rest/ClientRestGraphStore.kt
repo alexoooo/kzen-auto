@@ -101,6 +101,7 @@ class ClientRestGraphStore(
                 restClient.shiftInAttribute(
                         command.objectLocation, command.attributePath, command.newPosition)
 
+
             is RenameObjectRefactorCommand ->
                 restClient.refactorName(
                         command.objectLocation, command.newName)
@@ -109,6 +110,16 @@ class ClientRestGraphStore(
             is RenameDocumentRefactorCommand ->
                 restClient.refactorDocumentName(
                         command.documentPath, command.newName)
+
+
+            is AddResourceCommand ->
+                restClient.addResource(
+                        command.resourceLocation, command.resourceContent.value)
+
+
+            is RemoveResourceCommand ->
+                restClient.removeResource(
+                        command.resourceLocation)
 
 
             else ->

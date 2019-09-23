@@ -32,6 +32,7 @@ import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionIndex
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
+import tech.kzen.lib.common.model.structure.resource.ResourceContent
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.collect.persistentListOf
@@ -135,7 +136,7 @@ class RestHandler {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun resource(serverRequest: ServerRequest): Mono<ServerResponse> {
+    fun resourceRead(serverRequest: ServerRequest): Mono<ServerResponse> {
         val documentPath: DocumentPath = serverRequest.getParam(
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
@@ -482,6 +483,43 @@ class RestHandler {
                 RenameDocumentRefactorCommand(
                         documentPath,
                         newName))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun addResource(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
+        val resourcePath: ResourcePath = serverRequest.getParam(
+                CommonRestApi.paramResourcePath, ResourcePath.Companion::parse)
+
+        val contents = serverRequest.bodyToMono(ByteArray::class.java)
+
+        return contents.flatMap {
+            val command = AddResourceCommand(
+                    ResourceLocation(documentPath, resourcePath),
+                    ResourceContent(it))
+
+            val digest = applyCommand(command)
+
+            ServerResponse
+                .ok()
+                .body(Mono.just(digest.asString()))
+        }
+    }
+
+
+    fun resourceDelete(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
+        val resourcePath: ResourcePath = serverRequest.getParam(
+                CommonRestApi.paramResourcePath, ResourcePath.Companion::parse)
+
+        return applyAndDigest(
+                RemoveResourceCommand(
+                        ResourceLocation(documentPath, resourcePath)))
     }
 
 

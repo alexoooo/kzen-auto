@@ -1,6 +1,11 @@
 package tech.kzen.auto.client.objects.document.feature
 
 import kotlinx.css.*
+import org.khronos.webgl.ArrayBuffer
+import org.khronos.webgl.Uint8Array
+import org.khronos.webgl.get
+import org.w3c.files.Blob
+import org.w3c.files.FileReader
 import react.*
 import react.dom.br
 import react.dom.img
@@ -21,9 +26,15 @@ import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectNesting
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.cqrs.AddResourceCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.model.structure.resource.ResourceContent
+import tech.kzen.lib.common.model.structure.resource.ResourceName
+import tech.kzen.lib.common.model.structure.resource.ResourceNesting
+import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.platform.DateTimeUtils
 import tech.kzen.lib.platform.IoUtils
 
 
@@ -194,17 +205,45 @@ class FeatureController(
         val detail = state.detail
                 ?: return
 
-        console.log("detail", detail)
+//        console.log("detail", detail)
 
         val canvas = cropperWrapper!!.getCroppedCanvas()
 
-        console.log("canvas", canvas)
+//        console.log("canvas", canvas)
 
         setState {
             capturedDataUrl = canvas.toDataURL()
 
             requestingScreenshot = true
         }
+
+        canvas.toBlob({ blob: Blob? ->
+            val fileReader = FileReader()
+
+            fileReader.onload = { event ->
+                val target  = event.target as FileReader
+                val arrayBuffer= target.result as ArrayBuffer
+                val uint8Array = Uint8Array(arrayBuffer)
+                val byteArray = ByteArray(uint8Array.length) { i -> uint8Array[i] }
+
+                async {
+                    ClientContext.mirroredGraphStore.apply(AddResourceCommand(
+                            ResourceLocation(
+                                    state.documentPath!!,
+                                    ResourcePath(
+                                            ResourceName(DateTimeUtils.filenameTimestamp() + ".png"),
+                                            ResourceNesting.empty
+                                    )
+                            ),
+                            ResourceContent(byteArray)
+                    ))
+                }
+
+                Unit
+            }
+
+            fileReader.readAsArrayBuffer(blob!!)
+        })
     }
 
 

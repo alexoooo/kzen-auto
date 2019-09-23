@@ -14,7 +14,7 @@ class ServerRestApi(
     fun counterRouter() = router {
         GET(CommonRestApi.scan, counterHandler::scan)
         GET("${CommonRestApi.notationPrefix}**", counterHandler::notation)
-        GET(CommonRestApi.resource, counterHandler::resource)
+        GET(CommonRestApi.resource, counterHandler::resourceRead)
 
         GET(CommonRestApi.commandDocumentCreate, counterHandler::createDocument)
         GET(CommonRestApi.commandDocumentDelete, counterHandler::deleteDocument)
@@ -35,6 +35,9 @@ class ServerRestApi(
 
         GET(CommonRestApi.commandRefactorObjectRename, counterHandler::refactorObjectName)
         GET(CommonRestApi.commandRefactorDocumentRename, counterHandler::refactorDocumentName)
+
+        POST(CommonRestApi.commandResourceAdd, counterHandler::addResource)
+        GET(CommonRestApi.commandResourceRemove, counterHandler::resourceDelete)
 
         GET(CommonRestApi.actionModel, counterHandler::actionModel)
         GET(CommonRestApi.actionStart, counterHandler::actionStart)
