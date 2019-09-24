@@ -347,7 +347,14 @@ external class CropIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 
+
 @JsName("CameraAlt")
 external class CameraAltIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Refresh")
+external class RefreshIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }

@@ -8,9 +8,11 @@ import org.w3c.files.Blob
 import org.w3c.files.FileReader
 import react.*
 import react.dom.br
+import react.dom.hr
 import react.dom.img
 import styled.css
 import styled.styledDiv
+import styled.styledSpan
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.NavigationManager
@@ -29,6 +31,7 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.AddResourceCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveResourceCommand
 import tech.kzen.lib.common.model.structure.resource.ResourceContent
 import tech.kzen.lib.common.model.structure.resource.ResourceName
 import tech.kzen.lib.common.model.structure.resource.ResourceNesting
@@ -194,6 +197,28 @@ class FeatureController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onRefresh() {
+        setState {
+            capturedDataUrl = null
+            screenshotDataUrl = null
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onRemove(resourcePath: ResourcePath) {
+        async {
+            ClientContext.mirroredGraphStore.apply(RemoveResourceCommand(
+                    ResourceLocation(
+                            state.documentPath!!,
+                            resourcePath
+                    )
+            ))
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun onCrop(detail: CropperDetail) {
         setState {
             this.detail = detail
@@ -237,6 +262,8 @@ class FeatureController(
                             ),
                             ResourceContent(byteArray)
                     ))
+
+                    onRefresh()
                 }
 
                 Unit
@@ -265,19 +292,30 @@ class FeatureController(
         val documentNotation = graphStructure.graphNotation.documents[documentPath]!!
         val resources = documentNotation.resources!!
 
-        for (resource in resources.values) {
-            +"resource: ${resource.key}"
-
-            val resourceLocation = ResourceLocation(documentPath, resource.key)
-            val resourceUri = ClientContext.restClient.resourceUri(resourceLocation)
-
-            img {
-                attrs {
-                    src = resourceUri
-                }
+        styledDiv {
+            css {
+                padding(1.em)
             }
 
-            br {}
+            for (resource in resources.values) {
+                val resourceLocation = ResourceLocation(documentPath, resource.key)
+                val resourceUri = ClientContext.restClient.resourceUri(resourceLocation)
+
+                img {
+                    attrs {
+                        src = resourceUri
+                    }
+                }
+
+                styledSpan {
+                    css {
+                        marginLeft = 1.em
+                    }
+                    renderDelete(resource.key)
+                }
+
+                hr {}
+            }
         }
 
 
@@ -302,10 +340,13 @@ class FeatureController(
                 }
 
                 screenshotDataUrl != null -> {
-                    renderSave()
-
-                    br {}
-
+                    styledDiv {
+                        css {
+                            marginBottom = 0.5.em
+                        }
+                        renderSave()
+                        renderRefresh()
+                    }
                     renderCropper(screenshotDataUrl)
                 }
 
@@ -354,6 +395,10 @@ class FeatureController(
 
     private fun RBuilder.renderSave() {
         styledDiv {
+            css {
+                display = Display.inlineBlock
+            }
+
             child(MaterialButton::class) {
                 attrs {
                     variant = "outlined"
@@ -374,6 +419,73 @@ class FeatureController(
                     }
                 }
                 +"Save"
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderRefresh() {
+        styledDiv {
+            css {
+                display = Display.inlineBlock
+            }
+
+            child(MaterialButton::class) {
+                attrs {
+                    variant = "outlined"
+                    size = "small"
+
+                    onClick = ::onRefresh
+
+                    style = reactStyle {
+                        backgroundColor = Color.white
+                    }
+                }
+
+                child(RefreshIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            marginRight = 0.25.em
+                        }
+                    }
+                }
+                +"Refresh Screenshot"
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderDelete(
+            resourcePath: ResourcePath
+    ) {
+        styledDiv {
+            css {
+                display = Display.inlineBlock
+            }
+
+            child(MaterialButton::class) {
+                attrs {
+                    variant = "outlined"
+                    size = "small"
+
+                    onClick = {
+                        onRemove(resourcePath)
+                    }
+
+                    style = reactStyle {
+                        backgroundColor = Color.white
+                    }
+
+                    title = "Delete"
+                }
+
+                child(DeleteIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            marginRight = 0.25.em
+                        }
+                    }
+                }
             }
         }
     }
