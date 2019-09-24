@@ -210,7 +210,7 @@ class StepSelectEditor(
                 }
 
                 // https://stackoverflow.com/a/51844542/1941359
-                val styleTransformer: (Json, Json) -> Json = { base, state ->
+                val styleTransformer: (Json, Json) -> Json = { base, _ ->
                     val transformed = json()
                     transformed.add(base)
                     transformed["background"] = "transparent"

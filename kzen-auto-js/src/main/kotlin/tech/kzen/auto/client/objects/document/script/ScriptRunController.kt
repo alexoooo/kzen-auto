@@ -20,13 +20,10 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 
 
-// TODO: bugfix 'rename' causes 'Run all' to turn into 'Reset'?
 class ScriptRunController(
         props: Props
 ):
-//        RComponent<RunController.Props, RunController.State>(props),
         RPureComponent<ScriptRunController.Props, ScriptRunController.State>(props),
-//        ModelManager.Observer,
         ExecutionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -38,8 +35,6 @@ class ScriptRunController(
 
 
     class State(
-//            var structure: GraphStructure?,
-//            var execution: ExecutionModel?,
             var fabHover: Boolean
     ): RState
 
@@ -75,10 +70,12 @@ class ScriptRunController(
 
         if (! executionModel.containsStatus(ImperativePhase.Running)) {
             val next = ImperativeUtils.next(props.structure!!, executionModel)
-            if (next == null &&
-                    ClientContext.executionLoop.running(host)) {
-//                console.log("!@#!#!@#!@#!@ onExecutionModel - pause at end")
-                ClientContext.executionLoop.pause(host)
+            if (next == null) {
+                if (ClientContext.executionLoop.running(host)) {
+                    ClientContext.executionLoop.pause(host)
+                }
+
+                ClientContext.executionIntent.clear()
             }
         }
     }
@@ -87,14 +84,12 @@ class ScriptRunController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         async {
-//            ClientContext.modelManager.observe(this)
             ClientContext.executionManager.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-//        ClientContext.modelManager.unobserve(this)
         ClientContext.executionManager.unobserve(this)
     }
 
@@ -104,16 +99,6 @@ class ScriptRunController(
             prevState: State,
             snapshot: Any
     ) {
-//        if (props.documentPath != null && props.documentPath != prevState.documentPath) {
-//            async {
-//                val executionModel = ClientContext.executionManager.executionModel(state.documentPath!!)
-//                setState {
-//                    execution = executionModel
-//                }
-//            }
-//        }
-//        console.log("RunController componentDidUpdate", state, prevState)
-//        val execution = state.execution
         val execution = props.execution
                 ?: return
 

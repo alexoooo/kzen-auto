@@ -227,8 +227,9 @@ class FeatureController(
 
 
     private fun onSave() {
-        val detail = state.detail
-                ?: return
+        if (state.detail == null) {
+            return
+        }
 
 //        console.log("detail", detail)
 

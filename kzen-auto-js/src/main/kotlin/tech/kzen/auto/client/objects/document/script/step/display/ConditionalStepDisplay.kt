@@ -89,11 +89,13 @@ class ConditionalStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @Suppress("UNUSED_PARAMETER")
     private fun onMouseOver(event: Event) {
         hoverSignal.triggerMouseOver()
     }
 
 
+    @Suppress("UNUSED_PARAMETER")
     private fun onMouseOut(event: Event) {
         hoverSignal.triggerMouseOut()
     }

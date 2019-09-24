@@ -9,6 +9,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 class ActiveDataflowModel(
         val vertices: MutableMap<ObjectLocation, ActiveVertexModel>
 ) {
+    @Suppress("UNUSED_PARAMETER")
     fun move(from: DocumentPath, newPath: DocumentPath) {
         val oldLocations = vertices.keys.toList()
 

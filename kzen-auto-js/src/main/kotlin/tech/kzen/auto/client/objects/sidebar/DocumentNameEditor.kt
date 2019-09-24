@@ -88,7 +88,7 @@ class DocumentNameEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun displayPath(): String {
-        return props.documentPath.name!!.value.substringBeforeLast(".")
+        return props.documentPath.name.value
     }
 
 

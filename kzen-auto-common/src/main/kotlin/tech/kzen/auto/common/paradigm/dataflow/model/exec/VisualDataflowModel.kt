@@ -78,6 +78,7 @@ data class VisualDataflowModel(
     }
 
 
+    @Suppress("UNUSED_PARAMETER")
     fun move(from: DocumentPath, newPath: DocumentPath): VisualDataflowModel {
         return VisualDataflowModel(vertices.mapKeys {
             it.key.copy(documentPath = newPath)
