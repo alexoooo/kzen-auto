@@ -26,6 +26,7 @@ import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.model.locate.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.DeletedDocumentEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -170,6 +171,10 @@ class ScriptController:
 
 
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+        if (event is DeletedDocumentEvent && event.documentPath == state.documentPath) {
+            return
+        }
+
         setState {
             this.graphStructure = graphDefinition.successful.graphStructure
         }
@@ -184,7 +189,6 @@ class ScriptController:
             this.graphStructure = graphDefinition.successful.graphStructure
         }
     }
-
 
 
     override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {}

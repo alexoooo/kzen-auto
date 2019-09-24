@@ -8,6 +8,7 @@ import tech.kzen.lib.common.model.obj.ObjectPathMap
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
+import tech.kzen.lib.common.model.structure.resource.ResourceListing
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.collect.persistentMapOf
 
@@ -33,6 +34,7 @@ abstract class DocumentArchetype(
                     ?.let { ObjectName(it) }
         }
 
+
         fun archetypeLocation(
                 graphNotation: GraphNotation,
                 documentPath: DocumentPath
@@ -44,12 +46,25 @@ abstract class DocumentArchetype(
         }
 
 
-        fun newDocument(archetypeLocation: ObjectLocation): DocumentNotation {
+        fun newDocument(
+                archetypeLocation: ObjectLocation,
+                archetypeDirectory: Boolean
+        ): DocumentNotation {
             val mainObjectNotation = ObjectNotation.ofParent(archetypeLocation.objectPath.name)
-            return DocumentNotation(ObjectPathMap(persistentMapOf(
-                    NotationConventions.mainObjectPath to mainObjectNotation
-            )),
-                    null)
+
+            val resourceListing =
+                    if (archetypeDirectory) {
+                        ResourceListing.empty
+                    }
+                    else {
+                        null
+                    }
+
+            return DocumentNotation(
+                    ObjectPathMap(persistentMapOf(
+                            NotationConventions.mainObjectPath to mainObjectNotation
+                    )),
+                    resourceListing)
         }
     }
 

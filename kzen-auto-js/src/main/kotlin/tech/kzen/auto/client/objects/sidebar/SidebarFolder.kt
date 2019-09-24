@@ -230,11 +230,19 @@ class SidebarFolder(
             documentPath: DocumentPath,
             archetypeLocation: ObjectLocation
     ) {
-        val newDocument = DocumentArchetype.newDocument(archetypeLocation)
-//        console.log("^^^^^ createDocument", newDocument)
+        val directoryAttribute = props.graphStructure.graphNotation.transitiveAttribute(
+                archetypeLocation, AutoConventions.directoryAttributePath
+        ) as? ScalarAttributeNotation
+
+        val directory = directoryAttribute?.asBoolean() ?: false
+
+        val newDocument = DocumentArchetype.newDocument(archetypeLocation, directory)
+//        console.log("^^^^^ createDocument - creating", newDocument)
 
         ClientContext.mirroredGraphStore.apply(
                 CreateDocumentCommand(documentPath, newDocument))
+
+//        console.log("^^^^^ createDocument - created", newDocument)
     }
 
 

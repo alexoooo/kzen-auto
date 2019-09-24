@@ -35,10 +35,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.*
-import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.InsertObjectInListAttributeCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.persistentListOf
@@ -148,6 +145,10 @@ class GraphController:
 
 
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+        if (event is DeletedDocumentEvent && event.documentPath == state.documentPath) {
+            return
+        }
+
         setState {
             this.graphStructure = graphDefinition.successful.graphStructure
         }

@@ -182,6 +182,7 @@ class RestHandler {
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val documentBody: DocumentNotation = serverRequest.getParam(CommonRestApi.paramDocumentNotation) {
+            // TODO: consolidate with DocumentArchetype.newDocument in kzen-lib
             val resourceListing =
                     if (documentPath.directory) {
                         ResourceListing.empty

@@ -28,10 +28,7 @@ import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectNesting
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.cqrs.AddResourceCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
-import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveResourceCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.model.structure.resource.ResourceContent
 import tech.kzen.lib.common.model.structure.resource.ResourceName
 import tech.kzen.lib.common.model.structure.resource.ResourceNesting
@@ -158,6 +155,10 @@ class FeatureController(
 
 
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+        if (event is DeletedDocumentEvent && event.documentPath == state.documentPath) {
+            return
+        }
+
         setState {
             this.graphStructure = graphDefinition.successful.graphStructure
         }
