@@ -33,6 +33,7 @@ import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionIndex
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.model.structure.resource.ResourceContent
+import tech.kzen.lib.common.model.structure.resource.ResourceListing
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.collect.persistentListOf
@@ -181,9 +182,17 @@ class RestHandler {
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val documentBody: DocumentNotation = serverRequest.getParam(CommonRestApi.paramDocumentNotation) {
+            val resourceListing =
+                    if (documentPath.directory) {
+                        ResourceListing.empty
+                    }
+                    else {
+                        null
+                    }
+
             DocumentNotation(
                     ServerContext.yamlParser.parseDocumentObjects(it),
-                    null)
+                    resourceListing)
         }
 
         return applyAndDigest(
