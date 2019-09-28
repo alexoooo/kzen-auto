@@ -14,6 +14,13 @@ import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermission
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
+import java.io.BufferedOutputStream
+import java.io.FileOutputStream
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
+
+
 
 
 // see: https://github.com/Ardesco/selenium-standalone-server-plugin
@@ -91,6 +98,10 @@ class WebDriverInstaller(
             DownloadFormat.Zip -> {
                 extractZip(byteArray, destinationDir)
             }
+
+            DownloadFormat.TarGz -> {
+                extractTarGz(byteArray, destinationDir)
+            }
         }
 
         val binaryPath = findBinary(destinationDir, launcher)
@@ -126,6 +137,43 @@ class WebDriverInstaller(
                 }
             }
             zipIn.closeEntry()
+        }
+    }
+
+
+    private fun extractTarGz(byteArray: ByteArray, destinationDir: Path) {
+        val gzipIn = GzipCompressorInputStream(ByteArrayInputStream(byteArray))
+
+        // https://stackoverflow.com/a/41853978
+        TarArchiveInputStream(gzipIn).use { tarIn ->
+            var entry: TarArchiveEntry
+
+            while (true) {
+                entry = tarIn.nextEntry as? TarArchiveEntry
+                        ?: break
+
+                if (entry.isDirectory) {
+                    val dirPath = destinationDir.resolve(entry.name)
+                    Files.createDirectories(dirPath)
+                }
+                else {
+                    val filePath = destinationDir.resolve(entry.name).toFile()
+
+                    var count: Int
+                    val data = ByteArray(4096)
+                    val fos = FileOutputStream(filePath, false)
+                    BufferedOutputStream(fos, 4096).use { dest ->
+                        while (true) {
+                            count = tarIn.read(data, 0, 4096)
+                            if (count == -1) {
+                                break
+                            }
+
+                            dest.write(data, 0, count)
+                        }
+                    }
+                }
+            }
         }
     }
 }

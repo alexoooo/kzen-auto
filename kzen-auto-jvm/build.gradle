@@ -34,6 +34,7 @@ dependencies {
     compile "com.google.guava:guava:$guavaVersion"
     compile group: 'com.github.andrewoma.dexx', name: 'collection', version: dexxVersion
     compile group: 'org.seleniumhq.selenium', name: 'selenium-java', version: seleniumVersion
+    compile group: 'org.apache.commons', name: 'commons-compress', version: commonsCompressVersion
 
     compile group: 'tech.kzen.lib', name: 'kzen-lib-jvm', version: kzenLibVersion
 

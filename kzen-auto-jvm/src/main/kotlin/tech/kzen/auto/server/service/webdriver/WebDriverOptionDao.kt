@@ -7,35 +7,51 @@ import tech.kzen.auto.server.service.webdriver.model.WebDriverOption
 import java.net.URI
 
 
+// TODO: test on Mac
 class WebDriverOptionDao {
+    // NB: chromedriver distribution has changed - https://stackoverflow.com/a/55266105
     private val options: List<WebDriverOption> = listOf(
+//            WebDriverOption(
+//                    BrowserLauncher.GoogleChrome,
+//                    OperatingSystem.Linux,
+//                    CpuArchitecture.X86_64,
+//                    "77.0.3865.40",
+//                    URI("https://chromedriver.storage.googleapis.com/77.0.3865.40/chromedriver_linux64.zip")
+//            ),
             WebDriverOption(
-                    BrowserLauncher.GoogleChrome,
+                    BrowserLauncher.Firefox,
                     OperatingSystem.Linux,
                     CpuArchitecture.X86_64,
-                    "2.44",
-                    URI("https://chromedriver.storage.googleapis.com/2.44/chromedriver_linux64.zip")
+                    "0.25.0",
+                    URI("https://github.com/mozilla/geckodriver/releases/download/v0.25.0/geckodriver-v0.25.0-linux64.tar.gz")
             ),
+
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_32,
-                    "2.44",
-                    URI("https://chromedriver.storage.googleapis.com/2.44/chromedriver_win32.zip")
+//                    "2.46",
+//                    URI("https://chromedriver.storage.googleapis.com/2.46/chromedriver_win32.zip")
+                    "77.0.3865.40",
+                    URI("https://chromedriver.storage.googleapis.com/77.0.3865.40/chromedriver_win32.zip")
             ),
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_64,
-                    "2.44",
-                    URI("https://chromedriver.storage.googleapis.com/2.44/chromedriver_win32.zip")
+//                    "2.46",
+//                    URI("https://chromedriver.storage.googleapis.com/2.46/chromedriver_win32.zip")
+                    "77.0.3865.40",
+                    URI("https://chromedriver.storage.googleapis.com/77.0.3865.40/chromedriver_win32.zip")
             ),
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.OsX,
                     CpuArchitecture.X86_64,
-                    "2.44",
-                    URI("https://chromedriver.storage.googleapis.com/2.44/chromedriver_mac64.zip")
+//                    "2.46",
+//                    URI("https://chromedriver.storage.googleapis.com/2.46/chromedriver_mac64.zip")
+                    "77.0.3865.40",
+                    URI("https://chromedriver.storage.googleapis.com/77.0.3865.40/chromedriver_mac64.zip")
             ))
 
 
@@ -43,15 +59,13 @@ class WebDriverOptionDao {
             browser: BrowserLauncher = BrowserLauncher.GoogleChrome,
             os: OperatingSystem = OperatingSystem.get(),
             architecture: CpuArchitecture = CpuArchitecture.get()
-    ): WebDriverOption {
+    ): WebDriverOption? {
         val allVersions = options.filter {
             it.browserLauncher == browser &&
                     it.operationSystem == os &&
                     it.cpuArchitecture == architecture
         }
 
-        check(allVersions.isNotEmpty()) {"Not available: $browser / $os / $architecture"}
-
-        return allVersions.last()
+        return allVersions.lastOrNull()
     }
 }

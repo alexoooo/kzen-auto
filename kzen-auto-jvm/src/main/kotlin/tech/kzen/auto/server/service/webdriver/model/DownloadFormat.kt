@@ -6,7 +6,8 @@ import java.net.URI
 enum class DownloadFormat(
         val extension: String
 ) {
-    Zip(".zip");
+    Zip(".zip"),
+    TarGz(".tar.gz");
 
 
     companion object {
