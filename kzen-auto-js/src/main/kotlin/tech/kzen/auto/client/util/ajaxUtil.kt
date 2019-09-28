@@ -15,8 +15,6 @@ external fun encodeURIComponent(str: String): String
 
 
 suspend fun httpGet(url: String): String = suspendCoroutine { c ->
-//    console.log("^^^ httpGet", url)
-
     val xhr = XMLHttpRequest()
     xhr.onreadystatechange = {
         if (xhr.readyState == XMLHttpRequest.DONE) {
@@ -36,8 +34,6 @@ suspend fun httpGet(url: String): String = suspendCoroutine { c ->
 
 
 suspend fun httpGetBytes(url: String): ByteArray = suspendCoroutine { c ->
-//    console.log("^^^ httpGet", url)
-
     val xhr = XMLHttpRequest()
     xhr.responseType = XMLHttpRequestResponseType.ARRAYBUFFER
     xhr.onreadystatechange = {
@@ -60,8 +56,6 @@ suspend fun httpGetBytes(url: String): ByteArray = suspendCoroutine { c ->
 
 
 suspend fun httpPostBytes(url: String, body: ByteArray): String = suspendCoroutine { c ->
-//    console.log("^^^ httpGet", url)
-
     val xhr = XMLHttpRequest()
     xhr.responseType = XMLHttpRequestResponseType.EMPTY
     xhr.onreadystatechange = {
@@ -81,8 +75,6 @@ suspend fun httpPostBytes(url: String, body: ByteArray): String = suspendCorouti
 
 
 suspend fun httpDelete(url: String): String = suspendCoroutine { c ->
-    //    console.log("^^^ httpGet", url)
-
     val xhr = XMLHttpRequest()
     xhr.onreadystatechange = {
         if (xhr.readyState == XMLHttpRequest.DONE) {
@@ -113,7 +105,7 @@ fun <T> async(x: suspend () -> T): Promise<T> {
                     reject(result.exceptionOrNull()!!)
                 }
             }
-//
+
             override val context = EmptyCoroutineContext
         })
     }

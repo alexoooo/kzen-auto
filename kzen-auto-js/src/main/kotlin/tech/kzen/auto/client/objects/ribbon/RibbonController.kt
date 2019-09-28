@@ -148,7 +148,6 @@ class RibbonController(
         styledDiv {
             css {
                 backgroundColor = Color.white
-
                 paddingRight = 1.75.em
                 paddingBottom = 1.px
                 paddingLeft = 1.75.em
@@ -161,39 +160,95 @@ class RibbonController(
                     marginTop = 7.px
                     marginRight = 1.em
                 }
-
                 renderLogo()
-            }
-
-            child(MaterialTabs::class) {
-                attrs {
-                    textColor = "primary"
-                    indicatorColor = "primary"
-
-                    value = state.tabIndex
-
-                    onChange = { _, index: Int ->
-                        onTab(index)
-                    }
-                }
-
-                for (ribbonGroup in state.currentRibbonGroups) {
-                    child(MaterialTab::class) {
-                        attrs {
-                            key = ribbonGroup.title
-                            label = ribbonGroup.title
-                        }
-                    }
-                }
             }
 
             styledDiv {
                 css {
-//                    marginTop = 16.px
+                    float = Float.right
+                }
+                renderTitle()
+            }
+
+            renderTabs()
+
+            styledDiv {
+                css {
                     marginTop = 0.5.em
                 }
                 renderSubActions()
             }
+        }
+    }
+
+
+    private fun RBuilder.renderLogo() {
+        styledA {
+            attrs {
+                href = "/"
+            }
+
+            styledImg(src = "logo.png") {
+                css {
+                    height = 42.px
+                }
+
+                attrs {
+                    title = "Kzen (home)"
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderTabs() {
+        child(MaterialTabs::class) {
+            attrs {
+                textColor = "primary"
+                indicatorColor = "primary"
+
+                value = state.tabIndex
+
+                onChange = { _, index: Int ->
+                    onTab(index)
+                }
+            }
+
+            for (ribbonGroup in state.currentRibbonGroups) {
+                child(MaterialTab::class) {
+                    attrs {
+                        key = ribbonGroup.title
+                        label = ribbonGroup.title
+                    }
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderTitle() {
+        val projectTitle =
+                if (ClientContext.baseUrl.isEmpty()) {
+                    "Running in dev mode"
+                }
+                else {
+                    ClientContext.baseUrl
+                }
+
+        styledDiv {
+            css {
+                marginTop = 0.5.em
+                marginRight = 0.5.em
+                fontSize = 1.5.em
+                color = Color.gray
+                fontStyle = FontStyle.italic
+            }
+
+            attrs {
+                title = "Project name"
+            }
+
+            +projectTitle
         }
     }
 
@@ -204,8 +259,6 @@ class RibbonController(
         }
 
         val currentRibbon = state.currentRibbonGroups[state.tabIndex]
-
-//        console.log("^^^^^ currentRibbon", currentRibbon)
 
         for (ribbonTool in currentRibbon.children) {
             child(MaterialButton::class) {
@@ -227,7 +280,6 @@ class RibbonController(
                         if (state.type == ribbonTool.delegate) {
                             color = Color.white
                             backgroundColor = Color("#649fff")
-//                            backgroundColor = Color.blue.lighten(50).withAlpha(0.5)
                         }
 
                         marginRight = 0.5.em
@@ -265,26 +317,6 @@ class RibbonController(
                         ?: ribbonTool.delegate.objectPath.name.value
 
                 +title
-            }
-        }
-    }
-
-
-    private fun RBuilder.renderLogo() {
-        styledA {
-            attrs {
-                href = "/"
-            }
-
-            styledImg(src = "logo.png") {
-                css {
-//                    height = 52.px
-                    height = 42.px
-                }
-
-                attrs {
-                    title = "Kzen (home)"
-                }
             }
         }
     }

@@ -163,15 +163,13 @@ class ProjectController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-//        styledDiv {
-            val graphNotation = state.structure?.graphNotation
-            if (graphNotation == null) {
-                +"Loading..."
-            }
-            else {
-                renderBody(graphNotation)
-            }
-//        }
+        val graphNotation = state.structure?.graphNotation
+        if (graphNotation == null) {
+            +"Loading..."
+        }
+        else {
+            renderBody(graphNotation)
+        }
     }
 
 

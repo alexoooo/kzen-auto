@@ -499,7 +499,7 @@ class FeatureController(
         styledDiv {
             css {
                 width = 100.pct
-                height = 100.vh.minus(9.em)
+                height = 100.vh.minus(10.em)
                 minHeight = 200.px
                 maxHeight = 1024.px
             }
