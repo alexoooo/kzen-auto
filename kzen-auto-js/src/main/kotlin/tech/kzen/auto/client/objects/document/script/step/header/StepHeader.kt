@@ -394,6 +394,8 @@ class StepHeader(
                     height = runIconWidth.plus(overfill)
 
                     backgroundColor = highlight
+
+                    position = Position.relative
                 }
 
                 onClick = ::onRun
@@ -401,16 +403,30 @@ class StepHeader(
                 onMouseOut = ::onRunLeave
             }
 
+//            styledDiv {
+//                css {
+//                    margin(0.em)
+//                    padding(0.em)
+//                }
+//                +"x"
+//            }
             child(iconClassForName(icon)) {
                 attrs {
                     style = reactStyle {
                         color = Color.black
 
-                        marginTop = (-9).px
+//                        marginTop = (-9).px
                         fontSize = 1.75.em
                         borderRadius = 20.px
 
                         backgroundColor = highlight
+
+                        margin(0.em)
+                        padding(0.em)
+
+                        position = Position.absolute
+                        top = 3.px
+                        left = 3.px
                     }
                 }
             }
