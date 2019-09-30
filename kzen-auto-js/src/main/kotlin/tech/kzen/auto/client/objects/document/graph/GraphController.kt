@@ -145,7 +145,8 @@ class GraphController:
 
 
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
-        if (event is DeletedDocumentEvent && event.documentPath == state.documentPath) {
+        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent) &&
+                event.documentPath == state.documentPath) {
             return
         }
 
@@ -285,7 +286,7 @@ class GraphController:
                             GraphDocument.verticesAttributePath,
                             PositionIndex(verticesNotation.values.size),
                             AutoConventions.randomAnonymous(),
-                            PositionIndex(documentNotation.objects.values.size),
+                            PositionIndex(documentNotation.objects.notations.values.size),
                             objectNotation
                     )
                 }

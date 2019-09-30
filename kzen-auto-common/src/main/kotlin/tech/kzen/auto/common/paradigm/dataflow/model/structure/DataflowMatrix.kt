@@ -48,6 +48,7 @@ data class DataflowMatrix(
         ): ListAttributeNotation {
             return documentNotation
                     .objects
+                    .notations
                     .values[NotationConventions.mainObjectPath]
                     ?.attributes
                     ?.values
@@ -62,6 +63,7 @@ data class DataflowMatrix(
         ): ListAttributeNotation {
             return documentNotation
                     .objects
+                    .notations
                     .values[NotationConventions.mainObjectPath]
                     ?.attributes
                     ?.values

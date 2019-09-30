@@ -44,6 +44,11 @@ class ClientRestNotationMedia(
     }
 
 
+    override suspend fun copyResource(resourceLocation: ResourceLocation, destination: ResourceLocation) {
+        TODO("not implemented")
+    }
+
+
     override suspend fun writeResource(resourceLocation: ResourceLocation, contents: ByteArray) {
 //        restClient.writeResource(resourceLocation, contents)
         TODO("not implemented")

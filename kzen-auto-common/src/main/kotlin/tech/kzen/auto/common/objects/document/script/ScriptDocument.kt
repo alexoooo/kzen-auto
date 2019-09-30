@@ -39,9 +39,9 @@ class ScriptDocument(
             // NB: +1 offset for main Script object
             val endOfDocumentPosition = graphStructure
                     .graphNotation
-                    .documents
-                    .get(containingObjectLocation.documentPath)!!
+                    .documents[containingObjectLocation.documentPath]!!
                     .objects
+                    .notations
                     .values
                     .size
 
@@ -74,9 +74,9 @@ class ScriptDocument(
 
             val documentObjectNames = graphStructure
                     .graphNotation
-                    .documents
-                    .get(containingObjectLocation.documentPath)!!
+                    .documents[containingObjectLocation.documentPath]!!
                     .objects
+                    .notations
                     .values
                     .keys
                     .map { it.name }

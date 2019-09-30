@@ -13,7 +13,7 @@ class ClientRestGraphStore(
     override suspend fun apply(command: NotationCommand): Digest {
         return when (command) {
             is CreateDocumentCommand -> {
-                val unparsed = notationParser.unparseDocument(command.documentNotation, "")
+                val unparsed = notationParser.unparseDocument(command.documentObjectNotation, "")
                 restClient.createDocument(
                         command.documentPath, unparsed)
             }

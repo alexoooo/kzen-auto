@@ -19,9 +19,9 @@ class BootNotationMedia(
         private val loader: ClassLoader = Thread.currentThread().contextClassLoader
 ): NotationMedia {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        val gradleResourcesInfix = "/out/production/resources/"
-    }
+//    companion object {
+//        val gradleResourcesInfix = "/out/production/resources/"
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -105,11 +105,17 @@ class BootNotationMedia(
 
 
     override suspend fun writeDocument(documentPath: DocumentPath, contents: String) {
-        throw UnsupportedOperationException("Classpath writing not supported")
+        throw UnsupportedOperationException("Classpath resource writing not supported")
     }
 
+
+    override suspend fun copyResource(resourceLocation: ResourceLocation, destination: ResourceLocation) {
+        throw UnsupportedOperationException("Classpath resource copying not supported")
+    }
+
+
     override suspend fun deleteDocument(documentPath: DocumentPath) {
-        throw UnsupportedOperationException("Classpath deleting not supported")
+        throw UnsupportedOperationException("Classpath resource deleting not supported")
     }
 
 

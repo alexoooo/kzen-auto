@@ -155,7 +155,8 @@ class FeatureController(
 
 
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
-        if (event is DeletedDocumentEvent && event.documentPath == state.documentPath) {
+        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent) &&
+                event.documentPath == state.documentPath) {
             return
         }
 
@@ -299,7 +300,7 @@ class FeatureController(
                 padding(1.em)
             }
 
-            for (resource in resources.values) {
+            for (resource in resources.digests) {
                 val resourceLocation = ResourceLocation(documentPath, resource.key)
                 val resourceUri = ClientContext.restClient.resourceUri(resourceLocation)
 

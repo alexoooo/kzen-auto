@@ -28,12 +28,10 @@ import tech.kzen.lib.common.model.locate.ResourceLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
-import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionIndex
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.model.structure.resource.ResourceContent
-import tech.kzen.lib.common.model.structure.resource.ResourceListing
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.collect.persistentListOf
@@ -124,7 +122,7 @@ class RestHandler {
         for (e in documentTree.documents.values) {
             asMap[e.key.asRelativeFile()] = mapOf(
                     "documentDigest" to e.value.documentDigest.asString(),
-                    "resources" to e.value.resources?.values?.map {
+                    "resources" to e.value.resources?.digests?.map {
                         it.key.asString() to it.value.asString()
                     }?.toMap()
             )
@@ -181,19 +179,8 @@ class RestHandler {
         val documentPath: DocumentPath = serverRequest.getParam(
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
-        val documentBody: DocumentNotation = serverRequest.getParam(CommonRestApi.paramDocumentNotation) {
-            // TODO: consolidate with DocumentArchetype.newDocument in kzen-lib
-            val resourceListing =
-                    if (documentPath.directory) {
-                        ResourceListing.empty
-                    }
-                    else {
-                        null
-                    }
-
-            DocumentNotation(
-                    ServerContext.yamlParser.parseDocumentObjects(it),
-                    resourceListing)
+        val documentBody = serverRequest.getParam(CommonRestApi.paramDocumentNotation) {
+            ServerContext.yamlParser.parseDocumentObjects(it)
         }
 
         return applyAndDigest(

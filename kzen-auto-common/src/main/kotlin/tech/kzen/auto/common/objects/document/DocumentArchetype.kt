@@ -5,10 +5,9 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPathMap
-import tech.kzen.lib.common.model.structure.notation.DocumentNotation
+import tech.kzen.lib.common.model.structure.notation.DocumentObjectNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
-import tech.kzen.lib.common.model.structure.resource.ResourceListing
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.collect.persistentMapOf
 
@@ -24,7 +23,7 @@ abstract class DocumentArchetype(
             val document = graphNotation.documents.values[documentPath]
                     ?: return null
 
-            val mainObject = document.objects.values[NotationConventions.mainObjectPath]
+            val mainObject = document.objects.notations.values[NotationConventions.mainObjectPath]
                     ?: return null
 
             return mainObject
@@ -47,24 +46,14 @@ abstract class DocumentArchetype(
 
 
         fun newDocument(
-                archetypeLocation: ObjectLocation,
-                archetypeDirectory: Boolean
-        ): DocumentNotation {
+                archetypeLocation: ObjectLocation
+        ): DocumentObjectNotation {
             val mainObjectNotation = ObjectNotation.ofParent(archetypeLocation.objectPath.name)
 
-            val resourceListing =
-                    if (archetypeDirectory) {
-                        ResourceListing.empty
-                    }
-                    else {
-                        null
-                    }
+            val objectNotations = ObjectPathMap(persistentMapOf(
+                    NotationConventions.mainObjectPath to mainObjectNotation))
 
-            return DocumentNotation(
-                    ObjectPathMap(persistentMapOf(
-                            NotationConventions.mainObjectPath to mainObjectNotation
-                    )),
-                    resourceListing)
+            return DocumentObjectNotation(objectNotations)
         }
     }
 

@@ -29,6 +29,7 @@ import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.DeletedDocumentEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.persistentListOf
@@ -171,7 +172,8 @@ class ScriptController:
 
 
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
-        if (event is DeletedDocumentEvent && event.documentPath == state.documentPath) {
+        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent) &&
+                event.documentPath == state.documentPath) {
             return
         }
 
