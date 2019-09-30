@@ -10,10 +10,14 @@ import org.springframework.web.reactive.config.EnableWebFlux
 class KzenAutoApp
 
 
-fun main(args: Array<String>) {
+fun kzenAutoInit() {
     // NB: disable headless mode
     // https://stackoverflow.com/questions/40016683/spring-boot-forcing-headless-mode
     System.setProperty("java.awt.headless", "false")
+}
 
+
+fun main(args: Array<String>) {
+    kzenAutoInit()
     runApplication<KzenAutoApp>(*args)
 }
