@@ -99,23 +99,23 @@ class BootNotationMedia(
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun readDocument(documentPath: DocumentPath): String {
         val bytes = loader.getResource(prefix + documentPath.asRelativeFile())!!.readText()
-        println("ClasspathNotationMedia - read ${bytes.length}")
+        println("BootNotationMedia - read $documentPath - ${bytes.length}")
         return bytes
     }
 
 
     override suspend fun writeDocument(documentPath: DocumentPath, contents: String) {
-        throw UnsupportedOperationException("Classpath resource writing not supported")
+        throw UnsupportedOperationException("Boot resource writing not supported")
     }
 
 
     override suspend fun copyResource(resourceLocation: ResourceLocation, destination: ResourceLocation) {
-        throw UnsupportedOperationException("Classpath resource copying not supported")
+        throw UnsupportedOperationException("Boot resource copying not supported")
     }
 
 
     override suspend fun deleteDocument(documentPath: DocumentPath) {
-        throw UnsupportedOperationException("Classpath resource deleting not supported")
+        throw UnsupportedOperationException("Boot resource deleting not supported")
     }
 
 
@@ -124,12 +124,14 @@ class BootNotationMedia(
         TODO("not implemented")
     }
 
+
     override suspend fun readResource(resourceLocation: ResourceLocation): ByteArray {
-        throw UnsupportedOperationException("Classpath writing not supported")
+        throw UnsupportedOperationException("Boot writing not supported")
     }
 
+
     override suspend fun writeResource(resourceLocation: ResourceLocation, contents: ByteArray) {
-        throw UnsupportedOperationException("Classpath deleting not supported")
+        throw UnsupportedOperationException("Boot deleting not supported")
     }
 
 
