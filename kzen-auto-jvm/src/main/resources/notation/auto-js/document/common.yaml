@@ -14,7 +14,7 @@ AttributeEditorWrapper:
   meta:
     objectLocation:
       is: ObjectLocation
-      by: SelfLocation
+      by: Self
 
 
 ################################################################

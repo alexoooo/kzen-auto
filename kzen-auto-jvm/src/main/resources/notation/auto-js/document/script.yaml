@@ -34,7 +34,7 @@ StepDisplay:
   meta:
     objectLocation:
       is: ObjectLocation
-      by: SelfLocation
+      by: Self
 
 
 DefaultStepDisplay:
@@ -53,7 +53,12 @@ ConditionalStepDisplay:
 
 SelectStepEditor:
   is: AttributeEditorWrapper
-  class: tech.kzen.auto.client.objects.document.script.step.attribute.StepSelectEditor$Wrapper
+  class: tech.kzen.auto.client.objects.document.script.step.attribute.SelectStepEditor$Wrapper
+
+
+SelectFeatureEditor:
+  is: AttributeEditorWrapper
+  class: tech.kzen.auto.client.objects.document.script.step.attribute.SelectFeatureEditor$Wrapper
 
 
 #######################################################################################################################
@@ -176,6 +181,12 @@ LeftClickTool:
   is: RibbonTool
   parent: BrowserGroup
   delegate: LeftClick
+
+
+VisualClickTool:
+  is: RibbonTool
+  parent: BrowserGroup
+  delegate: VisualClick
 
 
 SendKeysTool:

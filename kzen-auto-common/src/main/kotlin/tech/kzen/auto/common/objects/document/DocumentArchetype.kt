@@ -41,7 +41,7 @@ abstract class DocumentArchetype(
             val parentName = archetypeName(graphNotation, documentPath)
                     ?: return null
 
-            return graphNotation.coalesce.locate(ObjectReference.ofName(parentName))
+            return graphNotation.coalesce.locate(ObjectReference.ofRootName(parentName))
         }
 
 

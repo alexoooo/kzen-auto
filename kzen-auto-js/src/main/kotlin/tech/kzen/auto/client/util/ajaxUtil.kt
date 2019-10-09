@@ -12,6 +12,7 @@ import kotlin.js.Promise
 
 
 external fun encodeURIComponent(str: String): String
+external fun decodeURIComponent(str: String): String
 
 
 suspend fun httpGet(url: String): String = suspendCoroutine { c ->

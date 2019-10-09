@@ -25,10 +25,10 @@ import kotlin.js.json
 
 
 @Suppress("unused")
-class StepSelectEditor(
+class SelectStepEditor(
         props: AttributeEditorProps
 ):
-        RPureComponent<AttributeEditorProps, StepSelectEditor.State>(props),
+        RPureComponent<AttributeEditorProps, SelectStepEditor.State>(props),
         LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -46,7 +46,7 @@ class StepSelectEditor(
             AttributeEditorWrapper(objectLocation)
     {
         override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>): ReactElement {
-            return input.child(StepSelectEditor::class) {
+            return input.child(SelectStepEditor::class) {
                 handler()
             }
         }
@@ -59,7 +59,6 @@ class StepSelectEditor(
 
         @Suppress("MoveVariableDeclarationIntoWhen")
         val attributeNotation =
-//                props.attributeNotation
                 props.graphStructure.graphNotation.transitiveAttribute(
                         props.objectLocation, props.attributeName)
 
@@ -150,7 +149,7 @@ class StepSelectEditor(
                 ?: return
 
         val localReference = value.toReference()
-                .crop(retainNesting = true, retainPath = false)
+                .crop(retainPath = false)
 
         ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
                 props.objectLocation,

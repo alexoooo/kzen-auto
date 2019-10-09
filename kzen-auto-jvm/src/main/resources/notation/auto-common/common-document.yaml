@@ -9,7 +9,7 @@ Document:
     icon: String
     objectLocation:
       is: ObjectLocation
-      by: SelfLocation
+      by: Self
     directory: Boolean
 
 
@@ -53,3 +53,7 @@ Feature:
   title: "Visual Target"
   icon: Crop
   directory: true
+  meta:
+    documentNotation:
+      is: DocumentNotation
+      by: Self

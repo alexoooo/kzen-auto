@@ -8,6 +8,7 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
+import tech.kzen.auto.client.util.decodeURIComponent
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
@@ -232,7 +233,7 @@ class RibbonController(
                     "Running in dev mode"
                 }
                 else {
-                    ClientContext.baseUrl
+                    decodeURIComponent(ClientContext.baseUrl).substringAfter("/")
                 }
 
         styledDiv {

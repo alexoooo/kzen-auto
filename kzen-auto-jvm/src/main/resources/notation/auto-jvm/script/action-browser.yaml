@@ -49,6 +49,18 @@ LeftClick:
     xpath: String
 
 
+VisualClick:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.browser.VisualClick
+  icon: TouchApp
+  title: "Visual Click"
+  meta:
+    target:
+      is: Feature
+      editor: SelectFeatureEditor
+
+
 SendKeys:
   abstract: true
   is: Action
