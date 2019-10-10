@@ -54,6 +54,9 @@ Feature:
   icon: Crop
   directory: true
   meta:
+    objectLocation:
+      is: ObjectLocation
+      by: Self
     documentNotation:
       is: DocumentNotation
       by: Self

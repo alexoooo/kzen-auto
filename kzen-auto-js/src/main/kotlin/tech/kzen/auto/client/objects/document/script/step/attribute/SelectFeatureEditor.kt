@@ -150,7 +150,6 @@ class SelectFeatureEditor(
                 ?: return
 
         val localReference = value.toReference()
-                .crop(retainPath = false)
 
         ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
                 props.objectLocation,

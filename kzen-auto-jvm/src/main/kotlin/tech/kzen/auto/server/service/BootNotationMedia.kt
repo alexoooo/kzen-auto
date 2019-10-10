@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.notation
+package tech.kzen.auto.server.service
 
 import com.google.common.base.MoreObjects
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver

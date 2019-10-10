@@ -614,6 +614,7 @@ class RestHandler {
 
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
+//        serverRequest.
         val execution: ImperativeResult = runBlocking {
             ServerContext.actionExecutor.execute(
                     objectLocation,
