@@ -7,8 +7,9 @@ import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageIns
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.auto.common.service.GraphInstanceManager
-import tech.kzen.auto.server.service.imperative.EmptyExecutionInitializer
-import tech.kzen.auto.server.service.imperative.ModelActionExecutor
+import tech.kzen.auto.server.service.exec.EmptyExecutionInitializer
+import tech.kzen.auto.server.service.exec.ModelActionExecutor
+import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
 import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
@@ -51,6 +52,9 @@ object ServerContext {
             notationReducer)
 
     val actionExecutor = ModelActionExecutor(
+            graphStore, graphCreator)
+
+    val detachedExecutor = ModelDetachedExecutor(
             graphStore, graphCreator)
 
     val executionManager = ExecutionManager(

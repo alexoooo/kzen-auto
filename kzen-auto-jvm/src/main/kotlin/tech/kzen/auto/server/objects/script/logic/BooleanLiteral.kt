@@ -4,8 +4,8 @@ import tech.kzen.auto.common.paradigm.common.model.BooleanExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 
 
 @Suppress("unused")
@@ -14,8 +14,8 @@ class BooleanLiteral(
 ): ExecutionAction {
     override suspend fun perform(
             imperativeModel: ImperativeModel
-    ): ImperativeResult {
-        return ImperativeSuccess(
+    ): ExecutionResult {
+        return ExecutionSuccess(
                 BooleanExecutionValue(value),
                 NullExecutionValue)
     }

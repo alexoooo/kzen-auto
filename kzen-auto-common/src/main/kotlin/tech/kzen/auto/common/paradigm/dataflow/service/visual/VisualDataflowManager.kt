@@ -16,7 +16,6 @@ import tech.kzen.lib.platform.collect.persistentMapOf
 class VisualDataflowManager(
         private val visualDataflowProvider: VisualDataflowProvider
 ):
-//        GraphStructureManager.Observer
         LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -44,15 +43,6 @@ class VisualDataflowManager(
     fun unobserve(observer: Observer) {
         observers.removeAll { it == observer }
     }
-
-
-//    suspend fun ping(host: DocumentPath) {
-//        if (host in models) {
-//            return
-//        }
-//
-//        inspect(host)
-//    }
 
 
     private suspend fun publishBeforeExecution(
@@ -135,7 +125,8 @@ class VisualDataflowManager(
                         model.rename(event.objectLocation, event.newName))
 
             is AddedObjectEvent -> {
-                val initialVertexModel = visualDataflowProvider.inspectVertex(documentPath, event.objectLocation)
+                val initialVertexModel =
+                        visualDataflowProvider.inspectVertex(documentPath, event.objectLocation)
 
                 currentModels.put(documentPath,
                         model.put(event.objectLocation, initialVertexModel))
@@ -189,7 +180,8 @@ class VisualDataflowManager(
                 val newModel = model.move(
                         event.removedUnderOldName.documentPath, event.createdWithNewName.destination)
 
-                val removed = models.remove(event.removedUnderOldName.documentPath)
+                val removed =
+                        models.remove(event.removedUnderOldName.documentPath)
                 removed.put(event.createdWithNewName.destination, newModel)
             }
 

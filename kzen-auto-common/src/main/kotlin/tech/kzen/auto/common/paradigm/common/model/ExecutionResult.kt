@@ -1,29 +1,26 @@
-package tech.kzen.auto.common.paradigm.imperative.model
+package tech.kzen.auto.common.paradigm.common.model
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
-import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.lib.common.util.Digest
 
 
-sealed class ImperativeResult {
+sealed class ExecutionResult {
     companion object {
         const val errorKey = "error"
         const val valueKey = "value"
         const val detailKey = "detail"
-//        const val transitionKey = "transition"
 
         @Suppress("UNCHECKED_CAST")
-        fun fromCollection(collection: Map<String, Any?>): ImperativeResult {
+        fun fromCollection(collection: Map<String, Any?>): ExecutionResult {
             val error = collection[errorKey]
 
             return if (error == null) {
-                ImperativeSuccess(
+                ExecutionSuccess(
                         ExecutionValue.fromCollection(collection[valueKey] as Map<String, Any>),
                         ExecutionValue.fromCollection(collection[detailKey] as Map<String, Any>)
                 )
             }
             else {
-                ImperativeError(error as String)
+                ExecutionFailure(error as String)
             }
         }
     }
@@ -35,9 +32,9 @@ sealed class ImperativeResult {
 }
 
 
-data class ImperativeError(
+data class ExecutionFailure(
         val errorMessage: String
-): ImperativeResult() {
+): ExecutionResult() {
     override fun toCollection(): Map<String, Any?> {
         return mapOf(
                 errorKey to errorMessage
@@ -50,12 +47,12 @@ data class ImperativeError(
 }
 
 
-data class ImperativeSuccess(
+data class ExecutionSuccess(
         val value: ExecutionValue,
         val detail: ExecutionValue
-): ImperativeResult() {
+): ExecutionResult() {
     companion object {
-        val empty = ImperativeSuccess(NullExecutionValue, NullExecutionValue)
+        val empty = ExecutionSuccess(NullExecutionValue, NullExecutionValue)
     }
 
     override fun toCollection(): Map<String, Any?> {
@@ -72,18 +69,3 @@ data class ImperativeSuccess(
         return digest.digest()
     }
 }
-
-
-//data class ImperativeTransition(
-//        val transition: ControlTransition
-//): ImperativeResult() {
-//    override fun toCollection(): Map<String, Any?> {
-//        return mapOf(
-//                transitionKey to errorMessage
-//        )
-//    }
-//
-//    override fun digest(): Digest {
-//        return Digest.ofXoShiRo256StarStar(transition.toString())
-//    }
-//}

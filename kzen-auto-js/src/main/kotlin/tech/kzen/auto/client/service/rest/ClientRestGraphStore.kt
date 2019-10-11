@@ -114,7 +114,7 @@ class ClientRestGraphStore(
 
             is AddResourceCommand ->
                 restClient.addResource(
-                        command.resourceLocation, command.resourceContent.value)
+                        command.resourceLocation, command.resourceContent)
 
 
             is RemoveResourceCommand ->

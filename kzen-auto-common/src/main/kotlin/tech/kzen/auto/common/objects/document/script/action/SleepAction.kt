@@ -3,8 +3,8 @@ package tech.kzen.auto.common.objects.document.script.action
 import kotlinx.coroutines.delay
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 
 
 @Suppress("unused")
@@ -13,8 +13,8 @@ class SleepAction(
 ): ExecutionAction {
     override suspend fun perform(
             imperativeModel: ImperativeModel
-    ): ImperativeResult {
+    ): ExecutionResult {
         delay((seconds * 1000).toLong())
-        return ImperativeSuccess.empty
+        return ExecutionSuccess.empty
     }
 }

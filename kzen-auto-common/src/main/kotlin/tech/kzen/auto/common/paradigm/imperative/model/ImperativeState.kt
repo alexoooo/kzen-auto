@@ -1,5 +1,8 @@
 package tech.kzen.auto.common.paradigm.imperative.model
 
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.imperative.model.control.ControlState
 import tech.kzen.auto.common.paradigm.imperative.model.control.InitialControlState
 import tech.kzen.lib.common.util.Digest
@@ -7,7 +10,7 @@ import tech.kzen.lib.common.util.Digest
 
 data class ImperativeState(
         val running: Boolean,
-        val previous: ImperativeResult?,
+        val previous: ExecutionResult?,
         val controlState: ControlState?
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -34,7 +37,7 @@ data class ImperativeState(
             return ImperativeState(
                     collection[runningKey] as Boolean,
                     collection[previousKey]?.let {
-                        ImperativeResult.fromCollection(it as Map<String, Any>)
+                        ExecutionResult.fromCollection(it as Map<String, Any>)
                     },
                     collection[controlStateKey]?.let {
                         ControlState.fromCollection(it as Map<String, Any>)
@@ -55,10 +58,10 @@ data class ImperativeState(
         }
 
         return when (previous) {
-            is ImperativeError ->
+            is ExecutionFailure ->
                 ImperativePhase.Error
 
-            is ImperativeSuccess ->
+            is ExecutionSuccess ->
                 ImperativePhase.Success
         }
     }

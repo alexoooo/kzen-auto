@@ -6,8 +6,8 @@ import org.openqa.selenium.firefox.FirefoxDriver
 import org.openqa.selenium.remote.RemoteWebDriver
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.webdriver.model.BrowserLauncher
 import java.nio.file.Paths
@@ -19,7 +19,7 @@ class OpenBrowser(
 ): ExecutionAction {
     override suspend fun perform(
             imperativeModel: ImperativeModel
-    ): ImperativeResult {
+    ): ExecutionResult {
         closeIfAlreadyOpen()
 
         val webDriverOption = ServerContext.webDriverRepo.latest(BrowserLauncher.GoogleChrome)
@@ -59,7 +59,7 @@ class OpenBrowser(
 
         ServerContext.webDriverContext.set(driver)
 
-        return ImperativeSuccess.empty
+        return ExecutionSuccess.empty
     }
 
 

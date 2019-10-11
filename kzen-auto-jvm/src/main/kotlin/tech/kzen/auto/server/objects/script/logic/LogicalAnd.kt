@@ -5,8 +5,8 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
@@ -17,14 +17,14 @@ class LogicalAnd(
 ): ExecutionAction {
     override suspend fun perform(
             imperativeModel: ImperativeModel
-    ): ImperativeResult {
+    ): ExecutionResult {
         val conditionResult = get(condition, imperativeModel)
         val andResult = get(and, imperativeModel)
 
         val value = apply(
                 conditionResult, andResult)
 
-        return ImperativeSuccess(
+        return ExecutionSuccess(
                 value,
                 NullExecutionValue)
     }
@@ -50,7 +50,7 @@ class LogicalAnd(
     ): BooleanExecutionValue? {
         val frame = imperativeModel.findLast(objectLocation)
         val state = frame?.states?.get(objectLocation.objectPath)
-        val result = state?.previous as? ImperativeSuccess
+        val result = state?.previous as? ExecutionSuccess
         return result?.value as? BooleanExecutionValue
     }
 }

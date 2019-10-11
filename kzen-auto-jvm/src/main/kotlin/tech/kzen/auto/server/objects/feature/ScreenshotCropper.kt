@@ -1,25 +1,43 @@
 package tech.kzen.auto.server.objects.feature
 
-import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
+import tech.kzen.auto.common.objects.document.feature.FeatureDocument
+import tech.kzen.auto.common.paradigm.common.model.*
+import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
+import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
+import tech.kzen.lib.platform.toInputStream
+import java.io.ByteArrayOutputStream
+import javax.imageio.ImageIO
 
 
-class ScreenshotCropper: ExecutionAction {
-    override suspend fun perform(
-            imperativeModel: ImperativeModel
-    ): ImperativeResult {
-        TODO()
-//        val robot = Robot(GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice)
-//        val rect = Rectangle(Toolkit.getDefaultToolkit().screenSize)
-//        val screenshot = robot.createScreenCapture(rect)
-//
-//        val buffer = ByteArrayOutputStream()
-//        ImageIO.write(screenshot, "png", buffer)
-//        val screenshotPng = buffer.toByteArray()
-//
-//        return ImperativeSuccess(
-//                BinaryExecutionValue(screenshotPng),
-//                NullExecutionValue)
+@Suppress("unused")
+class ScreenshotCropper: DetachedAction {
+    override suspend fun execute(
+            request: DetachedRequest
+    ): ExecutionResult {
+        val x = request.getInt(FeatureDocument.cropLeftParam)
+                ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropLeftParam}")
+
+        val y = request.getInt(FeatureDocument.cropTopParam)
+                ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropTopParam}")
+
+        val width = request.getInt(FeatureDocument.cropWidthParam)
+                ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropWidthParam}")
+
+        val height = request.getInt(FeatureDocument.cropHeightParam)
+                ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropHeightParam}")
+
+        val body = request.body
+                ?: return ExecutionFailure("Missing body")
+
+        val image = ImageIO.read(body.toInputStream())
+        val crop = image.getSubimage(x, y, width, height)
+
+        val buffer = ByteArrayOutputStream()
+        ImageIO.write(crop, "png", buffer)
+        val cropPng = buffer.toByteArray()
+
+        return ExecutionSuccess(
+                BinaryExecutionValue(cropPng),
+                NullExecutionValue)
     }
 }

@@ -22,7 +22,6 @@ class ExecutionManager(
         private val executionInitializer: ExecutionInitializer,
         private val actionExecutor: ActionExecutor
 ):
-//        GraphStructureManager.Observer
         LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------

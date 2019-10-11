@@ -5,8 +5,8 @@ import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.server.service.ServerContext
 
 
@@ -16,7 +16,7 @@ class GoTo(
 ): ExecutionAction {
     override suspend fun perform(
             imperativeModel: ImperativeModel
-    ): ImperativeResult {
+    ): ExecutionResult {
         val driver = ServerContext.webDriverContext.get()
 
         driver.get(location)
@@ -25,7 +25,7 @@ class GoTo(
 //        println("screenshot: $filePng")
         val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
 
-        return ImperativeSuccess(
+        return ExecutionSuccess(
                 NullExecutionValue,
                 BinaryExecutionValue(screenshotPng))
     }

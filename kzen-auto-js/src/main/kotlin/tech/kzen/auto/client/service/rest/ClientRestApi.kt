@@ -2,12 +2,12 @@ package tech.kzen.auto.client.service.rest
 
 import tech.kzen.auto.client.util.*
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -23,6 +23,7 @@ import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.model.structure.scan.DocumentScan
 import tech.kzen.lib.common.model.structure.scan.NotationScan
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.platform.client.ClientJsonUtils
 import tech.kzen.lib.platform.collect.toPersistentMap
 import kotlin.js.Json
@@ -71,14 +72,14 @@ class ClientRestApi(
     }
 
 
-    suspend fun readResource(location: ResourceLocation): ByteArray {
+    suspend fun readResource(location: ResourceLocation): ImmutableByteArray {
         @Suppress("UNUSED_VARIABLE")
         val response = getBytes(
                 CommonRestApi.resource,
                 CommonRestApi.paramDocumentPath to location.documentPath.asString(),
                 CommonRestApi.paramResourcePath to location.resourcePath.asString())
 
-        return response
+        return ImmutableByteArray.wrap(response)
     }
 
 
@@ -308,11 +309,11 @@ class ClientRestApi(
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun addResource(
             resourceLocation: ResourceLocation,
-            contents: ByteArray
+            contents: ImmutableByteArray
     ): Digest {
         return postDigest(
                 CommonRestApi.commandResourceAdd,
-                contents,
+                contents.toByteArray(),
                 CommonRestApi.paramDocumentPath to resourceLocation.documentPath.asString(),
                 CommonRestApi.paramResourcePath to resourceLocation.resourcePath.asString())
     }
@@ -372,20 +373,41 @@ class ClientRestApi(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     suspend fun performDetached(
-            objectLocation: ObjectLocation
-    ): ImperativeResult {
+            objectLocation: ObjectLocation,
+            vararg parameters: Pair<String, String>
+    ): ExecutionResult {
         val responseJson = getJson(
                 CommonRestApi.actionDetached,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+                *parameters)
 
         @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
-        return ImperativeResult.fromCollection(responseCollection)
+        return ExecutionResult.fromCollection(responseCollection)
     }
 
+
+    suspend fun performDetached(
+            objectLocation: ObjectLocation,
+            body: ByteArray,
+            vararg parameters: Pair<String, String>
+    ): ExecutionResult {
+        val responseJson = postJson(
+                CommonRestApi.actionDetached,
+                body,
+                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+                *parameters)
+
+        @Suppress("UNCHECKED_CAST")
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
+
+        return ExecutionResult.fromCollection(responseCollection)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -466,8 +488,18 @@ class ClientRestApi(
             body: ByteArray,
             vararg parameters: Pair<String, String>
     ): Digest {
-        val response = postBytes(commandPath, body, *parameters)
+        val response = post(commandPath, body, *parameters)
         return Digest.parse(response)
+    }
+
+
+    private suspend fun postJson(
+            commandPath: String,
+            body: ByteArray,
+            vararg parameters: Pair<String, String>
+    ): Json {
+        val response = post(commandPath, body, *parameters)
+        return JSON.parse(response)
     }
 
 
@@ -498,7 +530,7 @@ class ClientRestApi(
     }
 
 
-    private suspend fun postBytes(
+    private suspend fun post(
             commandPath: String,
             body: ByteArray,
             vararg parameters: Pair<String, String>

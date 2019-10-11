@@ -3,10 +3,10 @@ package tech.kzen.auto.server.objects.graph
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeError
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -17,11 +17,11 @@ class CsvSource(
 ): ExecutionAction {
     override suspend fun perform(
             imperativeModel: ImperativeModel
-    ): ImperativeResult {
+    ): ExecutionResult {
         val path = Paths.get(filePath)
 
         if (! Files.exists(path)) {
-            return ImperativeError("File not found")
+            return ExecutionFailure("File not found")
         }
 
         val lineCount: Long =
@@ -29,6 +29,6 @@ class CsvSource(
 
         val value = ExecutionValue.of("Line count: $lineCount")
 
-        return ImperativeSuccess(value, NullExecutionValue)
+        return ExecutionSuccess(value, NullExecutionValue)
     }
 }

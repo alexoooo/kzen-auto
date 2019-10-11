@@ -246,17 +246,8 @@ data class BinaryExecutionValue(
 
     fun asBase64(): String {
         return cache("base64") { IoUtils.base64Encode(value) }
-
-//        if (base64 == null) {
-//            base64 = IoUtils.base64Encode(value)
-//        }
-//        return base64!!
     }
 
-
-//    override fun get(): ByteArray {
-//        return value
-//    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

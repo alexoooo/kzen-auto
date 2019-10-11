@@ -24,7 +24,7 @@ import tech.kzen.auto.common.paradigm.common.model.ScalarExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -214,11 +214,11 @@ class DefaultStepDisplay(
             }
         }
 
-        (imperativeState?.previous as? ImperativeSuccess)?.value?.let {
+        (imperativeState?.previous as? ExecutionSuccess)?.value?.let {
             renderValue(it)
         }
 
-        (imperativeState?.previous as? ImperativeSuccess)?.detail?.let {
+        (imperativeState?.previous as? ExecutionSuccess)?.detail?.let {
             renderDetail(it)
         }
     }

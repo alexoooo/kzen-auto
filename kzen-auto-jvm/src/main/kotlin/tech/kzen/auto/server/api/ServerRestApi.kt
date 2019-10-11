@@ -43,7 +43,9 @@ class ServerRestApi(
         GET(CommonRestApi.actionStart, counterHandler::actionStart)
         GET(CommonRestApi.actionReset, counterHandler::actionReset)
         GET(CommonRestApi.actionPerform, counterHandler::actionPerform)
+
         GET(CommonRestApi.actionDetached, counterHandler::actionDetached)
+        POST(CommonRestApi.actionDetached, counterHandler::actionDetached)
 
         GET(CommonRestApi.execModel, counterHandler::execModel)
         GET(CommonRestApi.execReset, counterHandler::execReset)

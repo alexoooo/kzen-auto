@@ -1,9 +1,9 @@
-package tech.kzen.auto.server.service.imperative
+package tech.kzen.auto.server.service.exec
 
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.imperative.api.ControlFlow
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
 import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTransition
 import tech.kzen.auto.common.paradigm.imperative.service.ActionExecutor
 import tech.kzen.auto.common.util.AutoConventions
@@ -19,7 +19,7 @@ class ModelActionExecutor(
     override suspend fun execute(
             actionLocation: ObjectLocation,
             imperativeModel: ImperativeModel
-    ): ImperativeResult {
+    ): ExecutionResult {
         val graphDefinition = graphStore
                 .graphDefinition()
                 .successful

@@ -5,8 +5,8 @@ import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.NumberExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
@@ -17,10 +17,10 @@ class DivisibleCheck (
 ): ExecutionAction {
     override suspend fun perform(
             imperativeModel: ImperativeModel
-    ): ImperativeResult {
+    ): ExecutionResult {
         val frame = imperativeModel.findLast(number)
         val state = frame?.states?.get(number.objectPath)
-        val result = state?.previous as? ImperativeSuccess
+        val result = state?.previous as? ExecutionSuccess
         val numberResult = result?.value as? NumberExecutionValue
 
         val divisible =
@@ -30,7 +30,7 @@ class DivisibleCheck (
                 }
                 ?: NullExecutionValue
 
-        return ImperativeSuccess(
+        return ExecutionSuccess(
                 divisible,
                 NullExecutionValue)
     }

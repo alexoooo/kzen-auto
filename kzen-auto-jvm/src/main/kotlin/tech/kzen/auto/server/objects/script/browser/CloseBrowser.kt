@@ -2,8 +2,8 @@ package tech.kzen.auto.server.objects.script.browser
 
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.server.service.ServerContext
 
 
@@ -11,8 +11,8 @@ import tech.kzen.auto.server.service.ServerContext
 class CloseBrowser: ExecutionAction {
     override suspend fun perform(
             imperativeModel: ImperativeModel
-    ): ImperativeResult {
+    ): ExecutionResult {
         ServerContext.webDriverContext.quit()
-        return ImperativeSuccess.empty
+        return ExecutionSuccess.empty
     }
 }

@@ -2,11 +2,10 @@ package tech.kzen.auto.server.objects.script.control
 
 import tech.kzen.auto.common.paradigm.common.model.BooleanExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.api.ControlFlow
-import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeError
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.imperative.model.control.*
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import java.lang.IllegalStateException
@@ -24,7 +23,7 @@ class ConditionalExpression(
     ): ControlTransition {
         return when (controlState) {
             is InitialControlState -> {
-                val conditionResult = result(condition, imperativeModel) as? ImperativeSuccess
+                val conditionResult = result(condition, imperativeModel) as? ExecutionSuccess
                 val conditionValue = (conditionResult?.value as? BooleanExecutionValue)?.value ?: false
 
                 val branchIndex =
@@ -49,17 +48,17 @@ class ConditionalExpression(
 
     override suspend fun perform(
             imperativeModel: ImperativeModel
-    ): ImperativeResult {
-        val conditionResult = result(condition, imperativeModel) as? ImperativeSuccess
+    ): ExecutionResult {
+        val conditionResult = result(condition, imperativeModel) as? ExecutionSuccess
         val conditionValue = (conditionResult?.value as? BooleanExecutionValue)?.value ?: false
 
         return if (conditionValue) {
             result(then.last(), imperativeModel)
-                    ?: ImperativeError("'then' missing")
+                    ?: ExecutionFailure("'then' missing")
         }
         else {
             result(`else`.last(), imperativeModel)
-                    ?: ImperativeError("'else' missing")
+                    ?: ExecutionFailure("'else' missing")
         }
     }
 
@@ -67,7 +66,7 @@ class ConditionalExpression(
     private fun result(
             dependency: ObjectLocation,
             imperativeModel: ImperativeModel
-    ): ImperativeResult? {
+    ): ExecutionResult? {
         val conditionFrame = imperativeModel.findLast(dependency)
         val conditionState = conditionFrame?.states?.get(dependency.objectPath)
         return conditionState?.previous

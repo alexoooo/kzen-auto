@@ -3,16 +3,13 @@ package tech.kzen.auto.server.objects.script.browser
 import org.openqa.selenium.JavascriptExecutor
 import org.openqa.selenium.OutputType
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
-import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
-import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
+import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeError
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.vision.RgbGrid
 import tech.kzen.lib.common.model.locate.ResourceLocation
+import tech.kzen.lib.platform.toInputStream
 import java.awt.Rectangle
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
@@ -23,7 +20,7 @@ class VisualClick(
 ): ExecutionAction {
     override suspend fun perform(
             imperativeModel: ImperativeModel
-    ): ImperativeResult {
+    ): ExecutionResult {
         val driver = ServerContext.webDriverContext.get()
 
         val documentPath = target.objectLocation.documentPath
@@ -38,19 +35,19 @@ class VisualClick(
         for (resourcePath in resourceListing.digests.keys) {
             val resourceLocation = ResourceLocation(documentPath, resourcePath)
             val cropPngBytes = ServerContext.notationMedia.readResource(resourceLocation)
-            val cropImage = ImageIO.read(ByteArrayInputStream(cropPngBytes))
+            val cropImage = ImageIO.read(cropPngBytes.toInputStream())
             val cropGrid = RgbGrid.ofImage(cropImage)
             val cropMatches = locate(screenshotGrid, cropGrid)
             allMatches.addAll(cropMatches)
         }
 
         if (allMatches.isEmpty()) {
-            return ImperativeError(
+            return ExecutionFailure(
                     "Target not found")
         }
         else if (allMatches.size > 1) {
-            return ImperativeError(
-                    "More than one target found: ${allMatches.map { "[${it.x}, ${it.y}]"  }}")
+            return ExecutionFailure(
+                    "More than one target found: ${allMatches.map { "[${it.x}, ${it.y}]" }}")
         }
 
         val match = allMatches.single()
@@ -67,7 +64,7 @@ class VisualClick(
         jsExec.executeScript("el = document.elementFromPoint($translateX, $translateY); el.click();")
 
         val postScreenshotPngBytes = driver.getScreenshotAs(OutputType.BYTES)
-        return ImperativeSuccess(
+        return ExecutionSuccess(
                 NullExecutionValue,
                 BinaryExecutionValue(postScreenshotPngBytes))
     }

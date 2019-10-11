@@ -10,12 +10,13 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
+import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResult
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -31,14 +32,14 @@ import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionIndex
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
-import tech.kzen.lib.common.model.structure.resource.ResourceContent
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.platform.collect.persistentListOf
+import tech.kzen.lib.common.util.ImmutableByteArray
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.*
 import java.util.stream.Collectors
 
 
@@ -150,7 +151,7 @@ class RestHandler {
 
         return ServerResponse
                 .ok()
-                .body(Mono.just(resourceContents))
+                .body(Mono.just(resourceContents.toByteArray()))
     }
 
 
@@ -496,7 +497,7 @@ class RestHandler {
         return contents.flatMap {
             val command = AddResourceCommand(
                     ResourceLocation(documentPath, resourcePath),
-                    ResourceContent(it))
+                    ImmutableByteArray.wrap(it))
 
             val digest = applyCommand(command)
 
@@ -614,16 +615,34 @@ class RestHandler {
 
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
-//        serverRequest.
-        val execution: ImperativeResult = runBlocking {
-            ServerContext.actionExecutor.execute(
-                    objectLocation,
-                    ImperativeModel(persistentListOf()))
+        val params = mutableMapOf<String, List<String>>()
+        for (e in serverRequest.queryParams()) {
+            if (e.key == CommonRestApi.paramDocumentPath ||
+                    e.key == CommonRestApi.paramObjectPath) {
+                continue
+            }
+            params[e.key] = e.value
         }
 
-        return ServerResponse
-                .ok()
-                .body(Mono.just(execution.toCollection()))
+        return serverRequest
+                .bodyToMono(ByteArray::class.java)
+                .map { Optional.of(ImmutableByteArray.wrap(it)) }
+                .defaultIfEmpty(Optional.empty())
+                .flatMap { optionalBody ->
+                    val body = optionalBody.orElse(null)
+
+                    val detachedRequest = DetachedRequest(params, body)
+
+                    val execution: ExecutionResult = runBlocking {
+                        ServerContext.detachedExecutor.execute(
+                                objectLocation,
+                                detachedRequest)
+                    }
+
+                    ServerResponse
+                            .ok()
+                            .body(Mono.just(execution.toCollection()))
+                }
     }
 
 

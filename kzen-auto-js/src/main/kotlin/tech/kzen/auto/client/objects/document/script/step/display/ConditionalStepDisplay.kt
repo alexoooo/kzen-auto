@@ -20,7 +20,7 @@ import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.imperative.model.control.BranchEvaluationState
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -308,7 +308,7 @@ class ConditionalStepDisplay(
                 filter = "drop-shadow(0 1px 1px gray)"
 
                 backgroundColor = when {
-                    imperativeState?.previous is ImperativeSuccess ->
+                    imperativeState?.previous is ExecutionSuccess ->
                         Color("#00b467")
 
                     isNextToRun ->
@@ -353,7 +353,7 @@ class ConditionalStepDisplay(
                 height = 100.pct
 
                 backgroundColor = when {
-                    imperativeState?.previous is ImperativeSuccess ->
+                    imperativeState?.previous is ExecutionSuccess ->
                         Color("#00b467")
 
                     inThenBranch ->
@@ -442,7 +442,7 @@ class ConditionalStepDisplay(
                 filter = "drop-shadow(0 1px 1px gray)"
 
                 backgroundColor = when {
-                    imperativeState?.previous is ImperativeSuccess ->
+                    imperativeState?.previous is ExecutionSuccess ->
                         Color("#00b467")
 
                     inElseBranch ->

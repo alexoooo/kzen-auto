@@ -10,6 +10,7 @@ import tech.kzen.lib.common.model.structure.scan.NotationScan
 import tech.kzen.lib.common.service.media.NotationMedia
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.platform.collect.toPersistentMap
 
 
@@ -125,12 +126,12 @@ class BootNotationMedia(
     }
 
 
-    override suspend fun readResource(resourceLocation: ResourceLocation): ByteArray {
+    override suspend fun readResource(resourceLocation: ResourceLocation): ImmutableByteArray {
         throw UnsupportedOperationException("Boot writing not supported")
     }
 
 
-    override suspend fun writeResource(resourceLocation: ResourceLocation, contents: ByteArray) {
+    override suspend fun writeResource(resourceLocation: ResourceLocation, contents: ImmutableByteArray) {
         throw UnsupportedOperationException("Boot deleting not supported")
     }
 

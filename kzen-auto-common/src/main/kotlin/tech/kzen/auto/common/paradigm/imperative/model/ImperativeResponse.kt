@@ -1,12 +1,13 @@
 package tech.kzen.auto.common.paradigm.imperative.model
 
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTransition
 import tech.kzen.lib.common.util.Digest
 
 
 data class ImperativeResponse(
-        val executionResult: ImperativeResult?,
+        val executionResult: ExecutionResult?,
         val controlTransition: ControlTransition?,
         val executionModelDigest: Digest
 ) {
@@ -17,7 +18,7 @@ data class ImperativeResponse(
         @Suppress("UNCHECKED_CAST")
         fun fromCollection(collection: Map<String, Any?>): ImperativeResponse {
             val executionResult = (collection[resultKey] as? Map<String, Any>)?.let {
-                ImperativeResult.fromCollection(it)
+                ExecutionResult.fromCollection(it)
             }
 
             val controlTransition = (collection[transitionKey] as? Map<String, Any>)?.let {

@@ -1,11 +1,6 @@
 package tech.kzen.auto.client.objects.document.feature
 
 import kotlinx.css.*
-import org.khronos.webgl.ArrayBuffer
-import org.khronos.webgl.Uint8Array
-import org.khronos.webgl.get
-import org.w3c.files.Blob
-import org.w3c.files.FileReader
 import react.*
 import react.dom.br
 import react.dom.hr
@@ -18,8 +13,9 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.NavigationManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -29,11 +25,11 @@ import tech.kzen.lib.common.model.obj.ObjectNesting
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
-import tech.kzen.lib.common.model.structure.resource.ResourceContent
 import tech.kzen.lib.common.model.structure.resource.ResourceName
 import tech.kzen.lib.common.model.structure.resource.ResourceNesting
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.platform.DateTimeUtils
 import tech.kzen.lib.platform.IoUtils
 
@@ -51,6 +47,11 @@ class FeatureController(
         val screenshotTakerLocation = ObjectLocation(
                 DocumentPath.parse("auto-jvm/feature/feature.yaml"),
                 ObjectPath(ObjectName("ScreenshotTaker"), ObjectNesting.root))
+
+
+        val screenshotCropperLocation = ObjectLocation(
+                DocumentPath.parse("auto-jvm/feature/feature.yaml"),
+                ObjectPath(ObjectName("ScreenshotCropper"), ObjectNesting.root))
     }
 
 
@@ -94,6 +95,7 @@ class FeatureController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var cropperWrapper: CropperWrapper? = null
+    private var screenshotBytes: ByteArray? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -176,7 +178,6 @@ class FeatureController(
     }
 
 
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun doRequestScreenshot() {
         async {
@@ -184,10 +185,12 @@ class FeatureController(
             val result= ClientContext.restClient.performDetached(
                     screenshotTakerLocation)
 
-            if (result is ImperativeSuccess) {
+            if (result is ExecutionSuccess) {
                 val screenshotPng = result.value as BinaryExecutionValue
                 val base64 = IoUtils.base64Encode(screenshotPng.value)
                 val screenshotPngUrl = "data:png/png;base64,$base64"
+
+                screenshotBytes = screenshotPng.value
 
                 setState {
                     screenshotDataUrl = screenshotPngUrl
@@ -198,8 +201,83 @@ class FeatureController(
     }
 
 
+    private fun doCropAndSave(detail: CropperDetail) {
+        async {
+            val result = ClientContext.restClient.performDetached(
+                    screenshotCropperLocation,
+                    screenshotBytes!!,
+                    FeatureDocument.cropTopParam to detail.y.toInt().toString(),
+                    FeatureDocument.cropLeftParam to detail.x.toInt().toString(),
+                    FeatureDocument.cropWidthParam to detail.width.toInt().toString(),
+                    FeatureDocument.cropHeightParam to detail.height.toInt().toString())
+
+            if (result !is ExecutionSuccess) {
+                return@async
+            }
+            val cropPng = result.value as BinaryExecutionValue
+
+            ClientContext.mirroredGraphStore.apply(AddResourceCommand(
+                    ResourceLocation(
+                            state.documentPath!!,
+                            ResourcePath(
+                                    ResourceName(DateTimeUtils.filenameTimestamp() + ".png"),
+                                    ResourceNesting.empty
+                            )
+                    ),
+                    ImmutableByteArray.wrap(cropPng.value)
+            ))
+
+            onRefresh()
+
+//            val screenshotPng = result.value as BinaryExecutionValue
+//            val base64 = IoUtils.base64Encode(screenshotPng.value)
+//            val screenshotPngUrl = "data:png/png;base64,$base64"
+//
+//            screenshotBytes = screenshotPng.value
+//
+//            setState {
+//                screenshotDataUrl = screenshotPngUrl
+//                requestingScreenshot = false
+//            }
+        }
+
+
+//        canvas.toBlob({ blob: Blob? ->
+//            val fileReader = FileReader()
+//
+//            fileReader.onload = { event ->
+//                val target  = event.target as FileReader
+//                val arrayBuffer= target.result as ArrayBuffer
+//                val uint8Array = Uint8Array(arrayBuffer)
+//                val byteArray = ByteArray(uint8Array.length) { i -> uint8Array[i] }
+//
+//                async {
+//                    ClientContext.mirroredGraphStore.apply(AddResourceCommand(
+//                            ResourceLocation(
+//                                    state.documentPath!!,
+//                                    ResourcePath(
+//                                            ResourceName(DateTimeUtils.filenameTimestamp() + ".png"),
+//                                            ResourceNesting.empty
+//                                    )
+//                            ),
+//                            ImmutableByteArray.wrap(byteArray)
+//                    ))
+//
+//                    onRefresh()
+//                }
+//
+//                Unit
+//            }
+//
+//            fileReader.readAsArrayBuffer(blob!!)
+//        })
+
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRefresh() {
+        screenshotBytes = null
         setState {
             capturedDataUrl = null
             screenshotDataUrl = null
@@ -245,35 +323,7 @@ class FeatureController(
             requestingScreenshot = true
         }
 
-        canvas.toBlob({ blob: Blob? ->
-            val fileReader = FileReader()
-
-            fileReader.onload = { event ->
-                val target  = event.target as FileReader
-                val arrayBuffer= target.result as ArrayBuffer
-                val uint8Array = Uint8Array(arrayBuffer)
-                val byteArray = ByteArray(uint8Array.length) { i -> uint8Array[i] }
-
-                async {
-                    ClientContext.mirroredGraphStore.apply(AddResourceCommand(
-                            ResourceLocation(
-                                    state.documentPath!!,
-                                    ResourcePath(
-                                            ResourceName(DateTimeUtils.filenameTimestamp() + ".png"),
-                                            ResourceNesting.empty
-                                    )
-                            ),
-                            ResourceContent(byteArray)
-                    ))
-
-                    onRefresh()
-                }
-
-                Unit
-            }
-
-            fileReader.readAsArrayBuffer(blob!!)
-        })
+        doCropAndSave(state.detail!!)
     }
 
 
