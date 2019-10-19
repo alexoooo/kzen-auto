@@ -16,7 +16,7 @@ import tech.kzen.lib.common.model.locate.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
-import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedObjectRefactorEvent
+import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
@@ -110,10 +110,13 @@ class SelectFeatureEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         when (event) {
-            is RenamedObjectRefactorEvent -> {
-                if (event.renamedObject.objectLocation == state.value) {
+            is RenamedDocumentRefactorEvent -> {
+                if (event.removedUnderOldName.documentPath == state.value?.documentPath) {
+                    val newLocation =
+                            state.value!!.copy(documentPath = event.createdWithNewName.destination)
+
                     setState {
-                        value = event.renamedObject.newLocation()
+                        value = newLocation
                         renaming = true
                     }
                 }
