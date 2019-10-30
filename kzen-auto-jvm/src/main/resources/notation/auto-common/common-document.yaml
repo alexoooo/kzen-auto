@@ -50,7 +50,7 @@ Feature:
   abstract: true
   is: Document
   class: tech.kzen.auto.common.objects.document.feature.FeatureDocument
-  title: "Visual Target"
+  title: "Action Target"
   icon: Crop
   directory: true
   meta:
