@@ -15,6 +15,7 @@ import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
 
 
+@Suppress("unused")
 class VisualClick(
         private val target: FeatureDocument
 ): ExecutionAction {

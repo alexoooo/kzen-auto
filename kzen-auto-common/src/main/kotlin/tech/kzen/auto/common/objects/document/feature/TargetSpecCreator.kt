@@ -1,9 +1,5 @@
 package tech.kzen.auto.common.objects.document.feature
 
-import tech.kzen.auto.common.objects.document.script.target.FocusTarget
-import tech.kzen.auto.common.objects.document.script.target.TargetSpecDefiner
-import tech.kzen.auto.common.objects.document.script.target.TextTarget
-import tech.kzen.auto.common.objects.document.script.target.XpathTarget
 import tech.kzen.lib.common.api.AttributeCreator
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.definition.MapAttributeDefinition

@@ -1,6 +1,4 @@
-package tech.kzen.auto.common.objects.document.script.target
-
-import tech.kzen.auto.common.objects.document.feature.FeatureDocument
+package tech.kzen.auto.common.objects.document.feature
 
 
 sealed class TargetSpec

@@ -1,16 +1,17 @@
 package tech.kzen.auto.server.objects.script.browser
 
 import org.openqa.selenium.OutputType
+import tech.kzen.auto.common.objects.document.feature.TargetSpec
 import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.objects.document.script.target.TargetSpec
 import tech.kzen.auto.server.service.ServerContext
 
 
+@Suppress("unused")
 class VisualSendKeys(
         private val text: String,
         private val target: TargetSpec

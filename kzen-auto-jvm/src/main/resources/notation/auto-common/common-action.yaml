@@ -1,4 +1,14 @@
 
+TargetSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.feature.TargetSpec
+
+TargetSpecCreator:
+  class: tech.kzen.auto.common.objects.document.feature.TargetSpecCreator
+
+TargetSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
+
 
 ###########################################################
 

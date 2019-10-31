@@ -1,6 +1,5 @@
-package tech.kzen.auto.common.objects.document.script.target
+package tech.kzen.auto.common.objects.document.feature
 
-import tech.kzen.auto.common.objects.document.feature.TargetType
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.definition.*

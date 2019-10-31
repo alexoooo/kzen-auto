@@ -61,6 +61,11 @@ SelectFeatureEditor:
   class: tech.kzen.auto.client.objects.document.script.step.attribute.SelectFeatureEditor$Wrapper
 
 
+TargetSpecEditor:
+  is: AttributeEditorWrapper
+  class: tech.kzen.auto.client.objects.document.script.step.attribute.TargetSpecEditor$Wrapper
+
+
 #######################################################################################################################
 
 
@@ -193,6 +198,12 @@ SendKeysTool:
   is: RibbonTool
   parent: BrowserGroup
   delegate: SendKeys
+
+
+VisualKeysTool:
+  is: RibbonTool
+  parent: BrowserGroup
+  delegate: VisualSendKeys
 
 
 FormSubmitTool:

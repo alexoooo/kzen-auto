@@ -9,7 +9,5 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 open class AttributeEditorProps(
         var graphStructure: GraphStructure,
         var objectLocation: ObjectLocation,
-        var attributeName: AttributeName/*,
-        var attributeMetadata: AttributeMetadata,
-        var attributeNotation: AttributeNotation?*/
+        var attributeName: AttributeName
 ): RProps
