@@ -188,16 +188,23 @@ LeftClickTool:
   delegate: LeftClick
 
 
-VisualClickTool:
-  is: RibbonTool
-  parent: BrowserGroup
-  delegate: VisualClick
-
-
 SendKeysTool:
   is: RibbonTool
   parent: BrowserGroup
   delegate: SendKeys
+
+
+
+FormSubmitTool:
+  is: RibbonTool
+  parent: BrowserGroup
+  delegate: FormSubmit
+
+
+VisualClickTool:
+  is: RibbonTool
+  parent: BrowserGroup
+  delegate: VisualClick
 
 
 VisualKeysTool:
@@ -206,8 +213,7 @@ VisualKeysTool:
   delegate: VisualSendKeys
 
 
-FormSubmitTool:
+VisualSubmitTool:
   is: RibbonTool
   parent: BrowserGroup
-  delegate: FormSubmit
-
+  delegate: VisualFormSubmit

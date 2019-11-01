@@ -49,6 +49,31 @@ LeftClick:
     xpath: String
 
 
+SendKeys:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.browser.SendKeys
+  icon: Keyboard
+  title: "Write"
+  xpath: ""
+  text: ""
+  meta:
+    xpath: String
+    text: String
+
+
+
+FormSubmit:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.browser.FormSubmit
+  icon: Send
+  title: "Submit"
+  xpath: ""
+  meta:
+    xpath: String
+
+
 VisualClick:
   abstract: true
   is: Action
@@ -61,25 +86,12 @@ VisualClick:
       editor: SelectFeatureEditor
 
 
-SendKeys:
-  abstract: true
-  is: Action
-  class: tech.kzen.auto.server.objects.script.browser.SendKeys
-  icon: Keyboard
-  title: "Type"
-  xpath: ""
-  text: ""
-  meta:
-    xpath: String
-    text: String
-
-
 VisualSendKeys:
   abstract: true
   is: Action
   class: tech.kzen.auto.server.objects.script.browser.VisualSendKeys
   icon: Keyboard
-  title: "Visual Type"
+  title: "Visual Write"
   text: ""
   target:
     type: Focus
@@ -92,12 +104,17 @@ VisualSendKeys:
       editor: TargetSpecEditor
 
 
-FormSubmit:
+VisualFormSubmit:
   abstract: true
   is: Action
-  class: tech.kzen.auto.server.objects.script.browser.FormSubmit
+  class: tech.kzen.auto.server.objects.script.browser.VisualFormSubmit
   icon: Send
-  title: "Submit"
-  xpath: ""
+  title: "Visual Submit"
+  target:
+    type: Focus
   meta:
-    xpath: String
+    target:
+      is: TargetSpec
+      by: TargetSpecDefiner
+      creator: TargetSpecCreator
+      editor: TargetSpecEditor
