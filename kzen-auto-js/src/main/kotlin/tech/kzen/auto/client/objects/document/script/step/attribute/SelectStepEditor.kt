@@ -179,6 +179,7 @@ class SelectStepEditor(
 
         val selectId = "material-react-select-id"
 
+
         child(MaterialInputLabel::class) {
             attrs {
                 htmlFor = selectId

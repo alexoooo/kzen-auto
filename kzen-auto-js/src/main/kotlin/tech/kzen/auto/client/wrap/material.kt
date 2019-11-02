@@ -213,11 +213,16 @@ external class MaterialInputLabel : Component<MaterialInputLabelProps, RState> {
 }
 
 external interface MaterialInputLabelProps : RProps {
+    var id: String
     var htmlFor: String
     var style: Json
 }
 
 
+@JsName("FormControl")
+external class MaterialFormControl : Component<RProps, RState> {
+    override fun render(): ReactElement?
+}
 
 
 @JsName("Switch")
@@ -264,8 +269,12 @@ external class MaterialSelect : Component<MaterialSelectProps, RState> {
 }
 
 external interface MaterialSelectProps : RProps {
+    var id: String
+    var labelId: String
+    var style: Json
+
     var value: String
-    var onChange: ()->Unit
+    var onChange: (Event) -> Unit
 
     var inputProps: Json
 }
@@ -291,4 +300,5 @@ external class MaterialMenuItem: Component<MenuItemProps, RState> {
 
 external interface MenuItemProps: RProps {
     var onClick: () -> Unit
+    var value: String
 }
