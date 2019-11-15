@@ -533,7 +533,13 @@ class RestHandler {
 
     fun applyCommand(command: NotationCommand): Digest {
         return runBlocking {
-            ServerContext.graphStore.apply(command)
+            try {
+                ServerContext.graphStore.apply(command)
+            }
+            catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             ServerContext.graphStore.digest()
         }
     }

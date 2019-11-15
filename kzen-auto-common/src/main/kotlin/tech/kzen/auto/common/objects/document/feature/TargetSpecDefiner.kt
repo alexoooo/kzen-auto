@@ -2,6 +2,7 @@ package tech.kzen.auto.common.objects.document.feature
 
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.*
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -15,7 +16,10 @@ class TargetSpecDefiner: AttributeDefiner {
         val targetAttributeName = AttributeName("target")
 
         val typeKey = "type"
+        val typeSegment = AttributeSegment.ofKey(typeKey)
+
         val valueKey = "value"
+        val valueSegment = AttributeSegment.ofKey(valueKey)
     }
 
 

@@ -2,22 +2,29 @@ package tech.kzen.auto.client.objects.document.script.step.attribute
 
 import kotlinx.css.em
 import kotlinx.css.fontSize
-import react.RBuilder
-import react.RHandler
-import react.RState
-import react.ReactElement
+import kotlinx.css.marginTop
+import org.w3c.dom.HTMLInputElement
+import react.*
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.common.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
+import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
 import tech.kzen.auto.common.objects.document.feature.TargetType
+import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.locate.ObjectReference
+import tech.kzen.lib.common.model.locate.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.platform.collect.toPersistentMap
 
 
 @Suppress("unused")
@@ -32,9 +39,10 @@ class TargetSpecEditor(
             var targetType: TargetType,
 
             var targetText: String?,
+            var targetTextPending: Boolean,
 
             var targetLocation: ObjectLocation?,
-            var renamingTarget: Boolean
+            var targetRenaming: Boolean
     ) : RState
 
 
@@ -53,6 +61,89 @@ class TargetSpecEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var submitDebounce: FunctionWithDebounce = lodash.debounce({
+        editAttributeCommandAsync()
+    }, 1000)
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: AttributeEditorProps) {
+        val attributeNotation = props
+                .graphStructure
+                .graphNotation
+                .transitiveAttribute(props.objectLocation, props.attributeName)
+                as? MapAttributeNotation
+                ?: return
+
+        targetType = attributeNotation
+                .get(TargetSpecDefiner.typeKey)
+                ?.asString()
+                ?.let { TargetType.valueOf(it) }
+                ?: return
+
+        targetTextPending = false
+        targetRenaming = false
+
+        if (targetType == TargetType.Focus) {
+            targetText = null
+            targetLocation = null
+        }
+        else {
+            val value = attributeNotation
+                    .get(TargetSpecDefiner.valueKey)
+                    ?.asString()
+
+            if (targetType == TargetType.Text ||
+                    targetType == TargetType.Xpath) {
+                targetText = value
+                targetLocation = null
+            }
+            else if (value != null) {
+                val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
+                val reference = ObjectReference.parse(value)
+
+                targetText = null
+                targetLocation = props.graphStructure.graphNotation.coalesce.locate(
+                        reference, objectReferenceHost)
+            }
+            else {
+                targetText = null
+                targetLocation = null
+            }
+        }
+
+//        submitDebounce = lodash.debounce({
+//            editAttributeCommandAsync()
+//        }, 1000)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun componentDidUpdate(
+            prevProps: AttributeEditorProps,
+            prevState: State,
+            snapshot: Any
+    ) {
+        if (state.targetType != prevState.targetType) {
+            editAttributeCommandAsync()
+        }
+        else if (state.targetText != prevState.targetText) {
+            submitDebounce.apply()
+        }
+        else if (state.targetLocation != prevState.targetLocation) {
+            if (state.targetRenaming) {
+                setState {
+                    targetRenaming = false
+                }
+            }
+            else {
+                editAttributeCommandAsync()
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
 
@@ -63,20 +154,77 @@ class TargetSpecEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun flush() {
+//        println("ParameterEditor | flush")
+
+        submitDebounce.cancel()
+        if (state.targetTextPending) {
+            editAttributeCommand()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun editAttributeCommandAsync() {
+        async {
+            editAttributeCommand()
+        }
+    }
+
+
+    private suspend fun editAttributeCommand() {
+        val attributeMap =
+                mutableMapOf<AttributeSegment, ScalarAttributeNotation>()
+
+        attributeMap[TargetSpecDefiner.typeSegment] =
+                ScalarAttributeNotation(state.targetType.name)
+
+        if (state.targetText != null) {
+            attributeMap[TargetSpecDefiner.valueSegment] =
+                    ScalarAttributeNotation(state.targetText!!)
+        }
+        else if (state.targetLocation != null) {
+            val localReference = state.targetLocation!!.toReference()
+                    .crop(retainPath = false)
+
+            attributeMap[TargetSpecDefiner.valueSegment] =
+                    ScalarAttributeNotation(localReference.asString())
+        }
+
+        val attributeNotation = MapAttributeNotation(attributeMap.toPersistentMap())
+
+        ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
+                props.objectLocation,
+                props.attributeName,
+                attributeNotation))
+
+        if (state.targetText != null) {
+            setState {
+                targetTextPending = false
+            }
+        }
+    }
+
+
+    private fun onTypeChange(newType: TargetType) {
+        setState {
+            targetType = newType
+            targetText = null
+            targetLocation = null
+        }
+    }
+
+
+    private fun onTextChange(newValue: String) {
+        setState {
+            targetText = newValue
+            targetTextPending = true
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val attributeNotation = props
-                .graphStructure
-                .graphNotation
-                .transitiveAttribute(props.objectLocation, props.attributeName)
-                as? MapAttributeNotation
-                ?: return
-
-        val selected= attributeNotation
-                .get(TargetSpecDefiner.typeKey)
-                ?.asString()
-                ?.let { TargetType.valueOf(it) }
-                ?: return
-
         val selectLabelId = "material-react-input-label-id"
 
         styledDiv {
@@ -96,10 +244,12 @@ class TargetSpecEditor(
                             fontSize = 0.8.em
                         }
 
-                        value = selected.name
+                        value = state.targetType.name
 
                         onChange = {
-                            console.log("^^ event", it)
+                            val target: dynamic = it.target!!
+                            val value = target.value as String
+                            onTypeChange(TargetType.valueOf(value))
                         }
                     }
 
@@ -111,25 +261,54 @@ class TargetSpecEditor(
                                 value = type.name
                             }
 
-                            +type.name
+                            when (type) {
+                                TargetType.Focus ->
+                                    +"Currently focused"
+
+                                TargetType.Text ->
+                                    +"Containing text"
+
+                                TargetType.Xpath ->
+                                    +"Matching XPath"
+
+                                TargetType.Visual ->
+                                    +"Visual"
+                            }
                         }
                     }
                 }
             }
         }
 
-        when (selected) {
-            TargetType.Focus ->
-                +"Currently focused element"
+        if (state.targetType == TargetType.Text ||
+                state.targetType == TargetType.Xpath) {
+            child(MaterialTextField::class) {
+                attrs {
+                    fullWidth = true
 
-            TargetType.Text ->
-                +"Text"
+                    style = reactStyle {
+                        marginTop = 0.5.em
+                    }
 
-            TargetType.Xpath ->
-                +"XPath"
+                    label =
+                            if (state.targetType == TargetType.Text) {
+                                "Contains"
+                            }
+                            else {
+                                "Matches"
+                            }
 
-            TargetType.Visual ->
-                +"Visual"
+                    value = state.targetText ?: ""
+
+                    onChange = {
+                        val target = it.target as HTMLInputElement
+                        onTextChange(target.value)
+                    }
+                }
+            }
+        }
+        else if (state.targetType == TargetType.Visual) {
+            +"Visual: ${state.targetLocation}"
         }
     }
 }
