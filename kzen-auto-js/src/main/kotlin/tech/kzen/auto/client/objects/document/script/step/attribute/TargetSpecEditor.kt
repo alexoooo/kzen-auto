@@ -2,7 +2,6 @@ package tech.kzen.auto.client.objects.document.script.step.attribute
 
 import kotlinx.css.em
 import kotlinx.css.fontSize
-import kotlinx.css.marginTop
 import org.w3c.dom.HTMLInputElement
 import react.*
 import styled.styledDiv
@@ -11,10 +10,14 @@ import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
 import tech.kzen.auto.common.objects.document.feature.TargetType
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.model.locate.ObjectReferenceHost
@@ -22,9 +25,14 @@ import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
+import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.toPersistentMap
+import kotlin.browser.document
+import kotlin.js.Json
+import kotlin.js.json
 
 
 @Suppress("unused")
@@ -32,7 +40,8 @@ class TargetSpecEditor(
         props: AttributeEditorProps
 ):
         RPureComponent<AttributeEditorProps, TargetSpecEditor.State>(props),
-        LocalGraphStore.Observer
+        LocalGraphStore.Observer,
+        ExecutionManager.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
@@ -111,10 +120,6 @@ class TargetSpecEditor(
                 targetLocation = null
             }
         }
-
-//        submitDebounce = lodash.debounce({
-//            editAttributeCommandAsync()
-//        }, 1000)
     }
 
 
@@ -143,14 +148,51 @@ class TargetSpecEditor(
     }
 
 
+    override fun componentDidMount() {
+        async {
+            ClientContext.executionManager.observe(this)
+            ClientContext.mirroredGraphStore.observe(this)
+        }
+    }
+
+
+    override fun componentWillUnmount() {
+        ClientContext.executionManager.unobserve(this)
+        ClientContext.mirroredGraphStore.unobserve(this)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
 
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {}
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+        when (event) {
+            is RenamedDocumentRefactorEvent -> {
+                if (event.removedUnderOldName.documentPath == state.targetLocation?.documentPath) {
+                    val newLocation =
+                            state.targetLocation!!.copy(documentPath = event.createdWithNewName.destination)
+
+                    setState {
+                        targetLocation = newLocation
+                        targetRenaming = true
+                    }
+                }
+            }
+        }
+    }
 
 
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}
+
+
+    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
+        flush()
+    }
+
+    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {
+
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -184,11 +226,10 @@ class TargetSpecEditor(
                     ScalarAttributeNotation(state.targetText!!)
         }
         else if (state.targetLocation != null) {
-            val localReference = state.targetLocation!!.toReference()
-                    .crop(retainPath = false)
+            val globalReference = state.targetLocation!!.toReference()
 
             attributeMap[TargetSpecDefiner.valueSegment] =
-                    ScalarAttributeNotation(localReference.asString())
+                    ScalarAttributeNotation(globalReference.asString())
         }
 
         val attributeNotation = MapAttributeNotation(attributeMap.toPersistentMap())
@@ -223,22 +264,59 @@ class TargetSpecEditor(
     }
 
 
+    private fun onVisualFeatureChange(value: ObjectLocation?) {
+        setState {
+            targetLocation = value
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun visualTargets(): List<ObjectLocation> {
+        val featureMains = mutableListOf<ObjectLocation>()
+
+        for ((path, notation) in
+                props.graphStructure.graphNotation.documents.values) {
+
+            if (FeatureDocument.isFeature(notation)) {
+                featureMains.add(ObjectLocation(
+                        path, NotationConventions.mainObjectPath))
+            }
+        }
+
+        return featureMains
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val selectLabelId = "material-react-input-label-id"
+        renderSelectType()
+
+        if (state.targetType == TargetType.Text ||
+                state.targetType == TargetType.Xpath) {
+            renderTextual()
+        }
+        else if (state.targetType == TargetType.Visual) {
+            renderVisualSelect()
+        }
+    }
+
+
+    private fun RBuilder.renderSelectType() {
+//        val selectLabelId = "material-react-input-label-id"
 
         styledDiv {
-            child(MaterialFormControl::class) {
-                child(MaterialInputLabel::class) {
-                    attrs {
-                        id = selectLabelId
-                    }
-                    +"Target"
-                }
+//            child(MaterialFormControl::class) {
+//                child(MaterialInputLabel::class) {
+//                    attrs {
+//                        id = selectLabelId
+//                    }
+//                    +"Target"
+//                }
 
                 child(MaterialSelect::class) {
                     attrs {
-                        labelId = selectLabelId
+//                        labelId = selectLabelId
 
                         style = reactStyle {
                             fontSize = 0.8.em
@@ -277,38 +355,89 @@ class TargetSpecEditor(
                         }
                     }
                 }
-            }
+//            }
         }
+    }
 
-        if (state.targetType == TargetType.Text ||
-                state.targetType == TargetType.Xpath) {
-            child(MaterialTextField::class) {
-                attrs {
-                    fullWidth = true
 
-                    style = reactStyle {
-                        marginTop = 0.5.em
-                    }
+    private fun RBuilder.renderTextual() {
+        child(MaterialTextField::class) {
+            attrs {
+                fullWidth = true
 
-                    label =
-                            if (state.targetType == TargetType.Text) {
-                                "Contains"
-                            }
-                            else {
-                                "Matches"
-                            }
+//                style = reactStyle {
+//                    marginTop = 0.5.em
+//                }
 
-                    value = state.targetText ?: ""
+//                label =
+//                        if (state.targetType == TargetType.Text) {
+//                            "Contains"
+//                        }
+//                        else {
+//                            "Matches"
+//                        }
 
-                    onChange = {
-                        val target = it.target as HTMLInputElement
-                        onTextChange(target.value)
-                    }
+                value = state.targetText ?: ""
+
+                onChange = {
+                    val target = it.target as HTMLInputElement
+                    onTextChange(target.value)
                 }
             }
         }
-        else if (state.targetType == TargetType.Visual) {
-            +"Visual: ${state.targetLocation}"
+    }
+
+
+    private fun RBuilder.renderVisualSelect() {
+        val selectOptions = visualTargets()
+                .map { ReactSelectOption(it.asString(), it.documentPath.name.value) }
+                .toTypedArray()
+
+//        +"!! ${selectOptions.map { it.value }}"
+//        +"^^ SELECT: ${props.attributeName} - $attributeNotation - ${selectOptions.map { it.value }}"
+
+//        val selectId = "material-react-select-id"
+
+//        child(MaterialInputLabel::class) {
+//            attrs {
+//                htmlFor = selectId
+//
+//                style = reactStyle {
+//                    fontSize = 0.8.em
+//                }
+//            }
+//
+//            +"Select"
+//        }
+
+        child(ReactSelect::class) {
+            attrs {
+//                id = selectId
+
+                value = selectOptions.find { it.value == state.targetLocation?.asString() }
+
+                options = selectOptions
+
+                onChange = {
+                    onVisualFeatureChange(ObjectLocation.parse(it.value))
+                }
+
+                // https://stackoverflow.com/a/51844542/1941359
+                val styleTransformer: (Json, Json) -> Json = { base, _ ->
+                    val transformed = json()
+                    transformed.add(base)
+                    transformed["background"] = "transparent"
+                    transformed
+                }
+
+                val reactStyles = json()
+                reactStyles["control"] = styleTransformer
+                styles = reactStyles
+
+                // NB: this was causing clipping when used in ConditionalStepDisplay table,
+                //   see: https://react-select.com/advanced#portaling
+                menuPortalTarget = document.body!!
+            }
         }
     }
 }

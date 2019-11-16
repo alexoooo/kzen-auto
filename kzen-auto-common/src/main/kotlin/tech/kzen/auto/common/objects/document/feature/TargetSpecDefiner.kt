@@ -82,7 +82,7 @@ class TargetSpecDefiner: AttributeDefiner {
         definitionMap[typeKey] = ValueAttributeDefinition(typeName)
 
         if (valueDefinition != null) {
-            definitionMap[typeKey] = valueDefinition
+            definitionMap[valueKey] = valueDefinition
         }
 
         return AttributeDefinitionAttempt.success(

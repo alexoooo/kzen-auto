@@ -41,7 +41,12 @@ object VisionUtils {
 
             is TextTarget -> {
                 val encodedXpath = xpathEscape(target.text)
-                driver.findElement(By.xpath("//*[text() = '$encodedXpath']"))
+
+                // https://stackoverflow.com/a/49906870/1941359
+                // https://stackoverflow.com/a/3655588/1941359
+//                driver.findElement(By.xpath("//*[text() = $encodedXpath]"))
+//                driver.findElement(By.xpath("//*[normalize-space() = $encodedXpath]"))
+                driver.findElement(By.xpath("//*[text()[contains(.,$encodedXpath)]]"))
             }
 
             is XpathTarget ->

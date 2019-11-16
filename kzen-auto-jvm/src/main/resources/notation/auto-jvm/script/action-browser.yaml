@@ -38,40 +38,40 @@ GoTo:
     location: String
 
 
-LeftClick:
-  abstract: true
-  is: Action
-  class: tech.kzen.auto.server.objects.script.browser.LeftClick
-  icon: TouchApp
-  title: "Click"
-  xpath: ""
-  meta:
-    xpath: String
+#LeftClick:
+#  abstract: true
+#  is: Action
+#  class: tech.kzen.auto.server.objects.script.browser.LeftClick
+#  icon: TouchApp
+#  title: "Click"
+#  xpath: ""
+#  meta:
+#    xpath: String
 
 
-SendKeys:
-  abstract: true
-  is: Action
-  class: tech.kzen.auto.server.objects.script.browser.SendKeys
-  icon: Keyboard
-  title: "Write"
-  xpath: ""
-  text: ""
-  meta:
-    xpath: String
-    text: String
+#SendKeys:
+#  abstract: true
+#  is: Action
+#  class: tech.kzen.auto.server.objects.script.browser.SendKeys
+#  icon: Keyboard
+#  title: "Write"
+#  xpath: ""
+#  text: ""
+#  meta:
+#    xpath: String
+#    text: String
 
 
 
-FormSubmit:
-  abstract: true
-  is: Action
-  class: tech.kzen.auto.server.objects.script.browser.FormSubmit
-  icon: Send
-  title: "Submit"
-  xpath: ""
-  meta:
-    xpath: String
+#FormSubmit:
+#  abstract: true
+#  is: Action
+#  class: tech.kzen.auto.server.objects.script.browser.FormSubmit
+#  icon: Send
+#  title: "Submit"
+#  xpath: ""
+#  meta:
+#    xpath: String
 
 
 VisualClick:
@@ -79,11 +79,17 @@ VisualClick:
   is: Action
   class: tech.kzen.auto.server.objects.script.browser.VisualClick
   icon: TouchApp
-  title: "Visual Click"
+  title: "Click"
+  target:
+    type: Focus
   meta:
     target:
-      is: Feature
-      editor: SelectFeatureEditor
+#      is: Feature
+#      editor: SelectFeatureEditor
+      is: TargetSpec
+      by: TargetSpecDefiner
+      creator: TargetSpecCreator
+      editor: TargetSpecEditor
 
 
 VisualSendKeys:
@@ -91,7 +97,7 @@ VisualSendKeys:
   is: Action
   class: tech.kzen.auto.server.objects.script.browser.VisualSendKeys
   icon: Keyboard
-  title: "Visual Write"
+  title: "Write"
   text: ""
   target:
     type: Focus
@@ -109,7 +115,7 @@ VisualFormSubmit:
   is: Action
   class: tech.kzen.auto.server.objects.script.browser.VisualFormSubmit
   icon: Send
-  title: "Visual Submit"
+  title: "Submit"
   target:
     type: Focus
   meta:

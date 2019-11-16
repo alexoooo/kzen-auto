@@ -53,7 +53,10 @@ class TargetSpecCreator: AttributeCreator {
                 val location = partialGraphInstance.objectInstances.locate(
                         value, ObjectReferenceHost.ofLocation(objectLocation))
 
-                partialGraphInstance[location]?.reference as FeatureDocument
+                val featureDocument=
+                        partialGraphInstance[location]?.reference as FeatureDocument
+
+                VisualTarget(featureDocument)
             }
         }
     }

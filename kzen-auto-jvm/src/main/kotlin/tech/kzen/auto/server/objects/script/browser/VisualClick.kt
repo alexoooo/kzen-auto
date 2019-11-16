@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.script.browser
 
 import org.openqa.selenium.OutputType
-import tech.kzen.auto.common.objects.document.feature.FeatureDocument
+import tech.kzen.auto.common.objects.document.feature.TargetSpec
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
@@ -11,7 +11,8 @@ import tech.kzen.auto.server.service.vision.VisionUtils
 
 @Suppress("unused")
 class VisualClick(
-        private val target: FeatureDocument
+//        private val target: FeatureDocument
+        private val target: TargetSpec
 ): ExecutionAction {
     override suspend fun perform(
             imperativeModel: ImperativeModel

@@ -182,23 +182,23 @@ GoToTool:
   delegate: GoTo
 
 
-LeftClickTool:
-  is: RibbonTool
-  parent: BrowserGroup
-  delegate: LeftClick
+#LeftClickTool:
+#  is: RibbonTool
+#  parent: BrowserGroup
+#  delegate: LeftClick
 
 
-SendKeysTool:
-  is: RibbonTool
-  parent: BrowserGroup
-  delegate: SendKeys
+#SendKeysTool:
+#  is: RibbonTool
+#  parent: BrowserGroup
+#  delegate: SendKeys
 
 
 
-FormSubmitTool:
-  is: RibbonTool
-  parent: BrowserGroup
-  delegate: FormSubmit
+#FormSubmitTool:
+#  is: RibbonTool
+#  parent: BrowserGroup
+#  delegate: FormSubmit
 
 
 VisualClickTool:

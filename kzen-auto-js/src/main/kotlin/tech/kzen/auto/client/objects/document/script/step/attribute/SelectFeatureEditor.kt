@@ -152,12 +152,12 @@ class SelectFeatureEditor(
         val value = state.value
                 ?: return
 
-        val localReference = value.toReference()
+        val globalReference = value.toReference()
 
         ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
                 props.objectLocation,
                 props.attributeName,
-                ScalarAttributeNotation(localReference.asString())))
+                ScalarAttributeNotation(globalReference.asString())))
     }
 
 
