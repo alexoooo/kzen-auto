@@ -2,6 +2,11 @@
 TargetSpec:
   abstract: true
   class: tech.kzen.auto.common.objects.document.feature.TargetSpec
+  meta:
+    ref:
+      by: TargetSpecDefiner
+      creator: TargetSpecCreator
+      editor: TargetSpecEditor
 
 TargetSpecCreator:
   class: tech.kzen.auto.common.objects.document.feature.TargetSpecCreator

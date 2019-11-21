@@ -522,6 +522,39 @@ class RestHandler {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun benchmark(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val iterations: Int = serverRequest.getParam(
+                "i", Integer::parseInt)
+
+        val startTime = System.currentTimeMillis()
+
+        // http://localhost:8080/command/object/insert-in-list?path=main%2FScript.yaml&object=main&in-attribute=steps&index=7&name=Escape&position=8&body=is%3A%20SendEscape
+        val addCommand = InsertObjectInListAttributeCommand(
+                ObjectLocation.parse("main/Script.yaml#main"),
+                AttributePath.parse("steps"),
+                PositionIndex.parse("7"),
+                ObjectName("Escape"),
+                PositionIndex.parse("8"),
+                ServerContext.yamlParser.parseObject("is: SendEscape"))
+
+        // http://localhost:8080/command/object/remove-in?path=main%2FScript.yaml&object=main&in-attribute=steps.7
+        val removeCommand = RemoveObjectInAttributeCommand(
+                ObjectLocation.parse("main/Script.yaml#main"),
+                AttributePath.parse("steps.7"))
+
+        for (i in 0 .. iterations) {
+            applyAndDigest(addCommand)
+            applyAndDigest(removeCommand)
+        }
+
+        val duration = System.currentTimeMillis() - startTime
+        return ServerResponse
+                .ok()
+                .body(Mono.just("$duration"))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun applyAndDigest(command: NotationCommand): Mono<ServerResponse> {
         val digest = applyCommand(command)
 

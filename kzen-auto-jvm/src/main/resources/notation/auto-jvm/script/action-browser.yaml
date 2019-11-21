@@ -83,13 +83,7 @@ VisualClick:
   target:
     type: Focus
   meta:
-    target:
-#      is: Feature
-#      editor: SelectFeatureEditor
-      is: TargetSpec
-      by: TargetSpecDefiner
-      creator: TargetSpecCreator
-      editor: TargetSpecEditor
+    target: TargetSpec
 
 
 VisualSendKeys:
@@ -103,11 +97,7 @@ VisualSendKeys:
     type: Focus
   meta:
     text: String
-    target:
-      is: TargetSpec
-      by: TargetSpecDefiner
-      creator: TargetSpecCreator
-      editor: TargetSpecEditor
+    target: TargetSpec
 
 
 VisualFormSubmit:
@@ -119,8 +109,12 @@ VisualFormSubmit:
   target:
     type: Focus
   meta:
-    target:
-      is: TargetSpec
-      by: TargetSpecDefiner
-      creator: TargetSpecCreator
-      editor: TargetSpecEditor
+    target: TargetSpec
+
+
+SendEscape:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.browser.SendEscape
+  icon: CancelPresentation
+  title: "Escape"

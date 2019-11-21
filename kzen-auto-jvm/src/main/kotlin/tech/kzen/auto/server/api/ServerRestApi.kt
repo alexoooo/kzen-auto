@@ -39,6 +39,8 @@ class ServerRestApi(
         POST(CommonRestApi.commandResourceAdd, counterHandler::addResource)
         GET(CommonRestApi.commandResourceRemove, counterHandler::resourceDelete)
 
+        GET(CommonRestApi.commandBenchmark, counterHandler::benchmark)
+
         GET(CommonRestApi.actionModel, counterHandler::actionModel)
         GET(CommonRestApi.actionStart, counterHandler::actionStart)
         GET(CommonRestApi.actionReset, counterHandler::actionReset)

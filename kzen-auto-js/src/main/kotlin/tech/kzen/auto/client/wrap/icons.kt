@@ -72,6 +72,12 @@ external class CancelIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("CancelPresentation")
+external class CancelPresentationIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("Close")
 external class CloseIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?

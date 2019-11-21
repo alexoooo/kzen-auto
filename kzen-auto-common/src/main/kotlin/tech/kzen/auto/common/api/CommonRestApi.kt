@@ -39,6 +39,9 @@ object CommonRestApi {
     const val commandResourceAdd = "${commandResourcePrefix}add"
     const val commandResourceRemove = "${commandResourcePrefix}remove"
 
+    const val commandBenchmark = "${commandPrefix}benchmark"
+
+
     const val paramDocumentPath = "path"
     const val paramObjectPath = "object"
     const val paramPositionIndex = "index"

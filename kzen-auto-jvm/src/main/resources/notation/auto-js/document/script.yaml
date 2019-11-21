@@ -217,3 +217,10 @@ VisualSubmitTool:
   is: RibbonTool
   parent: BrowserGroup
   delegate: VisualFormSubmit
+
+
+SendEscapeTool:
+  is: RibbonTool
+  parent: BrowserGroup
+  delegate: SendEscape
+

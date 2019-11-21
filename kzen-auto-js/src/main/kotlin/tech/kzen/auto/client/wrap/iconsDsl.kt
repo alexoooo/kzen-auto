@@ -123,6 +123,9 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "CameraAlt" ->
             CameraAltIcon::class
 
+        "CancelPresentation" ->
+            CancelPresentationIcon::class
+
         else ->
             TextureIcon::class
     }
