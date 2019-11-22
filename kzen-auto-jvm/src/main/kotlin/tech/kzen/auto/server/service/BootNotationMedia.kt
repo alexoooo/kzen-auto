@@ -12,6 +12,7 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.platform.collect.toPersistentMap
+import java.util.concurrent.ConcurrentHashMap
 
 
 class BootNotationMedia(
@@ -26,25 +27,31 @@ class BootNotationMedia(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val cache: MutableMap<DocumentPath, DocumentScan> = mutableMapOf()
+    private var scanCache: NotationScan? = null
+    private var documentCache: MutableMap<DocumentPath, String> = ConcurrentHashMap()
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun scan(): NotationScan {
-        if (cache.isEmpty()) {
+        if (scanCache == null) {
             val paths = scanPaths()
+
+            val builder: MutableMap<DocumentPath, DocumentScan> = mutableMapOf()
 
             for (path in paths) {
                 check(! path.directory)
 
                 val bytes = readDocument(path)
                 val digest = Digest.ofUtf8(bytes)
-                cache[path] = DocumentScan(
+                builder[path] = DocumentScan(
                         digest,
                         null)
             }
+
+            scanCache = NotationScan(DocumentPathMap(builder.toPersistentMap()))
         }
-        return NotationScan(DocumentPathMap(cache.toPersistentMap()))
+
+        return scanCache!!
     }
 
 
@@ -98,10 +105,12 @@ class BootNotationMedia(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun readDocument(documentPath: DocumentPath): String {
-        val bytes = loader.getResource(prefix + documentPath.asRelativeFile())!!.readText()
-        println("BootNotationMedia - read $documentPath - ${bytes.length}")
-        return bytes
+    override suspend fun readDocument(documentPath: DocumentPath, expectedDigest: Digest?): String {
+        return documentCache.computeIfAbsent(documentPath) {
+            val body = loader.getResource(prefix + documentPath.asRelativeFile())!!.readText()
+            println("BootNotationMedia - read $documentPath - ${body.length}")
+            body
+        }
     }
 
 
@@ -138,6 +147,6 @@ class BootNotationMedia(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun invalidate() {
-        cache.clear()
+        // NB: classpath scanning doesn't need invalidation because it is fixed at compile time
     }
 }

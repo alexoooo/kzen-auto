@@ -4,6 +4,8 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ResourceLocation
 import tech.kzen.lib.common.model.structure.scan.NotationScan
 import tech.kzen.lib.common.service.media.NotationMedia
+import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.DigestCache
 import tech.kzen.lib.common.util.ImmutableByteArray
 
 
@@ -11,14 +13,30 @@ class ClientRestNotationMedia(
         private val restClient: ClientRestApi
 ): NotationMedia {
     //-----------------------------------------------------------------------------------------------------------------
+    private val documentCache = DigestCache<String>(128)
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override suspend fun scan(): NotationScan {
         return restClient.scanNotationPaths()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun readDocument(documentPath: DocumentPath): String {
-        return restClient.readNotation(documentPath)
+    override suspend fun readDocument(documentPath: DocumentPath, expectedDigest: Digest?): String {
+        if (expectedDigest != null) {
+            val cached = documentCache.get(expectedDigest)
+            if (cached != null) {
+                return cached
+            }
+        }
+
+        val body = restClient.readNotation(documentPath)
+
+        val digest = Digest.ofUtf8(body)
+        documentCache.put(digest, body)
+
+        return body
     }
 
 
