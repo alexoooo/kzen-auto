@@ -11,7 +11,6 @@ import tech.kzen.auto.server.service.vision.VisionUtils
 
 @Suppress("unused")
 class VisualClick(
-//        private val target: FeatureDocument
         private val target: TargetSpec
 ): ExecutionAction {
     override suspend fun perform(
@@ -28,7 +27,13 @@ class VisualClick(
 
         val element = targetLocation.webElement!!
 
-        element.click();
+        if (element.tagName.toLowerCase() == "input" &&
+                element.getAttribute("type").toLowerCase() == "submit") {
+            element.submit()
+        }
+        else {
+            element.click()
+        }
 
         val postScreenshotPngBytes = driver.getScreenshotAs(OutputType.BYTES)
         return ExecutionSuccess(

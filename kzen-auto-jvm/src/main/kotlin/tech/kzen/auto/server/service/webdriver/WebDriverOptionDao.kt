@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.service.webdriver
 
 import tech.kzen.auto.server.service.webdriver.model.BrowserLauncher
-import tech.kzen.auto.server.service.webdriver.model.OperatingSystem
 import tech.kzen.auto.server.service.webdriver.model.CpuArchitecture
+import tech.kzen.auto.server.service.webdriver.model.OperatingSystem
 import tech.kzen.auto.server.service.webdriver.model.WebDriverOption
 import java.net.URI
 
@@ -23,7 +23,7 @@ class WebDriverOptionDao {
                     OperatingSystem.Linux,
                     CpuArchitecture.X86_64,
                     "0.25.0",
-                    URI("https://github.com/mozilla/geckodriver/releases/download/v0.25.0/geckodriver-v0.25.0-linux64.tar.gz")
+                    URI("https://github.com/mozilla/geckodriver/releases/download/v0.26.0/geckodriver-v0.26.0-linux64.tar.gz")
             ),
 
             WebDriverOption(
@@ -32,26 +32,27 @@ class WebDriverOptionDao {
                     CpuArchitecture.X86_32,
 //                    "2.46",
 //                    URI("https://chromedriver.storage.googleapis.com/2.46/chromedriver_win32.zip")
-                    "77.0.3865.40",
-                    URI("https://chromedriver.storage.googleapis.com/77.0.3865.40/chromedriver_win32.zip")
+//                    "77.0.3865.40",
+//                    URI("https://chromedriver.storage.googleapis.com/77.0.3865.40/chromedriver_win32.zip")
+                    "78.0.3904.105",
+                    URI("https://chromedriver.storage.googleapis.com/78.0.3904.105/chromedriver_win32.zip")
             ),
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_64,
-//                    "2.46",
-//                    URI("https://chromedriver.storage.googleapis.com/2.46/chromedriver_win32.zip")
-                    "77.0.3865.40",
-                    URI("https://chromedriver.storage.googleapis.com/77.0.3865.40/chromedriver_win32.zip")
+                    "78.0.3904.105",
+                    URI("https://chromedriver.storage.googleapis.com/78.0.3904.105/chromedriver_win32.zip")
             ),
+
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.OsX,
                     CpuArchitecture.X86_64,
 //                    "2.46",
 //                    URI("https://chromedriver.storage.googleapis.com/2.46/chromedriver_mac64.zip")
-                    "77.0.3865.40",
-                    URI("https://chromedriver.storage.googleapis.com/77.0.3865.40/chromedriver_mac64.zip")
+                    "78.0.3904.105",
+                    URI("https://chromedriver.storage.googleapis.com/78.0.3904.105/chromedriver_mac64.zip")
             ))
 
 

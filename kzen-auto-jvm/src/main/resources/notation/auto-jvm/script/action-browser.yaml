@@ -38,42 +38,6 @@ GoTo:
     location: String
 
 
-#LeftClick:
-#  abstract: true
-#  is: Action
-#  class: tech.kzen.auto.server.objects.script.browser.LeftClick
-#  icon: TouchApp
-#  title: "Click"
-#  xpath: ""
-#  meta:
-#    xpath: String
-
-
-#SendKeys:
-#  abstract: true
-#  is: Action
-#  class: tech.kzen.auto.server.objects.script.browser.SendKeys
-#  icon: Keyboard
-#  title: "Write"
-#  xpath: ""
-#  text: ""
-#  meta:
-#    xpath: String
-#    text: String
-
-
-
-#FormSubmit:
-#  abstract: true
-#  is: Action
-#  class: tech.kzen.auto.server.objects.script.browser.FormSubmit
-#  icon: Send
-#  title: "Submit"
-#  xpath: ""
-#  meta:
-#    xpath: String
-
-
 VisualClick:
   abstract: true
   is: Action

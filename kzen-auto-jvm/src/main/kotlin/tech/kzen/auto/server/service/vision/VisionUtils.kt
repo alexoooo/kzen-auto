@@ -40,13 +40,21 @@ object VisionUtils {
                 driver.switchTo().activeElement()
 
             is TextTarget -> {
-                val encodedXpath = xpathEscape(target.text)
+                val xpathEscaped = xpathEscape(target.text)
 
                 // https://stackoverflow.com/a/49906870/1941359
                 // https://stackoverflow.com/a/3655588/1941359
-//                driver.findElement(By.xpath("//*[text() = $encodedXpath]"))
-//                driver.findElement(By.xpath("//*[normalize-space() = $encodedXpath]"))
-                driver.findElement(By.xpath("//*[text()[contains(.,$encodedXpath)]]"))
+                val foundContaining = driver.findElements(
+                        By.xpath("//*[text()[contains(.,$xpathEscaped)]]"))
+
+                if (foundContaining.isNotEmpty()) {
+                    foundContaining[0]
+                }
+                else {
+                    // e.g. buttons
+                    driver.findElement(
+                            By.xpath("//input[contains(@value,$xpathEscaped)]"))
+                }
             }
 
             is XpathTarget ->
