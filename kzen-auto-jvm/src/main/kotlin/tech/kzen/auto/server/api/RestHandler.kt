@@ -114,6 +114,12 @@ class RestHandler {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun scan(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val fresh = serverRequest.queryParams().containsKey(CommonRestApi.paramFresh)
+
+        if (fresh) {
+            ServerContext.notationMedia.invalidate()
+        }
+
         val documentTree = runBlocking {
             ServerContext.notationMedia.scan()
         }

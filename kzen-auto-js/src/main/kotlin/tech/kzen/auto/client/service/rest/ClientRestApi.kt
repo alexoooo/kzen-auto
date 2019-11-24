@@ -33,8 +33,11 @@ class ClientRestApi(
         private val baseUrl: String
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun scanNotationPaths(): NotationScan {
-        val scanText = get(CommonRestApi.scan)
+    suspend fun scanNotation(): NotationScan {
+        val scanText = get(
+                CommonRestApi.scan,
+                CommonRestApi.paramFresh to true.toString())
+
         val scanJson = JSON.parse<Json>(scanText)
         val scanMap = ClientJsonUtils.toMap(scanJson)
 

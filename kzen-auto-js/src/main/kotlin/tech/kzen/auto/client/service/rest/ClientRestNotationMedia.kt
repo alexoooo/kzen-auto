@@ -18,7 +18,7 @@ class ClientRestNotationMedia(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun scan(): NotationScan {
-        return restClient.scanNotationPaths()
+        return restClient.scanNotation()
     }
 
 

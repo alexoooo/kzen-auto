@@ -55,6 +55,7 @@ object CommonRestApi {
     const val paramAttributeKey = "key"
     const val paramAttributeNotation = "value"
     const val paramResourcePath = "resource"
+    const val paramFresh = "fresh"
 
 
     private const val actionPrefix = "/action/"
