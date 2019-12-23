@@ -10,12 +10,12 @@ import react.setState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -60,7 +60,10 @@ class ConditionalBranchDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var branchAttributePath: AttributePath,
+
             var stepController: StepController.Wrapper,
+            var scriptCommander: ScriptCommander,
+
             var graphStructure: GraphStructure,
             var objectLocation: ObjectLocation,
             var imperativeModel: ImperativeModel
@@ -124,16 +127,17 @@ class ConditionalBranchDisplay(
                 .getAndClearSelection()
                 ?: return
 
-        val command = ScriptDocument.createCommand(
+        val commands = props.scriptCommander.createCommands(
                 props.objectLocation,
                 props.branchAttributePath,
                 index,
                 archetypeObjectLocation,
-                props.graphStructure
-        )
+                props.graphStructure)
 
         async {
-            ClientContext.mirroredGraphStore.apply(command)
+            for (command in commands) {
+                ClientContext.mirroredGraphStore.apply(command)
+            }
         }
     }
 

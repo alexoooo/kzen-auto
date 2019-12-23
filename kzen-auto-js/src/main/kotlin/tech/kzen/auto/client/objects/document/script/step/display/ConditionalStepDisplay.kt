@@ -15,13 +15,14 @@ import react.dom.br
 import react.dom.td
 import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributeController
+import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.imperative.model.control.BranchEvaluationState
+import tech.kzen.auto.common.paradigm.imperative.model.control.InternalControlState
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -49,6 +50,8 @@ class ConditionalStepDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var attributeController: AttributeController.Wrapper,
+            var scriptCommander: ScriptCommander,
+
             var stepControllerHandle: StepController.Handle,
 
             graphStructure: GraphStructure,
@@ -64,6 +67,7 @@ class ConditionalStepDisplay(
     class Wrapper(
             objectLocation: ObjectLocation,
             private val attributeController: AttributeController.Wrapper,
+            private val scriptCommander: ScriptCommander,
             private val stepControllerHandle: StepController.Handle
     ):
             StepDisplayWrapper(objectLocation)
@@ -74,8 +78,9 @@ class ConditionalStepDisplay(
         ): ReactElement {
             return input.child(ConditionalStepDisplay::class) {
                 attrs {
-                    this.attributeController = this@Wrapper.attributeController
-                    this.stepControllerHandle = this@Wrapper.stepControllerHandle
+                    attributeController = this@Wrapper.attributeController
+                    scriptCommander = this@Wrapper.scriptCommander
+                    stepControllerHandle = this@Wrapper.stepControllerHandle
                 }
 
                 handler()
@@ -340,8 +345,8 @@ class ConditionalStepDisplay(
     ) {
         val inThenBranch = ! isNextToRun &&
                 ! (imperativeState?.running ?: false) &&
-                imperativeState?.controlState is BranchEvaluationState &&
-                imperativeState.controlState.index == 0
+                imperativeState?.controlState is InternalControlState &&
+                imperativeState.controlState.branchIndex == 0
 
         styledDiv {
             css {
@@ -413,6 +418,8 @@ class ConditionalStepDisplay(
                         branchAttributePath = AttributePath.ofName(thenAttributeName)
 
                         this.stepController = props.stepControllerHandle.wrapper!!
+                        this.scriptCommander = props.scriptCommander
+
                         this.graphStructure = props.graphStructure
                         this.objectLocation = props.objectLocation
                         this.imperativeModel = props.imperativeModel
@@ -429,8 +436,8 @@ class ConditionalStepDisplay(
     ) {
         val inElseBranch = ! isNextToRun &&
                 ! (imperativeState?.running ?: false) &&
-                imperativeState?.controlState is BranchEvaluationState &&
-                imperativeState.controlState.index == 1
+                imperativeState?.controlState is InternalControlState &&
+                imperativeState.controlState.branchIndex == 1
 
         styledDiv {
             css {
@@ -496,6 +503,8 @@ class ConditionalStepDisplay(
                         branchAttributePath = AttributePath.ofName(elseAttributeName)
 
                         this.stepController = props.stepControllerHandle.wrapper!!
+                        this.scriptCommander = props.scriptCommander
+
                         this.graphStructure = props.graphStructure
                         this.objectLocation = props.objectLocation
                         this.imperativeModel = props.imperativeModel

@@ -18,13 +18,10 @@ import tech.kzen.auto.client.wrap.MaterialCardContent
 import tech.kzen.auto.client.wrap.MaterialPaper
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
-import tech.kzen.auto.common.paradigm.common.model.ScalarExecutionValue
+import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -225,23 +222,38 @@ class DefaultStepDisplay(
 
 
     private fun RBuilder.renderValue(value: ExecutionValue) {
-        if (value is ScalarExecutionValue) {
+        if (value is NullExecutionValue) {
+            return
+        }
+
+        styledDiv {
+            attrs {
+                title = "Result"
+            }
+
+            css {
+                padding(0.em, 0.5.em, 0.5.em, 0.5.em)
+            }
+
             styledDiv {
-                attrs {
-                    title = "Result"
-                }
-
                 css {
-                    padding(0.em, 0.5.em, 0.5.em, 0.5.em)
+                    backgroundColor = Color("rgba(0, 0, 0, 0.04)")
+                    padding(0.5.em)
                 }
 
-                styledDiv {
-                    css {
-                        backgroundColor = Color("rgba(0, 0, 0, 0.04)")
-                        padding(0.5.em)
+                when (value) {
+                    is ScalarExecutionValue -> {
+                        +"${value.get()}"
                     }
 
-                    +"${value.get()}"
+                    is ListExecutionValue -> {
+                        val textValues = value.values.map { it.get().toString() }
+                        +"$textValues"
+                    }
+
+                    else -> {
+                        +"$value"
+                    }
                 }
             }
         }
@@ -249,22 +261,35 @@ class DefaultStepDisplay(
 
 
     private fun RBuilder.renderDetail(detail: ExecutionValue) {
-        if (detail is BinaryExecutionValue) {
+        when (detail) {
+            is BinaryExecutionValue -> {
+                val screenshotPngUrl = detail.cache("img") {
+                    val base64 = IoUtils.base64Encode(detail.value)
+                    "data:png/png;base64,$base64"
+                }
 
-            val screenshotPngUrl = detail.cache("img") {
-                val base64 = IoUtils.base64Encode(detail.value)
-                "data:png/png;base64,$base64"
-            }
-
-            img {
-                attrs {
-                    width = "100%"
-                    src = screenshotPngUrl
+                img {
+                    attrs {
+                        width = "100%"
+                        src = screenshotPngUrl
+                    }
                 }
             }
-        }
-        else if (detail is ScalarExecutionValue) {
-            +"${detail.get()}"
+
+            is ScalarExecutionValue -> {
+                +"${detail.get()}"
+            }
+
+            is ListExecutionValue -> {
+                val valueStrings = detail.values.map { it.toString() }
+                +"$valueStrings"
+            }
+
+            is NullExecutionValue -> {}
+
+            else -> {
+                +"Detail: $detail"
+            }
         }
     }
 

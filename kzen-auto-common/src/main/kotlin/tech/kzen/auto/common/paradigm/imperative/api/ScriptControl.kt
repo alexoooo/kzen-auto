@@ -6,7 +6,7 @@ import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTransition
 import tech.kzen.lib.common.model.obj.ObjectName
 
 
-interface ControlFlow: ExecutionAction {
+interface ScriptControl: ScriptStep {
     companion object {
         val objectName = ObjectName("ControlFlow")
     }

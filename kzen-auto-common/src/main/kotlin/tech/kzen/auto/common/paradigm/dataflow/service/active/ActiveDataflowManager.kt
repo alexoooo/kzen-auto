@@ -341,7 +341,6 @@ class ActiveDataflowManager(
             loopConsumer: (ObjectLocation) -> Unit = {},
             clearedConsumer: (ObjectLocation) -> Unit = {}
     ) {
-//        val serverGraphStructure = graphStructureManager.serverGraphStructure()
         val serverGraphStructure = graphStore
                 .graphStructure()
                 .filter(AutoConventions.serverAllowed)
@@ -466,7 +465,8 @@ class ActiveDataflowManager(
                             dataflow.process(activeVertexModel.state)
                     }
 
-            val output = instance.constructorAttributes[DataflowUtils.mainOutputAttributeName] as? MutableDataflowOutput<*>
+            val output = instance
+                    .constructorAttributes[DataflowUtils.mainOutputAttributeName] as? MutableDataflowOutput<*>
             if (output != null) {
                 if (output.bufferHasMultiple()) {
                     output.consumeAndClear {

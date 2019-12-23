@@ -11,6 +11,9 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
  *
  * See: https://en.wikipedia.org/wiki/Pipe_(fluid_conveyance)
  * See: https://en.wikipedia.org/wiki/Piping_and_plumbing_fitting
+ *
+ * TODO: rename to Vertex?
+ * TODO: use ExecutionState<T> fields for internalized state, inline with
  */
 interface Dataflow<State> {
     /**

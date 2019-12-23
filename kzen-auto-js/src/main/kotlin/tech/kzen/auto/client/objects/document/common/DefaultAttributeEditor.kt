@@ -217,13 +217,12 @@ class DefaultAttributeEditor(
         }
         else if (type.className == ClassNames.kotlinList) {
             val listGeneric = type.generics.getOrNull(0)
-            if (listGeneric?.className == ClassNames.kotlinString) {
-//                val textValues = (props.attributeNotation as ListAttributeNotation)
-//                val textValues = (attributeNotation as ListAttributeNotation)
-//                        .values.map { it.asString() ?: "" }
+            if (listGeneric?.className?.let { ClassNames.isPrimitive(it) } == true) {
                 val textValues = state.values ?: listOf()
-
-                renderListOfString(textValues)
+                renderListOfPrimitive(textValues)
+            }
+            else {
+                +"List of: ${listGeneric?.className ?: ClassNames.kotlinAny}"
             }
         }
         else if (type.className == ClassNames.kotlinBoolean) {
@@ -297,7 +296,7 @@ class DefaultAttributeEditor(
     }
 
 
-    private fun RBuilder.renderListOfString(stateValues: List<String>) {
+    private fun RBuilder.renderListOfPrimitive(stateValues: List<String>) {
         child(MaterialTextField::class) {
             attrs {
                 fullWidth = true

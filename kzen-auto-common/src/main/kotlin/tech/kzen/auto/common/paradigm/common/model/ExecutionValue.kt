@@ -7,6 +7,10 @@ import tech.kzen.lib.platform.IoUtils
 //---------------------------------------------------------------------------------------------------------------------
 sealed class ExecutionValue {
     companion object {
+        private const val typeKey = "type"
+        private const val valueKey = "value"
+
+
         fun of(value: Any?): ExecutionValue {
             return ofArbitrary(value)
                     ?: TODO("Not supported (yet): $value")
@@ -53,30 +57,30 @@ sealed class ExecutionValue {
 
 
         fun fromCollection(asCollection: Map<String, Any>): ExecutionValue {
-            return when (asCollection["type"]) {
+            return when (asCollection[typeKey]) {
                 null ->
-                    throw IllegalArgumentException("'type' missing: $asCollection")
+                    throw IllegalArgumentException("'${typeKey}' missing: $asCollection")
 
                 "null" ->
                     NullExecutionValue
 
                 "text" ->
-                    TextExecutionValue(asCollection["value"] as String)
+                    TextExecutionValue(asCollection[valueKey] as String)
 
                 "boolean" ->
-                    BooleanExecutionValue(asCollection["value"] as Boolean)
+                    BooleanExecutionValue(asCollection[valueKey] as Boolean)
 
                 "number" ->
                     NumberExecutionValue(
-                            asCollection["value"] as Double)
+                            asCollection[valueKey] as Double)
 
                 "binary" ->
                     BinaryExecutionValue(
-                            IoUtils.base64Decode(asCollection["value"] as String))
+                            IoUtils.base64Decode(asCollection[valueKey] as String))
 
                 "list" ->
                     ListExecutionValue(
-                            (asCollection["value"] as List<*>).map {
+                            (asCollection[valueKey] as List<*>).map {
                                 @Suppress("UNCHECKED_CAST")
                                 fromCollection(it as Map<String, Any>)
                             }
@@ -84,7 +88,7 @@ sealed class ExecutionValue {
 
                 "map" ->
                     MapExecutionValue(
-                            (asCollection["value"] as Map<*, *>).map{
+                            (asCollection[valueKey] as Map<*, *>).map{
                                 @Suppress("UNCHECKED_CAST")
                                 it.key as String to fromCollection(it.value as Map<String, Any>)
                             }.toMap()
@@ -126,7 +130,7 @@ sealed class ExecutionValue {
     fun toCollection(): Map<String, Any> {
         return when (this) {
             NullExecutionValue -> mapOf(
-                    "type" to "null")
+                    typeKey to "null")
 
             is TextExecutionValue ->
                 toCollection("text", value)
@@ -151,8 +155,8 @@ sealed class ExecutionValue {
 
     private fun toCollection(type: String, value: Any): Map<String, Any> {
         return mapOf(
-                "type" to type,
-                "value" to value)
+                typeKey to type,
+                valueKey to value)
     }
 
 

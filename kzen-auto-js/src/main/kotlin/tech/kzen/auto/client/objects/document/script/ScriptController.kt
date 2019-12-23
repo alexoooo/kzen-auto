@@ -8,6 +8,7 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
@@ -68,7 +69,8 @@ class ScriptController:
 
 
     class Props(
-            var stepController: StepController.Wrapper
+            var stepController: StepController.Wrapper,
+            var scriptCommander: ScriptCommander
     ): RProps
 
 
@@ -83,7 +85,8 @@ class ScriptController:
     @Suppress("unused")
     class Wrapper(
             private val archetype: ObjectLocation,
-            private val stepController: StepController.Wrapper
+            private val stepController: StepController.Wrapper,
+            private val scriptCommander: ScriptCommander
     ):
             DocumentController
     {
@@ -95,6 +98,7 @@ class ScriptController:
             return input.child(ScriptController::class) {
                 attrs {
                     this.stepController = this@Wrapper.stepController
+                    this.scriptCommander = this@Wrapper.scriptCommander
                 }
 
                 handler()
@@ -234,7 +238,7 @@ class ScriptController:
         val containingObjectLocation = ObjectLocation(
                 documentPath, NotationConventions.mainObjectPath)
 
-        val command = ScriptDocument.createCommand(
+        val commands = props.scriptCommander.createCommands(
                 containingObjectLocation,
                 ScriptDocument.stepsAttributePath,
                 index,
@@ -243,7 +247,9 @@ class ScriptController:
         )
 
         async {
-            ClientContext.mirroredGraphStore.apply(command)
+            for (command in commands) {
+                ClientContext.mirroredGraphStore.apply(command)
+            }
         }
     }
 

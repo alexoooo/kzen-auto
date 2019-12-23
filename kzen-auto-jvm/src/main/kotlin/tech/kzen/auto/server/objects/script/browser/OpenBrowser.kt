@@ -4,21 +4,23 @@ import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.firefox.FirefoxDriver
 import org.openqa.selenium.remote.RemoteWebDriver
-import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
+import tech.kzen.auto.common.paradigm.imperative.api.ScriptStep
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.webdriver.model.BrowserLauncher
+import tech.kzen.lib.common.model.instance.GraphInstance
 import java.nio.file.Paths
 
 
 @Suppress("unused")
 class OpenBrowser(
         private val extensionFiles: List<String>
-): ExecutionAction {
+): ScriptStep {
     override suspend fun perform(
-            imperativeModel: ImperativeModel
+            imperativeModel: ImperativeModel,
+            graphInstance: GraphInstance
     ): ExecutionResult {
         closeIfAlreadyOpen()
 

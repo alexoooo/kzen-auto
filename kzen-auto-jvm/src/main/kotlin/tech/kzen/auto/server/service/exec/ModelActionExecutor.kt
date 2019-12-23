@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.service.exec
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
-import tech.kzen.auto.common.paradigm.imperative.api.ControlFlow
-import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
+import tech.kzen.auto.common.paradigm.imperative.api.ScriptControl
+import tech.kzen.auto.common.paradigm.imperative.api.ScriptStep
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTransition
 import tech.kzen.auto.common.paradigm.imperative.service.ActionExecutor
@@ -20,19 +20,21 @@ class ModelActionExecutor(
             actionLocation: ObjectLocation,
             imperativeModel: ImperativeModel
     ): ExecutionResult {
+        // TODO: report any definition issues on client side
         val graphDefinition = graphStore
                 .graphDefinition()
                 .successful
                 .filterDefinitions(AutoConventions.serverAllowed)
 
-        val objectGraph = graphCreator
-                .createGraph(graphDefinition)
+        // TODO: add GraphInstanceAttempt for error reporting
+        val graphInstance =
+                graphCreator.createGraph(graphDefinition)
 
-        val instance = objectGraph.objectInstances[actionLocation]?.reference
+        val instance = graphInstance.objectInstances[actionLocation]?.reference
 
-        val action = instance as ExecutionAction
+        val action = instance as ScriptStep
 
-        return action.perform(imperativeModel)
+        return action.perform(imperativeModel, graphInstance)
     }
 
 
@@ -50,7 +52,7 @@ class ModelActionExecutor(
 
         val instance = objectGraph.objectInstances[actionLocation]?.reference
 
-        val action = instance as ControlFlow
+        val action = instance as ScriptControl
 
         val state = imperativeModel.frames.last().states[actionLocation.objectPath]!!
 

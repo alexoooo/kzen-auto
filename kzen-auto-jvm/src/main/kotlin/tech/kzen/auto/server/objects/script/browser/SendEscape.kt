@@ -7,15 +7,17 @@ import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
-import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
+import tech.kzen.auto.common.paradigm.imperative.api.ScriptStep
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.server.service.ServerContext
+import tech.kzen.lib.common.model.instance.GraphInstance
 
 
 @Suppress("unused")
-class SendEscape: ExecutionAction {
+class SendEscape: ScriptStep {
     override suspend fun perform(
-            imperativeModel: ImperativeModel
+            imperativeModel: ImperativeModel,
+            graphInstance: GraphInstance
     ): ExecutionResult {
         // https://groups.google.com/forum/#!topic/selenium-users/F2c4QWP50F8
 

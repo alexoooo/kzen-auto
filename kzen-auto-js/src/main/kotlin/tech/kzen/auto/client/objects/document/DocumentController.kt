@@ -6,6 +6,5 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 interface DocumentController: ReactWrapper<RProps> {
-//    fun type(): DocumentArchetype
     fun archetypeLocation(): ObjectLocation
 }

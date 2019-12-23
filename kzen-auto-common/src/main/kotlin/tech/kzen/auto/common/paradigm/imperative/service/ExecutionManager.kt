@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.paradigm.imperative.service
 
 import kotlinx.coroutines.delay
-import tech.kzen.auto.common.paradigm.imperative.api.ControlFlow
+import tech.kzen.auto.common.paradigm.imperative.api.ScriptControl
 import tech.kzen.auto.common.paradigm.imperative.model.*
 import tech.kzen.auto.common.paradigm.imperative.model.control.*
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
@@ -295,7 +295,7 @@ class ExecutionManager(
             graphStructure: GraphStructure
     ): Boolean {
         val inheritanceChain = graphStructure.graphNotation.inheritanceChain(objectLocation)
-        return inheritanceChain.any { it.objectPath.name == ControlFlow.objectName }
+        return inheritanceChain.any { it.objectPath.name == ScriptControl.objectName }
     }
 
 
@@ -341,8 +341,8 @@ class ExecutionManager(
                 EvaluateControlTransition ->
                     FinalControlState
 
-                is BranchExecutionTransition ->
-                    BranchEvaluationState(controlTransition.index)
+                is InternalControlTransition ->
+                    InternalControlState(controlTransition.branchIndex, controlTransition.value)
             }
 
             val executionState = ImperativeState(

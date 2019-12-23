@@ -1,10 +1,27 @@
 
+#######################################################################################################################
 
 ScriptController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.script.ScriptController$Wrapper
   archetype: Script
   stepController: StepController
+  scriptCommander: ScriptCommander
+
+
+################################################################
+
+
+ScriptCommander:
+  class: tech.kzen.auto.client.objects.document.script.command.ScriptCommander
+  meta:
+    stepCommanders: ChildList
+
+
+StepCommander:
+  abstract: true
+  is: ParentPointer
+  class: tech.kzen.auto.client.objects.document.script.command.StepCommander
 
 
 ################################################################
@@ -46,6 +63,7 @@ ConditionalStepDisplay:
   is: StepDisplay
   class: tech.kzen.auto.client.objects.document.script.step.display.ConditionalStepDisplay$Wrapper
   stepControllerHandle: StepControllerHandle
+  scriptCommander: ScriptCommander
 
 
 ################################################################
@@ -101,6 +119,12 @@ NumberLiteralTool:
   is: RibbonTool
   parent: InputOutputGroup
   delegate: NumberLiteral
+
+
+NumberRangeTool:
+  is: RibbonTool
+  parent: InputOutputGroup
+  delegate: NumberRange
 
 
 ReferenceActionTool:
@@ -180,25 +204,6 @@ GoToTool:
   is: RibbonTool
   parent: BrowserGroup
   delegate: GoTo
-
-
-#LeftClickTool:
-#  is: RibbonTool
-#  parent: BrowserGroup
-#  delegate: LeftClick
-
-
-#SendKeysTool:
-#  is: RibbonTool
-#  parent: BrowserGroup
-#  delegate: SendKeys
-
-
-
-#FormSubmitTool:
-#  is: RibbonTool
-#  parent: BrowserGroup
-#  delegate: FormSubmit
 
 
 VisualClickTool:

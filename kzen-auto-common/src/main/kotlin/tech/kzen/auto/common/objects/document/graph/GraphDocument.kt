@@ -10,11 +10,9 @@ import tech.kzen.lib.common.model.attribute.AttributePath
 @Suppress("unused")
 class GraphDocument(
         val vertices: List<Dataflow<*>>,
-        val edges: List<EdgeDescriptor>//,
-
-//        objectLocation: ObjectLocation
+        val edges: List<EdgeDescriptor>
 ):
-        DocumentArchetype(/*objectLocation*/)
+        DocumentArchetype()
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

@@ -1,20 +1,4 @@
 
-TargetSpec:
-  abstract: true
-  class: tech.kzen.auto.common.objects.document.feature.TargetSpec
-  meta:
-    ref:
-      by: TargetSpecDefiner
-      creator: TargetSpecCreator
-      editor: TargetSpecEditor
-
-TargetSpecCreator:
-  class: tech.kzen.auto.common.objects.document.feature.TargetSpecCreator
-
-TargetSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
-
-
 ###########################################################
 
 
@@ -35,6 +19,25 @@ ControlFlow:
   is: Action
   class: tech.kzen.auto.common.paradigm.imperative.api.ControlFlow
   description: "Control flow"
+
+
+###########################################################
+
+
+TargetSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.feature.TargetSpec
+  meta:
+    ref:
+      by: TargetSpecDefiner
+      creator: TargetSpecCreator
+      editor: TargetSpecEditor
+
+TargetSpecCreator:
+  class: tech.kzen.auto.common.objects.document.feature.TargetSpecCreator
+
+TargetSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
 
 
 ###########################################################

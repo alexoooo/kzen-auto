@@ -1,14 +1,11 @@
 package tech.kzen.auto.server.objects.script.control
 
-import tech.kzen.auto.common.paradigm.common.model.BooleanExecutionValue
-import tech.kzen.auto.common.paradigm.imperative.api.ControlFlow
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
+import tech.kzen.auto.common.paradigm.common.model.*
+import tech.kzen.auto.common.paradigm.imperative.api.ScriptControl
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.imperative.model.control.*
+import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import java.lang.IllegalStateException
 
 
 @Suppress("unused")
@@ -16,7 +13,7 @@ class ConditionalExpression(
         private val condition: ObjectLocation,
         private val then: List<ObjectLocation>,
         private val `else`: List<ObjectLocation>
-) : ControlFlow {
+): ScriptControl {
     override fun control(
             imperativeModel: ImperativeModel,
             controlState: ControlState
@@ -34,10 +31,10 @@ class ConditionalExpression(
                             1
                         }
 
-                BranchExecutionTransition(branchIndex)
+                InternalControlTransition(branchIndex, NullExecutionValue)
             }
 
-            is BranchEvaluationState ->
+            is InternalControlState ->
                 EvaluateControlTransition
 
             else ->
@@ -47,7 +44,8 @@ class ConditionalExpression(
 
 
     override suspend fun perform(
-            imperativeModel: ImperativeModel
+            imperativeModel: ImperativeModel,
+            graphInstance: GraphInstance
     ): ExecutionResult {
         val conditionResult = result(condition, imperativeModel) as? ExecutionSuccess
         val conditionValue = (conditionResult?.value as? BooleanExecutionValue)?.value ?: false

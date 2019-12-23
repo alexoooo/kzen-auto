@@ -59,6 +59,9 @@ DivisibleCheck:
     divisor: Int
 
 
+################################################################
+
+
 ConditionalExpression:
   abstract: true
   is: ControlFlow
@@ -83,6 +86,38 @@ ConditionalExpression:
       of: ObjectLocation
       by: Nominal
       branch: 1
+
+
+################################################################
+
+
+ListItem:
+  abstract: true
+  class: tech.kzen.auto.server.objects.script.control.ListItem
+  icon: Share
+  title: "Item"
+  meta:
+    selfLocation: SelfLocation
+
+
+ListMapping:
+  abstract: true
+  is: ControlFlow
+  class: tech.kzen.auto.server.objects.script.control.ListMapping
+  icon: Share
+  title: "If"
+#  display: ConditionalStepDisplay
+  steps: []
+  meta:
+    items:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+    steps:
+      is: List
+      of: ObjectLocation
+      by: Nominal
+      branch: 0
 
 
 ################################################################
@@ -121,3 +156,16 @@ DisplayValue:
       is: ObjectLocation
       by: Nominal
       editor: SelectStepEditor
+
+
+NumberRange:
+  abstract: true
+  is: Action
+  class: tech.kzen.auto.server.objects.script.NumberRange
+  icon: TripOrigin
+  title: "Range"
+  from: 1
+  to: 10
+  meta:
+    from: Int
+    to: Int

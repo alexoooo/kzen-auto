@@ -3,19 +3,21 @@ package tech.kzen.auto.server.objects.script.browser
 import org.openqa.selenium.OutputType
 import tech.kzen.auto.common.objects.document.feature.TargetSpec
 import tech.kzen.auto.common.paradigm.common.model.*
-import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
+import tech.kzen.auto.common.paradigm.imperative.api.ScriptStep
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.vision.VisionUtils
+import tech.kzen.lib.common.model.instance.GraphInstance
 
 
 @Suppress("unused")
 class VisualSendKeys(
         private val text: String,
         private val target: TargetSpec
-): ExecutionAction {
+): ScriptStep {
     override suspend fun perform(
-            imperativeModel: ImperativeModel
+            imperativeModel: ImperativeModel,
+            graphInstance: GraphInstance
     ): ExecutionResult {
         val driver = ServerContext.webDriverContext.get()
 

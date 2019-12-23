@@ -13,6 +13,7 @@ interface ActionExecutor {
     ): ExecutionResult
 
 
+    // TODO: use ControlResult?
     suspend fun control(
             actionLocation: ObjectLocation,
             imperativeModel: ImperativeModel

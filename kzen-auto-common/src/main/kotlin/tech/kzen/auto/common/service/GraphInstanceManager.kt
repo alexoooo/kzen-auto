@@ -7,6 +7,7 @@ import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
+// TODO: one instance per execution frame (Graph)
 class GraphInstanceManager(
         private val graphStore: LocalGraphStore,
         private val graphCreator: GraphCreator)

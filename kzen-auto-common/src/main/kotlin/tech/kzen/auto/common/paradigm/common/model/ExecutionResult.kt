@@ -53,6 +53,10 @@ data class ExecutionSuccess(
 ): ExecutionResult() {
     companion object {
         val empty = ExecutionSuccess(NullExecutionValue, NullExecutionValue)
+
+        fun ofValue(value: ExecutionValue): ExecutionSuccess {
+            return ExecutionSuccess(value, NullExecutionValue)
+        }
     }
 
     override fun toCollection(): Map<String, Any?> {

@@ -17,13 +17,13 @@ class CountSink(
     )
 
 
-    override fun inspectState(state: State): ExecutionValue {
-        return ExecutionValue.of(state.count)
+    override fun initialState(): State {
+        return State()
     }
 
 
-    override fun initialState(): State {
-        return State()
+    override fun inspectState(state: State): ExecutionValue {
+        return ExecutionValue.of(state.count)
     }
 
 

@@ -1,24 +1,20 @@
 package tech.kzen.auto.common.objects.document.script
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.auto.common.paradigm.imperative.api.ExecutionAction
+import tech.kzen.auto.common.paradigm.imperative.api.ScriptStep
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.ObjectNotation
-import tech.kzen.lib.common.model.structure.notation.PositionIndex
-import tech.kzen.lib.common.model.structure.notation.cqrs.InsertObjectInListAttributeCommand
 
 
 @Suppress("unused")
 class ScriptDocument(
-        val steps: List<ExecutionAction>/*,
-        objectLocation: ObjectLocation*/
+        val steps: List<ScriptStep>
 ):
-        DocumentArchetype(/*objectLocation*/)
+        DocumentArchetype()
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -26,37 +22,37 @@ class ScriptDocument(
         val stepsAttributePath = AttributePath.ofName(stepsAttributeName)
 
 
-        fun createCommand(
-                containingObjectLocation: ObjectLocation,
-                containingAttributePath: AttributePath,
-                indexInContainingAttribute: Int,
-                archetypeObjectLocation: ObjectLocation,
-                graphStructure: GraphStructure
-        ): InsertObjectInListAttributeCommand {
-            val newName = findNextAvailable(
-                    containingObjectLocation, archetypeObjectLocation, graphStructure)
-
-            // NB: +1 offset for main Script object
-            val endOfDocumentPosition = graphStructure
-                    .graphNotation
-                    .documents[containingObjectLocation.documentPath]!!
-                    .objects
-                    .notations
-                    .values
-                    .size
-
-            val objectNotation = ObjectNotation.ofParent(
-                    archetypeObjectLocation.toReference().name)
-
-            return InsertObjectInListAttributeCommand(
-                    containingObjectLocation,
-                    containingAttributePath,
-                    PositionIndex(indexInContainingAttribute),
-                    newName,
-                    PositionIndex(endOfDocumentPosition),
-                    objectNotation
-            )
-        }
+//        fun createCommand(
+//                containingObjectLocation: ObjectLocation,
+//                containingAttributePath: AttributePath,
+//                indexInContainingAttribute: Int,
+//                archetypeObjectLocation: ObjectLocation,
+//                graphStructure: GraphStructure
+//        ): InsertObjectInListAttributeCommand {
+//            val newName = findNextAvailable(
+//                    containingObjectLocation, archetypeObjectLocation, graphStructure)
+//
+//            // NB: +1 offset for main Script object
+//            val endOfDocumentPosition = graphStructure
+//                    .graphNotation
+//                    .documents[containingObjectLocation.documentPath]!!
+//                    .objects
+//                    .notations
+//                    .values
+//                    .size
+//
+//            val objectNotation = ObjectNotation.ofParent(
+//                    archetypeObjectLocation.toReference().name)
+//
+//            return InsertObjectInListAttributeCommand(
+//                    containingObjectLocation,
+//                    containingAttributePath,
+//                    PositionIndex(indexInContainingAttribute),
+//                    newName,
+//                    PositionIndex(endOfDocumentPosition),
+//                    objectNotation
+//            )
+//        }
 
 
         fun findNextAvailable(
