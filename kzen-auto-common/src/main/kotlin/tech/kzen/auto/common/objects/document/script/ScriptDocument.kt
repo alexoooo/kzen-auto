@@ -22,39 +22,6 @@ class ScriptDocument(
         val stepsAttributePath = AttributePath.ofName(stepsAttributeName)
 
 
-//        fun createCommand(
-//                containingObjectLocation: ObjectLocation,
-//                containingAttributePath: AttributePath,
-//                indexInContainingAttribute: Int,
-//                archetypeObjectLocation: ObjectLocation,
-//                graphStructure: GraphStructure
-//        ): InsertObjectInListAttributeCommand {
-//            val newName = findNextAvailable(
-//                    containingObjectLocation, archetypeObjectLocation, graphStructure)
-//
-//            // NB: +1 offset for main Script object
-//            val endOfDocumentPosition = graphStructure
-//                    .graphNotation
-//                    .documents[containingObjectLocation.documentPath]!!
-//                    .objects
-//                    .notations
-//                    .values
-//                    .size
-//
-//            val objectNotation = ObjectNotation.ofParent(
-//                    archetypeObjectLocation.toReference().name)
-//
-//            return InsertObjectInListAttributeCommand(
-//                    containingObjectLocation,
-//                    containingAttributePath,
-//                    PositionIndex(indexInContainingAttribute),
-//                    newName,
-//                    PositionIndex(endOfDocumentPosition),
-//                    objectNotation
-//            )
-//        }
-
-
         fun findNextAvailable(
                 containingObjectLocation: ObjectLocation,
                 archetypeObjectLocation: ObjectLocation,

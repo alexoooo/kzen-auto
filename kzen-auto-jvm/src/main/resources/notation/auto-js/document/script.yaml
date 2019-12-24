@@ -61,7 +61,14 @@ DefaultStepDisplay:
 
 ConditionalStepDisplay:
   is: StepDisplay
-  class: tech.kzen.auto.client.objects.document.script.step.display.ConditionalStepDisplay$Wrapper
+  class: tech.kzen.auto.client.objects.document.script.step.display.control.ConditionalStepDisplay$Wrapper
+  stepControllerHandle: StepControllerHandle
+  scriptCommander: ScriptCommander
+
+
+MappingStepDisplay:
+  is: StepDisplay
+  class: tech.kzen.auto.client.objects.document.script.step.display.control.MappingStepDisplay$Wrapper
   stepControllerHandle: StepControllerHandle
   scriptCommander: ScriptCommander
 
@@ -172,10 +179,19 @@ DivisibleCheckTool:
   delegate: DivisibleCheck
 
 
+#######################################################################################################################
+
+
 ConditionalExpressionTool:
   is: RibbonTool
   parent: LogicGroup
   delegate: ConditionalExpression
+
+
+ListMappingTool:
+  is: RibbonTool
+  parent: LogicGroup
+  delegate: ListMapping
 
 
 #######################################################################################################################

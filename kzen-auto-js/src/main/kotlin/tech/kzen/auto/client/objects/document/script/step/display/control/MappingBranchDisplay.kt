@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.script.step.display
+package tech.kzen.auto.client.objects.document.script.step.display.control
 
 import kotlinx.css.*
 import kotlinx.html.title
@@ -27,12 +27,12 @@ import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
-class ConditionalBranchDisplay(
+class MappingBranchDisplay(
         props: Props
 ):
         RPureComponent<
-                ConditionalBranchDisplay.Props,
-                ConditionalBranchDisplay.State
+                MappingBranchDisplay.Props,
+                MappingBranchDisplay.State
                 >(props),
         InsertionManager.Observer
 {
@@ -82,27 +82,14 @@ class ConditionalBranchDisplay(
 
 
     override fun componentDidMount() {
-//        console.log("^^^^^^ script - componentDidMount")
-
-//        println("ProjectController - Subscribed")
         async {
-            //            console.log("^^^^^^ script - adding observers")
-//            ClientContext.modelManager.observe(this)
-//            ClientContext.executionManager.observe(this)
             ClientContext.insertionManager.subscribe(this)
-//            ClientContext.navigationManager.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-//        console.log("^^^^^^ script - componentWillUnmount")
-
-//        println("ProjectController - Un-subscribed")
-//        ClientContext.modelManager.unobserve(this)
-//        ClientContext.executionManager.unobserve(this)
         ClientContext.insertionManager.unSubscribe(this)
-//        ClientContext.navigationManager.unobserve(this)
     }
 
 
@@ -159,8 +146,7 @@ class ConditionalBranchDisplay(
                 props.objectLocation,
                 props.branchAttributePath,
                 props.graphStructure
-        )
-                ?: return
+        ) ?: return
 
         if (stepLocations.isEmpty()) {
             styledDiv {
@@ -225,8 +211,6 @@ class ConditionalBranchDisplay(
 
 
     private fun RBuilder.renderNonEmptySteps(
-//            graphStructure: GraphStructure,
-//            documentPath: DocumentPath,
             stepLocations: List<ObjectLocation>
     ) {
         renderInsertionPoint(0)
@@ -237,14 +221,6 @@ class ConditionalBranchDisplay(
             }
 
             for ((index, stepLocation) in stepLocations.withIndex()) {
-//                val objectPath = stepLocation.objectPath
-
-//                +"Step: $stepLocation"
-//                val executionState: ImperativeState? =
-//                        props.execution?.frames?.lastOrNull()?.states?.get(objectPath)
-//
-//                val keyLocation = ObjectLocation(documentPath, objectPath)
-//
                 renderStep(index, stepLocation)
 
                 if (index < stepLocations.size - 1) {
@@ -305,8 +281,6 @@ class ConditionalBranchDisplay(
     private fun RBuilder.renderStep(
             index: Int,
             stepLocation: ObjectLocation
-//            graphStructure: GraphStructure,
-//            executionState: ImperativeState?
     ) {
         span {
             key = stepLocation.toReference().asString()

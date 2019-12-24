@@ -41,13 +41,12 @@ class ListMapping(
             }
 
             is InternalControlState -> {
+                val listIndex = (controlState.value as NumberExecutionValue).value.toInt()
 
-
-                if (controlState.branchIndex >= listValue.values.size - 1) {
+                if (listIndex >= listValue.values.size - 1) {
                     EvaluateControlTransition
                 }
                 else {
-                    val listIndex = (controlState.value as NumberExecutionValue).value.toInt()
                     val nextIndex = NumberExecutionValue((listIndex + 1).toDouble())
 
 //                    InternalControlTransition(0, controlState.branchIndex + 1)

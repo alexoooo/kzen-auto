@@ -104,9 +104,9 @@ ListMapping:
   abstract: true
   is: ControlFlow
   class: tech.kzen.auto.server.objects.script.control.ListMapping
-  icon: Share
-  title: "If"
-#  display: ConditionalStepDisplay
+  icon: Forward
+  title: "Mapping"
+  display: MappingStepDisplay
   steps: []
   meta:
     items:
