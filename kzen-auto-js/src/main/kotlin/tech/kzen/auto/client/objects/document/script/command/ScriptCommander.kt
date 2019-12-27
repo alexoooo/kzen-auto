@@ -13,6 +13,13 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 class ScriptCommander(
         stepCommanders: List<StepCommander>
 ) {
+//    companion object {
+//        fun createAsync() {
+//
+//        }
+//    }
+
+
     private val byArchetype: Map<ObjectLocation, StepCommander>
 
 
@@ -65,7 +72,7 @@ class ScriptCommander(
                     val additionalCommands =
                             stepCommander.additionalCommands(command, graphStructure)
 
-                    additionalCommands + command
+                    listOf(command) + additionalCommands
                 }
                 else {
                     listOf(command)

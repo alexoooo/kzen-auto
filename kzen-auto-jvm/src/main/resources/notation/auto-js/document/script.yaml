@@ -24,6 +24,21 @@ StepCommander:
   class: tech.kzen.auto.client.objects.document.script.command.StepCommander
 
 
+MappingCommander:
+  is: StepCommander
+  class: tech.kzen.auto.client.objects.document.script.step.display.control.MappingCommander
+  parent: ScriptCommander
+  stepArchetype: ListMapping
+  itemArchetype: ListItem
+  meta:
+    stepArchetype:
+      is: ObjectLocation
+      by: Nominal
+    itemArchetype:
+      is: ObjectLocation
+      by: Nominal
+
+
 ################################################################
 
 
@@ -156,7 +171,7 @@ PrintlnActionTool:
 
 LogicGroup:
   is: RibbonGroup
-  title: "Logic"
+  title: "Control"
   archetype: Script
 
 ###########################################################

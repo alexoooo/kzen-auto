@@ -93,6 +93,7 @@ ConditionalExpression:
 
 ListItem:
   abstract: true
+  is: Action
   class: tech.kzen.auto.server.objects.script.control.ListItem
   icon: Share
   title: "Item"

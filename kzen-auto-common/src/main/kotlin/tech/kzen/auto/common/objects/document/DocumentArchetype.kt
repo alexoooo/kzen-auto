@@ -56,17 +56,4 @@ abstract class DocumentArchetype(
             return DocumentObjectNotation(objectNotations)
         }
     }
-
-
-//    fun name(): ObjectName {
-//        return objectLocation.objectPath.name
-//    }
-
-
-//    fun newDocument(): DocumentNotation {
-//        val mainObjectNotation = ObjectNotation.ofParent(name())
-//        return DocumentNotation(ObjectPathMap(persistentMapOf(
-//                NotationConventions.mainObjectPath to mainObjectNotation
-//        )))
-//    }
 }
