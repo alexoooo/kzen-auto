@@ -2,7 +2,10 @@ package tech.kzen.auto.common.paradigm.imperative.service
 
 import kotlinx.coroutines.delay
 import tech.kzen.auto.common.paradigm.imperative.api.ScriptControl
-import tech.kzen.auto.common.paradigm.imperative.model.*
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeFrame
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.model.control.*
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -34,7 +37,7 @@ class ExecutionManager(
     //-----------------------------------------------------------------------------------------------------------------
     private val observers = mutableSetOf<Observer>()
     private var models: PersistentMap<DocumentPath, ImperativeModel> = persistentMapOf()
-//    private var version = 0
+    private var controlTrees = mutableMapOf<DocumentPath, BranchControlNode>()
 
 
     private suspend fun modelOrInit(host: DocumentPath): ImperativeModel {
@@ -100,6 +103,8 @@ class ExecutionManager(
             val newModels = apply(host, event, graphStructure)
 
             if (models != newModels) {
+                controlTrees[host] = ControlTree.readSteps(graphStructure, host)
+
                 models = newModels
                 if (host in models) {
                     publishExecutionModel(host, models[host]!!)
@@ -215,11 +220,11 @@ class ExecutionManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun isExecuting(
-            host: DocumentPath
-    ): Boolean {
-        return modelOrInit(host).containsStatus(ImperativePhase.Running)
-    }
+//    suspend fun isExecuting(
+//            host: DocumentPath
+//    ): Boolean {
+//        return modelOrInit(host).containsStatus(ImperativePhase.Running)
+//    }
 
 
     suspend fun executionModel(
@@ -246,7 +251,10 @@ class ExecutionManager(
             host: DocumentPath,
             graphStructure: GraphStructure
     ): Digest {
-        val initialState = initializeFrame(host, graphStructure)
+        val controlTree = ControlTree.readSteps(graphStructure, host)
+        controlTrees[host] = controlTree
+
+        val initialState = initializeFrame(controlTree)
 
         val frame = ImperativeFrame(host, initialState.toPersistentMap())
         val executionModel = ImperativeModel(persistentListOf(frame))
@@ -260,18 +268,27 @@ class ExecutionManager(
 
 
     private fun initializeFrame(
-            host: DocumentPath,
-            graphStructure: GraphStructure
+            controlTree: BranchControlNode
     ): PersistentMap<ObjectPath, ImperativeState> {
-        val controlTree = ControlTree.readSteps(graphStructure, host)
-
         val values = mutableMapOf<ObjectPath, ImperativeState>()
 
-        controlTree.traverseDepthFirst { stepObjectLocation ->
-            values[stepObjectLocation.objectPath] = initialState(stepObjectLocation, graphStructure)
+        controlTree.traverseDepthFirstNodes { node ->
+            values[node.step.objectPath] = initialState(node)
         }
 
         return values.toPersistentMap()
+    }
+
+
+    private fun initialState(
+            controlNode: StepControlNode
+    ): ImperativeState {
+        return if (controlNode.branches.isNotEmpty()) {
+            ImperativeState.initialControlFlow
+        }
+        else {
+            ImperativeState.initialSingular
+        }
     }
 
 
@@ -297,6 +314,7 @@ class ExecutionManager(
         val inheritanceChain = graphStructure.graphNotation.inheritanceChain(objectLocation)
         return inheritanceChain.any { it.objectPath.name == ScriptControl.objectName }
     }
+
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -330,7 +348,7 @@ class ExecutionManager(
             )
 
             val digest = modelOrInit(host).digest()
-            didExecute(host, objectLocation, executionState)
+            didExecute(host, objectLocation, executionState, null)
             return ImperativeResponse(result, null, digest)
         }
         else {
@@ -351,8 +369,12 @@ class ExecutionManager(
                     controlState
             )
 
+            val branchReset =
+                    (controlState as? InternalControlState)?.branchIndex
+
+            didExecute(host, objectLocation, executionState, branchReset)
+
             val digest = modelOrInit(host).digest()
-            didExecute(host, objectLocation, executionState)
             return ImperativeResponse(null, controlTransition, digest)
         }
     }
@@ -389,7 +411,8 @@ class ExecutionManager(
     private suspend fun didExecute(
             host: DocumentPath,
             objectLocation: ObjectLocation,
-            executionState: ImperativeState
+            executionState: ImperativeState,
+            branchReset: Int?
     ) {
         val model = modelOrInit(host)
         val existingFrame = model.findLast(objectLocation)
@@ -400,10 +423,26 @@ class ExecutionManager(
         val updatedFrame = upsertFrame.set(
                 objectLocation.objectPath,
                 executionState)
-//        upsertFrame.states[objectLocation.objectPath] = executionState
+
+        val clearedFrame =
+                if (branchReset != null) {
+                    val controlTree = controlTrees[host]!!
+                    val controlNode = controlTree.find(objectLocation)!!
+                    val branch = controlNode.branches[branchReset]
+
+                    var buffer = updatedFrame.states
+                    branch.traverseDepthFirstNodes { node ->
+                        val state = initialState(node)
+                        buffer = buffer.put(node.step.objectPath, state)
+                    }
+                    updatedFrame.copy(states = buffer)
+                }
+                else {
+                    updatedFrame
+                }
 
         val updatedModel = ImperativeModel(
-                model.frames.set(model.frames.size - 1, updatedFrame))
+                model.frames.set(model.frames.size - 1, clearedFrame))
 
         models = models.put(host, updatedModel)
 

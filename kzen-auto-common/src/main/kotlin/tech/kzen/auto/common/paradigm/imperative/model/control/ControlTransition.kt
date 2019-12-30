@@ -31,7 +31,8 @@ sealed class ControlTransition {
                 mapOf()
 
             is InternalControlTransition ->
-                mapOf(branchKey to branchIndex)
+                mapOf(branchKey to branchIndex,
+                        valueKey to value.toCollection())
         }
     }
 }

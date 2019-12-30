@@ -101,12 +101,41 @@ data class BranchControlNode(
     }
 
 
-    fun traverseDepthFirst(visitor: (ObjectLocation) -> Unit) {
+    fun find(objectLocation: ObjectLocation): StepControlNode? {
+        for (node in nodes) {
+            if (node.step == objectLocation) {
+                return node
+            }
+
+            for (branch in node.branches) {
+                val match = branch.find(objectLocation)
+                if (match != null) {
+                    return match
+                }
+            }
+        }
+
+        return null
+    }
+
+
+    fun traverseDepthFirstNodes(visitor: (StepControlNode) -> Unit) {
+        for (node in nodes) {
+            visitor.invoke(node)
+
+            for (branch in node.branches) {
+                branch.traverseDepthFirstNodes(visitor)
+            }
+        }
+    }
+
+
+    fun traverseDepthFirstLocations(visitor: (ObjectLocation) -> Unit) {
         for (node in nodes) {
             visitor.invoke(node.step)
 
             for (branch in node.branches) {
-                branch.traverseDepthFirst(visitor)
+                branch.traverseDepthFirstLocations(visitor)
             }
         }
     }

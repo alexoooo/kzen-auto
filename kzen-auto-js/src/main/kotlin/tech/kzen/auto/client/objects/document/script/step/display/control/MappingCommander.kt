@@ -19,6 +19,7 @@ class MappingCommander(
         return setOf(stepArchetype)
     }
 
+
     override fun additionalCommands(
             createStepCommand: InsertObjectInListAttributeCommand,
             graphStructure: GraphStructure
@@ -28,7 +29,7 @@ class MappingCommander(
         val newName = ScriptDocument.findNextAvailable(
                 containingObjectLocation, itemArchetype, graphStructure)
 
-        // NB: +1 offset for main Script object
+        // NB: +2 offset for main Script object plus parent
         val endOfDocumentPosition = graphStructure
                 .graphNotation
                 .documents[containingObjectLocation.documentPath]!!
@@ -36,6 +37,7 @@ class MappingCommander(
                 .notations
                 .values
                 .size
+                + 1
 
         val objectNotation = ObjectNotation.ofParent(
                 itemArchetype.objectPath.name)

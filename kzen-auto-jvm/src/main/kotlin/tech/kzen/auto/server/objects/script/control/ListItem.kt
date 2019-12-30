@@ -1,9 +1,6 @@
 package tech.kzen.auto.server.objects.script.control
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.common.model.ListExecutionValue
+import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.imperative.api.ScriptStep
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.control.InternalControlState
@@ -35,7 +32,7 @@ class ListItem(
         val parentInternal =  parentControl as? InternalControlState
                 ?: return ExecutionFailure("Parent internals not found")
 
-        val listIndex = parentInternal.branchIndex
+        val listIndex = (parentInternal.value as NumberExecutionValue).value.toInt()
 
         val listLocation = graphInstance[parentLocation]!!
                 .constructorAttributes[ListMapping.itemsAttributeName]
