@@ -8,8 +8,16 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 
 
 open class StepDisplayProps(
-        var graphStructure: GraphStructure,
-        var objectLocation: ObjectLocation,
-        var attributeNesting: AttributeNesting,
-        var imperativeModel: ImperativeModel
-): RProps
+        var common: Common
+): RProps {
+    data class Common(
+            var graphStructure: GraphStructure,
+            var objectLocation: ObjectLocation,
+            var attributeNesting: AttributeNesting,
+            var imperativeModel: ImperativeModel,
+
+            var managed: Boolean = false,
+            var first: Boolean = false,
+            var last: Boolean = false
+    )
+}

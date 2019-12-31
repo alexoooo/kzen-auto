@@ -19,15 +19,12 @@ import tech.kzen.auto.client.wrap.MaterialPaper
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.paradigm.common.model.*
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.platform.IoUtils
 
@@ -47,13 +44,8 @@ class DefaultStepDisplay(
     class Props(
             var attributeController: AttributeController.Wrapper,
 
-            graphStructure: GraphStructure,
-            objectLocation: ObjectLocation,
-            attributeNesting: AttributeNesting,
-            imperativeModel: ImperativeModel
-    ): StepDisplayProps(
-            graphStructure, objectLocation, attributeNesting, imperativeModel
-    )
+            common: Common
+    ): StepDisplayProps(common)
 
 
     class State(
@@ -110,11 +102,11 @@ class DefaultStepDisplay(
 
             attrs {
                 onMouseOverFunction = {
-                    onMouseOver(/*true*/)
+                    onMouseOver()
                 }
 
                 onMouseOutFunction = {
-                    onMouseOut(/*true*/)
+                    onMouseOut()
                 }
             }
 
@@ -125,16 +117,21 @@ class DefaultStepDisplay(
 
     private fun RBuilder.renderCard() {
         val imperativeState = props
+                .common
                 .imperativeModel
                 .frames
                 .lastOrNull()
                 ?.states
-                ?.get(props.objectLocation.objectPath)
+                ?.get(props.common.objectLocation.objectPath)
         val nextToRun = ImperativeUtils.next(
-                props.graphStructure, props.imperativeModel)
-        val isNextToRun = props.objectLocation == nextToRun
+                props.common.graphStructure, props.common.imperativeModel)
+        val isNextToRun = props.common.objectLocation == nextToRun
 
-        val objectMetadata = props.graphStructure.graphMetadata.objectMetadata[props.objectLocation]!!
+        val objectMetadata = props
+                .common
+                .graphStructure
+                .graphMetadata
+                .objectMetadata[props.common.objectLocation]!!
 
         val reactStyles = reactStyle {
             val cardColor = when (imperativeState?.phase()) {
@@ -172,11 +169,15 @@ class DefaultStepDisplay(
                     attrs {
                         hoverSignal = this@DefaultStepDisplay.hoverSignal
 
-                        attributeNesting = props.attributeNesting
-                        objectLocation = props.objectLocation
-                        graphStructure = props.graphStructure
+                        attributeNesting = props.common.attributeNesting
+                        objectLocation = props.common.objectLocation
+                        graphStructure = props.common.graphStructure
 
                         this.imperativeState = imperativeState
+
+                        managed = props.common.managed
+                        first = props.common.first
+                        last = props.common.last
                     }
                 }
 
@@ -198,7 +199,7 @@ class DefaultStepDisplay(
             imperativeState: ImperativeState?
     ) {
         for (e in objectMetadata.attributes.values) {
-            if (AutoConventions.isManaged(e.key)) {
+            if (AutoConventions.isManaged(e.key) || props.common.managed) {
                 continue
             }
 
@@ -299,8 +300,8 @@ class DefaultStepDisplay(
     ) {
         props.attributeController.child(this) {
             attrs {
-                this.graphStructure = props.graphStructure
-                this.objectLocation = props.objectLocation
+                this.graphStructure = props.common.graphStructure
+                this.objectLocation = props.common.objectLocation
                 this.attributeName = attributeName
             }
         }

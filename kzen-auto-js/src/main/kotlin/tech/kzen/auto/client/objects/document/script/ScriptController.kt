@@ -10,6 +10,7 @@ import styled.styledSpan
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
+import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.service.NavigationManager
@@ -335,7 +336,8 @@ class ScriptController:
                         index,
                         keyLocation,
                         graphStructure,
-                        imperativeModel)
+                        imperativeModel,
+                        stepLocations.size)
 
                 if (index < stepLocations.size - 1) {
                     downArrowWithInsertionPoint(index + 1)
@@ -426,17 +428,21 @@ class ScriptController:
             index: Int,
             objectLocation: ObjectLocation,
             graphStructure: GraphStructure,
-            imperativeModel: ImperativeModel
+            imperativeModel: ImperativeModel,
+            stepCount: Int
     ) {
         span {
             key = objectLocation.toReference().asString()
 
             props.stepController.child(this) {
                 attrs {
-                    attributeNesting = AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index)))
-                    this.objectLocation = objectLocation
-                    this.graphStructure = graphStructure
-                    this.imperativeModel = imperativeModel
+                    common = StepDisplayProps.Common(
+                            graphStructure,
+                            objectLocation,
+                            AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
+                            imperativeModel,
+                            first = index == 0,
+                            last = index == stepCount - 1)
                 }
             }
         }

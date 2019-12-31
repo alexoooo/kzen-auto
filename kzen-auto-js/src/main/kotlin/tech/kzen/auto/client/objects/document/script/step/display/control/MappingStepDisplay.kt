@@ -22,14 +22,11 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.model.control.InternalControlState
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 
 
 @Suppress("unused")
@@ -42,12 +39,10 @@ class MappingStepDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val itemsAttributeName = AttributeName("items")
-//        private val thenAttributeName = AttributeName("then")
-//        private val elseAttributeName = AttributeName("else")
+
         private val stepWidth = 18.em
         private val overlapTop = 4.px
     }
-
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -56,13 +51,8 @@ class MappingStepDisplay(
             var scriptCommander: ScriptCommander,
             var stepControllerHandle: StepController.Handle,
 
-            graphStructure: GraphStructure,
-            objectLocation: ObjectLocation,
-            attributeNesting: AttributeNesting,
-            imperativeModel: ImperativeModel
-    ) : StepDisplayProps(
-            graphStructure, objectLocation, attributeNesting, imperativeModel
-    )
+            common: Common
+    ): StepDisplayProps(common)
 
 
     @Suppress("unused")
@@ -110,16 +100,17 @@ class MappingStepDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val imperativeState = props
+                .common
                 .imperativeModel
                 .frames
                 .lastOrNull()
                 ?.states
-                ?.get(props.objectLocation.objectPath)
+                ?.get(props.common.objectLocation.objectPath)
 
         val nextToRun = ImperativeUtils.next(
-                props.graphStructure, props.imperativeModel)
+                props.common.graphStructure, props.common.imperativeModel)
 
-        val isNextToRun = nextToRun == props.objectLocation
+        val isNextToRun = nextToRun == props.common.objectLocation
 
         styledTable {
             css {
@@ -153,7 +144,6 @@ class MappingStepDisplay(
                     }
 
                     td {}
-//                    td {}
                 }
 
 
@@ -168,12 +158,11 @@ class MappingStepDisplay(
                         renderReference(isNextToRun, imperativeState)
                     }
                     styledTd {
-                        css {
+//                        css {
 //                            borderWidth = 1.px
 //                            borderStyle = BorderStyle.solid
-
 //                            padding(0.px)
-                        }
+//                        }
 
                         renderBranch()
                     }
@@ -211,9 +200,9 @@ class MappingStepDisplay(
                 attrs {
                     hoverSignal = this@MappingStepDisplay.hoverSignal
 
-                    attributeNesting = props.attributeNesting
-                    objectLocation = props.objectLocation
-                    graphStructure = props.graphStructure
+                    attributeNesting = props.common.attributeNesting
+                    objectLocation = props.common.objectLocation
+                    graphStructure = props.common.graphStructure
 
                     this.imperativeState = imperativeState
                 }
@@ -253,8 +242,8 @@ class MappingStepDisplay(
 
             props.attributeController.child(this) {
                 attrs {
-                    this.graphStructure = props.graphStructure
-                    this.objectLocation = props.objectLocation
+                    this.graphStructure = props.common.graphStructure
+                    this.objectLocation = props.common.objectLocation
                     this.attributeName = itemsAttributeName
                 }
             }
@@ -301,9 +290,9 @@ class MappingStepDisplay(
                         this.stepController = props.stepControllerHandle.wrapper!!
                         this.scriptCommander = props.scriptCommander
 
-                        this.graphStructure = props.graphStructure
-                        this.objectLocation = props.objectLocation
-                        this.imperativeModel = props.imperativeModel
+                        this.graphStructure = props.common.graphStructure
+                        this.objectLocation = props.common.objectLocation
+                        this.imperativeModel = props.common.imperativeModel
                     }
                 }
             }

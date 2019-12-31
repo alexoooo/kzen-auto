@@ -97,6 +97,7 @@ ListItem:
   class: tech.kzen.auto.server.objects.script.control.ListItem
   icon: Share
   title: "Item"
+#  display: MappingItemDisplay
   meta:
     selfLocation: SelfLocation
 

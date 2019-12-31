@@ -12,6 +12,7 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
+import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.util.async
@@ -221,7 +222,7 @@ class ConditionalBranchDisplay(
             }
 
             for ((index, stepLocation) in stepLocations.withIndex()) {
-                renderStep(index, stepLocation)
+                renderStep(index, stepLocation, stepLocations.size)
 
                 if (index < stepLocations.size - 1) {
                     renderDownArrowWithInsertionPoint(index + 1)
@@ -280,19 +281,23 @@ class ConditionalBranchDisplay(
 
     private fun RBuilder.renderStep(
             index: Int,
-            stepLocation: ObjectLocation
+            stepLocation: ObjectLocation,
+            stepCount: Int
     ) {
         span {
             key = stepLocation.toReference().asString()
 
             props.stepController.child(this) {
                 attrs {
+                    common = StepDisplayProps.Common(
+                            props.graphStructure,
+                            stepLocation,
+                            AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
+                            props.imperativeModel,
 
-                    attributeNesting = AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index)))
-
-                    objectLocation = stepLocation
-                    graphStructure = props.graphStructure
-                    imperativeModel = props.imperativeModel
+                            first = index == 0,
+                            last = index == stepCount - 1
+                    )
                 }
             }
         }

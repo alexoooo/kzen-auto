@@ -87,6 +87,10 @@ MappingStepDisplay:
   stepControllerHandle: StepControllerHandle
   scriptCommander: ScriptCommander
 
+#MappingItemDisplay:
+#  is: StepDisplay
+#  class: tech.kzen.auto.client.objects.document.script.step.display.control.MappingItemDisplay$Wrapper
+
 
 ################################################################
 

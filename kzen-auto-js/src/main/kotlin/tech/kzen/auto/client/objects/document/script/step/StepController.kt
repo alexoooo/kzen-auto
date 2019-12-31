@@ -2,14 +2,11 @@ package tech.kzen.auto.client.objects.document.script.step
 
 import react.*
 import tech.kzen.auto.client.api.ReactWrapper
+import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.lib.common.model.attribute.AttributeNesting
-import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.structure.GraphStructure
 
 
 class StepController(
@@ -21,10 +18,7 @@ class StepController(
     class Props(
             var stepDisplays: List<StepDisplayWrapper>,
 
-            var graphStructure: GraphStructure,
-            var objectLocation: ObjectLocation,
-            var attributeNesting: AttributeNesting,
-            var imperativeModel: ImperativeModel
+            var common: StepDisplayProps.Common
     ): RProps
 
 
@@ -64,18 +58,15 @@ class StepController(
 //        +">> ${props.objectLocation.asString()}"
 
         val displayWrapperName = ObjectName(
-                props.graphStructure.graphNotation.getString(
-                        props.objectLocation, AutoConventions.displayAttributePath))
+                props.common.graphStructure.graphNotation.getString(
+                        props.common.objectLocation, AutoConventions.displayAttributePath))
 
         val displayWrapper = props.stepDisplays.find { it.name() == displayWrapperName }
                 ?: throw IllegalStateException("Step display not found: $displayWrapperName")
 
         displayWrapper.child(this) {
             attrs {
-                graphStructure = props.graphStructure
-                objectLocation = props.objectLocation
-                attributeNesting = props.attributeNesting
-                imperativeModel = props.imperativeModel
+                common = props.common
             }
         }
     }

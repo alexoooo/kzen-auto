@@ -56,7 +56,11 @@ class StepHeader(
             var objectLocation: ObjectLocation,
             var graphStructure: GraphStructure,
 
-            var imperativeState: ImperativeState?
+            var imperativeState: ImperativeState?,
+
+            var managed: Boolean = false,
+            var first: Boolean = false,
+            var last: Boolean = false
     ): RProps
 
 
@@ -502,28 +506,36 @@ class StepHeader(
             +"Rename"
         }
 
-        child(MaterialMenuItem::class) {
-            attrs {
-                onClick = ::onShiftUp
-            }
-            child(KeyboardArrowUpIcon::class) {
-                attrs {
-                    style = iconStyle
-                }
-            }
-            +"Move up"
+        if (props.managed) {
+            return
         }
 
-        child(MaterialMenuItem::class) {
-            attrs {
-                onClick = ::onShiftDown
-            }
-            child(KeyboardArrowDownIcon::class) {
+        if (! props.first) {
+            child(MaterialMenuItem::class) {
                 attrs {
-                    style = iconStyle
+                    onClick = ::onShiftUp
                 }
+                child(KeyboardArrowUpIcon::class) {
+                    attrs {
+                        style = iconStyle
+                    }
+                }
+                +"Move up"
             }
-            +"Move down"
+        }
+
+        if (! props.last) {
+            child(MaterialMenuItem::class) {
+                attrs {
+                    onClick = ::onShiftDown
+                }
+                child(KeyboardArrowDownIcon::class) {
+                    attrs {
+                        style = iconStyle
+                    }
+                }
+                +"Move down"
+            }
         }
 
         child(MaterialMenuItem::class) {

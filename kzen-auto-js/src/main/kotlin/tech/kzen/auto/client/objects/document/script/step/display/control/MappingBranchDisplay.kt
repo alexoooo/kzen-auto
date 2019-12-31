@@ -12,6 +12,7 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
+import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.InsertionManager
 import tech.kzen.auto.client.util.async
@@ -148,27 +149,7 @@ class MappingBranchDisplay(
                 props.graphStructure
         ) ?: return
 
-        if (stepLocations.isEmpty()) {
-            styledDiv {
-                css {
-//                    paddingTop = 2.em
-                    marginTop = (-2).em
-                    paddingLeft = 1.em
-                }
-
-                styledDiv {
-                    css {
-                        width = 10.em
-                        fontSize = 1.5.em
-                    }
-
-                    +"Empty, please add steps"
-                }
-
-                renderInsertionPoint(0)
-            }
-        }
-        else {
+        if (stepLocations.isNotEmpty()) {
             styledDiv {
                 css {
                     paddingLeft = 1.em
@@ -213,15 +194,13 @@ class MappingBranchDisplay(
     private fun RBuilder.renderNonEmptySteps(
             stepLocations: List<ObjectLocation>
     ) {
-        renderInsertionPoint(0)
-
         styledDiv {
             css {
                 width = 20.em
             }
 
             for ((index, stepLocation) in stepLocations.withIndex()) {
-                renderStep(index, stepLocation)
+                renderStep(index, stepLocation, stepLocations.size)
 
                 if (index < stepLocations.size - 1) {
                     renderDownArrowWithInsertionPoint(index + 1)
@@ -280,19 +259,24 @@ class MappingBranchDisplay(
 
     private fun RBuilder.renderStep(
             index: Int,
-            stepLocation: ObjectLocation
+            stepLocation: ObjectLocation,
+            stepCount: Int
     ) {
         span {
             key = stepLocation.toReference().asString()
 
             props.stepController.child(this) {
                 attrs {
+                    common = StepDisplayProps.Common(
+                            props.graphStructure,
+                            stepLocation,
+                            AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
+                            props.imperativeModel,
 
-                    attributeNesting = AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index)))
-
-                    objectLocation = stepLocation
-                    graphStructure = props.graphStructure
-                    imperativeModel = props.imperativeModel
+                            managed = index == 0,
+                            first = index == 1,
+                            last = index == stepCount - 1
+                    )
                 }
             }
         }
