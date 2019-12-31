@@ -1,14 +1,23 @@
 package tech.kzen.auto.common.paradigm.common.model
 
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.Digestible
 import tech.kzen.lib.platform.IoUtils
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class ExecutionValue {
+sealed class ExecutionValue: Digestible {
     companion object {
         private const val typeKey = "type"
         private const val valueKey = "value"
+
+        private const val nullType = "null"
+        private const val textType = "text"
+        private const val booleanType = "boolean"
+        private const val numberType = "number"
+        private const val binaryType = "binary"
+        private const val listType = "list"
+        private const val mapType = "map"
 
 
         fun of(value: Any?): ExecutionValue {
@@ -61,24 +70,24 @@ sealed class ExecutionValue {
                 null ->
                     throw IllegalArgumentException("'${typeKey}' missing: $asCollection")
 
-                "null" ->
+                nullType ->
                     NullExecutionValue
 
-                "text" ->
+                textType ->
                     TextExecutionValue(asCollection[valueKey] as String)
 
-                "boolean" ->
+                booleanType ->
                     BooleanExecutionValue(asCollection[valueKey] as Boolean)
 
-                "number" ->
+                numberType ->
                     NumberExecutionValue(
                             asCollection[valueKey] as Double)
 
-                "binary" ->
+                binaryType ->
                     BinaryExecutionValue(
                             IoUtils.base64Decode(asCollection[valueKey] as String))
 
-                "list" ->
+                listType ->
                     ListExecutionValue(
                             (asCollection[valueKey] as List<*>).map {
                                 @Suppress("UNCHECKED_CAST")
@@ -86,7 +95,7 @@ sealed class ExecutionValue {
                             }
                     )
 
-                "map" ->
+                mapType ->
                     MapExecutionValue(
                             (asCollection[valueKey] as Map<*, *>).map{
                                 @Suppress("UNCHECKED_CAST")
@@ -130,25 +139,25 @@ sealed class ExecutionValue {
     fun toCollection(): Map<String, Any> {
         return when (this) {
             NullExecutionValue -> mapOf(
-                    typeKey to "null")
+                    typeKey to nullType)
 
             is TextExecutionValue ->
-                toCollection("text", value)
+                toCollection(textType, value)
 
             is BooleanExecutionValue ->
-                toCollection("boolean", value)
+                toCollection(booleanType, value)
 
             is NumberExecutionValue ->
-                toCollection("number", value)
+                toCollection(numberType, value)
 
             is BinaryExecutionValue ->
-                toCollection("binary", IoUtils.base64Encode(value))
+                toCollection(binaryType, IoUtils.base64Encode(value))
 
             is ListExecutionValue ->
-                toCollection("list", values.map { it.toCollection() })
+                toCollection(listType, values.map { it.toCollection() })
 
             is MapExecutionValue ->
-                toCollection("map", values.mapValues { it.value.toCollection() })
+                toCollection(mapType, values.mapValues { it.value.toCollection() })
         }
     }
 
@@ -160,14 +169,14 @@ sealed class ExecutionValue {
     }
 
 
-    fun digest(): Digest {
+    override fun digest(): Digest {
         val digest = Digest.Builder()
         digest(digest)
         return digest.digest()
     }
 
 
-    fun digest(builder: Digest.Builder) {
+    override fun digest(builder: Digest.Builder) {
         when (this) {
             NullExecutionValue ->
                 builder.addMissing()

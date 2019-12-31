@@ -110,6 +110,7 @@ ListMapping:
   display: MappingStepDisplay
   steps: []
   meta:
+    selfLocation: SelfLocation
     items:
       is: ObjectLocation
       by: Nominal

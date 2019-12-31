@@ -590,7 +590,8 @@ class RestHandler {
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val executionModel = runBlocking {
-            ServerContext.executionManager.executionModel(documentPath)
+            val graphStructure = ServerContext.graphStore.graphStructure()
+            ServerContext.executionManager.executionModel(documentPath, graphStructure)
         }
 
         return ServerResponse
@@ -642,7 +643,8 @@ class RestHandler {
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
         val execution: ImperativeResponse = runBlocking {
-            ServerContext.executionManager.execute(documentPath, objectLocation)
+            val graphStructure = ServerContext.graphStore.graphStructure()
+            ServerContext.executionManager.execute(documentPath, objectLocation, graphStructure)
         }
 
         return ServerResponse

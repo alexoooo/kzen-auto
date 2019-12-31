@@ -140,7 +140,8 @@ class StepHeader(
         async {
             ClientContext.executionManager.execute(
                     props.objectLocation.documentPath,
-                    props.objectLocation)
+                    props.objectLocation,
+                    props.graphStructure)
         }
     }
 

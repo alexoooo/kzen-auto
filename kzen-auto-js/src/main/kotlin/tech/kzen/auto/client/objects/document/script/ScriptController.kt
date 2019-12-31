@@ -149,7 +149,9 @@ class ScriptController:
 //        console.log("%#$%#$%#$ componentDidUpdate", state.documentPath, prevState.documentPath)
         if (state.documentPath != null && state.documentPath != prevState.documentPath) {
             async {
-                val executionModel = ClientContext.executionManager.executionModel(state.documentPath!!)
+                val executionModel = ClientContext.executionManager.executionModel(
+                        state.documentPath!!,
+                        state.graphStructure!!)
 //                console.log("%#$%#$%#$ componentDidUpdate",
 //                        state.documentPath,
 //                        prevState.documentPath,

@@ -26,7 +26,7 @@ sealed class ControlState {
                     InitialControlState
 
                 finalType ->
-                    FinalControlState
+                    FinalControlState(ExecutionValue.fromCollection(value!!))
 
                 branchType ->
                     InternalControlState(index!!, ExecutionValue.fromCollection(value!!))
@@ -44,12 +44,14 @@ sealed class ControlState {
                 mapOf(typeKey to initialType)
 
             is FinalControlState ->
-                mapOf(typeKey to finalType)
+                mapOf(typeKey to finalType,
+                        valueKey to value.toCollection())
 
             is InternalControlState ->
                 return mapOf(
                         typeKey to branchType,
-                        branchKey to branchIndex
+                        branchKey to branchIndex,
+                        valueKey to value.toCollection()
                 )
         }
     }
@@ -66,9 +68,12 @@ object InitialControlState: ControlState() {
 }
 
 
-object FinalControlState: ControlState() {
+data class FinalControlState(
+        val value: ExecutionValue
+): ControlState() {
     override fun digest(): Digest {
-        return Digest.ofUtf8(FinalControlState::class.simpleName)
+//        return Digest.ofUtf8(FinalControlState::class.simpleName)
+        return value.digest()
     }
 }
 
@@ -80,9 +85,10 @@ class InternalControlState(
     override fun digest(): Digest {
         val digest = Digest.Builder()
 
-        digest.addUtf8(InternalControlState::class.simpleName)
+//        digest.addUtf8(InternalControlState::class.simpleName)
 
         digest.addInt(branchIndex)
+        digest.addDigestible(value)
 
         return digest.digest()
     }

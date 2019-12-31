@@ -40,13 +40,20 @@ class ExecutionManager(
     private var controlTrees = mutableMapOf<DocumentPath, BranchControlNode>()
 
 
-    private suspend fun modelOrInit(host: DocumentPath): ImperativeModel {
+    private suspend fun modelOrInit(
+            host: DocumentPath,
+            graphStructure: GraphStructure
+    ): ImperativeModel {
         val existing = models[host]
         if (existing != null) {
             return existing
         }
+
         val initial = executionInitializer.initialExecutionModel(host)
+
         models = models.put(host, initial)
+        controlTrees[host] = ControlTree.readSteps(graphStructure, host)
+
         publishExecutionModel(host, initial)
         return initial
     }
@@ -104,6 +111,7 @@ class ExecutionManager(
 
             if (models != newModels) {
                 controlTrees[host] = ControlTree.readSteps(graphStructure, host)
+//                println("^^^^ onCommandSuccess - $host")
 
                 models = newModels
                 if (host in models) {
@@ -228,9 +236,10 @@ class ExecutionManager(
 
 
     suspend fun executionModel(
-            host: DocumentPath
+            host: DocumentPath,
+            graphStructure: GraphStructure
     ): ImperativeModel {
-        return modelOrInit(host)
+        return modelOrInit(host, graphStructure)
     }
 
 
@@ -253,6 +262,7 @@ class ExecutionManager(
     ): Digest {
         val controlTree = ControlTree.readSteps(graphStructure, host)
         controlTrees[host] = controlTree
+//        println("^^^^ starting - $host")
 
         val initialState = initializeFrame(controlTree)
 
@@ -261,9 +271,9 @@ class ExecutionManager(
 
         models = models.put(host, executionModel)
 
-        val model = modelOrInit(host)
-        publishExecutionModel(host, model)
-        return model.digest()
+//        val model = modelOrInit(host, graphStructure)
+        publishExecutionModel(host, executionModel)
+        return executionModel.digest()
     }
 
 
@@ -321,24 +331,25 @@ class ExecutionManager(
     suspend fun execute(
             host: DocumentPath,
             objectLocation: ObjectLocation,
+            graphStructure: GraphStructure,
             delayMillis: Int = 0
     ): ImperativeResponse {
         if (delayMillis > 0) {
 //            println("ExecutionManager | %%%% delay($delayMillis)")
             delay(delayMillis.toLong())
         }
-        willExecute(host, objectLocation)
+        willExecute(host, objectLocation, graphStructure)
 
         if (delayMillis > 0) {
 //            println("ExecutionManager | delay($delayMillis)")
             delay(delayMillis.toLong())
         }
 
-        val imperativeModel = executionModel(host)
+        val imperativeModel = executionModel(host, graphStructure)
 
         val state = imperativeModel.frames.last().states[objectLocation.objectPath]!!
 
-        if (state.controlState == null || state.controlState == FinalControlState) {
+        if (state.controlState == null || state.controlState is FinalControlState) {
             val result = actionExecutor.execute(objectLocation, imperativeModel)
 
             val executionState = ImperativeState(
@@ -347,8 +358,8 @@ class ExecutionManager(
                     null
             )
 
-            val digest = modelOrInit(host).digest()
-            didExecute(host, objectLocation, executionState, null)
+            val digest = modelOrInit(host, graphStructure).digest()
+            didExecute(host, objectLocation, executionState, null, graphStructure)
             return ImperativeResponse(result, null, digest)
         }
         else {
@@ -356,8 +367,8 @@ class ExecutionManager(
             val controlTransition = actionExecutor.control(objectLocation, imperativeModel)
 
             val controlState = when (controlTransition) {
-                EvaluateControlTransition ->
-                    FinalControlState
+                is EvaluateControlTransition ->
+                    FinalControlState(controlTransition.value)
 
                 is InternalControlTransition ->
                     InternalControlState(controlTransition.branchIndex, controlTransition.value)
@@ -372,9 +383,9 @@ class ExecutionManager(
             val branchReset =
                     (controlState as? InternalControlState)?.branchIndex
 
-            didExecute(host, objectLocation, executionState, branchReset)
+            didExecute(host, objectLocation, executionState, branchReset, graphStructure)
 
-            val digest = modelOrInit(host).digest()
+            val digest = modelOrInit(host, graphStructure).digest()
             return ImperativeResponse(null, controlTransition, digest)
         }
     }
@@ -382,9 +393,10 @@ class ExecutionManager(
 
     private suspend fun willExecute(
             host: DocumentPath,
-            objectLocation: ObjectLocation
+            objectLocation: ObjectLocation,
+            graphStructure: GraphStructure
     ) {
-        val model = modelOrInit(host)
+        val model = modelOrInit(host, graphStructure)
         val existingFrame = model.findLast(objectLocation)
 
         val upsertFrame = existingFrame
@@ -412,9 +424,10 @@ class ExecutionManager(
             host: DocumentPath,
             objectLocation: ObjectLocation,
             executionState: ImperativeState,
-            branchReset: Int?
+            branchReset: Int?,
+            graphStructure: GraphStructure
     ) {
-        val model = modelOrInit(host)
+        val model = modelOrInit(host, graphStructure)
         val existingFrame = model.findLast(objectLocation)
 
         val upsertFrame = existingFrame
@@ -426,8 +439,12 @@ class ExecutionManager(
 
         val clearedFrame =
                 if (branchReset != null) {
-                    val controlTree = controlTrees[host]!!
-                    val controlNode = controlTree.find(objectLocation)!!
+                    val controlTree = controlTrees[host]
+                            ?: throw RuntimeException("Control tree missing: $host - ${controlTrees.keys}")
+
+                    val controlNode = controlTree.find(objectLocation)
+                            ?: throw RuntimeException("Control node missing: $objectLocation")
+
                     val branch = controlNode.branches[branchReset]
 
                     var buffer = updatedFrame.states

@@ -35,7 +35,8 @@ class ConditionalExpression(
             }
 
             is InternalControlState ->
-                EvaluateControlTransition
+                EvaluateControlTransition(
+                        NullExecutionValue)
 
             else ->
                 throw IllegalStateException()

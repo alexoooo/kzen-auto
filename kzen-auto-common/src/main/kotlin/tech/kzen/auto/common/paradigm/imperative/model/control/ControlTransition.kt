@@ -10,16 +10,17 @@ sealed class ControlTransition {
 
 
         fun fromCollection(collection: Map<String, Any?>): ControlTransition {
-            val index = collection[branchKey] as? Int
+            val branchIndex = collection[branchKey] as? Int
 
             @Suppress("UNCHECKED_CAST")
-            val value = collection[valueKey] as? Map<String, Any>
+            val valueMap = collection[valueKey] as Map<String, Any>
+            val value = ExecutionValue.fromCollection(valueMap)
 
-            return if (index == null) {
-                EvaluateControlTransition
+            return if (branchIndex == null) {
+                EvaluateControlTransition(value)
             }
             else {
-                InternalControlTransition(index, ExecutionValue.fromCollection(value!!))
+                InternalControlTransition(branchIndex, value)
             }
         }
     }
@@ -27,8 +28,8 @@ sealed class ControlTransition {
 
     fun toCollection(): Map<String, Any?> {
         return when (this) {
-            EvaluateControlTransition ->
-                mapOf()
+            is EvaluateControlTransition ->
+                mapOf(valueKey to value.toCollection())
 
             is InternalControlTransition ->
                 mapOf(branchKey to branchIndex,
@@ -38,7 +39,9 @@ sealed class ControlTransition {
 }
 
 
-object EvaluateControlTransition: ControlTransition()
+data class EvaluateControlTransition(
+        val value: ExecutionValue
+): ControlTransition()
 
 
 data class InternalControlTransition(

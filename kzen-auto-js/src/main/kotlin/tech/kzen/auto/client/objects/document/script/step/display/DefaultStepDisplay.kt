@@ -281,7 +281,7 @@ class DefaultStepDisplay(
             }
 
             is ListExecutionValue -> {
-                val valueStrings = detail.values.map { it.toString() }
+                val valueStrings = detail.values.map { it.get().toString() }
                 +"$valueStrings"
             }
 

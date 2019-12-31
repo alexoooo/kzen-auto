@@ -194,7 +194,8 @@ class ScriptRunController(
         async {
             ClientContext.executionManager.execute(
                     props.documentPath!!,
-                    nextToRun)
+                    nextToRun,
+                    props.structure!!)
         }
     }
 

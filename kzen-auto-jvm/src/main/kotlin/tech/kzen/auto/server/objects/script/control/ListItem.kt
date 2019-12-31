@@ -32,7 +32,9 @@ class ListItem(
         val parentInternal =  parentControl as? InternalControlState
                 ?: return ExecutionFailure("Parent internals not found")
 
-        val listIndex = (parentInternal.value as NumberExecutionValue).value.toInt()
+        val parentValue = parentInternal.value as MapExecutionValue
+
+        val listIndex = (parentValue.values[ListMapping.indexKey] as NumberExecutionValue).value.toInt()
 
         val listLocation = graphInstance[parentLocation]!!
                 .constructorAttributes[ListMapping.itemsAttributeName]

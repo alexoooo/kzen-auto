@@ -12,5 +12,4 @@ open class StepDisplayProps(
         var objectLocation: ObjectLocation,
         var attributeNesting: AttributeNesting,
         var imperativeModel: ImperativeModel
-//        var imperativeState: ImperativeState?
 ): RProps

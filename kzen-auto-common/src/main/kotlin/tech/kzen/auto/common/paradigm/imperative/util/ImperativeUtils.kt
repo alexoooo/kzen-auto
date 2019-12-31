@@ -60,7 +60,7 @@ object ImperativeUtils {
             ) {
                 null -> true
                 InitialControlState -> true
-                FinalControlState -> true
+                is FinalControlState -> true
 
                 is InternalControlState -> {
                     val branch = node.branches[controlState.branchIndex]

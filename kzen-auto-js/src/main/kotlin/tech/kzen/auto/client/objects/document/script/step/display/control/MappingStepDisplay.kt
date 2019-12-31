@@ -133,7 +133,7 @@ class MappingStepDisplay(
             }
 
             styledTbody {
-                //                css {
+//                css {
 //                    borderWidth = 1.px
 //                    borderStyle = BorderStyle.solid
 //                }
@@ -169,7 +169,7 @@ class MappingStepDisplay(
                     }
                     styledTd {
                         css {
-                            //                            borderWidth = 1.px
+//                            borderWidth = 1.px
 //                            borderStyle = BorderStyle.solid
 
 //                            padding(0.px)

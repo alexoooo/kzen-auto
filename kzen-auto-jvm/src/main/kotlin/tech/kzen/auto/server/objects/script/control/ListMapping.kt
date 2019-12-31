@@ -10,12 +10,16 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 class ListMapping(
+        private val selfLocation: ObjectLocation,
         private val items: ObjectLocation,
         private val steps: List<ObjectLocation>
 ): ScriptControl {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val itemsAttributeName = AttributeName("items")
+
+        const val indexKey = "index"
+        private const val bufferKey = "buffer"
     }
 
 
@@ -33,24 +37,38 @@ class ListMapping(
         return when (controlState) {
             is InitialControlState -> {
                 if (listValue.values.isEmpty()) {
-                    EvaluateControlTransition
+                    EvaluateControlTransition(
+                            listValue)
                 }
                 else {
-                    InternalControlTransition(0, NumberExecutionValue(0.0))
+                    InternalControlTransition(0, MapExecutionValue(mapOf(
+                            indexKey to NumberExecutionValue(0.0),
+                            bufferKey to ListExecutionValue(listOf()))))
                 }
             }
 
             is InternalControlState -> {
-                val listIndex = (controlState.value as NumberExecutionValue).value.toInt()
+                val values = (controlState.value as MapExecutionValue).values
 
-                if (listIndex >= listValue.values.size - 1) {
-                    EvaluateControlTransition
+                val index = (values[indexKey] as NumberExecutionValue).value.toInt()
+                val buffer = (values[bufferKey] as ListExecutionValue).values
+
+                val nextIndex = (index + 1).toDouble()
+
+                val evalLocation = steps.last()
+                val evalFrame = imperativeModel.findLast(evalLocation)
+                val evalState = evalFrame?.states?.get(evalLocation.objectPath)
+                val branchValue = (evalState?.previous as ExecutionSuccess).value
+
+                val nextBuffer = buffer + branchValue
+
+                if (nextIndex >= listValue.values.size) {
+                    EvaluateControlTransition(ListExecutionValue(nextBuffer))
                 }
                 else {
-                    val nextIndex = NumberExecutionValue((listIndex + 1).toDouble())
-
-//                    InternalControlTransition(0, controlState.branchIndex + 1)
-                    InternalControlTransition(0, nextIndex)
+                    InternalControlTransition(0, MapExecutionValue(mapOf(
+                            indexKey to NumberExecutionValue(nextIndex),
+                            bufferKey to ListExecutionValue(nextBuffer))))
                 }
             }
 
@@ -64,11 +82,12 @@ class ListMapping(
             imperativeModel: ImperativeModel,
             graphInstance: GraphInstance
     ): ExecutionResult {
-        val evalLocation = steps.last()
-        val evalFrame = imperativeModel.findLast(evalLocation)
-        val evalState = evalFrame?.states?.get(evalLocation.objectPath)
+        val selfFrame = imperativeModel.findLast(selfLocation)!!
+        val selfState = selfFrame.states[selfLocation.objectPath]!!
+        val selfControl = selfState.controlState!! as FinalControlState
 
-        return evalState?.previous
-                ?: ExecutionFailure("steps missing")
+        return ExecutionSuccess(
+                selfControl.value,
+                NullExecutionValue)
     }
 }

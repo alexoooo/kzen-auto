@@ -7,6 +7,7 @@ import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 
@@ -58,7 +59,7 @@ class ExecutionLoop(
 
 //        println("$$$$ onExecutionModel - $host - $next - $executionModel")
 
-        run(host, next)
+        run(host, next, serverGraphStructure)
     }
 
 
@@ -75,11 +76,11 @@ class ExecutionLoop(
 
 //        println("ExecutionLoop | executionModel is $executionModel")
 
-        val next = state.executionModel?.let {
-            val serverGraphStructure = mirroredGraphStore
-                    .graphStructure()
-                    .filter(AutoConventions.serverAllowed)
+        val serverGraphStructure = mirroredGraphStore
+                .graphStructure()
+                .filter(AutoConventions.serverAllowed)
 
+        val next = state.executionModel?.let {
             ImperativeUtils.next(serverGraphStructure, it)
         }
         if (next == null) {
@@ -92,19 +93,20 @@ class ExecutionLoop(
 
 //        println("ExecutionLoop |^ next is $next")
 
-        run(host, next)
+        run(host, next, serverGraphStructure)
     }
 
 
     private suspend fun run(
             host: DocumentPath,
-            next: ObjectLocation
+            next: ObjectLocation,
+            graphStructure: GraphStructure
     ) {
         // NB: break cycle, is there a cleaner way to do this?
         @Suppress("DeferredResultUnused")
         GlobalScope.async {
             // NB: this will trigger ExecutionManager.Observer onExecutionModel method above
-            executionManager.execute(host, next, delayMillis)
+            executionManager.execute(host, next, graphStructure, delayMillis)
         }
     }
 
