@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.script.control
+package tech.kzen.auto.common.objects.document.script.control
 
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.imperative.api.ScriptStep
@@ -10,7 +10,6 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 @Suppress("unused")
 class ListItem(
-//        private val parent: ObjectLocation
         private val selfLocation: ObjectLocation
 ): ScriptStep {
     override suspend fun perform(

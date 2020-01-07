@@ -9,6 +9,7 @@ import react.RHandler
 import react.RState
 import react.ReactElement
 import react.dom.br
+import react.dom.div
 import react.dom.td
 import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributeController
@@ -19,9 +20,14 @@ import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWra
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.wrap.ArrowForwardIcon
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.SubdirectoryArrowLeftIcon
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
+import tech.kzen.auto.common.objects.document.script.control.ListMapping
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
+import tech.kzen.auto.common.paradigm.common.model.ListExecutionValue
+import tech.kzen.auto.common.paradigm.common.model.MapExecutionValue
+import tech.kzen.auto.common.paradigm.common.model.NumberExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.model.control.InternalControlState
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
@@ -155,7 +161,7 @@ class MappingStepDisplay(
                             padding(0.px)
                         }
 
-                        renderReference(isNextToRun, imperativeState)
+                        renderBody(isNextToRun, imperativeState)
                     }
                     styledTd {
 //                        css {
@@ -211,14 +217,16 @@ class MappingStepDisplay(
     }
 
 
-    private fun RBuilder.renderReference(
+    private fun RBuilder.renderBody(
             isNextToRun: Boolean,
             imperativeState: ImperativeState?
     ) {
+        val internalControlState = imperativeState
+                ?.controlState as? InternalControlState
+
         val inBranch = !isNextToRun &&
                 !(imperativeState?.running ?: false) &&
-                imperativeState?.controlState is InternalControlState &&
-                imperativeState.controlState.branchIndex == 0
+                internalControlState?.branchIndex == 0
 
         styledDiv {
             css {
@@ -245,6 +253,45 @@ class MappingStepDisplay(
                     this.graphStructure = props.common.graphStructure
                     this.objectLocation = props.common.objectLocation
                     this.attributeName = itemsAttributeName
+                }
+            }
+
+            val controlValue = internalControlState?.value
+            if (controlValue != null) {
+                val values = (controlValue as MapExecutionValue).values
+                val index = (values[ListMapping.indexKey] as NumberExecutionValue).value.toInt()
+                val buffer = (values[ListMapping.bufferKey] as ListExecutionValue).values
+
+                styledDiv {
+                    css {
+                        marginTop = 0.5.em
+                        backgroundColor = Color("rgba(0, 0, 0, 0.04)")
+                        padding(0.5.em)
+                    }
+
+                    div {
+                        +"Item number: ${index + 1}"
+                    }
+
+                    div {
+                        +"${buffer.map { it.get() }}"
+                    }
+                }
+            }
+
+            val previousValue = imperativeState?.previous as? ExecutionSuccess
+            if (previousValue != null) {
+                styledDiv {
+                    css {
+                        marginTop = 0.5.em
+                        backgroundColor = Color("rgba(0, 0, 0, 0.04)")
+                        padding(0.5.em)
+                    }
+
+                    val textValues = (previousValue.value as ListExecutionValue)
+                            .values.map { it.get().toString() }
+
+                    +"$textValues"
                 }
             }
         }
@@ -293,6 +340,15 @@ class MappingStepDisplay(
                         this.graphStructure = props.common.graphStructure
                         this.objectLocation = props.common.objectLocation
                         this.imperativeModel = props.common.imperativeModel
+                    }
+                }
+
+                child(SubdirectoryArrowLeftIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            marginLeft = 3.5.em
+                            fontSize = 3.em
+                        }
                     }
                 }
             }

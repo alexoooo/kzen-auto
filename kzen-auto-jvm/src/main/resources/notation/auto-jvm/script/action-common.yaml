@@ -94,7 +94,7 @@ ConditionalExpression:
 ListItem:
   abstract: true
   is: Action
-  class: tech.kzen.auto.server.objects.script.control.ListItem
+  class: tech.kzen.auto.common.objects.document.script.control.ListItem
   icon: Share
   title: "Item"
 #  display: MappingItemDisplay
@@ -105,7 +105,7 @@ ListItem:
 ListMapping:
   abstract: true
   is: ControlFlow
-  class: tech.kzen.auto.server.objects.script.control.ListMapping
+  class: tech.kzen.auto.common.objects.document.script.control.ListMapping
   icon: Forward
   title: "Mapping"
   display: MappingStepDisplay
