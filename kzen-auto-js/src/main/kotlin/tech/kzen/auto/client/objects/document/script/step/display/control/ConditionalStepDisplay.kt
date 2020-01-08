@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.script.step.display.control
 
 import kotlinx.css.*
+import kotlinx.css.properties.borderLeft
 import kotlinx.css.properties.deg
 import kotlinx.css.properties.rotate
 import kotlinx.css.properties.transform
@@ -43,6 +44,9 @@ class ConditionalStepDisplay(
         private val elseAttributeName = AttributeName("else")
         private val stepWidth = 18.em
         private val overlapTop = 4.px
+
+//        private const val tableBorders = true
+        private const val tableBorders = false
     }
 
 
@@ -120,17 +124,24 @@ class ConditionalStepDisplay(
                 // https://stackoverflow.com/a/24594811/1941359
                 height = 100.pct
 
-//                borderWidth = 1.px
-//                borderStyle = BorderStyle.solid
+                if (tableBorders) {
+                    borderWidth = 1.px
+                    borderStyle = BorderStyle.solid
+                }
 
                 borderCollapse = BorderCollapse.collapse
+
+                marginBottom = (-1).em
+//                marginBottom = (-2).em
             }
 
             styledTbody {
-//                css {
-//                    borderWidth = 1.px
-//                    borderStyle = BorderStyle.solid
-//                }
+                css {
+                    if (tableBorders) {
+                        borderWidth = 1.px
+                        borderStyle = BorderStyle.solid
+                    }
+                }
 
                 styledTr {
                     styledTd {
@@ -162,8 +173,10 @@ class ConditionalStepDisplay(
                     }
                     styledTd {
                         css {
-//                            borderWidth = 1.px
-//                            borderStyle = BorderStyle.solid
+                            if (tableBorders) {
+                                borderWidth = 1.px
+                                borderStyle = BorderStyle.solid
+                            }
 
 //                            padding(0.px)
                         }
@@ -180,6 +193,7 @@ class ConditionalStepDisplay(
                             attrs {
                                 style = reactStyle {
                                     fontSize = 3.em
+                                    marginBottom = (-11).px
 
                                     transform {
                                         rotate((-90).deg)
@@ -196,45 +210,45 @@ class ConditionalStepDisplay(
                             verticalAlign = VerticalAlign.top
                             height = 100.pct
                             padding(0.px)
-//                            borderWidth = 1.px
-//                            borderStyle = BorderStyle.solid
+
+                            if (tableBorders) {
+                                borderWidth = 1.px
+                                borderStyle = BorderStyle.solid
+                            }
                         }
 
                         renderElseSegment(isNextToRun, imperativeState)
                     }
 
                     td {
-                        renderElseBranch(/*imperativeState*/)
+                        renderElseBranch()
                     }
 
                     styledTd {
                         css {
-//                            borderWidth = 1.px
-//                            borderStyle = BorderStyle.solid
+                            if (tableBorders) {
+                                borderWidth = 1.px
+                                borderStyle = BorderStyle.solid
+                            }
 
-//                            position = Position.relative
-//                            height = 100.pct
                             verticalAlign = VerticalAlign.bottom
                         }
 
-//                        child(ArrowDownwardIcon::class) {
-//                            attrs {
-//                                style = reactStyle {
-//                                    fontSize = 3.em
-//
-////                                    position = Position.absolute
-////                                    top = 0.px
-//                                }
-//                            }
-//                        }
+                        styledDiv {
+                            css {
+                                float = Float.left
+                                borderLeft(4.px, BorderStyle.solid, Color.black)
+                                height = 100.pct.minus(3.em)
+                                marginLeft = 1.em.plus(12.px)
+                                marginTop = 1.em//.minus(4.px)
+                            }
+                        }
 
                         child(SubdirectoryArrowLeftIcon::class) {
                             attrs {
                                 style = reactStyle {
                                     fontSize = 3.em
-
-//                                    position = Position.absolute
-//                                    bottom = 0.px
+                                    marginBottom = (-8).px
 
                                     transform {
                                         rotate((-90).deg)
@@ -254,30 +268,50 @@ class ConditionalStepDisplay(
     private fun RBuilder.renderEgressRow() {
         styledTr {
             styledTd {
-                css {
-                    textAlign = TextAlign.center
+                styledDiv {
+                    css {
+                        float = Float.left
+                        borderLeft(4.px, BorderStyle.solid, Color.black)
+                        height = 0.75.em
+                        marginLeft = 9.em.plus(12.px)
+                        marginTop = 1.em.minus(4.px)
+                    }
                 }
 
-                child(SubdirectoryArrowRightIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            fontSize = 3.em
-                            marginLeft = 6.px
-
-                            transform {
-                                rotate(90.deg)
-                            }
-                        }
+                styledHr {
+                    css {
+                        borderTop = "4px solid black"
+                        width = 100.pct.minus(9.em.plus(12.px))
+                        marginLeft = 9.em.plus(12.px)
+                        marginTop = 1.em.minus(4.px)
                     }
                 }
             }
 
-            td {
+            styledTd {
+                css {
+                    if (tableBorders) {
+                        borderWidth = 1.px
+                        borderStyle = BorderStyle.solid
+                    }
+                }
+
                 child(ArrowBackIcon::class) {
                     attrs {
                         style = reactStyle {
                             fontSize = 3.em
+                            float = Float.left
                         }
+                    }
+                }
+
+                styledHr {
+                    css {
+                        borderTop = "4px solid black"
+                        width = 100.pct.minus(2.em)
+                        marginLeft = 2.em
+                        marginTop = 1.em.plus(6.px)
+//                        marginTop = 21.5.px
                     }
                 }
             }
@@ -287,6 +321,8 @@ class ConditionalStepDisplay(
                     attrs {
                         style = reactStyle {
                             fontSize = 3.em
+                            marginTop = (-6).px
+                            marginLeft = (-8).px
                         }
                     }
                 }
@@ -381,12 +417,13 @@ class ConditionalStepDisplay(
         styledDiv {
             css {
 //                width = 30.em
+                width = 100.pct
                 marginBottom = overlapTop
             }
 
             styledDiv {
                 css {
-                    width = 10.em
+//                    width = 10.em
                     display = Display.inlineBlock
                     marginLeft = 3.px
                 }
@@ -404,6 +441,7 @@ class ConditionalStepDisplay(
 
             styledDiv {
                 css {
+                    width = 100.pct.minus(3.em)
                     display = Display.inlineBlock
                     marginTop = (-4.5).em
                 }
@@ -437,7 +475,7 @@ class ConditionalStepDisplay(
         styledDiv {
             css {
 //                marginTop = overlapTop.times(2).unaryMinus()
-                width = stepWidth
+//                width = stepWidth
                 padding(left = 1.em, right = 1.em/*, top = 1.em*/)
                 borderBottomLeftRadius = 3.px
                 borderBottomRightRadius = 3.px
@@ -467,11 +505,12 @@ class ConditionalStepDisplay(
         styledDiv {
             css {
                 marginBottom = overlapTop.times(2)
+                width = 100.pct
             }
 
             styledDiv {
                 css {
-                    width = 10.em
+                    width = 100.pct
                     display = Display.inlineBlock
                     marginLeft = 3.px
                 }
@@ -491,6 +530,7 @@ class ConditionalStepDisplay(
                 css {
                     display = Display.inlineBlock
                     marginTop = (-4.5).em
+                    width = 100.pct.minus(3.em)
                 }
 
                 child(ConditionalBranchDisplay::class) {

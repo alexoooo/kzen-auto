@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.script.step.display.control
 
 import kotlinx.css.*
+import kotlinx.css.properties.borderTop
 import kotlinx.html.title
 import react.RBuilder
 import react.RProps
@@ -134,7 +135,10 @@ class ConditionalBranchDisplay(
     override fun RBuilder.render() {
         styledDiv {
             css {
+                width = 100.pct
                 marginLeft = 2.em
+
+//                backgroundColor = Color.red
             }
 
             renderSteps()
@@ -155,6 +159,7 @@ class ConditionalBranchDisplay(
 //                    paddingTop = 2.em
                     marginTop = (-2).em
                     paddingLeft = 1.em
+                    width = 100.pct
                 }
 
                 styledDiv {
@@ -166,13 +171,14 @@ class ConditionalBranchDisplay(
                     +"Empty, please add steps"
                 }
 
-                renderInsertionPoint(0)
+                renderRightArrowWithInsertionPoint(0)
             }
         }
         else {
             styledDiv {
                 css {
                     paddingLeft = 1.em
+                    width = 100.pct
                 }
 
                 renderNonEmptySteps(stepLocations)
@@ -181,15 +187,15 @@ class ConditionalBranchDisplay(
     }
 
 
-    private fun RBuilder.renderInsertionPoint(index: Int) {
+    private fun RBuilder.renderInsertionPoint(
+            index: Int
+    ) {
         styledSpan {
             attrs {
                 if (state.creating) {
                     title = "Insert action here"
                 }
             }
-
-//            +"Index: $index"
 
             child(MaterialIconButton::class) {
                 attrs {
@@ -218,7 +224,8 @@ class ConditionalBranchDisplay(
 
         styledDiv {
             css {
-                width = 20.em
+                minWidth = 20.em
+                width = 100.pct
             }
 
             for ((index, stepLocation) in stepLocations.withIndex()) {
@@ -230,7 +237,7 @@ class ConditionalBranchDisplay(
             }
         }
 
-        renderInsertionPoint(stepLocations.size)
+        renderRightArrowWithInsertionPoint(stepLocations.size)
     }
 
 
@@ -273,6 +280,63 @@ class ConditionalBranchDisplay(
                             fontSize = 3.em
                         }
                     }
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderRightArrowWithInsertionPoint(index: Int) {
+        styledDiv {
+            css {
+                position = Position.relative
+                height = 4.em
+//                width = 9.em
+                width = 100.pct
+            }
+
+            styledDiv {
+                css {
+                    marginTop = 0.5.em
+
+                    position = Position.absolute
+                    height = 1.em
+                    width = 1.em
+                    top = 0.em
+                    left = 0.em
+                }
+                renderInsertionPoint(index)
+            }
+
+            styledDiv {
+                css {
+                    position = Position.absolute
+                    height = 3.em
+                    width = 3.em
+                    top = 0.em
+                    left = 8.5.em
+
+                    marginTop =  0.5.em
+                    marginBottom = 0.5.em
+                }
+
+                child(SubdirectoryArrowRightIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+                    }
+                }
+            }
+
+            styledDiv {
+                css {
+                    position = Position.absolute
+                    width = 100.pct.minus(11.em)
+//                    width = 10.em
+                    borderTop(4.px, BorderStyle.solid, Color.black)
+                    left = 10.5.em.plus(12.px)
+                    top = 2.em.plus(4.px)
                 }
             }
         }

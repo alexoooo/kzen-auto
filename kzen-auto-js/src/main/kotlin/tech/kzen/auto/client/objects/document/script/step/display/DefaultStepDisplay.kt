@@ -157,6 +157,8 @@ class DefaultStepDisplay(
             }
 
             backgroundColor = cardColor
+
+            width = 20.em
         }
 
         child(MaterialPaper::class) {
