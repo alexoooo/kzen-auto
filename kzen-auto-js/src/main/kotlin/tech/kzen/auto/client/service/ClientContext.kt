@@ -64,7 +64,7 @@ object ClientContext {
     val executionLoop = ExecutionLoop(
             mirroredGraphStore,
             executionManager,
-            250)
+            125)
 
     val insertionManager = InsertionManager()
     val executionIntent = ExecutionIntent()

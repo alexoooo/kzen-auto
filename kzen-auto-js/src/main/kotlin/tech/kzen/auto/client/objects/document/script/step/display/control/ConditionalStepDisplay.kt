@@ -1,10 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.step.display.control
 
 import kotlinx.css.*
-import kotlinx.css.properties.borderLeft
-import kotlinx.css.properties.deg
-import kotlinx.css.properties.rotate
-import kotlinx.css.properties.transform
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import org.w3c.dom.events.Event
@@ -21,7 +17,9 @@ import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.ArrowForwardIcon
+import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.paradigm.imperative.model.control.InternalControlState
@@ -130,9 +128,6 @@ class ConditionalStepDisplay(
                 }
 
                 borderCollapse = BorderCollapse.collapse
-
-                marginBottom = (-1).em
-//                marginBottom = (-2).em
             }
 
             styledTbody {
@@ -158,7 +153,6 @@ class ConditionalStepDisplay(
                     }
 
                     td {}
-                    td {}
                 }
 
                 styledTr {
@@ -177,30 +171,8 @@ class ConditionalStepDisplay(
                                 borderWidth = 1.px
                                 borderStyle = BorderStyle.solid
                             }
-
-//                            padding(0.px)
                         }
                         renderThenBranch()
-                    }
-
-                    styledTd {
-                        css {
-                            verticalAlign = VerticalAlign.bottom
-                            padding(0.px)
-                        }
-
-                        child(SubdirectoryArrowLeftIcon::class) {
-                            attrs {
-                                style = reactStyle {
-                                    fontSize = 3.em
-                                    marginBottom = (-11).px
-
-                                    transform {
-                                        rotate((-90).deg)
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -222,108 +194,6 @@ class ConditionalStepDisplay(
 
                     td {
                         renderElseBranch()
-                    }
-
-                    styledTd {
-                        css {
-                            if (tableBorders) {
-                                borderWidth = 1.px
-                                borderStyle = BorderStyle.solid
-                            }
-
-                            verticalAlign = VerticalAlign.bottom
-                        }
-
-                        styledDiv {
-                            css {
-                                float = Float.left
-                                borderLeft(4.px, BorderStyle.solid, Color.black)
-                                height = 100.pct.minus(3.em)
-                                marginLeft = 1.em.plus(12.px)
-                                marginTop = 1.em//.minus(4.px)
-                            }
-                        }
-
-                        child(SubdirectoryArrowLeftIcon::class) {
-                            attrs {
-                                style = reactStyle {
-                                    fontSize = 3.em
-                                    marginBottom = (-8).px
-
-                                    transform {
-                                        rotate((-90).deg)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                renderEgressRow()
-            }
-        }
-    }
-
-
-    private fun RBuilder.renderEgressRow() {
-        styledTr {
-            styledTd {
-                styledDiv {
-                    css {
-                        float = Float.left
-                        borderLeft(4.px, BorderStyle.solid, Color.black)
-                        height = 0.75.em
-                        marginLeft = 9.em.plus(12.px)
-                        marginTop = 1.em.minus(4.px)
-                    }
-                }
-
-                styledHr {
-                    css {
-                        borderTop = "4px solid black"
-                        width = 100.pct.minus(9.em.plus(12.px))
-                        marginLeft = 9.em.plus(12.px)
-                        marginTop = 1.em.minus(4.px)
-                    }
-                }
-            }
-
-            styledTd {
-                css {
-                    if (tableBorders) {
-                        borderWidth = 1.px
-                        borderStyle = BorderStyle.solid
-                    }
-                }
-
-                child(ArrowBackIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            fontSize = 3.em
-                            float = Float.left
-                        }
-                    }
-                }
-
-                styledHr {
-                    css {
-                        borderTop = "4px solid black"
-                        width = 100.pct.minus(2.em)
-                        marginLeft = 2.em
-                        marginTop = 1.em.plus(6.px)
-//                        marginTop = 21.5.px
-                    }
-                }
-            }
-
-            td {
-                child(SubdirectoryArrowLeftIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            fontSize = 3.em
-                            marginTop = (-6).px
-                            marginLeft = (-8).px
-                        }
                     }
                 }
             }
@@ -382,8 +252,7 @@ class ConditionalStepDisplay(
         styledDiv {
             css {
                 width = stepWidth
-                padding(left = 1.em, right = 1.em/*, top = 1.em*/)
-//                marginTop = overlapTop.unaryMinus()
+                padding(left = 1.em, right = 1.em)
                 filter = "drop-shadow(0 1px 1px gray)"
 
                 height = 100.pct
@@ -416,14 +285,12 @@ class ConditionalStepDisplay(
     ) {
         styledDiv {
             css {
-//                width = 30.em
                 width = 100.pct
                 marginBottom = overlapTop
             }
 
             styledDiv {
                 css {
-//                    width = 10.em
                     display = Display.inlineBlock
                     marginLeft = 3.px
                 }
@@ -474,9 +341,7 @@ class ConditionalStepDisplay(
 
         styledDiv {
             css {
-//                marginTop = overlapTop.times(2).unaryMinus()
-//                width = stepWidth
-                padding(left = 1.em, right = 1.em/*, top = 1.em*/)
+                padding(left = 1.em, right = 1.em)
                 borderBottomLeftRadius = 3.px
                 borderBottomRightRadius = 3.px
                 filter = "drop-shadow(0 1px 1px gray)"

@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.step.display.control
 
 import kotlinx.css.*
-import kotlinx.css.properties.borderTop
 import kotlinx.html.title
 import react.RBuilder
 import react.RProps
@@ -143,6 +142,18 @@ class ConditionalBranchDisplay(
 
             renderSteps()
         }
+
+        child(SubdirectoryArrowLeftIcon::class) {
+            attrs {
+                style = reactStyle {
+                    fontSize = 3.em
+//                    marginTop = (-35).px
+                    marginBottom = 15.px
+                    marginTop = (-60).px
+//                    marginLeft = (-32).px
+                }
+            }
+        }
     }
 
 
@@ -156,8 +167,8 @@ class ConditionalBranchDisplay(
         if (stepLocations.isEmpty()) {
             styledDiv {
                 css {
-//                    paddingTop = 2.em
-                    marginTop = (-2).em
+//                    marginTop = (-2).em
+                    marginTop = 2.em
                     paddingLeft = 1.em
                     width = 100.pct
                 }
@@ -171,7 +182,7 @@ class ConditionalBranchDisplay(
                     +"Empty, please add steps"
                 }
 
-                renderRightArrowWithInsertionPoint(0)
+                renderInsertionPoint(0)
             }
         }
         else {
@@ -237,7 +248,7 @@ class ConditionalBranchDisplay(
             }
         }
 
-        renderRightArrowWithInsertionPoint(stepLocations.size)
+        renderInsertionPoint(stepLocations.size)
     }
 
 
@@ -280,63 +291,6 @@ class ConditionalBranchDisplay(
                             fontSize = 3.em
                         }
                     }
-                }
-            }
-        }
-    }
-
-
-    private fun RBuilder.renderRightArrowWithInsertionPoint(index: Int) {
-        styledDiv {
-            css {
-                position = Position.relative
-                height = 4.em
-//                width = 9.em
-                width = 100.pct
-            }
-
-            styledDiv {
-                css {
-                    marginTop = 0.5.em
-
-                    position = Position.absolute
-                    height = 1.em
-                    width = 1.em
-                    top = 0.em
-                    left = 0.em
-                }
-                renderInsertionPoint(index)
-            }
-
-            styledDiv {
-                css {
-                    position = Position.absolute
-                    height = 3.em
-                    width = 3.em
-                    top = 0.em
-                    left = 8.5.em
-
-                    marginTop =  0.5.em
-                    marginBottom = 0.5.em
-                }
-
-                child(SubdirectoryArrowRightIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            fontSize = 3.em
-                        }
-                    }
-                }
-            }
-
-            styledDiv {
-                css {
-                    position = Position.absolute
-                    width = 100.pct.minus(11.em)
-//                    width = 10.em
-                    borderTop(4.px, BorderStyle.solid, Color.black)
-                    left = 10.5.em.plus(12.px)
-                    top = 2.em.plus(4.px)
                 }
             }
         }

@@ -346,8 +346,9 @@ class MappingStepDisplay(
                 child(SubdirectoryArrowLeftIcon::class) {
                     attrs {
                         style = reactStyle {
-                            marginLeft = 3.5.em
                             fontSize = 3.em
+                            marginTop = (-3.25).em
+                            marginBottom = 0.25.em
                         }
                     }
                 }
