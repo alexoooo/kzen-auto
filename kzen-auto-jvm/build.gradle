@@ -3,7 +3,7 @@ buildscript {
         // TODO: upgrade once bug is fixed:
         //  https://github.com/spring-projects/spring-framework/issues/23961
         springBootVersion = '2.2.0.RELEASE'
-//        springBootVersion = '2.2.1.RELEASE'
+//        springBootVersion = '2.2.2.RELEASE'
     }
     repositories {
         mavenCentral()
