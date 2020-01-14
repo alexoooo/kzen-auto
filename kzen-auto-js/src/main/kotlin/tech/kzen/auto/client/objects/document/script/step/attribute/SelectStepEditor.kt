@@ -112,7 +112,7 @@ class SelectStepEditor(
             is RenamedObjectRefactorEvent -> {
                 if (event.renamedObject.objectLocation == state.value) {
                     setState {
-                        value = event.renamedObject.newLocation()
+                        value = event.renamedObject.newObjectLocation()
                         renaming = true
                     }
                 }
@@ -159,10 +159,12 @@ class SelectStepEditor(
 
 
     private fun predecessors(): List<ObjectLocation> {
+        val host = props.objectLocation.documentPath
         val steps = ControlTree.readSteps(
-                props.graphStructure, props.objectLocation.documentPath)
+                props.graphStructure, host)
 
-        return steps.predecessors(props.objectLocation)
+        val objectPaths = steps.predecessors(props.objectLocation.objectPath)
+        return objectPaths.map { ObjectLocation(host, it) }
     }
 
 

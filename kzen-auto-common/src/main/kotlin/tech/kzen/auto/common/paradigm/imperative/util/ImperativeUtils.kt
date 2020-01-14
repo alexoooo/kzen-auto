@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
 import tech.kzen.auto.common.paradigm.imperative.model.control.*
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.GraphStructure
 
 
@@ -25,30 +26,21 @@ object ImperativeUtils {
             }
         }
 
-        val controlTree = ControlTree.readSteps(graphStructure, lastFrame.path)
+        val host = lastFrame.path
+        val controlTree = ControlTree.readSteps(graphStructure, host)
 
-        return nextInBranch(controlTree, lastFrame)
+        val next = nextInBranch(controlTree, lastFrame)
 
-//        var pending: ObjectLocation? = null
-//
-//        controlTree.traverseDepthFirst { stepLocation ->
-//            val objectPath = stepLocation.objectPath
-//
-//            if (lastFrame.states[objectPath]?.phase() == ImperativePhase.Pending) {
-//                pending = stepLocation
-//            }
-//        }
-//
-//        return pending
+        return next?.let { ObjectLocation(host, it) }
     }
 
 
     private fun nextInBranch(
             branchControlNode: BranchControlNode,
             imperativeFrame: ImperativeFrame
-    ): ObjectLocation? {
+    ): ObjectPath? {
         for (node in branchControlNode.nodes) {
-            val state = imperativeFrame.states[node.step.objectPath]
+            val state = imperativeFrame.states[node.step]
                     ?: continue
 
             if (state.previous != null) {

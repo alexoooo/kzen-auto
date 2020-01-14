@@ -175,6 +175,11 @@ class ExecutionManager(
                     val newModel = model.move(
                             event.removedUnderOldName.documentPath, event.createdWithNewName.destination)
 
+                    val oldControlTree = controlTrees.remove(event.removedUnderOldName.documentPath)
+                    if (oldControlTree != null) {
+                        controlTrees[event.createdWithNewName.destination] = oldControlTree
+                    }
+
                     val removed = models.remove(event.removedUnderOldName.documentPath)
                     removed.put(event.createdWithNewName.destination, newModel)
                 }
@@ -204,7 +209,11 @@ class ExecutionManager(
 
             is RenamedObjectEvent ->
                 currentModels.put(documentPath,
-                        model.rename(event.objectLocation, event.newName))
+                        model.rename(event.objectLocation, event.newObjectPath()))
+
+            is RenamedNestedObjectEvent ->
+                currentModels.put(documentPath,
+                        model.rename(event.objectLocation, event.newObjectPath()))
 
             is AddedObjectEvent -> {
                 val initialState = initialState(event.objectLocation, graphStructure)
@@ -283,7 +292,7 @@ class ExecutionManager(
         val values = mutableMapOf<ObjectPath, ImperativeState>()
 
         controlTree.traverseDepthFirstNodes { node ->
-            values[node.step.objectPath] = initialState(node)
+            values[node.step] = initialState(node)
         }
 
         return values.toPersistentMap()
@@ -442,7 +451,7 @@ class ExecutionManager(
                     val controlTree = controlTrees[host]
                             ?: throw RuntimeException("Control tree missing: $host - ${controlTrees.keys}")
 
-                    val controlNode = controlTree.find(objectLocation)
+                    val controlNode = controlTree.find(objectLocation.objectPath)
                             ?: throw RuntimeException("Control node missing: $objectLocation")
 
                     val branch = controlNode.branches[branchReset]
@@ -450,7 +459,7 @@ class ExecutionManager(
                     var buffer = updatedFrame.states
                     branch.traverseDepthFirstNodes { node ->
                         val state = initialState(node)
-                        buffer = buffer.put(node.step.objectPath, state)
+                        buffer = buffer.put(node.step, state)
                     }
                     updatedFrame.copy(states = buffer)
                 }

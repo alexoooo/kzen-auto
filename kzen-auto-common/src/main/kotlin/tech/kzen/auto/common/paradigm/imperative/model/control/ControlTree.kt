@@ -7,6 +7,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.model.locate.ObjectReferenceHost
+import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -80,7 +81,7 @@ sealed class ControlTree {
             }
 
             return StepControlNode(
-                    stepLocation,
+                    stepLocation.objectPath,
                     branches)
         }
     }
@@ -88,7 +89,8 @@ sealed class ControlTree {
 
 
 data class StepControlNode(
-        val step: ObjectLocation,
+//        val step: ObjectLocation,
+        val step: ObjectPath,
         val branches: List<BranchControlNode>
 ): ControlTree()
 
@@ -101,14 +103,15 @@ data class BranchControlNode(
     }
 
 
-    fun find(objectLocation: ObjectLocation): StepControlNode? {
+//    fun find(objectLocation: ObjectLocation): StepControlNode? {
+    fun find(objectPath: ObjectPath): StepControlNode? {
         for (node in nodes) {
-            if (node.step == objectLocation) {
+            if (node.step == objectPath) {
                 return node
             }
 
             for (branch in node.branches) {
-                val match = branch.find(objectLocation)
+                val match = branch.find(objectPath)
                 if (match != null) {
                     return match
                 }
@@ -130,7 +133,8 @@ data class BranchControlNode(
     }
 
 
-    fun traverseDepthFirstLocations(visitor: (ObjectLocation) -> Unit) {
+//    fun traverseDepthFirstLocations(visitor: (ObjectLocation) -> Unit) {
+    fun traverseDepthFirstLocations(visitor: (ObjectPath) -> Unit) {
         for (node in nodes) {
             visitor.invoke(node.step)
 
@@ -141,7 +145,8 @@ data class BranchControlNode(
     }
 
 
-    fun contains(target: ObjectLocation): Boolean {
+//    fun contains(target: ObjectLocation): Boolean {
+    fun contains(target: ObjectPath): Boolean {
         for (node in nodes) {
             if (node.step == target) {
                 return true
@@ -159,17 +164,21 @@ data class BranchControlNode(
 
 
     fun predecessors(
-            target: ObjectLocation
-    ): List<ObjectLocation> {
-        val buffer = mutableListOf<ObjectLocation>()
+//            target: ObjectLocation
+//    ): List<ObjectLocation> {
+            target: ObjectPath
+    ): List<ObjectPath> {
+        val buffer = mutableListOf<ObjectPath>()
         predecessors(target, buffer)
         return buffer
     }
 
 
     private fun predecessors(
-            target: ObjectLocation,
-            buffer: MutableList<ObjectLocation>
+//            target: ObjectLocation,
+//            buffer: MutableList<ObjectLocation>
+            target: ObjectPath,
+            buffer: MutableList<ObjectPath>
     ) {
         for (node in nodes) {
             if (node.step == target) {

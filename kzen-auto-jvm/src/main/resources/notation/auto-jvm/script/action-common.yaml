@@ -166,7 +166,7 @@ NumberRange:
   is: Action
   class: tech.kzen.auto.server.objects.script.NumberRange
   icon: TripOrigin
-  title: "Range"
+  title: "Number Range"
   from: 1
   to: 10
   meta:

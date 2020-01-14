@@ -2,7 +2,7 @@ package tech.kzen.auto.common.paradigm.imperative.model
 
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.collect.PersistentList
 import tech.kzen.lib.platform.collect.toPersistentList
@@ -71,14 +71,14 @@ data class ImperativeModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun rename(from: ObjectLocation, newName: ObjectName): ImperativeModel {
+    fun rename(from: ObjectLocation, newObjectPath: ObjectPath): ImperativeModel {
         var builder = frames
         for ((index, frame) in frames.withIndex()) {
             if (frame.path != from.documentPath) {
                 continue
             }
 
-            val renamed = frame.rename(from.objectPath, newName)
+            val renamed = frame.rename(from.objectPath, newObjectPath)
             builder = builder.set(index, renamed)
         }
 

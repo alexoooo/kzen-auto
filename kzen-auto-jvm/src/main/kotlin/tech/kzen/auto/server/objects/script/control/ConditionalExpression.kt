@@ -52,12 +52,23 @@ class ConditionalExpression(
         val conditionValue = (conditionResult?.value as? BooleanExecutionValue)?.value ?: false
 
         return if (conditionValue) {
-            result(then.last(), imperativeModel)
-                    ?: ExecutionFailure("'then' missing")
+            if (then.isEmpty()) {
+                ExecutionSuccess.empty
+            }
+            else {
+                result(then.last(), imperativeModel)
+                        ?: ExecutionFailure("'then' missing")
+
+            }
         }
         else {
-            result(`else`.last(), imperativeModel)
+            if (`else`.isEmpty()) {
+                ExecutionSuccess.empty
+            }
+            else {
+                result(`else`.last(), imperativeModel)
                     ?: ExecutionFailure("'else' missing")
+            }
         }
     }
 

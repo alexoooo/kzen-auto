@@ -1,7 +1,6 @@
 package tech.kzen.auto.common.paradigm.imperative.model
 
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.toPersistentMap
@@ -64,16 +63,14 @@ data class ImperativeFrame(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun rename(from: ObjectPath, newName: ObjectName): ImperativeFrame {
+    fun rename(from: ObjectPath, newObjectPath: ObjectPath): ImperativeFrame {
         val state = states[from]
                 ?: return this
 
-        val newNamePath = from.copy(name = newName)
-
         val removedAtOldName = states.remove(from)
-        val addedAtNewName = removedAtOldName.put(newNamePath, state)
+        val addedAtNewNesting = removedAtOldName.put(newObjectPath, state)
 
-        return copy(states = addedAtNewName)
+        return copy(states = addedAtNewNesting)
     }
 
 
