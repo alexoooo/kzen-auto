@@ -110,8 +110,8 @@ class ExecutionManager(
             val newModels = apply(host, event, graphStructure)
 
             if (models != newModels) {
+//                println("^^^^ onCommandSuccess - $host - $event")
                 controlTrees[host] = ControlTree.readSteps(graphStructure, host)
-//                println("^^^^ onCommandSuccess - $host")
 
                 models = newModels
                 if (host in models) {

@@ -71,7 +71,7 @@ class ScriptRunController(
         if (! executionModel.containsStatus(ImperativePhase.Running)) {
             val next = ImperativeUtils.next(props.structure!!, executionModel)
             if (next == null) {
-                if (ClientContext.executionLoop.running(host)) {
+                if (ClientContext.executionLoop.isLooping(host)) {
                     ClientContext.executionLoop.pause(host)
                 }
 
@@ -167,8 +167,10 @@ class ScriptRunController(
             return Phase.Empty
         }
 
+        val looping = ClientContext.executionLoop.isLooping(host)
+
         if (executionModel.containsStatus(ImperativePhase.Running)) {
-            if (ClientContext.executionLoop.running(host)) {
+            if (looping) {
                 return Phase.Looping
             }
             return Phase.Running
@@ -176,6 +178,10 @@ class ScriptRunController(
 
         ImperativeUtils.next(props.structure!!, executionModel)
                 ?: return Phase.Done
+
+        if (looping) {
+            return Phase.Looping
+        }
 
         if (executionModel.containsStatus(ImperativePhase.Success) ||
                 executionModel.containsStatus(ImperativePhase.Error)) {
@@ -370,6 +376,8 @@ class ScriptRunController(
     private fun RBuilder.renderMainAction(
             phase: Phase
     ) {
+        +"phase: $phase"
+
         child(MaterialFab::class) {
             val hasMoreToRun = phase == Phase.Pending || phase == Phase.Partial
             val looping = phase == Phase.Looping
@@ -391,14 +399,14 @@ class ScriptRunController(
 
                 onClick = {
                     when {
+                        looping ->
+                            onPause()
+
                         hasMoreToRun ->
                             onRunAll()
 
                         phase == Phase.Done ->
                             onReset()
-
-                        looping ->
-                            onPause()
                     }
                 }
 
@@ -422,7 +430,7 @@ class ScriptRunController(
             }
 
             when {
-                hasMoreToRun -> child(PlayArrowIcon::class) {
+                looping -> child(PauseIcon::class) {
                     attrs {
                         style = reactStyle {
                             fontSize = 3.em
@@ -430,7 +438,7 @@ class ScriptRunController(
                     }
                 }
 
-                looping -> child(PauseIcon::class) {
+                hasMoreToRun -> child(PlayArrowIcon::class) {
                     attrs {
                         style = reactStyle {
                             fontSize = 3.em

@@ -66,10 +66,13 @@ class SelectStepEditor(
 
         if (attributeNotation is ScalarAttributeNotation) {
             val reference = ObjectReference.parse(attributeNotation.value)
-            val objectLocation = props.graphStructure.graphNotation.coalesce.locate(
+            val objectLocation = props.graphStructure.graphNotation.coalesce.locateOptional(
                     reference, objectReferenceHost)
 
-            value = objectLocation
+            if (objectLocation != null) {
+                // NB: might be absent if e.g. it was deleted
+                value = objectLocation
+            }
         }
 
         renaming = false
