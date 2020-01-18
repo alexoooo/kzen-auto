@@ -23,7 +23,8 @@ class ModelActionExecutor(
         // TODO: report any definition issues on client side
         val graphDefinition = graphStore
                 .graphDefinition()
-                .successful
+//                .successful
+                .transitiveSuccessful()
                 .filterDefinitions(AutoConventions.serverAllowed)
 
         // TODO: add GraphInstanceAttempt for error reporting
@@ -44,7 +45,7 @@ class ModelActionExecutor(
     ): ControlTransition {
         val graphDefinition = graphStore
                 .graphDefinition()
-                .successful
+                .transitiveSuccessful()
                 .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator.createGraph(

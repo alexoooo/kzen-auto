@@ -376,7 +376,7 @@ class ScriptRunController(
     private fun RBuilder.renderMainAction(
             phase: Phase
     ) {
-        +"phase: $phase"
+//        +"phase: $phase"
 
         child(MaterialFab::class) {
             val hasMoreToRun = phase == Phase.Pending || phase == Phase.Partial

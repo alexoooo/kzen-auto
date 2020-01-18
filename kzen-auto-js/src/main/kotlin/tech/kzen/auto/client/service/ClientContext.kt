@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.service
 
 import tech.kzen.auto.client.service.rest.*
-import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
@@ -35,7 +34,7 @@ object ClientContext {
     val graphCreator = GraphCreator()
     val notationReducer = NotationReducer()
 
-    private val seededNotationMedia = SeededNotationMedia(
+    val seededNotationMedia = SeededNotationMedia(
             restNotationMedia)
 
     private val directGraphStore = DirectGraphStore(
@@ -93,15 +92,19 @@ object ClientContext {
         val kzenAutoJs = js("require('kzen-auto-js.js')")
 //        console.log("kzenAutoJs", kzenAutoJs)
         ModuleRegistry.add(kzenAutoJs)
+    }
 
-        async {
-            navigationManager.postConstruct(mirroredGraphStore)
 
-            mirroredGraphStore.observe(executionManager)
-            mirroredGraphStore.observe(visualDataflowManager)
+    suspend fun initAsync() {
+        navigationManager.postConstruct(mirroredGraphStore)
 
-            executionManager.observe(executionLoop)
-            visualDataflowManager.observe(visualDataflowLoop)
-        }
+        mirroredGraphStore.observe(executionManager)
+        mirroredGraphStore.observe(visualDataflowManager)
+
+        executionManager.observe(executionLoop)
+        visualDataflowManager.observe(visualDataflowLoop)
+
+        // NB: pre-load, otherwise can have race condition
+        seededNotationMedia.scan()
     }
 }

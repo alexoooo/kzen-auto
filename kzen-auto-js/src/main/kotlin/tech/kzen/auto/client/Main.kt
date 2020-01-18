@@ -16,6 +16,8 @@ fun main() {
 
     window.onload = {
         async {
+            ClientContext.initAsync()
+
             val clientGraphDefinition = ClientContext.mirroredGraphStore
                     .graphDefinition()
                     .successful

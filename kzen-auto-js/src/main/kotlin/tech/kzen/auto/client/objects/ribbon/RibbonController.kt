@@ -35,6 +35,8 @@ class RibbonController(
 
 
     class State(
+            var documentPath: DocumentPath?,
+
             var type: ObjectLocation?,
             var tabIndex: Int = 0,
 
@@ -62,6 +64,7 @@ class RibbonController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
+        documentPath = null
         type = null
         tabIndex = 0
         currentRibbonGroups = listOf()
@@ -82,9 +85,46 @@ class RibbonController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun componentDidUpdate(
+            prevProps: Props,
+            prevState: State,
+            snapshot: Any
+    ) {
+        if (state.documentPath == prevState.documentPath &&
+                prevState.currentRibbonGroups.isNotEmpty()) {
+            return
+        }
+
+//        console.log("^^^^^ handleNavigation", state.documentPath)
+
+        if (state.documentPath == null) {
+            setState {
+                type = null
+                tabIndex = 0
+                currentRibbonGroups = listOf()
+            }
+        }
+        else {
+            val typeName = DocumentArchetype.archetypeName(props.notation, state.documentPath!!)
+                    ?: return
+
+//        console.log("^^^^^ handleNavigation - ribbonGroups", typeName, props.ribbonGroups)
+
+            val documentRibbonGroups = props
+                    .ribbonGroups
+                    .filter { it.archetype.objectPath.name == typeName }
+
+            setState {
+                tabIndex = 0
+                currentRibbonGroups = documentRibbonGroups
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun onInsertionSelected(action: ObjectLocation) {
         setState {
-//            name = NameConventions.randomAnonymous()
             type = action
         }
     }
@@ -99,29 +139,8 @@ class RibbonController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun handleNavigation(documentPath: DocumentPath?) {
-//        console.log("^^^^^ handleNavigation", documentPath)
-
-        if (documentPath == null) {
-            setState {
-                type = null
-                tabIndex = 0
-                currentRibbonGroups = listOf()
-            }
-            return
-        }
-
-        val typeName = DocumentArchetype.archetypeName(props.notation, documentPath)
-                ?: return
-
-//        console.log("^^^^^ handleNavigation - ribbonGroups", typeName, props.ribbonGroups)
-
-        val documentRibbonGroups = props
-                .ribbonGroups
-                .filter { it.archetype.objectPath.name == typeName }
-
         setState {
-            tabIndex = 0
-            currentRibbonGroups = documentRibbonGroups
+            this.documentPath = documentPath
         }
     }
 
