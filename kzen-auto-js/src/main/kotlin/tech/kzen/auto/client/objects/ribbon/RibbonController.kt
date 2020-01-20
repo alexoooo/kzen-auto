@@ -35,6 +35,7 @@ class RibbonController(
 
 
     class State(
+            var updatePending: Boolean,
             var documentPath: DocumentPath?,
 
             var type: ObjectLocation?,
@@ -65,6 +66,8 @@ class RibbonController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
         documentPath = null
+        updatePending = false
+
         type = null
         tabIndex = 0
         currentRibbonGroups = listOf()
@@ -90,15 +93,21 @@ class RibbonController(
             prevState: State,
             snapshot: Any
     ) {
-        if (state.documentPath == prevState.documentPath &&
-                prevState.currentRibbonGroups.isNotEmpty()) {
+        if (//state.documentPath == prevState.documentPath &&
+                ! state.updatePending) {
             return
         }
 
-//        console.log("^^^^^ handleNavigation", state.documentPath)
+//        console.log("^^^^^ handleNavigation !!!",
+//                state.updatePending,
+//                state.documentPath,
+//                state.currentRibbonGroups,
+//                prevState.documentPath,
+//                prevState.currentRibbonGroups)
 
         if (state.documentPath == null) {
             setState {
+                updatePending = false
                 type = null
                 tabIndex = 0
                 currentRibbonGroups = listOf()
@@ -108,13 +117,14 @@ class RibbonController(
             val typeName = DocumentArchetype.archetypeName(props.notation, state.documentPath!!)
                     ?: return
 
-//        console.log("^^^^^ handleNavigation - ribbonGroups", typeName, props.ribbonGroups)
+//            console.log("^^^^^ handleNavigation - ribbonGroups", typeName, props.ribbonGroups)
 
             val documentRibbonGroups = props
                     .ribbonGroups
                     .filter { it.archetype.objectPath.name == typeName }
 
             setState {
+                updatePending = false
                 tabIndex = 0
                 currentRibbonGroups = documentRibbonGroups
             }
@@ -140,6 +150,7 @@ class RibbonController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun handleNavigation(documentPath: DocumentPath?) {
         setState {
+            this.updatePending = true
             this.documentPath = documentPath
         }
     }

@@ -228,6 +228,10 @@ class VertexController(
     }
 
 
+    private fun hasMessage(): Boolean {
+        return visualVertexModel()?.message != null
+    }
+
     private fun isMessagePending(): Boolean {
         if (visualVertexModel()?.message == null) {
             return false
@@ -299,7 +303,7 @@ class VertexController(
                 Color.gold.lighten(75)
 
             visualVertexModel?.hasNext ?: false ->
-                Color.gold.lighten(90)
+                Color.gold.lighten(93)
 
             else -> when (phase) {
                 VisualVertexPhase.Pending ->
@@ -754,7 +758,8 @@ class VertexController(
             }
         }
 
-        if (isMessagePending) {
+//        if (isMessagePending) {
+        if (hasMessage()) {
             val vertexMessage = visualVertexModel()?.message!!
 
             styledDiv {
@@ -776,7 +781,9 @@ class VertexController(
                         style = reactStyle {
                             color = Color.black
 
-                            backgroundColor = Color("rgba(255, 215, 0, 0.175)")
+                            if (isMessagePending) {
+                                backgroundColor = Color("rgba(255, 215, 0, 0.175)")
+                            }
                         }
                     }
 

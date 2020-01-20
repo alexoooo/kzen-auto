@@ -241,16 +241,16 @@ class EdgeController(
 
     private fun isEgressActive(
             edgeDirection: EdgeDirection,
-            offsetCoordinate: CellCoordinate,
+            nextCoordinate: CellCoordinate,
             nextToRun: ObjectLocation,
             edgesLeadingToActive: Set<EdgeDescriptor>
     ): Boolean {
-        val activeEdgeAtOffset = edgesLeadingToActive.find { it.coordinate == offsetCoordinate }
+        val activeEdgeAtOffset = edgesLeadingToActive.find { it.coordinate == nextCoordinate }
         if (activeEdgeAtOffset != null) {
             return activeEdgeAtOffset.orientation.hasIngress(edgeDirection.reverse())
         }
 
-        val vertexDescriptor = props.dataflowMatrix.get(offsetCoordinate) as? VertexDescriptor
+        val vertexDescriptor = props.dataflowMatrix.get(nextCoordinate) as? VertexDescriptor
                 ?: return false
 
         return edgeDirection == EdgeDirection.Bottom &&
@@ -283,25 +283,26 @@ class EdgeController(
             edgeDirection: EdgeDirection,
             isRunning: Boolean,
             nextToRun: ObjectLocation?,
+            hasMessage: Boolean,
             edgesLeadingToNextToRun: Set<EdgeDescriptor>,
             edgesInFlightToPending: Set<EdgeDescriptor>,
             edgesAvailableToPending: Set<EdgeDescriptor>,
             pendingWithAvailableMessage: Set<ObjectLocation>
     ): Color {
-        if (nextToRun == null) {
+        if (nextToRun == null || ! hasMessage) {
             return Color.white
         }
 
-        val coordinate = props.cellDescriptor.coordinate.offset(edgeDirection)
+        val nextCoordinate = props.cellDescriptor.coordinate.offset(edgeDirection)
 
         val isSending = isEgressActive(
-                edgeDirection, coordinate, nextToRun, edgesLeadingToNextToRun)
+                edgeDirection, nextCoordinate, nextToRun, edgesLeadingToNextToRun)
 
         val isInFlight = isEgressActive(
-                edgeDirection, coordinate, nextToRun, edgesInFlightToPending)
+                edgeDirection, nextCoordinate, nextToRun, edgesInFlightToPending)
 
         val isEdgeMessageAvailable = isEgressAvailable(
-                edgeDirection, coordinate, edgesAvailableToPending, pendingWithAvailableMessage)
+                edgeDirection, nextCoordinate, edgesAvailableToPending, pendingWithAvailableMessage)
 
         return when {
             isSending ->
@@ -352,6 +353,10 @@ class EdgeController(
 
 
     private fun RBuilder.renderEdge() {
+//        val isDebug =
+//                props.cellDescriptor.coordinate.row == 5 &&
+//                props.cellDescriptor.coordinate.column == 0
+
         val orientation = props.cellDescriptor.orientation
 
         val isRunning = props.visualDataflowModel.isRunning()
@@ -374,6 +379,8 @@ class EdgeController(
         val pendingWithAvailableMessage = pendingWithAvailableMessage()
         val edgesAvailableToPending = edgesAvailableToPending(pendingWithAvailableMessage)
         val isEdgeMessageAvailable = props.cellDescriptor in edgesAvailableToPending
+
+        val hasMessage = isEdgeSendingMessage || isEdgeInFlightMessage || isEdgeMessageAvailable
 
         val ingressAndCentreColor = when {
             isEdgeSendingMessage ->
@@ -424,6 +431,7 @@ class EdgeController(
                             EdgeDirection.Left,
                             isRunning,
                             nextToRun,
+                            hasMessage,
                             edgesLeadingToNextToRun,
                             edgesInFlightToPending,
                             edgesAvailableToPending,
@@ -475,6 +483,7 @@ class EdgeController(
                         EdgeDirection.Right,
                         isRunning,
                         nextToRun,
+                        hasMessage,
                         edgesLeadingToNextToRun,
                         edgesInFlightToPending,
                         edgesAvailableToPending,
@@ -491,6 +500,7 @@ class EdgeController(
                     EdgeDirection.Bottom,
                     isRunning,
                     nextToRun,
+                    hasMessage,
                     edgesLeadingToNextToRun,
                     edgesInFlightToPending,
                     edgesAvailableToPending,

@@ -298,6 +298,10 @@ data class DataflowMatrix(
 
         traceEdgeBackFrom(edgeDescriptorAbove, edges)
 
+//        if (vertexDescriptor.inputNames.size > 1 && offsetLeft == 0) {
+//            println("traceEdgeBackFrom > $edges")
+//        }
+
         return edges
     }
 
