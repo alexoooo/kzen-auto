@@ -4,7 +4,7 @@ import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
-import org.w3c.dom.HTMLButtonElement
+import org.w3c.dom.HTMLElement
 import react.RBuilder
 import react.RProps
 import react.RState
@@ -86,7 +86,7 @@ class VertexController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var buttonRef: HTMLButtonElement? = null
+    private var menuAnchorRef: HTMLElement? = null
 //    private var mainDocumentsCache: List<DocumentPath>? = null
 
     // NB: workaround for open options icon remaining after click with drag away from item
@@ -598,6 +598,10 @@ class VertexController(
                     top = 0.px
                 }
 
+                ref {
+                    this@VertexController.menuAnchorRef = it as? HTMLElement
+                }
+
                 renderOptionsMenu()
             }
         }
@@ -629,10 +633,6 @@ class VertexController(
                 attrs {
                     title = "Options..."
                     onClick = ::onOptionsOpen
-
-                    buttonRef = {
-                        this@VertexController.buttonRef = it
-                    }
                 }
 
                 child(MoreVertIcon::class) {}
@@ -645,7 +645,7 @@ class VertexController(
 
                 onClose = ::onOptionsCancel
 
-                anchorEl = buttonRef
+                anchorEl = menuAnchorRef
             }
 
             renderMenuItems()

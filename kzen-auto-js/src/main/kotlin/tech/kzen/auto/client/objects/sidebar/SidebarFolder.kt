@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.sidebar
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
-import org.w3c.dom.HTMLButtonElement
+import org.w3c.dom.HTMLElement
 import react.*
 import styled.css
 import styled.styledDiv
@@ -55,8 +55,7 @@ class SidebarFolder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var buttonRef: HTMLButtonElement? = null
-//    private var mainDocumentsCache: List<DocumentPath>? = null
+    private var menuAnchorRef: HTMLElement? = null
 
     // NB: workaround for open options icon remaining after click with drag away from item
     private var processingOption: Boolean = false
@@ -336,6 +335,10 @@ class SidebarFolder(
 //                    backgroundColor = Color.blue
                 }
 
+                ref {
+                    this@SidebarFolder.menuAnchorRef = it as? HTMLElement
+                }
+
                 renderOptionsMenu()
             }
         }
@@ -395,10 +398,6 @@ class SidebarFolder(
                     title = "Project options..."
                     onClick = ::onOptionsOpen
 
-                    buttonRef = {
-                        this@SidebarFolder.buttonRef = it
-                    }
-
                     style = reactStyle {
                         marginTop = (-13).px
                         marginRight = (-16).px
@@ -415,7 +414,7 @@ class SidebarFolder(
 
                 onClose = ::onOptionsCancel
 
-                anchorEl = buttonRef
+                anchorEl = menuAnchorRef
             }
 
             renderMenuItems()

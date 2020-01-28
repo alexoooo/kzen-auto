@@ -5,7 +5,7 @@ import kotlinx.css.properties.TextDecorationLine
 import kotlinx.css.properties.textDecoration
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
-import org.w3c.dom.HTMLButtonElement
+import org.w3c.dom.HTMLElement
 import react.*
 import styled.css
 import styled.styledA
@@ -55,7 +55,7 @@ class SidebarFile(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var buttonRef: HTMLButtonElement? = null
+    private var menuAnchorRef: HTMLElement? = null
     private var nameEditorRef: DocumentNameEditor? = null
 
     private var processingOption: Boolean = false
@@ -221,6 +221,10 @@ class SidebarFile(
                     top = 0.px
                     right = 0.px
                 }
+                
+                ref {
+                    this@SidebarFile.menuAnchorRef = it as? HTMLElement
+                }
 
                 renderOptionsMenu()
             }
@@ -314,10 +318,6 @@ class SidebarFile(
                     title = "Options..."
                     onClick = ::onOptionsOpen
 
-                    buttonRef = {
-                        this@SidebarFile.buttonRef = it
-                    }
-
                     style = reactStyle {
                         marginTop = (-13).px
                         marginRight = (-16).px
@@ -334,7 +334,7 @@ class SidebarFile(
 
                 onClose = ::onOptionsCancel
 
-                anchorEl = buttonRef
+                anchorEl = menuAnchorRef
             }
 
             renderMenuItems()

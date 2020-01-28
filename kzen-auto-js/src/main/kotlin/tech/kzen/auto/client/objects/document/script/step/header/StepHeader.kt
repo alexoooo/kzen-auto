@@ -103,7 +103,7 @@ class StepHeader(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var editSignal = StepNameEditor.EditSignal()
-    private var buttonRef: HTMLElement? = null
+    private var menuAnchorRef: HTMLElement? = null
 
     private var processingOption: Boolean = false
     private var optionCompletedTime: Double? = null
@@ -360,6 +360,10 @@ class StepHeader(
                     top = (-16).px
                     right = 9.px
                 }
+                
+                ref {
+                    this@StepHeader.menuAnchorRef = it as? HTMLElement
+                }
 
                 renderOptionsMenu()
             }
@@ -465,10 +469,6 @@ class StepHeader(
                 attrs {
                     title = "Options..."
                     onClick = ::onOptionsOpen
-
-                    buttonRef = {
-                        this@StepHeader.buttonRef = it
-                    }
                 }
 
                 child(MoreVertIcon::class) {}
@@ -481,7 +481,7 @@ class StepHeader(
 
                 onClose = ::onOptionsCancel
 
-                anchorEl = buttonRef
+                anchorEl = menuAnchorRef
             }
 
             renderMenuItems()
