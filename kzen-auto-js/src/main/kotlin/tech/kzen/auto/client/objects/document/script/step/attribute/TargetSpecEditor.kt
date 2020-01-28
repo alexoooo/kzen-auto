@@ -112,7 +112,7 @@ class TargetSpecEditor(
                 val reference = ObjectReference.parse(value)
 
                 targetText = null
-                targetLocation = props.graphStructure.graphNotation.coalesce.locate(
+                targetLocation = props.graphStructure.graphNotation.coalesce.locateOptional(
                         reference, objectReferenceHost)
             }
             else {

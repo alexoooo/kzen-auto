@@ -16,7 +16,7 @@ buildscript {
 
 subprojects {
     group = 'tech.kzen.auto'
-    version = '0.12.4'
+    version = '0.13.0-SNAPSHOT'
 
     repositories {
         mavenLocal()

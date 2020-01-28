@@ -20,7 +20,7 @@ class ModelDetachedExecutor(
     ): ExecutionResult {
         val graphDefinition = graphStore
                 .graphDefinition()
-                .successful
+                .transitiveSuccessful()
                 .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator
