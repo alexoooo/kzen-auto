@@ -198,7 +198,7 @@ class RibbonController(
                 css {
                     float = Float.right
                 }
-                renderTitle()
+                renderRightFloat()
             }
 
             renderTabs()
@@ -257,6 +257,13 @@ class RibbonController(
     }
 
 
+    private fun RBuilder.renderRightFloat() {
+        renderTitle()
+
+        renderRunNavigation()
+    }
+
+
     private fun RBuilder.renderTitle() {
         val projectTitle =
                 if (ClientContext.baseUrl.isEmpty()) {
@@ -273,6 +280,7 @@ class RibbonController(
                 fontSize = 1.5.em
                 color = Color.gray
                 fontStyle = FontStyle.italic
+                display = Display.inlineBlock
             }
 
             attrs {
@@ -280,6 +288,21 @@ class RibbonController(
             }
 
             +projectTitle
+        }
+    }
+
+
+    private fun RBuilder.renderRunNavigation() {
+        styledDiv {
+            css {
+                display = Display.inlineBlock
+            }
+
+            child(RibbonRun::class) {
+                attrs {
+                    notation = props.notation
+                }
+            }
         }
     }
 

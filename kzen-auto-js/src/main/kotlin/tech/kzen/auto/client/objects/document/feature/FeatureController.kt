@@ -307,9 +307,8 @@ class FeatureController(
 
 
     private fun onSave() {
-        if (state.detail == null) {
-            return
-        }
+        val detail = state.detail
+                ?: return
 
 //        console.log("detail", detail)
 
@@ -323,7 +322,7 @@ class FeatureController(
             requestingScreenshot = true
         }
 
-        doCropAndSave(state.detail!!)
+        doCropAndSave(detail)
     }
 
 

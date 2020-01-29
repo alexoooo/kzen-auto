@@ -5,12 +5,16 @@ import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentNesting
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.obj.ObjectNesting
+import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.DateTimeUtils
 
 
 object AutoConventions {
+    val mainPath = ObjectPath(ObjectName("main"), ObjectNesting.root)
+
     val autoCommonDocumentNesting = DocumentNesting.parse("auto-common/")
     val autoClientDocumentNesting = DocumentNesting.parse("auto-js/")
     val autoServerDocumentNesting = DocumentNesting.parse("auto-jvm/")

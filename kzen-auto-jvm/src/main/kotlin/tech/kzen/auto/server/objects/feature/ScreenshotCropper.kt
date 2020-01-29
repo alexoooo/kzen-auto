@@ -30,7 +30,31 @@ class ScreenshotCropper: DetachedAction {
                 ?: return ExecutionFailure("Missing body")
 
         val image = ImageIO.read(body.toInputStream())
-        val crop = image.getSubimage(x, y, width, height)
+
+        val xOffset =
+                if (x < 0) {
+                    -x
+                }
+                else {
+                    0
+                }
+
+        val yOffset =
+                if (y < 0) {
+                    -y
+                }
+                else {
+                    0
+                }
+
+        val adjustedX = x + xOffset
+        val adjustedY = y + yOffset
+        val adjustedWidth = width - xOffset
+        val adjustedHeight = height - yOffset
+
+        val crop = image.getSubimage(
+//                x, y, width, height)
+                adjustedX, adjustedY, adjustedWidth, adjustedHeight)
 
         val buffer = ByteArrayOutputStream()
         ImageIO.write(crop, "png", buffer)
