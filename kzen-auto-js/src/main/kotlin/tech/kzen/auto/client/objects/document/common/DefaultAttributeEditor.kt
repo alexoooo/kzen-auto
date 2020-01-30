@@ -12,7 +12,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -28,7 +28,7 @@ class DefaultAttributeEditor(
         props: AttributeEditorProps
 ):
         RPureComponent<AttributeEditorProps, DefaultAttributeEditor.State>(props),
-        ExecutionManager.Observer
+        ExecutionRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

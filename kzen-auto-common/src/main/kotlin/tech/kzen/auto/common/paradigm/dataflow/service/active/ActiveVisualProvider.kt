@@ -9,14 +9,14 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 class ActiveVisualProvider(
-        private val activeDataflowManager: ActiveDataflowManager
+        private val activeDataflowRepository: ActiveDataflowRepository
 ):
         VisualDataflowProvider
 {
     override suspend fun inspectDataflow(
             host: DocumentPath
     ): VisualDataflowModel {
-        return activeDataflowManager.inspect(host)
+        return activeDataflowRepository.inspect(host)
     }
 
 
@@ -24,7 +24,7 @@ class ActiveVisualProvider(
             host: DocumentPath,
             vertexLocation: ObjectLocation
     ): VisualVertexModel {
-        return activeDataflowManager.inspectVertex(host, vertexLocation)
+        return activeDataflowRepository.inspectVertex(host, vertexLocation)
     }
 
 
@@ -32,11 +32,11 @@ class ActiveVisualProvider(
             host: DocumentPath,
             vertexLocation: ObjectLocation
     ): VisualVertexTransition {
-        return activeDataflowManager.executeVisual(host, vertexLocation)
+        return activeDataflowRepository.executeVisual(host, vertexLocation)
     }
 
 
     override suspend fun resetDataflow(host: DocumentPath): VisualDataflowModel {
-        return activeDataflowManager.reset(host)
+        return activeDataflowRepository.reset(host)
     }
 }

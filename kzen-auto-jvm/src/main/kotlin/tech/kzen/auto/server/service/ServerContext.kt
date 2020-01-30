@@ -1,12 +1,12 @@
 package tech.kzen.auto.server.service
 
 import kotlinx.coroutines.runBlocking
-import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveDataflowManager
+import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveDataflowRepository
 import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveVisualProvider
 import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageInspector
-import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
-import tech.kzen.auto.common.service.GraphInstanceManager
+import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
+import tech.kzen.auto.common.service.GraphInstanceCreator
 import tech.kzen.auto.server.service.exec.EmptyExecutionInitializer
 import tech.kzen.auto.server.service.exec.ModelActionExecutor
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
@@ -57,17 +57,17 @@ object ServerContext {
     val detachedExecutor = ModelDetachedExecutor(
             graphStore, graphCreator)
 
-    val executionManager = ExecutionManager(
+    val executionManager = ExecutionRepository(
             EmptyExecutionInitializer,
             actionExecutor)
 
 
-    private val graphInstanceManager = GraphInstanceManager(
+    private val graphInstanceManager = GraphInstanceCreator(
             graphStore, graphCreator)
 
     private val dataflowMessageInspector = DataflowMessageInspector()
 
-    private val activeDataflowManager = ActiveDataflowManager(
+    private val activeDataflowManager = ActiveDataflowRepository(
             graphInstanceManager,
             dataflowMessageInspector,
             graphStore)
@@ -75,12 +75,12 @@ object ServerContext {
     private val activeVisualProvider = ActiveVisualProvider(
             activeDataflowManager)
 
-    val visualDataflowManager = VisualDataflowManager(
+    val visualDataflowManager = VisualDataflowRepository(
             activeVisualProvider)
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val downloadManager = DownloadManager()
+    private val downloadManager = DownloadClient()
 
     val webDriverRepo = WebDriverOptionDao()
     val webDriverInstaller = WebDriverInstaller(downloadManager)

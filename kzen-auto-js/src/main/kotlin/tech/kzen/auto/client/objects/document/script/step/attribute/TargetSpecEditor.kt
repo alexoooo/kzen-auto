@@ -14,7 +14,7 @@ import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
 import tech.kzen.auto.common.objects.document.feature.TargetType
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -41,7 +41,7 @@ class TargetSpecEditor(
 ):
         RPureComponent<AttributeEditorProps, TargetSpecEditor.State>(props),
         LocalGraphStore.Observer,
-        ExecutionManager.Observer
+        ExecutionRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(

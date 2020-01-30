@@ -14,7 +14,7 @@ import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.InsertionManager
+import tech.kzen.auto.client.service.InsertionGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
@@ -35,7 +35,7 @@ class MappingBranchDisplay(
                 MappingBranchDisplay.Props,
                 MappingBranchDisplay.State
                 >(props),
-        InsertionManager.Observer
+        InsertionGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

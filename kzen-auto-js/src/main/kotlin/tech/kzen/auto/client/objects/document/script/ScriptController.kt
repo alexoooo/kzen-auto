@@ -12,13 +12,13 @@ import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.InsertionManager
-import tech.kzen.auto.client.service.NavigationManager
+import tech.kzen.auto.client.service.InsertionGlobal
+import tech.kzen.auto.client.service.NavigationRepository
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
@@ -40,10 +40,10 @@ import tech.kzen.lib.platform.collect.persistentListOf
 @Suppress("unused")
 class ScriptController:
         RPureComponent<ScriptController.Props, ScriptController.State>(),
-        NavigationManager.Observer,
+        NavigationRepository.Observer,
         LocalGraphStore.Observer,
-        ExecutionManager.Observer,
-        InsertionManager.Observer
+        ExecutionRepository.Observer,
+        InsertionGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

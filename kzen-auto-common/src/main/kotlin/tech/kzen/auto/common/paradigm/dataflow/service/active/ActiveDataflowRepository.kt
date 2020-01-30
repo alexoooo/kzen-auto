@@ -10,7 +10,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
 import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageInspector
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
-import tech.kzen.auto.common.service.GraphInstanceManager
+import tech.kzen.auto.common.service.GraphInstanceCreator
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -21,8 +21,8 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.toPersistentMap
 
 
-class ActiveDataflowManager(
-        private val instanceManager: GraphInstanceManager,
+class ActiveDataflowRepository(
+        private val instanceCreator: GraphInstanceCreator,
         private val dataflowMessageInspector: DataflowMessageInspector,
         private val graphStore: LocalGraphStore
 ) :
@@ -182,7 +182,7 @@ class ActiveDataflowManager(
     private suspend fun initializeVertex(
             vertexLocation: ObjectLocation
     ): ActiveVertexModel {
-        val vertexInstance = instanceManager.get(vertexLocation).reference as Dataflow<*>
+        val vertexInstance = instanceCreator.create(vertexLocation).reference as Dataflow<*>
 
         val initialState = vertexInstance.initialState()
         val initialStateOrNull =
@@ -263,7 +263,7 @@ class ActiveDataflowManager(
             state: Any
     ): ExecutionValue {
         @Suppress("UNCHECKED_CAST")
-        val dataflow = instanceManager.get(vertexLocation).reference as Dataflow<Any>
+        val dataflow = instanceCreator.create(vertexLocation).reference as Dataflow<Any>
         return dataflow.inspectState(state)
     }
 
@@ -440,7 +440,7 @@ class ActiveDataflowManager(
             activeVertexModel.message = nextMessage
         }
         else {
-            val instance = instanceManager.get(vertexLocation)
+            val instance = instanceCreator.create(vertexLocation)
 
             @Suppress("UNCHECKED_CAST")
             val dataflow = instance.reference as Dataflow<Any?>

@@ -21,7 +21,7 @@ import tech.kzen.lib.platform.collect.persistentMapOf
 import tech.kzen.lib.platform.collect.toPersistentMap
 
 
-class ExecutionManager(
+class ExecutionRepository(
         private val executionInitializer: ExecutionInitializer,
         private val actionExecutor: ActionExecutor
 ):

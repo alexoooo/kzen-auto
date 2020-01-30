@@ -13,7 +13,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -24,7 +24,7 @@ class ScriptRunController(
         props: Props
 ):
         RPureComponent<ScriptRunController.Props, ScriptRunController.State>(props),
-        ExecutionManager.Observer
+        ExecutionRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(

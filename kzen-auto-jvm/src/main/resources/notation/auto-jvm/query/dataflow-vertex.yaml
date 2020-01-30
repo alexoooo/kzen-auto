@@ -75,7 +75,7 @@ ReplaceProcessor:
   icon: Forward
   title: "Replace"
   description: "Substitute the input value (which is ignored) with the given replacement"
-  replacement: "Foo"
+  replacement: ""
   meta:
     input:
       is: RequiredInput

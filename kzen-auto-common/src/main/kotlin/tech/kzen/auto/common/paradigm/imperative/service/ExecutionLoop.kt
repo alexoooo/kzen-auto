@@ -13,10 +13,10 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 class ExecutionLoop(
         private val mirroredGraphStore: MirroredGraphStore,
-        private val executionManager: ExecutionManager,
+        private val executionRepository: ExecutionRepository,
         private val delayMillis: Int = 0
 ):
-        ExecutionManager.Observer
+        ExecutionRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val states = mutableMapOf<DocumentPath, State>()
@@ -106,7 +106,7 @@ class ExecutionLoop(
         @Suppress("DeferredResultUnused")
         GlobalScope.async {
             // NB: this will trigger ExecutionManager.Observer onExecutionModel method above
-            executionManager.execute(host, next, graphStructure, delayMillis)
+            executionRepository.execute(host, next, graphStructure, delayMillis)
         }
     }
 

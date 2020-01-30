@@ -10,7 +10,7 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 import kotlin.browser.window
 
 
-class NavigationManager(
+class NavigationRepository(
         private val executionLoop: ExecutionLoop,
         private val visualDataflowLoop: VisualDataflowLoop
 ):

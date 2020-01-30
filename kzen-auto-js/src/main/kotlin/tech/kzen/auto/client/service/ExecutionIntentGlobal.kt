@@ -3,7 +3,7 @@ package tech.kzen.auto.client.service
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
-class ExecutionIntent {
+class ExecutionIntentGlobal {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         fun onExecutionIntent(actionLocation: ObjectLocation?)

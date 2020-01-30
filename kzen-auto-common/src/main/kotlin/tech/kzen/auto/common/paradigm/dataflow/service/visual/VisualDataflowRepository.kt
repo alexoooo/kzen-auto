@@ -13,7 +13,7 @@ import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.persistentMapOf
 
 
-class VisualDataflowManager(
+class VisualDataflowRepository(
         private val visualDataflowProvider: VisualDataflowProvider
 ):
         LocalGraphStore.Observer

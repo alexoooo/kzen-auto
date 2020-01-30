@@ -6,8 +6,8 @@ import react.*
 import styled.*
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.InsertionManager
-import tech.kzen.auto.client.service.NavigationManager
+import tech.kzen.auto.client.service.InsertionGlobal
+import tech.kzen.auto.client.service.NavigationRepository
 import tech.kzen.auto.client.util.decodeURIComponent
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
@@ -22,8 +22,8 @@ class RibbonController(
         props: Props
 ):
         RPureComponent<RibbonController.Props, RibbonController.State>(props),
-        InsertionManager.Observer,
-        NavigationManager.Observer
+        InsertionGlobal.Observer,
+        NavigationRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(

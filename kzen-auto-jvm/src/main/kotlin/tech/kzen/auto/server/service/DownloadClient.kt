@@ -7,10 +7,10 @@ import java.security.cert.X509Certificate
 import javax.net.ssl.*
 
 
-class DownloadManager {
+class DownloadClient {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val logger = LoggerFactory.getLogger(DownloadManager::class.java)!!
+        private val logger = LoggerFactory.getLogger(DownloadClient::class.java)!!
     }
 
 

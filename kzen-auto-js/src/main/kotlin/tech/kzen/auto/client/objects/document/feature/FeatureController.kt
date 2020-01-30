@@ -10,7 +10,7 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.NavigationManager
+import tech.kzen.auto.client.service.NavigationRepository
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
@@ -39,7 +39,7 @@ class FeatureController(
         props: Props
 ):
         RPureComponent<FeatureController.Props, FeatureController.State>(props),
-        NavigationManager.Observer,
+        NavigationRepository.Observer,
         LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------

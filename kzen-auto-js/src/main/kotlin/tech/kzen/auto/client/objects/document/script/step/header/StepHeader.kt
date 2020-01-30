@@ -12,7 +12,7 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.ExecutionIntent
+import tech.kzen.auto.client.service.ExecutionIntentGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
@@ -32,7 +32,7 @@ class StepHeader(
         props: Props
 ):
         RPureComponent<StepHeader.Props, StepHeader.State>(props),
-        ExecutionIntent.Observer
+        ExecutionIntentGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

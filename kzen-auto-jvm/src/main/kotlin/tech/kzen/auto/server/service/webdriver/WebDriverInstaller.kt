@@ -2,7 +2,7 @@ package tech.kzen.auto.server.service.webdriver
 
 import com.google.common.io.ByteStreams
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.server.service.DownloadManager
+import tech.kzen.auto.server.service.DownloadClient
 import tech.kzen.auto.server.service.webdriver.model.BrowserLauncher
 import tech.kzen.auto.server.service.webdriver.model.DownloadFormat
 import tech.kzen.auto.server.service.webdriver.model.WebDriverOption
@@ -25,7 +25,7 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 
 // see: https://github.com/Ardesco/selenium-standalone-server-plugin
 class WebDriverInstaller(
-        private val downloadManager: DownloadManager
+        private val downloadClient: DownloadClient
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(WebDriverInstaller::class.java)!!
@@ -80,7 +80,7 @@ class WebDriverInstaller(
             destinationDir: Path,
             browserLauncher: BrowserLauncher
     ) {
-        val bytes = downloadManager.download(download)
+        val bytes = downloadClient.download(download)
         val format = DownloadFormat.parse(download)
         extract(bytes, destinationDir, format, browserLauncher)
     }

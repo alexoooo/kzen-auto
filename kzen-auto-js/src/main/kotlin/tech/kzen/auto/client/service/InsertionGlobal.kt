@@ -3,7 +3,7 @@ package tech.kzen.auto.client.service
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
-class InsertionManager {
+class InsertionGlobal {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         fun onInsertionSelected(action: ObjectLocation)

@@ -12,11 +12,11 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 class VisualDataflowLoop(
         private val mirroredGraphStore: MirroredGraphStore,
-        private val visualDataflowManager: VisualDataflowManager,
+        private val visualDataflowRepository: VisualDataflowRepository,
         private val delayBeforeRunningMillis: Int,
         private val delayAfterRunningMillis: Int
 ):
-        VisualDataflowManager.Observer
+        VisualDataflowRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val states = mutableMapOf<DocumentPath, State>()
@@ -107,7 +107,7 @@ class VisualDataflowLoop(
         // NB: break cycle, is there a cleaner way to do this?
         GlobalScope.async {
             // NB: this will trigger VisualDataflowManager.Observer onExecutionModel method above
-            visualDataflowManager.execute(
+            visualDataflowRepository.execute(
                     host,
                     next,
                     delayBeforeRunningMillis,

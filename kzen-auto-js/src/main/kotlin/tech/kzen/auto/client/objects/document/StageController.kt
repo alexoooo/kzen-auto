@@ -10,7 +10,7 @@ import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.NavigationManager
+import tech.kzen.auto.client.service.NavigationRepository
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.objects.document.DocumentArchetype
@@ -29,7 +29,7 @@ class StageController(
 ):
         RPureComponent<StageController.Props, StageController.State>(props),
         LocalGraphStore.Observer,
-        NavigationManager.Observer
+        NavigationRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(

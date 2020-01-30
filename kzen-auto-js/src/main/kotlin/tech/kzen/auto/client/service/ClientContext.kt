@@ -2,9 +2,9 @@ package tech.kzen.auto.client.service
 
 import tech.kzen.auto.client.service.rest.*
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
-import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
+import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionManager
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
 import tech.kzen.lib.common.service.media.NotationMedia
@@ -56,7 +56,7 @@ object ClientContext {
     private val restActionExecutor = ClientRestActionExecutor(
             restClient)
 
-    val executionManager = ExecutionManager(
+    val executionManager = ExecutionRepository(
             restExecutionInitializer,
             restActionExecutor)
 
@@ -65,13 +65,13 @@ object ClientContext {
             executionManager,
             125)
 
-    val insertionManager = InsertionManager()
-    val executionIntent = ExecutionIntent()
+    val insertionManager = InsertionGlobal()
+    val executionIntent = ExecutionIntentGlobal()
 
     private val clientRestVisualDataflowProvider = ClientRestVisualDataflowProvider(
             restClient)
 
-    val visualDataflowManager = VisualDataflowManager(
+    val visualDataflowManager = VisualDataflowRepository(
             clientRestVisualDataflowProvider)
 
     val visualDataflowLoop = VisualDataflowLoop(
@@ -80,7 +80,7 @@ object ClientContext {
             250,
             200)
 
-    val navigationManager = NavigationManager(
+    val navigationManager = NavigationRepository(
             executionLoop,
             visualDataflowLoop)
 

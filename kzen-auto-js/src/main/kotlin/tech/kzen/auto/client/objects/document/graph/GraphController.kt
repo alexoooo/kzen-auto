@@ -9,8 +9,8 @@ import styled.*
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.InsertionManager
-import tech.kzen.auto.client.service.NavigationManager
+import tech.kzen.auto.client.service.InsertionGlobal
+import tech.kzen.auto.client.service.NavigationRepository
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
@@ -25,7 +25,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordina
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
-import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowManager
+import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -46,9 +46,9 @@ import tech.kzen.lib.platform.collect.persistentMapOf
 class GraphController:
         RPureComponent<GraphController.Props, GraphController.State>(),
         LocalGraphStore.Observer,
-        InsertionManager.Observer,
-        NavigationManager.Observer,
-        VisualDataflowManager.Observer
+        InsertionGlobal.Observer,
+        NavigationRepository.Observer,
+        VisualDataflowRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
