@@ -22,7 +22,7 @@ class RibbonController(
         props: Props
 ):
         RPureComponent<RibbonController.Props, RibbonController.State>(props),
-        InsertionGlobal.Observer,
+        InsertionGlobal.Subscriber,
         NavigationRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -76,14 +76,14 @@ class RibbonController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.insertionManager.subscribe(this)
-        ClientContext.navigationManager.observe(this)
+        ClientContext.insertionGlobal.subscribe(this)
+        ClientContext.navigationRepository.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.insertionManager.unSubscribe(this)
-        ClientContext.navigationManager.unobserve(this)
+        ClientContext.insertionGlobal.unsubscribe(this)
+        ClientContext.navigationRepository.unobserve(this)
     }
 
 
@@ -158,12 +158,12 @@ class RibbonController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onUnSelect() {
-        ClientContext.insertionManager.clearSelection()
+        ClientContext.insertionGlobal.clearSelection()
     }
 
 
     private fun onSelect(actionType: ObjectLocation) {
-        ClientContext.insertionManager.setSelected(actionType)
+        ClientContext.insertionGlobal.setSelected(actionType)
     }
 
 

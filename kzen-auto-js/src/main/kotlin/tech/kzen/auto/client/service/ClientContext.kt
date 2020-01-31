@@ -56,31 +56,31 @@ object ClientContext {
     private val restActionExecutor = ClientRestActionExecutor(
             restClient)
 
-    val executionManager = ExecutionRepository(
+    val executionRepository = ExecutionRepository(
             restExecutionInitializer,
             restActionExecutor)
 
     val executionLoop = ExecutionLoop(
             mirroredGraphStore,
-            executionManager,
+            executionRepository,
             125)
 
-    val insertionManager = InsertionGlobal()
-    val executionIntent = ExecutionIntentGlobal()
+    val insertionGlobal = InsertionGlobal()
+    val executionIntentGlobal = ExecutionIntentGlobal()
 
     private val clientRestVisualDataflowProvider = ClientRestVisualDataflowProvider(
             restClient)
 
-    val visualDataflowManager = VisualDataflowRepository(
+    val visualDataflowRepository = VisualDataflowRepository(
             clientRestVisualDataflowProvider)
 
     val visualDataflowLoop = VisualDataflowLoop(
             mirroredGraphStore,
-            visualDataflowManager,
+            visualDataflowRepository,
             250,
             200)
 
-    val navigationManager = NavigationRepository(
+    val navigationRepository = NavigationRepository(
             executionLoop,
             visualDataflowLoop)
 
@@ -96,13 +96,13 @@ object ClientContext {
 
 
     suspend fun initAsync() {
-        navigationManager.postConstruct(mirroredGraphStore)
+        navigationRepository.postConstruct(mirroredGraphStore)
 
-        mirroredGraphStore.observe(executionManager)
-        mirroredGraphStore.observe(visualDataflowManager)
+        mirroredGraphStore.observe(executionRepository)
+        mirroredGraphStore.observe(visualDataflowRepository)
 
-        executionManager.observe(executionLoop)
-        visualDataflowManager.observe(visualDataflowLoop)
+        executionRepository.observe(executionLoop)
+        visualDataflowRepository.observe(visualDataflowLoop)
 
         // NB: pre-load, otherwise can have race condition
         seededNotationMedia.scan()

@@ -35,7 +35,7 @@ class MappingBranchDisplay(
                 MappingBranchDisplay.Props,
                 MappingBranchDisplay.State
                 >(props),
-        InsertionGlobal.Observer
+        InsertionGlobal.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -84,13 +84,13 @@ class MappingBranchDisplay(
 
     override fun componentDidMount() {
         async {
-            ClientContext.insertionManager.subscribe(this)
+            ClientContext.insertionGlobal.subscribe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.insertionManager.unSubscribe(this)
+        ClientContext.insertionGlobal.unsubscribe(this)
     }
 
 
@@ -111,7 +111,7 @@ class MappingBranchDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(index: Int) {
-        val archetypeObjectLocation = ClientContext.insertionManager
+        val archetypeObjectLocation = ClientContext.insertionGlobal
                 .getAndClearSelection()
                 ?: return
 

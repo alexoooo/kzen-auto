@@ -120,14 +120,14 @@ class StepHeader(
 
     override fun componentDidMount() {
         props.hoverSignal.attach(this)
-        ClientContext.executionIntent.observe(this)
+        ClientContext.executionIntentGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
         props.hoverSignal.detach()
         optionCompletedTime = null
-        ClientContext.executionIntent.unobserve(this)
+        ClientContext.executionIntentGlobal.unobserve(this)
     }
 
 
@@ -142,7 +142,7 @@ class StepHeader(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRun() {
         async {
-            ClientContext.executionManager.execute(
+            ClientContext.executionRepository.execute(
                     props.objectLocation.documentPath,
                     props.objectLocation,
                     props.graphStructure)
@@ -151,12 +151,12 @@ class StepHeader(
 
 
     private fun onRunEnter() {
-        ClientContext.executionIntent.set(props.objectLocation)
+        ClientContext.executionIntentGlobal.set(props.objectLocation)
     }
 
 
     private fun onRunLeave() {
-        ClientContext.executionIntent.clearIf(props.objectLocation)
+        ClientContext.executionIntentGlobal.clearIf(props.objectLocation)
     }
 
 

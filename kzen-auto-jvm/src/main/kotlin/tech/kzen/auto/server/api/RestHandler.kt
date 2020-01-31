@@ -591,7 +591,7 @@ class RestHandler {
 
         val executionModel = runBlocking {
             val graphStructure = ServerContext.graphStore.graphStructure()
-            ServerContext.executionManager.executionModel(documentPath, graphStructure)
+            ServerContext.executionRepository.executionModel(documentPath, graphStructure)
         }
 
         return ServerResponse
@@ -609,7 +609,7 @@ class RestHandler {
                     .graphStructure()
                     .filter(AutoConventions.serverAllowed)
 
-            ServerContext.executionManager.start(
+            ServerContext.executionRepository.start(
                     documentPath, graphStructure)
         }
 
@@ -624,7 +624,7 @@ class RestHandler {
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val digest = runBlocking {
-            ServerContext.executionManager.reset(documentPath)
+            ServerContext.executionRepository.reset(documentPath)
         }
 
         return ServerResponse
@@ -644,7 +644,7 @@ class RestHandler {
 
         val execution: ImperativeResponse = runBlocking {
             val graphStructure = ServerContext.graphStore.graphStructure()
-            ServerContext.executionManager.execute(documentPath, objectLocation, graphStructure)
+            ServerContext.executionRepository.execute(documentPath, objectLocation, graphStructure)
         }
 
         return ServerResponse
@@ -702,7 +702,7 @@ class RestHandler {
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
 
         val visualDataflowModel = runBlocking {
-            ServerContext.visualDataflowManager.get(documentPath)
+            ServerContext.visualDataflowRepository.get(documentPath)
         }
 
         val result =
@@ -728,7 +728,7 @@ class RestHandler {
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
         val visualDataflowModel = runBlocking {
-            ServerContext.visualDataflowManager.reset(documentPath)
+            ServerContext.visualDataflowRepository.reset(documentPath)
         }
 
         return ServerResponse
@@ -747,7 +747,7 @@ class RestHandler {
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
         val transition: VisualVertexTransition = runBlocking {
-            ServerContext.visualDataflowManager.execute(documentPath, objectLocation)
+            ServerContext.visualDataflowRepository.execute(documentPath, objectLocation)
         }
 
         return ServerResponse

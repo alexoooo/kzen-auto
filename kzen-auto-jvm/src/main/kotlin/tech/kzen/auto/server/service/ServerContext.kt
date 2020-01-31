@@ -57,44 +57,44 @@ object ServerContext {
     val detachedExecutor = ModelDetachedExecutor(
             graphStore, graphCreator)
 
-    val executionManager = ExecutionRepository(
+    val executionRepository = ExecutionRepository(
             EmptyExecutionInitializer,
             actionExecutor)
 
 
-    private val graphInstanceManager = GraphInstanceCreator(
+    private val graphInstanceCreator = GraphInstanceCreator(
             graphStore, graphCreator)
 
     private val dataflowMessageInspector = DataflowMessageInspector()
 
-    private val activeDataflowManager = ActiveDataflowRepository(
-            graphInstanceManager,
+    private val activeDataflowRepository = ActiveDataflowRepository(
+            graphInstanceCreator,
             dataflowMessageInspector,
             graphStore)
 
     private val activeVisualProvider = ActiveVisualProvider(
-            activeDataflowManager)
+            activeDataflowRepository)
 
-    val visualDataflowManager = VisualDataflowRepository(
+    val visualDataflowRepository = VisualDataflowRepository(
             activeVisualProvider)
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val downloadManager = DownloadClient()
+    private val downloadClient = DownloadClient()
 
     val webDriverRepo = WebDriverOptionDao()
-    val webDriverInstaller = WebDriverInstaller(downloadManager)
+    val webDriverInstaller = WebDriverInstaller(downloadClient)
     val webDriverContext = WebDriverContext()
 
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        downloadManager.initialize()
+        downloadClient.initialize()
 
         runBlocking {
-            graphStore.observe(executionManager)
-            graphStore.observe(activeDataflowManager)
-            graphStore.observe(visualDataflowManager)
+            graphStore.observe(executionRepository)
+            graphStore.observe(activeDataflowRepository)
+            graphStore.observe(visualDataflowRepository)
         }
     }
 

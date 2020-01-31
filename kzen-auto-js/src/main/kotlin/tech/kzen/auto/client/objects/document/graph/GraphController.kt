@@ -46,7 +46,7 @@ import tech.kzen.lib.platform.collect.persistentMapOf
 class GraphController:
         RPureComponent<GraphController.Props, GraphController.State>(),
         LocalGraphStore.Observer,
-        InsertionGlobal.Observer,
+        InsertionGlobal.Subscriber,
         NavigationRepository.Observer,
         VisualDataflowRepository.Observer
 {
@@ -98,10 +98,10 @@ class GraphController:
 //        println("ProjectController - Subscribed")
         async {
             ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.insertionManager.subscribe(this)
-            ClientContext.navigationManager.observe(this)
+            ClientContext.insertionGlobal.subscribe(this)
+            ClientContext.navigationRepository.observe(this)
 
-            ClientContext.visualDataflowManager.observe(this)
+            ClientContext.visualDataflowRepository.observe(this)
         }
     }
 
@@ -110,9 +110,9 @@ class GraphController:
 //        println("ProjectController - Un-subscribed")
         ClientContext.mirroredGraphStore.unobserve(this)
 //        ClientContext.executionManager.unsubscribe(this)
-        ClientContext.insertionManager.unSubscribe(this)
-        ClientContext.navigationManager.unobserve(this)
-        ClientContext.visualDataflowManager.unobserve(this)
+        ClientContext.insertionGlobal.unsubscribe(this)
+        ClientContext.navigationRepository.unobserve(this)
+        ClientContext.visualDataflowRepository.unobserve(this)
     }
 
 
@@ -134,7 +134,7 @@ class GraphController:
             }
             else {
                 async {
-                    val visualDataflowModel = ClientContext.visualDataflowManager.get(documentPath)
+                    val visualDataflowModel = ClientContext.visualDataflowRepository.get(documentPath)
                     setState {
                         this.visualDataflowModel = visualDataflowModel
                     }
@@ -241,7 +241,7 @@ class GraphController:
         val documentNotation = documentNotation()
                 ?: return
 
-        val archetypeLocation = ClientContext.insertionManager.getAndClearSelection()
+        val archetypeLocation = ClientContext.insertionGlobal.getAndClearSelection()
                 ?: return
 
         val archetypeNotation = state.graphStructure!!.graphNotation.coalesce[archetypeLocation]!!

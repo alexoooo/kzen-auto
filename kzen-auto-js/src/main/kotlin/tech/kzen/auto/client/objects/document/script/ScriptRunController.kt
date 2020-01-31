@@ -75,7 +75,7 @@ class ScriptRunController(
                     ClientContext.executionLoop.pause(host)
                 }
 
-                ClientContext.executionIntent.clear()
+                ClientContext.executionIntentGlobal.clear()
             }
         }
     }
@@ -84,13 +84,13 @@ class ScriptRunController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         async {
-            ClientContext.executionManager.observe(this)
+            ClientContext.executionRepository.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.executionManager.unobserve(this)
+        ClientContext.executionRepository.unobserve(this)
     }
 
 
@@ -136,7 +136,7 @@ class ScriptRunController(
         val documentPath = props.documentPath
                 ?: return
 
-        val expectedDigest = ClientContext.executionManager.start(
+        val expectedDigest = ClientContext.executionRepository.start(
                 documentPath, graphStructure)
 
         val actualDigest = ClientContext.restClient.startExecution(documentPath)
@@ -198,7 +198,7 @@ class ScriptRunController(
                 props.structure!!, props.execution!!)!!
 
         async {
-            ClientContext.executionManager.execute(
+            ClientContext.executionRepository.execute(
                     props.documentPath!!,
                     nextToRun,
                     props.structure!!)
@@ -211,7 +211,7 @@ class ScriptRunController(
                 ?: return
 
         async {
-            ClientContext.executionIntent.clear()
+            ClientContext.executionIntentGlobal.clear()
             ClientContext.executionLoop.run(host)
         }
     }
@@ -232,7 +232,7 @@ class ScriptRunController(
         onPause()
 
         async {
-            ClientContext.executionManager.reset(host)
+            ClientContext.executionRepository.reset(host)
             executionStateToFreshStart()
         }
     }
@@ -257,13 +257,13 @@ class ScriptRunController(
         val nextToRun = props.execution?.let {
             ImperativeUtils.next(props.structure!!, it)
         }
-        if (nextToRun == ClientContext.executionIntent.actionLocation()) {
+        if (nextToRun == ClientContext.executionIntentGlobal.actionLocation()) {
             return
         }
 
 //        println("^$%^$%^% onRunAllEnter - ${state.execution} - $nextToRun")
         if (nextToRun != null) {
-            ClientContext.executionIntent.set(nextToRun)
+            ClientContext.executionIntentGlobal.set(nextToRun)
         }
     }
 
@@ -275,7 +275,7 @@ class ScriptRunController(
         }
 //        println("^$%^$%^% onRunAllLeave - $nextToRun")
         if (nextToRun != null) {
-            ClientContext.executionIntent.clearIf(nextToRun)
+            ClientContext.executionIntentGlobal.clearIf(nextToRun)
         }
     }
 

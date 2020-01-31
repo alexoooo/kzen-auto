@@ -79,12 +79,12 @@ class CellController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.executionIntent.observe(this)
+        ClientContext.executionIntentGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.executionIntent.unobserve(this)
+        ClientContext.executionIntentGlobal.unobserve(this)
     }
 
 

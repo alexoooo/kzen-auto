@@ -98,13 +98,13 @@ class DefaultAttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         async {
-            ClientContext.executionManager.observe(this)
+            ClientContext.executionRepository.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.executionManager.unobserve(this)
+        ClientContext.executionRepository.unobserve(this)
     }
 
 

@@ -59,7 +59,7 @@ class SidebarController(
 //        println("ProjectController - Subscribed")
         async {
             ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.navigationManager.observe(this)
+            ClientContext.navigationRepository.observe(this)
         }
     }
 
@@ -67,7 +67,7 @@ class SidebarController(
     override fun componentWillUnmount() {
 //        println("ProjectController - Un-subscribed")
         ClientContext.mirroredGraphStore.unobserve(this)
-        ClientContext.navigationManager.unobserve(this)
+        ClientContext.navigationRepository.unobserve(this)
     }
 
 
@@ -82,7 +82,7 @@ class SidebarController(
         val mainDocuments = AutoConventions.mainDocuments(structure.graphNotation)
 
         if (state.documentPath == null && ! mainDocuments.isEmpty()) {
-            ClientContext.navigationManager.goto(mainDocuments[0])
+            ClientContext.navigationRepository.goto(mainDocuments[0])
         }
     }
 

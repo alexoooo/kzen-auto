@@ -129,6 +129,21 @@ data class ImperativeModel(
     }
 
 
+    fun isRunning(): Boolean {
+        return containsStatus(ImperativePhase.Running)
+    }
+
+
+    fun isActive(): Boolean {
+        for (frame in frames) {
+            if (frame.states.values.find { it.phase() != ImperativePhase.Pending } != null) {
+                return true
+            }
+        }
+        return false
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun digest(): Digest {
         val digest = Digest.Builder()

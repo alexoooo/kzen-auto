@@ -219,11 +219,11 @@ class StepNameEditor(
     }
 
     private fun onRunEnter() {
-        ClientContext.executionIntent.set(props.objectLocation)
+        ClientContext.executionIntentGlobal.set(props.objectLocation)
     }
 
     private fun onRunLeave() {
-        ClientContext.executionIntent.clearIf(props.objectLocation)
+        ClientContext.executionIntentGlobal.clearIf(props.objectLocation)
     }
 
 

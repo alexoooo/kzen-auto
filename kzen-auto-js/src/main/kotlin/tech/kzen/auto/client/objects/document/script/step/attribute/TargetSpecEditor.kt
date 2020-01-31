@@ -150,14 +150,14 @@ class TargetSpecEditor(
 
     override fun componentDidMount() {
         async {
-            ClientContext.executionManager.observe(this)
+            ClientContext.executionRepository.observe(this)
             ClientContext.mirroredGraphStore.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.executionManager.unobserve(this)
+        ClientContext.executionRepository.unobserve(this)
         ClientContext.mirroredGraphStore.unobserve(this)
     }
 

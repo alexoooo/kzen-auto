@@ -71,7 +71,8 @@ class ExecutionRepository(
 
 
     fun unobserve(observer: Observer) {
-        observers.remove(observer)
+        val removed = observers.remove(observer)
+        check(removed) { "Not found: $observer" }
     }
 
 
@@ -94,9 +95,9 @@ class ExecutionRepository(
 
 //        val current = version++
 //        println("^^^ publishExecutionModel - $current - $host - $model")
-        for (subscriber in observers) {
+        for (observer in observers) {
 //            println("^^^ ### publishExecutionModel - to subscriber - $current")
-            subscriber.onExecutionModel(host, model)
+            observer.onExecutionModel(host, model)
         }
     }
 

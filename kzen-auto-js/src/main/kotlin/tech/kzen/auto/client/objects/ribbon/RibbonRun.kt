@@ -5,17 +5,22 @@ import kotlinx.css.color
 import org.w3c.dom.HTMLElement
 import react.*
 import styled.styledDiv
+import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
+import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 
 
 class RibbonRun (
         props: Props
 ):
-        RPureComponent<RibbonRun.Props, RibbonRun.State>(props)//,
-//        InsertionManager.Observer,
-//        NavigationManager.Observer
+        RPureComponent<RibbonRun.Props, RibbonRun.State>(props),
+        ExecutionRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
@@ -35,6 +40,9 @@ class RibbonRun (
 //
 //            var currentRibbonGroups: List<RibbonGroup>
 
+            var active: Set<DocumentPath>,
+//            var executionModel: ImperativeModel?,
+
             var dropdownOpen: Boolean
     ): RState
 
@@ -43,6 +51,61 @@ class RibbonRun (
     private var dropdownAnchorRef: HTMLElement? = null
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: Props) {
+        active = setOf()
+//        executionModel = null
+        dropdownOpen = false
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun componentDidMount() {
+        async {
+            ClientContext.executionRepository.observe(this)
+        }
+    }
+
+
+    override fun componentWillUnmount() {
+        ClientContext.executionRepository.unobserve(this)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
+
+    }
+
+
+    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {
+        val active = state.active
+
+        val modifiedActive =
+                if (executionModel.isActive()) {
+                    active + host
+                }
+                else {
+                    active - host
+                }
+
+//        console.log("^^^ onExecutionModel: " +
+//                "$active / $modifiedActive - $host - ${executionModel.isActive()} - $executionModel")
+
+        if (active != modifiedActive) {
+//            console.log("!! setting: $modifiedActive")
+            setState {
+                this.active = modifiedActive
+            }
+        }
+
+//        setState {
+//            this.executionModel = executionModel
+//        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun onOptionsOpen() {
         setState {
             dropdownOpen = true
@@ -70,13 +133,17 @@ class RibbonRun (
 
             child(MaterialIconButton::class) {
                 attrs {
-                    title = "Run"
-                    onClick = ::onOptionsOpen
+                    if (state.active.isEmpty()) {
+                        title = "No scripts running"
+//                        onClick = ::onOptionsOpen
+                    }
+                    else {
+                        title = "Running"
+                        onClick = ::onOptionsOpen
 
-                    style = reactStyle {
-                        color = Color.black
-//                        marginTop = (-13).px
-//                        marginRight = (-16).px
+                        style = reactStyle {
+                            color = Color.black
+                        }
                     }
                 }
 
@@ -101,6 +168,10 @@ class RibbonRun (
                     .filter { ScriptDocument.isScript(it.key, it.value) }
 
             for (script in scriptDocuments) {
+                if (! state.active.contains(script.key)) {
+                    continue
+                }
+
                 child(MaterialMenuItem::class) {
                     attrs {
                         key = script.key.asString()

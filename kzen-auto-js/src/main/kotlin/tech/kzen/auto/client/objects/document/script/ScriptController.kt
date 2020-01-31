@@ -43,7 +43,7 @@ class ScriptController:
         NavigationRepository.Observer,
         LocalGraphStore.Observer,
         ExecutionRepository.Observer,
-        InsertionGlobal.Observer
+        InsertionGlobal.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -124,9 +124,9 @@ class ScriptController:
         async {
 //            console.log("^^^^^^ script - adding observers")
             ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.executionManager.observe(this)
-            ClientContext.insertionManager.subscribe(this)
-            ClientContext.navigationManager.observe(this)
+            ClientContext.executionRepository.observe(this)
+            ClientContext.insertionGlobal.subscribe(this)
+            ClientContext.navigationRepository.observe(this)
         }
     }
 
@@ -136,9 +136,9 @@ class ScriptController:
 
 //        println("ProjectController - Un-subscribed")
         ClientContext.mirroredGraphStore.unobserve(this)
-        ClientContext.executionManager.unobserve(this)
-        ClientContext.insertionManager.unSubscribe(this)
-        ClientContext.navigationManager.unobserve(this)
+        ClientContext.executionRepository.unobserve(this)
+        ClientContext.insertionGlobal.unsubscribe(this)
+        ClientContext.navigationRepository.unobserve(this)
     }
 
 
@@ -150,7 +150,7 @@ class ScriptController:
 //        console.log("%#$%#$%#$ componentDidUpdate", state.documentPath, prevState.documentPath)
         if (state.documentPath != null && state.documentPath != prevState.documentPath) {
             async {
-                val executionModel = ClientContext.executionManager.executionModel(
+                val executionModel = ClientContext.executionRepository.executionModel(
                         state.documentPath!!,
                         state.graphStructure!!)
 //                console.log("%#$%#$%#$ componentDidUpdate",
@@ -233,7 +233,7 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(index: Int) {
-        val archetypeObjectLocation = ClientContext.insertionManager
+        val archetypeObjectLocation = ClientContext.insertionGlobal
                 .getAndClearSelection()
                 ?: return
 

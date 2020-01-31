@@ -63,14 +63,14 @@ class StageController(
     override fun componentDidMount() {
         async {
             ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.navigationManager.observe(this)
+            ClientContext.navigationRepository.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
         ClientContext.mirroredGraphStore.unobserve(this)
-        ClientContext.navigationManager.unobserve(this)
+        ClientContext.navigationRepository.unobserve(this)
     }
 
 

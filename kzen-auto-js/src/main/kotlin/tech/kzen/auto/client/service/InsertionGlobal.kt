@@ -5,26 +5,26 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 class InsertionGlobal {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Observer {
+    interface Subscriber {
         fun onInsertionSelected(action: ObjectLocation)
         fun onInsertionUnselected()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val subscribers = mutableListOf<Observer>()
+    private val subscribers = mutableListOf<Subscriber>()
 
     private var selected: ObjectLocation? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun subscribe(observer: Observer) {
-        subscribers.add(observer)
+    fun subscribe(subscriber: Subscriber) {
+        subscribers.add(subscriber)
     }
 
 
-    fun unSubscribe(observer: Observer) {
-        subscribers.remove(observer)
+    fun unsubscribe(subscriber: Subscriber) {
+        subscribers.remove(subscriber)
     }
 
 
