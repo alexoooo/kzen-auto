@@ -10,6 +10,7 @@ import tech.kzen.auto.common.api.CommonRestApi
 class ServerRestApi(
         private val counterHandler: RestHandler
 ) {
+    @Suppress("unused")
     @Bean
     fun counterRouter() = router {
         GET(CommonRestApi.scan, counterHandler::scan)
@@ -41,6 +42,7 @@ class ServerRestApi(
 
         GET(CommonRestApi.commandBenchmark, counterHandler::benchmark)
 
+        GET(CommonRestApi.actionList, counterHandler::actionList)
         GET(CommonRestApi.actionModel, counterHandler::actionModel)
         GET(CommonRestApi.actionStart, counterHandler::actionStart)
         GET(CommonRestApi.actionReset, counterHandler::actionReset)

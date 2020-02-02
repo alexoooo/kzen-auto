@@ -63,6 +63,15 @@ class RibbonRun (
     override fun componentDidMount() {
         async {
             ClientContext.executionRepository.observe(this)
+
+            val initialActiveScripts =
+                    ClientContext.restClient.activeScripts()
+
+            val nextActive = state.active + initialActiveScripts
+
+            setState {
+                active = nextActive
+            }
         }
     }
 

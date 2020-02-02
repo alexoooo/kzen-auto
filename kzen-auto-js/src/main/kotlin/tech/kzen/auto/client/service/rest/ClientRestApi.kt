@@ -331,6 +331,20 @@ class ClientRestApi(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    suspend fun activeScripts(): List<DocumentPath> {
+        val responseText = get(
+                CommonRestApi.actionList)
+
+        val responseJson = JSON.parse<Array<String>>(responseText)
+
+        @Suppress("UNCHECKED_CAST")
+        val responseCollection = ClientJsonUtils.toList(responseJson) as List<String>
+
+        @Suppress("UNCHECKED_CAST")
+        return responseCollection.map { DocumentPath.parse(it) }
+    }
+
+
     suspend fun executionModel(host: DocumentPath): ImperativeModel {
         val responseText = get(
                 CommonRestApi.actionModel,

@@ -59,6 +59,7 @@ object CommonRestApi {
 
 
     private const val actionPrefix = "/action/"
+    const val actionList = "${actionPrefix}list"
     const val actionModel = "${actionPrefix}model"
     const val actionStart = "${actionPrefix}start"
     const val actionReset = "${actionPrefix}reset"

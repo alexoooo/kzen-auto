@@ -244,6 +244,13 @@ class ExecutionRepository(
 //        return modelOrInit(host).containsStatus(ImperativePhase.Running)
 //    }
 
+    fun activeScripts(): List<DocumentPath> {
+        return models
+                .filter { it.value.isActive() }
+                .keys
+                .toList()
+    }
+
 
     suspend fun executionModel(
             host: DocumentPath,

@@ -585,6 +585,16 @@ class RestHandler {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun actionList(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val activeScripts = ServerContext.executionRepository.activeScripts()
+        val encoded = activeScripts.map { it.asString() }
+
+        return ServerResponse
+                .ok()
+                .body(Mono.just(encoded))
+    }
+
+
     fun actionModel(serverRequest: ServerRequest): Mono<ServerResponse> {
         val documentPath: DocumentPath = serverRequest.getParam(
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
