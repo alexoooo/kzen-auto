@@ -1,5 +1,8 @@
 package tech.kzen.auto.client.service
 
+import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
+import tech.kzen.auto.client.service.global.InsertionGlobal
+import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.rest.*
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
@@ -80,7 +83,7 @@ object ClientContext {
             250,
             200)
 
-    val navigationRepository = NavigationRepository(
+    val navigationRepository = NavigationGlobal(
             executionLoop,
             visualDataflowLoop)
 

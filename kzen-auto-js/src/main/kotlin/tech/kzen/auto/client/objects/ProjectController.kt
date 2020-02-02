@@ -13,7 +13,7 @@ import tech.kzen.auto.client.objects.document.StageController
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.objects.sidebar.SidebarController
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.NavigationRepository
+import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
@@ -32,7 +32,7 @@ class ProjectController(
 ):
         RPureComponent<ProjectController.Props, ProjectController.State>(props),
         LocalGraphStore.Observer,
-        NavigationRepository.Observer
+        NavigationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

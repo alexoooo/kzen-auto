@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.service
+package tech.kzen.auto.client.service.global
 
 import tech.kzen.lib.common.model.locate.ObjectLocation
 

@@ -12,8 +12,8 @@ import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.InsertionGlobal
-import tech.kzen.auto.client.service.NavigationRepository
+import tech.kzen.auto.client.service.global.InsertionGlobal
+import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
@@ -40,7 +40,7 @@ import tech.kzen.lib.platform.collect.persistentListOf
 @Suppress("unused")
 class ScriptController:
         RPureComponent<ScriptController.Props, ScriptController.State>(),
-        NavigationRepository.Observer,
+        NavigationGlobal.Observer,
         LocalGraphStore.Observer,
         ExecutionRepository.Observer,
         InsertionGlobal.Subscriber

@@ -9,8 +9,8 @@ import styled.*
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.InsertionGlobal
-import tech.kzen.auto.client.service.NavigationRepository
+import tech.kzen.auto.client.service.global.InsertionGlobal
+import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
@@ -47,7 +47,7 @@ class GraphController:
         RPureComponent<GraphController.Props, GraphController.State>(),
         LocalGraphStore.Observer,
         InsertionGlobal.Subscriber,
-        NavigationRepository.Observer,
+        NavigationGlobal.Observer,
         VisualDataflowRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------

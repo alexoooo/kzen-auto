@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.service
+package tech.kzen.auto.client.service.global
 
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
@@ -10,7 +10,7 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 import kotlin.browser.window
 
 
-class NavigationRepository(
+class NavigationGlobal(
         private val executionLoop: ExecutionLoop,
         private val visualDataflowLoop: VisualDataflowLoop
 ):
