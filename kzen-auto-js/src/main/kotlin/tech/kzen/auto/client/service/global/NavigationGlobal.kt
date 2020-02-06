@@ -2,6 +2,7 @@ package tech.kzen.auto.client.service.global
 
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
@@ -18,20 +19,23 @@ class NavigationGlobal(
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
-        fun handleNavigation(documentPath: DocumentPath?)
+        fun handleNavigation(
+                documentPath: DocumentPath?,
+                parameters: RequestParams)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private val observers = mutableSetOf<Observer>()
     private var documentPath: DocumentPath? = null
+    private var parameters: RequestParams = RequestParams.empty
 
 
     fun observe(observer: Observer) {
         observers.add(observer)
 
         if (documentPath != null) {
-            observer.handleNavigation(documentPath)
+            observer.handleNavigation(documentPath, parameters)
         }
     }
 
@@ -53,7 +57,7 @@ class NavigationGlobal(
             }
 
 //            console.log("^^^^ nav publishing - observer", observer)
-            observer.handleNavigation(documentPath)
+            observer.handleNavigation(documentPath, parameters)
         }
     }
 
@@ -119,27 +123,50 @@ class NavigationGlobal(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun readAndPublishIfNecessary() {
-        val previous = documentPath
+        val previousPath = documentPath
+        val previousParameters = parameters
 
-        documentPath = read()
+        readPathAndParameters()
 
-        if (previous != documentPath) {
+        if (previousPath != documentPath ||
+                previousParameters != parameters) {
             publish()
         }
     }
 
 
-    private fun read(): DocumentPath? {
+    private fun readPathAndParameters() {
 //        console.log("^^^ read", window.location.hash)
-        val encodedPath = window.location.hash.substring(1)
+        val encodedLocationHash = window.location.hash.substring(1)
 
-        if (encodedPath.isEmpty()) {
-            return null
+        if (encodedLocationHash.isEmpty()) {
+            documentPath = null
+            parameters = RequestParams.empty
+            return
         }
 
-//        val path = js("decodeURIComponent(encodedPath)") as String
-        val path = js("decodeURI(encodedPath)") as String
+        val locationHash = js("decodeURI(encodedLocationHash)") as String
 
-        return DocumentPath.parse(path)
+        val paramIndex = locationHash.indexOf('?')
+
+        val path =
+                if (paramIndex == -1) {
+                    locationHash
+                }
+                else {
+                    locationHash.substring(0, paramIndex)
+                }
+
+        val params =
+                if (paramIndex == -1) {
+                    RequestParams.empty
+                }
+                else {
+                    val paramSuffix = locationHash.substring(paramIndex + 1)
+                    RequestParams.parse(paramSuffix)
+                }
+
+        documentPath = DocumentPath.parse(path)
+        parameters = params
     }
 }

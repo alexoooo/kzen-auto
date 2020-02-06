@@ -16,6 +16,7 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -149,7 +150,10 @@ class FeatureController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun handleNavigation(documentPath: DocumentPath?) {
+    override fun handleNavigation(
+            documentPath: DocumentPath?,
+            parameters: RequestParams
+    ) {
         setState {
             this.documentPath = documentPath
         }

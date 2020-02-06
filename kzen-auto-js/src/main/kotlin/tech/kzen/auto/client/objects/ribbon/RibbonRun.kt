@@ -1,16 +1,24 @@
 package tech.kzen.auto.client.objects.ribbon
 
-import kotlinx.css.Color
-import kotlinx.css.color
+import kotlinx.css.*
+import kotlinx.css.properties.TextDecorationLine
+import kotlinx.css.properties.textDecoration
 import org.w3c.dom.HTMLElement
-import react.*
+import react.RBuilder
+import react.RProps
+import react.RState
+import react.setState
+import styled.css
+import styled.styledA
 import styled.styledDiv
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -23,10 +31,19 @@ class RibbonRun (
         ExecutionRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        const val runningKey = "running"
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     class Props(
 //            var actionTypes: List<ObjectLocation>,
 //            var ribbonGroups: List<RibbonGroup>,
-//
+
+            var navPath: DocumentPath?,
+            var parameters: RequestParams,
+
             var notation: GraphNotation
     ): RProps
 
@@ -133,6 +150,8 @@ class RibbonRun (
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        val selected = props.parameters.get(runningKey)
+
         styledDiv {
             ref {
                 dropdownAnchorRef = it as? HTMLElement
@@ -181,15 +200,31 @@ class RibbonRun (
                     continue
                 }
 
-                child(MaterialMenuItem::class) {
-                    attrs {
-                        key = script.key.asString()
-//                        onClick = {
-//                            onAdd(archetypeLocation, title)
-//                        }
+                val pathValue = script.key.asString()
+                val isActive = selected == pathValue
+
+                styledA {
+                    css {
+                        color = Color.inherit
+                        textDecoration(TextDecorationLine.initial)
+                        width = 100.pct
+                        height = 100.pct
                     }
 
-                    +script.key.name.value
+                    attrs {
+                        key = pathValue
+                        href = NavigationRoute(
+                                props.navPath,
+                                props.parameters.set(runningKey, pathValue)
+                        ).toFragment()
+                    }
+
+                    child(MaterialMenuItem::class) {
+                        if (isActive) {
+                            +"> "
+                        }
+                        +script.key.name.value
+                    }
                 }
             }
         }

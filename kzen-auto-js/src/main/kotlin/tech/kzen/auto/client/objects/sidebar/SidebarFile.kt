@@ -12,10 +12,13 @@ import styled.styledA
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
@@ -27,7 +30,8 @@ import kotlin.js.Date
 class SidebarFile(
         props: Props
 ):
-        RPureComponent<SidebarFile.Props, SidebarFile.State>(props)
+        RPureComponent<SidebarFile.Props, SidebarFile.State>(props),
+        NavigationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -50,7 +54,8 @@ class SidebarFile(
             var hoverItem: Boolean,
             var hoverOptions: Boolean,
             var optionsOpen: Boolean,
-            var editing: Boolean
+            var editing: Boolean,
+            var parameters: RequestParams
     ): RState
 
 
@@ -66,6 +71,26 @@ class SidebarFile(
     override fun State.init(props: Props) {
         optionsOpen = false
         editing = false
+        parameters = RequestParams.empty
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun componentDidMount() {
+        ClientContext.navigationRepository.observe(this)
+    }
+
+
+    override fun componentWillUnmount() {
+        ClientContext.navigationRepository.unobserve(this)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun handleNavigation(documentPath: DocumentPath?, parameters: RequestParams) {
+        setState {
+            this.parameters = parameters
+        }
     }
 
 
@@ -208,7 +233,10 @@ class SidebarFile(
                     }
 
                     attrs {
-                        href = "#" + props.documentPath.asString()
+                        href = NavigationRoute(
+                                props.documentPath,
+                                state.parameters
+                        ).toFragment()
                     }
 
                     renderIconAndName(archetypeLocation)
@@ -221,7 +249,7 @@ class SidebarFile(
                     top = 0.px
                     right = 0.px
                 }
-                
+
                 ref {
                     this@SidebarFile.menuAnchorRef = it as? HTMLElement
                 }

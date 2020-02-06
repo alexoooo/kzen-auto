@@ -15,6 +15,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -91,7 +92,10 @@ class StageController(
     }
 
 
-    override fun handleNavigation(documentPath: DocumentPath?) {
+    override fun handleNavigation(
+            documentPath: DocumentPath?,
+            parameters: RequestParams
+    ) {
         setState {
             this.documentPath = documentPath
         }

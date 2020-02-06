@@ -16,6 +16,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.GraphStructure
@@ -152,7 +153,10 @@ class ProjectController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun handleNavigation(documentPath: DocumentPath?) {
+    override fun handleNavigation(
+            documentPath: DocumentPath?,
+            parameters: RequestParams
+    ) {
         async {
             // NB: account for possible header resize
             delay(1)

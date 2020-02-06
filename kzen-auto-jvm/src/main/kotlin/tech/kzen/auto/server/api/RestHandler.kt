@@ -18,6 +18,7 @@ import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -688,7 +689,7 @@ class RestHandler {
                 .flatMap { optionalBody ->
                     val body = optionalBody.orElse(null)
 
-                    val detachedRequest = DetachedRequest(params, body)
+                    val detachedRequest = DetachedRequest(RequestParams(params), body)
 
                     val execution: ExecutionResult = runBlocking {
                         ServerContext.detachedExecutor.execute(

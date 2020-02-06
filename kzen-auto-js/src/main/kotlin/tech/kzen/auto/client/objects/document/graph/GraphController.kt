@@ -27,6 +27,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescript
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -211,7 +212,10 @@ class GraphController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun handleNavigation(documentPath: DocumentPath?) {
+    override fun handleNavigation(
+            documentPath: DocumentPath?,
+            parameters: RequestParams
+    ) {
         setState {
             this.documentPath = documentPath
         }

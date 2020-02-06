@@ -12,6 +12,7 @@ import tech.kzen.auto.client.util.decodeURIComponent
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -37,6 +38,7 @@ class RibbonController(
     class State(
             var updatePending: Boolean,
             var documentPath: DocumentPath?,
+            var parameters: RequestParams,
 
             var type: ObjectLocation?,
             var tabIndex: Int = 0,
@@ -66,6 +68,7 @@ class RibbonController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
         documentPath = null
+        parameters = RequestParams.empty
         updatePending = false
 
         type = null
@@ -148,10 +151,14 @@ class RibbonController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun handleNavigation(documentPath: DocumentPath?) {
+    override fun handleNavigation(
+            documentPath: DocumentPath?,
+            parameters: RequestParams
+    ) {
         setState {
             this.updatePending = true
             this.documentPath = documentPath
+            this.parameters = parameters
         }
     }
 
@@ -300,6 +307,8 @@ class RibbonController(
 
             child(RibbonRun::class) {
                 attrs {
+                    navPath = state.documentPath
+                    parameters = state.parameters
                     notation = props.notation
                 }
             }

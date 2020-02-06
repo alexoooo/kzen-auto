@@ -19,6 +19,7 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
@@ -169,7 +170,10 @@ class ScriptController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun handleNavigation(documentPath: DocumentPath?) {
+    override fun handleNavigation(
+            documentPath: DocumentPath?,
+            parameters: RequestParams
+    ) {
 //        console.log("^^^^^^ script - handleNavigation", documentPath)
 
         setState {
