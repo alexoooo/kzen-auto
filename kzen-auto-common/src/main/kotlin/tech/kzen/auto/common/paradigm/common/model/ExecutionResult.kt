@@ -1,9 +1,12 @@
 package tech.kzen.auto.common.paradigm.common.model
 
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.Digestible
 
 
-sealed class ExecutionResult {
+sealed class ExecutionResult
+    : Digestible
+{
     companion object {
         const val errorKey = "error"
         const val valueKey = "value"
@@ -28,7 +31,29 @@ sealed class ExecutionResult {
 
     abstract fun toCollection(): Map<String, Any?>
 
-    abstract fun digest(): Digest
+
+
+    override fun digest(): Digest {
+        val digest = Digest.Builder()
+        digest(digest)
+        return digest.digest()
+    }
+
+
+    override fun digest(builder: Digest.Builder) {
+        when (this) {
+            is ExecutionFailure -> {
+                builder.addBoolean(false)
+                builder.addUtf8(errorMessage)
+            }
+
+            is ExecutionSuccess -> {
+                builder.addBoolean(true)
+                value.digest(builder)
+                detail.digest(builder)
+            }
+        }
+    }
 }
 
 
@@ -39,10 +64,6 @@ data class ExecutionFailure(
         return mapOf(
                 errorKey to errorMessage
         )
-    }
-
-    override fun digest(): Digest {
-        return Digest.ofUtf8(errorMessage)
     }
 }
 

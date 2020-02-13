@@ -6,7 +6,9 @@ import tech.kzen.lib.platform.IoUtils
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class ExecutionValue: Digestible {
+sealed class ExecutionValue
+    : Digestible
+{
     companion object {
         private const val typeKey = "type"
         private const val valueKey = "value"
@@ -179,27 +181,35 @@ sealed class ExecutionValue: Digestible {
     override fun digest(builder: Digest.Builder) {
         when (this) {
             NullExecutionValue ->
-                builder.addMissing()
+                builder.addInt(0)
 
-            is TextExecutionValue ->
+            is TextExecutionValue -> {
+                builder.addInt(1)
                 builder.addUtf8(value)
+            }
 
-            is BooleanExecutionValue ->
+            is BooleanExecutionValue -> {
+                builder.addInt(2)
                 builder.addBoolean(value)
+            }
 
             is NumberExecutionValue -> {
+                builder.addInt(3)
                 builder.addDouble(value)
             }
 
-            is BinaryExecutionValue ->
+            is BinaryExecutionValue -> {
+                builder.addInt(4)
                 builder.addBytes(value)
+            }
 
             is ListExecutionValue -> {
-                builder.addInt(values.size)
-                values.forEach { it.digest(builder) }
+                builder.addInt(5)
+                builder.addDigestibleList(values)
             }
 
             is MapExecutionValue -> {
+                builder.addInt(6)
                 builder.addInt(values.size)
                 values.forEach {
                     builder.addUtf8(it.key)

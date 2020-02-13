@@ -6,13 +6,19 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.imperative.model.control.ControlState
 import tech.kzen.auto.common.paradigm.imperative.model.control.InitialControlState
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.Digestible
 
 
 data class ImperativeState(
+        // TODO: factor out
         val running: Boolean,
+
         val previous: ExecutionResult?,
+
         val controlState: ControlState?
-) {
+):
+        Digestible
+{
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val runningKey = "running"
@@ -67,15 +73,18 @@ data class ImperativeState(
     }
 
 
-    fun digest(): Digest {
+
+    override fun digest(): Digest {
         val digest = Digest.Builder()
-
-        digest.addBoolean(running)
-
-        digest.addDigest(previous?.digest())
-
-        digest.addDigest(controlState?.digest())
-
+        digest(digest)
         return digest.digest()
+    }
+
+
+    override fun digest(builder: Digest.Builder) {
+        builder.addBoolean(running)
+
+        builder.addDigestibleNullable(previous)
+        builder.addDigestibleNullable(controlState)
     }
 }

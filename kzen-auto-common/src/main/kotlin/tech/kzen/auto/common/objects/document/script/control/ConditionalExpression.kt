@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.script.control
+package tech.kzen.auto.common.objects.document.script.control
 
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.imperative.api.ScriptControl

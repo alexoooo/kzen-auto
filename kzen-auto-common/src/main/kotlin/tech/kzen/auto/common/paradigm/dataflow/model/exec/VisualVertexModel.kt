@@ -2,6 +2,7 @@ package tech.kzen.auto.common.paradigm.dataflow.model.exec
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.Digestible
 
 
 // TODO: add support for logging (possibly with log levels)
@@ -35,7 +36,9 @@ data class VisualVertexModel(
          * If present, means something went wrong
          */
         val error: String?
-) {
+):
+    Digestible
+{
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val empty = VisualVertexModel(
@@ -106,19 +109,12 @@ data class VisualVertexModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun digest(): Digest {
-        val digest = Digest.Builder()
+    override fun digest(builder: Digest.Builder) {
+        builder.addBoolean(running)
 
-        digest.addBoolean(running)
-
-        digest.addDigest(state?.digest())
-
-        digest.addDigest(message?.digest())
-
-        digest.addBoolean(hasNext)
-
-        digest.addInt(epoch)
-
-        return digest.digest()
+        builder.addDigestibleNullable(state)
+        builder.addDigestibleNullable(message)
+        builder.addBoolean(hasNext)
+        builder.addInt(epoch)
     }
 }

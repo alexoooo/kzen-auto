@@ -4,13 +4,16 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.Digestible
 import tech.kzen.lib.platform.collect.PersistentList
 import tech.kzen.lib.platform.collect.toPersistentList
 
 
 data class ImperativeModel(
         val frames: PersistentList<ImperativeFrame>
-) {
+):
+    Digestible
+{
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         fun toCollection(model: ImperativeModel): List<Map<String, Any>> {
@@ -145,18 +148,7 @@ data class ImperativeModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun digest(): Digest {
-        val digest = Digest.Builder()
-
-        digest.addInt(frames.size)
-
-        for (frames in frames) {
-            for (e in frames.states) {
-                digest.addUtf8(e.key.asString())
-                digest.addDigest(e.value.digest())
-            }
-        }
-
-        return digest.digest()
+    override fun digest(builder: Digest.Builder) {
+        builder.addDigestibleList(frames)
     }
 }

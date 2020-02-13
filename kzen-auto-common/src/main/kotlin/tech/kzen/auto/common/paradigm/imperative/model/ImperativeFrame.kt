@@ -2,6 +2,8 @@ package tech.kzen.auto.common.paradigm.imperative.model
 
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.Digestible
 import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.toPersistentMap
 
@@ -9,7 +11,7 @@ import tech.kzen.lib.platform.collect.toPersistentMap
 data class ImperativeFrame(
         val path: DocumentPath,
         val states: PersistentMap<ObjectPath, ImperativeState>
-) {
+): Digestible {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val pathKey = "path"
@@ -84,5 +86,19 @@ data class ImperativeFrame(
 
     fun remove(objectPath: ObjectPath): ImperativeFrame {
         return copy(states = states.remove(objectPath))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun digest(): Digest {
+        val digest = Digest.Builder()
+        digest(digest)
+        return digest.digest()
+    }
+
+
+    override fun digest(builder: Digest.Builder) {
+        path.digest(builder)
+        builder.addDigestibleUnorderedMap(states)
     }
 }

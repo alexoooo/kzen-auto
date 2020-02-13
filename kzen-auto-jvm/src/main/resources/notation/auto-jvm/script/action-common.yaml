@@ -65,7 +65,7 @@ DivisibleCheck:
 ConditionalExpression:
   abstract: true
   is: ControlFlow
-  class: tech.kzen.auto.server.objects.script.control.ConditionalExpression
+  class: tech.kzen.auto.common.objects.document.script.control.ConditionalExpression
   icon: Share
   title: "If"
   display: ConditionalStepDisplay

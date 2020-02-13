@@ -2,13 +2,18 @@ package tech.kzen.auto.common.paradigm.imperative.model.control
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.Digestible
 
 
-sealed class ControlState {
+//---------------------------------------------------------------------------------------------------------------------
+sealed class ControlState
+    : Digestible
+{
     companion object {
         private const val branchKey = "branch"
         private const val typeKey = "type"
         private const val valueKey = "value"
+
         private const val initialType  = "initial"
         private const val finalType  = "final"
         private const val branchType  = "branch"
@@ -57,13 +62,38 @@ sealed class ControlState {
     }
 
 
-    abstract fun digest(): Digest
+    override fun digest(): Digest {
+        val digest = Digest.Builder()
+        digest(digest)
+        return digest.digest()
+    }
+
+
+    override fun digest(builder: Digest.Builder) {
+        when (this) {
+            is InitialControlState -> {
+                builder.addInt(0)
+            }
+
+            is FinalControlState -> {
+                builder.addInt(1)
+                value.digest(builder)
+            }
+
+            is InternalControlState -> {
+                builder.addInt(2)
+                builder.addInt(branchIndex)
+                value.digest(builder)
+            }
+        }
+    }
 }
 
 
+//---------------------------------------------------------------------------------------------------------------------
 object InitialControlState: ControlState() {
     override fun digest(): Digest {
-        return Digest.ofUtf8(InitialControlState::class.simpleName)
+        return Digest.empty
     }
 }
 
@@ -72,20 +102,18 @@ data class FinalControlState(
         val value: ExecutionValue
 ): ControlState() {
     override fun digest(): Digest {
-//        return Digest.ofUtf8(FinalControlState::class.simpleName)
         return value.digest()
     }
 }
 
 
+//---------------------------------------------------------------------------------------------------------------------
 class InternalControlState(
         val branchIndex: Int,
         val value: ExecutionValue
 ): ControlState() {
     override fun digest(): Digest {
         val digest = Digest.Builder()
-
-//        digest.addUtf8(InternalControlState::class.simpleName)
 
         digest.addInt(branchIndex)
         digest.addDigestible(value)

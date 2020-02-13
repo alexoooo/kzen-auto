@@ -7,6 +7,7 @@ import org.w3c.dom.HTMLElement
 import react.RBuilder
 import react.RProps
 import react.RState
+import react.dom.hr
 import react.setState
 import styled.css
 import styled.styledA
@@ -150,7 +151,7 @@ class RibbonRun (
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val selected = props.parameters.get(runningKey)
+        val selected = props.parameters.get(runningKey)?.let { DocumentPath.parse(it) }
 
         styledDiv {
             ref {
@@ -189,42 +190,62 @@ class RibbonRun (
                 anchorEl = dropdownAnchorRef
             }
 
-            val scriptDocuments = props
-                    .notation
-                    .documents
-                    .values
-                    .filter { ScriptDocument.isScript(it.key, it.value) }
+            renderSelected(selected)
 
-            for (script in scriptDocuments) {
-                if (! state.active.contains(script.key)) {
-                    continue
+            hr {}
+
+            renderActiveSelection(selected)
+        }
+    }
+
+
+    private fun RBuilder.renderSelected(
+            selected: DocumentPath?
+    ) {
+        if (selected == null) {
+            +"Please select a running script (below)"
+            return
+        }
+
+        +"Selected: ${selected.name}"
+    }
+
+
+    private fun RBuilder.renderActiveSelection(
+            selected: DocumentPath?
+    ) {
+        val scriptDocuments = props
+                .notation
+                .documents
+                .values
+                .filter { ScriptDocument.isScript(/*it.key,*/ it.value) }
+
+        for (script in scriptDocuments) {
+            if (! state.active.contains(script.key) ||
+                    selected == script.key) {
+                continue
+            }
+
+            val pathValue = script.key.asString()
+
+            styledA {
+                css {
+                    color = Color.inherit
+                    textDecoration(TextDecorationLine.initial)
+                    width = 100.pct
+                    height = 100.pct
                 }
 
-                val pathValue = script.key.asString()
-                val isActive = selected == pathValue
+                attrs {
+                    key = pathValue
+                    href = NavigationRoute(
+                            props.navPath,
+                            props.parameters.set(runningKey, pathValue)
+                    ).toFragment()
+                }
 
-                styledA {
-                    css {
-                        color = Color.inherit
-                        textDecoration(TextDecorationLine.initial)
-                        width = 100.pct
-                        height = 100.pct
-                    }
-
-                    attrs {
-                        key = pathValue
-                        href = NavigationRoute(
-                                props.navPath,
-                                props.parameters.set(runningKey, pathValue)
-                        ).toFragment()
-                    }
-
-                    child(MaterialMenuItem::class) {
-                        if (isActive) {
-                            +"> "
-                        }
-                        +script.key.name.value
-                    }
+                child(MaterialMenuItem::class) {
+                    +script.key.name.value
                 }
             }
         }
