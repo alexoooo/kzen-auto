@@ -264,7 +264,7 @@ class ExecutionRepository(
     suspend fun reset(
             host: DocumentPath
     ): Digest {
-        val model = ImperativeModel(persistentListOf())
+        val model = ImperativeModel(null, persistentListOf())
         models = models.put(host, model)
 
         publishExecutionModel(host, model)
@@ -284,7 +284,7 @@ class ExecutionRepository(
         val initialState = initializeFrame(controlTree)
 
         val frame = ImperativeFrame(host, initialState.toPersistentMap())
-        val executionModel = ImperativeModel(persistentListOf(frame))
+        val executionModel = ImperativeModel(null, persistentListOf(frame))
 
         models = models.put(host, executionModel)
 
@@ -370,7 +370,7 @@ class ExecutionRepository(
             val result = actionExecutor.execute(objectLocation, imperativeModel)
 
             val executionState = ImperativeState(
-                    false,
+//                    false,
                     result,
                     null
             )
@@ -392,7 +392,7 @@ class ExecutionRepository(
             }
 
             val executionState = ImperativeState(
-                    false,
+//                    false,
                     state.previous,
                     controlState
             )
@@ -414,20 +414,21 @@ class ExecutionRepository(
             graphStructure: GraphStructure
     ) {
         val model = modelOrInit(host, graphStructure)
-        val existingFrame = model.findLast(objectLocation)
-
-        val upsertFrame = existingFrame
-                ?: model.frames.last()
-
-        val state = upsertFrame.states[objectLocation.objectPath]
-                ?: return
-
-        val updatedFrame = upsertFrame.set(
-                objectLocation.objectPath,
-                state.copy(running = true))
-
-        val updatedModel = ImperativeModel(
-                model.frames.set(model.frames.size - 1, updatedFrame))
+//        val existingFrame = model.findLast(objectLocation)
+//
+//        val upsertFrame = existingFrame
+//                ?: model.frames.last()
+//
+//        val state = upsertFrame.states[objectLocation.objectPath]
+//                ?: return
+//
+//        val updatedFrame = upsertFrame.set(
+//                objectLocation.objectPath,
+//                state.copy(running = true))
+//
+//        val updatedModel = ImperativeModel(
+//                model.frames.set(model.frames.size - 1, updatedFrame))
+        val updatedModel = model.copy(running = objectLocation)
 
         models = models.put(host, updatedModel)
 //        upsertFrame.states[objectLocation.objectPath] = state.copy(running = true)
@@ -476,6 +477,7 @@ class ExecutionRepository(
                 }
 
         val updatedModel = ImperativeModel(
+                null,
                 model.frames.set(model.frames.size - 1, clearedFrame))
 
         models = models.put(host, updatedModel)

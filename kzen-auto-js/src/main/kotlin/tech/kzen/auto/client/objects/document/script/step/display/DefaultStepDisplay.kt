@@ -123,6 +123,7 @@ class DefaultStepDisplay(
                 .lastOrNull()
                 ?.states
                 ?.get(props.common.objectLocation.objectPath)
+        val isRunning = props.common.isRunning()
         val nextToRun = ImperativeUtils.next(
                 props.common.graphStructure, props.common.imperativeModel)
         val isNextToRun = props.common.objectLocation == nextToRun
@@ -134,7 +135,7 @@ class DefaultStepDisplay(
                 .objectMetadata[props.common.objectLocation]!!
 
         val reactStyles = reactStyle {
-            val cardColor = when (imperativeState?.phase()) {
+            val cardColor = when (imperativeState?.phase(isRunning)) {
                 ImperativePhase.Pending ->
                     if (isNextToRun) {
                         Color.gold.lighten(50)
@@ -176,6 +177,7 @@ class DefaultStepDisplay(
                         graphStructure = props.common.graphStructure
 
                         this.imperativeState = imperativeState
+                        this.isRunning = isRunning
 
                         managed = props.common.managed
                         first = props.common.first

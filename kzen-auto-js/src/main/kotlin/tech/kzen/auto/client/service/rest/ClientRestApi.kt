@@ -350,12 +350,12 @@ class ClientRestApi(
                 CommonRestApi.actionModel,
                 CommonRestApi.paramDocumentPath to host.asString())
 
-        val responseJson = JSON.parse<Array<Json>>(responseText)
-        val responseCollection = ClientJsonUtils.toList(responseJson)
+        val responseJson = JSON.parse<Json>(responseText)
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
 
         @Suppress("UNCHECKED_CAST")
         return ImperativeModel.fromCollection(
-                responseCollection as List<Map<String, Any>>)
+                responseCollection)
     }
 
 

@@ -14,14 +14,14 @@ object ImperativeUtils {
             graphStructure: GraphStructure,
             executionModel: ImperativeModel
     ): ObjectLocation? {
-        if (executionModel.frames.isEmpty() || executionModel.containsStatus(ImperativePhase.Running)) {
+        if (executionModel.frames.isEmpty() || executionModel.isRunning()) {
             return null
         }
 
         val lastFrame = executionModel.frames.last()
 
         for (e in lastFrame.states) {
-            if (e.value.phase() == ImperativePhase.Error) {
+            if (e.value.phase(false) == ImperativePhase.Error) {
                 return null
             }
         }

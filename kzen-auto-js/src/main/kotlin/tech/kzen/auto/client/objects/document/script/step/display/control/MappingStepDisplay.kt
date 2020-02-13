@@ -112,6 +112,7 @@ class MappingStepDisplay(
                 .lastOrNull()
                 ?.states
                 ?.get(props.common.objectLocation.objectPath)
+        val isRunning = props.common.isRunning()
 
         val nextToRun = ImperativeUtils.next(
                 props.common.graphStructure, props.common.imperativeModel)
@@ -146,7 +147,7 @@ class MappingStepDisplay(
                             onMouseOutFunction = ::onMouseOut
                         }
 
-                        renderHeader(isNextToRun, imperativeState)
+                        renderHeader(isNextToRun, imperativeState, isRunning)
                     }
 
                     td {}
@@ -161,7 +162,7 @@ class MappingStepDisplay(
                             padding(0.px)
                         }
 
-                        renderBody(isNextToRun, imperativeState)
+                        renderBody(isNextToRun, imperativeState, isRunning)
                     }
                     styledTd {
 //                        css {
@@ -180,7 +181,8 @@ class MappingStepDisplay(
 
     private fun RBuilder.renderHeader(
             isNextToRun: Boolean,
-            imperativeState: ImperativeState?
+            imperativeState: ImperativeState?,
+            isRunning: Boolean
     ) {
         styledDiv {
             css {
@@ -211,6 +213,7 @@ class MappingStepDisplay(
                     graphStructure = props.common.graphStructure
 
                     this.imperativeState = imperativeState
+                    this.isRunning = isRunning
                 }
             }
         }
@@ -219,13 +222,14 @@ class MappingStepDisplay(
 
     private fun RBuilder.renderBody(
             isNextToRun: Boolean,
-            imperativeState: ImperativeState?
+            imperativeState: ImperativeState?,
+            isRunning: Boolean
     ) {
         val internalControlState = imperativeState
                 ?.controlState as? InternalControlState
 
-        val inBranch = !isNextToRun &&
-                !(imperativeState?.running ?: false) &&
+        val inBranch = ! isNextToRun &&
+                ! isRunning &&
                 internalControlState?.branchIndex == 0
 
         styledDiv {

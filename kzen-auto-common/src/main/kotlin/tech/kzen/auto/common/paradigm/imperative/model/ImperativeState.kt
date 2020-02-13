@@ -10,9 +10,6 @@ import tech.kzen.lib.common.util.Digestible
 
 
 data class ImperativeState(
-        // TODO: factor out
-        val running: Boolean,
-
         val previous: ExecutionResult?,
 
         val controlState: ControlState?
@@ -21,17 +18,17 @@ data class ImperativeState(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val runningKey = "running"
+//        private const val runningKey = "running"
         private const val previousKey = "previous"
         private const val controlStateKey = "controlState"
 
-        val initialSingular = ImperativeState(false, null, null)
-        val initialControlFlow = ImperativeState(false, null, InitialControlState)
+        val initialSingular = ImperativeState(/*false,*/ null, null)
+        val initialControlFlow = ImperativeState(/*false,*/ null, InitialControlState)
 
 
         fun toCollection(state: ImperativeState): Map<String, Any?> {
             return mapOf(
-                    runningKey to state.running,
+//                    runningKey to state.running,
                     previousKey to state.previous?.toCollection(),
                     controlStateKey to state.controlState?.toCollection()
             )
@@ -41,7 +38,7 @@ data class ImperativeState(
         @Suppress("UNCHECKED_CAST")
         fun fromCollection(collection: Map<String, Any?>): ImperativeState {
             return ImperativeState(
-                    collection[runningKey] as Boolean,
+//                    collection[runningKey] as Boolean,
                     collection[previousKey]?.let {
                         ExecutionResult.fromCollection(it as Map<String, Any>)
                     },
@@ -54,7 +51,7 @@ data class ImperativeState(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun phase(): ImperativePhase {
+    fun phase(running: Boolean): ImperativePhase {
         if (running) {
             return ImperativePhase.Running
         }
@@ -73,16 +70,8 @@ data class ImperativeState(
     }
 
 
-
-    override fun digest(): Digest {
-        val digest = Digest.Builder()
-        digest(digest)
-        return digest.digest()
-    }
-
-
     override fun digest(builder: Digest.Builder) {
-        builder.addBoolean(running)
+//        builder.addBoolean(running)
 
         builder.addDigestibleNullable(previous)
         builder.addDigestibleNullable(controlState)

@@ -111,6 +111,7 @@ class ConditionalStepDisplay(
                 .lastOrNull()
                 ?.states
                 ?.get(props.common.objectLocation.objectPath)
+        val isRunning = props.common.isRunning()
 
         val nextToRun = ImperativeUtils.next(
                 props.common.graphStructure, props.common.imperativeModel)
@@ -149,7 +150,7 @@ class ConditionalStepDisplay(
                             onMouseOutFunction = ::onMouseOut
                         }
 
-                        renderHeader(isNextToRun, imperativeState)
+                        renderHeader(isNextToRun, imperativeState, isRunning)
                     }
 
                     td {}
@@ -163,7 +164,7 @@ class ConditionalStepDisplay(
                             padding(0.px)
                         }
 
-                        renderCondition(isNextToRun, imperativeState)
+                        renderCondition(isNextToRun, imperativeState, isRunning)
                     }
                     styledTd {
                         css {
@@ -189,7 +190,7 @@ class ConditionalStepDisplay(
                             }
                         }
 
-                        renderElseSegment(isNextToRun, imperativeState)
+                        renderElseSegment(isNextToRun, imperativeState, isRunning)
                     }
 
                     td {
@@ -203,7 +204,8 @@ class ConditionalStepDisplay(
 
     private fun RBuilder.renderHeader(
             isNextToRun: Boolean,
-            imperativeState: ImperativeState?
+            imperativeState: ImperativeState?,
+            isRunning: Boolean
     ) {
         styledDiv {
             css {
@@ -234,6 +236,7 @@ class ConditionalStepDisplay(
                     graphStructure = props.common.graphStructure
 
                     this.imperativeState = imperativeState
+                    this.isRunning = isRunning
                 }
             }
         }
@@ -242,10 +245,11 @@ class ConditionalStepDisplay(
 
     private fun RBuilder.renderCondition(
             isNextToRun: Boolean,
-            imperativeState: ImperativeState?
+            imperativeState: ImperativeState?,
+            isRunning: Boolean
     ) {
         val inThenBranch = ! isNextToRun &&
-                ! (imperativeState?.running ?: false) &&
+                ! isRunning &&
                 imperativeState?.controlState is InternalControlState &&
                 imperativeState.controlState.branchIndex == 0
 
@@ -332,10 +336,11 @@ class ConditionalStepDisplay(
 
     private fun RBuilder.renderElseSegment(
             isNextToRun: Boolean,
-            imperativeState: ImperativeState?
+            imperativeState: ImperativeState?,
+            isRunning: Boolean
     ) {
         val inElseBranch = ! isNextToRun &&
-                ! (imperativeState?.running ?: false) &&
+                ! isRunning &&
                 imperativeState?.controlState is InternalControlState &&
                 imperativeState.controlState.branchIndex == 1
 

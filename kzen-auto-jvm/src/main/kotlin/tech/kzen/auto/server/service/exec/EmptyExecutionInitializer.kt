@@ -10,6 +10,6 @@ object EmptyExecutionInitializer: ExecutionInitializer {
     override suspend fun initialExecutionModel(
             host: DocumentPath
     ): ImperativeModel {
-        return ImperativeModel(persistentListOf())
+        return ImperativeModel(null, persistentListOf())
     }
 }

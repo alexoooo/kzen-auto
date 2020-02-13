@@ -10,26 +10,56 @@ import tech.kzen.lib.platform.collect.toPersistentList
 
 
 data class ImperativeModel(
+        val running: ObjectLocation?,
         val frames: PersistentList<ImperativeFrame>
 ):
     Digestible
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        fun toCollection(model: ImperativeModel): List<Map<String, Any>> {
-            return model
+        private const val runningKey = "running"
+        private const val framesKey = "frames"
+
+
+        fun toCollection(model: ImperativeModel): Map<String, Any?> {
+            val framesCollection = model
                     .frames
                     .map { ImperativeFrame.toCollection(it) }
+
+            return mapOf(
+                    runningKey to model.running?.asString(),
+                    framesKey to framesCollection)
         }
+
+//        fun toCollection(model: ImperativeModel): List<Map<String, Any>> {
+//            return model
+//                    .frames
+//                    .map { ImperativeFrame.toCollection(it) }
+//        }
 
 
         fun fromCollection(
-                collection: List<Map<String, Any>>
+                collection: Map<String, Any?>
         ): ImperativeModel {
-            return ImperativeModel(collection
+            val runningValue = collection[runningKey] as? String
+            val running = runningValue?.let { ObjectLocation.parse(it) }
+
+            @Suppress("UNCHECKED_CAST")
+            val framesCollection = collection[framesKey] as List<Map<String, Any>>
+            val frames = framesCollection
                     .map { ImperativeFrame.fromCollection(it) }
-                    .toPersistentList())
+                    .toPersistentList()
+
+            return ImperativeModel(running, frames)
         }
+
+//        fun fromCollection(
+//                collection: List<Map<String, Any>>
+//        ): ImperativeModel {
+//            return ImperativeModel(collection
+//                    .map { ImperativeFrame.fromCollection(it) }
+//                    .toPersistentList())
+//        }
     }
 
 
@@ -49,7 +79,16 @@ data class ImperativeModel(
         if (builder == frames) {
             return this
         }
-        return ImperativeModel(builder)
+
+        val nextRunning =
+                if (running?.documentPath == from) {
+                    running.copy(documentPath = newPath)
+                }
+                else {
+                    running
+                }
+
+        return ImperativeModel(nextRunning, builder)
     }
 
 
@@ -69,7 +108,16 @@ data class ImperativeModel(
         if (builder == frames) {
             return this
         }
-        return ImperativeModel(builder)
+
+        val nextRunning =
+                if (running == objectLocation) {
+                    null
+                }
+                else {
+                    running
+                }
+
+        return ImperativeModel(nextRunning, builder)
     }
 
 
@@ -88,7 +136,16 @@ data class ImperativeModel(
         if (builder == frames) {
             return this
         }
-        return ImperativeModel(builder)
+
+        val nextRunning =
+                if (running == from) {
+                    running.copy(objectPath = newObjectPath)
+                }
+                else {
+                    running
+                }
+
+        return ImperativeModel(nextRunning, builder)
     }
 
 
@@ -108,7 +165,7 @@ data class ImperativeModel(
         if (builder == frames) {
             return this
         }
-        return ImperativeModel(builder)
+        return ImperativeModel(running, builder)
     }
 
 
@@ -123,25 +180,48 @@ data class ImperativeModel(
 
 
     fun containsStatus(status: ImperativePhase): Boolean {
+        if (status == ImperativePhase.Running) {
+            return isRunning()
+        }
+
         for (frame in frames) {
-            if (frame.states.values.find { it.phase() == status } != null) {
-                return true
+            val frameRunning = running?.documentPath == frame.path
+
+            for (e in frame.states) {
+                val stepRunning = frameRunning && e.key == running?.objectPath
+                if (e.value.phase(stepRunning) != status) {
+                    return true
+                }
             }
+
+//            if (frame.states.values.find { it.phase(false) == status } != null) {
+//                return true
+//            }
         }
         return false
     }
 
 
     fun isRunning(): Boolean {
-        return containsStatus(ImperativePhase.Running)
+//        return containsStatus(ImperativePhase.Running)
+        return running != null
     }
 
 
     fun isActive(): Boolean {
         for (frame in frames) {
-            if (frame.states.values.find { it.phase() != ImperativePhase.Pending } != null) {
-                return true
+            val frameRunning = running?.documentPath == frame.path
+
+            for (e in frame.states) {
+                if (frameRunning && e.key == running?.objectPath ||
+                        e.value.phase(false) != ImperativePhase.Pending) {
+                    return true
+                }
             }
+
+//            if (frame.states.values.find { it.phase() != ImperativePhase.Pending } != null) {
+//                return true
+//            }
         }
         return false
     }

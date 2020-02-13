@@ -15,7 +15,6 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -57,6 +56,7 @@ class StepHeader(
             var graphStructure: GraphStructure,
 
             var imperativeState: ImperativeState?,
+            var isRunning: Boolean,
 
             var managed: Boolean = false,
             var first: Boolean = false,
@@ -380,7 +380,7 @@ class StepHeader(
                 ?: defaultRunIcon
 
         val highlight =
-                if (state.intentToRun && props.imperativeState?.phase() != ImperativePhase.Running) {
+                if (state.intentToRun && ! props.isRunning) {
                     Color("rgba(255, 215, 0, 0.5)")
 //                    Color("rgba(255, 184, 45, 0.5)")
                 }
