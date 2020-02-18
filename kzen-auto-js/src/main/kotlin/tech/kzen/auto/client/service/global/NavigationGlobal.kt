@@ -70,6 +70,8 @@ class NavigationGlobal(
 
         window.addEventListener("hashchange", {
 //            console.log("^^^ hashchange", it)
+
+            // TODO: get chrome error here: [Violation] 'hashchange' handler took <N>ms
             readAndPublishIfNecessary()
         })
 

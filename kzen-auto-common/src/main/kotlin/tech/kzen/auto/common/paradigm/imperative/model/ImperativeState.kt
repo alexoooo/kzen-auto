@@ -18,17 +18,15 @@ data class ImperativeState(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        private const val runningKey = "running"
         private const val previousKey = "previous"
         private const val controlStateKey = "controlState"
 
-        val initialSingular = ImperativeState(/*false,*/ null, null)
-        val initialControlFlow = ImperativeState(/*false,*/ null, InitialControlState)
+        val initialSingular = ImperativeState(null, null)
+        val initialControlFlow = ImperativeState(null, InitialControlState)
 
 
         fun toCollection(state: ImperativeState): Map<String, Any?> {
             return mapOf(
-//                    runningKey to state.running,
                     previousKey to state.previous?.toCollection(),
                     controlStateKey to state.controlState?.toCollection()
             )
@@ -38,7 +36,6 @@ data class ImperativeState(
         @Suppress("UNCHECKED_CAST")
         fun fromCollection(collection: Map<String, Any?>): ImperativeState {
             return ImperativeState(
-//                    collection[runningKey] as Boolean,
                     collection[previousKey]?.let {
                         ExecutionResult.fromCollection(it as Map<String, Any>)
                     },
@@ -71,8 +68,6 @@ data class ImperativeState(
 
 
     override fun digest(builder: Digest.Builder) {
-//        builder.addBoolean(running)
-
         builder.addDigestibleNullable(previous)
         builder.addDigestibleNullable(controlState)
     }

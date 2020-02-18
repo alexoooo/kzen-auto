@@ -126,6 +126,9 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "CancelPresentation" ->
             CancelPresentationIcon::class
 
+        "TransitEnterexit" ->
+            TransitEnterexitIcon::class
+
         else ->
             TextureIcon::class
     }

@@ -364,3 +364,9 @@ external class CameraAltIcon: Component<IconProps, RState> {
 external class RefreshIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("TransitEnterexit")
+external class TransitEnterexitIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

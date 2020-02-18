@@ -68,6 +68,7 @@ ConditionalExpression:
   class: tech.kzen.auto.common.objects.document.script.control.ConditionalExpression
   icon: Share
   title: "If"
+  description: "Do one thing or another based on condition"
   display: ConditionalStepDisplay
   then: []
   else: []
@@ -108,6 +109,7 @@ ListMapping:
   class: tech.kzen.auto.common.objects.document.script.control.ListMapping
   icon: Forward
   title: "Mapping"
+  description: "Transform each item in a list"
   display: MappingStepDisplay
   steps: []
   meta:
@@ -121,6 +123,24 @@ ListMapping:
       of: ObjectLocation
       by: Nominal
       branch: 0
+
+################################################################
+
+
+InvokeCall:
+  abstract: true
+  is: ControlFlow
+  class: tech.kzen.auto.common.objects.document.script.invoke.InvokeCall
+  icon: TransitEnterexit
+  title: "Invoke"
+  description: "Run a sub-script"
+  meta:
+    selfLocation: SelfLocation
+    script:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectScriptEditor
+      call: true
 
 
 ################################################################

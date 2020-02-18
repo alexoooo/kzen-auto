@@ -16,6 +16,7 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 sealed class ControlTree {
     companion object {
         private val branchAttributePath = AttributePath.parse("branch")
+        private val callAttributePath = AttributePath.parse("call")
 
 
         fun readSteps(
@@ -59,40 +60,88 @@ sealed class ControlTree {
         ): StepControlNode {
             val stepMetadata = graphStructure.graphMetadata.get(stepLocation)!!
 
+            val stepNotation = graphStructure
+                    .graphNotation
+                    .documents[stepLocation.documentPath]!!
+                    .objects
+                    .notations[stepLocation.objectPath]!!
+
             val branches = mutableListOf<BranchControlNode>()
 
+            var isCall: Boolean = false
+            var callReference: DocumentPath? = null
+
             for (attributeMetadata in stepMetadata.attributes.values) {
-                val branchIndex = attributeMetadata
-                        .value
-                        .attributeMetadataNotation
+                val metadataAttributes = attributeMetadata.value.attributeMetadataNotation
+
+                val callIndicator = metadataAttributes
+                        .get(callAttributePath)
+                        ?.asBoolean()
+                        ?: false
+                if (callIndicator) {
+                    isCall = true
+                    callReference = stepNotation
+                            .get(attributeMetadata.key)
+                            ?.asString()
+                            ?.let { ObjectReference.parse(it) }
+                            ?.path
+                }
+
+                val branchIndex = metadataAttributes
                         .get(branchAttributePath)
                         ?.asString()
                         ?.toIntOrNull()
-                        ?: continue
+                if (branchIndex != null) {
+                    val branchControlNode = readBranch(
+                            graphStructure, stepLocation, attributeMetadata.key)
 
-                val branchControlNode = readBranch(
-                        graphStructure, stepLocation, attributeMetadata.key)
+                    while (branches.size <= branchIndex) {
+                        branches.add(BranchControlNode.empty)
+                    }
 
-                while (branches.size <= branchIndex) {
-                    branches.add(BranchControlNode.empty)
+                    branches[branchIndex] = branchControlNode
                 }
-
-                branches[branchIndex] = branchControlNode
             }
 
-            return StepControlNode(
-                    stepLocation.objectPath,
-                    branches)
+            return when {
+                isCall -> {
+                    check(branches.isEmpty())
+                    CallingControlNode(stepLocation.objectPath, callReference)
+                }
+
+                branches.isNotEmpty() -> {
+                    BranchingControlNode(stepLocation.objectPath, branches)
+                }
+
+                else -> {
+                    SingularControlNode(stepLocation.objectPath)
+                }
+            }
         }
     }
 }
 
 
-data class StepControlNode(
-//        val step: ObjectLocation,
-        val step: ObjectPath,
+sealed class StepControlNode: ControlTree() {
+    abstract val step: ObjectPath
+}
+
+
+data class SingularControlNode(
+        override val step: ObjectPath
+): StepControlNode()
+
+
+data class BranchingControlNode(
+        override val step: ObjectPath,
         val branches: List<BranchControlNode>
-): ControlTree()
+): StepControlNode()
+
+
+data class CallingControlNode(
+        override val step: ObjectPath,
+        val reference: DocumentPath?
+): StepControlNode()
 
 
 data class BranchControlNode(
@@ -103,11 +152,14 @@ data class BranchControlNode(
     }
 
 
-//    fun find(objectLocation: ObjectLocation): StepControlNode? {
     fun find(objectPath: ObjectPath): StepControlNode? {
         for (node in nodes) {
             if (node.step == objectPath) {
                 return node
+            }
+
+            if (node !is BranchingControlNode) {
+                continue
             }
 
             for (branch in node.branches) {
@@ -126,6 +178,10 @@ data class BranchControlNode(
         for (node in nodes) {
             visitor.invoke(node)
 
+            if (node !is BranchingControlNode) {
+                continue
+            }
+
             for (branch in node.branches) {
                 branch.traverseDepthFirstNodes(visitor)
             }
@@ -133,23 +189,25 @@ data class BranchControlNode(
     }
 
 
-//    fun traverseDepthFirstLocations(visitor: (ObjectLocation) -> Unit) {
-    fun traverseDepthFirstLocations(visitor: (ObjectPath) -> Unit) {
-        for (node in nodes) {
-            visitor.invoke(node.step)
+//    fun traverseDepthFirstLocations(visitor: (ObjectPath) -> Unit) {
+//        for (node in nodes) {
+//            visitor.invoke(node.step)
+//
+//            for (branch in node.branches) {
+//                branch.traverseDepthFirstLocations(visitor)
+//            }
+//        }
+//    }
 
-            for (branch in node.branches) {
-                branch.traverseDepthFirstLocations(visitor)
-            }
-        }
-    }
 
-
-//    fun contains(target: ObjectLocation): Boolean {
     fun contains(target: ObjectPath): Boolean {
         for (node in nodes) {
             if (node.step == target) {
                 return true
+            }
+
+            if (node !is BranchingControlNode) {
+                continue
             }
 
             for (branch in node.branches) {
@@ -164,8 +222,6 @@ data class BranchControlNode(
 
 
     fun predecessors(
-//            target: ObjectLocation
-//    ): List<ObjectLocation> {
             target: ObjectPath
     ): List<ObjectPath> {
         val buffer = mutableListOf<ObjectPath>()
@@ -175,14 +231,16 @@ data class BranchControlNode(
 
 
     private fun predecessors(
-//            target: ObjectLocation,
-//            buffer: MutableList<ObjectLocation>
             target: ObjectPath,
             buffer: MutableList<ObjectPath>
     ) {
         for (node in nodes) {
             if (node.step == target) {
                 break
+            }
+
+            if (node !is BranchingControlNode) {
+                continue
             }
 
             for (branch in node.branches) {

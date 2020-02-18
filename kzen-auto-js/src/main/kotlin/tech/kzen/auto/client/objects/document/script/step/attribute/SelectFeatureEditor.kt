@@ -133,7 +133,7 @@ class SelectFeatureEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onValueChange(value: ObjectLocation?) {
-        console.log("onValueChange - $value")
+//        console.log("onValueChange - $value")
 
         setState {
             this.value = value
@@ -165,8 +165,8 @@ class SelectFeatureEditor(
         val featureMains = mutableListOf<ObjectLocation>()
 
         for ((path, notation) in
-                props.graphStructure.graphNotation.documents.values) {
-
+                props.graphStructure.graphNotation.documents.values)
+        {
             if (FeatureDocument.isFeature(notation)) {
                 featureMains.add(ObjectLocation(
                         path, NotationConventions.mainObjectPath))

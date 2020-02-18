@@ -8,7 +8,7 @@ import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTree
+import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
@@ -16,8 +16,9 @@ import tech.kzen.lib.common.model.locate.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
-import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedObjectRefactorEvent
+import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
+import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import kotlin.browser.document
 import kotlin.js.Json
@@ -25,10 +26,10 @@ import kotlin.js.json
 
 
 @Suppress("unused")
-class SelectStepEditor(
+class SelectScriptEditor(
         props: AttributeEditorProps
 ):
-        RPureComponent<AttributeEditorProps, SelectStepEditor.State>(props),
+        RPureComponent<AttributeEditorProps, SelectScriptEditor.State>(props),
         LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -46,7 +47,7 @@ class SelectStepEditor(
             AttributeEditorWrapper(objectLocation)
     {
         override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>): ReactElement {
-            return input.child(SelectStepEditor::class) {
+            return input.child(SelectScriptEditor::class) {
                 handler()
             }
         }
@@ -66,13 +67,10 @@ class SelectStepEditor(
 
         if (attributeNotation is ScalarAttributeNotation) {
             val reference = ObjectReference.parse(attributeNotation.value)
-            val objectLocation = props.graphStructure.graphNotation.coalesce.locateOptional(
+            val objectLocation = props.graphStructure.graphNotation.coalesce.locate(
                     reference, objectReferenceHost)
 
-            if (objectLocation != null) {
-                // NB: might be absent if e.g. it was deleted
-                value = objectLocation
-            }
+            value = objectLocation
         }
 
         renaming = false
@@ -112,10 +110,13 @@ class SelectStepEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         when (event) {
-            is RenamedObjectRefactorEvent -> {
-                if (event.renamedObject.objectLocation == state.value) {
+            is RenamedDocumentRefactorEvent -> {
+                if (event.removedUnderOldName.documentPath == state.value?.documentPath) {
+                    val newLocation =
+                            state.value!!.copy(documentPath = event.createdWithNewName.destination)
+
                     setState {
-                        value = event.renamedObject.newObjectLocation()
+                        value = newLocation
                         renaming = true
                     }
                 }
@@ -151,23 +152,31 @@ class SelectStepEditor(
         val value = state.value
                 ?: return
 
-        val localReference = value.toReference()
-                .crop(retainPath = false)
-
         ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
                 props.objectLocation,
                 props.attributeName,
-                ScalarAttributeNotation(localReference.asString())))
+                ScalarAttributeNotation(value.asString())))
     }
 
 
-    private fun predecessors(): List<ObjectLocation> {
-        val host = props.objectLocation.documentPath
-        val steps = ControlTree.readSteps(
-                props.graphStructure, host)
+    private fun options(): List<ObjectLocation> {
+        val featureMains = mutableListOf<ObjectLocation>()
 
-        val objectPaths = steps.predecessors(props.objectLocation.objectPath)
-        return objectPaths.map { ObjectLocation(host, it) }
+        for ((path, notation) in
+                props.graphStructure.graphNotation.documents.values)
+        {
+            if (path == props.objectLocation.documentPath) {
+                // TODO: avoid suggesting DAG violation?
+                continue
+            }
+
+            if (ScriptDocument.isScript(notation)) {
+                featureMains.add(ObjectLocation(
+                        path, NotationConventions.mainObjectPath))
+            }
+        }
+
+        return featureMains
     }
 
 
@@ -176,10 +185,11 @@ class SelectStepEditor(
 //        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
 //                props.objectLocation, props.attributeName)
 
-        val selectOptions = predecessors()
-                .map { ReactSelectOption(it.asString(), it.objectPath.name.value) }
+        val selectOptions = options()
+                .map { ReactSelectOption(it.asString(), it.documentPath.name.value) }
                 .toTypedArray()
 
+//        +"!! ${selectOptions.map { it.value }}"
 //        +"^^ SELECT: ${props.attributeName} - $attributeNotation - ${selectOptions.map { it.value }}"
 
         val selectId = "material-react-select-id"
@@ -207,7 +217,7 @@ class SelectStepEditor(
 //                options = optionsArray
 
                 onChange = {
-//                    console.log("^^^^^ selected: $it")
+                    //                    console.log("^^^^^ selected: $it")
 
                     onValueChange(ObjectLocation.parse(it.value))
 //                    onTypeChange(it.value)

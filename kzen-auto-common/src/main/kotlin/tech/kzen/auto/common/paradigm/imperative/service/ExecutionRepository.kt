@@ -310,11 +310,15 @@ class ExecutionRepository(
     private fun initialState(
             controlNode: StepControlNode
     ): ImperativeState {
-        return if (controlNode.branches.isNotEmpty()) {
-            ImperativeState.initialControlFlow
-        }
-        else {
-            ImperativeState.initialSingular
+        return when (controlNode) {
+            is BranchingControlNode ->
+                ImperativeState.initialControlFlow
+
+            is CallingControlNode ->
+                ImperativeState.initialControlFlow
+
+            is SingularControlNode ->
+                ImperativeState.initialSingular
         }
     }
 
@@ -370,7 +374,6 @@ class ExecutionRepository(
             val result = actionExecutor.execute(objectLocation, imperativeModel)
 
             val executionState = ImperativeState(
-//                    false,
                     result,
                     null
             )
@@ -389,10 +392,12 @@ class ExecutionRepository(
 
                 is InternalControlTransition ->
                     InternalControlState(controlTransition.branchIndex, controlTransition.value)
+
+                InvokeControlTransition ->
+                    InvokeControlState
             }
 
             val executionState = ImperativeState(
-//                    false,
                     state.previous,
                     controlState
             )
@@ -461,6 +466,7 @@ class ExecutionRepository(
                             ?: throw RuntimeException("Control tree missing: $host - ${controlTrees.keys}")
 
                     val controlNode = controlTree.find(objectLocation.objectPath)
+                            as? BranchingControlNode
                             ?: throw RuntimeException("Control node missing: $objectLocation")
 
                     val branch = controlNode.branches[branchReset]

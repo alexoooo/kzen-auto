@@ -16,7 +16,8 @@ sealed class ControlState
 
         private const val initialType  = "initial"
         private const val finalType  = "final"
-        private const val branchType  = "branch"
+        private const val internalType  = "internal"
+        private const val invokeType  = "invoke"
 
 
         @Suppress("UNCHECKED_CAST")
@@ -33,8 +34,11 @@ sealed class ControlState
                 finalType ->
                     FinalControlState(ExecutionValue.fromCollection(value!!))
 
-                branchType ->
+                internalType ->
                     InternalControlState(index!!, ExecutionValue.fromCollection(value!!))
+
+                invokeType ->
+                    InvokeControlState
 
                 else ->
                     throw IllegalArgumentException("Unknown: $collection")
@@ -53,11 +57,12 @@ sealed class ControlState
                         valueKey to value.toCollection())
 
             is InternalControlState ->
-                return mapOf(
-                        typeKey to branchType,
+                mapOf(typeKey to internalType,
                         branchKey to branchIndex,
-                        valueKey to value.toCollection()
-                )
+                        valueKey to value.toCollection())
+
+            is InvokeControlState ->
+                mapOf(typeKey to invokeType)
         }
     }
 
@@ -85,40 +90,31 @@ sealed class ControlState
                 builder.addInt(branchIndex)
                 value.digest(builder)
             }
+
+            is InvokeControlState -> {
+                builder.addInt(3)
+            }
         }
     }
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
-object InitialControlState: ControlState() {
-    override fun digest(): Digest {
-        return Digest.empty
-    }
-}
+object InitialControlState: ControlState()
 
 
 data class FinalControlState(
         val value: ExecutionValue
-): ControlState() {
-    override fun digest(): Digest {
-        return value.digest()
-    }
-}
+): ControlState()
 
 
 //---------------------------------------------------------------------------------------------------------------------
 class InternalControlState(
         val branchIndex: Int,
         val value: ExecutionValue
-): ControlState() {
-    override fun digest(): Digest {
-        val digest = Digest.Builder()
+): ControlState()
 
-        digest.addInt(branchIndex)
-        digest.addDigestible(value)
 
-        return digest.digest()
-    }
-}
+//---------------------------------------------------------------------------------------------------------------------
+object InvokeControlState: ControlState()
 

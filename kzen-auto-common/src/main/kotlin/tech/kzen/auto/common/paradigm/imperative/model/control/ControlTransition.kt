@@ -5,23 +5,44 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 
 sealed class ControlTransition {
     companion object {
+        private const val typeKey = "type"
         private const val branchKey = "branch"
         private const val valueKey = "value"
 
+        private const val evaluateType = "eval"
+        private const val internalType = "internal"
+        private const val invokeType = "invoke"
+
 
         fun fromCollection(collection: Map<String, Any?>): ControlTransition {
-            val branchIndex = collection[branchKey] as? Int
+            @Suppress("MoveVariableDeclarationIntoWhen")
+            val type = collection[typeKey] as String
 
+            return when (type) {
+                evaluateType -> {
+                    val value = readValue(collection)
+                    EvaluateControlTransition(value)
+                }
+
+                internalType -> {
+                    val branchIndex = collection[branchKey] as Int
+                    val value = readValue(collection)
+                    InternalControlTransition(branchIndex, value)
+                }
+
+                invokeType -> {
+                    InvokeControlTransition
+                }
+
+                else ->
+                    throw IllegalArgumentException("Unknown type: $collection")
+            }
+        }
+
+        private fun readValue(collection: Map<String, Any?>): ExecutionValue {
             @Suppress("UNCHECKED_CAST")
             val valueMap = collection[valueKey] as Map<String, Any>
-            val value = ExecutionValue.fromCollection(valueMap)
-
-            return if (branchIndex == null) {
-                EvaluateControlTransition(value)
-            }
-            else {
-                InternalControlTransition(branchIndex, value)
-            }
+            return ExecutionValue.fromCollection(valueMap)
         }
     }
 
@@ -29,11 +50,16 @@ sealed class ControlTransition {
     fun toCollection(): Map<String, Any?> {
         return when (this) {
             is EvaluateControlTransition ->
-                mapOf(valueKey to value.toCollection())
+                mapOf(typeKey to evaluateType,
+                        valueKey to value.toCollection())
 
             is InternalControlTransition ->
-                mapOf(branchKey to branchIndex,
+                mapOf(typeKey to internalType,
+                        branchKey to branchIndex,
                         valueKey to value.toCollection())
+
+            InvokeControlTransition ->
+                mapOf(typeKey to invokeType)
         }
     }
 }
@@ -48,3 +74,6 @@ data class InternalControlTransition(
         val branchIndex: Int,
         val value: ExecutionValue
 ): ControlTransition()
+
+
+object InvokeControlTransition: ControlTransition()
