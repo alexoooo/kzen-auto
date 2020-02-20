@@ -55,7 +55,7 @@ object ImperativeUtils {
                 is FinalControlState -> true
 
                 // TODO
-                InvokeControlState -> true
+                is InvokeControlState -> true
 
                 is InternalControlState -> {
                     val branch = (node as BranchingControlNode).branches[controlState.branchIndex]

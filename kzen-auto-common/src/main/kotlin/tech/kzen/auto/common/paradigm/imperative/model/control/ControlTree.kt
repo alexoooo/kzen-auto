@@ -239,14 +239,12 @@ data class BranchControlNode(
                 break
             }
 
-            if (node !is BranchingControlNode) {
-                continue
-            }
-
-            for (branch in node.branches) {
-                if (branch.contains(target)) {
-                    branch.predecessors(target, buffer)
-                    return
+            if (node is BranchingControlNode) {
+                for (branch in node.branches) {
+                    if (branch.contains(target)) {
+                        branch.predecessors(target, buffer)
+                        return
+                    }
                 }
             }
 

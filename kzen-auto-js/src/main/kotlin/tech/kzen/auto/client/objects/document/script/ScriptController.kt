@@ -148,24 +148,24 @@ class ScriptController:
             prevState: State,
             snapshot: Any
     ) {
+//        console.log("%#$%#$%#$ componentDidUpdate",
+//                state.imperativeModel?.frames?.map { it.path.asString() })
+
 //        console.log("%#$%#$%#$ componentDidUpdate", state.documentPath, prevState.documentPath)
-        if (state.documentPath != null && state.documentPath != prevState.documentPath) {
+        if (state.documentPath != null &&
+                state.documentPath != prevState.documentPath &&
+                state.imperativeModel?.frames?.find { it.path == state.documentPath} == null)
+        {
             async {
                 val executionModel = ClientContext.executionRepository.executionModel(
                         state.documentPath!!,
                         state.graphStructure!!)
-//                console.log("%#$%#$%#$ componentDidUpdate",
-//                        state.documentPath,
-//                        prevState.documentPath,
-//                        executionModel)
 
                 setState {
                     imperativeModel = executionModel
                 }
             }
         }
-
-//        console.log("ProjectController componentDidUpdate", state, prevState)
     }
 
 
@@ -208,7 +208,9 @@ class ScriptController:
 
 
     override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {
-        if (state.documentPath != host) {
+        if (state.documentPath != host &&
+                executionModel.frames.find { it.path == state.documentPath} == null)
+        {
             return
         }
 

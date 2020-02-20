@@ -10,6 +10,7 @@ import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
+@Suppress("unused")
 class InvokeCall(
         private val selfLocation: ObjectLocation,
         private val script: ObjectLocation
@@ -20,9 +21,9 @@ class InvokeCall(
     ): ControlTransition {
         return when (controlState) {
             InitialControlState ->
-                InvokeControlTransition
+                InvokeControlTransition(script.documentPath)
 
-            InvokeControlState ->
+            is InvokeControlState ->
                 EvaluateControlTransition(NullExecutionValue)
 
             else ->

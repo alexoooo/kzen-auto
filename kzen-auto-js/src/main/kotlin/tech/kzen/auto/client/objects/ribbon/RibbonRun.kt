@@ -50,15 +50,8 @@ class RibbonRun (
 
 
     class State(
-//            var updatePending: Boolean,
-//            var documentPath: DocumentPath?,
-//
-//            var type: ObjectLocation?,
-//            var tabIndex: Int = 0,
-//
-//            var currentRibbonGroups: List<RibbonGroup>
-
             var active: Set<DocumentPath>,
+            var selectedFramePaths: List<DocumentPath>,
 //            var executionModel: ImperativeModel?,
 
             var dropdownOpen: Boolean
@@ -72,6 +65,7 @@ class RibbonRun (
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
         active = setOf()
+        selectedFramePaths = listOf()
 //        executionModel = null
         dropdownOpen = false
     }
@@ -119,16 +113,16 @@ class RibbonRun (
 //        console.log("^^^ onExecutionModel: " +
 //                "$active / $modifiedActive - $host - ${executionModel.isActive()} - $executionModel")
 
-        if (active != modifiedActive) {
-//            console.log("!! setting: $modifiedActive")
+        val selectedFramePaths = executionModel.frames.map { it.path }
+
+        if (active != modifiedActive ||
+                state.selectedFramePaths != selectedFramePaths)
+        {
             setState {
                 this.active = modifiedActive
+                this.selectedFramePaths = selectedFramePaths
             }
         }
-
-//        setState {
-//            this.executionModel = executionModel
-//        }
     }
 
 
@@ -148,6 +142,7 @@ class RibbonRun (
 //            hoverOptions = false
         }
     }
+
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
@@ -208,6 +203,16 @@ class RibbonRun (
         }
 
         +"Selected: ${selected.name}"
+
+        for (framePath in state.selectedFramePaths) {
+            styledDiv {
+                attrs {
+                    key = framePath.asString()
+                }
+
+                +framePath.name.value
+            }
+        }
     }
 
 

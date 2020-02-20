@@ -166,6 +166,8 @@ class SelectStepEditor(
         val steps = ControlTree.readSteps(
                 props.graphStructure, host)
 
+//        console.log("^^^^ steps", steps.toString())
+
         val objectPaths = steps.predecessors(props.objectLocation.objectPath)
         return objectPaths.map { ObjectLocation(host, it) }
     }

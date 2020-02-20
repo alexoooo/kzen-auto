@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.paradigm.imperative.model.control
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
 
@@ -13,6 +14,7 @@ sealed class ControlState
         private const val branchKey = "branch"
         private const val typeKey = "type"
         private const val valueKey = "value"
+        private const val targetKey = "target"
 
         private const val initialType  = "initial"
         private const val finalType  = "final"
@@ -26,6 +28,7 @@ sealed class ControlState
             val type = collection[typeKey] as String
             val index = collection[branchKey] as? Int
             val value = collection[valueKey] as? Map<String, Any>
+            val target = collection[targetKey] as? String
 
             return when (type) {
                 initialType ->
@@ -38,7 +41,7 @@ sealed class ControlState
                     InternalControlState(index!!, ExecutionValue.fromCollection(value!!))
 
                 invokeType ->
-                    InvokeControlState
+                    InvokeControlState(DocumentPath.parse(target!!))
 
                 else ->
                     throw IllegalArgumentException("Unknown: $collection")
@@ -62,7 +65,8 @@ sealed class ControlState
                         valueKey to value.toCollection())
 
             is InvokeControlState ->
-                mapOf(typeKey to invokeType)
+                mapOf(typeKey to invokeType,
+                        targetKey to target.asString())
         }
     }
 
@@ -109,12 +113,14 @@ data class FinalControlState(
 
 
 //---------------------------------------------------------------------------------------------------------------------
-class InternalControlState(
+data class InternalControlState(
         val branchIndex: Int,
         val value: ExecutionValue
 ): ControlState()
 
 
 //---------------------------------------------------------------------------------------------------------------------
-object InvokeControlState: ControlState()
+data class InvokeControlState(
+        val target: DocumentPath
+): ControlState()
 

@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.paradigm.imperative.model.control
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.lib.common.model.document.DocumentPath
 
 
 sealed class ControlTransition {
@@ -8,6 +9,7 @@ sealed class ControlTransition {
         private const val typeKey = "type"
         private const val branchKey = "branch"
         private const val valueKey = "value"
+        private const val targetKey = "target"
 
         private const val evaluateType = "eval"
         private const val internalType = "internal"
@@ -31,7 +33,8 @@ sealed class ControlTransition {
                 }
 
                 invokeType -> {
-                    InvokeControlTransition
+                    val target = DocumentPath.parse(collection[targetKey] as String)
+                    InvokeControlTransition(target)
                 }
 
                 else ->
@@ -58,8 +61,9 @@ sealed class ControlTransition {
                         branchKey to branchIndex,
                         valueKey to value.toCollection())
 
-            InvokeControlTransition ->
-                mapOf(typeKey to invokeType)
+            is InvokeControlTransition ->
+                mapOf(typeKey to invokeType,
+                        targetKey to target.asString())
         }
     }
 }
@@ -76,4 +80,7 @@ data class InternalControlTransition(
 ): ControlTransition()
 
 
-object InvokeControlTransition: ControlTransition()
+data class InvokeControlTransition(
+//        val target: ObjectLocation
+        val target: DocumentPath
+): ControlTransition()

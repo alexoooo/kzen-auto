@@ -64,7 +64,9 @@ class ScriptRunController(
             host: DocumentPath,
             executionModel: ImperativeModel
     ) {
-        if (host != props.documentPath) {
+        if (host != props.documentPath &&
+                executionModel.frames.find { it.path == props.documentPath} == null)
+        {
             return
         }
 
@@ -194,14 +196,17 @@ class ScriptRunController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRun() {
+        val graphStructure = props.structure!!
+        val imperativeModel = props.execution!!
+
         val nextToRun = ImperativeUtils.next(
-                props.structure!!, props.execution!!)!!
+                graphStructure, imperativeModel)!!
 
         async {
             ClientContext.executionRepository.execute(
-                    props.documentPath!!,
+                    imperativeModel.frames.first().path,
                     nextToRun,
-                    props.structure!!)
+                    graphStructure)
         }
     }
 

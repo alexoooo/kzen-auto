@@ -379,7 +379,15 @@ class ExecutionRepository(
             )
 
             val digest = modelOrInit(host, graphStructure).digest()
-            didExecute(host, objectLocation, executionState, null, graphStructure)
+
+            didExecute(
+                    host,
+                    objectLocation,
+                    executionState,
+                    null,
+                    null,
+                    graphStructure)
+
             return ImperativeResponse(result, null, digest)
         }
         else {
@@ -393,8 +401,8 @@ class ExecutionRepository(
                 is InternalControlTransition ->
                     InternalControlState(controlTransition.branchIndex, controlTransition.value)
 
-                InvokeControlTransition ->
-                    InvokeControlState
+                is InvokeControlTransition ->
+                    InvokeControlState(controlTransition.target)
             }
 
             val executionState = ImperativeState(
@@ -405,7 +413,13 @@ class ExecutionRepository(
             val branchReset =
                     (controlState as? InternalControlState)?.branchIndex
 
-            didExecute(host, objectLocation, executionState, branchReset, graphStructure)
+            didExecute(
+                    host,
+                    objectLocation,
+                    executionState,
+                    branchReset,
+                    controlTransition,
+                    graphStructure)
 
             val digest = modelOrInit(host, graphStructure).digest()
             return ImperativeResponse(null, controlTransition, digest)
@@ -419,24 +433,10 @@ class ExecutionRepository(
             graphStructure: GraphStructure
     ) {
         val model = modelOrInit(host, graphStructure)
-//        val existingFrame = model.findLast(objectLocation)
-//
-//        val upsertFrame = existingFrame
-//                ?: model.frames.last()
-//
-//        val state = upsertFrame.states[objectLocation.objectPath]
-//                ?: return
-//
-//        val updatedFrame = upsertFrame.set(
-//                objectLocation.objectPath,
-//                state.copy(running = true))
-//
-//        val updatedModel = ImperativeModel(
-//                model.frames.set(model.frames.size - 1, updatedFrame))
+
         val updatedModel = model.copy(running = objectLocation)
 
         models = models.put(host, updatedModel)
-//        upsertFrame.states[objectLocation.objectPath] = state.copy(running = true)
 
         publishExecutionModel(host, updatedModel)
         publishBeforeExecution(host, objectLocation)
@@ -448,9 +448,30 @@ class ExecutionRepository(
             objectLocation: ObjectLocation,
             executionState: ImperativeState,
             branchReset: Int?,
+            controlTransition: ControlTransition?,
             graphStructure: GraphStructure
     ) {
         val model = modelOrInit(host, graphStructure)
+
+        val updatedModel = nextModel(
+                host, objectLocation, executionState, model, branchReset, controlTransition, graphStructure)
+
+        models = models.put(host, updatedModel)
+
+//        println("^^^ didExecute: $host - $updatedModel")
+        publishExecutionModel(host, updatedModel)
+    }
+
+
+    fun nextModel(
+            host: DocumentPath,
+            objectLocation: ObjectLocation,
+            executionState: ImperativeState,
+            model: ImperativeModel,
+            branchReset: Int?,
+            controlTransition: ControlTransition?,
+            graphStructure: GraphStructure
+    ): ImperativeModel {
         val existingFrame = model.findLast(objectLocation)
 
         val upsertFrame = existingFrame
@@ -482,13 +503,22 @@ class ExecutionRepository(
                     updatedFrame
                 }
 
-        val updatedModel = ImperativeModel(
+        val clearedFrames =
+                model.frames.set(model.frames.size - 1, clearedFrame)
+
+        val nextFrames =
+                if (controlTransition is InvokeControlTransition) {
+                    val controlTree = ControlTree.readSteps(graphStructure, controlTransition.target)
+                    val initialState = initializeFrame(controlTree)
+                    val frame = ImperativeFrame(controlTransition.target, initialState.toPersistentMap())
+                    clearedFrames.add(frame)
+                }
+                else {
+                    clearedFrames
+                }
+
+        return ImperativeModel(
                 null,
-                model.frames.set(model.frames.size - 1, clearedFrame))
-
-        models = models.put(host, updatedModel)
-
-//        println("^^^ didExecute: $host - $updatedModel")
-        publishExecutionModel(host, updatedModel)
+                nextFrames)
     }
 }
