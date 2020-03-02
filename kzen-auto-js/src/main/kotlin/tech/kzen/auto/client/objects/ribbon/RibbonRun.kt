@@ -122,11 +122,22 @@ class RibbonRun (
                 this.active = modifiedActive
                 this.selectedFramePaths = selectedFramePaths
             }
+
+            if (props.parameters.values.isEmpty()) {
+                onInitialRunning(host)
+            }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onInitialRunning(host: DocumentPath) {
+        ClientContext.navigationGlobal.parameterize(RequestParams(
+                mapOf(runningKey to listOf(host.asString()))
+        ))
+    }
+
+
     private fun onOptionsOpen() {
         setState {
             dropdownOpen = true

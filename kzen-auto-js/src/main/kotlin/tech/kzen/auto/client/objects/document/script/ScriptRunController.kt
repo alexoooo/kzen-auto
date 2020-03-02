@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.script
 
+import kotlinx.coroutines.delay
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
@@ -13,6 +14,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase
+import tech.kzen.auto.common.paradigm.imperative.model.control.InitialControlState
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -50,14 +52,25 @@ class ScriptRunController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    override suspend fun handleModel(projectStructure: GraphStructure, event: NotationEvent?) {
-//        setState {
-//            structure = projectStructure
-//        }
-//    }
+    private var previousControlRun: ObjectLocation? = null
 
 
-    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {}
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
+        previousControlRun = null
+
+        val frame = props.execution?.findLast(objectLocation)
+                ?: return
+
+        val control = frame.states[objectLocation.objectPath]?.controlState
+                ?: return
+
+        if (control !is InitialControlState) {
+            return
+        }
+
+        previousControlRun = objectLocation
+    }
 
 
     override suspend fun onExecutionModel(
@@ -78,6 +91,25 @@ class ScriptRunController(
                 }
 
                 ClientContext.executionIntentGlobal.clear()
+            }
+        }
+
+        if (previousControlRun != null &&
+                ! executionModel.isRunning() &&
+                executionModel.frames.size > 1 &&
+                ! executionModel.frames.last().isActive(null))
+        {
+//            console.log("^^^^ ENTERED: " + executionModel.frames.last().path.asString())
+            async {
+                delay(1)
+
+                ClientContext.navigationGlobal.goto(
+                        executionModel.frames.last().path)
+
+//                ClientContext.navigationGlobal.parameterize(RequestParams(
+//                        mapOf(RibbonRun.runningKey to listOf(
+//                                executionModel.frames.last().path.asString()))
+//                ))
             }
         }
     }
@@ -316,9 +348,12 @@ class ScriptRunController(
     private fun RBuilder.renderInner(
             phase: Phase
     ) {
+        val nested =
+                props.execution?.frames?.size ?: 0 > 1
+
         renderSecondaryActions(phase)
 
-        renderMainAction(phase)
+        renderMainAction(phase, nested)
     }
 
 
@@ -379,7 +414,8 @@ class ScriptRunController(
 
 
     private fun RBuilder.renderMainAction(
-            phase: Phase
+            phase: Phase,
+            nested: Boolean
     ) {
 //        +"phase: $phase"
 
@@ -390,7 +426,12 @@ class ScriptRunController(
             attrs {
                 title = when {
                     phase == Phase.Done ->
-                        "Reset"
+                        if (nested) {
+                            "Continue"
+                        }
+                        else {
+                            "Reset"
+                        }
 
                     looping ->
                         "Pause"
@@ -444,6 +485,14 @@ class ScriptRunController(
                 }
 
                 hasMoreToRun -> child(PlayArrowIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+                    }
+                }
+
+                nested -> child(KeyboardReturnIcon::class) {
                     attrs {
                         style = reactStyle {
                             fontSize = 3.em

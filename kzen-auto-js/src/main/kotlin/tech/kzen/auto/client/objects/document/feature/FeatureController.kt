@@ -114,7 +114,7 @@ class FeatureController(
     override fun componentDidMount() {
         async {
             ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.navigationRepository.observe(this)
+            ClientContext.navigationGlobal.observe(this)
         }
 
         if (state.screenshotDataUrl == null) {
@@ -127,7 +127,7 @@ class FeatureController(
 
     override fun componentWillUnmount() {
         ClientContext.mirroredGraphStore.unobserve(this)
-        ClientContext.navigationRepository.unobserve(this)
+        ClientContext.navigationGlobal.unobserve(this)
     }
 
 

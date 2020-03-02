@@ -77,12 +77,12 @@ class SidebarFile(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.navigationRepository.observe(this)
+        ClientContext.navigationGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.navigationRepository.unobserve(this)
+        ClientContext.navigationGlobal.unobserve(this)
     }
 
 

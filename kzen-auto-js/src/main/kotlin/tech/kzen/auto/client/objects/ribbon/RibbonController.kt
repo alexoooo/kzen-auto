@@ -80,13 +80,13 @@ class RibbonController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.insertionGlobal.subscribe(this)
-        ClientContext.navigationRepository.observe(this)
+        ClientContext.navigationGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
         ClientContext.insertionGlobal.unsubscribe(this)
-        ClientContext.navigationRepository.unobserve(this)
+        ClientContext.navigationGlobal.unobserve(this)
     }
 
 

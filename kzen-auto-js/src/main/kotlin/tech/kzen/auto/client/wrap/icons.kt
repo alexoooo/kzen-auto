@@ -370,3 +370,8 @@ external class RefreshIcon: Component<IconProps, RState> {
 external class TransitEnterexitIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+@JsName("KeyboardReturn")
+external class KeyboardReturnIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

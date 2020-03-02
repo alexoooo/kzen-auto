@@ -172,11 +172,12 @@ data class ImperativeModel(
     //-----------------------------------------------------------------------------------------------------------------
     fun findLast(
             objectLocation: ObjectLocation
-    ): ImperativeFrame? =
-        frames.findLast {
+    ): ImperativeFrame? {
+        return frames.findLast {
             it.path == objectLocation.documentPath &&
                     it.contains(objectLocation.objectPath)
         }
+    }
 
 
     fun containsStatus(status: ImperativePhase): Boolean {
@@ -187,16 +188,9 @@ data class ImperativeModel(
         for (frame in frames) {
             val frameRunning = running?.documentPath == frame.path
 
-            for (e in frame.states) {
-                val stepRunning = frameRunning && e.key == running?.objectPath
-                if (e.value.phase(stepRunning) != status) {
-                    return true
-                }
+            if (frame.containsStatus(status, frameRunning)) {
+                return true
             }
-
-//            if (frame.states.values.find { it.phase(false) == status } != null) {
-//                return true
-//            }
         }
         return false
     }
@@ -210,17 +204,17 @@ data class ImperativeModel(
 
     fun isActive(): Boolean {
         for (frame in frames) {
-            val frameRunning = running?.documentPath == frame.path
-
-            for (e in frame.states) {
-                if (frameRunning && e.key == running?.objectPath ||
-                        e.value.phase(false) != ImperativePhase.Pending) {
-                    return true
-                }
+            if (frame.isActive(running)) {
+                return true
             }
 
-//            if (frame.states.values.find { it.phase() != ImperativePhase.Pending } != null) {
-//                return true
+//            val frameRunning = running?.documentPath == frame.path
+//
+//            for (e in frame.states) {
+//                if (frameRunning && e.key == running?.objectPath ||
+//                        e.value.phase(false) != ImperativePhase.Pending) {
+//                    return true
+//                }
 //            }
         }
         return false

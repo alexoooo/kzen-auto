@@ -100,7 +100,7 @@ class GraphController:
         async {
             ClientContext.mirroredGraphStore.observe(this)
             ClientContext.insertionGlobal.subscribe(this)
-            ClientContext.navigationRepository.observe(this)
+            ClientContext.navigationGlobal.observe(this)
 
             ClientContext.visualDataflowRepository.observe(this)
         }
@@ -112,7 +112,7 @@ class GraphController:
         ClientContext.mirroredGraphStore.unobserve(this)
 //        ClientContext.executionManager.unsubscribe(this)
         ClientContext.insertionGlobal.unsubscribe(this)
-        ClientContext.navigationRepository.unobserve(this)
+        ClientContext.navigationGlobal.unobserve(this)
         ClientContext.visualDataflowRepository.unobserve(this)
     }
 

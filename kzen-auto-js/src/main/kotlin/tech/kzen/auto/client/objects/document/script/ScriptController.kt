@@ -127,7 +127,7 @@ class ScriptController:
             ClientContext.mirroredGraphStore.observe(this)
             ClientContext.executionRepository.observe(this)
             ClientContext.insertionGlobal.subscribe(this)
-            ClientContext.navigationRepository.observe(this)
+            ClientContext.navigationGlobal.observe(this)
         }
     }
 
@@ -139,7 +139,7 @@ class ScriptController:
         ClientContext.mirroredGraphStore.unobserve(this)
         ClientContext.executionRepository.unobserve(this)
         ClientContext.insertionGlobal.unsubscribe(this)
-        ClientContext.navigationRepository.unobserve(this)
+        ClientContext.navigationGlobal.unobserve(this)
     }
 
 

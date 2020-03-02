@@ -645,6 +645,7 @@ class RestHandler {
 
 
     fun actionPerform(serverRequest: ServerRequest): Mono<ServerResponse> {
+        // TODO: include separate *host*
         val documentPath: DocumentPath = serverRequest.getParam(
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 

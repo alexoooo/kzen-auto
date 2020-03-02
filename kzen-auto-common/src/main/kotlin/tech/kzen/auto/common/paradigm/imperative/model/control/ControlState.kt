@@ -16,10 +16,10 @@ sealed class ControlState
         private const val valueKey = "value"
         private const val targetKey = "target"
 
-        private const val initialType  = "initial"
-        private const val finalType  = "final"
-        private const val internalType  = "internal"
-        private const val invokeType  = "invoke"
+        private const val initialType = "initial"
+        private const val finalType = "final"
+        private const val internalType = "internal"
+        private const val invokeType = "invoke"
 
 
         @Suppress("UNCHECKED_CAST")

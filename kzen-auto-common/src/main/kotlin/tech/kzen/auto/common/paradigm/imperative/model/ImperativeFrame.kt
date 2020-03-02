@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.paradigm.imperative.model
 
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
@@ -56,6 +57,30 @@ data class ImperativeFrame(
     //-----------------------------------------------------------------------------------------------------------------
     fun contains(objectPath: ObjectPath): Boolean {
         return states.containsKey(objectPath)
+    }
+
+
+    fun containsStatus(status: ImperativePhase, running: Boolean): Boolean {
+        for (e in states) {
+            if (e.value.phase(running) != status) {
+                return true
+            }
+        }
+        return false
+    }
+
+
+    fun isActive(running: ObjectLocation?): Boolean {
+        val frameRunning = running?.documentPath == path
+
+        for (e in states) {
+            if (frameRunning && e.key == running?.objectPath ||
+                    e.value.phase(false) != ImperativePhase.Pending) {
+                return true
+            }
+        }
+
+        return false
     }
 
 

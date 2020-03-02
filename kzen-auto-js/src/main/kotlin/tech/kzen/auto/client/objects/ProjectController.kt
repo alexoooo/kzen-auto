@@ -97,7 +97,7 @@ class ProjectController(
     override fun componentDidMount() {
         async {
             ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.navigationRepository.observe(this)
+            ClientContext.navigationGlobal.observe(this)
         }
 
         window.addEventListener("resize", handleResize)
@@ -107,7 +107,7 @@ class ProjectController(
     override fun componentWillUnmount() {
 //        println("ProjectController - Un-subscribed")
         ClientContext.mirroredGraphStore.unobserve(this)
-        ClientContext.navigationRepository.unobserve(this)
+        ClientContext.navigationGlobal.unobserve(this)
 
         window.addEventListener("resize", handleResize)
     }

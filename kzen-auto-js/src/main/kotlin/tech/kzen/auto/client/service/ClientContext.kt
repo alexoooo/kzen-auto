@@ -83,7 +83,7 @@ object ClientContext {
             250,
             200)
 
-    val navigationRepository = NavigationGlobal(
+    val navigationGlobal = NavigationGlobal(
             executionLoop,
             visualDataflowLoop)
 
@@ -99,7 +99,7 @@ object ClientContext {
 
 
     suspend fun initAsync() {
-        navigationRepository.postConstruct(mirroredGraphStore)
+        navigationGlobal.postConstruct(mirroredGraphStore)
 
         mirroredGraphStore.observe(executionRepository)
         mirroredGraphStore.observe(visualDataflowRepository)

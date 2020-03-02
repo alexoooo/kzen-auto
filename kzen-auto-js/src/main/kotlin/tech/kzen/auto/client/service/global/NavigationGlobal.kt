@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.service.global
 
+import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
 import tech.kzen.auto.common.util.RequestParams
@@ -119,7 +120,12 @@ class NavigationGlobal(
 
 
     fun goto(documentPath: DocumentPath) {
-        window.location.hash = "#" + documentPath.asString()
+        window.location.hash = NavigationRoute(documentPath, parameters).toFragment()
+    }
+
+
+    fun parameterize(requestParams: RequestParams) {
+        window.location.hash = NavigationRoute(documentPath, requestParams).toFragment()
     }
 
 
