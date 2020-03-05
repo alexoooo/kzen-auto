@@ -371,7 +371,7 @@ class ExecutionRepository(
         val state = imperativeModel.frames.last().states[objectLocation.objectPath]!!
 
         if (state.controlState == null || state.controlState is FinalControlState) {
-            val result = actionExecutor.execute(objectLocation, imperativeModel)
+            val result = actionExecutor.execute(host, objectLocation, imperativeModel)
 
             val executionState = ImperativeState(
                     result,
@@ -392,7 +392,7 @@ class ExecutionRepository(
         }
         else {
             @Suppress("MoveVariableDeclarationIntoWhen")
-            val controlTransition = actionExecutor.control(objectLocation, imperativeModel)
+            val controlTransition = actionExecutor.control(host, objectLocation, imperativeModel)
 
             val controlState = when (controlTransition) {
                 is EvaluateControlTransition ->

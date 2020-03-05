@@ -376,10 +376,12 @@ class ClientRestApi(
 
 
     suspend fun performAction(
+            host: DocumentPath,
             objectLocation: ObjectLocation
     ): ImperativeResponse {
         val responseJson = getJson(
                 CommonRestApi.actionPerform,
+                CommonRestApi.paramHostDocumentPath to host.asString(),
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
 

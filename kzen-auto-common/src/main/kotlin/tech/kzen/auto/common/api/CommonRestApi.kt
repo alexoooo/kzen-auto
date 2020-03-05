@@ -42,6 +42,7 @@ object CommonRestApi {
     const val commandBenchmark = "${commandPrefix}benchmark"
 
 
+    const val paramHostDocumentPath = "host"
     const val paramDocumentPath = "path"
     const val paramObjectPath = "object"
     const val paramPositionIndex = "index"

@@ -645,7 +645,9 @@ class RestHandler {
 
 
     fun actionPerform(serverRequest: ServerRequest): Mono<ServerResponse> {
-        // TODO: include separate *host*
+        val hostDocumentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramHostDocumentPath, DocumentPath.Companion::parse)
+
         val documentPath: DocumentPath = serverRequest.getParam(
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
@@ -656,7 +658,8 @@ class RestHandler {
 
         val execution: ImperativeResponse = runBlocking {
             val graphStructure = ServerContext.graphStore.graphStructure()
-            ServerContext.executionRepository.execute(documentPath, objectLocation, graphStructure)
+            ServerContext.executionRepository.execute(
+                    hostDocumentPath, objectLocation, graphStructure)
         }
 
         return ServerResponse

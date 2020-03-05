@@ -7,6 +7,7 @@ import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTransition
 import tech.kzen.auto.common.paradigm.imperative.service.ActionExecutor
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.LocalGraphStore
@@ -17,13 +18,13 @@ class ModelActionExecutor(
         private val graphCreator: GraphCreator
 ): ActionExecutor {
     override suspend fun execute(
+            host: DocumentPath,
             actionLocation: ObjectLocation,
             imperativeModel: ImperativeModel
     ): ExecutionResult {
         // TODO: report any definition issues on client side
         val graphDefinition = graphStore
                 .graphDefinition()
-//                .successful
                 .transitiveSuccessful()
                 .filterDefinitions(AutoConventions.serverAllowed)
 
@@ -40,6 +41,7 @@ class ModelActionExecutor(
 
 
     override suspend fun control(
+            host: DocumentPath,
             actionLocation: ObjectLocation,
             imperativeModel: ImperativeModel
     ): ControlTransition {
