@@ -243,6 +243,29 @@ class ScriptRunController(
     }
 
 
+    private fun onReturn() {
+        val graphStructure = props.structure!!
+        val imperativeModel = props.execution!!
+
+        async {
+            val previousFrame =
+                    if (imperativeModel.frames.size > 1) {
+                        imperativeModel.frames[imperativeModel.frames.size - 2].path
+                    }
+                    else {
+                        null
+                    }
+
+            ClientContext.executionRepository.returnFrame(
+                    imperativeModel.frames.first().path, graphStructure)
+
+            if (previousFrame != null) {
+                ClientContext.navigationGlobal.goto(previousFrame)
+            }
+        }
+    }
+
+
     private fun onRunAll() {
         val host = props.documentPath
                 ?: return
@@ -452,7 +475,12 @@ class ScriptRunController(
                             onRunAll()
 
                         phase == Phase.Done ->
-                            onReset()
+                            if (nested) {
+                                onReturn()
+                            }
+                            else {
+                                onReset()
+                            }
                     }
                 }
 

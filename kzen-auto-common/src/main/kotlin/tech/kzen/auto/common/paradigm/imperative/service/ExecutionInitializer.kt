@@ -5,5 +5,8 @@ import tech.kzen.lib.common.model.document.DocumentPath
 
 
 interface ExecutionInitializer {
+    // TODO
+    suspend fun runningHosts(): List<DocumentPath>
+
     suspend fun initialExecutionModel(host: DocumentPath): ImperativeModel
 }

@@ -77,7 +77,7 @@ class RibbonRun (
             ClientContext.executionRepository.observe(this)
 
             val initialActiveScripts =
-                    ClientContext.restClient.activeScripts()
+                    ClientContext.restClient.runningHosts()
 
             val nextActive = state.active + initialActiveScripts
 
@@ -113,7 +113,15 @@ class RibbonRun (
 //        console.log("^^^ onExecutionModel: " +
 //                "$active / $modifiedActive - $host - ${executionModel.isActive()} - $executionModel")
 
-        val selectedFramePaths = executionModel.frames.map { it.path }
+        val selected = props.parameters.get(runningKey)?.let { DocumentPath.parse(it) }
+
+        val selectedFramePaths =
+                if (executionModel.frames.firstOrNull()?.path == selected) {
+                    executionModel.frames.map { it.path }
+                }
+                else {
+                    state.selectedFramePaths
+                }
 
         if (active != modifiedActive ||
                 state.selectedFramePaths != selectedFramePaths)
@@ -196,11 +204,17 @@ class RibbonRun (
                 anchorEl = dropdownAnchorRef
             }
 
-            renderSelected(selected)
+            styledDiv {
+                css {
+                    width = 16.em
+                }
 
-            hr {}
+                renderSelected(selected)
 
-            renderActiveSelection(selected)
+                hr {}
+
+                renderActiveSelection(selected)
+            }
         }
     }
 

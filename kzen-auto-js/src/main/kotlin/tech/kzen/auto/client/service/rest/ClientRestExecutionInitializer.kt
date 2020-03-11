@@ -8,6 +8,11 @@ import tech.kzen.lib.common.model.document.DocumentPath
 class ClientRestExecutionInitializer(
         private val clientRestApi: ClientRestApi
 ): ExecutionInitializer {
+    override suspend fun runningHosts(): List<DocumentPath> {
+        return clientRestApi.runningHosts()
+    }
+
+
     override suspend fun initialExecutionModel(
             host: DocumentPath
     ): ImperativeModel {

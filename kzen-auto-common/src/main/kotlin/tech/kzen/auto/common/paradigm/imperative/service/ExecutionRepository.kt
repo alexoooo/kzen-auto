@@ -347,7 +347,6 @@ class ExecutionRepository(
     }
 
 
-
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun execute(
             host: DocumentPath,
@@ -463,7 +462,7 @@ class ExecutionRepository(
     }
 
 
-    fun nextModel(
+    private fun nextModel(
             host: DocumentPath,
             objectLocation: ObjectLocation,
             executionState: ImperativeState,
@@ -520,5 +519,27 @@ class ExecutionRepository(
         return ImperativeModel(
                 null,
                 nextFrames)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun returnFrame(
+            host: DocumentPath,
+            graphStructure: GraphStructure
+    ): Digest {
+        val imperativeModel = executionModel(host, graphStructure)
+
+        val nextFrames = imperativeModel
+                .frames.subList(0, imperativeModel.frames.size - 1)
+
+        val nextModel = imperativeModel.copy(frames = nextFrames)
+
+        models = models.put(host, nextModel)
+
+        publishExecutionModel(host, nextModel)
+
+        actionExecutor.returnFrame(host)
+
+        return nextModel.digest()
     }
 }

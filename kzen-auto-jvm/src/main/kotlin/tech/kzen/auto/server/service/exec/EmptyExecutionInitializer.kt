@@ -7,6 +7,10 @@ import tech.kzen.lib.platform.collect.persistentListOf
 
 
 object EmptyExecutionInitializer: ExecutionInitializer {
+    override suspend fun runningHosts(): List<DocumentPath> {
+        return listOf()
+    }
+
     override suspend fun initialExecutionModel(
             host: DocumentPath
     ): ImperativeModel {

@@ -39,4 +39,9 @@ class ClientRestActionExecutor(
 //            ImperativeError(e.message ?: "Error")
 //        }
     }
+
+
+    override suspend fun returnFrame(host: DocumentPath) {
+        restClient.returnFrame(host)
+    }
 }

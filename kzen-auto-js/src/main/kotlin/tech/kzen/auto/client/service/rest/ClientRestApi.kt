@@ -331,7 +331,7 @@ class ClientRestApi(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun activeScripts(): List<DocumentPath> {
+    suspend fun runningHosts(): List<DocumentPath> {
         val responseText = get(
                 CommonRestApi.actionList)
 
@@ -366,13 +366,13 @@ class ClientRestApi(
     }
 
 
-    suspend fun resetExecution(
-            host: DocumentPath
-    ): Digest {
-        return getDigest(
-                CommonRestApi.actionReset,
-                CommonRestApi.paramDocumentPath to host.asString())
-    }
+//    suspend fun resetExecution(
+//            host: DocumentPath
+//    ): Digest {
+//        return getDigest(
+//                CommonRestApi.actionReset,
+//                CommonRestApi.paramDocumentPath to host.asString())
+//    }
 
 
     suspend fun performAction(
@@ -389,6 +389,14 @@ class ClientRestApi(
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
         return ImperativeResponse.fromCollection(responseCollection)
+    }
+
+
+    suspend fun returnFrame(
+            host: DocumentPath
+    ) {
+        get(CommonRestApi.actionReturn,
+                CommonRestApi.paramHostDocumentPath to host.asString())
     }
 
 

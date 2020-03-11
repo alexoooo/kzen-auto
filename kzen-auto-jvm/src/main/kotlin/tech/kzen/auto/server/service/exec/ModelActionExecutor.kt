@@ -61,4 +61,7 @@ class ModelActionExecutor(
 
         return action.control(imperativeModel, state.controlState!!)
     }
+
+
+    override suspend fun returnFrame(host: DocumentPath) {}
 }

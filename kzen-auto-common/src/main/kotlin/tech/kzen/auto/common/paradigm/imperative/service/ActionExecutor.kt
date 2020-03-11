@@ -21,4 +21,8 @@ interface ActionExecutor {
             actionLocation: ObjectLocation,
             imperativeModel: ImperativeModel
     ): ControlTransition
+
+
+    suspend fun returnFrame(
+            host: DocumentPath)
 }

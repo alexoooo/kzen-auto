@@ -11,6 +11,7 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
+import tech.kzen.auto.client.objects.ribbon.RibbonRun
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
@@ -80,7 +81,9 @@ class ScriptController:
             var documentPath: DocumentPath?,
             var graphStructure: GraphStructure?,
             var imperativeModel: ImperativeModel?,
-            var creating: Boolean
+            var creating: Boolean,
+
+            var runningHost: DocumentPath?
     ): RState
 
 
@@ -151,6 +154,16 @@ class ScriptController:
 //        console.log("%#$%#$%#$ componentDidUpdate",
 //                state.imperativeModel?.frames?.map { it.path.asString() })
 
+        val runningHost = state.runningHost
+        if (prevState.runningHost == null && runningHost != null && state.imperativeModel == null) {
+            val graphStructure = state.graphStructure!!
+            async {
+                ClientContext.executionRepository.executionModel(
+                        runningHost, graphStructure)
+            }
+            return
+        }
+
 //        console.log("%#$%#$%#$ componentDidUpdate", state.documentPath, prevState.documentPath)
         if (state.documentPath != null &&
                 state.documentPath != prevState.documentPath &&
@@ -178,6 +191,8 @@ class ScriptController:
 
         setState {
             this.documentPath = documentPath
+
+            runningHost = parameters.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
         }
     }
 
@@ -208,13 +223,19 @@ class ScriptController:
 
 
     override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {
-        if (state.documentPath != host &&
+//        console.log("^^^^ onExecutionModel: " +
+//                "$host - ${state.documentPath} - ${state.runningHost} - $executionModel")
+
+//        if (state.documentPath != host &&
+//                executionModel.frames.find { it.path == state.documentPath} == null)
+        if (state.runningHost != null && state.runningHost != host ||
+                state.runningHost == null &&
+                state.documentPath != host &&
                 executionModel.frames.find { it.path == state.documentPath} == null)
         {
             return
         }
 
-//        console.log("^^^^ onExecutionModel: $host - ${state.documentPath} - $executionModel")
         setState {
             imperativeModel = executionModel
         }
