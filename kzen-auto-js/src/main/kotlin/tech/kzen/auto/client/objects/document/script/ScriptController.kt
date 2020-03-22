@@ -490,6 +490,7 @@ class ScriptController:
             child(ScriptRunController::class) {
                 attrs {
                     documentPath = state.documentPath
+                    runningHost = state.runningHost
                     structure = state.graphStructure
                     execution = state.imperativeModel
                 }

@@ -229,6 +229,9 @@ class DefaultAttributeEditor(
             val booleanValue = state.value == "true"
             renderBoolean(booleanValue)
         }
+        else if (attributeMetadata.definerReference?.name?.value == "Self") {
+            // NB: don't render
+        }
         else {
             +"${props.attributeName} (type not supported)"
 

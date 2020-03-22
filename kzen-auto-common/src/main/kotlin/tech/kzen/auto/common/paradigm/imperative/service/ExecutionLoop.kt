@@ -21,10 +21,12 @@ class ExecutionLoop(
     //-----------------------------------------------------------------------------------------------------------------
     private val states = mutableMapOf<DocumentPath, State>()
 
-    private class State {
-        var looping: Boolean = false
-        var executionModel: ImperativeModel? = null
-    }
+    private data class State(
+        var looping: Boolean = false,
+        var executionModel: ImperativeModel? = null,
+        var returningFrame: Boolean = false,
+        var continuingFrame: Boolean = false
+    )
 
 
     private fun getOrCreate(host: DocumentPath): State {
@@ -48,6 +50,15 @@ class ExecutionLoop(
             return
         }
 
+        nextIteration(state, host, executionModel)
+    }
+
+
+    private suspend fun nextIteration(
+            state: State,
+            host: DocumentPath,
+            executionModel: ImperativeModel
+    ) {
         val serverGraphStructure = mirroredGraphStore
                 .graphStructure()
                 .filter(AutoConventions.serverAllowed)
@@ -57,9 +68,15 @@ class ExecutionLoop(
                 executionModel
         ) ?: return
 
-//        println("$$$$ onExecutionModel - $host - $next - $executionModel")
+//        println("$$$$ nextIteration - $host - $next - $executionModel")
 
-        run(host, next, serverGraphStructure)
+        if (state.returningFrame) {
+            state.returningFrame = false
+            state.continuingFrame = true
+        }
+        else {
+            run(host, next, serverGraphStructure)
+        }
     }
 
 
@@ -117,6 +134,11 @@ class ExecutionLoop(
     }
 
 
+    fun isContinuingFrame(host: DocumentPath): Boolean {
+        return getOrCreate(host).continuingFrame
+    }
+
+
     fun pause(host: DocumentPath) {
         val state = getOrCreate(host)
 //        println("ExecutionLoop | Pause request - $states")
@@ -129,6 +151,30 @@ class ExecutionLoop(
 //        println("ExecutionLoop | Pausing")
 
         state.looping = false
+    }
+
+
+    fun returnFrame(host: DocumentPath) {
+        val state = getOrCreate(host)
+        if (! state.looping) {
+            return
+        }
+        state.returningFrame = true
+    }
+
+
+    suspend fun continueFrame(host: DocumentPath) {
+        val state = getOrCreate(host)
+
+//        println("^^^^^^^ continueFrame - $state")
+
+        state.continuingFrame = false
+        state.looping = true
+
+        val executionModel = state.executionModel
+                ?: throw IllegalStateException("missing execution model: $state")
+
+        nextIteration(state, host, executionModel)
     }
 
 

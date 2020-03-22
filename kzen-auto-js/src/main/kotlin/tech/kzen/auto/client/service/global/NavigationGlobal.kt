@@ -30,6 +30,7 @@ class NavigationGlobal(
     private val observers = mutableSetOf<Observer>()
     private var documentPath: DocumentPath? = null
     private var parameters: RequestParams = RequestParams.empty
+    private var returnPending: Boolean = false
 
 
     fun observe(observer: Observer) {
@@ -47,8 +48,13 @@ class NavigationGlobal(
 
 
     private fun publish() {
-        executionLoop.pauseAll()
-        visualDataflowLoop.pauseAll()
+        if (returnPending) {
+            // TODO: consolidate loops
+            executionLoop.pauseAll()
+            visualDataflowLoop.pauseAll()
+
+            returnPending = false
+        }
 
         val observersCopy = observers.toList()
         for (observer in observersCopy) {
@@ -121,6 +127,12 @@ class NavigationGlobal(
 
     fun goto(documentPath: DocumentPath) {
         window.location.hash = NavigationRoute(documentPath, parameters).toFragment()
+    }
+
+
+    fun returnTo(documentPath: DocumentPath) {
+        returnPending = true
+        goto(documentPath)
     }
 
 

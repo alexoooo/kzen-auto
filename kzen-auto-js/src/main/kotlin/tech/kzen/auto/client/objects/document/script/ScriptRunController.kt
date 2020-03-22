@@ -31,6 +31,7 @@ class ScriptRunController(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var documentPath: DocumentPath?,
+            var runningHost: DocumentPath?,
             var structure: GraphStructure?,
             var execution: ImperativeModel?
     ): RProps
@@ -77,6 +78,8 @@ class ScriptRunController(
             host: DocumentPath,
             executionModel: ImperativeModel
     ) {
+        console.log("^^^ onExecutionModel: $host - $executionModel")
+
         if (host != props.documentPath &&
                 executionModel.frames.find { it.path == props.documentPath} == null)
         {
@@ -87,7 +90,14 @@ class ScriptRunController(
             val next = ImperativeUtils.next(props.structure!!, executionModel)
             if (next == null) {
                 if (ClientContext.executionLoop.isLooping(host)) {
-                    ClientContext.executionLoop.pause(host)
+                    val nested = props.execution?.frames?.size ?: 0 > 1
+                    if (nested) {
+                        ClientContext.executionLoop.returnFrame(host)
+                        onReturn()
+                    }
+                    else {
+                        ClientContext.executionLoop.pause(host)
+                    }
                 }
 
                 ClientContext.executionIntentGlobal.clear()
@@ -137,31 +147,31 @@ class ScriptRunController(
                 ?: return
 
         if (execution.frames.isEmpty()) {
-//            console.log("!@#!#!@#!@#!@  starting execution")
             async {
                 executionStateToFreshStart()
             }
             return
         }
+
+        val runningHost = props.runningHost
+
+//        console.log("!@#!#!@#!@#!@  componentDidUpdate - " +
+//                "${props.documentPath} - ${prevProps.documentPath} - $runningHost - " +
+//                "${runningHost?.let {ClientContext.executionLoop.isContinuingFrame(it)}}")
+
+        if (props.documentPath != prevProps.documentPath &&
+                runningHost != null &&
+                ClientContext.executionLoop.isContinuingFrame(runningHost))
+        {
+//            console.log("^^^^^^^^^ continuing execution")
+            async {
+                ClientContext.executionLoop.continueFrame(runningHost)
+            }
+        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-
-    // TODO: refresh manager?
-//    private fun onRefresh() {
-//        val host = props.documentPath
-//                ?: return
-//
-//        ClientContext.executionLoop.pause(host)
-//
-//        async {
-//            ClientContext.modelManager.refresh()
-//            ClientContext.executionManager.reset(host)
-//        }
-//    }
-
-
     private suspend fun executionStateToFreshStart() {
 //        val graphStructure = state.structure
         val graphStructure = props.structure
@@ -247,6 +257,8 @@ class ScriptRunController(
         val graphStructure = props.structure!!
         val imperativeModel = props.execution!!
 
+//        console.log("&&%^&^% returning frame")
+
         async {
             val previousFrame =
                     if (imperativeModel.frames.size > 1) {
@@ -256,11 +268,13 @@ class ScriptRunController(
                         null
                     }
 
+//            console.log("&&%^&^% returning frame - async")
+
             ClientContext.executionRepository.returnFrame(
                     imperativeModel.frames.first().path, graphStructure)
 
             if (previousFrame != null) {
-                ClientContext.navigationGlobal.goto(previousFrame)
+                ClientContext.navigationGlobal.returnTo(previousFrame)
             }
         }
     }

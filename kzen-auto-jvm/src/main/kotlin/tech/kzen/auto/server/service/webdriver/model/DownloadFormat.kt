@@ -12,7 +12,7 @@ enum class DownloadFormat(
 
     companion object {
         fun parse(location: URI): DownloadFormat {
-            val path = location.path.toString()
+            val path = location.path
 
             for (value in values()) {
                 if (path.endsWith(value.extension)) {

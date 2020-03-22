@@ -138,7 +138,7 @@ class ProjectController(
 
 
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {
-        console.log("^^^ onCommandFailure", command.toString(), cause)
+//        console.log("^^^ onCommandFailure", command.toString(), cause)
         setState {
             commandError = "${cause.message}"
         }
