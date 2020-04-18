@@ -4,10 +4,7 @@ import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import org.w3c.dom.events.Event
-import react.RBuilder
-import react.RHandler
-import react.RState
-import react.ReactElement
+import react.*
 import react.dom.br
 import react.dom.td
 import styled.*
@@ -18,7 +15,6 @@ import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayPro
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.wrap.ArrowForwardIcon
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
@@ -251,7 +247,7 @@ class ConditionalStepDisplay(
         val inThenBranch = ! isNextToRun &&
                 ! isRunning &&
                 imperativeState?.controlState is InternalControlState &&
-                imperativeState.controlState.branchIndex == 0
+                (imperativeState.controlState as InternalControlState).branchIndex == 0
 
         styledDiv {
             css {
@@ -342,7 +338,7 @@ class ConditionalStepDisplay(
         val inElseBranch = ! isNextToRun &&
                 ! isRunning &&
                 imperativeState?.controlState is InternalControlState &&
-                imperativeState.controlState.branchIndex == 1
+                (imperativeState.controlState as InternalControlState).branchIndex == 1
 
         styledDiv {
             css {

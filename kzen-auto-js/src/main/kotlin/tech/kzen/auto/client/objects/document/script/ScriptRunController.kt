@@ -4,11 +4,8 @@ import kotlinx.coroutines.delay
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
-import react.RBuilder
-import react.RProps
-import react.RState
+import react.*
 import react.dom.div
-import react.setState
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*

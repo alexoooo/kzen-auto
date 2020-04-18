@@ -4,10 +4,7 @@ import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import org.w3c.dom.events.Event
-import react.RBuilder
-import react.RHandler
-import react.RState
-import react.ReactElement
+import react.*
 import react.dom.br
 import react.dom.div
 import react.dom.td
@@ -19,7 +16,6 @@ import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayPro
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.wrap.ArrowForwardIcon
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.SubdirectoryArrowLeftIcon
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.script.ScriptDocument

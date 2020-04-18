@@ -4,7 +4,6 @@ import react.*
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.obj.ObjectName
 

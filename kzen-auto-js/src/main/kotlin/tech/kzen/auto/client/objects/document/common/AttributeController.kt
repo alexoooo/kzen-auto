@@ -1,11 +1,7 @@
 package tech.kzen.auto.client.objects.document.common
 
-import react.RBuilder
-import react.RHandler
-import react.RState
-import react.ReactElement
+import react.*
 import tech.kzen.auto.client.api.ReactWrapper
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation

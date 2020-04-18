@@ -5,10 +5,7 @@ import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
 import org.w3c.dom.HTMLElement
-import react.RBuilder
-import react.RProps
-import react.RState
-import react.setState
+import react.*
 import styled.css
 import styled.styledDiv
 import styled.styledSpan

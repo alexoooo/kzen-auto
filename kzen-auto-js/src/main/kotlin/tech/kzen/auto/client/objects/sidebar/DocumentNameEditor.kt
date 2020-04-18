@@ -4,10 +4,7 @@ import kotlinx.coroutines.delay
 import kotlinx.css.*
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
-import react.RBuilder
-import react.RProps
-import react.RState
-import react.setState
+import react.*
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.service.ClientContext

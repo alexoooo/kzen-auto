@@ -6,11 +6,11 @@ import kotlinx.css.properties.borderRight
 import kotlinx.css.properties.borderTop
 import react.RBuilder
 import react.RProps
+import react.RPureComponent
 import react.RState
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.graph.CellController
-import tech.kzen.auto.client.wrap.RPureComponent
 
 
 class BottomEgress(

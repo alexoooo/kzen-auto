@@ -4,11 +4,8 @@ import kotlinx.css.*
 import kotlinx.css.properties.TextDecorationLine
 import kotlinx.css.properties.textDecoration
 import org.w3c.dom.HTMLElement
-import react.RBuilder
-import react.RProps
-import react.RState
+import react.*
 import react.dom.hr
-import react.setState
 import styled.css
 import styled.styledA
 import styled.styledDiv

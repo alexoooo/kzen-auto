@@ -1,14 +1,10 @@
 package tech.kzen.auto.client.objects.document.graph
 
 import kotlinx.css.em
-import react.RBuilder
-import react.RProps
-import react.RState
-import react.setState
+import react.*
 import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix

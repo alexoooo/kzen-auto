@@ -6,6 +6,7 @@ import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLImageElement
 import react.RBuilder
 import react.RProps
+import react.RPureComponent
 import react.RState
 import styled.css
 import styled.styledDiv

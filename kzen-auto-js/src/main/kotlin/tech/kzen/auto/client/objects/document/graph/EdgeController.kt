@@ -7,10 +7,7 @@ import kotlinx.css.properties.borderRight
 import kotlinx.css.properties.borderTop
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
-import react.RBuilder
-import react.RProps
-import react.RState
-import react.setState
+import react.*
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
@@ -19,7 +16,6 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.DeleteIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.graph.GraphDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel

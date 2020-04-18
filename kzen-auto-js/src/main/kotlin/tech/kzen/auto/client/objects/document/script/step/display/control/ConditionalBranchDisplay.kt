@@ -2,11 +2,8 @@ package tech.kzen.auto.client.objects.document.script.step.display.control
 
 import kotlinx.css.*
 import kotlinx.html.title
-import react.RBuilder
-import react.RProps
-import react.RState
+import react.*
 import react.dom.span
-import react.setState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan

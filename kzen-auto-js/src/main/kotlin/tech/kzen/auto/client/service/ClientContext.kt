@@ -92,9 +92,17 @@ object ClientContext {
     fun init() {
 //        console.log("starting with baseUrl: ", baseUrl)
 
-        val kzenAutoJs = js("require('kzen-auto-js.js')")
-//        console.log("kzenAutoJs", kzenAutoJs)
-        ModuleRegistry.add(kzenAutoJs)
+//        ModuleRegistry.add(js("require('lib-lib-common')"))
+//        ModuleRegistry.add(js("require('proj-proj-common')"))
+//        ModuleRegistry.add(js("require('proj-proj-js')"))
+
+        ModuleRegistry.add(js("require('kzen-lib-kzen-lib-common')"))
+        ModuleRegistry.add(js("require('kzen-lib-kzen-lib-js')"))
+        ModuleRegistry.add(js("require('kzen-auto-kzen-auto-common')"))
+        ModuleRegistry.add(js("require('kzen-auto-kzen-auto-js')"))
+
+//        val kzenAutoJs = js("require('kzen-auto-js.js')")
+//        ModuleRegistry.add(kzenAutoJs)
     }
 
 
