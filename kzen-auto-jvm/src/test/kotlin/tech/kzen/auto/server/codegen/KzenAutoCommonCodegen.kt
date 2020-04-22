@@ -5,8 +5,11 @@ import tech.kzen.lib.server.codegen.ModuleReflectionGenerator
 import java.nio.file.Paths
 
 
-fun main() {
-    ModuleReflectionGenerator.generate(
-            Paths.get("kzen-auto-common/src/commonMain/kotlin"),
-            ClassName("tech.kzen.auto.common.codegen.KzenAutoCommonModule"))
+object KzenAutoCommonCodegen {
+    @JvmStatic
+    fun main(args: Array<String>) {
+        ModuleReflectionGenerator.generate(
+                Paths.get("kzen-auto-common/src/commonMain/kotlin"),
+                ClassName("tech.kzen.auto.common.codegen.KzenAutoCommonModule"))
+    }
 }

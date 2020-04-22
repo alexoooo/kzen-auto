@@ -75,7 +75,7 @@ class ScriptRunController(
             host: DocumentPath,
             executionModel: ImperativeModel
     ) {
-        console.log("^^^ onExecutionModel: $host - $executionModel")
+//        console.log("^^^ onExecutionModel: $host - $executionModel")
 
         if (host != props.documentPath &&
                 executionModel.frames.find { it.path == props.documentPath} == null)

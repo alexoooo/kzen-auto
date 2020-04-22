@@ -8,9 +8,10 @@ import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionIndex
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
+import tech.kzen.lib.common.reflect.Reflect
 
 
-@Suppress("unused")
+@Reflect
 class MappingCommander(
         private val stepArchetype: ObjectLocation,
         private val itemArchetype: ObjectLocation

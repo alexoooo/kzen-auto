@@ -10,14 +10,16 @@ import tech.kzen.auto.client.objects.document.common.DefaultAttributeEditor
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.auto.client.objects.document.feature.FeatureController
 import tech.kzen.auto.client.objects.document.graph.GraphController
+import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
+import tech.kzen.auto.client.objects.document.script.command.StepCommander
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.step.StepController
-import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.attribute.SelectFeatureEditor
 import tech.kzen.auto.client.objects.document.script.step.attribute.SelectScriptEditor
 import tech.kzen.auto.client.objects.document.script.step.attribute.SelectStepEditor
 import tech.kzen.auto.client.objects.document.script.step.attribute.TargetSpecEditor
 import tech.kzen.auto.client.objects.document.script.step.display.control.ConditionalStepDisplay
+import tech.kzen.auto.client.objects.document.script.step.display.control.MappingCommander
 import tech.kzen.auto.client.objects.document.script.step.display.control.MappingStepDisplay
 import tech.kzen.auto.client.objects.document.script.step.display.DefaultStepDisplay
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
@@ -62,6 +64,13 @@ reflectionRegistry.put(
 }
 
 reflectionRegistry.put(
+    "tech.kzen.auto.client.objects.document.script.command.ScriptCommander",
+    listOf("stepCommanders")
+) { args ->
+    ScriptCommander(args[0] as List<StepCommander>)
+}
+
+reflectionRegistry.put(
     "tech.kzen.auto.client.objects.document.script.ScriptController\$Wrapper",
     listOf("archetype", "stepController", "scriptCommander")
 ) { args ->
@@ -101,6 +110,13 @@ reflectionRegistry.put(
     listOf("objectLocation", "attributeController", "scriptCommander", "stepControllerHandle")
 ) { args ->
     ConditionalStepDisplay.Wrapper(args[0] as ObjectLocation, args[1] as AttributeController.Wrapper, args[2] as ScriptCommander, args[3] as StepController.Handle)
+}
+
+reflectionRegistry.put(
+    "tech.kzen.auto.client.objects.document.script.step.display.control.MappingCommander",
+    listOf("stepArchetype", "itemArchetype")
+) { args ->
+    MappingCommander(args[0] as ObjectLocation, args[1] as ObjectLocation)
 }
 
 reflectionRegistry.put(
