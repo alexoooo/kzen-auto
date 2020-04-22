@@ -30,35 +30,29 @@ class WebDriverOptionDao {
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_32,
-//                    "78.0.3904.105",
-//                    URI("https://chromedriver.storage.googleapis.com/78.0.3904.105/chromedriver_win32.zip")
-                    "79.0.3945.36",
-                    URI("https://chromedriver.storage.googleapis.com/79.0.3945.36/chromedriver_win32.zip")
-//                    "80.0.3987.16",
-//                    URI("https://chromedriver.storage.googleapis.com/80.0.3987.16/chromedriver_win32.zip")
+//                    "79.0.3945.36",
+//                    URI("https://chromedriver.storage.googleapis.com/79.0.3945.36/chromedriver_win32.zip")
+                    "81.0.4044.69",
+                    URI("https://chromedriver.storage.googleapis.com/81.0.4044.69/chromedriver_win32.zip")
             ),
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_64,
-//                    "78.0.3904.105",
-//                    URI("https://chromedriver.storage.googleapis.com/78.0.3904.105/chromedriver_win32.zip")
-                    "79.0.3945.36",
-                    URI("https://chromedriver.storage.googleapis.com/79.0.3945.36/chromedriver_win32.zip")
-//                    "80.0.3987.16",
-//                    URI("https://chromedriver.storage.googleapis.com/80.0.3987.16/chromedriver_win32.zip")
+//                    "79.0.3945.36",
+//                    URI("https://chromedriver.storage.googleapis.com/79.0.3945.36/chromedriver_win32.zip")
+                    "81.0.4044.69",
+                    URI("https://chromedriver.storage.googleapis.com/81.0.4044.69/chromedriver_win32.zip")
             ),
 
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.OsX,
                     CpuArchitecture.X86_64,
-//                    "78.0.3904.105",
-//                    URI("https://chromedriver.storage.googleapis.com/78.0.3904.105/chromedriver_mac64.zip")
-                    "79.0.3945.36",
-                    URI("https://chromedriver.storage.googleapis.com/79.0.3945.36/chromedriver_mac64.zip")
-//                    "80.0.3987.16",
-//                    URI("https://chromedriver.storage.googleapis.com/80.0.3987.16/chromedriver_mac64.zip")
+//                    "79.0.3945.36",
+//                    URI("https://chromedriver.storage.googleapis.com/79.0.3945.36/chromedriver_mac64.zip")
+                    "81.0.4044.69",
+                    URI("https://chromedriver.storage.googleapis.com/81.0.4044.69/chromedriver_mac64.zip")
             ))
 
 

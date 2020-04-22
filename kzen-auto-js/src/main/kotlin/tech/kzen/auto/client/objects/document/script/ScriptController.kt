@@ -34,6 +34,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.DeletedDocumentEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
+import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.persistentListOf
@@ -87,7 +88,8 @@ class ScriptController:
     ): RState
 
 
-    @Suppress("unused")
+    //-----------------------------------------------------------------------------------------------------------------
+    @Reflect
     class Wrapper(
             private val archetype: ObjectLocation,
             private val stepController: StepController.Wrapper,

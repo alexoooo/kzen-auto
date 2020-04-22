@@ -12,9 +12,10 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
+import tech.kzen.lib.common.reflect.Reflect
 
 
-@Suppress("unused")
+@Reflect
 class EdgesDefiner: AttributeDefiner {
     override fun define(
             objectLocation: ObjectLocation,

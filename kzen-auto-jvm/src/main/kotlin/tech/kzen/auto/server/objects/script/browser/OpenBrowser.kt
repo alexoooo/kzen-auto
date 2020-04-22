@@ -11,10 +11,11 @@ import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.webdriver.model.BrowserLauncher
 import tech.kzen.lib.common.model.instance.GraphInstance
+import tech.kzen.lib.common.reflect.Reflect
 import java.nio.file.Paths
 
 
-@Suppress("unused")
+@Reflect
 class OpenBrowser(
         private val extensionFiles: List<String>
 ): ScriptStep {

@@ -1,13 +1,16 @@
 package tech.kzen.auto.client.service
 
+import tech.kzen.auto.client.codegen.KzenAutoJsModule
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.rest.*
+import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
+import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
 import tech.kzen.lib.common.service.media.NotationMedia
@@ -96,13 +99,17 @@ object ClientContext {
 //        ModuleRegistry.add(js("require('proj-proj-common')"))
 //        ModuleRegistry.add(js("require('proj-proj-js')"))
 
-        ModuleRegistry.add(js("require('kzen-lib-kzen-lib-common')"))
-        ModuleRegistry.add(js("require('kzen-lib-kzen-lib-js')"))
-        ModuleRegistry.add(js("require('kzen-auto-kzen-auto-common')"))
-        ModuleRegistry.add(js("require('kzen-auto-kzen-auto-js')"))
+//        ModuleRegistry.add(js("require('kzen-lib-kzen-lib-common')"))
+//        ModuleRegistry.add(js("require('kzen-lib-kzen-lib-js')"))
+//        ModuleRegistry.add(js("require('kzen-auto-kzen-auto-common')"))
+//        ModuleRegistry.add(js("require('kzen-auto-kzen-auto-js')"))
 
 //        val kzenAutoJs = js("require('kzen-auto-js.js')")
 //        ModuleRegistry.add(kzenAutoJs)
+
+        KzenLibCommonModule.register()
+        KzenAutoCommonModule.register()
+        KzenAutoJsModule.register()
     }
 
 

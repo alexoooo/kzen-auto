@@ -7,8 +7,10 @@ import tech.kzen.auto.common.paradigm.imperative.api.ScriptStep
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.reflect.Reflect
 
 
+@Reflect
 class ReferenceAction(
         private val value: ObjectLocation
 ): ScriptStep {

@@ -29,6 +29,7 @@ import tech.kzen.auto.common.paradigm.imperative.model.control.InternalControlSt
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.reflect.Reflect
 
 
 @Suppress("unused")
@@ -57,14 +58,16 @@ class MappingStepDisplay(
     ): StepDisplayProps(common)
 
 
-    @Suppress("unused")
+    //-----------------------------------------------------------------------------------------------------------------
+    @Reflect
     class Wrapper(
             objectLocation: ObjectLocation,
             private val attributeController: AttributeController.Wrapper,
             private val scriptCommander: ScriptCommander,
             private val stepControllerHandle: StepController.Handle
     ) :
-            StepDisplayWrapper(objectLocation) {
+            StepDisplayWrapper(objectLocation)
+    {
         override fun child(
                 input: RBuilder,
                 handler: RHandler<StepDisplayProps>

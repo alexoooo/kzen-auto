@@ -22,6 +22,7 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import kotlin.browser.window
 
@@ -61,7 +62,8 @@ class ProjectController(
     ): RState
 
 
-    @Suppress("unused")
+    //-----------------------------------------------------------------------------------------------------------------
+    @Reflect
     class Wrapper(
             private val sidebarController: SidebarController.Wrapper,
             private val ribbonController: RibbonController.Wrapper,

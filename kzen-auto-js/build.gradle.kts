@@ -9,14 +9,7 @@ kotlin {
 
 //        produceExecutable()
 
-        browser {
-            // TODO: figure out keep("tech.kzen.**") pattern
-            dceTask {
-                dceOptions {
-                    devMode = true
-                }
-            }
-        }
+        browser {}
     }
 }
 

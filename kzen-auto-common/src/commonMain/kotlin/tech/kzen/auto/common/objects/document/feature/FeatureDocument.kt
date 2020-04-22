@@ -4,11 +4,12 @@ import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
+import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 // see: https://en.wikipedia.org/wiki/Feature_(computer_vision)
-@Suppress("unused")
+@Reflect
 class FeatureDocument(
         val objectLocation: ObjectLocation,
         val documentNotation: DocumentNotation

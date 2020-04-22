@@ -23,6 +23,7 @@ import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.reflect.Reflect
 
 
 @Suppress("unused")
@@ -55,7 +56,8 @@ class ConditionalStepDisplay(
     ): StepDisplayProps(common)
 
 
-    @Suppress("unused")
+    //-----------------------------------------------------------------------------------------------------------------
+    @Reflect
     class Wrapper(
             objectLocation: ObjectLocation,
             private val attributeController: AttributeController.Wrapper,

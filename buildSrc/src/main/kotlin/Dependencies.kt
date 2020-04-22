@@ -13,8 +13,8 @@ const val serializationVersion = "0.20.0"
 const val wrapperKotlinVersion = "pre.94-kotlin-1.3.70"
 //const val wrapperKotlinVersion = "pre.95-kotlin-1.4-M1"
 
-const val kzenLibVersion = "0.13.2"
-//const val libVersion = "0.1.0"
+//const val kzenLibVersion = "0.13.5"
+const val kzenLibVersion = "0.13.6-SNAPSHOT"
 
 const val immutaleJsVersion = "3.8.2"
 const val dexxVersion = "0.7"

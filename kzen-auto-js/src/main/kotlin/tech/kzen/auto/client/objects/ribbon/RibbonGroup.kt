@@ -1,9 +1,10 @@
 package tech.kzen.auto.client.objects.ribbon
 
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.reflect.Reflect
 
 
-//@Suppress("unused")
+@Reflect
 class RibbonGroup(
         val title: String,
         val archetype: ObjectLocation,

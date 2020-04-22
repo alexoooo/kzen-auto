@@ -31,6 +31,8 @@ allprojects {
         mavenCentral()
 
         maven { setUrl("https://raw.githubusercontent.com/alexoooo/kzen-repo/master/artifacts") }
+
+        mavenLocal()
     }
 }
 

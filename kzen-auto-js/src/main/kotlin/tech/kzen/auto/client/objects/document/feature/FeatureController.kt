@@ -29,6 +29,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.model.structure.resource.ResourceName
 import tech.kzen.lib.common.model.structure.resource.ResourceNesting
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
+import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.platform.DateTimeUtils
@@ -72,7 +73,7 @@ class FeatureController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Suppress("unused")
+    @Reflect
     class Wrapper(
             private val archetype: ObjectLocation
     ):

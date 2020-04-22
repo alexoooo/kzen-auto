@@ -18,6 +18,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
+import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import kotlin.browser.document
@@ -40,7 +41,7 @@ class SelectFeatureEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Suppress("unused")
+    @Reflect
     class Wrapper(
             objectLocation: ObjectLocation
     ):

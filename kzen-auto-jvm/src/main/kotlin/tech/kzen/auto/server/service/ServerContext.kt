@@ -1,6 +1,8 @@
 package tech.kzen.auto.server.service
 
 import kotlinx.coroutines.runBlocking
+import tech.kzen.auto.client.codegen.KzenAutoJvmModule
+import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveDataflowRepository
 import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveVisualProvider
 import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageInspector
@@ -13,6 +15,7 @@ import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
 import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
+import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
 import tech.kzen.lib.common.service.media.MultiNotationMedia
@@ -89,6 +92,10 @@ object ServerContext {
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
+        KzenLibCommonModule.register()
+        KzenAutoCommonModule.register()
+        KzenAutoJvmModule.register()
+
         downloadClient.initialize()
 
         runBlocking {

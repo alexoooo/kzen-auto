@@ -3,9 +3,10 @@ package tech.kzen.auto.server.objects.graph
 import tech.kzen.auto.common.paradigm.dataflow.api.StatelessDataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.input.OptionalInput
 import tech.kzen.auto.common.paradigm.dataflow.api.output.RequiredOutput
+import tech.kzen.lib.common.reflect.Reflect
 
 
-@Suppress("unused")
+@Reflect
 class AppendText(
         private val prefix: OptionalInput<Any>,
         private val suffix: OptionalInput<Any>,

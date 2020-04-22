@@ -16,6 +16,7 @@ import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.reflect.Reflect
 
 
 @Suppress("unused")
@@ -47,7 +48,8 @@ class RibbonController(
     ): RState
 
 
-    @Suppress("unused")
+    //-----------------------------------------------------------------------------------------------------------------
+    @Reflect
     class Wrapper(
             private val actionTypes: List<ObjectLocation>,
             private val ribbonGroups: List<RibbonGroup>

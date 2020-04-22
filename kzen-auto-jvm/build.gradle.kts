@@ -90,6 +90,7 @@ tasks.getByName<Jar>("jar") {
     enabled = true
 }
 
+
 tasks.getByName<BootJar>("bootJar") {
     archiveClassifier.set("boot")
 }

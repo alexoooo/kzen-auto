@@ -3,9 +3,10 @@ package tech.kzen.auto.server.objects.graph
 import tech.kzen.auto.common.paradigm.dataflow.api.StatelessDataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.input.RequiredInput
 import tech.kzen.auto.common.paradigm.dataflow.api.output.OptionalOutput
+import tech.kzen.lib.common.reflect.Reflect
 
 
-@Suppress("unused")
+@Reflect
 class PrimeFilter(
         private val input: RequiredInput<Int>,
         private val output: OptionalOutput<Int>

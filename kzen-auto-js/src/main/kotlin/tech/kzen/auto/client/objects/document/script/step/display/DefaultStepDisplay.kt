@@ -22,6 +22,7 @@ import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
+import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.IoUtils
 
 
@@ -49,7 +50,8 @@ class DefaultStepDisplay(
     ): RState
 
 
-    @Suppress("unused")
+    //-----------------------------------------------------------------------------------------------------------------
+    @Reflect
     class Wrapper(
             objectLocation: ObjectLocation,
             private val attributeController: AttributeController.Wrapper

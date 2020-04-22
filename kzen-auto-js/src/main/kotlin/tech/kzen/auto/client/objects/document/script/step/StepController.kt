@@ -6,6 +6,7 @@ import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayPro
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.reflect.Reflect
 
 
 class StepController(
@@ -21,7 +22,8 @@ class StepController(
     ): RProps
 
 
-    @Suppress("unused")
+    //-----------------------------------------------------------------------------------------------------------------
+    @Reflect
     class Wrapper(
             private val stepDisplays: List<StepDisplayWrapper>,
             handle: Handle
@@ -47,6 +49,7 @@ class StepController(
     /**
      * NB: lazy reference to avoid loop
      */
+    @Reflect
     class Handle {
         var wrapper: Wrapper? = null
     }

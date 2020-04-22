@@ -3,9 +3,10 @@ package tech.kzen.auto.server.objects.graph
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.input.RequiredInput
+import tech.kzen.lib.common.reflect.Reflect
 
 
-@Suppress("unused")
+@Reflect
 class CountSink(
         private val input: RequiredInput<*>
 ):

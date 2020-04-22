@@ -3,9 +3,10 @@ package tech.kzen.auto.server.objects.graph
 import tech.kzen.auto.common.paradigm.dataflow.api.StatelessDataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.input.RequiredInput
 import tech.kzen.auto.common.paradigm.dataflow.api.output.BatchOutput
+import tech.kzen.lib.common.reflect.Reflect
 
 
-@Suppress("unused")
+@Reflect
 class RepeatProcessor<T>(
         private val input: RequiredInput<T>,
         private val output: BatchOutput<T>,

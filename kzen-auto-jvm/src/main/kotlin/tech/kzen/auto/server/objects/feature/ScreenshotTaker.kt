@@ -6,6 +6,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
+import tech.kzen.lib.common.reflect.Reflect
 import java.awt.GraphicsEnvironment
 import java.awt.Rectangle
 import java.awt.Robot
@@ -16,8 +17,7 @@ import javax.imageio.ImageIO
 
 
 
-
-@Suppress("unused")
+@Reflect
 class ScreenshotTaker: DetachedAction {
     override suspend fun execute(
             request: DetachedRequest

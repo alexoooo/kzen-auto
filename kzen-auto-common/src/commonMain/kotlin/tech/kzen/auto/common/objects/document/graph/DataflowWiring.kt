@@ -14,12 +14,13 @@ import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames
 
 
-@Suppress("unused")
+@Reflect
 class DataflowWiring: AttributeDefiner {
     companion object {
         val objectName = ObjectName("DataflowWiring")

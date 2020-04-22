@@ -11,9 +11,10 @@ import tech.kzen.auto.common.paradigm.imperative.api.ScriptStep
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.model.instance.GraphInstance
+import tech.kzen.lib.common.reflect.Reflect
 
 
-@Suppress("unused")
+@Reflect
 class SendEscape: ScriptStep {
     override suspend fun perform(
             imperativeModel: ImperativeModel,

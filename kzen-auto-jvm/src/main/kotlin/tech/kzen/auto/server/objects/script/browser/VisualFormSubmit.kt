@@ -8,9 +8,10 @@ import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.vision.VisionUtils
 import tech.kzen.lib.common.model.instance.GraphInstance
+import tech.kzen.lib.common.reflect.Reflect
 
 
-@Suppress("unused")
+@Reflect
 class VisualFormSubmit(
         private val target: TargetSpec
 ): ScriptStep {

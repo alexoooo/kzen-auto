@@ -20,6 +20,7 @@ import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
+import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.collect.toPersistentList
 
@@ -46,7 +47,7 @@ class DefaultAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Suppress("unused")
+    @Reflect
     class Wrapper(
             objectLocation: ObjectLocation
     ):

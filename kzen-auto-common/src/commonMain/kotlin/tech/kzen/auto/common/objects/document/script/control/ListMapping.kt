@@ -7,8 +7,10 @@ import tech.kzen.auto.common.paradigm.imperative.model.control.*
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.reflect.Reflect
 
 
+@Reflect
 class ListMapping(
         private val selfLocation: ObjectLocation,
         private val items: ObjectLocation,
