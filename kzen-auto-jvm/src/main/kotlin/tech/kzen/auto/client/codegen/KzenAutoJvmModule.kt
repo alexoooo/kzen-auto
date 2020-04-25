@@ -69,14 +69,20 @@ reflectionRegistry.put(
     "tech.kzen.auto.server.objects.graph.AppendText",
     listOf("prefix", "suffix", "output")
 ) { args ->
-    AppendText(args[0] as OptionalInput<Any>, args[1] as OptionalInput<Any>, args[2] as RequiredOutput<String>)
+    AppendText(
+            args[0] as OptionalInput<Any>,
+            args[1] as OptionalInput<Any>,
+            args[2] as RequiredOutput<String>
+    )
 }
 
 reflectionRegistry.put(
     "tech.kzen.auto.server.objects.graph.CountSink",
     listOf("input")
 ) { args ->
-    CountSink(args[0] as RequiredInput<*>)
+    CountSink(
+            args[0] as RequiredInput<*>
+    )
 }
 
 reflectionRegistry.put(
@@ -111,7 +117,11 @@ reflectionRegistry.put(
     "tech.kzen.auto.server.objects.graph.ReplaceProcessor",
     listOf("input", "output", "replacement")
 ) { args ->
-    ReplaceProcessor(args[0] as RequiredInput<*>, args[1] as OptionalOutput<String>, args[2] as String)
+    ReplaceProcessor(
+            args[0] as RequiredInput<*>,
+            args[1] as OptionalOutput<String>,
+            args[2] as String
+    )
 }
 
 reflectionRegistry.put(

@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.script
 
+import kotlinx.coroutines.delay
 import kotlinx.css.*
 import kotlinx.html.title
 import react.*
@@ -15,6 +16,8 @@ import tech.kzen.auto.client.objects.ribbon.RibbonRun
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.service.global.SessionGlobal
+import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
@@ -40,12 +43,12 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
-@Suppress("unused")
 class ScriptController:
         RPureComponent<ScriptController.Props, ScriptController.State>(),
-        NavigationGlobal.Observer,
-        LocalGraphStore.Observer,
-        ExecutionRepository.Observer,
+//        NavigationGlobal.Observer,
+//        LocalGraphStore.Observer,
+//        ExecutionRepository.Observer,
+        SessionGlobal.Observer,
         InsertionGlobal.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -79,12 +82,13 @@ class ScriptController:
 
 
     class State(
-            var documentPath: DocumentPath?,
-            var graphStructure: GraphStructure?,
-            var imperativeModel: ImperativeModel?,
-            var creating: Boolean,
+//            var documentPath: DocumentPath?,
+//            var graphStructure: GraphStructure?,
+//            var imperativeModel: ImperativeModel?,
+            var clientState: SessionState?,
 
-            var runningHost: DocumentPath?
+            var creating: Boolean//,
+//            var runningHost: DocumentPath?
     ): RState
 
 
@@ -116,9 +120,10 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        documentPath = null
-        graphStructure = null
-        imperativeModel = null
+//        documentPath = null
+//        graphStructure = null
+//        imperativeModel = null
+        clientState = null
         creating = false
     }
 
@@ -126,14 +131,21 @@ class ScriptController:
     override fun componentDidMount() {
 //        console.log("^^^^^^ script - componentDidMount")
 
-//        println("ProjectController - Subscribed")
-        async {
-//            console.log("^^^^^^ script - adding observers")
-            ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.executionRepository.observe(this)
+
+        ClientContext.sessionGlobal.observe(this)
+
+//        ClientContext.navigationGlobal.observe(this)
+//
+////        println("ProjectController - Subscribed")
+//        async {
+////            console.log("^^^^^^ script - adding observers")
+//            delay(1)
+//            ClientContext.mirroredGraphStore.observe(this)
+////            delay(1)
+//            ClientContext.executionRepository.observe(this)
+////            delay(1)
             ClientContext.insertionGlobal.subscribe(this)
-            ClientContext.navigationGlobal.observe(this)
-        }
+//        }
     }
 
 
@@ -141,10 +153,12 @@ class ScriptController:
 //        console.log("^^^^^^ script - componentWillUnmount")
 
 //        println("ProjectController - Un-subscribed")
-        ClientContext.mirroredGraphStore.unobserve(this)
-        ClientContext.executionRepository.unobserve(this)
+//        ClientContext.mirroredGraphStore.unobserve(this)
+//        ClientContext.executionRepository.unobserve(this)
         ClientContext.insertionGlobal.unsubscribe(this)
-        ClientContext.navigationGlobal.unobserve(this)
+//        ClientContext.navigationGlobal.unobserve(this)
+
+        ClientContext.sessionGlobal.unobserve(this)
     }
 
 
@@ -153,95 +167,122 @@ class ScriptController:
             prevState: State,
             snapshot: Any
     ) {
+        val clientState = state.clientState
+                ?: return
+
+//        if (clientState.activeHost() == null &&
+//                clientState.navigationRoute.documentPath != null)
+//        {
+//            ClientContext.navigationGlobal.parameterize(RequestParams(
+//                    mapOf(RibbonRun.runningKey to listOf(clientState.navigationRoute.documentPath.asString()))
+//            ))
+//        }
+
+//        if (state.graphStructure == null) {
+////            console.log("~~~ not ready - componentDidUpdate")
+//            return
+//        }
 //        console.log("%#$%#$%#$ componentDidUpdate",
 //                state.imperativeModel?.frames?.map { it.path.asString() })
 
-        val runningHost = state.runningHost
-        if (prevState.runningHost == null && runningHost != null && state.imperativeModel == null) {
-            val graphStructure = state.graphStructure!!
-            async {
-                ClientContext.executionRepository.executionModel(
-                        runningHost, graphStructure)
-            }
-            return
-        }
-
-//        console.log("%#$%#$%#$ componentDidUpdate", state.documentPath, prevState.documentPath)
-        if (state.documentPath != null &&
-                state.documentPath != prevState.documentPath &&
-                state.imperativeModel?.frames?.find { it.path == state.documentPath} == null)
-        {
-            async {
-                val executionModel = ClientContext.executionRepository.executionModel(
-                        state.documentPath!!,
-                        state.graphStructure!!)
-
-                setState {
-                    imperativeModel = executionModel
-                }
-            }
-        }
+//        val runningHost = clientState.activeHost()
+//        if ((prevState.runningHost == null || prevState.graphStructure == null) &&
+//                runningHost != null &&
+//                state.imperativeModel == null)
+//        {
+//            val graphStructure = state.graphStructure!!
+//            async {
+//                ClientContext.executionRepository.executionModel(
+//                        runningHost, graphStructure)
+//            }
+//            return
+//        }
+//
+////        console.log("%#$%#$%#$ componentDidUpdate", state.documentPath, prevState.documentPath)
+//        if (state.documentPath != null &&
+//                state.documentPath != prevState.documentPath &&
+//                state.imperativeModel?.frames?.find { it.path == state.documentPath} == null)
+//        {
+//            async {
+//                val executionModel = ClientContext.executionRepository.executionModel(
+//                        state.documentPath!!,
+//                        state.graphStructure!!)
+//
+//                setState {
+//                    imperativeModel = executionModel
+//                }
+//            }
+//        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun handleNavigation(
-            documentPath: DocumentPath?,
-            parameters: RequestParams
-    ) {
-//        console.log("^^^^^^ script - handleNavigation", documentPath)
-
+    override fun onClientState(clientState: SessionState) {
         setState {
-            this.documentPath = documentPath
-
-            runningHost = parameters.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
+            this.clientState = clientState
         }
     }
 
-
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
-        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent) &&
-                event.documentPath == state.documentPath) {
-            return
-        }
-
-        setState {
-            this.graphStructure = graphDefinition.successful.graphStructure
-        }
-    }
-
-
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+//    override fun handleNavigation(
+//            documentPath: DocumentPath?,
+//            parameters: RequestParams
+//    ) {
+////        console.log("^^^^^^ script - handleNavigation", documentPath, parameters)
+//
+//        setState {
+//            this.documentPath = documentPath
+//
+//            runningHost = parameters.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
+//        }
+//    }
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
-        setState {
-            this.graphStructure = graphDefinition.successful.graphStructure
-        }
-    }
+//    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+//        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent) &&
+//                event.documentPath == state.documentPath) {
+//            return
+//        }
+//
+//        setState {
+//            this.graphStructure = graphDefinition.successful.graphStructure
+//        }
+//    }
 
 
-    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {}
+//    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+//
+//
+//    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
+////        console.log("^^^^^ onStoreRefresh")
+//        setState {
+//            this.graphStructure = graphDefinition.successful.graphStructure
+//        }
+//    }
 
 
-    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {
-//        console.log("^^^^ onExecutionModel: " +
-//                "$host - ${state.documentPath} - ${state.runningHost} - $executionModel")
+//    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {}
 
-//        if (state.documentPath != host &&
+
+//    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {
+////        console.log("^^^^ onExecutionModel: " +
+////                "$host - ${state.documentPath} - ${state.runningHost} - $executionModel")
+//
+////        if (state.documentPath != host &&
+////                executionModel.frames.find { it.path == state.documentPath} == null)
+//        if (state.runningHost != null && state.runningHost != host ||
+//                state.runningHost == null &&
+//                state.documentPath != host &&
 //                executionModel.frames.find { it.path == state.documentPath} == null)
-        if (state.runningHost != null && state.runningHost != host ||
-                state.runningHost == null &&
-                state.documentPath != host &&
-                executionModel.frames.find { it.path == state.documentPath} == null)
-        {
-            return
-        }
-
-        setState {
-            imperativeModel = executionModel
-        }
-    }
+//        {
+//            return
+//        }
+//
+////        console.log("Assign exec model")
+//
+//        setState {
+//            imperativeModel = executionModel
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -262,11 +303,13 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(index: Int) {
+        val clientState = state.clientState!!
+
         val archetypeObjectLocation = ClientContext.insertionGlobal
                 .getAndClearSelection()
                 ?: return
 
-        val documentPath = state.documentPath!!
+        val documentPath = clientState.navigationRoute.documentPath!!
         val containingObjectLocation = ObjectLocation(
                 documentPath, NotationConventions.mainObjectPath)
 
@@ -275,7 +318,7 @@ class ScriptController:
                 ScriptDocument.stepsAttributePath,
                 index,
                 archetypeObjectLocation,
-                state.graphStructure!!
+                clientState.graphDefinitionAttempt.successful.graphStructure
         )
 
         async {
@@ -288,29 +331,42 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val structure = state.graphStructure
+        val clientState = state.clientState
                 ?: return
 
-        val documentPath: DocumentPath = state.documentPath
+//        val structure = state.graphStructure
+//                ?: return
+//
+//        val documentPath: DocumentPath = state.documentPath
+//                ?: return
+
+        val documentPath = clientState.navigationRoute.documentPath
                 ?: return
+
+        val imperativeModel = clientState.imperativeModel
+                ?: ClientContext.executionRepository.emptyState(
+                        documentPath, clientState.graphDefinitionAttempt.successful.graphStructure)
 
         styledDiv {
             css {
                 marginLeft = 2.em
             }
 
-            steps(structure, documentPath)
+            steps(clientState, imperativeModel)
         }
 
-        runController()
+        runController(clientState, imperativeModel)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.steps(
-            graphStructure: GraphStructure,
-            documentPath: DocumentPath
+            clientState: SessionState,
+            imperativeModel: ImperativeModel
     ) {
+        val graphStructure: GraphStructure = clientState.graphDefinitionAttempt.successful.graphStructure
+        val documentPath: DocumentPath = clientState.navigationRoute.documentPath!!
+
         val stepLocations = stepLocations(graphStructure, documentPath)
                 ?: return
 
@@ -335,7 +391,7 @@ class ScriptController:
                 css {
                     paddingLeft = 1.em
                 }
-                nonEmptySteps(graphStructure, documentPath, stepLocations)
+                nonEmptySteps(graphStructure, documentPath, stepLocations, clientState, imperativeModel)
             }
         }
     }
@@ -344,10 +400,12 @@ class ScriptController:
     private fun RBuilder.nonEmptySteps(
             graphStructure: GraphStructure,
             documentPath: DocumentPath,
-            stepLocations: List<ObjectLocation>
+            stepLocations: List<ObjectLocation>,
+            clientState: SessionState,
+            imperativeModel: ImperativeModel
     ) {
-        val imperativeModel = state.imperativeModel
-                ?: return
+//        +"nonEmptySteps: $stepLocations"
+//        +"imperativeModel: running ${imperativeModel.running}"
 
         insertionPoint(0)
 
@@ -460,6 +518,10 @@ class ScriptController:
             imperativeModel: ImperativeModel,
             stepCount: Int
     ) {
+        val active =
+                state.clientState?.activeHost != null &&
+                imperativeModel.frames.any { it.path == state.clientState?.navigationRoute?.documentPath }
+
         span {
             key = objectLocation.toReference().asString()
 
@@ -471,7 +533,8 @@ class ScriptController:
                             AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
                             imperativeModel,
                             first = index == 0,
-                            last = index == stepCount - 1)
+                            last = index == stepCount - 1,
+                            active = active)
                 }
             }
         }
@@ -479,7 +542,10 @@ class ScriptController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.runController() {
+    private fun RBuilder.runController(
+            clientState: SessionState,
+            imperativeModel: ImperativeModel
+    ) {
         styledDiv {
             css {
                 position = Position.fixed
@@ -491,10 +557,10 @@ class ScriptController:
 
             child(ScriptRunController::class) {
                 attrs {
-                    documentPath = state.documentPath
-                    runningHost = state.runningHost
-                    structure = state.graphStructure
-                    execution = state.imperativeModel
+                    documentPath = clientState.navigationRoute.documentPath!!
+                    runningHost = clientState.activeHost
+                    structure = clientState.graphDefinitionAttempt.successful.graphStructure
+                    execution = imperativeModel
                 }
             }
         }

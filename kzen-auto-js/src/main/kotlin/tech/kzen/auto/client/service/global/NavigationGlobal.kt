@@ -22,7 +22,8 @@ class NavigationGlobal(
     interface Observer {
         fun handleNavigation(
                 documentPath: DocumentPath?,
-                parameters: RequestParams)
+                parameters: RequestParams
+        )
     }
 
 

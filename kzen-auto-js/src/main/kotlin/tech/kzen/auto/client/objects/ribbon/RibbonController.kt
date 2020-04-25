@@ -309,9 +309,9 @@ class RibbonController(
 
             child(RibbonRun::class) {
                 attrs {
-                    navPath = state.documentPath
-                    parameters = state.parameters
-                    notation = props.notation
+//                    navPath = state.documentPath
+//                    parameters = state.parameters
+//                    notation = props.notation
                 }
             }
         }

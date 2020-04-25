@@ -165,7 +165,7 @@ NumberLiteral:
   title: "Number"
   value: 1
   meta:
-    value: Int
+    value: Double
 
 
 DisplayValue:

@@ -30,7 +30,7 @@ class ExecutionRepository(
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation)
-        suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel)
+        suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel?)
     }
 
 
@@ -89,7 +89,7 @@ class ExecutionRepository(
 
     private suspend fun publishExecutionModel(
             host: DocumentPath,
-            model: ImperativeModel
+            model: ImperativeModel?
     ) {
 //        val model = models[host]!!
 
@@ -263,13 +263,26 @@ class ExecutionRepository(
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun reset(
             host: DocumentPath
-    ): Digest {
-        val model = ImperativeModel(null, persistentListOf())
-        models = models.put(host, model)
+//    ): Digest {
+    ) {
+//        val model = ImperativeModel(null, persistentListOf())
+//        models = models.put(host, model)
+        models = models.remove(host)
 
-        publishExecutionModel(host, model)
+        publishExecutionModel(host, null)
 
-        return model.digest()
+//        return model.digest()
+    }
+
+
+    fun emptyState(
+            host: DocumentPath,
+            graphStructure: GraphStructure
+    ): ImperativeModel {
+        val controlTree = ControlTree.readSteps(graphStructure, host)
+        val initialState = initializeFrame(controlTree)
+        val frame = ImperativeFrame(host, initialState.toPersistentMap())
+        return ImperativeModel(null, persistentListOf(frame))
     }
 
 
@@ -354,6 +367,10 @@ class ExecutionRepository(
             graphStructure: GraphStructure,
             delayMillis: Int = 0
     ): ImperativeResponse {
+        if (host !in models) {
+            start(host, graphStructure)
+        }
+
         if (delayMillis > 0) {
 //            println("ExecutionManager | %%%% delay($delayMillis)")
             delay(delayMillis.toLong())

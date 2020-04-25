@@ -18,7 +18,8 @@ open class StepDisplayProps(
 
             var managed: Boolean = false,
             var first: Boolean = false,
-            var last: Boolean = false
+            var last: Boolean = false,
+            var active: Boolean = false
     ) {
         fun isRunning(): Boolean {
             return objectLocation == imperativeModel.running

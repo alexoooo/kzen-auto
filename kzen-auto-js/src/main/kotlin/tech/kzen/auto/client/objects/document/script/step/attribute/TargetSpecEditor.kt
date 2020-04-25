@@ -191,7 +191,7 @@ class TargetSpecEditor(
         flush()
     }
 
-    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {
+    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel?) {
 
     }
 

@@ -7,7 +7,7 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class AccumulateSink (
+class AccumulateSink(
         private val input: RequiredInput<Any>
 ):
         Dataflow<AccumulateSink.State>

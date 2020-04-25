@@ -510,12 +510,13 @@ class ActiveDataflowRepository(
             val sourceVertex = dataflowMatrix.traceVertexBackFrom(vertexDescriptor, inputAttribute)
                     ?: continue
 
-            val input = dataflowInstance.constructorAttributes[inputAttribute] as? MutableInput<*>
+            @Suppress("UNCHECKED_CAST")
+            val input = dataflowInstance.constructorAttributes[inputAttribute] as? MutableInput<Any>
                     ?: throw IllegalArgumentException("Unknown vertexLocation $vertexLocation: $sourceVertex")
 
             val inputLocation = sourceVertex.objectLocation
             val inputActiveModel = activeDataflowModel.vertices[inputLocation]!!
-            val message = inputActiveModel.message
+            val message = inputActiveModel.message!!
             input.set(message)
 
             populatedInputCount++

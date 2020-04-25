@@ -10,6 +10,8 @@ import styled.css
 import styled.styledA
 import styled.styledDiv
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.SessionGlobal
+import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
@@ -26,7 +28,7 @@ class RibbonRun (
         props: Props
 ):
         RPureComponent<RibbonRun.Props, RibbonRun.State>(props),
-        ExecutionRepository.Observer
+        SessionGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -39,17 +41,19 @@ class RibbonRun (
 //            var actionTypes: List<ObjectLocation>,
 //            var ribbonGroups: List<RibbonGroup>,
 
-            var navPath: DocumentPath?,
-            var parameters: RequestParams,
-
-            var notation: GraphNotation
+//            var navPath: DocumentPath?,
+//            var parameters: RequestParams,
+//
+//            var notation: GraphNotation
     ): RProps
 
 
     class State(
-            var active: Set<DocumentPath>,
-            var selectedFramePaths: List<DocumentPath>,
+//            var active: Set<DocumentPath>,
+//            var selectedFramePaths: List<DocumentPath>,
 //            var executionModel: ImperativeModel?,
+
+            var clientState: SessionState?,
 
             var dropdownOpen: Boolean
     ): RState
@@ -61,84 +65,115 @@ class RibbonRun (
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        active = setOf()
-        selectedFramePaths = listOf()
+//        active = setOf()
+//        selectedFramePaths = listOf()
 //        executionModel = null
+        clientState = null
         dropdownOpen = false
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        async {
-            ClientContext.executionRepository.observe(this)
+        ClientContext.sessionGlobal.observe(this)
 
-            val initialActiveScripts =
-                    ClientContext.restClient.runningHosts()
-
-            val nextActive = state.active + initialActiveScripts
-
-            setState {
-                active = nextActive
-            }
-        }
+//        async {
+//            ClientContext.executionRepository.observe(this)
+//
+//            val initialActiveScripts =
+//                    ClientContext.restClient.runningHosts()
+//
+//            val nextActive = state.active + initialActiveScripts
+//
+//            setState {
+//                active = nextActive
+//            }
+//        }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.executionRepository.unobserve(this)
+//        ClientContext.executionRepository.unobserve(this)
+        ClientContext.sessionGlobal.unobserve(this)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
+    override fun onClientState(clientState: SessionState) {
+        setState {
+            this.clientState = clientState
+//            active = clientState.runningHosts
+//            selectedFramePaths = clientState.imperativeModel?.frames?.map { it.path } ?: listOf()
+        }
 
-    }
-
-
-    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {
-        val active = state.active
-
-        val modifiedActive =
-                if (executionModel.isActive()) {
-                    active + host
-                }
-                else {
-                    active - host
-                }
-
-//        console.log("^^^ onExecutionModel: " +
-//                "$active / $modifiedActive - $host - ${executionModel.isActive()} - $executionModel")
-
-        val selected = props.parameters.get(runningKey)?.let { DocumentPath.parse(it) }
-
-        val selectedFramePaths =
-                if (executionModel.frames.firstOrNull()?.path == selected) {
-                    executionModel.frames.map { it.path }
-                }
-                else {
-                    state.selectedFramePaths
-                }
-
-        if (active != modifiedActive ||
-                state.selectedFramePaths != selectedFramePaths)
+        if (clientState.activeHost == null &&
+                clientState.imperativeModel?.isActive() == true)
         {
-            setState {
-                this.active = modifiedActive
-                this.selectedFramePaths = selectedFramePaths
-            }
-
-            if (props.parameters.values.isEmpty()) {
-                onInitialRunning(host)
-            }
+            onInitialRunning(clientState.imperativeModel.frames[0].path)
+        }
+        else if (clientState.activeHost != null &&
+                clientState.imperativeModel?.isActive() != true)
+        {
+            onStoppedRunning()
         }
     }
+
+
+//    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
+//
+//    }
+
+
+//    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {
+//        val active = state.active
+//
+//        val modifiedActive =
+//                if (executionModel.isActive()) {
+//                    active + host
+//                }
+//                else {
+//                    active - host
+//                }
+//
+////        console.log("^^^ onExecutionModel: " +
+////                "$active / $modifiedActive - $host - ${executionModel.isActive()} - $executionModel")
+//
+//        val selected = props.parameters.get(runningKey)?.let { DocumentPath.parse(it) }
+//
+//        val selectedFramePaths =
+//                if (executionModel.frames.firstOrNull()?.path == selected) {
+//                    executionModel.frames.map { it.path }
+//                }
+//                else {
+//                    state.selectedFramePaths
+//                }
+//
+//        if (active != modifiedActive ||
+//                state.selectedFramePaths != selectedFramePaths)
+//        {
+//            setState {
+//                this.active = modifiedActive
+//                this.selectedFramePaths = selectedFramePaths
+//            }
+//
+//            if (props.parameters.values.isEmpty()) {
+//                onInitialRunning(host)
+//            }
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onInitialRunning(host: DocumentPath) {
         ClientContext.navigationGlobal.parameterize(RequestParams(
                 mapOf(runningKey to listOf(host.asString()))
+        ))
+    }
+
+
+    private fun onStoppedRunning() {
+        ClientContext.navigationGlobal.parameterize(RequestParams(
+                mapOf()
         ))
     }
 
@@ -162,7 +197,14 @@ class RibbonRun (
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val selected = props.parameters.get(runningKey)?.let { DocumentPath.parse(it) }
+        val clientState = state.clientState
+                ?: return
+
+        val active = clientState.runningHosts
+
+//        val selected = props.parameters.get(runningKey)?.let { DocumentPath.parse(it) }
+        val selected = clientState.activeHost
+        val selectedFramePaths = clientState.imperativeModel?.frames?.map { it.path } ?: listOf()
 
         styledDiv {
             ref {
@@ -173,7 +215,7 @@ class RibbonRun (
 
             child(MaterialIconButton::class) {
                 attrs {
-                    if (state.active.isEmpty()) {
+                    if (active.isEmpty()) {
                         title = "No scripts running"
 //                        onClick = ::onOptionsOpen
                     }
@@ -206,18 +248,23 @@ class RibbonRun (
                     width = 16.em
                 }
 
-                renderSelected(selected)
+                renderSelected(selected, selectedFramePaths)
 
                 hr {}
 
-                renderActiveSelection(selected)
+                renderActiveSelection(
+                        selected,
+                        clientState.graphDefinitionAttempt.successful.graphStructure.graphNotation,
+                        active,
+                        clientState.navigationRoute)
             }
         }
     }
 
 
     private fun RBuilder.renderSelected(
-            selected: DocumentPath?
+            selected: DocumentPath?,
+            selectedFramePaths: List<DocumentPath>
     ) {
         if (selected == null) {
             +"Please select a running script (below)"
@@ -226,7 +273,7 @@ class RibbonRun (
 
         +"Selected: ${selected.name}"
 
-        for (framePath in state.selectedFramePaths) {
+        for (framePath in selectedFramePaths) {
             styledDiv {
                 attrs {
                     key = framePath.asString()
@@ -239,16 +286,18 @@ class RibbonRun (
 
 
     private fun RBuilder.renderActiveSelection(
-            selected: DocumentPath?
+            selected: DocumentPath?,
+            graphNotation: GraphNotation,
+            active: Set<DocumentPath>,
+            navigationRoute: NavigationRoute
     ) {
-        val scriptDocuments = props
-                .notation
+        val scriptDocuments = graphNotation
                 .documents
                 .values
                 .filter { ScriptDocument.isScript(/*it.key,*/ it.value) }
 
         for (script in scriptDocuments) {
-            if (! state.active.contains(script.key) ||
+            if (! active.contains(script.key) ||
                     selected == script.key) {
                 continue
             }
@@ -266,8 +315,8 @@ class RibbonRun (
                 attrs {
                     key = pathValue
                     href = NavigationRoute(
-                            props.navPath,
-                            props.parameters.set(runningKey, pathValue)
+                            navigationRoute.documentPath,
+                            navigationRoute.requestParams.set(runningKey, pathValue)
                     ).toFragment()
                 }
 

@@ -33,6 +33,7 @@ class ModelActionExecutor(
                 graphCreator.createGraph(graphDefinition)
 
         val instance = graphInstance.objectInstances[actionLocation]?.reference
+                ?: throw IllegalArgumentException("Not found: $actionLocation")
 
         val action = instance as ScriptStep
 

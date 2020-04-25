@@ -40,8 +40,13 @@ class ExecutionLoop(
 
     override suspend fun onExecutionModel(
             host: DocumentPath,
-            executionModel: ImperativeModel
+            executionModel: ImperativeModel?
     ) {
+        if (executionModel == null) {
+            states.remove(host)
+            return
+        }
+
         val state = getOrCreate(host)
 
         state.executionModel = executionModel
@@ -100,6 +105,7 @@ class ExecutionLoop(
         val next = state.executionModel?.let {
             ImperativeUtils.next(serverGraphStructure, it)
         }
+
         if (next == null) {
 //            println("ExecutionLoop | pausing at end of loop")
 

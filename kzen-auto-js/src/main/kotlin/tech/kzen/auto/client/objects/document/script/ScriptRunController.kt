@@ -73,17 +73,19 @@ class ScriptRunController(
 
     override suspend fun onExecutionModel(
             host: DocumentPath,
-            executionModel: ImperativeModel
+            executionModel: ImperativeModel?
     ) {
 //        console.log("^^^ onExecutionModel: $host - $executionModel")
 
         if (host != props.documentPath &&
-                executionModel.frames.find { it.path == props.documentPath} == null)
+                executionModel?.frames?.find { it.path == props.documentPath} == null)
         {
             return
         }
 
-        if (! executionModel.containsStatus(ImperativePhase.Running)) {
+        if (executionModel != null &&
+                ! executionModel.containsStatus(ImperativePhase.Running))
+        {
             val next = ImperativeUtils.next(props.structure!!, executionModel)
             if (next == null) {
                 if (ClientContext.executionLoop.isLooping(host)) {
@@ -102,6 +104,7 @@ class ScriptRunController(
         }
 
         if (previousControlRun != null &&
+                executionModel != null &&
                 ! executionModel.isRunning() &&
                 executionModel.frames.size > 1 &&
                 ! executionModel.frames.last().isActive(null))
@@ -140,15 +143,15 @@ class ScriptRunController(
             prevState: State,
             snapshot: Any
     ) {
-        val execution = props.execution
-                ?: return
-
-        if (execution.frames.isEmpty()) {
-            async {
-                executionStateToFreshStart()
-            }
-            return
-        }
+//        val execution = props.execution
+//                ?: return
+//
+//        if (execution.frames.isEmpty()) {
+//            async {
+//                executionStateToFreshStart()
+//            }
+//            return
+//        }
 
         val runningHost = props.runningHost
 
@@ -169,27 +172,27 @@ class ScriptRunController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun executionStateToFreshStart() {
-//        val graphStructure = state.structure
-        val graphStructure = props.structure
-                ?: return
-
-        val documentPath = props.documentPath
-                ?: return
-
-        val expectedDigest = ClientContext.executionRepository.start(
-                documentPath, graphStructure)
-
-        val actualDigest = ClientContext.restClient.startExecution(documentPath)
-
-//        console.log("^^^ executionStateToFreshStart", expectedDigest.asString(), actualDigest.asString())
-
-        if (expectedDigest != actualDigest) {
-            // TODO
-            console.log("Digest mismatch, refresh required")
-            // onRefresh()
-        }
-    }
+//    private suspend fun executionStateToFreshStart() {
+////        val graphStructure = state.structure
+//        val graphStructure = props.structure
+//                ?: return
+//
+//        val documentPath = props.documentPath
+//                ?: return
+//
+//        val expectedDigest = ClientContext.executionRepository.start(
+//                documentPath, graphStructure)
+//
+//        val actualDigest = ClientContext.restClient.startExecution(documentPath)
+//
+////        console.log("^^^ executionStateToFreshStart", expectedDigest.asString(), actualDigest.asString())
+//
+//        if (expectedDigest != actualDigest) {
+//            // TODO
+//            console.log("Digest mismatch, refresh required")
+//            // onRefresh()
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -283,6 +286,12 @@ class ScriptRunController(
 
         async {
             ClientContext.executionIntentGlobal.clear()
+
+            if (props.execution?.isActive() != true) {
+                ClientContext.executionRepository.start(
+                        host, props.structure!!)
+            }
+
             ClientContext.executionLoop.run(host)
         }
     }
@@ -304,7 +313,7 @@ class ScriptRunController(
 
         async {
             ClientContext.executionRepository.reset(host)
-            executionStateToFreshStart()
+//            executionStateToFreshStart()
         }
     }
 
@@ -353,6 +362,14 @@ class ScriptRunController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        if (props.runningHost != null &&
+                props.execution != null &&
+                props.execution!!.frames.none { it.path == props.documentPath })
+        {
+            +"[X]"
+            return
+        }
+
 //        +"Path: ${props.documentPath?.asString()}"
 //        br {}
 //        +"Exec: ${state.execution?.frames?.lastOrNull()?.path}"

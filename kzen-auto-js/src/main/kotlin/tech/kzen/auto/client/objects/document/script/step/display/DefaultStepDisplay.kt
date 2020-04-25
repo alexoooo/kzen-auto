@@ -114,13 +114,20 @@ class DefaultStepDisplay(
 
 
     private fun RBuilder.renderCard() {
-        val imperativeState = props
-                .common
-                .imperativeModel
-                .frames
-                .lastOrNull()
-                ?.states
-                ?.get(props.common.objectLocation.objectPath)
+        val imperativeState =
+                if (! props.common.active) {
+                    null
+                }
+                else {
+                    props
+                            .common
+                            .imperativeModel
+                            .frames
+                            .lastOrNull()
+                            ?.states
+                            ?.get(props.common.objectLocation.objectPath)
+                }
+
         val isRunning = props.common.isRunning()
         val nextToRun = ImperativeUtils.next(
                 props.common.graphStructure, props.common.imperativeModel)

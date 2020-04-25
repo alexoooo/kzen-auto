@@ -4,6 +4,7 @@ import tech.kzen.auto.client.codegen.KzenAutoJsModule
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.rest.*
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
@@ -90,23 +91,11 @@ object ClientContext {
             executionLoop,
             visualDataflowLoop)
 
+    val sessionGlobal = SessionGlobal()
+
 
     //-----------------------------------------------------------------------------------------------------------------
     fun init() {
-//        console.log("starting with baseUrl: ", baseUrl)
-
-//        ModuleRegistry.add(js("require('lib-lib-common')"))
-//        ModuleRegistry.add(js("require('proj-proj-common')"))
-//        ModuleRegistry.add(js("require('proj-proj-js')"))
-
-//        ModuleRegistry.add(js("require('kzen-lib-kzen-lib-common')"))
-//        ModuleRegistry.add(js("require('kzen-lib-kzen-lib-js')"))
-//        ModuleRegistry.add(js("require('kzen-auto-kzen-auto-common')"))
-//        ModuleRegistry.add(js("require('kzen-auto-kzen-auto-js')"))
-
-//        val kzenAutoJs = js("require('kzen-auto-js.js')")
-//        ModuleRegistry.add(kzenAutoJs)
-
         KzenLibCommonModule.register()
         KzenAutoCommonModule.register()
         KzenAutoJsModule.register()
@@ -124,5 +113,8 @@ object ClientContext {
 
         // NB: pre-load, otherwise can have race condition
         seededNotationMedia.scan()
+
+        sessionGlobal.postConstruct(
+                navigationGlobal, executionRepository, directGraphStore, restClient)
     }
 }

@@ -115,7 +115,7 @@ class DefaultAttributeEditor(
     }
 
 
-    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {}
+    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel?) {}
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -210,7 +210,8 @@ class DefaultAttributeEditor(
             +"${props.attributeName} (type missing)"
         }
         else if (type.className == ClassNames.kotlinString ||
-                type.className == ClassNames.kotlinInt) {
+                type.className == ClassNames.kotlinInt ||
+                type.className == ClassNames.kotlinDouble) {
 //            val textValue = props.attributeNotation?.asString() ?: ""
 //            val textValue = attributeNotation?.asString() ?: ""
             val textValue = state.value ?: ""

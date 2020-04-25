@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document
 
-//import tech.kzen.auto.common.service.GraphStructureManager
 import kotlinx.css.em
 import kotlinx.css.fontSize
 import kotlinx.css.marginLeft
