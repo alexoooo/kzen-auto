@@ -237,9 +237,13 @@ class ScriptRunController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onRun() {
+    private suspend fun onRun() {
         val graphStructure = props.structure!!
         val imperativeModel = props.execution!!
+
+        if (! imperativeModel.isActive()) {
+            ClientContext.restClient.startExecution(props.documentPath!!)
+        }
 
         val nextToRun = ImperativeUtils.next(
                 graphStructure, imperativeModel)!!
@@ -313,6 +317,7 @@ class ScriptRunController(
 
         async {
             ClientContext.executionRepository.reset(host)
+            ClientContext.restClient.resetExecution(host)
 //            executionStateToFreshStart()
         }
     }
@@ -366,7 +371,7 @@ class ScriptRunController(
                 props.execution != null &&
                 props.execution!!.frames.none { it.path == props.documentPath })
         {
-            +"[X]"
+            +"[Not active]"
             return
         }
 
@@ -450,7 +455,11 @@ class ScriptRunController(
                     }
                 }
 
-                onClick = ::onRun
+                onClick = {
+                    async {
+                        onRun()
+                    }
+                }
             }
 
             child(RedoIcon::class) {

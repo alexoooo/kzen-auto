@@ -359,6 +359,7 @@ class ClientRestApi(
     }
 
 
+    // todo: should this be used?
     suspend fun startExecution(documentPath: DocumentPath): Digest {
         return getDigest(
                 CommonRestApi.actionStart,
@@ -366,13 +367,13 @@ class ClientRestApi(
     }
 
 
-//    suspend fun resetExecution(
-//            host: DocumentPath
-//    ): Digest {
-//        return getDigest(
-//                CommonRestApi.actionReset,
-//                CommonRestApi.paramDocumentPath to host.asString())
-//    }
+    suspend fun resetExecution(
+            host: DocumentPath
+    ): Digest {
+        return getDigest(
+                CommonRestApi.actionReset,
+                CommonRestApi.paramDocumentPath to host.asString())
+    }
 
 
     suspend fun performAction(

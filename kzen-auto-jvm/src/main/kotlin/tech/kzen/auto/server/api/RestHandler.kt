@@ -652,18 +652,20 @@ class RestHandler {
     }
 
 
-//    fun actionReset(serverRequest: ServerRequest): Mono<ServerResponse> {
-//        val documentPath: DocumentPath = serverRequest.getParam(
-//                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
-//
+    fun actionReset(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
 //        val digest = runBlocking {
-//            ServerContext.executionRepository.reset(documentPath)
-//        }
-//
-//        return ServerResponse
-//                .ok()
+        runBlocking {
+            ServerContext.executionRepository.reset(documentPath)
+        }
+
+        return ServerResponse
+                .ok()
+                .build()
 //                .body(Mono.just(digest.asString()))
-//    }
+    }
 
 
     fun actionPerform(serverRequest: ServerRequest): Mono<ServerResponse> {

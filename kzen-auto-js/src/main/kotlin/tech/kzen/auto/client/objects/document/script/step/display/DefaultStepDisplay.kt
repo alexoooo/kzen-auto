@@ -159,7 +159,8 @@ class DefaultStepDisplay(
                     Color.red
 
                 null ->
-                    Color.gray
+                    Color.white
+//                    Color.gray
             }
 
             backgroundColor = cardColor
