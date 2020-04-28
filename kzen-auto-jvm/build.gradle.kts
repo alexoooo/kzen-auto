@@ -38,33 +38,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$coroutinesVersion")
 }
 
-//dependencies {
-//    expectedBy project(':kzen-auto-common')
-//
-//    // NB: jvm module must compile before js, so that we can processResources into public (see below)
-//    //      see: https://stackoverflow.com/q/53587141/1941359
-//    // compile project(":kzen-auto-js")
-//
-//    compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: kotlinVersion
-//    compile("org.jetbrains.kotlin:kotlin-reflect")
-//    compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesCoreVersion"
-//
-//    compile('org.springframework.boot:spring-boot-starter-webflux')
-//    compile('com.fasterxml.jackson.module:jackson-module-kotlin')
-//
-//    compile "com.google.guava:guava:$guavaVersion"
-//    compile group: 'com.github.andrewoma.dexx', name: 'collection', version: dexxVersion
-//    compile group: 'org.seleniumhq.selenium', name: 'selenium-java', version: seleniumVersion
-//    compile group: 'org.apache.commons', name: 'commons-compress', version: commonsCompressVersion
-//
-//    compile group: 'tech.kzen.lib', name: 'kzen-lib-jvm', version: kzenLibVersion
-//
-//    testCompile('org.springframework.boot:spring-boot-starter-test')
-//    testCompile('io.projectreactor:reactor-test')
-//    testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test', version: kotlinVersion
-//    testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test-junit', version: kotlinVersion
-//}
-
 
 tasks.withType<ProcessResources> {
     val jsProject = project(":kzen-auto-js")
