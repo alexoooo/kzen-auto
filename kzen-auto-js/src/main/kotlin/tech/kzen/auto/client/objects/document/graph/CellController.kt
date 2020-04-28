@@ -5,6 +5,7 @@ import react.*
 import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
+import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowDag
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.DataflowMatrix
@@ -40,7 +41,7 @@ class CellController(
 
             var documentPath: DocumentPath,
             var attributeNesting: AttributeNesting,
-            var graphStructure: GraphStructure,
+            var clientState: SessionState,
             var visualDataflowModel: VisualDataflowModel,
             var dataflowMatrix: DataflowMatrix,
             var dataflowDag: DataflowDag
@@ -109,7 +110,7 @@ class CellController(
 
                     documentPath = props.documentPath
                     attributeNesting = props.attributeNesting
-                    graphStructure = props.graphStructure
+                    clientState = props.clientState
                     visualDataflowModel = props.visualDataflowModel
                     dataflowMatrix = props.dataflowMatrix
                     dataflowDag = props.dataflowDag
@@ -123,7 +124,7 @@ class CellController(
 
                     documentPath = props.documentPath
                     attributeNesting = props.attributeNesting
-                    graphStructure = props.graphStructure
+                    graphStructure = props.clientState.graphStructure()
                     visualDataflowModel = props.visualDataflowModel
                     dataflowMatrix = props.dataflowMatrix
                     dataflowDag = props.dataflowDag

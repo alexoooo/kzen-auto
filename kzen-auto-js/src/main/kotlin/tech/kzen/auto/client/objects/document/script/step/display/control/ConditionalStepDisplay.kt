@@ -112,7 +112,7 @@ class ConditionalStepDisplay(
         val isRunning = props.common.isRunning()
 
         val nextToRun = ImperativeUtils.next(
-                props.common.graphStructure, props.common.imperativeModel)
+                props.common.clientState.graphStructure(), props.common.imperativeModel)
 
         val isNextToRun = nextToRun == props.common.objectLocation
 
@@ -231,7 +231,7 @@ class ConditionalStepDisplay(
 
                     attributeNesting = props.common.attributeNesting
                     objectLocation = props.common.objectLocation
-                    graphStructure = props.common.graphStructure
+                    graphStructure = props.common.clientState.graphStructure()
 
                     this.imperativeState = imperativeState
                     this.isRunning = isRunning
@@ -273,7 +273,7 @@ class ConditionalStepDisplay(
 
             props.attributeController.child(this) {
                 attrs {
-                    this.graphStructure = props.common.graphStructure
+                    this.clientState = props.common.clientState
                     this.objectLocation = props.common.objectLocation
                     this.attributeName = conditionAttributeName
                 }
@@ -322,7 +322,7 @@ class ConditionalStepDisplay(
                         this.stepController = props.stepControllerHandle.wrapper!!
                         this.scriptCommander = props.scriptCommander
 
-                        this.graphStructure = props.common.graphStructure
+                        this.clientState = props.common.clientState
                         this.objectLocation = props.common.objectLocation
                         this.imperativeModel = props.common.imperativeModel
                     }
@@ -408,7 +408,8 @@ class ConditionalStepDisplay(
                         this.stepController = props.stepControllerHandle.wrapper!!
                         this.scriptCommander = props.scriptCommander
 
-                        this.graphStructure = props.common.graphStructure
+//                        this.graphStructure = props.common.graphStructure
+                        this.clientState = props.common.clientState
                         this.objectLocation = props.common.objectLocation
                         this.imperativeModel = props.common.imperativeModel
                     }

@@ -1,12 +1,10 @@
 package tech.kzen.auto.client.service.global
 
-import react.setState
 import tech.kzen.auto.client.objects.ribbon.RibbonRun
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.util.RequestParams
@@ -20,7 +18,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefacto
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
-class SessionGlobal :
+class SessionGlobal:
         NavigationGlobal.Observer,
         ExecutionRepository.Observer,
         LocalGraphStore.Observer
@@ -49,11 +47,12 @@ class SessionGlobal :
             localGraphStore: LocalGraphStore,
             clientRestApi: ClientRestApi
     ) {
+        runningHosts = clientRestApi.runningHosts().toSet()
+//        console.log("%%%%% runningHosts - $runningHosts")
+
         localGraphStore.observe(this)
         executionRepository.observe(this)
         navigationGlobal.observe(this)
-
-        runningHosts = clientRestApi.runningHosts().toSet()
     }
 
 
@@ -64,7 +63,7 @@ class SessionGlobal :
         val selected = parameters.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
         if (selected != null) {
             async {
-                ClientContext.executionRepository.executionModel(
+                imperativeModel = ClientContext.executionRepository.executionModel(
                         selected, graphDefinitionAttempt!!.successful.graphStructure)
                 publishIfReady()
             }
@@ -118,10 +117,9 @@ class SessionGlobal :
 
 
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
-//        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent) &&
-//                event.documentPath == state.documentPath) {
-//            return
-//        }
+        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent)) {
+            runningHosts -= event.documentPath
+        }
 
 //        when (event) {
 //            is RenamedDocumentRefactorEvent -> {

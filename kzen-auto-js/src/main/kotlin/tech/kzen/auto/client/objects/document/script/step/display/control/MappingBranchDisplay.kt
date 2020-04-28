@@ -12,6 +12,7 @@ import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
+import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
@@ -20,6 +21,7 @@ import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
+import tech.kzen.lib.common.model.locate.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.platform.collect.persistentListOf
@@ -47,24 +49,25 @@ class MappingBranchDisplay(
                     as? ListAttributeNotation
                     ?: return null
 
+            val host = ObjectReferenceHost.ofLocation(stepLocation)
             return branchNotations
                     .values
                     .map { ObjectReference.parse(it.asString()!!) }
-                    .map { graphStructure.graphNotation.coalesce.locate(it) }
+                    .map { graphStructure.graphNotation.coalesce.locate(it, host) }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var branchAttributePath: AttributePath,
+        var branchAttributePath: AttributePath,
 
-            var stepController: StepController.Wrapper,
-            var scriptCommander: ScriptCommander,
+        var stepController: StepController.Wrapper,
+        var scriptCommander: ScriptCommander,
 
-            var graphStructure: GraphStructure,
-            var objectLocation: ObjectLocation,
-            var imperativeModel: ImperativeModel
+        var clientState: SessionState,
+        var objectLocation: ObjectLocation,
+        var imperativeModel: ImperativeModel
     ): RProps
 
 
@@ -117,7 +120,7 @@ class MappingBranchDisplay(
                 props.branchAttributePath,
                 index,
                 archetypeObjectLocation,
-                props.graphStructure)
+                props.clientState.graphStructure())
 
         async {
             for (command in commands) {
@@ -143,7 +146,7 @@ class MappingBranchDisplay(
         val stepLocations = branchLocations(
                 props.objectLocation,
                 props.branchAttributePath,
-                props.graphStructure
+                props.clientState.graphStructure()
         ) ?: return
 
         if (stepLocations.isNotEmpty()) {
@@ -265,7 +268,7 @@ class MappingBranchDisplay(
             props.stepController.child(this) {
                 attrs {
                     common = StepDisplayProps.Common(
-                            props.graphStructure,
+                            props.clientState,
                             stepLocation,
                             AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
                             props.imperativeModel,

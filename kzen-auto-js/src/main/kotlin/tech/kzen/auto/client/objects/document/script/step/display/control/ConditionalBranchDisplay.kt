@@ -12,6 +12,7 @@ import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
+import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
@@ -57,14 +58,16 @@ class ConditionalBranchDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var branchAttributePath: AttributePath,
+        var branchAttributePath: AttributePath,
 
-            var stepController: StepController.Wrapper,
-            var scriptCommander: ScriptCommander,
+        var stepController: StepController.Wrapper,
+        var scriptCommander: ScriptCommander,
 
-            var graphStructure: GraphStructure,
-            var objectLocation: ObjectLocation,
-            var imperativeModel: ImperativeModel
+        var clientState: SessionState,
+//            var graphStructure: GraphStructure,
+//        var graphStructure: GraphStructure,
+        var objectLocation: ObjectLocation,
+        var imperativeModel: ImperativeModel
     ): RProps
 
 
@@ -117,7 +120,7 @@ class ConditionalBranchDisplay(
                 props.branchAttributePath,
                 index,
                 archetypeObjectLocation,
-                props.graphStructure)
+                props.clientState.graphStructure())
 
         async {
             for (command in commands) {
@@ -158,7 +161,7 @@ class ConditionalBranchDisplay(
         val stepLocations = branchLocations(
                 props.objectLocation,
                 props.branchAttributePath,
-                props.graphStructure
+                props.clientState.graphStructure()
         ) ?: return
 
         if (stepLocations.isEmpty()) {
@@ -305,7 +308,7 @@ class ConditionalBranchDisplay(
             props.stepController.child(this) {
                 attrs {
                     common = StepDisplayProps.Common(
-                            props.graphStructure,
+                            props.clientState,
                             stepLocation,
                             AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
                             props.imperativeModel,

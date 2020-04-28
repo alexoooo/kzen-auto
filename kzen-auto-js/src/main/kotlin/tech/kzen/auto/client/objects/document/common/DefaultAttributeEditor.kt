@@ -66,8 +66,7 @@ class DefaultAttributeEditor(
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-//        val attributeNotation = props.attributeNotation
-        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
+        val attributeNotation = props.clientState.graphStructure().graphNotation.transitiveAttribute(
                 props.objectLocation, props.attributeName)
 
         when (attributeNotation) {
@@ -192,12 +191,13 @@ class DefaultAttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val attributeMetadata: AttributeMetadata = props
-                .graphStructure
-                .graphMetadata
-                .get(props.objectLocation)
-                ?.attributes
-                ?.get(props.attributeName)
-                ?: return
+            .clientState
+            .graphStructure()
+            .graphMetadata
+            .get(props.objectLocation)
+            ?.attributes
+            ?.get(props.attributeName)
+            ?: return
 
 //        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
 //                props.objectLocation, props.attributeName)

@@ -318,7 +318,6 @@ class ScriptRunController(
         async {
             ClientContext.executionRepository.reset(host)
             ClientContext.restClient.resetExecution(host)
-//            executionStateToFreshStart()
         }
     }
 
@@ -371,7 +370,7 @@ class ScriptRunController(
                 props.execution != null &&
                 props.execution!!.frames.none { it.path == props.documentPath })
         {
-            +"[Not active]"
+            +"[Running \"${props.runningHost!!.name.value}\"]"
             return
         }
 

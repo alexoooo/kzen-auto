@@ -4,6 +4,7 @@ import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.structure.GraphStructure
 
 
 data class SessionState(
@@ -19,4 +20,7 @@ data class SessionState(
 //    fun activeHost(): DocumentPath? {
 //        return imperativeModel?.frames?.get(0)?.path
 //    }
+    fun graphStructure(): GraphStructure {
+        return graphDefinitionAttempt.successful.graphStructure
+    }
 }

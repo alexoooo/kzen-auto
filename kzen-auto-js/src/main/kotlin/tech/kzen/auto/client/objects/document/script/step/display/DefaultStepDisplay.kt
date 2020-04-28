@@ -115,7 +115,7 @@ class DefaultStepDisplay(
 
     private fun RBuilder.renderCard() {
         val imperativeState =
-                if (! props.common.active) {
+                if (! props.common.isActive()) {
                     null
                 }
                 else {
@@ -127,17 +127,19 @@ class DefaultStepDisplay(
                             ?.states
                             ?.get(props.common.objectLocation.objectPath)
                 }
+//        +"imperativeModel: $imperativeState | ${props.common.objectLocation.objectPath} | ${props.common.imperativeModel}"
 
         val isRunning = props.common.isRunning()
         val nextToRun = ImperativeUtils.next(
-                props.common.graphStructure, props.common.imperativeModel)
+                props.common.clientState.graphStructure(), props.common.imperativeModel)
         val isNextToRun = props.common.objectLocation == nextToRun
 
         val objectMetadata = props
-                .common
-                .graphStructure
-                .graphMetadata
-                .objectMetadata[props.common.objectLocation]!!
+            .common
+            .clientState
+            .graphStructure()
+            .graphMetadata
+            .objectMetadata[props.common.objectLocation]!!
 
         val reactStyles = reactStyle {
             val cardColor = when (imperativeState?.phase(isRunning)) {
@@ -180,7 +182,7 @@ class DefaultStepDisplay(
 
                         attributeNesting = props.common.attributeNesting
                         objectLocation = props.common.objectLocation
-                        graphStructure = props.common.graphStructure
+                        graphStructure = props.common.clientState.graphStructure()
 
                         this.imperativeState = imperativeState
                         this.isRunning = isRunning
@@ -310,7 +312,7 @@ class DefaultStepDisplay(
     ) {
         props.attributeController.child(this) {
             attrs {
-                this.graphStructure = props.common.graphStructure
+                this.clientState = props.common.clientState
                 this.objectLocation = props.common.objectLocation
                 this.attributeName = attributeName
             }

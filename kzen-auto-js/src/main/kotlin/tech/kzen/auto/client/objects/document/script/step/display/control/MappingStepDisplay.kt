@@ -114,7 +114,7 @@ class MappingStepDisplay(
         val isRunning = props.common.isRunning()
 
         val nextToRun = ImperativeUtils.next(
-                props.common.graphStructure, props.common.imperativeModel)
+                props.common.clientState.graphStructure(), props.common.imperativeModel)
 
         val isNextToRun = nextToRun == props.common.objectLocation
 
@@ -209,7 +209,7 @@ class MappingStepDisplay(
 
                     attributeNesting = props.common.attributeNesting
                     objectLocation = props.common.objectLocation
-                    graphStructure = props.common.graphStructure
+                    graphStructure = props.common.clientState.graphStructure()
 
                     this.imperativeState = imperativeState
                     this.isRunning = isRunning
@@ -253,7 +253,7 @@ class MappingStepDisplay(
 
             props.attributeController.child(this) {
                 attrs {
-                    this.graphStructure = props.common.graphStructure
+                    this.clientState = props.common.clientState
                     this.objectLocation = props.common.objectLocation
                     this.attributeName = itemsAttributeName
                 }
@@ -340,7 +340,7 @@ class MappingStepDisplay(
                         this.stepController = props.stepControllerHandle.wrapper!!
                         this.scriptCommander = props.scriptCommander
 
-                        this.graphStructure = props.common.graphStructure
+                        this.clientState = props.common.clientState
                         this.objectLocation = props.common.objectLocation
                         this.imperativeModel = props.common.imperativeModel
                     }

@@ -39,7 +39,10 @@ class BootNotationMedia(
             val builder: MutableMap<DocumentPath, DocumentScan> = mutableMapOf()
 
             for (path in paths) {
-                check(! path.directory)
+                if (path.directory) {
+                    throw UnsupportedOperationException(
+                            "Directory documents not supported as Spring Boot resources (yet): $path")
+                }
 
                 val bytes = readDocument(path)
                 val digest = Digest.ofUtf8(bytes)

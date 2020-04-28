@@ -56,7 +56,7 @@ DivisibleCheck:
       is: ObjectLocation
       by: Nominal
       editor: SelectStepEditor
-    divisor: Int
+    divisor: Double
 
 
 ################################################################

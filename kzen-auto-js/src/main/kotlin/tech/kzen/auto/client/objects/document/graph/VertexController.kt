@@ -14,6 +14,7 @@ import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
+import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.graph.DataflowWiring
@@ -60,17 +61,18 @@ class VertexController(
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var attributeController: AttributeController.Wrapper,
+        var attributeController: AttributeController.Wrapper,
 
-            var cellDescriptor: VertexDescriptor,
+        var cellDescriptor: VertexDescriptor,
 
-            var documentPath: DocumentPath,
-            var attributeNesting: AttributeNesting,
-            var graphStructure: GraphStructure,
-            var visualDataflowModel: VisualDataflowModel,
-            var dataflowMatrix: DataflowMatrix,
-            var dataflowDag: DataflowDag
-    ) : RProps
+        var documentPath: DocumentPath,
+        var attributeNesting: AttributeNesting,
+//            var graphStructure: GraphStructure,
+        var clientState: SessionState,
+        var visualDataflowModel: VisualDataflowModel,
+        var dataflowMatrix: DataflowMatrix,
+        var dataflowDag: DataflowDag
+    ): RProps
 
 
     class State(
@@ -272,14 +274,15 @@ class VertexController(
 
     private fun RBuilder.renderVertex() {
         val cellDescriptor = props.cellDescriptor
-        val inputAttributes = DataflowWiring.findInputs(cellDescriptor.objectLocation, props.graphStructure)
+        val inputAttributes = DataflowWiring.findInputs(
+            cellDescriptor.objectLocation, props.clientState.graphStructure())
 
         val isRunning = props.visualDataflowModel.isRunning()
         val visualVertexModel = visualVertexModel()
         val phase = visualVertexModel?.phase()
         val nextToRun = DataflowUtils.next(
                 props.documentPath,
-                props.graphStructure,
+                props.clientState.graphStructure(),
                 props.visualDataflowModel)
 
         val isNextToRun = props.cellDescriptor.objectLocation == nextToRun
@@ -323,7 +326,7 @@ class VertexController(
             }
         }
 
-        val objectMetadata = props.graphStructure.graphMetadata.get(props.cellDescriptor.objectLocation)!!
+        val objectMetadata = props.clientState.graphStructure().graphMetadata.get(props.cellDescriptor.objectLocation)!!
         val hasInput = inputAttributes.isNotEmpty()
         val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.mainOutputAttributeName)
 
@@ -479,13 +482,13 @@ class VertexController(
 
     private fun RBuilder.renderAttributes() {
         val vertexLocation = props.cellDescriptor.objectLocation
-        val objectMetadata = props.graphStructure.graphMetadata.objectMetadata[vertexLocation]!!
+        val objectMetadata = props.clientState.graphStructure().graphMetadata.objectMetadata[vertexLocation]!!
 
         val editableAttributes = objectMetadata.attributes.values.keys.filterNot {
             AutoConventions.isManaged(it) ||
                     it == CellCoordinate.rowAttributeName ||
                     it == CellCoordinate.columnAttributeName ||
-                    props.graphStructure.graphNotation.transitiveAttribute(
+                    props.clientState.graphStructure().graphNotation.transitiveAttribute(
                             vertexLocation, AttributePath.ofName(it)
                     ) == null
         }
@@ -530,7 +533,7 @@ class VertexController(
     ) {
         props.attributeController.child(this) {
             attrs {
-                this.graphStructure = props.graphStructure
+                this.clientState = props.clientState
                 this.objectLocation = props.cellDescriptor.objectLocation
                 this.attributeName = attributeName
             }
@@ -541,13 +544,13 @@ class VertexController(
     private fun RBuilder.renderHeader(
             phase: VisualVertexPhase?
     ) {
-        val title = props.graphStructure.graphNotation
+        val title = props.clientState.graphStructure().graphNotation
                 .transitiveAttribute(
                         props.cellDescriptor.objectLocation,
                         AutoConventions.titleAttributePath
                 )?.asString()
 
-        val description = props.graphStructure.graphNotation
+        val description = props.clientState.graphStructure().graphNotation
                 .transitiveAttribute(
                         props.cellDescriptor.objectLocation,
                         AutoConventions.descriptionAttributePath
@@ -675,7 +678,7 @@ class VertexController(
             description: String?,
             phase: VisualVertexPhase?
     ) {
-        val icon = props.graphStructure.graphNotation
+        val icon = props.clientState.graphStructure().graphNotation
                 .transitiveAttribute(props.cellDescriptor.objectLocation, AutoConventions.iconAttributePath)
                 ?.asString()
                 ?: defaultIcon
@@ -833,11 +836,14 @@ class VertexController(
                         title
                     }
                     else {
-                        val objectNotation =
-                                props.graphStructure.graphNotation.coalesce[props.cellDescriptor.objectLocation]!!
+                        val objectNotation = props.clientState.graphStructure()
+                            .graphNotation.coalesce[props.cellDescriptor.objectLocation]!!
+
                         val parentReference = ObjectReference.parse(
                                 objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
-                        val parentLocation = props.graphStructure.graphNotation.coalesce.locate(parentReference)
+
+                        val parentLocation = props.clientState.graphStructure()
+                            .graphNotation.coalesce.locate(parentReference)
 
                         parentLocation.objectPath.name.value
                     }

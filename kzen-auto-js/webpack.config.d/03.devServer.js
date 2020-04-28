@@ -43,6 +43,7 @@
                 target: serverUrl,
                 secure: false,
                 bypass: function (req, res, proxyOptions) {
+//                    if ((req.headers.accept || '').indexOf('.js') !== -1) {
                     if (req.headers.accept.indexOf('.js') !== -1) {
                         return req.headers.accept;
                     }

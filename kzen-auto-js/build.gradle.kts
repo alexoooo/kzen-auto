@@ -9,7 +9,12 @@ kotlin {
 
 //        produceExecutable()
 
-        browser {}
+        browser {
+            webpackTask {
+                // TODO: hot-reload breaks?
+//                outputFileName = "index.js"
+            }
+        }
     }
 }
 
@@ -34,17 +39,17 @@ dependencies {
     implementation(npm("inline-style-prefixer", inlineStylePrefixerVersion))
     implementation(npm("styled-components", styledComponentsVersion))
     testImplementation("org.jetbrains.kotlin:kotlin-test-js")
-    testImplementation(npm("enzyme", "3.9.0"))
-    testImplementation(npm("enzyme-adapter-react-16", "1.12.1"))
+//    testImplementation(npm("enzyme", "3.9.0"))
+//    testImplementation(npm("enzyme-adapter-react-16", "1.12.1"))
 
     implementation("tech.kzen.lib:kzen-lib-common-js:$kzenLibVersion")
     implementation("tech.kzen.lib:kzen-lib-js:$kzenLibVersion")
 
-    implementation(npm("@material-ui/core", "4.9.7"))
-    implementation(npm("@material-ui/icons", "4.9.1"))
-    implementation(npm("cropperjs", "1.5.6"))
-    implementation(npm("lodash", "4.17.15"))
-    implementation(npm("react-select", "3.0.8"))
+    implementation(npm("@material-ui/core", materialUiCoreVersion))
+    implementation(npm("@material-ui/icons", materialUiIconsVersion))
+    implementation(npm("cropperjs", cropperJsVersion))
+    implementation(npm("lodash", lodashVersion))
+    implementation(npm("react-select", reactSelectVersion))
 }
 
 

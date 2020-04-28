@@ -60,16 +60,15 @@ class SelectFeatureEditor(
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val attributeNotation =
-                props.graphStructure.graphNotation.transitiveAttribute(
-                        props.objectLocation, props.attributeName)
+        val attributeNotation = props.clientState.graphStructure().graphNotation
+            .transitiveAttribute(props.objectLocation, props.attributeName)
 
         val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 
         if (attributeNotation is ScalarAttributeNotation) {
             val reference = ObjectReference.parse(attributeNotation.value)
-            val objectLocation = props.graphStructure.graphNotation.coalesce.locate(
-                    reference, objectReferenceHost)
+            val objectLocation = props.clientState.graphStructure().graphNotation.coalesce
+                .locate(reference, objectReferenceHost)
 
             value = objectLocation
         }
@@ -166,7 +165,7 @@ class SelectFeatureEditor(
         val featureMains = mutableListOf<ObjectLocation>()
 
         for ((path, notation) in
-                props.graphStructure.graphNotation.documents.values)
+                props.clientState.graphStructure().graphNotation.documents.values)
         {
             if (FeatureDocument.isFeature(notation)) {
                 featureMains.add(ObjectLocation(

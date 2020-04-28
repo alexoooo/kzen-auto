@@ -11,6 +11,8 @@ import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.service.global.SessionGlobal
+import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
@@ -45,11 +47,12 @@ import tech.kzen.lib.platform.collect.persistentMapOf
 
 @Suppress("unused")
 class GraphController:
-        RPureComponent<GraphController.Props, GraphController.State>(),
-        LocalGraphStore.Observer,
-        InsertionGlobal.Subscriber,
-        NavigationGlobal.Observer,
-        VisualDataflowRepository.Observer
+    RPureComponent<GraphController.Props, GraphController.State>(),
+//        LocalGraphStore.Observer,
+    InsertionGlobal.Subscriber,
+//        NavigationGlobal.Observer,
+    VisualDataflowRepository.Observer,
+    SessionGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -63,8 +66,9 @@ class GraphController:
 
 
     class State(
-            var documentPath: DocumentPath?,
-            var graphStructure: GraphStructure?,
+//            var documentPath: DocumentPath?,
+//            var graphStructure: GraphStructure?,
+            var clientState: SessionState?,
             var creating: Boolean,
 
             var visualDataflowModel: VisualDataflowModel?
@@ -99,10 +103,11 @@ class GraphController:
     override fun componentDidMount() {
 //        println("ProjectController - Subscribed")
         async {
-            ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.insertionGlobal.subscribe(this)
-            ClientContext.navigationGlobal.observe(this)
+            ClientContext.sessionGlobal.observe(this)
 
+//            ClientContext.mirroredGraphStore.observe(this)
+            ClientContext.insertionGlobal.subscribe(this)
+//            ClientContext.navigationGlobal.observe(this)
             ClientContext.visualDataflowRepository.observe(this)
         }
     }
@@ -110,11 +115,12 @@ class GraphController:
 
     override fun componentWillUnmount() {
 //        println("ProjectController - Un-subscribed")
-        ClientContext.mirroredGraphStore.unobserve(this)
+//        ClientContext.mirroredGraphStore.unobserve(this)
 //        ClientContext.executionManager.unsubscribe(this)
         ClientContext.insertionGlobal.unsubscribe(this)
-        ClientContext.navigationGlobal.unobserve(this)
+//        ClientContext.navigationGlobal.unobserve(this)
         ClientContext.visualDataflowRepository.unobserve(this)
+        ClientContext.sessionGlobal.unobserve(this)
     }
 
 
@@ -125,8 +131,8 @@ class GraphController:
     ) {
 //        console.log("ProjectController componentDidUpdate", state, prevState)
 
-        val documentPath = state.documentPath
-        if (documentPath != prevState.documentPath) {
+        val documentPath = state.clientState?.navigationRoute?.documentPath
+        if (documentPath != prevState.clientState?.navigationRoute?.documentPath) {
 //            console.log("ProjectController componentDidUpdate", state.documentPath, prevState.documentPath)
 
             if (documentPath == null) {
@@ -146,24 +152,31 @@ class GraphController:
     }
 
 
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
-        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent) &&
-                event.documentPath == state.documentPath) {
-            return
-        }
+//    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+//        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent) &&
+//                event.documentPath == state.documentPath) {
+//            return
+//        }
+//
+//        setState {
+//            this.graphStructure = graphDefinition.successful.graphStructure
+//        }
+//    }
+//
+//
+//    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+//
+//
+//    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
+//        setState {
+//            this.graphStructure = graphDefinition.successful.graphStructure
+//        }
+//    }
 
+
+    override fun onClientState(clientState: SessionState) {
         setState {
-            this.graphStructure = graphDefinition.successful.graphStructure
-        }
-    }
-
-
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
-
-
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
-        setState {
-            this.graphStructure = graphDefinition.successful.graphStructure
+            this.clientState = clientState
         }
     }
 
@@ -176,7 +189,7 @@ class GraphController:
 
 
     override suspend fun onVisualDataflowModel(host: DocumentPath, visualDataflowModel: VisualDataflowModel) {
-        if (state.documentPath != host) {
+        if (state.clientState?.navigationRoute?.documentPath != host) {
             return
         }
 
@@ -213,28 +226,27 @@ class GraphController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun handleNavigation(
-            documentPath: DocumentPath?,
-            parameters: RequestParams
-    ) {
-        setState {
-            this.documentPath = documentPath
-        }
-    }
+//    override fun handleNavigation(
+//            documentPath: DocumentPath?,
+//            parameters: RequestParams
+//    ) {
+//        setState {
+//            this.documentPath = documentPath
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun documentNotation(): DocumentNotation? {
-        val graphStructure = state.graphStructure
+        val graphStructure = state.clientState?.graphStructure()
                 ?: return null
 
-        val documentPath = state.documentPath
+        val documentPath = state.clientState?.navigationRoute?.documentPath
                 ?: return null
 
         return graphStructure
-                .graphNotation
-                .documents
-                .get(documentPath)
+            .graphNotation
+            .documents[documentPath]
     }
 
 
@@ -249,11 +261,11 @@ class GraphController:
         val archetypeLocation = ClientContext.insertionGlobal.getAndClearSelection()
                 ?: return
 
-        val archetypeNotation = state.graphStructure!!.graphNotation.coalesce[archetypeLocation]!!
+        val archetypeNotation = state.clientState!!.graphStructure().graphNotation.coalesce[archetypeLocation]!!
         val archetypeIs = archetypeNotation.get(NotationConventions.isAttributeName)?.asString()!!
 
         val containingObjectLocation = ObjectLocation(
-                state.documentPath!!, NotationConventions.mainObjectPath)
+                state.clientState?.navigationRoute?.documentPath!!, NotationConventions.mainObjectPath)
 
         val isPipe = archetypeIs == edgePipeName
 
@@ -304,6 +316,7 @@ class GraphController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        +"foo bar"
         val documentNotation = documentNotation()
                 ?: return
 
@@ -321,7 +334,7 @@ class GraphController:
         val verticesNotation = DataflowMatrix.verticesNotation(documentNotation)
         val edgesNotation = DataflowMatrix.edgesNotation(documentNotation)
         val dataflowMatrix = DataflowMatrix.cellDescriptorLayers(
-                state.graphStructure!!,  verticesNotation, edgesNotation)
+                state.clientState!!.graphStructure(),  verticesNotation, edgesNotation)
 
         if (dataflowMatrix.isEmpty()) {
             styledDiv {
@@ -353,7 +366,7 @@ class GraphController:
                         ?: VisualDataflowModel.empty
 
                 nonEmptyDag(
-                        state.graphStructure!!,
+                        state.clientState!!,
                         visualDataflowModel,
                         dataflowMatrix)
             }
@@ -362,7 +375,7 @@ class GraphController:
 
 
     private fun RBuilder.nonEmptyDag(
-            graphStructure: GraphStructure,
+            clientState: SessionState,
             visualDataflowModel: VisualDataflowModel,
             dataflowMatrix: DataflowMatrix
     ) {
@@ -404,7 +417,7 @@ class GraphController:
                                     key = cellDescriptor.key()
 
                                     if (cellDescriptor is VertexDescriptor) {
-                                        val cellMetadata = graphStructure
+                                        val cellMetadata = clientState.graphStructure()
                                                 .graphMetadata.objectMetadata[cellDescriptor.objectLocation]!!
 
                                         val inputAttributes: List<AttributeName> = cellMetadata
@@ -426,7 +439,7 @@ class GraphController:
                                     }
 
                                     cell(cellDescriptor,
-                                            graphStructure,
+                                            clientState,
                                             visualDataflowModel,
                                             dataflowMatrix,
                                             dataflowDag)
@@ -493,7 +506,7 @@ class GraphController:
 
     private fun RBuilder.cell(
             cellDescriptor: CellDescriptor,
-            graphStructure: GraphStructure,
+            clientState: SessionState,
             visualDataflowModel: VisualDataflowModel,
             dataflowMatrix: DataflowMatrix,
             dataflowDag: DataflowDag
@@ -507,9 +520,9 @@ class GraphController:
                 attributeNesting = AttributeNesting(persistentListOf(
                         AttributeSegment.ofIndex(cellDescriptor.indexInContainer)))
 
-                documentPath = state.documentPath!!
+                documentPath = clientState.navigationRoute.documentPath!!
 
-                this.graphStructure = graphStructure
+                this.clientState = clientState
                 this.visualDataflowModel = visualDataflowModel
                 this.dataflowMatrix = dataflowMatrix
                 this.dataflowDag = dataflowDag
@@ -531,8 +544,8 @@ class GraphController:
 
             child(GraphRunController::class) {
                 attrs {
-                    documentPath = state.documentPath
-                    graphStructure = state.graphStructure
+                    documentPath = state.clientState?.navigationRoute?.documentPath
+                    graphStructure = state.clientState?.graphStructure()
                     visualDataflowModel = state.visualDataflowModel
                 }
             }

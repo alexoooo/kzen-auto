@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.script
 
-import kotlinx.coroutines.delay
 import kotlinx.css.*
 import kotlinx.html.title
 import react.*
@@ -12,42 +11,29 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
-import tech.kzen.auto.client.objects.ribbon.RibbonRun
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
-import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
-import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
-import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.model.locate.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.DeletedDocumentEvent
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
-import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
-import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
 class ScriptController:
         RPureComponent<ScriptController.Props, ScriptController.State>(),
-//        NavigationGlobal.Observer,
-//        LocalGraphStore.Observer,
-//        ExecutionRepository.Observer,
         SessionGlobal.Observer,
         InsertionGlobal.Subscriber
 {
@@ -82,13 +68,8 @@ class ScriptController:
 
 
     class State(
-//            var documentPath: DocumentPath?,
-//            var graphStructure: GraphStructure?,
-//            var imperativeModel: ImperativeModel?,
             var clientState: SessionState?,
-
-            var creating: Boolean//,
-//            var runningHost: DocumentPath?
+            var creating: Boolean
     ): RState
 
 
@@ -120,44 +101,19 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-//        documentPath = null
-//        graphStructure = null
-//        imperativeModel = null
         clientState = null
         creating = false
     }
 
 
     override fun componentDidMount() {
-//        console.log("^^^^^^ script - componentDidMount")
-
-
         ClientContext.sessionGlobal.observe(this)
-
-//        ClientContext.navigationGlobal.observe(this)
-//
-////        println("ProjectController - Subscribed")
-//        async {
-////            console.log("^^^^^^ script - adding observers")
-//            delay(1)
-//            ClientContext.mirroredGraphStore.observe(this)
-////            delay(1)
-//            ClientContext.executionRepository.observe(this)
-////            delay(1)
-            ClientContext.insertionGlobal.subscribe(this)
-//        }
+        ClientContext.insertionGlobal.subscribe(this)
     }
 
 
     override fun componentWillUnmount() {
-//        console.log("^^^^^^ script - componentWillUnmount")
-
-//        println("ProjectController - Un-subscribed")
-//        ClientContext.mirroredGraphStore.unobserve(this)
-//        ClientContext.executionRepository.unobserve(this)
         ClientContext.insertionGlobal.unsubscribe(this)
-//        ClientContext.navigationGlobal.unobserve(this)
-
         ClientContext.sessionGlobal.unobserve(this)
     }
 
@@ -218,6 +174,7 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: SessionState) {
+//        console.log("#!#@!#@! onClientState - ${clientState.imperativeModel}")
         setState {
             this.clientState = clientState
         }
@@ -391,14 +348,14 @@ class ScriptController:
                 css {
                     paddingLeft = 1.em
                 }
-                nonEmptySteps(graphStructure, documentPath, stepLocations, clientState, imperativeModel)
+                nonEmptySteps(/*graphStructure,*/ documentPath, stepLocations, clientState, imperativeModel)
             }
         }
     }
 
 
     private fun RBuilder.nonEmptySteps(
-            graphStructure: GraphStructure,
+//            graphStructure: GraphStructure,
             documentPath: DocumentPath,
             stepLocations: List<ObjectLocation>,
             clientState: SessionState,
@@ -422,7 +379,6 @@ class ScriptController:
                 renderStep(
                         index,
                         keyLocation,
-                        graphStructure,
                         imperativeModel,
                         stepLocations.size)
 
@@ -514,27 +470,22 @@ class ScriptController:
     private fun RBuilder.renderStep(
             index: Int,
             objectLocation: ObjectLocation,
-            graphStructure: GraphStructure,
+//            graphStructure: GraphStructure,
             imperativeModel: ImperativeModel,
             stepCount: Int
     ) {
-        val active =
-                state.clientState?.activeHost != null &&
-                imperativeModel.frames.any { it.path == state.clientState?.navigationRoute?.documentPath }
-
         span {
             key = objectLocation.toReference().asString()
 
             props.stepController.child(this) {
                 attrs {
                     common = StepDisplayProps.Common(
-                            graphStructure,
-                            objectLocation,
-                            AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
-                            imperativeModel,
-                            first = index == 0,
-                            last = index == stepCount - 1,
-                            active = active)
+                        state.clientState!!,
+                        objectLocation,
+                        AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
+                        imperativeModel,
+                        first = index == 0,
+                        last = index == stepCount - 1)
                 }
             }
         }

@@ -369,10 +369,9 @@ class ClientRestApi(
 
     suspend fun resetExecution(
             host: DocumentPath
-    ): Digest {
-        return getDigest(
-                CommonRestApi.actionReset,
-                CommonRestApi.paramDocumentPath to host.asString())
+    ) {
+        get(CommonRestApi.actionReset,
+            CommonRestApi.paramDocumentPath to host.asString())
     }
 
 

@@ -41,6 +41,24 @@ data class RequestParams(
     }
 
 
+    fun replaceValues(find: String, replace: String): RequestParams {
+        val builder = mutableMapOf<String, List<String>>()
+        for (e in values) {
+            val newValues = e.value
+                .map {
+                    if (it == find) {
+                        replace
+                    }
+                    else {
+                        it
+                    }
+                }
+            builder[e.key] = newValues
+        }
+        return RequestParams(builder)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun asString(): String {
         val entries = mutableListOf<String>()

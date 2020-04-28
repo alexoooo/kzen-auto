@@ -93,7 +93,16 @@ class NavigationGlobal(
         when (event) {
             is RenamedDocumentRefactorEvent -> {
                 if (event.removedUnderOldName.documentPath == documentPath) {
-                    goto(event.createdWithNewName.destination)
+                    val updatedParameters = parameters.replaceValues(
+                        event.removedUnderOldName.documentPath.asString(),
+                        event.createdWithNewName.destination.asString())
+
+                    if (parameters == updatedParameters) {
+                        goto(event.createdWithNewName.destination)
+                    }
+                    else {
+                        goto(event.createdWithNewName.destination, updatedParameters)
+                    }
                 }
             }
 
@@ -110,6 +119,8 @@ class NavigationGlobal(
                     publish()
                 }
             }
+
+            else -> {}
         }
     }
 
@@ -126,8 +137,12 @@ class NavigationGlobal(
     }
 
 
-    fun goto(documentPath: DocumentPath) {
-        window.location.hash = NavigationRoute(documentPath, parameters).toFragment()
+    fun goto(newDocumentPath: DocumentPath) {
+        window.location.hash = NavigationRoute(newDocumentPath, parameters).toFragment()
+    }
+
+    fun goto(newDocumentPath: DocumentPath, newParameters: RequestParams) {
+        window.location.hash = NavigationRoute(newDocumentPath, newParameters).toFragment()
     }
 
 

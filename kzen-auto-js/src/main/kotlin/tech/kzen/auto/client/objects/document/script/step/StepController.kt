@@ -60,7 +60,7 @@ class StepController(
 //        +">> ${props.objectLocation.asString()}"
 
         val displayWrapperName = ObjectName(
-                props.common.graphStructure.graphNotation.getString(
+                props.common.clientState.graphStructure().graphNotation.getString(
                         props.common.objectLocation, AutoConventions.displayAttributePath))
 
         val displayWrapper = props.stepDisplays.find { it.name() == displayWrapperName }

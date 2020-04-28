@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.common
 
 import react.*
 import tech.kzen.auto.client.api.ReactWrapper
+import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -23,13 +24,14 @@ class AttributeController(
 
 
     class Props(
-            var attributeEditors: List<AttributeEditorWrapper>,
+        var attributeEditors: List<AttributeEditorWrapper>,
 
-            graphStructure: GraphStructure,
-            objectLocation: ObjectLocation,
-            attributeName: AttributeName
+//            graphStructure: GraphStructure,
+        clientState: SessionState,
+        objectLocation: ObjectLocation,
+        attributeName: AttributeName
     ): AttributeEditorProps(
-            graphStructure, objectLocation, attributeName
+        clientState, objectLocation, attributeName
     )
 
 
@@ -55,12 +57,13 @@ class AttributeController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val attributeMetadata: AttributeMetadata = props
-                .graphStructure
-                .graphMetadata
-                .get(props.objectLocation)
-                ?.attributes
-                ?.get(props.attributeName)
-                ?: return
+            .clientState
+            .graphStructure()
+            .graphMetadata
+            .get(props.objectLocation)
+            ?.attributes
+            ?.get(props.attributeName)
+            ?: return
 
         val editorAttributeNotation = attributeMetadata
                 .attributeMetadataNotation
@@ -76,7 +79,7 @@ class AttributeController(
 
         editorWrapper.child(this) {
             attrs {
-                graphStructure = props.graphStructure
+                clientState = props.clientState
                 objectLocation = props.objectLocation
                 attributeName = props.attributeName
             }

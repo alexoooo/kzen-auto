@@ -93,7 +93,7 @@ reflectionRegistry.put(
 
 reflectionRegistry.put(
     "tech.kzen.auto.common.objects.document.script.control.ConditionalExpression",
-    listOf("condition", "then", "`else`")
+    listOf("condition", "then", "else")
 ) { args ->
     ConditionalExpression(args[0] as ObjectLocation, args[1] as List<ObjectLocation>, args[2] as List<ObjectLocation>)
 }

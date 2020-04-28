@@ -59,16 +59,15 @@ class SelectStepEditor(
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val attributeNotation =
-                props.graphStructure.graphNotation.transitiveAttribute(
-                        props.objectLocation, props.attributeName)
+        val attributeNotation = props.clientState.graphStructure().graphNotation
+            .transitiveAttribute(props.objectLocation, props.attributeName)
 
         val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 
         if (attributeNotation is ScalarAttributeNotation) {
             val reference = ObjectReference.parse(attributeNotation.value)
-            val objectLocation = props.graphStructure.graphNotation.coalesce.locateOptional(
-                    reference, objectReferenceHost)
+            val objectLocation = props.clientState.graphStructure().graphNotation.coalesce
+                .locateOptional(reference, objectReferenceHost)
 
             if (objectLocation != null) {
                 // NB: might be absent if e.g. it was deleted
@@ -165,7 +164,7 @@ class SelectStepEditor(
     private fun predecessors(): List<ObjectLocation> {
         val host = props.objectLocation.documentPath
         val steps = ControlTree.readSteps(
-                props.graphStructure, host)
+                props.clientState.graphStructure(), host)
 
 //        console.log("^^^^ steps", steps.toString())
 

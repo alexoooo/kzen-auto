@@ -9,7 +9,7 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class DivisibleCheck (
+class DivisibleCheck(
         private val number: ObjectLocation,
         private val divisor: Double
 ): ScriptStep {

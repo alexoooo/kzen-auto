@@ -315,7 +315,8 @@ class RibbonRun (
                 attrs {
                     key = pathValue
                     href = NavigationRoute(
-                            navigationRoute.documentPath,
+//                            navigationRoute.documentPath,
+                            script.key,
                             navigationRoute.requestParams.set(runningKey, pathValue)
                     ).toFragment()
                 }

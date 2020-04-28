@@ -79,11 +79,12 @@ class TargetSpecEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: AttributeEditorProps) {
         val attributeNotation = props
-                .graphStructure
-                .graphNotation
-                .transitiveAttribute(props.objectLocation, props.attributeName)
-                as? MapAttributeNotation
-                ?: return
+            .clientState
+            .graphStructure()
+            .graphNotation
+            .transitiveAttribute(props.objectLocation, props.attributeName)
+            as? MapAttributeNotation
+            ?: return
 
         targetType = attributeNotation
                 .get(TargetSpecDefiner.typeKey)
@@ -113,8 +114,8 @@ class TargetSpecEditor(
                 val reference = ObjectReference.parse(value)
 
                 targetText = null
-                targetLocation = props.graphStructure.graphNotation.coalesce.locateOptional(
-                        reference, objectReferenceHost)
+                targetLocation = props.clientState.graphStructure().graphNotation.coalesce
+                    .locateOptional(reference, objectReferenceHost)
             }
             else {
                 targetText = null
@@ -277,7 +278,7 @@ class TargetSpecEditor(
         val featureMains = mutableListOf<ObjectLocation>()
 
         for ((path, notation) in
-                props.graphStructure.graphNotation.documents.values) {
+                props.clientState.graphStructure().graphNotation.documents.values) {
 
             if (FeatureDocument.isFeature(notation)) {
                 featureMains.add(ObjectLocation(
