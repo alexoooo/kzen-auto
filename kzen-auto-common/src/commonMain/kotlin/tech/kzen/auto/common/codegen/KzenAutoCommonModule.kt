@@ -52,9 +52,9 @@ reflectionRegistry.put(
 
 reflectionRegistry.put(
     "tech.kzen.auto.common.objects.document.filter.FilterDocument",
-    listOf("inputPattern")
+    listOf("input", "output")
 ) { args ->
-    FilterDocument(args[0] as String)
+    FilterDocument(args[0] as String, args[1] as String)
 }
 
 reflectionRegistry.put(

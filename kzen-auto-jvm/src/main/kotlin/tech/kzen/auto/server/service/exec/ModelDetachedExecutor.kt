@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.service.exec
 
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
@@ -27,9 +28,16 @@ class ModelDetachedExecutor(
                 .createGraph(graphDefinition)
 
         val instance = objectGraph.objectInstances[actionLocation]?.reference
+                ?: return ExecutionFailure("Not found: $actionLocation")
 
-        val action = instance as DetachedAction
+        val action = instance as? DetachedAction
+                ?: return ExecutionFailure("Not DetachedAAction: $actionLocation - $instance")
 
-        return action.execute(request)
+        return try {
+            action.execute(request)
+        }
+        catch (t: Throwable) {
+            ExecutionFailure(t.message ?: "exception")
+        }
     }
 }

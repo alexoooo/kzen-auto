@@ -370,7 +370,7 @@ class ScriptRunController(
                 props.execution != null &&
                 props.execution!!.frames.none { it.path == props.documentPath })
         {
-            +"[Running \"${props.runningHost!!.name.value}\"]"
+//            +"[Running \"${props.runningHost!!.name.value}\"]"
             return
         }
 

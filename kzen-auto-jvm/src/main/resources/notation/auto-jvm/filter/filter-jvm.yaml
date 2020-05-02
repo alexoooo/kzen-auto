@@ -1,0 +1,9 @@
+
+
+ColumnListing:
+  class: tech.kzen.auto.server.objects.filter.ColumnListing
+
+
+ApplyFilter:
+  class: tech.kzen.auto.server.objects.filter.ApplyFilter
+

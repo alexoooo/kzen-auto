@@ -69,5 +69,7 @@ Filter:
   title: "Data Filter"
   icon: FilterList
   directory: true
+  output: work/out.csv
   meta:
-    inputPattern: String
+    input: String
+    output: String

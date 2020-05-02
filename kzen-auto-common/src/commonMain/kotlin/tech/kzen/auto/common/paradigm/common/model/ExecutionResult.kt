@@ -76,9 +76,10 @@ data class ExecutionSuccess(
         val empty = ExecutionSuccess(NullExecutionValue, NullExecutionValue)
 
         fun ofValue(value: ExecutionValue): ExecutionSuccess {
-            return ExecutionSuccess(value, NullExecutionValue)
+            return ExecutionSuccess(value, detail = NullExecutionValue)
         }
     }
+
 
     override fun toCollection(): Map<String, Any?> {
         return mapOf(
@@ -86,6 +87,7 @@ data class ExecutionSuccess(
                 detailKey to detail.toCollection()
         )
     }
+
 
     override fun digest(): Digest {
         val digest = Digest.Builder()

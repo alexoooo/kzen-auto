@@ -7,11 +7,13 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Reflect
 class FilterDocument(
-        val inputPattern: String
+        val input: String,
+        val output: String
 ):
         DocumentArchetype()
 {
     companion object {
-        val inputPatternAttribute = AttributeName("inputPattern")
+        val inputAttribute = AttributeName("input")
+        val outputAttribute = AttributeName("output")
     }
 }

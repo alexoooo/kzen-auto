@@ -46,13 +46,16 @@ class FeatureController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        private val featureJvmPath = DocumentPath.parse("auto-jvm/feature/feature-jvm.yaml")
+
+
         val screenshotTakerLocation = ObjectLocation(
-                DocumentPath.parse("auto-jvm/feature/feature.yaml"),
+                featureJvmPath,
                 ObjectPath(ObjectName("ScreenshotTaker"), ObjectNesting.root))
 
 
         val screenshotCropperLocation = ObjectLocation(
-                DocumentPath.parse("auto-jvm/feature/feature.yaml"),
+                featureJvmPath,
                 ObjectPath(ObjectName("ScreenshotCropper"), ObjectNesting.root))
     }
 
