@@ -98,11 +98,11 @@ class RestHandler {
             if (projectName != null) {
                 // IntelliJ and typical commandline working dir is project root
                 builder.add(Paths.get("$projectName-jvm/src/main/resources/public/"))
-                builder.add(Paths.get("$projectName-js/build/dist/"))
+                builder.add(Paths.get("$projectName-js/build/distributions/"))
 
                 // Eclipse and Gradle default active working directory is the module
                 builder.add(Paths.get("src/main/resources/public/"))
-                builder.add(Paths.get("../$projectName-js/build/dist/"))
+                builder.add(Paths.get("../$projectName-js/build/distributions/"))
             }
             else {
                 builder.add(Paths.get("static/"))

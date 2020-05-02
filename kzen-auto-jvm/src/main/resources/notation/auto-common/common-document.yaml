@@ -60,3 +60,14 @@ Feature:
     documentNotation:
       is: DocumentNotation
       by: Self
+
+
+Filter:
+  abstract: true
+  is: Document
+  class: tech.kzen.auto.common.objects.document.filter.FilterDocument
+  title: "Data Filter"
+  icon: FilterList
+  directory: true
+  meta:
+    inputPattern: String

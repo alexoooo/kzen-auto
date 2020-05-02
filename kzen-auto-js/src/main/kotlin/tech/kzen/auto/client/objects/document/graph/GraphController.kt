@@ -316,7 +316,6 @@ class GraphController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        +"foo bar"
         val documentNotation = documentNotation()
                 ?: return
 

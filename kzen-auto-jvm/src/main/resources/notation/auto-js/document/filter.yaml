@@ -1,0 +1,6 @@
+
+
+FilterController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.filter.FilterController$Wrapper
+  archetype: Filter
