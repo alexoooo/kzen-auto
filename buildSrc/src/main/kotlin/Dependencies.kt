@@ -41,3 +41,5 @@ const val cropperJsVersion = "1.5.6"
 const val lodashVersion = "4.17.15"
 //const val reactSelectVersion = "3.0.8"
 const val reactSelectVersion = "3.1.0"
+
+const val commonsCsvVersion = "1.8"

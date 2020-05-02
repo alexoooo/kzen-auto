@@ -44,6 +44,10 @@ class FilterController(
         val applyFilterLocation = ObjectLocation(
                 filterJvmPath,
                 ObjectPath(ObjectName("ApplyFilter"), ObjectNesting.root))
+
+        val columnDomainLocation = ObjectLocation(
+                filterJvmPath,
+                ObjectPath(ObjectName("ColumnDomain"), ObjectNesting.root))
     }
 
 
@@ -60,7 +64,9 @@ class FilterController(
             var columnListing: List<String>?,
 
             var writingOutput: Boolean,
-            var wroteOutputPath: String?
+            var wroteOutputPath: String?,
+
+            var columnDetails: List<String>?
     ): RState
 
 
@@ -103,6 +109,8 @@ class FilterController(
 
         writingOutput = false
         wroteOutputPath = null
+
+        columnDetails = null
     }
 
 
@@ -134,10 +142,22 @@ class FilterController(
             getColumnListing(clientState)
         }
 
-        if (state.columnListing == null && ! state.columnListingLoading) {
+        val columnListing = state.columnListing
+        if (columnListing == null && ! state.columnListingLoading) {
             setState {
                 columnListingLoading = true
             }
+        }
+        else if (columnListing != null && prevState.columnListing == null) {
+            if (columnListing.isNotEmpty()) {
+                requestNextColumn(mainLocation()!!, clientState, 0)
+            }
+        }
+        else if (state.columnDetails?.size != prevState.columnDetails?.size &&
+                state.columnDetails?.size ?: 0 < columnListing?.size ?: 0)
+        {
+            val nextIndex = state.columnDetails!!.size
+            requestNextColumn(mainLocation()!!, clientState, nextIndex)
         }
     }
 
@@ -215,8 +235,8 @@ class FilterController(
         async {
             val result = ClientContext.restClient.performDetached(
                     applyFilterLocation,
-                    FilterDocument.inputAttribute.value to inputValue,
-                    FilterDocument.outputAttribute.value to outputValue)
+                    FilterDocument.inputKey to inputValue,
+                    FilterDocument.outputKey to outputValue)
 
             when (result) {
                 is ExecutionSuccess -> {
@@ -234,6 +254,48 @@ class FilterController(
 
             setState {
                 writingOutput = false
+            }
+        }
+    }
+
+
+    private fun requestNextColumn(
+            mainLocation: ObjectLocation,
+            clientState: SessionState,
+            columnIndex: Int
+    ) {
+//        val columnListing = state.columnListing
+//                ?: return
+
+        val graphStructure = clientState.graphStructure()
+
+        val inputValue = graphStructure
+                .graphNotation
+                .transitiveAttribute(mainLocation, FilterDocument.inputAttribute)
+                ?.asString()
+                ?: return
+
+        async {
+            val result = ClientContext.restClient.performDetached(
+                    columnDomainLocation,
+                    FilterDocument.inputKey to inputValue,
+                    FilterDocument.indexKey to columnIndex.toString())
+
+            when (result) {
+                is ExecutionSuccess -> {
+                    val columnDetails = state.columnDetails
+                            ?: emptyList()
+
+                    setState {
+                        this.columnDetails = columnDetails + result.value.get().toString()
+                    }
+                }
+
+                is ExecutionFailure -> {
+                    setState {
+                        error = result.errorMessage
+                    }
+                }
             }
         }
     }
@@ -280,6 +342,7 @@ class FilterController(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderSpacing() {
         styledDiv {
             css {
@@ -317,6 +380,7 @@ class FilterController(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderProgress() {
         val error = state.error
         if (error != null) {
@@ -344,6 +408,7 @@ class FilterController(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderFilters() {
         val columnListing = state.columnListing
 
@@ -363,10 +428,21 @@ class FilterController(
 
 
     private fun RBuilder.renderFilter(index: Int, columnName: String) {
-        +"${index + 1} - $columnName"
+        +"${index + 1} - $columnName "
+
+        val columnDetails = state.columnDetails
+                ?: return
+
+        if (columnDetails.size > index) {
+            +columnDetails[index]
+        }
+        else {
+            +"..."
+        }
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderRun(
             mainLocation: ObjectLocation,
             clientState: SessionState

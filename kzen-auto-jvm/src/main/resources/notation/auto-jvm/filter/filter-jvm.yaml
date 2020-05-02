@@ -7,3 +7,7 @@ ColumnListing:
 ApplyFilter:
   class: tech.kzen.auto.server.objects.filter.ApplyFilter
 
+
+ColumnDomain:
+  class: tech.kzen.auto.server.objects.filter.ColumnDomain
+

@@ -13,7 +13,11 @@ class FilterDocument(
         DocumentArchetype()
 {
     companion object {
-        val inputAttribute = AttributeName("input")
-        val outputAttribute = AttributeName("output")
+        const val indexKey = "index"
+        const val inputKey = "input"
+        const val outputKey = "output"
+
+        val inputAttribute = AttributeName(inputKey)
+        val outputAttribute = AttributeName(outputKey)
     }
 }

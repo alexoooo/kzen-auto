@@ -17,10 +17,10 @@ import java.nio.file.Files
 @Reflect
 object ApplyFilter: DetachedAction {
     override suspend fun execute(request: DetachedRequest): ExecutionResult {
-        val input = request.parameters.get(FilterDocument.inputAttribute.value)
+        val input = request.parameters.get(FilterDocument.inputKey)
                 ?: return ExecutionFailure("'input' required")
 
-        val output = request.parameters.get(FilterDocument.outputAttribute.value)
+        val output = request.parameters.get(FilterDocument.outputKey)
                 ?: return ExecutionFailure("'output' required")
 
         val parsedInputPath = AutoJvmUtils.parsePath(input)

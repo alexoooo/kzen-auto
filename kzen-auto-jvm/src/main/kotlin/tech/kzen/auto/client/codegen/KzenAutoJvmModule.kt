@@ -12,6 +12,7 @@ import tech.kzen.auto.common.paradigm.dataflow.api.output.StreamOutput
 import tech.kzen.auto.server.objects.feature.ScreenshotCropper
 import tech.kzen.auto.server.objects.feature.ScreenshotTaker
 import tech.kzen.auto.server.objects.filter.ApplyFilter
+import tech.kzen.auto.server.objects.filter.ColumnDomain
 import tech.kzen.auto.server.objects.filter.ColumnListing
 import tech.kzen.auto.server.objects.graph.*
 import tech.kzen.auto.server.objects.script.DisplayValue
@@ -50,6 +51,13 @@ reflectionRegistry.put(
     listOf()
 ) {
     ApplyFilter
+}
+
+reflectionRegistry.put(
+    "tech.kzen.auto.server.objects.filter.ColumnDomain",
+    listOf()
+) {
+    ColumnDomain
 }
 
 reflectionRegistry.put(
