@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.filter
 import kotlinx.css.*
 import react.*
 import react.dom.br
+import react.dom.hr
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
@@ -426,6 +427,8 @@ class FilterController(
         for (i in columnListing.indices) {
             styledDiv {
                 key = i.toString()
+
+                hr {}
 
                 renderFilter(i, columnListing[i])
             }
