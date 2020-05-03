@@ -10,6 +10,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
+import tech.kzen.auto.server.objects.filter.model.ValueSummaryBuilder
 import tech.kzen.auto.util.AutoJvmUtils
 import tech.kzen.lib.common.reflect.Reflect
 import java.nio.file.Files
@@ -28,7 +29,7 @@ object ColumnDomain: DetachedAction {
                 ?: return ExecutionFailure("'${FilterDocument.indexKey}' required")
 
         val columnIndex = columnIndexValue.toIntOrNull()
-                ?:return ExecutionFailure("'${FilterDocument.indexKey}' not an int")
+                ?: return ExecutionFailure("'${FilterDocument.indexKey}' not an int")
 
         val parsedPath = AutoJvmUtils.parsePath(input)
                 ?: return ExecutionFailure("Invalid input: $input")
@@ -39,21 +40,28 @@ object ColumnDomain: DetachedAction {
             return ExecutionFailure("'input' not a regular file: $path")
         }
 
-        val builder = mutableSetOf<String>()
+        val builder = ValueSummaryBuilder()
 
         withContext(Dispatchers.IO) {
             Files.newBufferedReader(path).use {
-                val csvParser = CSVFormat.DEFAULT.parse(it)
-                for (record in csvParser) {
+                val csvParser = CSVFormat.DEFAULT.parse(it).iterator()
+
+                // header
+                if (csvParser.hasNext()) {
+                    csvParser.next()
+                }
+
+                while (csvParser.hasNext()) {
+                    val record = csvParser.next()
                     val value = record.get(columnIndex)
                     builder.add(value)
                 }
             }
         }
 
-        val summary = builder.size
+        val summary = builder.build()
 
         return ExecutionSuccess.ofValue(
-                ExecutionValue.of(summary))
+                ExecutionValue.of(summary.toCollection()))
     }
 }

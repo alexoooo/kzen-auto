@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.filter
 
 import kotlinx.css.*
 import react.*
+import react.dom.br
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
@@ -17,6 +18,7 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.filter.FilterDocument
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
+import tech.kzen.auto.common.paradigm.reactive.ValueSummary
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -66,7 +68,7 @@ class FilterController(
             var writingOutput: Boolean,
             var wroteOutputPath: String?,
 
-            var columnDetails: List<String>?
+            var columnDetails: List<ValueSummary>?
     ): RState
 
 
@@ -286,8 +288,12 @@ class FilterController(
                     val columnDetails = state.columnDetails
                             ?: emptyList()
 
+                    @Suppress("UNCHECKED_CAST")
+                    val valueSummary = ValueSummary.fromCollection(
+                        result.value.get() as Map<String, Any>)
+
                     setState {
-                        this.columnDetails = columnDetails + result.value.get().toString()
+                        this.columnDetails = columnDetails + valueSummary
                     }
                 }
 
@@ -431,10 +437,30 @@ class FilterController(
         +"${index + 1} - $columnName "
 
         val columnDetails = state.columnDetails
-                ?: return
 
-        if (columnDetails.size > index) {
-            +columnDetails[index]
+        if (columnDetails?.size ?: 0 > index) {
+            val valueSummary = columnDetails!![index]
+
+            +"count: ${valueSummary.count}"
+            br {}
+
+            val histogram = valueSummary.nominalValueSummary.histogram
+            if (histogram.isNotEmpty()) {
+                +"histogram: $histogram"
+                br {}
+            }
+
+            val density = valueSummary.numericValueSummary.density
+            if (density.isNotEmpty()) {
+                +"density: $density"
+                br {}
+            }
+
+            val sample = valueSummary.opaqueValueSummary.sample
+            if (sample.isNotEmpty()) {
+                +"sample: $sample"
+                br {}
+            }
         }
         else {
             +"..."
