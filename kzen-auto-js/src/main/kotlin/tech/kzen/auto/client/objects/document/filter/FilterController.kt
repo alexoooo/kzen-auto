@@ -2,8 +2,6 @@ package tech.kzen.auto.client.objects.document.filter
 
 import kotlinx.css.*
 import react.*
-import react.dom.br
-import react.dom.hr
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
@@ -424,49 +422,31 @@ class FilterController(
             return
         }
 
-        for (i in columnListing.indices) {
-            styledDiv {
-                key = i.toString()
-
-                hr {}
-
-                renderFilter(i, columnListing[i])
-            }
-        }
-    }
-
-
-    private fun RBuilder.renderFilter(index: Int, columnName: String) {
-        +"${index + 1} - $columnName "
-
         val columnDetails = state.columnDetails
 
-        if (columnDetails?.size ?: 0 > index) {
-            val valueSummary = columnDetails!![index]
+        for (index in columnListing.indices) {
+            styledDiv {
+                key = index.toString()
 
-            +"count: ${valueSummary.count}"
-            br {}
+                css {
+                    marginBottom = 1.em
+                }
 
-            val histogram = valueSummary.nominalValueSummary.histogram
-            if (histogram.isNotEmpty()) {
-                +"histogram: $histogram"
-                br {}
+                child(ColumnFilter::class) {
+                    attrs {
+                        clientState = state.clientState!!
+                        columnIndex = index
+                        columnHeader = columnListing[index]
+                        valueSummary =
+                            if (columnDetails?.size ?: 0 > index) {
+                                columnDetails!![index]
+                            }
+                            else {
+                                null
+                            }
+                    }
+                }
             }
-
-            val density = valueSummary.numericValueSummary.density
-            if (density.isNotEmpty()) {
-                +"density: $density"
-                br {}
-            }
-
-            val sample = valueSummary.opaqueValueSummary.sample
-            if (sample.isNotEmpty()) {
-                +"sample: $sample"
-                br {}
-            }
-        }
-        else {
-            +"..."
         }
     }
 
