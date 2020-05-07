@@ -302,3 +302,19 @@ external interface MenuItemProps: RProps {
     var onClick: () -> Unit
     var value: String
 }
+
+
+
+@JsName("Checkbox")
+external class MaterialCheckbox: Component<CheckboxProps, RState> {
+    override fun render(): ReactElement?
+}
+
+external interface CheckboxProps: RProps {
+//    var style: Json
+
+    var id: String
+
+    var checked: Boolean
+    var onChange: (e: Event) -> Unit
+}

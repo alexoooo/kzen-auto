@@ -5,7 +5,7 @@ package tech.kzen.auto.common.codegen
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.objects.document.feature.TargetSpecCreator
 import tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
-import tech.kzen.auto.common.objects.document.filter.FilterDocument
+import tech.kzen.auto.common.objects.document.filter.CriteriaSpecDefiner
 import tech.kzen.auto.common.objects.document.graph.DataflowWiring
 import tech.kzen.auto.common.objects.document.graph.EdgesDefiner
 import tech.kzen.auto.common.objects.document.graph.GraphDocument
@@ -51,10 +51,10 @@ reflectionRegistry.put(
 }
 
 reflectionRegistry.put(
-    "tech.kzen.auto.common.objects.document.filter.FilterDocument",
-    listOf("input", "output")
-) { args ->
-    FilterDocument(args[0] as String, args[1] as String)
+    "tech.kzen.auto.common.objects.document.filter.CriteriaSpecDefiner",
+    listOf()
+) {
+    CriteriaSpecDefiner
 }
 
 reflectionRegistry.put(

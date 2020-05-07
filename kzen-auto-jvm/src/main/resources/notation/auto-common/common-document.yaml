@@ -29,6 +29,9 @@ Script:
       of: Action
 
 
+################################################################
+
+
 Graph:
   abstract: true
   is: Document
@@ -44,6 +47,9 @@ Graph:
       is: List
       of: EdgeDescriptor
       by: EdgesDefiner
+
+
+################################################################
 
 
 Feature:
@@ -62,14 +68,37 @@ Feature:
       by: Self
 
 
+################################################################
+
+
 Filter:
   abstract: true
   is: Document
-  class: tech.kzen.auto.common.objects.document.filter.FilterDocument
+#  class: tech.kzen.auto.common.objects.document.filter.FilterDocument
+  class: tech.kzen.auto.server.objects.filter.FilterDocument
   title: "Data Filter"
   icon: FilterList
-  directory: true
+  input: path/to/input.csv
   output: work/out.csv
+  criteria: {}
   meta:
     input: String
     output: String
+    criteria:
+      is: CriteriaSpec
+      by: CriteriaSpecDefiner
+#      creator: CriteriaSpecCreator
+
+
+CriteriaSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.filter.CriteriaSpec
+
+
+CriteriaSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.filter.CriteriaSpecDefiner
+
+#CriteriaSpecCreator:
+#  class: tech.kzen.auto.common.objects.document.filter.CriteriaSpecCreator
+
+

@@ -13,7 +13,7 @@ class ValueSummaryBuilder {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val maxNumericBuckets = 100
-        private const val maxNominalBuckets = 100
+        private const val maxNominalBuckets = 1000
         private const val maxSampleSize = 100
         private const val nominalOther = "<other>"
     }

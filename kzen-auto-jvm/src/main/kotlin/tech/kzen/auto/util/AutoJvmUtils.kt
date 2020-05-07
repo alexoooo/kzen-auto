@@ -5,7 +5,14 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 
-object AutoJvmUtils {
+object AutoJvmUtils
+{
+    fun sanitizeFilename(filenameFragment: String): String {
+        return filenameFragment
+            .replace(Regex("\\W+"), "_")
+    }
+
+
     fun parsePath(asString: String): Path? {
         try {
             return Paths.get(asString)

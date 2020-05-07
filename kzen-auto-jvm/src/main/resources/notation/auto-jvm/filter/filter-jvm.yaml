@@ -1,13 +1,13 @@
 
 
-ColumnListing:
-  class: tech.kzen.auto.server.objects.filter.ColumnListing
-
-
-ApplyFilter:
-  class: tech.kzen.auto.server.objects.filter.ApplyFilter
-
-
-ColumnDomain:
-  class: tech.kzen.auto.server.objects.filter.ColumnDomain
+#ColumnListing:
+#  class: tech.kzen.auto.server.objects.filter.ColumnListing
+#
+#
+#ApplyFilter:
+#  class: tech.kzen.auto.server.objects.filter.ApplyFilter
+#
+#
+#ColumnDomain:
+#  class: tech.kzen.auto.server.objects.filter.ColumnDomain
 

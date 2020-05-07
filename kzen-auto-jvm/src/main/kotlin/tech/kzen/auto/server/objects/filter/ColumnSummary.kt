@@ -3,26 +3,17 @@ package tech.kzen.auto.server.objects.filter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
-import tech.kzen.auto.common.objects.document.filter.FilterDocument
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
-import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
 import tech.kzen.auto.common.paradigm.reactive.NumericValueSummary
 import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
 import tech.kzen.auto.common.paradigm.reactive.ValueSummary
 import tech.kzen.auto.server.objects.filter.model.ValueSummaryBuilder
 import tech.kzen.auto.util.AutoJvmUtils
-import tech.kzen.lib.common.reflect.Reflect
 import java.nio.file.Files
 import java.nio.file.Path
 
 
-@Reflect
-object ColumnDomain: DetachedAction {
+object ColumnSummary {
     //-----------------------------------------------------------------------------------------------------------------
     private const val summaryCsvFilename = "summary.csv"
     private const val nominalCsvFilename = "nominal.csv"
@@ -31,50 +22,18 @@ object ColumnDomain: DetachedAction {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun execute(request: DetachedRequest): ExecutionResult {
-        val input = request.parameters.get(FilterDocument.inputKey)
-                ?: return ExecutionFailure("'${FilterDocument.inputKey}' required")
-
-        val columnIndexValue = request.parameters.get(FilterDocument.indexKey)
-                ?: return ExecutionFailure("'${FilterDocument.indexKey}' required")
-
-        val columnIndex = columnIndexValue.toIntOrNull()
-                ?: return ExecutionFailure("'${FilterDocument.indexKey}' not an int")
-
-        val parsedPath = AutoJvmUtils.parsePath(input)
-                ?: return ExecutionFailure("Invalid input: $input")
-
-        val inputPath = parsedPath.toAbsolutePath().normalize()
-
-        if (! Files.isRegularFile(inputPath)) {
-            return ExecutionFailure("'input' not a regular file: $inputPath")
-        }
-
-        val columnNames = ColumnListing.columnNames(inputPath)
-
-        val summary = getValueSummary(inputPath, columnIndex, columnNames)
-
-        return ExecutionSuccess.ofValue(
-                ExecutionValue.of(summary.toCollection()))
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun getValueSummary(
+    suspend fun getValueSummary(
         inputPath: Path,
-        columnIndex: Int,
-        columnNames: List<String>
+        columnName: String
     ): ValueSummary {
-        val columnDirName = columnNames[columnIndex]
-            .replace(Regex("\\W+"), "_")
-
+        val columnDirName = AutoJvmUtils.sanitizeFilename(columnName)
         val columnDir = FilterIndex.inputIndexPath(inputPath).resolve(columnDirName)
 
         return if (Files.exists(columnDir)) {
             loadValueSummary(columnDir)
         }
         else {
-            val valueSummary = buildValueSummary(inputPath, columnIndex)
+            val valueSummary = buildValueSummary(inputPath, columnName)
             saveValueSummary(valueSummary, columnDir)
             return valueSummary
         }
@@ -259,21 +218,21 @@ object ColumnDomain: DetachedAction {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun buildValueSummary(path: Path, columnIndex: Int): ValueSummary {
+    private suspend fun buildValueSummary(
+        path: Path,
+        columnName: String
+    ): ValueSummary {
         val builder = ValueSummaryBuilder()
 
         withContext(Dispatchers.IO) {
             Files.newBufferedReader(path).use {
-                val csvParser = CSVFormat.DEFAULT.parse(it).iterator()
-
-                // header
-                if (csvParser.hasNext()) {
-                    csvParser.next()
-                }
+                val csvParser = CSVFormat.DEFAULT
+                    .withFirstRecordAsHeader()
+                    .parse(it).iterator()
 
                 while (csvParser.hasNext()) {
                     val record = csvParser.next()
-                    val value = record.get(columnIndex)
+                    val value = record.get(columnName)
                     builder.add(value)
                 }
             }

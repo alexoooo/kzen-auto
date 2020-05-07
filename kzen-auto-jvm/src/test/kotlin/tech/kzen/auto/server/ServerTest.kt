@@ -1,5 +1,5 @@
-//package tech.kzen.auto.server
-//
+package tech.kzen.auto.server
+
 //import tech.kzen.auto.common.getAnswerFoo
 //import org.junit.Assert.assertEquals
 ////import tech.kzen.lib.server.notation.GradleNotationMedia

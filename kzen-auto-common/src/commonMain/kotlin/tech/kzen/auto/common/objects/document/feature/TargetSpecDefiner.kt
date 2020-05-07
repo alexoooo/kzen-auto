@@ -17,10 +17,10 @@ class TargetSpecDefiner: AttributeDefiner {
     companion object {
         val targetAttributeName = AttributeName("target")
 
-        val typeKey = "type"
+        const val typeKey = "type"
         val typeSegment = AttributeSegment.ofKey(typeKey)
 
-        val valueKey = "value"
+        const val valueKey = "value"
         val valueSegment = AttributeSegment.ofKey(valueKey)
     }
 

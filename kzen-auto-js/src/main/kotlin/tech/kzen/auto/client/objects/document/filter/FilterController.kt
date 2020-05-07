@@ -14,15 +14,13 @@ import tech.kzen.auto.client.wrap.CropperWrapper
 import tech.kzen.auto.client.wrap.MaterialFab
 import tech.kzen.auto.client.wrap.PlayArrowIcon
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.filter.FilterDocument
+import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
+import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.reactive.ValueSummary
-import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.obj.ObjectNesting
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 
@@ -34,24 +32,6 @@ class FilterController(
         RPureComponent<FilterController.Props, FilterController.State>(props),
         SessionGlobal.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val filterJvmPath = DocumentPath.parse("auto-jvm/filter/filter-jvm.yaml")
-
-        val columnListingLocation = ObjectLocation(
-                filterJvmPath,
-                ObjectPath(ObjectName("ColumnListing"), ObjectNesting.root))
-
-        val applyFilterLocation = ObjectLocation(
-                filterJvmPath,
-                ObjectPath(ObjectName("ApplyFilter"), ObjectNesting.root))
-
-        val columnDomainLocation = ObjectLocation(
-                filterJvmPath,
-                ObjectPath(ObjectName("ColumnDomain"), ObjectNesting.root))
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     class Props: RProps
 
@@ -151,14 +131,14 @@ class FilterController(
         }
         else if (columnListing != null && prevState.columnListing == null) {
             if (columnListing.isNotEmpty()) {
-                requestNextColumn(mainLocation()!!, clientState, 0)
+                requestNextColumn(mainLocation()!!, clientState, columnListing[0])
             }
         }
         else if (state.columnDetails?.size != prevState.columnDetails?.size &&
                 state.columnDetails?.size ?: 0 < columnListing?.size ?: 0)
         {
             val nextIndex = state.columnDetails!!.size
-            requestNextColumn(mainLocation()!!, clientState, nextIndex)
+            requestNextColumn(mainLocation()!!, clientState, columnListing!![nextIndex])
         }
     }
 
@@ -173,18 +153,12 @@ class FilterController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun getColumnListing(clientState: SessionState) {
-        val graphStructure = clientState.graphStructure()
-
-        val inputValue = graphStructure
-                .graphNotation
-                .transitiveAttribute(mainLocation()!!, FilterDocument.inputAttribute)
-                ?.asString()
-                ?: return
+        val mainLocation = mainLocation()!!
 
         async {
-            val result= ClientContext.restClient.performDetached(
-                    columnListingLocation,
-                    FilterDocument.inputAttribute.value to inputValue)
+            val result = ClientContext.restClient.performDetached(
+                mainLocation,
+                FilterConventions.actionParameter to FilterConventions.actionColumns)
 
             when (result) {
                 is ExecutionSuccess -> {
@@ -215,29 +189,14 @@ class FilterController(
             return
         }
 
-        val graphStructure = clientState.graphStructure()
-
-        val inputValue = graphStructure
-                .graphNotation
-                .transitiveAttribute(mainLocation, FilterDocument.inputAttribute)
-                ?.asString()
-                ?: return
-
-        val outputValue = graphStructure
-                .graphNotation
-                .transitiveAttribute(mainLocation, FilterDocument.outputAttribute)
-                ?.asString()
-                ?: return
-
         setState {
             writingOutput = true
         }
 
         async {
             val result = ClientContext.restClient.performDetached(
-                    applyFilterLocation,
-                    FilterDocument.inputKey to inputValue,
-                    FilterDocument.outputKey to outputValue)
+                mainLocation,
+                FilterConventions.actionParameter to FilterConventions.actionApply)
 
             when (result) {
                 is ExecutionSuccess -> {
@@ -263,24 +222,13 @@ class FilterController(
     private fun requestNextColumn(
             mainLocation: ObjectLocation,
             clientState: SessionState,
-            columnIndex: Int
+            columnName: String
     ) {
-//        val columnListing = state.columnListing
-//                ?: return
-
-        val graphStructure = clientState.graphStructure()
-
-        val inputValue = graphStructure
-                .graphNotation
-                .transitiveAttribute(mainLocation, FilterDocument.inputAttribute)
-                ?.asString()
-                ?: return
-
         async {
             val result = ClientContext.restClient.performDetached(
-                    columnDomainLocation,
-                    FilterDocument.inputKey to inputValue,
-                    FilterDocument.indexKey to columnIndex.toString())
+                mainLocation,
+                FilterConventions.actionParameter to FilterConventions.actionSummary,
+                FilterConventions.columnKey to columnName)
 
             when (result) {
                 is ExecutionSuccess -> {
@@ -340,7 +288,7 @@ class FilterController(
 
             renderSpacing()
 
-            renderFilters()
+            renderFilters(mainLocation, clientState)
         }
 
         renderRun(mainLocation, clientState)
@@ -365,7 +313,7 @@ class FilterController(
             attrs {
                 this.clientState = clientState
                 objectLocation = mainLocation
-                attributeName = FilterDocument.inputAttribute
+                attributeName = FilterConventions.inputAttribute
             }
         }
     }
@@ -379,7 +327,7 @@ class FilterController(
             attrs {
                 this.clientState = clientState
                 objectLocation = mainLocation
-                attributeName = FilterDocument.outputAttribute
+                attributeName = FilterConventions.outputAttribute
             }
         }
     }
@@ -414,13 +362,23 @@ class FilterController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderFilters() {
+    private fun RBuilder.renderFilters(
+        mainLocation: ObjectLocation,
+        clientState: SessionState
+    ) {
         val columnListing = state.columnListing
 
         if (columnListing == null) {
             +"..."
             return
         }
+
+        val criteriaDefinition = clientState
+            .graphDefinitionAttempt
+            .successful
+            .objectDefinitions[mainLocation]!!
+            .attributeDefinitions[FilterConventions.criteriaAttributeName]!!
+        val criteriaSpec = (criteriaDefinition as ValueAttributeDefinition).value as CriteriaSpec
 
         val columnDetails = state.columnDetails
 
@@ -432,11 +390,17 @@ class FilterController(
                     marginBottom = 1.em
                 }
 
+                // val graphStructure = clientState.graphStructure()
+                val columnName = columnListing[index]
+
                 child(ColumnFilter::class) {
                     attrs {
-                        clientState = state.clientState!!
+                        this.mainLocation = mainLocation
+                        this.clientState = clientState
+                        this.criteriaSpec = criteriaSpec
+
                         columnIndex = index
-                        columnHeader = columnListing[index]
+                        columnHeader = columnName
                         valueSummary =
                             if (columnDetails?.size ?: 0 > index) {
                                 columnDetails!![index]

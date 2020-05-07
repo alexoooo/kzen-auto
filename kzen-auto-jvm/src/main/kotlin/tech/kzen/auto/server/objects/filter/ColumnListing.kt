@@ -4,45 +4,14 @@ import com.google.common.io.MoreFiles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
-import tech.kzen.auto.common.objects.document.filter.FilterDocument
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
-import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
-import tech.kzen.auto.util.AutoJvmUtils
-import tech.kzen.lib.common.reflect.Reflect
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
 
-@Reflect
-object ColumnListing: DetachedAction {
+object ColumnListing {
     //-----------------------------------------------------------------------------------------------------------------
     private const val columnsCsvFilename = "columns.csv"
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun execute(request: DetachedRequest): ExecutionResult {
-        val input = request.parameters.get(FilterDocument.inputKey)
-                ?: return ExecutionFailure("'input' required")
-
-        val parsedPath = AutoJvmUtils.parsePath(input)
-                ?: return ExecutionFailure("Invalid input: $input")
-
-        val path = parsedPath.toAbsolutePath().normalize()
-
-        if (! Files.isRegularFile(path)) {
-            return ExecutionFailure("'input' not a regular file: $path")
-        }
-
-        val columnNames = columnNames(path)
-
-        return ExecutionSuccess.ofValue(
-                ExecutionValue.of(columnNames))
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -53,10 +22,9 @@ object ColumnListing: DetachedAction {
         if (Files.exists(columnsFile)) {
             return withContext(Dispatchers.IO) {
                 Files.newBufferedReader(columnsFile).use { reader ->
-                    val parser = CSVFormat.DEFAULT.parse(reader)
-
-                    // NB: skip header
-                    parser.iterator().next()
+                    val parser = CSVFormat.DEFAULT
+                        .withFirstRecordAsHeader()
+                        .parse(reader)
 
                     parser.map { it[1] }
                 }

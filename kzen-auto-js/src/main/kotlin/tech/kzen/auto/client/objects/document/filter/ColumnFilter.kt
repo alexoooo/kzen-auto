@@ -7,13 +7,29 @@ import react.RPureComponent
 import react.RState
 import react.dom.*
 import styled.*
+import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.MaterialCardContent
+import tech.kzen.auto.client.wrap.MaterialCheckbox
 import tech.kzen.auto.client.wrap.MaterialPaper
+import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
+import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
 import tech.kzen.auto.common.paradigm.reactive.NumericValueSummary
 import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
 import tech.kzen.auto.common.paradigm.reactive.ValueSummary
+import tech.kzen.lib.common.model.attribute.AttributeNesting
+import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.PositionIndex
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.InsertMapEntryInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveInAttributeCommand
+import tech.kzen.lib.platform.collect.persistentListOf
 
 
 class ColumnFilter(
@@ -30,17 +46,73 @@ class ColumnFilter(
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
+        var mainLocation: ObjectLocation,
         var clientState: SessionState,
+        var criteriaSpec: CriteriaSpec,
 
         var columnIndex: Int,
         var columnHeader: String,
         var valueSummary: ValueSummary?
-    ) : RProps
+    ): RProps
 
 
     class State(
 
-    ) : RState
+    ): RState
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onCriteriaChange(
+        value: String,
+//        previousChecked: Boolean,
+        columnRequired: Set<String>
+    ) {
+        val valueIndex = columnRequired.indexOf(value)
+        val columnAttributeSegment = AttributeSegment.ofKey(props.columnHeader)
+        val columnRequiredPath = AttributePath(
+            FilterConventions.criteriaAttributeName,
+            AttributeNesting(persistentListOf(columnAttributeSegment)))
+
+        async {
+            if (valueIndex == -1) {
+                if (columnRequired.isEmpty()) {
+                    ClientContext.mirroredGraphStore.apply(
+                        InsertMapEntryInAttributeCommand(
+                            props.mainLocation,
+                            columnRequiredPath.parent(),
+                            PositionIndex(0),
+                            columnAttributeSegment,
+                            ListAttributeNotation(
+                                persistentListOf(ScalarAttributeNotation(value))
+                            )
+                        ))
+                }
+                else {
+                    ClientContext.mirroredGraphStore.apply(
+                        InsertListItemInAttributeCommand(
+                            props.mainLocation,
+                            columnRequiredPath,
+                            PositionIndex(columnRequired.size),
+                            ScalarAttributeNotation(value)))
+                }
+            }
+            else {
+                if (columnRequired.size == 1) {
+                    ClientContext.mirroredGraphStore.apply(
+                        RemoveInAttributeCommand(
+                            props.mainLocation,
+                            columnRequiredPath))
+                }
+                else {
+                    val itemPath = columnRequiredPath.nesting.push(AttributeSegment.ofIndex(valueIndex))
+                    ClientContext.mirroredGraphStore.apply(
+                        RemoveInAttributeCommand(
+                            props.mainLocation,
+                            columnRequiredPath.copy(nesting = itemPath)))
+                }
+            }
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -91,7 +163,7 @@ class ColumnFilter(
                     fontSize = 2.em
                 }
 
-                +"${props.columnIndex + 1} - ${props.columnHeader}"
+                +"#${props.columnIndex + 1} ${props.columnHeader}"
             }
 
             styledDiv {
@@ -153,7 +225,7 @@ class ColumnFilter(
                                 top = 0.px
                                 backgroundColor = Color.white
                             }
-                            +"[x]"
+                            +"Filter"
                         }
                         styledTh {
                             css {
@@ -176,11 +248,23 @@ class ColumnFilter(
 
                 tbody {
                     for (e in histogram.histogram.entries) {
+                        val columnRequired = props.criteriaSpec.columnRequiredValues[props.columnHeader]
+                            ?: setOf()
+                        val checked = columnRequired.contains(e.key)
+
                         tr {
                             key = e.key
 
                             td {
-                                +"[ ]"
+                                child(MaterialCheckbox::class) {
+                                    attrs {
+                                        this.checked = checked
+
+                                        onChange = {
+                                            onCriteriaChange(e.key, columnRequired)
+                                        }
+                                    }
+                                }
                             }
 
                             td {
