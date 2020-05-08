@@ -16,6 +16,82 @@ class ValueSummaryBuilder {
         private const val maxNominalBuckets = 1000
         private const val maxSampleSize = 100
         private const val nominalOther = "<other>"
+
+
+        fun merge(a: ValueSummary, b: ValueSummary): ValueSummary {
+            return ValueSummary(
+                a.count + b.count,
+                mergeNominal(a.nominalValueSummary, b.nominalValueSummary),
+                mergeNumeric(a.numericValueSummary, b.numericValueSummary),
+                mergeOpaque(a.opaqueValueSummary, b.opaqueValueSummary)
+            )
+        }
+
+
+        private fun mergeNominal(a: NominalValueSummary, b: NominalValueSummary): NominalValueSummary {
+            val builder = a.histogram.toMutableMap()
+            for (e in b.histogram) {
+                val existingCount = a.histogram[e.key] ?: 0
+                builder[e.key] = e.value + existingCount
+            }
+            return NominalValueSummary(builder)
+        }
+
+
+        private fun mergeNumeric(a: NumericValueSummary, b: NumericValueSummary): NumericValueSummary {
+            // TODO: use HDR histogram?
+
+            val builder = a.density.toMutableMap()
+
+            fun intersect(start: Double, end: Double): Boolean {
+                return builder.any { it.key.start <= end && it.key.endInclusive >= start }
+            }
+
+            for (e in b.density) {
+                val existingCount = a.density[e.key] ?: 0
+                if (existingCount != 0L) {
+                    builder[e.key] = e.value + existingCount
+                }
+                else {
+                    val start = e.key.start
+                    val end = e.key.endInclusive
+                    if (! intersect(start, end)) {
+                        builder[e.key] = e.value
+                    }
+                    else {
+                        val mid = (start + end) / 2
+                        val container =
+                            builder.filter { it.key.contains(mid) }.keys.firstOrNull()
+                        if (container != null) {
+                            builder[container] = builder[container]!! + e.value
+                        }
+                        else {
+                            builder[start.rangeTo(end)] = e.value
+                        }
+                    }
+                }
+            }
+            return NumericValueSummary(builder)
+        }
+
+
+        private fun mergeOpaque(a: OpaqueValueSummary, b: OpaqueValueSummary): OpaqueValueSummary {
+            val builder = a.sample.toMutableList()
+
+            val iterator = b.sample.iterator()
+            while (iterator.hasNext()) {
+                val next = iterator.next()
+                if (builder.size < maxSampleSize) {
+                    builder.add(next)
+                }
+                else {
+                    val randomIndex = (Math.random() * builder.size).toInt()
+                    builder[randomIndex] = next
+                }
+            }
+
+            return OpaqueValueSummary(builder.toSet())
+        }
     }
 
 

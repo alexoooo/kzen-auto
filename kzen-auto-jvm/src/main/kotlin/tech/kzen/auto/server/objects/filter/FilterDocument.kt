@@ -11,7 +11,6 @@ import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.util.AutoJvmUtils
 import tech.kzen.lib.common.reflect.Reflect
-import java.nio.file.Files
 import java.nio.file.Path
 
 
@@ -29,21 +28,21 @@ class FilterDocument(
         val action = request.parameters.get(FilterConventions.actionParameter)
             ?: return ExecutionFailure("'${FilterConventions.actionParameter}' expected")
 
-        val inputPath = inputPath()
+        val inputPaths = inputPaths()
             ?: return ExecutionFailure("Please provide a valid input path")
 
         return when (action) {
             FilterConventions.actionColumns ->
-                actionColumnListing(inputPath)
+                actionColumnListing(inputPaths)
 
             FilterConventions.actionSummary ->
-                actionColumnSummary(inputPath, request)
+                actionColumnSummary(inputPaths, request)
 
             FilterConventions.actionApply ->
-                actionApplyFilter(inputPath)
+                actionApplyFilter(inputPaths)
 
             FilterConventions.actionFiles ->
-                TODO()
+                actionListFiles(inputPaths)
 
             else ->
                 return ExecutionFailure("Unknown action: $action")
@@ -52,36 +51,39 @@ class FilterDocument(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun inputPath(): Path? {
-        val parsedInputPath = AutoJvmUtils.parsePath(input)
-            ?: return null
-
-        val inputPath = parsedInputPath.toAbsolutePath().normalize()
-
-        if (! Files.isRegularFile(inputPath)) {
-            return null
-        }
-
-        return inputPath
+    private suspend fun inputPaths(): List<Path>? {
+        return FileListing.list(input)
+//
+//        val parsedInputPath = AutoJvmUtils.parsePath(input)
+//            ?: return null
+//
+//        val inputPath = parsedInputPath.toAbsolutePath().normalize()
+//
+//        if (! Files.isRegularFile(inputPath)) {
+//            return null
+//        }
+//
+//        return inputPath
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun actionColumnListing(inputPath: Path): ExecutionResult {
-        val columnNames = ColumnListing.columnNames(inputPath)
+    private suspend fun actionColumnListing(inputPaths: List<Path>): ExecutionResult {
+        val columnNames = ColumnListing.columnNamesMerge(inputPaths)
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(columnNames))
     }
 
 
     private suspend fun actionColumnSummary(
-        inputPath: Path,
+        inputPaths: List<Path>,
         request: DetachedRequest
     ): ExecutionResult {
         val columnName = request.parameters.get(FilterConventions.columnKey)
             ?: return ExecutionFailure("'${FilterConventions.columnKey}' required")
 
-        val summary = ColumnSummary.getValueSummary(inputPath, columnName)
+        val summary = ColumnSummary.summarizeAll(
+            inputPaths, columnName)
 
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(summary.toCollection()))
@@ -89,13 +91,24 @@ class FilterDocument(
 
 
     private suspend fun actionApplyFilter(
-        inputPath: Path
+        inputPaths: List<Path>
     ): ExecutionResult {
         val parsedOutputPath = AutoJvmUtils.parsePath(output)
             ?: return ExecutionFailure("Invalid output: $output")
 
         val outputPath = parsedOutputPath.toAbsolutePath().normalize()
 
-        return ApplyFilter.applyFilter(inputPath, outputPath)
+        val columnNames = ColumnListing.columnNamesMerge(inputPaths)
+
+        return ApplyFilter.applyFilter(
+            inputPaths, columnNames, outputPath, criteria)
+    }
+
+
+    private fun actionListFiles(
+        inputPaths: List<Path>
+    ): ExecutionResult {
+        return ExecutionSuccess.ofValue(ExecutionValue.of(
+            inputPaths.map { it.toString() }))
     }
 }

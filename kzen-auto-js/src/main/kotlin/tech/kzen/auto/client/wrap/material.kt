@@ -318,3 +318,9 @@ external interface CheckboxProps: RProps {
     var checked: Boolean
     var onChange: (e: Event) -> Unit
 }
+
+
+@JsName("CircularProgress")
+external class MaterialCircularProgress: Component<RProps, RState> {
+    override fun render(): ReactElement?
+}

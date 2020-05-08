@@ -8,6 +8,12 @@ data class ValueSummary(
     val opaqueValueSummary: OpaqueValueSummary
 ) {
     companion object {
+        val empty = ValueSummary(
+            0,
+            NominalValueSummary.empty,
+            NumericValueSummary.empty,
+            OpaqueValueSummary.empty)
+
         private const val countKey = "count"
         private const val nominalKey = "nominal"
         private const val numericKey = "numeric"

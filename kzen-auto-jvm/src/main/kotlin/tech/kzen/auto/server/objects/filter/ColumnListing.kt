@@ -1,10 +1,8 @@
 package tech.kzen.auto.server.objects.filter
 
-import com.google.common.io.MoreFiles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -15,6 +13,20 @@ object ColumnListing {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    suspend fun columnNamesMerge(inputPaths: List<Path>): List<String> {
+        val builder = mutableListOf<String>()
+        for (inputPath in inputPaths) {
+            val columns = columnNames(inputPath)
+            for (column in columns) {
+                if (column !in builder) {
+                    builder.add(column)
+                }
+            }
+        }
+        return builder
+    }
+
+
     suspend fun columnNames(inputPath: Path): List<String> {
         val inputIndexPath = FilterIndex.inputIndexPath(inputPath)
         val columnsFile = inputIndexPath.resolve(columnsCsvFilename)
@@ -31,21 +43,17 @@ object ColumnListing {
             }
         }
 
-        val firstLine= withContext(Dispatchers.IO) {
-            @Suppress("UnstableApiUsage")
-            MoreFiles
-                .asCharSource(inputPath, StandardCharsets.UTF_8)
-                .readFirstLine()
-        } ?: return listOf()
+        val columnNames = FileStreamer.open(inputPath)?.use { stream ->
+            stream.header()
+        } ?: throw IllegalArgumentException("Not found: $inputPath")
 
-        val columnNames = firstLine.split(",")
+        val csvBody = columnNames
+            .withIndex()
+            .joinToString("\n") {
+                CSVFormat.DEFAULT.format(it.index, it.value)
+            }
 
-        val csvFile = "Number,Name\n" +
-                columnNames
-                    .withIndex()
-                    .joinToString("\n") {
-                        CSVFormat.DEFAULT.format(it.index, it.value)
-                    }
+        val csvFile = "Number,Name\n$csvBody"
 
         withContext(Dispatchers.IO) {
             Files.writeString(columnsFile, csvFile)

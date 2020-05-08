@@ -10,10 +10,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.CropperWrapper
-import tech.kzen.auto.client.wrap.MaterialFab
-import tech.kzen.auto.client.wrap.PlayArrowIcon
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
@@ -40,6 +37,9 @@ class FilterController(
             var clientState: SessionState?,
 
             var error: String?,
+
+            var fileListingLoading: Boolean,
+            var fileListing: List<String>?,
 
             var columnListingLoading: Boolean,
             var columnListing: List<String>?,
@@ -85,6 +85,9 @@ class FilterController(
 
         error = null
 
+        fileListingLoading = false
+        fileListing = null
+
         columnListingLoading = false
         columnListing = null
 
@@ -116,11 +119,13 @@ class FilterController(
             return
         }
 
-        val clientState = state.clientState
-                ?: return
+        // TODO
+//        if (state.fileListingLoading && ! prevState.fileListingLoading) {
+//            getFileListing()
+//        }
 
         if (state.columnListingLoading && ! prevState.columnListingLoading) {
-            getColumnListing(clientState)
+            getColumnListing()
         }
 
         val columnListing = state.columnListing
@@ -131,14 +136,14 @@ class FilterController(
         }
         else if (columnListing != null && prevState.columnListing == null) {
             if (columnListing.isNotEmpty()) {
-                requestNextColumn(mainLocation()!!, clientState, columnListing[0])
+                requestNextColumn(mainLocation()!!, columnListing[0])
             }
         }
         else if (state.columnDetails?.size != prevState.columnDetails?.size &&
                 state.columnDetails?.size ?: 0 < columnListing?.size ?: 0)
         {
             val nextIndex = state.columnDetails!!.size
-            requestNextColumn(mainLocation()!!, clientState, columnListing!![nextIndex])
+            requestNextColumn(mainLocation()!!, columnListing!![nextIndex])
         }
     }
 
@@ -152,7 +157,39 @@ class FilterController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun getColumnListing(clientState: SessionState) {
+    private fun getFileListing() {
+        val mainLocation = mainLocation()!!
+
+        async {
+            val result = ClientContext.restClient.performDetached(
+                mainLocation,
+                FilterConventions.actionParameter to FilterConventions.actionFiles)
+
+            when (result) {
+                is ExecutionSuccess -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val resultValue = result.value.get() as List<String>
+
+                    setState {
+                        fileListing = resultValue
+                    }
+                }
+
+                is ExecutionFailure -> {
+                    setState {
+                        error = result.errorMessage
+                    }
+                }
+            }
+
+            setState {
+                fileListingLoading = false
+            }
+        }
+    }
+
+
+    private fun getColumnListing() {
         val mainLocation = mainLocation()!!
 
         async {
@@ -184,7 +221,7 @@ class FilterController(
     }
 
 
-    private fun applyFilter(mainLocation: ObjectLocation, clientState: SessionState) {
+    private fun applyFilter(mainLocation: ObjectLocation) {
         if (state.writingOutput) {
             return
         }
@@ -221,7 +258,6 @@ class FilterController(
 
     private fun requestNextColumn(
             mainLocation: ObjectLocation,
-            clientState: SessionState,
             columnName: String
     ) {
         async {
@@ -462,14 +498,19 @@ class FilterController(
                 }
             }
 
-            child(PlayArrowIcon::class) {
-                attrs {
-                    style = reactStyle {
-                        fontSize = 3.em
-                    }
+            if (state.writingOutput) {
+                child(MaterialCircularProgress::class) {}
+            }
+            else {
+                child(PlayArrowIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
 
-                    onClick = {
-                        applyFilter(mainLocation, clientState)
+                        onClick = {
+                            applyFilter(mainLocation)
+                        }
                     }
                 }
             }

@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.filter
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.apache.commons.csv.CSVFormat
+import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
 import tech.kzen.auto.common.paradigm.reactive.NumericValueSummary
 import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
@@ -15,6 +15,9 @@ import java.nio.file.Path
 
 object ColumnSummary {
     //-----------------------------------------------------------------------------------------------------------------
+    private val logger = LoggerFactory.getLogger(ColumnSummary::class.java)
+
+
     private const val summaryCsvFilename = "summary.csv"
     private const val nominalCsvFilename = "nominal.csv"
     private const val numericCsvFilename = "numeric.csv"
@@ -22,6 +25,19 @@ object ColumnSummary {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    suspend fun summarizeAll(
+        inputPaths: List<Path>,
+        columnName: String
+    ): ValueSummary {
+        var builder = ValueSummary.empty
+        for (inputPath in inputPaths) {
+            val valueSummary = getValueSummary(inputPath, columnName)
+            builder = ValueSummaryBuilder.merge(builder, valueSummary)
+        }
+        return builder
+    }
+
+
     suspend fun getValueSummary(
         inputPath: Path,
         columnName: String
@@ -33,9 +49,16 @@ object ColumnSummary {
             loadValueSummary(columnDir)
         }
         else {
-            val valueSummary = buildValueSummary(inputPath, columnName)
-            saveValueSummary(valueSummary, columnDir)
-            return valueSummary
+            // TODO: avoid re-calculation on mis-matched columns
+
+            val valueSummaries = buildValueSummaries(inputPath)
+            for (e in valueSummaries) {
+                val saveColumnDirName = AutoJvmUtils.sanitizeFilename(e.key)
+                val saveColumnDir = FilterIndex.inputIndexPath(inputPath).resolve(saveColumnDirName)
+                saveValueSummary(e.value, saveColumnDir)
+            }
+            return valueSummaries[columnName]
+                ?: throw IllegalArgumentException("Not found: $inputPath - $columnName")
         }
     }
 
@@ -218,26 +241,37 @@ object ColumnSummary {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun buildValueSummary(
-        path: Path,
-        columnName: String
-    ): ValueSummary {
-        val builder = ValueSummaryBuilder()
+    private suspend fun buildValueSummaries(
+        inputPath: Path
+    ): Map<String, ValueSummary> {
+        logger.info("Summarizing columns: $inputPath")
+
+        val builders = mutableMapOf<String, ValueSummaryBuilder>()
 
         withContext(Dispatchers.IO) {
-            Files.newBufferedReader(path).use {
-                val csvParser = CSVFormat.DEFAULT
-                    .withFirstRecordAsHeader()
-                    .parse(it).iterator()
-
-                while (csvParser.hasNext()) {
-                    val record = csvParser.next()
-                    val value = record.get(columnName)
-                    builder.add(value)
+            FileStreamer.open(inputPath)!!.use { stream ->
+                for (columnName in stream.header()) {
+                    builders[columnName] = ValueSummaryBuilder()
                 }
+
+                var count = 0
+                while (stream.hasNext()) {
+                    count++
+                    if (count % 10_000 == 0) {
+                        logger.info("Summarized: $count")
+                    }
+
+                    val record = stream.next()
+                    for (columnName in stream.header()) {
+                        val value = record.get(columnName)!!
+                        builders[columnName]!!.add(value)
+                    }
+                }
+
+                logger.info("Finished file summary: $count")
             }
         }
 
-        return builder.build()
+        return builders.mapValues { it.value.build() }
     }
 }

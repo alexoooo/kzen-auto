@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVPrinter
+import tech.kzen.auto.util.AutoJvmUtils
 import tech.kzen.auto.util.WorkUtils
 import java.io.StringReader
 import java.io.StringWriter
@@ -19,10 +20,8 @@ object FilterIndex {
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun inputIndexPath(absoluteInputPath: Path): Path {
-        val indexSubPath = absoluteInputPath
-            .fileName
-            .toString()
-            .replace(Regex("\\W+"), "_")
+        val indexSubPath = AutoJvmUtils.sanitizeFilename(
+            absoluteInputPath.fileName.toString())
 
         val pathInWork = Paths.get("${indexDirName}/$indexSubPath")
         val workPath = WorkUtils.resolve(pathInWork)
