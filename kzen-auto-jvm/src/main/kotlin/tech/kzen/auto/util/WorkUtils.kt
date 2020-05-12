@@ -5,7 +5,8 @@ import java.nio.file.Paths
 
 
 object WorkUtils {
-    val workDir = Paths.get("work")
+    // NB: sibling to hide it from IDE
+    val workDir = Paths.get("../work")
 
 
     fun resolve(relativePath: Path): Path {

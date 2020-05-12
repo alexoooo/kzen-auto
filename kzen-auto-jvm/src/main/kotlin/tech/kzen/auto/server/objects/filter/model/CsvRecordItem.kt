@@ -15,6 +15,10 @@ class CsvRecordItem(
     }
 
     override fun get(columnName: String): String? {
+        if (! csvRecord.isMapped(columnName)) {
+            return null
+        }
+
         return csvRecord[columnName]
     }
 }

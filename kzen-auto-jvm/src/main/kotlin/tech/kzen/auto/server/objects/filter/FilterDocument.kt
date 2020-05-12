@@ -16,9 +16,9 @@ import java.nio.file.Path
 
 @Reflect
 class FilterDocument(
-        val input: String,
-        val output: String,
-        val criteria: CriteriaSpec
+        private val input: String,
+        private val output: String,
+        private val criteria: CriteriaSpec
 ):
     DocumentArchetype(),
     DetachedAction

@@ -13,7 +13,7 @@ class ValueSummaryBuilder {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val maxNumericBuckets = 100
-        private const val maxNominalBuckets = 1000
+        private const val maxNominalBuckets = 250
         private const val maxSampleSize = 100
         private const val nominalOther = "<other>"
 
@@ -214,7 +214,7 @@ class ValueSummaryBuilder {
         }
 
         if (numericHistogram.elementSet().size == 1) {
-            val singleValue = numericHistogram.single()
+            val singleValue = numericHistogram.elementSet().single()
             return NumericValueSummary(
                 mapOf(singleValue.rangeTo(singleValue) to numericHistogram.size.toLong()))
         }

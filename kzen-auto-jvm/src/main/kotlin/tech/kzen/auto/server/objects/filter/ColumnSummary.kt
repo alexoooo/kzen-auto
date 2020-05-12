@@ -52,6 +52,7 @@ object ColumnSummary {
             // TODO: avoid re-calculation on mis-matched columns
 
             val valueSummaries = buildValueSummaries(inputPath)
+
             for (e in valueSummaries) {
                 val saveColumnDirName = AutoJvmUtils.sanitizeFilename(e.key)
                 val saveColumnDir = FilterIndex.inputIndexPath(inputPath).resolve(saveColumnDirName)
@@ -257,7 +258,7 @@ object ColumnSummary {
                 var count = 0
                 while (stream.hasNext()) {
                     count++
-                    if (count % 10_000 == 0) {
+                    if (count % 100_000 == 0) {
                         logger.info("Summarized: $count")
                     }
 

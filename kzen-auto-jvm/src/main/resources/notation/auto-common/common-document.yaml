@@ -79,7 +79,7 @@ Filter:
   title: "Data Filter"
   icon: FilterList
   input: path/to/input.csv
-  output: work/out.csv
+  output: ../work/out.csv
   criteria: {}
   meta:
     input: String

@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.filter
 
+import com.google.common.collect.LinkedHashMultiset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
@@ -14,16 +15,15 @@ object ColumnListing {
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun columnNamesMerge(inputPaths: List<Path>): List<String> {
-        val builder = mutableListOf<String>()
+        val builder = LinkedHashMultiset.create<String>()
         for (inputPath in inputPaths) {
             val columns = columnNames(inputPath)
-            for (column in columns) {
-                if (column !in builder) {
-                    builder.add(column)
-                }
-            }
+            builder.addAll(columns)
         }
         return builder
+                .entrySet()
+                .filter { it.count == inputPaths.size }
+                .map { it.element }
     }
 
 

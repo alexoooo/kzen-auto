@@ -2,8 +2,11 @@ package tech.kzen.auto.client.objects.document.filter
 
 import kotlinx.css.*
 import react.*
+import react.dom.li
+import react.dom.ol
 import styled.css
 import styled.styledDiv
+import styled.styledSpan
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.DefaultAttributeEditor
 import tech.kzen.auto.client.service.ClientContext
@@ -119,13 +122,20 @@ class FilterController(
             return
         }
 
-        // TODO
-//        if (state.fileListingLoading && ! prevState.fileListingLoading) {
-//            getFileListing()
-//        }
+        if (state.fileListingLoading && ! prevState.fileListingLoading) {
+            getFileListing()
+        }
 
         if (state.columnListingLoading && ! prevState.columnListingLoading) {
             getColumnListing()
+        }
+
+        val fileListing = state.fileListing
+        if (fileListing == null && ! state.fileListingLoading) {
+            setState {
+                fileListingLoading = true
+            }
+            return
         }
 
         val columnListing = state.columnListing
@@ -133,13 +143,17 @@ class FilterController(
             setState {
                 columnListingLoading = true
             }
+            return
         }
-        else if (columnListing != null && prevState.columnListing == null) {
+
+        if (columnListing != null && prevState.columnListing == null) {
             if (columnListing.isNotEmpty()) {
                 requestNextColumn(mainLocation()!!, columnListing[0])
             }
+            return
         }
-        else if (state.columnDetails?.size != prevState.columnDetails?.size &&
+
+        if (state.columnDetails?.size != prevState.columnDetails?.size &&
                 state.columnDetails?.size ?: 0 < columnListing?.size ?: 0)
         {
             val nextIndex = state.columnDetails!!.size
@@ -292,11 +306,22 @@ class FilterController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun mainLocation(): ObjectLocation? {
-        return state
-                .clientState
-                ?.navigationRoute
-                ?.documentPath
-                ?.let { ObjectLocation(it, NotationConventions.mainObjectPath) }
+        val clientState = state.clientState
+                ?: return null
+
+        val documentPath = clientState
+                .navigationRoute
+                .documentPath
+                ?: return null
+
+        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
+                ?: return null
+
+        if (! FilterConventions.isFeature(documentNotation)) {
+            return null
+        }
+
+        return ObjectLocation(documentPath, NotationConventions.mainObjectPath)
     }
 
 
@@ -305,7 +330,8 @@ class FilterController(
         val clientState = state.clientState
                 ?: return
 
-        val mainLocation = mainLocation()!!
+        val mainLocation = mainLocation()
+                ?: return
 
         styledDiv {
             css {
@@ -313,21 +339,21 @@ class FilterController(
             }
 
             renderInput(mainLocation, clientState)
-
             renderSpacing()
 
             renderOutput(mainLocation, clientState)
-
             renderSpacing()
 
             renderProgress()
+            renderSpacing()
 
+            renderFiles()
             renderSpacing()
 
             renderFilters(mainLocation, clientState)
         }
 
-        renderRun(mainLocation, clientState)
+        renderRun(mainLocation)
     }
 
 
@@ -371,29 +397,81 @@ class FilterController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderProgress() {
-        val error = state.error
-        if (error != null) {
-            +"Error: $error"
-            return
-        }
+        styledDiv {
+            css {
+                fontSize = 2.em
+                fontFamily = "monospace"
+                fontWeight = FontWeight.bold
+                backgroundColor = Color("rgba(255, 255, 255, 0.5)")
+                padding(0.5.em)
+//                margin(1.em)
+            }
 
-        if (state.columnListingLoading) {
-            +"Working: listing columns"
-            return
-        }
+            +"Status -> "
 
-        if (state.writingOutput) {
-            +"Working: writing output"
-            return
-        }
+            val error = state.error
+            if (error != null) {
+                +"Error: $error"
+                return
+            }
 
-        val wrotePath = state.wroteOutputPath
-        if (wrotePath != null) {
-            +"Wrote: $wrotePath"
-            return
-        }
+            if (state.fileListingLoading) {
+                +"Working: listing files"
+                return
+            }
 
-        +"Showing columns"
+            if (state.columnListingLoading) {
+                +"Working: listing columns"
+                return
+            }
+
+            if (state.writingOutput) {
+                +"Working: writing output"
+                return
+            }
+
+            val wrotePath = state.wroteOutputPath
+            if (wrotePath != null) {
+                +"Wrote: $wrotePath"
+                return
+            }
+
+            +"Showing columns (${state.columnDetails?.size ?: 0} of ${state.columnListing?.size})"
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderFiles() {
+        val fileListing = state.fileListing
+
+        child(MaterialPaper::class) {
+            child(MaterialCardContent::class) {
+                styledSpan {
+                    css {
+                        fontSize = 2.em
+                    }
+
+                    +"Input Files"
+                }
+
+                if (fileListing == null) {
+                    +"..."
+                }
+                else {
+                    ol {
+                        for (filePath in fileListing) {
+                            li {
+                                attrs {
+                                    key = filePath
+                                }
+                                +filePath
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
 
@@ -433,7 +511,8 @@ class FilterController(
                     attrs {
                         this.mainLocation = mainLocation
                         this.clientState = clientState
-                        this.criteriaSpec = criteriaSpec
+//                        this.criteriaSpec = criteriaSpec
+                        this.requiredValues = criteriaSpec.columnRequiredValues[columnName]
 
                         columnIndex = index
                         columnHeader = columnName
@@ -453,8 +532,7 @@ class FilterController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderRun(
-            mainLocation: ObjectLocation,
-            clientState: SessionState
+            mainLocation: ObjectLocation
     ) {
         styledDiv {
             css {
@@ -465,14 +543,13 @@ class FilterController(
                 marginBottom = 2.em
             }
 
-            renderRunFab(mainLocation, clientState)
+            renderRunFab(mainLocation)
         }
     }
 
 
     private fun RBuilder.renderRunFab(
-            mainLocation: ObjectLocation,
-            clientState: SessionState
+            mainLocation: ObjectLocation
     ) {
         child(MaterialFab::class) {
             attrs {

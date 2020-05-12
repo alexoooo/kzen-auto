@@ -32,6 +32,8 @@ object ApplyFilter {
 
         logger.info("Starting: $outputPath | $criteriaSpec | $inputPaths")
 
+        val filterColumns = columnNames.intersect(criteriaSpec.columnRequiredValues.keys).toList()
+
         withContext(Dispatchers.IO) {
             Files.newBufferedWriter(outputPath).use { output ->
                 var first = true
@@ -39,7 +41,7 @@ object ApplyFilter {
                     logger.info("Reading: $inputPath")
 
                     FileStreamer.open(inputPath)!!.use { stream ->
-                        filterStream(stream, output, columnNames, criteriaSpec, first)
+                        filterStream(stream, output, columnNames, filterColumns, criteriaSpec, first)
                     }
 
                     first = false
@@ -57,6 +59,7 @@ object ApplyFilter {
         input: RecordStream,
         output: BufferedWriter,
         columnNames: List<String>,
+        filterColumns: List<String>,
         criteriaSpec: CriteriaSpec,
         writHeader: Boolean
     ) {
@@ -74,13 +77,17 @@ object ApplyFilter {
             val record = input.next()
 
             count++
-            if (count % 10_000 == 0) {
+            if (count % 100_000 == 0) {
                 logger.info("Processed $count, wrote $writtenCount")
             }
 
-            for (e in criteriaSpec.columnRequiredValues) {
-                val value = record.get(e.key)
-                if (! e.value.contains(value)) {
+            for (filterColumn in filterColumns) {
+                val value = record.get(filterColumn)
+
+                @Suppress("MapGetWithNotNullAssertionOperator")
+                val requiredValues = criteriaSpec.columnRequiredValues[filterColumn]!!
+
+                if (! requiredValues.contains(value)) {
                     continue@next_record
                 }
             }

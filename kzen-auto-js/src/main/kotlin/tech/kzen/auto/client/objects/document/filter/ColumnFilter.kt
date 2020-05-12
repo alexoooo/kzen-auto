@@ -13,7 +13,6 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.MaterialCardContent
 import tech.kzen.auto.client.wrap.MaterialCheckbox
 import tech.kzen.auto.client.wrap.MaterialPaper
-import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
 import tech.kzen.auto.common.paradigm.reactive.NumericValueSummary
@@ -48,7 +47,8 @@ class ColumnFilter(
     class Props(
         var mainLocation: ObjectLocation,
         var clientState: SessionState,
-        var criteriaSpec: CriteriaSpec,
+//        var criteriaSpec: CriteriaSpec,
+        var requiredValues: Set<String>?,
 
         var columnIndex: Int,
         var columnHeader: String,
@@ -248,7 +248,7 @@ class ColumnFilter(
 
                 tbody {
                     for (e in histogram.histogram.entries) {
-                        val columnRequired = props.criteriaSpec.columnRequiredValues[props.columnHeader]
+                        val columnRequired = props.requiredValues
                             ?: setOf()
                         val checked = columnRequired.contains(e.key)
 
