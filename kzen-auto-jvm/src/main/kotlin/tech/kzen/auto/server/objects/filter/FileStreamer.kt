@@ -10,27 +10,35 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.zip.GZIPInputStream
 
 
 object FileStreamer {
     fun open(inputPath: Path): RecordStream? {
+//        val filename = inputPath.fileName
         val extension = MoreFiles.getFileExtension(inputPath)
+        val withoutExtension = MoreFiles.getNameWithoutExtension(inputPath)
 
         var input: InputStream? = null
         var reader: BufferedReader? = null
         try {
+            val adjustedExtension: String
+            val rawInput = Files.newInputStream(inputPath)
+
             input =
                 if (extension == "gz") {
-                    GZIPInputStream(Files.newInputStream(inputPath))
+                    adjustedExtension = MoreFiles.getFileExtension(Paths.get(withoutExtension))
+                    GZIPInputStream(rawInput)
                 }
                 else {
-                    Files.newInputStream(inputPath)
+                    adjustedExtension = extension
+                    rawInput
                 }
 
             reader = BufferedReader(InputStreamReader(input!!))
 
-            return when (extension) {
+            return when (adjustedExtension) {
                 "csv" -> {
                     CsvRecordStream(CSVFormat
                         .DEFAULT

@@ -18,7 +18,6 @@ import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.reactive.ValueSummary
 import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -48,9 +47,9 @@ class FilterController(
             var columnListing: List<String>?,
 
             var writingOutput: Boolean,
-            var wroteOutputPath: String?,
+            var wroteOutputPath: String?//,
 
-            var columnDetails: List<ValueSummary>?
+//            var columnDetails: List<ValueSummary>?
     ): RState
 
 
@@ -97,7 +96,7 @@ class FilterController(
         writingOutput = false
         wroteOutputPath = null
 
-        columnDetails = null
+//        columnDetails = null
     }
 
 
@@ -146,19 +145,19 @@ class FilterController(
             return
         }
 
-        if (columnListing != null && prevState.columnListing == null) {
-            if (columnListing.isNotEmpty()) {
-                requestNextColumn(mainLocation()!!, columnListing[0])
-            }
-            return
-        }
+//        if (columnListing != null && prevState.columnListing == null) {
+//            if (columnListing.isNotEmpty()) {
+//                requestNextColumn(mainLocation()!!, columnListing[0])
+//            }
+//            return
+//        }
 
-        if (state.columnDetails?.size != prevState.columnDetails?.size &&
-                state.columnDetails?.size ?: 0 < columnListing?.size ?: 0)
-        {
-            val nextIndex = state.columnDetails!!.size
-            requestNextColumn(mainLocation()!!, columnListing!![nextIndex])
-        }
+//        if (state.columnDetails?.size != prevState.columnDetails?.size &&
+//                state.columnDetails?.size ?: 0 < columnListing?.size ?: 0)
+//        {
+//            val nextIndex = state.columnDetails!!.size
+//            requestNextColumn(mainLocation()!!, columnListing!![nextIndex])
+//        }
     }
 
 
@@ -265,40 +264,6 @@ class FilterController(
 
             setState {
                 writingOutput = false
-            }
-        }
-    }
-
-
-    private fun requestNextColumn(
-            mainLocation: ObjectLocation,
-            columnName: String
-    ) {
-        async {
-            val result = ClientContext.restClient.performDetached(
-                mainLocation,
-                FilterConventions.actionParameter to FilterConventions.actionSummary,
-                FilterConventions.columnKey to columnName)
-
-            when (result) {
-                is ExecutionSuccess -> {
-                    val columnDetails = state.columnDetails
-                            ?: emptyList()
-
-                    @Suppress("UNCHECKED_CAST")
-                    val valueSummary = ValueSummary.fromCollection(
-                        result.value.get() as Map<String, Any>)
-
-                    setState {
-                        this.columnDetails = columnDetails + valueSummary
-                    }
-                }
-
-                is ExecutionFailure -> {
-                    setState {
-                        error = result.errorMessage
-                    }
-                }
             }
         }
     }
@@ -436,7 +401,8 @@ class FilterController(
                 return
             }
 
-            +"Showing columns (${state.columnDetails?.size ?: 0} of ${state.columnListing?.size})"
+//            +"Showing columns (${state.columnDetails?.size ?: 0} of ${state.columnListing?.size})"
+            +"Showing columns (${state.columnListing?.size})"
         }
     }
 
@@ -447,25 +413,32 @@ class FilterController(
 
         child(MaterialPaper::class) {
             child(MaterialCardContent::class) {
-                styledSpan {
+                styledDiv {
                     css {
-                        fontSize = 2.em
+                        maxHeight = 20.em
+                        overflowY = Overflow.auto
                     }
 
-                    +"Input Files"
-                }
+                    styledSpan {
+                        css {
+                            fontSize = 2.em
+                        }
 
-                if (fileListing == null) {
-                    +"..."
-                }
-                else {
-                    ol {
-                        for (filePath in fileListing) {
-                            li {
-                                attrs {
-                                    key = filePath
+                        +"Input Files"
+                    }
+
+                    if (fileListing == null) {
+                        +"..."
+                    }
+                    else {
+                        ol {
+                            for (filePath in fileListing) {
+                                li {
+                                    attrs {
+                                        key = filePath
+                                    }
+                                    +filePath
                                 }
-                                +filePath
                             }
                         }
                     }
@@ -494,7 +467,7 @@ class FilterController(
             .attributeDefinitions[FilterConventions.criteriaAttributeName]!!
         val criteriaSpec = (criteriaDefinition as ValueAttributeDefinition).value as CriteriaSpec
 
-        val columnDetails = state.columnDetails
+//        val columnDetails = state.columnDetails
 
         for (index in columnListing.indices) {
             styledDiv {
@@ -515,14 +488,14 @@ class FilterController(
                         this.requiredValues = criteriaSpec.columnRequiredValues[columnName]
 
                         columnIndex = index
-                        columnHeader = columnName
-                        valueSummary =
-                            if (columnDetails?.size ?: 0 > index) {
-                                columnDetails!![index]
-                            }
-                            else {
-                                null
-                            }
+                        this.columnName = columnName
+//                        valueSummary =
+//                            if (columnDetails?.size ?: 0 > index) {
+//                                columnDetails!![index]
+//                            }
+//                            else {
+//                                null
+//                            }
                     }
                 }
             }

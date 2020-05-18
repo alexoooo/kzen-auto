@@ -246,28 +246,32 @@ class ClientRestApi(
             containingMap: AttributePath,
             indexInMap: PositionIndex,
             mapKey: AttributeSegment,
-            deparsedValueNotation: String
+            deparsedValueNotation: String,
+            createAncestorsIfAbsent: Boolean
     ): Digest {
         return getDigest(
-                CommonRestApi.commandAttributeInsertEntryIn,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                CommonRestApi.paramAttributePath to containingMap.asString(),
-                CommonRestApi.paramPositionIndex to indexInMap.asString(),
-                CommonRestApi.paramAttributeKey to mapKey.asKey(),
-                CommonRestApi.paramAttributeNotation to deparsedValueNotation)
+            CommonRestApi.commandAttributeInsertEntryIn,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributePath to containingMap.asString(),
+            CommonRestApi.paramPositionIndex to indexInMap.asString(),
+            CommonRestApi.paramAttributeKey to mapKey.asKey(),
+            CommonRestApi.paramAttributeNotation to deparsedValueNotation,
+            CommonRestApi.paramAttributeCreateContainer to createAncestorsIfAbsent.toString())
     }
 
 
     suspend fun removeInAttribute(
             objectLocation: ObjectLocation,
-            attributePath: AttributePath
+            attributePath: AttributePath,
+            removeContainerIfEmpty: Boolean
     ): Digest {
         return getDigest(
-                CommonRestApi.commandAttributeRemoveIn,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                CommonRestApi.paramAttributePath to attributePath.asString())
+            CommonRestApi.commandAttributeRemoveIn,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributePath to attributePath.asString(),
+            CommonRestApi.paramAttributeCleanupContainer to removeContainerIfEmpty.toString())
     }
 
 

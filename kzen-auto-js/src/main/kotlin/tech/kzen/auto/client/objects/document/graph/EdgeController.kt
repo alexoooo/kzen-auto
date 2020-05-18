@@ -91,7 +91,7 @@ class EdgeController(
                     props.attributeNesting)
 
             ClientContext.mirroredGraphStore.apply(RemoveInAttributeCommand(
-                    sourceMain, objectAttributePath))
+                    sourceMain, objectAttributePath, false))
         }
     }
 

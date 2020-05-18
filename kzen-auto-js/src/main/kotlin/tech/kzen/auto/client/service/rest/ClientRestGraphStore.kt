@@ -88,13 +88,18 @@ class ClientRestGraphStore(
             is InsertMapEntryInAttributeCommand -> {
                 val unparsed = notationParser.unparseAttribute(command.value)
                 restClient.insertMapEntryInAttribute(
-                        command.objectLocation, command.containingMap, command.indexInMap, command.mapKey, unparsed)
+                    command.objectLocation,
+                    command.containingMap,
+                    command.indexInMap,
+                    command.mapKey,
+                    unparsed,
+                    command.createAncestorsIfAbsent)
             }
 
 
             is RemoveInAttributeCommand ->
                 restClient.removeInAttribute(
-                        command.objectLocation, command.attributePath)
+                    command.objectLocation, command.attributePath, command.removeContainerIfEmpty)
 
 
             is ShiftInAttributeCommand ->

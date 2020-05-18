@@ -371,7 +371,20 @@ external class TransitEnterexitIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 
+
 @JsName("KeyboardReturn")
 external class KeyboardReturnIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("ExpandLess")
+external class ExpandLessIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("ExpandMore")
+external class ExpandMoreIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }

@@ -2,6 +2,7 @@
 const val kotlinVersion = "1.3.72"
 
 const val springBootVersion = "2.2.6.RELEASE"
+//const val springBootVersion = "2.3.0.RELEASE"
 const val dependencyManagementVersion = "1.0.9.RELEASE"
 
 const val coroutinesVersion = "1.3.5"
@@ -14,8 +15,8 @@ const val serializationVersion = "0.20.0"
 const val wrapperKotlinVersion = "pre.103-kotlin-1.3.72"
 //const val wrapperKotlinVersion = "pre.95-kotlin-1.4-M1"
 
-//const val kzenLibVersion = "0.13.7"
-const val kzenLibVersion = "0.14.0-SNAPSHOT"
+const val kzenLibVersion = "0.14.2"
+//const val kzenLibVersion = "0.14.3-SNAPSHOT"
 
 const val immutaleJsVersion = "3.8.2"
 const val dexxVersion = "0.7"

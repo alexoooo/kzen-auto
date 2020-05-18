@@ -411,13 +411,18 @@ class RestHandler {
         val valueNotation: AttributeNotation = serverRequest.getParam(
                 CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
 
+        val createAncestorsIfAbsent: Boolean = serverRequest
+            .tryGetParam(CommonRestApi.paramAttributeCreateContainer) { value -> value == "true" }
+            ?: false
+
         return applyAndDigest(
-                InsertMapEntryInAttributeCommand(
-                        ObjectLocation(documentPath, objectPath),
-                        containingMap,
-                        indexInMap,
-                        mapKey,
-                        valueNotation))
+            InsertMapEntryInAttributeCommand(
+                ObjectLocation(documentPath, objectPath),
+                containingMap,
+                indexInMap,
+                mapKey,
+                valueNotation,
+                createAncestorsIfAbsent))
     }
 
 
@@ -431,10 +436,15 @@ class RestHandler {
         val attributePath: AttributePath = serverRequest.getParam(
                 CommonRestApi.paramAttributePath, AttributePath.Companion::parse)
 
+        val removeContainerIfEmpty: Boolean = serverRequest
+            .tryGetParam(CommonRestApi.paramAttributeCleanupContainer) { i -> i == "true"}
+            ?: false
+
         return applyAndDigest(
-                RemoveInAttributeCommand(
-                        ObjectLocation(documentPath, objectPath),
-                        attributePath))
+            RemoveInAttributeCommand(
+                ObjectLocation(documentPath, objectPath),
+                attributePath,
+                removeContainerIfEmpty))
     }
 
 

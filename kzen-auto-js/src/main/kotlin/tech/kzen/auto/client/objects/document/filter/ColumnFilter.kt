@@ -1,19 +1,16 @@
 package tech.kzen.auto.client.objects.document.filter
 
 import kotlinx.css.*
-import react.RBuilder
-import react.RProps
-import react.RPureComponent
-import react.RState
+import react.*
 import react.dom.*
 import styled.*
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.MaterialCardContent
-import tech.kzen.auto.client.wrap.MaterialCheckbox
-import tech.kzen.auto.client.wrap.MaterialPaper
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
 import tech.kzen.auto.common.paradigm.reactive.NumericValueSummary
 import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
@@ -51,14 +48,43 @@ class ColumnFilter(
         var requiredValues: Set<String>?,
 
         var columnIndex: Int,
-        var columnHeader: String,
-        var valueSummary: ValueSummary?
+        var columnName: String//,
+//        var valueSummary: ValueSummary?
     ): RProps
 
 
     class State(
-
+        var open: Boolean,
+        var requested: Boolean,
+        var valueSummary: ValueSummary?,
+        var error: String?
     ): RState
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: Props) {
+        open = false
+        requested = false
+        valueSummary = null
+        error = null
+    }
+
+
+    override fun componentDidUpdate(
+        prevProps: Props,
+        prevState: State,
+        snapshot: Any
+    ) {
+        if (state.open && ! prevState.open && ! state.requested) {
+            setState {
+                requested = true
+            }
+        }
+
+        if (state.requested && ! prevState.requested) {
+            requestValueSummary()
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -68,7 +94,7 @@ class ColumnFilter(
         columnRequired: Set<String>
     ) {
         val valueIndex = columnRequired.indexOf(value)
-        val columnAttributeSegment = AttributeSegment.ofKey(props.columnHeader)
+        val columnAttributeSegment = AttributeSegment.ofKey(props.columnName)
         val columnRequiredPath = AttributePath(
             FilterConventions.criteriaAttributeName,
             AttributeNesting(persistentListOf(columnAttributeSegment)))
@@ -84,7 +110,8 @@ class ColumnFilter(
                             columnAttributeSegment,
                             ListAttributeNotation(
                                 persistentListOf(ScalarAttributeNotation(value))
-                            )
+                            ),
+                            true
                         ))
                 }
                 else {
@@ -97,20 +124,48 @@ class ColumnFilter(
                 }
             }
             else {
-                if (columnRequired.size == 1) {
-                    ClientContext.mirroredGraphStore.apply(
-                        RemoveInAttributeCommand(
-                            props.mainLocation,
-                            columnRequiredPath))
+                val itemPath = columnRequiredPath.nesting.push(AttributeSegment.ofIndex(valueIndex))
+                ClientContext.mirroredGraphStore.apply(
+                    RemoveInAttributeCommand(
+                        props.mainLocation,
+                        columnRequiredPath.copy(nesting = itemPath),
+                        true))
+            }
+        }
+    }
+
+
+    private fun requestValueSummary() {
+        async {
+            val result = ClientContext.restClient.performDetached(
+                props.mainLocation,
+                FilterConventions.actionParameter to FilterConventions.actionSummary,
+                FilterConventions.columnKey to props.columnName)
+
+            when (result) {
+                is ExecutionSuccess -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val valueSummary = ValueSummary.fromCollection(
+                        result.value.get() as Map<String, Any>)
+
+                    setState {
+                        this.valueSummary = valueSummary
+                    }
                 }
-                else {
-                    val itemPath = columnRequiredPath.nesting.push(AttributeSegment.ofIndex(valueIndex))
-                    ClientContext.mirroredGraphStore.apply(
-                        RemoveInAttributeCommand(
-                            props.mainLocation,
-                            columnRequiredPath.copy(nesting = itemPath)))
+
+                is ExecutionFailure -> {
+                    setState {
+                        error = result.errorMessage
+                    }
                 }
             }
+        }
+    }
+
+
+    private fun onOpenToggle() {
+        setState {
+            open = ! open
         }
     }
 
@@ -134,18 +189,28 @@ class ColumnFilter(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val valueSummary = props.valueSummary
+        val valueSummary = state.valueSummary
 
         child(MaterialPaper::class) {
-//            attrs {
-//                style = reactStyles
-//            }
-
             child(MaterialCardContent::class) {
                 renderCardHeader(valueSummary)
 
-                if (valueSummary != null) {
-                    renderCardContent(valueSummary)
+                val error = state.error
+                if (error != null) {
+                    div {
+                        +"Error: $error"
+                    }
+                }
+
+                val requiredValues = props.requiredValues
+                if (requiredValues != null) {
+                    div {
+                        +"Required values: ${requiredValues.joinToString()}"
+                    }
+                }
+
+                if (state.open) {
+                    renderCardBody(valueSummary)
                 }
             }
         }
@@ -153,58 +218,91 @@ class ColumnFilter(
 
 
     private fun RBuilder.renderCardHeader(valueSummary: ValueSummary?) {
-        styledDiv {
+        styledTable {
             css {
                 width = 100.pct
             }
 
-            styledSpan {
-                css {
-                    fontSize = 2.em
+            tr {
+                styledTd {
+                    css {
+                        width = 100.pct.minus(20.em)
+//                        backgroundColor = Color.blue
+                    }
+
+                    styledSpan {
+                        css {
+                            fontSize = 2.em
+                        }
+
+                        +"#${props.columnIndex + 1} ${props.columnName}"
+                    }
                 }
 
-                +"#${props.columnIndex + 1} ${props.columnHeader}"
-            }
+                styledTd {
+                    css {
+                        width = 20.em
+                        textAlign = TextAlign.right
+                    }
 
-            styledDiv {
-                css {
-                    float = Float.right
-                    fontWeight = FontWeight.bold
-                }
+                    if (valueSummary != null) {
+                        val countFormat = formatCount(valueSummary.count)
+                        +"Count: $countFormat"
+                    }
 
-                if (valueSummary == null) {
-                    +"..."
-                } else {
-                    val countFormat = formatCount(valueSummary.count)
-                    +"Count: $countFormat"
+                    child(MaterialIconButton::class) {
+                        attrs {
+                            onClick = {
+                                onOpenToggle()
+                            }
+                        }
+
+                        if (state.open) {
+                            child(ExpandLessIcon::class) {}
+                        }
+                        else {
+                            child(ExpandMoreIcon::class) {}
+                        }
+                    }
                 }
             }
         }
     }
 
 
-    private fun RBuilder.renderCardContent(valueSummary: ValueSummary) {
-        val hasNominal = ! valueSummary.nominalValueSummary.isEmpty()
-        if (hasNominal) {
-            renderHistogram(valueSummary.nominalValueSummary)
-        }
+    private fun RBuilder.renderCardBody(valueSummary: ValueSummary?) {
+        styledDiv {
+            css {
+                width = 100.pct
+            }
 
-        val hasNumeric = ! valueSummary.numericValueSummary.isEmpty()
-        if (hasNumeric && hasNominal) {
-            br {}
-        }
+            if (valueSummary == null) {
+                +"Loading..."
+                return
+            }
 
-        if (hasNumeric) {
-            renderDensity(valueSummary.numericValueSummary)
-        }
+            val hasNominal = ! valueSummary.nominalValueSummary.isEmpty()
+            if (hasNominal) {
+                renderHistogram(valueSummary.nominalValueSummary)
+            }
 
-        val hasOpaque = ! valueSummary.opaqueValueSummary.isEmpty()
-        if (hasOpaque && (hasNumeric || hasNominal)) {
-            br {}
-        }
+            val hasNumeric = ! valueSummary.numericValueSummary.isEmpty()
+            if (hasNumeric && hasNominal) {
+                br {}
+            }
 
-        if (hasOpaque) {
-            renderOpaque(valueSummary.opaqueValueSummary)
+            if (hasNumeric) {
+                renderDensity(valueSummary.numericValueSummary)
+            }
+
+            val hasOpaque = ! valueSummary.opaqueValueSummary.isEmpty()
+            if (hasOpaque && (hasNumeric || hasNominal)) {
+                br {}
+            }
+
+            if (hasOpaque) {
+                renderOpaque(valueSummary.opaqueValueSummary)
+            }
         }
     }
 

@@ -74,7 +74,6 @@ Feature:
 Filter:
   abstract: true
   is: Document
-#  class: tech.kzen.auto.common.objects.document.filter.FilterDocument
   class: tech.kzen.auto.server.objects.filter.FilterDocument
   title: "Data Filter"
   icon: FilterList
@@ -84,19 +83,22 @@ Filter:
   meta:
     input: String
     output: String
-    criteria:
-      is: CriteriaSpec
-      by: CriteriaSpecDefiner
-#      creator: CriteriaSpecCreator
+    criteria: CriteriaSpec
+#    criteria:
+#      is: CriteriaSpec
+#      by: CriteriaSpecDefiner
 
 
 CriteriaSpec:
   abstract: true
   class: tech.kzen.auto.common.objects.document.filter.CriteriaSpec
+  meta:
+    ref:
+      by: CriteriaSpecDefiner
 
 
 CriteriaSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.filter.CriteriaSpecDefiner
+  class: tech.kzen.auto.common.objects.document.filter.CriteriaSpec$Definer
 
 #CriteriaSpecCreator:
 #  class: tech.kzen.auto.common.objects.document.filter.CriteriaSpecCreator
