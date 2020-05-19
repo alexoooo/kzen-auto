@@ -18,8 +18,8 @@ sealed class ExecutionResult
 
             return if (error == null) {
                 ExecutionSuccess(
-                        ExecutionValue.fromCollection(collection[valueKey] as Map<String, Any>),
-                        ExecutionValue.fromCollection(collection[detailKey] as Map<String, Any>)
+                        ExecutionValue.fromJsonCollection(collection[valueKey] as Map<String, Any>),
+                        ExecutionValue.fromJsonCollection(collection[detailKey] as Map<String, Any>)
                 )
             }
             else {
@@ -83,8 +83,8 @@ data class ExecutionSuccess(
 
     override fun toCollection(): Map<String, Any?> {
         return mapOf(
-                valueKey to value.toCollection(),
-                detailKey to detail.toCollection()
+                valueKey to value.toJsonCollection(),
+                detailKey to detail.toJsonCollection()
         )
     }
 

@@ -69,7 +69,7 @@ object ApplyFilter {
             csvPrinter.printRecord(columnNames)
         }
 
-        var count = 0
+        var count: Long = 0
         var writtenCount = 0
 
         next_record@
@@ -77,8 +77,8 @@ object ApplyFilter {
             val record = input.next()
 
             count++
-            if (count % 100_000 == 0) {
-                logger.info("Processed $count, wrote $writtenCount")
+            if (count % 250_000 == 0L) {
+                logger.info("Processed {}, wrote {}", String.format("%,d", count), String.format("%,d", writtenCount))
             }
 
             for (filterColumn in filterColumns) {

@@ -12,8 +12,8 @@ import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
-import tech.kzen.auto.common.paradigm.reactive.NumericValueSummary
 import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
+import tech.kzen.auto.common.paradigm.reactive.StatisticValueSummary
 import tech.kzen.auto.common.paradigm.reactive.ValueSummary
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -223,45 +223,46 @@ class ColumnFilter(
                 width = 100.pct
             }
 
-            tr {
-                styledTd {
-                    css {
-                        width = 100.pct.minus(20.em)
-//                        backgroundColor = Color.blue
-                    }
-
-                    styledSpan {
+            tbody {
+                tr {
+                    styledTd {
                         css {
-                            fontSize = 2.em
+                            width = 100.pct.minus(20.em)
                         }
 
-                        +"#${props.columnIndex + 1} ${props.columnName}"
-                    }
-                }
-
-                styledTd {
-                    css {
-                        width = 20.em
-                        textAlign = TextAlign.right
-                    }
-
-                    if (valueSummary != null) {
-                        val countFormat = formatCount(valueSummary.count)
-                        +"Count: $countFormat"
-                    }
-
-                    child(MaterialIconButton::class) {
-                        attrs {
-                            onClick = {
-                                onOpenToggle()
+                        styledSpan {
+                            css {
+                                fontSize = 2.em
                             }
+
+                            +"#${props.columnIndex + 1} ${props.columnName}"
+                        }
+                    }
+
+                    styledTd {
+                        css {
+                            width = 20.em
+                            textAlign = TextAlign.right
                         }
 
-                        if (state.open) {
-                            child(ExpandLessIcon::class) {}
+                        if (valueSummary != null) {
+                            val countFormat = formatCount(valueSummary.count)
+                            +"Count: $countFormat"
                         }
-                        else {
-                            child(ExpandMoreIcon::class) {}
+
+                        child(MaterialIconButton::class) {
+                            attrs {
+                                onClick = {
+                                    onOpenToggle()
+                                }
+                            }
+
+                            if (state.open) {
+                                child(ExpandLessIcon::class) {}
+                            }
+                            else {
+                                child(ExpandMoreIcon::class) {}
+                            }
                         }
                     }
                 }
@@ -292,7 +293,7 @@ class ColumnFilter(
             }
 
             if (hasNumeric) {
-                renderDensity(valueSummary.numericValueSummary)
+                renderNumeric(valueSummary.numericValueSummary)
             }
 
             val hasOpaque = ! valueSummary.opaqueValueSummary.isEmpty()
@@ -381,7 +382,7 @@ class ColumnFilter(
     }
 
 
-    private fun RBuilder.renderDensity(density: NumericValueSummary) {
+    private fun RBuilder.renderNumeric(density: StatisticValueSummary) {
         styledDiv {
             css {
                 maxHeight = 20.em
@@ -397,7 +398,7 @@ class ColumnFilter(
                                 top = 0.px
                                 backgroundColor = Color.white
                             }
-                            +"From"
+                            +"Statistic"
                         }
                         styledTh {
                             css {
@@ -405,37 +406,72 @@ class ColumnFilter(
                                 top = 0.px
                                 backgroundColor = Color.white
                             }
-                            +"To"
+                            +"Value"
                         }
-                        styledTh {
-                            css {
-                                position = Position.sticky
-                                top = 0.px
-                                backgroundColor = Color.white
-                            }
-                            +"Count"
-                        }
+//                        styledTh {
+//                            css {
+//                                position = Position.sticky
+//                                top = 0.px
+//                                backgroundColor = Color.white
+//                            }
+//                            +"Count"
+//                        }
                     }
                 }
 
                 tbody {
-                    for (e in density.density.entries) {
-                        tr {
-                            key = e.key.toString()
-
-                            td {
-                                +e.key.start.toString()
-                            }
-
-                            td {
-                                +e.key.endInclusive.toString()
-                            }
-
-                            td {
-                                +formatCount(e.value)
-                            }
+                    tr {
+                        td { +"Count" }
+                        td {
+                            +"${density.count}"
                         }
                     }
+
+                    tr {
+                        td { +"Sum" }
+                        td {
+                            +"${density.sum}"
+                        }
+                    }
+
+                    tr {
+                        td { +"Minimum" }
+                        td {
+                            +"${density.min}"
+                        }
+                    }
+
+                    tr {
+                        td { +"Maximum" }
+                        td {
+                            +"${density.max}"
+                        }
+                    }
+
+                    tr {
+                        td { +"Average" }
+                        td {
+                            +"${density.sum / density.count}"
+                        }
+                    }
+
+//                    for (e in density.density.entries) {
+//                        tr {
+//                            key = e.key.toString()
+//
+//                            td {
+//                                +e.key.start.toString()
+//                            }
+//
+//                            td {
+//                                +e.key.endInclusive.toString()
+//                            }
+//
+//                            td {
+//                                +formatCount(e.value)
+//                            }
+//                        }
+//                    }
                 }
             }
         }

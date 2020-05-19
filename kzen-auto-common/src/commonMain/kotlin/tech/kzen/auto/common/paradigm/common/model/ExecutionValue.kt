@@ -17,6 +17,7 @@ sealed class ExecutionValue
         private const val textType = "text"
         private const val booleanType = "boolean"
         private const val numberType = "number"
+        private const val longType = "long"
         private const val binaryType = "binary"
         private const val listType = "list"
         private const val mapType = "map"
@@ -38,6 +39,9 @@ sealed class ExecutionValue
 
                 is Boolean ->
                     BooleanExecutionValue(value)
+
+                is Long ->
+                    LongExecutionValue(value)
 
                 is Number ->
                     NumberExecutionValue(value.toDouble())
@@ -67,7 +71,7 @@ sealed class ExecutionValue
         }
 
 
-        fun fromCollection(asCollection: Map<String, Any>): ExecutionValue {
+        fun fromJsonCollection(asCollection: Map<String, Any>): ExecutionValue {
             return when (asCollection[typeKey]) {
                 null ->
                     throw IllegalArgumentException("'${typeKey}' missing: $asCollection")
@@ -81,28 +85,45 @@ sealed class ExecutionValue
                 booleanType ->
                     BooleanExecutionValue(asCollection[valueKey] as Boolean)
 
-                numberType ->
-                    NumberExecutionValue(
-                            asCollection[valueKey] as Double)
+                numberType -> {
+                    when (val value = asCollection[valueKey]) {
+                        is Double -> {
+                            NumberExecutionValue(value)
+                        }
+
+                        is String -> {
+                            // NB: handle Infinity
+                            NumberExecutionValue(value.toDouble())
+                        }
+
+                        else -> {
+                            throw IllegalArgumentException("'${typeKey}' not a number: $asCollection")
+                        }
+                    }
+                }
+
+                longType ->
+                    LongExecutionValue(
+                        (asCollection[valueKey] as String).toLong())
 
                 binaryType ->
                     BinaryExecutionValue(
-                            IoUtils.base64Decode(asCollection[valueKey] as String))
+                        IoUtils.base64Decode(asCollection[valueKey] as String))
 
                 listType ->
                     ListExecutionValue(
-                            (asCollection[valueKey] as List<*>).map {
-                                @Suppress("UNCHECKED_CAST")
-                                fromCollection(it as Map<String, Any>)
-                            }
+                        (asCollection[valueKey] as List<*>).map {
+                            @Suppress("UNCHECKED_CAST")
+                            fromJsonCollection(it as Map<String, Any>)
+                        }
                     )
 
                 mapType ->
                     MapExecutionValue(
-                            (asCollection[valueKey] as Map<*, *>).map{
-                                @Suppress("UNCHECKED_CAST")
-                                it.key as String to fromCollection(it.value as Map<String, Any>)
-                            }.toMap()
+                        (asCollection[valueKey] as Map<*, *>).map{
+                            @Suppress("UNCHECKED_CAST")
+                            it.key as String to fromJsonCollection(it.value as Map<String, Any>)
+                        }.toMap()
                     )
 
                 else ->
@@ -126,6 +147,9 @@ sealed class ExecutionValue
             is NumberExecutionValue ->
                 value
 
+            is LongExecutionValue ->
+                value
+
             is BinaryExecutionValue ->
                 value
 
@@ -138,33 +162,36 @@ sealed class ExecutionValue
     }
 
 
-    fun toCollection(): Map<String, Any> {
+    fun toJsonCollection(): Map<String, Any> {
         return when (this) {
             NullExecutionValue -> mapOf(
                     typeKey to nullType)
 
             is TextExecutionValue ->
-                toCollection(textType, value)
+                typedValue(textType, value)
 
             is BooleanExecutionValue ->
-                toCollection(booleanType, value)
+                typedValue(booleanType, value)
 
             is NumberExecutionValue ->
-                toCollection(numberType, value)
+                typedValue(numberType, value)
+
+            is LongExecutionValue ->
+                typedValue(longType, value.toString())
 
             is BinaryExecutionValue ->
-                toCollection(binaryType, IoUtils.base64Encode(value))
+                typedValue(binaryType, IoUtils.base64Encode(value))
 
             is ListExecutionValue ->
-                toCollection(listType, values.map { it.toCollection() })
+                typedValue(listType, values.map { it.toJsonCollection() })
 
             is MapExecutionValue ->
-                toCollection(mapType, values.mapValues { it.value.toCollection() })
+                typedValue(mapType, values.mapValues { it.value.toJsonCollection() })
         }
     }
 
 
-    private fun toCollection(type: String, value: Any): Map<String, Any> {
+    private fun typedValue(type: String, value: Any): Map<String, Any> {
         return mapOf(
                 typeKey to type,
                 valueKey to value)
@@ -198,18 +225,23 @@ sealed class ExecutionValue
                 builder.addDouble(value)
             }
 
-            is BinaryExecutionValue -> {
+            is LongExecutionValue -> {
                 builder.addInt(4)
+                builder.addLong(value)
+            }
+
+            is BinaryExecutionValue -> {
+                builder.addInt(5)
                 builder.addBytes(value)
             }
 
             is ListExecutionValue -> {
-                builder.addInt(5)
+                builder.addInt(6)
                 builder.addDigestibleList(values)
             }
 
             is MapExecutionValue -> {
-                builder.addInt(6)
+                builder.addInt(7)
                 builder.addInt(values.size)
                 values.forEach {
                     builder.addUtf8(it.key)
@@ -245,6 +277,11 @@ data class BooleanExecutionValue(
 
 data class NumberExecutionValue(
         val value: Double
+): ScalarExecutionValue()
+
+
+data class LongExecutionValue(
+        val value: Long
 ): ScalarExecutionValue()
 
 

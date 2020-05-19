@@ -36,20 +36,20 @@ class FilterController(
 
 
     class State(
-            var clientState: SessionState?,
+        var clientState: SessionState?,
 
-            var error: String?,
+        var error: String?,
 
-            var fileListingLoading: Boolean,
-            var fileListing: List<String>?,
+        var fileListingLoading: Boolean,
+        var fileListing: List<String>?,
 
-            var columnListingLoading: Boolean,
-            var columnListing: List<String>?,
+        var columnListingLoading: Boolean,
+        var columnListing: List<String>?,
 
-            var writingOutput: Boolean,
-            var wroteOutputPath: String?//,
+        var writingOutput: Boolean,
+        var wroteOutputPath: String?,
 
-//            var columnDetails: List<ValueSummary>?
+        var inputChanged: Boolean
     ): RState
 
 
@@ -96,7 +96,7 @@ class FilterController(
         writingOutput = false
         wroteOutputPath = null
 
-//        columnDetails = null
+        inputChanged = false
     }
 
 
@@ -117,6 +117,11 @@ class FilterController(
             prevState: State,
             snapshot: Any
     ) {
+        val clientState = state.clientState
+            ?: return
+        val mainLocation = mainLocation(clientState)
+            ?: return
+
         if (state.error != null) {
             return
         }
@@ -145,19 +150,13 @@ class FilterController(
             return
         }
 
-//        if (columnListing != null && prevState.columnListing == null) {
-//            if (columnListing.isNotEmpty()) {
-//                requestNextColumn(mainLocation()!!, columnListing[0])
-//            }
-//            return
-//        }
-
-//        if (state.columnDetails?.size != prevState.columnDetails?.size &&
-//                state.columnDetails?.size ?: 0 < columnListing?.size ?: 0)
-//        {
-//            val nextIndex = state.columnDetails!!.size
-//            requestNextColumn(mainLocation()!!, columnListing!![nextIndex])
-//        }
+        val prevClientState = prevState.clientState
+            ?: return
+        if (inputPath(clientState, mainLocation) != inputPath(prevClientState, mainLocation)) {
+            setState {
+                inputChanged = true
+            }
+        }
     }
 
 
@@ -269,11 +268,34 @@ class FilterController(
     }
 
 
+    private fun refresh() {
+        setState {
+            error = null
+
+            fileListingLoading = false
+            fileListing = null
+
+            columnListingLoading = false
+            columnListing = null
+
+            writingOutput = false
+            wroteOutputPath = null
+
+            inputChanged = false
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun mainLocation(): ObjectLocation? {
         val clientState = state.clientState
-                ?: return null
+            ?: return null
 
+        return mainLocation(clientState)
+    }
+
+
+    private fun mainLocation(clientState: SessionState): ObjectLocation? {
         val documentPath = clientState
                 .navigationRoute
                 .documentPath
@@ -287,6 +309,14 @@ class FilterController(
         }
 
         return ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+    }
+
+
+    private fun inputPath(clientState: SessionState, mainLocation: ObjectLocation): String {
+        val mainObjectNotation = clientState
+            .graphStructure().graphNotation.documents[mainLocation.documentPath]!!
+
+        return FilterConventions.getInput(mainObjectNotation)
     }
 
 
@@ -550,6 +580,19 @@ class FilterController(
 
             if (state.writingOutput) {
                 child(MaterialCircularProgress::class) {}
+            }
+            else if (state.inputChanged) {
+                child(RefreshIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+
+                        onClick = {
+                            refresh()
+                        }
+                    }
+                }
             }
             else {
                 child(PlayArrowIcon::class) {

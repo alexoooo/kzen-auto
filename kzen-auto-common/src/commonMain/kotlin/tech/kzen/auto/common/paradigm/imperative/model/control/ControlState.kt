@@ -35,10 +35,10 @@ sealed class ControlState
                     InitialControlState
 
                 finalType ->
-                    FinalControlState(ExecutionValue.fromCollection(value!!))
+                    FinalControlState(ExecutionValue.fromJsonCollection(value!!))
 
                 internalType ->
-                    InternalControlState(index!!, ExecutionValue.fromCollection(value!!))
+                    InternalControlState(index!!, ExecutionValue.fromJsonCollection(value!!))
 
                 invokeType ->
                     InvokeControlState(DocumentPath.parse(target!!))
@@ -57,12 +57,12 @@ sealed class ControlState
 
             is FinalControlState ->
                 mapOf(typeKey to finalType,
-                        valueKey to value.toCollection())
+                        valueKey to value.toJsonCollection())
 
             is InternalControlState ->
                 mapOf(typeKey to internalType,
                         branchKey to branchIndex,
-                        valueKey to value.toCollection())
+                        valueKey to value.toJsonCollection())
 
             is InvokeControlState ->
                 mapOf(typeKey to invokeType,

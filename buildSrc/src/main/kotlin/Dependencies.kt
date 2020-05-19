@@ -36,11 +36,10 @@ const val guavaVersion = "29.0-jre"
 const val seleniumVersion = "3.141.59"
 const val commonsCompressVersion = "1.20"
 
-const val materialUiCoreVersion = "4.9.12"
+const val materialUiCoreVersion = "4.9.14"
 const val materialUiIconsVersion = "4.9.1"
 const val cropperJsVersion = "1.5.6"
 const val lodashVersion = "4.17.15"
-//const val reactSelectVersion = "3.0.8"
 const val reactSelectVersion = "3.1.0"
 
 const val commonsCsvVersion = "1.8"

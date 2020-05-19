@@ -28,8 +28,8 @@ data class VisualVertexTransition(
 
         fun toCollection(model: VisualVertexTransition): Map<String, Any?> {
             return mapOf(
-                    stateChangeKey to model.stateChange?.toCollection(),
-                    messageKey to model.message?.toCollection(),
+                    stateChangeKey to model.stateChange?.toJsonCollection(),
+                    messageKey to model.message?.toJsonCollection(),
                     hasNextKey to model.hasNext,
                     epochKey to model.iteration,
                     loopKey to model.loop.map { it.asString() },
@@ -45,10 +45,10 @@ data class VisualVertexTransition(
         ): VisualVertexTransition {
             return VisualVertexTransition(
                     collection[stateChangeKey]?.let {
-                        ExecutionValue.fromCollection(it as Map<String, Any>)
+                        ExecutionValue.fromJsonCollection(it as Map<String, Any>)
                     },
                     collection[messageKey]?.let {
-                        ExecutionValue.fromCollection(it as Map<String, Any>)
+                        ExecutionValue.fromJsonCollection(it as Map<String, Any>)
                     },
                     collection[hasNextKey] as Boolean,
                     collection[epochKey] as Int,

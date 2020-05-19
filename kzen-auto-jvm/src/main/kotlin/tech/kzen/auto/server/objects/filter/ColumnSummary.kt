@@ -4,8 +4,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
-import tech.kzen.auto.common.paradigm.reactive.NumericValueSummary
 import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
+import tech.kzen.auto.common.paradigm.reactive.StatisticValueSummary
 import tech.kzen.auto.common.paradigm.reactive.ValueSummary
 import tech.kzen.auto.server.objects.filter.model.ValueSummaryBuilder
 import tech.kzen.auto.util.AutoJvmUtils
@@ -188,11 +188,12 @@ object ColumnSummary {
 
     private suspend fun loadNumeric(
         columnDir: Path
-    ): NumericValueSummary {
+    ): StatisticValueSummary {
         val numericFile = columnDir.resolve(numericCsvFilename)
 
         if (! Files.exists(numericFile)) {
-            return NumericValueSummary.empty
+//            return NumericValueSummary.empty
+            return StatisticValueSummary.empty
         }
 
         val numericFileContent = withContext(Dispatchers.IO) {
@@ -200,7 +201,7 @@ object ColumnSummary {
         }
 
         val numericFileCsv = FilterIndex.fromCsv(numericFileContent)
-        return NumericValueSummary.fromCsv(numericFileCsv)
+        return StatisticValueSummary.fromCsv(numericFileCsv)
     }
 
 
@@ -245,7 +246,7 @@ object ColumnSummary {
     private suspend fun buildValueSummaries(
         inputPath: Path
     ): Map<String, ValueSummary> {
-        logger.info("Summarizing columns: $inputPath")
+        logger.info("Summarizing columns: {}", inputPath)
 
         val builders = mutableMapOf<String, ValueSummaryBuilder>()
 
@@ -255,11 +256,11 @@ object ColumnSummary {
                     builders[columnName] = ValueSummaryBuilder()
                 }
 
-                var count = 0
+                var count: Long = 0
                 while (stream.hasNext()) {
                     count++
-                    if (count % 100_000 == 0) {
-                        logger.info("Summarized: $count")
+                    if (count % 250_000 == 0L) {
+                        logger.info("Summarized: {}", formatCount(count))
                     }
 
                     val record = stream.next()
@@ -269,10 +270,15 @@ object ColumnSummary {
                     }
                 }
 
-                logger.info("Finished file summary: $count")
+                logger.info("Finished file summary: {}", formatCount(count))
             }
         }
 
         return builders.mapValues { it.value.build() }
+    }
+
+
+    private fun formatCount(count: Long): String {
+        return String.format("%,d", count)
     }
 }

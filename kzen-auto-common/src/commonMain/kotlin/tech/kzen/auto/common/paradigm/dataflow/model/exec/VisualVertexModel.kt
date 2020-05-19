@@ -60,8 +60,8 @@ data class VisualVertexModel(
         fun toCollection(model: VisualVertexModel): Map<String, Any?> {
             return mapOf(
                     runningKey to model.running,
-                    stateKey to model.state?.toCollection(),
-                    messageKey to model.message?.toCollection(),
+                    stateKey to model.state?.toJsonCollection(),
+                    messageKey to model.message?.toJsonCollection(),
                     hasNextKey to model.hasNext,
                     epochKey to model.epoch,
                     errorKey to model.error
@@ -76,10 +76,10 @@ data class VisualVertexModel(
             return VisualVertexModel(
                     collection[runningKey] as Boolean,
                     collection[stateKey]?.let {
-                        ExecutionValue.fromCollection(it as Map<String, Any>)
+                        ExecutionValue.fromJsonCollection(it as Map<String, Any>)
                     },
                     collection[messageKey]?.let {
-                        ExecutionValue.fromCollection(it as Map<String, Any>)
+                        ExecutionValue.fromJsonCollection(it as Map<String, Any>)
                     },
                     collection[hasNextKey] as Boolean,
                     collection[epochKey] as Int,

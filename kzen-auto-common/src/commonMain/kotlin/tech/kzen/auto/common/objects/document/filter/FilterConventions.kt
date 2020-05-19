@@ -26,13 +26,19 @@ object FilterConventions {
 
     fun isFeature(documentNotation: DocumentNotation): Boolean {
         val mainObjectNotation =
-                documentNotation.objects.notations[NotationConventions.mainObjectPath]
-                        ?: return false
+            documentNotation.objects.notations[NotationConventions.mainObjectPath]
+                ?: return false
 
         val mainObjectIs =
-                mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
-                        ?: return false
+            mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
+                ?: return false
 
         return mainObjectIs == archetypeObjectName.value
+    }
+
+
+    fun getInput(documentNotation: DocumentNotation): String {
+        val mainObjectNotation = documentNotation.objects.notations[NotationConventions.mainObjectPath]!!
+        return mainObjectNotation.get(inputAttribute)?.asString() ?: ""
     }
 }

@@ -45,7 +45,7 @@ sealed class ControlTransition {
         private fun readValue(collection: Map<String, Any?>): ExecutionValue {
             @Suppress("UNCHECKED_CAST")
             val valueMap = collection[valueKey] as Map<String, Any>
-            return ExecutionValue.fromCollection(valueMap)
+            return ExecutionValue.fromJsonCollection(valueMap)
         }
     }
 
@@ -54,12 +54,12 @@ sealed class ControlTransition {
         return when (this) {
             is EvaluateControlTransition ->
                 mapOf(typeKey to evaluateType,
-                        valueKey to value.toCollection())
+                        valueKey to value.toJsonCollection())
 
             is InternalControlTransition ->
                 mapOf(typeKey to internalType,
                         branchKey to branchIndex,
-                        valueKey to value.toCollection())
+                        valueKey to value.toJsonCollection())
 
             is InvokeControlTransition ->
                 mapOf(typeKey to invokeType,

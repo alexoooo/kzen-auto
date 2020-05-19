@@ -1,20 +1,19 @@
 package tech.kzen.auto.server.objects.filter.model
 
-import com.google.common.collect.BoundType
 import com.google.common.collect.HashMultiset
-import com.google.common.collect.TreeMultiset
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
-import tech.kzen.auto.common.paradigm.reactive.NumericValueSummary
 import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
+import tech.kzen.auto.common.paradigm.reactive.StatisticValueSummary
 import tech.kzen.auto.common.paradigm.reactive.ValueSummary
 
 
 class ValueSummaryBuilder {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val maxNumericBuckets = 100
+//        private const val maxNumericBuckets = 100
         private const val maxNominalBuckets = 250
         private const val maxSampleSize = 100
+        private const val sampleThreshold = 10_000
         private const val nominalOther = "<other>"
 
 
@@ -38,40 +37,14 @@ class ValueSummaryBuilder {
         }
 
 
-        private fun mergeNumeric(a: NumericValueSummary, b: NumericValueSummary): NumericValueSummary {
+        private fun mergeNumeric(a: StatisticValueSummary, b: StatisticValueSummary): StatisticValueSummary {
             // TODO: use HDR histogram?
-
-            val builder = a.density.toMutableMap()
-
-            fun intersect(start: Double, end: Double): Boolean {
-                return builder.any { it.key.start <= end && it.key.endInclusive >= start }
-            }
-
-            for (e in b.density) {
-                val existingCount = a.density[e.key] ?: 0
-                if (existingCount != 0L) {
-                    builder[e.key] = e.value + existingCount
-                }
-                else {
-                    val start = e.key.start
-                    val end = e.key.endInclusive
-                    if (! intersect(start, end)) {
-                        builder[e.key] = e.value
-                    }
-                    else {
-                        val mid = (start + end) / 2
-                        val container =
-                            builder.filter { it.key.contains(mid) }.keys.firstOrNull()
-                        if (container != null) {
-                            builder[container] = builder[container]!! + e.value
-                        }
-                        else {
-                            builder[start.rangeTo(end)] = e.value
-                        }
-                    }
-                }
-            }
-            return NumericValueSummary(builder)
+            return StatisticValueSummary(
+                a.count + b.count,
+                a.sum + b.sum,
+                a.min.coerceAtMost(b.min),
+                a.max.coerceAtLeast(b.max)
+            )
         }
 
 
@@ -97,8 +70,15 @@ class ValueSummaryBuilder {
 
     //-----------------------------------------------------------------------------------------------------------------
     private val textHistogram = HashMultiset.create<String>()
-    private val numericHistogram = TreeMultiset.create<Double>()
-    private var count: Long = 0
+    private val textSample = mutableListOf<String>()
+
+//    private val numericHistogram = TreeMultiset.create<Double>()
+    private var emptyCount: Long = 0
+    private var textCount: Long = 0
+    private var numberCount: Long = 0
+    private var sum: Double = 0.0
+    private var min: Double = Double.POSITIVE_INFINITY
+    private var max: Double = Double.NEGATIVE_INFINITY
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -106,18 +86,62 @@ class ValueSummaryBuilder {
         val trimmed = value.trim()
 
         if (trimmed.isEmpty()) {
+            emptyCount++
             return
         }
 
-        count++
+        if (isSimpleNumber(trimmed)) {
+            val doubleValue = java.lang.Double.parseDouble(trimmed)
 
-        val doubleValue = value.toDoubleOrNull()
-        if (doubleValue == null) {
-            textHistogram.add(trimmed)
+            numberCount++
+            sum += doubleValue
+            min = min.coerceAtMost(doubleValue)
+            max = max.coerceAtLeast(doubleValue)
         }
         else {
-            numericHistogram.add(doubleValue)
+            textCount++
+
+            if (textSample.isNotEmpty()) {
+                val randomIndex = (Math.random() * textSample.size).toInt()
+                textSample[randomIndex] = trimmed
+            }
+            else {
+                textHistogram.add(trimmed)
+
+                if (textHistogram.elementSet().size > sampleThreshold) {
+                    val iterator = textHistogram.elementSet().iterator()
+                    while (textSample.size < maxSampleSize) {
+                        textSample.add(iterator.next())
+                    }
+                    textHistogram.clear()
+                }
+            }
         }
+    }
+
+
+    @Suppress("ConvertTwoComparisonsToRangeCheck")
+    private fun isSimpleNumber(text: String): Boolean {
+        var dotCount = 0;
+        var digitCount = 0;
+        var alphaCount = 0;
+
+        var i = 0
+        val length = text.length
+        while (i < length) {
+            val char = text[i++]
+            if (char == '.') {
+                dotCount++
+            }
+            else if ('0' <= char && char <= '9') {
+                digitCount++
+            }
+            else {
+                alphaCount++
+            }
+        }
+
+        return digitCount > 0 && dotCount <= 1 && alphaCount == 0
     }
 
 
@@ -128,7 +152,7 @@ class ValueSummaryBuilder {
         val opaque = buildOpaque()
 
         return ValueSummary(
-            count,
+            textCount + numberCount,
             nominal,
             numeric,
             opaque)
@@ -178,68 +202,20 @@ class ValueSummaryBuilder {
 
 
     private fun buildOpaque(): OpaqueValueSummary {
-        if (textHistogram.isEmpty()) {
+        if (textSample.isEmpty()) {
             return OpaqueValueSummary.empty
         }
 
-        if (textHistogram.elementSet().size == 1) {
-            return OpaqueValueSummary.empty
-        }
-
-        if (textHistogram.size != textHistogram.elementSet().size) {
-            return OpaqueValueSummary.empty
-        }
-
-        val builder = mutableListOf<String>()
-
-        for (e in textHistogram.entrySet()) {
-            val value = e.element
-
-            if (builder.size < maxSampleSize) {
-                builder.add(value)
-            }
-            else {
-                val randomIndex = (Math.random() * builder.size).toInt()
-                builder[randomIndex] = value
-            }
-        }
-
-        return OpaqueValueSummary(builder.toSet())
+        return OpaqueValueSummary(textSample.toSet())
     }
 
 
-    private fun buildNumeric(): NumericValueSummary {
-        if (numericHistogram.isEmpty()) {
-            return NumericValueSummary.empty
+    private fun buildNumeric(): StatisticValueSummary {
+        if (numberCount == 0L) {
+            return StatisticValueSummary.empty
         }
 
-        if (numericHistogram.elementSet().size == 1) {
-            val singleValue = numericHistogram.elementSet().single()
-            return NumericValueSummary(
-                mapOf(singleValue.rangeTo(singleValue) to numericHistogram.size.toLong()))
-        }
-
-        val builder = mutableMapOf<ClosedFloatingPointRange<Double>, Long>()
-
-        val min = numericHistogram.firstEntry().element
-        val max = numericHistogram.lastEntry().element
-        val buckets = numericHistogram.entrySet().size.coerceAtMost(maxNumericBuckets)
-        val increment = (max - min) / buckets
-        for (i in 0 until buckets) {
-            val fromInclusive = min + i * increment
-            val toExclusive = min + (i + 1) * increment
-            val subset = numericHistogram.subMultiset(
-                fromInclusive, BoundType.CLOSED, toExclusive, BoundType.OPEN)
-            if (subset.isEmpty()) {
-                continue
-            }
-
-            val subsetMin = subset.firstEntry().element
-            val subsetMax = subset.lastEntry().element
-
-            builder[subsetMin.rangeTo(subsetMax)] = subset.size.toLong()
-        }
-
-        return NumericValueSummary(builder)
+        return StatisticValueSummary(
+            numberCount, sum, min, max)
     }
 }

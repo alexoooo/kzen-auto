@@ -107,8 +107,8 @@ class ExecutionValueTest {
 //            assertTrue(asCollection contentEquals ExecutionValue.fromCollection(asCollection) as ByteArray)
 //        }
 //        else {
-            assertEquals(executionValue, ExecutionValue.fromCollection(asCollection))
-            assertEquals(asCollection, executionValue.toCollection())
+            assertEquals(executionValue, ExecutionValue.fromJsonCollection(asCollection))
+            assertEquals(asCollection, executionValue.toJsonCollection())
 //        }
     }
 }
