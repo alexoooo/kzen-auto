@@ -7,7 +7,6 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -26,12 +25,12 @@ class AttributeController(
     class Props(
         var attributeEditors: List<AttributeEditorWrapper>,
 
-//            graphStructure: GraphStructure,
         clientState: SessionState,
         objectLocation: ObjectLocation,
-        attributeName: AttributeName
+        attributeName: AttributeName,
+        labelOverride: String?
     ): AttributeEditorProps(
-        clientState, objectLocation, attributeName
+        clientState, objectLocation, attributeName, labelOverride
     )
 
 

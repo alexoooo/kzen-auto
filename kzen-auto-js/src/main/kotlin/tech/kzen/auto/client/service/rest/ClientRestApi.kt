@@ -8,6 +8,8 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
+import tech.kzen.auto.common.paradigm.task.model.TaskId
+import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.lib.client.ClientJsonUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -418,7 +420,7 @@ class ClientRestApi(
         @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
-        return ExecutionResult.fromCollection(responseCollection)
+        return ExecutionResult.fromJsonCollection(responseCollection)
     }
 
 
@@ -437,7 +439,7 @@ class ClientRestApi(
         @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
-        return ExecutionResult.fromCollection(responseCollection)
+        return ExecutionResult.fromJsonCollection(responseCollection)
     }
 
 
@@ -496,10 +498,66 @@ class ClientRestApi(
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
 
-        @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
         return VisualVertexTransition.fromCollection(responseCollection)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun taskSubmit(
+        objectLocation: ObjectLocation,
+        vararg parameters: Pair<String, String>
+    ): TaskModel {
+        val responseJson = getJson(
+            CommonRestApi.taskSubmit,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            *parameters)
+
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
+
+        return TaskModel.fromJsonCollection(responseCollection)
+    }
+
+
+    suspend fun taskQuery(
+        taskId: TaskId
+    ): TaskModel {
+        val responseJson = getJson(
+            CommonRestApi.taskQuery,
+            CommonRestApi.paramTaskId to taskId.identifier)
+
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
+
+        return TaskModel.fromJsonCollection(responseCollection)
+    }
+
+
+    suspend fun taskCancel(
+        taskId: TaskId
+    ): TaskModel {
+        val responseJson = getJson(
+            CommonRestApi.taskCancel,
+            CommonRestApi.paramTaskId to taskId.identifier)
+
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
+
+        return TaskModel.fromJsonCollection(responseCollection)
+    }
+
+
+    suspend fun taskLookup(
+        objectLocation: ObjectLocation
+    ): Set<TaskId> {
+        val responseJson = get(
+            CommonRestApi.taskLookup,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+
+        val responseCollection = ClientJsonUtils.toList(JSON.parse(responseJson))
+
+        return responseCollection.map { TaskId(it as String) }.toSet()
     }
 
 

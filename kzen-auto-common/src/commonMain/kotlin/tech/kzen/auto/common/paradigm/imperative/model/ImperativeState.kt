@@ -27,7 +27,7 @@ data class ImperativeState(
 
         fun toCollection(state: ImperativeState): Map<String, Any?> {
             return mapOf(
-                    previousKey to state.previous?.toCollection(),
+                    previousKey to state.previous?.toJsonCollection(),
                     controlStateKey to state.controlState?.toCollection()
             )
         }
@@ -37,7 +37,7 @@ data class ImperativeState(
         fun fromCollection(collection: Map<String, Any?>): ImperativeState {
             return ImperativeState(
                     collection[previousKey]?.let {
-                        ExecutionResult.fromCollection(it as Map<String, Any>)
+                        ExecutionResult.fromJsonCollection(it as Map<String, Any>)
                     },
                     collection[controlStateKey]?.let {
                         ControlState.fromCollection(it as Map<String, Any>)

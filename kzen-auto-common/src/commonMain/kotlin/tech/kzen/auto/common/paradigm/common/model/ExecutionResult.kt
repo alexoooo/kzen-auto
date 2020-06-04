@@ -13,14 +13,11 @@ sealed class ExecutionResult
         const val detailKey = "detail"
 
         @Suppress("UNCHECKED_CAST")
-        fun fromCollection(collection: Map<String, Any?>): ExecutionResult {
+        fun fromJsonCollection(collection: Map<String, Any?>): ExecutionResult {
             val error = collection[errorKey]
 
             return if (error == null) {
-                ExecutionSuccess(
-                        ExecutionValue.fromJsonCollection(collection[valueKey] as Map<String, Any>),
-                        ExecutionValue.fromJsonCollection(collection[detailKey] as Map<String, Any>)
-                )
+                ExecutionSuccess.fromJsonCollection(collection)
             }
             else {
                 ExecutionFailure(error as String)
@@ -29,8 +26,7 @@ sealed class ExecutionResult
     }
 
 
-    abstract fun toCollection(): Map<String, Any?>
-
+    abstract fun toJsonCollection(): Map<String, Any?>
 
 
     override fun digest(): Digest {
@@ -60,7 +56,7 @@ sealed class ExecutionResult
 data class ExecutionFailure(
         val errorMessage: String
 ): ExecutionResult() {
-    override fun toCollection(): Map<String, Any?> {
+    override fun toJsonCollection(): Map<String, Any?> {
         return mapOf(
                 errorKey to errorMessage
         )
@@ -78,10 +74,19 @@ data class ExecutionSuccess(
         fun ofValue(value: ExecutionValue): ExecutionSuccess {
             return ExecutionSuccess(value, detail = NullExecutionValue)
         }
+
+
+        @Suppress("UNCHECKED_CAST")
+        fun fromJsonCollection(collection: Map<String, Any?>): ExecutionSuccess {
+            return ExecutionSuccess(
+                ExecutionValue.fromJsonCollection(collection[valueKey] as Map<String, Any>),
+                ExecutionValue.fromJsonCollection(collection[detailKey] as Map<String, Any>)
+            )
+        }
     }
 
 
-    override fun toCollection(): Map<String, Any?> {
+    override fun toJsonCollection(): Map<String, Any?> {
         return mapOf(
                 valueKey to value.toJsonCollection(),
                 detailKey to detail.toJsonCollection()

@@ -1,10 +1,10 @@
 package tech.kzen.auto.server.objects.filter.model
 
 import com.google.common.collect.HashMultiset
+import tech.kzen.auto.common.paradigm.reactive.ColumnSummary
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
 import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
 import tech.kzen.auto.common.paradigm.reactive.StatisticValueSummary
-import tech.kzen.auto.common.paradigm.reactive.ValueSummary
 
 
 class ValueSummaryBuilder {
@@ -17,8 +17,8 @@ class ValueSummaryBuilder {
         private const val nominalOther = "<other>"
 
 
-        fun merge(a: ValueSummary, b: ValueSummary): ValueSummary {
-            return ValueSummary(
+        fun merge(a: ColumnSummary, b: ColumnSummary): ColumnSummary {
+            return ColumnSummary(
                 a.count + b.count,
                 mergeNominal(a.nominalValueSummary, b.nominalValueSummary),
                 mergeNumeric(a.numericValueSummary, b.numericValueSummary),
@@ -87,6 +87,10 @@ class ValueSummaryBuilder {
 
         if (trimmed.isEmpty()) {
             emptyCount++
+
+            if (textSample.isEmpty()) {
+                textHistogram.add("")
+            }
             return
         }
 
@@ -146,12 +150,12 @@ class ValueSummaryBuilder {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun build(): ValueSummary {
+    fun build(): ColumnSummary {
         val nominal = buildNominal()
         val numeric = buildNumeric()
         val opaque = buildOpaque()
 
-        return ValueSummary(
+        return ColumnSummary(
             textCount + numberCount,
             nominal,
             numeric,

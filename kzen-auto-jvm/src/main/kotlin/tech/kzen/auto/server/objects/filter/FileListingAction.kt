@@ -8,7 +8,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 
-object FileListing {
+object FileListingAction {
     suspend fun list(pattern: String): List<Path>? {
         val parsed = AutoJvmUtils.parsePath(pattern)
 

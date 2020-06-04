@@ -7,14 +7,15 @@ import styled.*
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.ExpandLessIcon
+import tech.kzen.auto.client.wrap.ExpandMoreIcon
+import tech.kzen.auto.client.wrap.MaterialCheckbox
+import tech.kzen.auto.client.wrap.MaterialIconButton
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
+import tech.kzen.auto.common.paradigm.reactive.ColumnSummary
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
 import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
 import tech.kzen.auto.common.paradigm.reactive.StatisticValueSummary
-import tech.kzen.auto.common.paradigm.reactive.ValueSummary
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -28,10 +29,10 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveInAttributeComma
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
-class ColumnFilter(
+class FilterColumn(
     props: Props
 ):
-    RPureComponent<ColumnFilter.Props, ColumnFilter.State>(props)
+    RPureComponent<FilterColumn.Props, FilterColumn.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -44,19 +45,17 @@ class ColumnFilter(
     class Props(
         var mainLocation: ObjectLocation,
         var clientState: SessionState,
-//        var criteriaSpec: CriteriaSpec,
         var requiredValues: Set<String>?,
 
         var columnIndex: Int,
-        var columnName: String//,
-//        var valueSummary: ValueSummary?
+        var columnName: String,
+        var columnSummary: ColumnSummary?
     ): RProps
 
 
     class State(
         var open: Boolean,
-        var requested: Boolean,
-        var valueSummary: ValueSummary?,
+//        var requested: Boolean,
         var error: String?
     ): RState
 
@@ -64,8 +63,8 @@ class ColumnFilter(
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
         open = false
-        requested = false
-        valueSummary = null
+//        requested = false
+//        valueSummary = null
         error = null
     }
 
@@ -75,15 +74,15 @@ class ColumnFilter(
         prevState: State,
         snapshot: Any
     ) {
-        if (state.open && ! prevState.open && ! state.requested) {
-            setState {
-                requested = true
-            }
-        }
+//        if (state.open && ! prevState.open && ! state.requested) {
+//            setState {
+//                requested = true
+//            }
+//        }
 
-        if (state.requested && ! prevState.requested) {
-            requestValueSummary()
-        }
+//        if (state.requested && ! prevState.requested) {
+//            requestValueSummary()
+//        }
     }
 
 
@@ -135,34 +134,6 @@ class ColumnFilter(
     }
 
 
-    private fun requestValueSummary() {
-        async {
-            val result = ClientContext.restClient.performDetached(
-                props.mainLocation,
-                FilterConventions.actionParameter to FilterConventions.actionSummary,
-                FilterConventions.columnKey to props.columnName)
-
-            when (result) {
-                is ExecutionSuccess -> {
-                    @Suppress("UNCHECKED_CAST")
-                    val valueSummary = ValueSummary.fromCollection(
-                        result.value.get() as Map<String, Any>)
-
-                    setState {
-                        this.valueSummary = valueSummary
-                    }
-                }
-
-                is ExecutionFailure -> {
-                    setState {
-                        error = result.errorMessage
-                    }
-                }
-            }
-        }
-    }
-
-
     private fun onOpenToggle() {
         setState {
             open = ! open
@@ -189,35 +160,39 @@ class ColumnFilter(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val valueSummary = state.valueSummary
+        val columnSummary = props.columnSummary
 
-        child(MaterialPaper::class) {
-            child(MaterialCardContent::class) {
-                renderCardHeader(valueSummary)
+        styledDiv {
+            css {
+                borderTopWidth = 1.px
+                borderTopStyle = BorderStyle.solid
+                borderTopColor = Color.gray
+            }
 
-                val error = state.error
-                if (error != null) {
-                    div {
-                        +"Error: $error"
-                    }
+            renderCardHeader(columnSummary)
+
+            val error = state.error
+            if (error != null) {
+                div {
+                    +"Error: $error"
                 }
+            }
 
-                val requiredValues = props.requiredValues
-                if (requiredValues != null) {
-                    div {
-                        +"Required values: ${requiredValues.joinToString()}"
-                    }
+            val requiredValues = props.requiredValues
+            if (requiredValues != null) {
+                div {
+                    +"Required values: ${requiredValues.joinToString()}"
                 }
+            }
 
-                if (state.open) {
-                    renderCardBody(valueSummary)
-                }
+            if (state.open) {
+                renderCardBody(columnSummary)
             }
         }
     }
 
 
-    private fun RBuilder.renderCardHeader(valueSummary: ValueSummary?) {
+    private fun RBuilder.renderCardHeader(valueSummary: ColumnSummary?) {
         styledTable {
             css {
                 width = 100.pct
@@ -271,7 +246,7 @@ class ColumnFilter(
     }
 
 
-    private fun RBuilder.renderCardBody(valueSummary: ValueSummary?) {
+    private fun RBuilder.renderCardBody(valueSummary: ColumnSummary?) {
         styledDiv {
             css {
                 width = 100.pct

@@ -328,6 +328,11 @@ class DefaultAttributeEditor(
 
 
     private fun formattedLabel(): String {
+        val labelOverride = props.labelOverride
+        if (labelOverride != null) {
+            return labelOverride
+        }
+
         val upperCamelCase = props.attributeName.value.capitalize()
 
         val results = Regex("[A-Z][a-z]*").findAll(upperCamelCase)

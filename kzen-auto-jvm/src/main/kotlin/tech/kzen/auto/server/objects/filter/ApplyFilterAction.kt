@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
+import tech.kzen.auto.common.objects.document.filter.OutputInfo
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
@@ -14,8 +15,32 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 
-object ApplyFilter {
-    private val logger = LoggerFactory.getLogger(ApplyFilter::class.java)
+object ApplyFilterAction {
+    private val logger = LoggerFactory.getLogger(ApplyFilterAction::class.java)
+
+
+    suspend fun lookupOutput(
+        outputPath: Path
+    ): ExecutionResult {
+        val absolutePath = outputPath.normalize().toAbsolutePath().toString()
+
+        val info =
+            if (! Files.exists(outputPath)) {
+                OutputInfo(
+                    absolutePath,
+                    null,
+                    Files.exists(outputPath.parent))
+            }
+            else {
+                val fileTime = withContext(Dispatchers.IO) {
+                    Files.getLastModifiedTime(outputPath)
+                }
+                OutputInfo(absolutePath, fileTime.toString(), true)
+            }
+
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(info.toCollection()))
+    }
 
 
     suspend fun applyFilter(
@@ -51,7 +76,8 @@ object ApplyFilter {
 
         logger.info("Done")
 
-        return ExecutionSuccess.ofValue(ExecutionValue.of(outputPath.toString()))
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(outputPath.toString()))
     }
 
 

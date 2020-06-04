@@ -17,6 +17,8 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
+import tech.kzen.auto.common.paradigm.task.model.TaskId
+import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.server.service.ServerContext
@@ -702,6 +704,7 @@ class RestHandler {
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     fun actionDetached(serverRequest: ServerRequest): Mono<ServerResponse> {
         val documentPath: DocumentPath = serverRequest.getParam(
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
@@ -737,7 +740,7 @@ class RestHandler {
 
                     ServerResponse
                             .ok()
-                            .body(Mono.just(execution.toCollection()))
+                            .body(Mono.just(execution.toJsonCollection()))
                 }
     }
 
@@ -756,14 +759,14 @@ class RestHandler {
 
         val result =
                 if (objectPath == null) {
-                    VisualDataflowModel.toCollection(visualDataflowModel)
+                    VisualDataflowModel.toJsonCollection(visualDataflowModel)
                 }
                 else {
                     val objectLocation = ObjectLocation(documentPath, objectPath)
                     val visualVertexModel = visualDataflowModel.vertices[objectLocation]
                             ?: throw IllegalArgumentException("Object location not found: $objectLocation")
 
-                    VisualVertexModel.toCollection(visualVertexModel)
+                    VisualVertexModel.toJsonCollection(visualVertexModel)
                 }
 
         return ServerResponse
@@ -782,7 +785,7 @@ class RestHandler {
 
         return ServerResponse
                 .ok()
-                .body(Mono.just(VisualDataflowModel.toCollection(visualDataflowModel)))
+                .body(Mono.just(VisualDataflowModel.toJsonCollection(visualDataflowModel)))
     }
 
 
@@ -803,6 +806,99 @@ class RestHandler {
                 .ok()
                 .body(Mono.just(VisualVertexTransition.toCollection(transition)))
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun taskSubmit(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+            CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
+        val objectPath: ObjectPath = serverRequest.getParam(
+            CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
+
+        val objectLocation = ObjectLocation(documentPath, objectPath)
+
+        val params = mutableMapOf<String, List<String>>()
+        for (e in serverRequest.queryParams()) {
+            if (e.key == CommonRestApi.paramDocumentPath ||
+                e.key == CommonRestApi.paramObjectPath) {
+                continue
+            }
+            params[e.key] = e.value
+        }
+
+        return serverRequest
+            .bodyToMono(ByteArray::class.java)
+            .map { Optional.of(ImmutableByteArray.wrap(it)) }
+            .defaultIfEmpty(Optional.empty())
+            .flatMap { optionalBody ->
+                val body = optionalBody.orElse(null)
+
+                val detachedRequest = DetachedRequest(RequestParams(params), body)
+
+                val execution: TaskModel = runBlocking {
+                    ServerContext.modelTaskRepository.submit(
+                        objectLocation,
+                        detachedRequest)
+                }
+
+                ServerResponse
+                    .ok()
+                    .body(Mono.just(execution.toJsonCollection()))
+            }
+    }
+
+
+    fun taskQuery(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val taskId: TaskId = serverRequest
+            .getParam(CommonRestApi.paramTaskId) { TaskId(it) }
+
+        val model: TaskModel? = runBlocking {
+            ServerContext.modelTaskRepository.query(taskId)
+        }
+
+        val result = model?.toJsonCollection()
+
+        return ServerResponse
+            .ok()
+            .body(Mono.just(result!!))
+    }
+
+
+    fun taskCancel(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val taskId: TaskId = serverRequest
+            .getParam(CommonRestApi.paramTaskId) { TaskId(it) }
+
+        val model: TaskModel? = runBlocking {
+            ServerContext.modelTaskRepository.cancel(taskId)
+        }
+
+        val result = model?.toJsonCollection()
+
+        return ServerResponse
+            .ok()
+            .body(Mono.just(result!!))
+    }
+
+
+    fun taskLookup(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+            CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
+        val objectPath: ObjectPath = serverRequest.getParam(
+            CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
+
+        val objectLocation = ObjectLocation(documentPath, objectPath)
+
+        val tasks: Set<TaskId> = runBlocking {
+            ServerContext.modelTaskRepository.lookupActive(objectLocation)
+        }
+
+        return ServerResponse
+            .ok()
+            .body(Mono.just(tasks.map { it.identifier }))
+    }
+
 
 
     //-----------------------------------------------------------------------------------------------------------------

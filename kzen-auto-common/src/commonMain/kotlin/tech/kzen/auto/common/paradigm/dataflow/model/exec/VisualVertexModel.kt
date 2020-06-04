@@ -57,7 +57,7 @@ data class VisualVertexModel(
         private const val errorKey = "error"
 
 
-        fun toCollection(model: VisualVertexModel): Map<String, Any?> {
+        fun toJsonCollection(model: VisualVertexModel): Map<String, Any?> {
             return mapOf(
                     runningKey to model.running,
                     stateKey to model.state?.toJsonCollection(),

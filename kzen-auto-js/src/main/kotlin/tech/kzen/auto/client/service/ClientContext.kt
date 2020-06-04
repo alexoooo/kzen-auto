@@ -22,7 +22,6 @@ import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.common.service.store.DirectGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
-import tech.kzen.lib.platform.client.ModuleRegistry
 import kotlin.browser.window
 
 
@@ -86,6 +85,11 @@ object ClientContext {
             visualDataflowRepository,
             250,
             200)
+
+
+    val clientRestTaskRepository = ClientRestTaskRepository(
+        restClient)
+
 
     val navigationGlobal = NavigationGlobal(
             executionLoop,

@@ -1,7 +1,5 @@
 package tech.kzen.auto.common.paradigm.reactive
 
-import tech.kzen.auto.common.util.DataFormatUtils
-
 
 data class NominalValueSummary(
     val histogram: Map<String, Long>
@@ -43,7 +41,6 @@ data class NominalValueSummary(
         builder.add(listOf("Value", "Count"))
 
         for (e in histogram) {
-            val encodedValue = DataFormatUtils.csvEncode(e.key)
             builder.add(listOf(e.key, e.value.toString()))
         }
 

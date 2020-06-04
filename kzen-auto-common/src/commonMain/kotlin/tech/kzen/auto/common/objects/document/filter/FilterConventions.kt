@@ -14,14 +14,19 @@ object FilterConventions {
     private const val inputKey = "input"
     private const val outputKey = "output"
 
+    const val nameKey = "name"
+    const val progressKey = "progress"
+
     val inputAttribute = AttributeName(inputKey)
     val outputAttribute = AttributeName(outputKey)
 
     const val actionParameter = "action"
-    const val actionFiles = "files"
-    const val actionColumns = "columns"
-    const val actionSummary = "summary"
-    const val actionApply = "apply"
+    const val actionListFiles = "files"
+    const val actionListColumns = "columns"
+    const val actionLookupOutput = "output"
+    const val actionSummaryLookup = "summary-lookup"
+    const val actionSummaryRun = "summary-run"
+    const val actionFilter = "filter"
 
 
     fun isFeature(documentNotation: DocumentNotation): Boolean {

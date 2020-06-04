@@ -2,23 +2,24 @@ package tech.kzen.auto.client.objects.document.filter
 
 import kotlinx.css.*
 import react.*
-import react.dom.li
-import react.dom.ol
 import styled.css
 import styled.styledDiv
-import styled.styledSpan
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.objects.document.common.DefaultAttributeEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
+import tech.kzen.auto.client.wrap.CropperWrapper
+import tech.kzen.auto.client.wrap.FunctionWithDebounce
+import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
+import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
+import tech.kzen.auto.common.paradigm.reactive.SummaryProgress
+import tech.kzen.auto.common.paradigm.reactive.TableSummary
+import tech.kzen.auto.common.paradigm.task.model.TaskModel
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -40,11 +41,10 @@ class FilterController(
 
         var error: String?,
 
-        var fileListingLoading: Boolean,
-        var fileListing: List<String>?,
-
-        var columnListingLoading: Boolean,
-        var columnListing: List<String>?,
+        var initialTableSummaryLoading: Boolean,
+        var tableSummaryLoading: Boolean,
+        var tableSummaryProgress: SummaryProgress?,
+        var tableSummary: TableSummary?,
 
         var writingOutput: Boolean,
         var wroteOutputPath: String?,
@@ -80,6 +80,10 @@ class FilterController(
     private var cropperWrapper: CropperWrapper? = null
     private var screenshotBytes: ByteArray? = null
 
+    private var tableSummaryProgressDebounce: FunctionWithDebounce = lodash.debounce({
+        updateTableSummaryProgress()
+    }, 5_000)
+
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
@@ -87,11 +91,10 @@ class FilterController(
 
         error = null
 
-        fileListingLoading = false
-        fileListing = null
-
-        columnListingLoading = false
-        columnListing = null
+        initialTableSummaryLoading = false
+        tableSummaryLoading = false
+        tableSummaryProgress = null
+        tableSummary = null
 
         writingOutput = false
         wroteOutputPath = null
@@ -126,29 +129,25 @@ class FilterController(
             return
         }
 
-        if (state.fileListingLoading && ! prevState.fileListingLoading) {
-            getFileListing()
+        if (state.initialTableSummaryLoading && ! prevState.initialTableSummaryLoading) {
+            getInitialTableSummary()
         }
 
-        if (state.columnListingLoading && ! prevState.columnListingLoading) {
-            getColumnListing()
-        }
+//        if (state.tableSummaryLoading && ! prevState.tableSummaryLoading) {
+//            getTableSummary()
+//        }
 
-        val fileListing = state.fileListing
-        if (fileListing == null && ! state.fileListingLoading) {
+        val tableSummary = state.tableSummary
+        if (tableSummary == null && ! state.initialTableSummaryLoading) {
             setState {
-                fileListingLoading = true
+                initialTableSummaryLoading = true
             }
-            return
         }
-
-        val columnListing = state.columnListing
-        if (columnListing == null && ! state.columnListingLoading) {
-            setState {
-                columnListingLoading = true
-            }
-            return
-        }
+//        if (tableSummary == null && ! state.tableSummaryLoading) {
+//            setState {
+//                tableSummaryLoading = true
+//            }
+//        }
 
         val prevClientState = prevState.clientState
             ?: return
@@ -169,21 +168,27 @@ class FilterController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun getFileListing() {
+    private fun getInitialTableSummary() {
         val mainLocation = mainLocation()!!
 
         async {
             val result = ClientContext.restClient.performDetached(
                 mainLocation,
-                FilterConventions.actionParameter to FilterConventions.actionFiles)
+                FilterConventions.actionParameter to FilterConventions.actionSummaryLookup)
 
             when (result) {
                 is ExecutionSuccess -> {
                     @Suppress("UNCHECKED_CAST")
-                    val resultValue = result.value.get() as List<String>
+                    val resultValue = result.value.get() as Map<String, Map<String, Any>>
+                    val tableSummary = TableSummary.fromCollection(resultValue)
+
+                    @Suppress("UNCHECKED_CAST")
+                    val resultDetail = result.detail.get() as Map<String, String>
+                    val summaryProgress = SummaryProgress.fromCollection(resultDetail)
 
                     setState {
-                        fileListing = resultValue
+                        this.tableSummary = tableSummary
+                        this.tableSummaryProgress = summaryProgress
                     }
                 }
 
@@ -195,27 +200,49 @@ class FilterController(
             }
 
             setState {
-                fileListingLoading = false
+                initialTableSummaryLoading = false
             }
         }
     }
 
 
-    private fun getColumnListing() {
+    private fun getTableSummary() {
         val mainLocation = mainLocation()!!
 
         async {
-            val result = ClientContext.restClient.performDetached(
-                mainLocation,
-                FilterConventions.actionParameter to FilterConventions.actionColumns)
+            val activeTasks = ClientContext.clientRestTaskRepository.lookupActive(mainLocation)
+
+            val taskModel: TaskModel =
+                if (activeTasks.isNotEmpty()) {
+                    check(activeTasks.size == 1)
+                    val taskId = activeTasks.first()
+                    ClientContext.clientRestTaskRepository.query(taskId)!!
+                }
+                else {
+                    ClientContext.clientRestTaskRepository.submit(
+                        mainLocation,
+                        DetachedRequest(
+                            RequestParams.of(
+                                FilterConventions.actionParameter to FilterConventions.actionSummaryRun),
+                            null))
+                }
+
+            val result =
+                taskModel.finalResult ?: taskModel.partialResult!!
 
             when (result) {
                 is ExecutionSuccess -> {
                     @Suppress("UNCHECKED_CAST")
-                    val resultValue = result.value.get() as List<String>
+                    val resultValue = result.value.get() as Map<String, Map<String, Any>>
+                    val tableSummary = TableSummary.fromCollection(resultValue)
+
+                    @Suppress("UNCHECKED_CAST")
+                    val resultDetail = result.detail.get() as Map<String, String>?
+                    val tableSummaryProgress = resultDetail?.let { SummaryProgress.fromCollection(it) }
 
                     setState {
-                        columnListing = resultValue
+                        this.tableSummaryProgress = tableSummaryProgress
+                        this.tableSummary = tableSummary
                     }
                 }
 
@@ -226,8 +253,14 @@ class FilterController(
                 }
             }
 
+            val isDone = taskModel.finalResult != null
+
             setState {
-                columnListingLoading = false
+                tableSummaryLoading = ! isDone
+            }
+
+            if (! isDone) {
+                tableSummaryProgressDebounce.apply()
             }
         }
     }
@@ -245,7 +278,7 @@ class FilterController(
         async {
             val result = ClientContext.restClient.performDetached(
                 mainLocation,
-                FilterConventions.actionParameter to FilterConventions.actionApply)
+                FilterConventions.actionParameter to FilterConventions.actionFilter)
 
             when (result) {
                 is ExecutionSuccess -> {
@@ -272,16 +305,77 @@ class FilterController(
         setState {
             error = null
 
-            fileListingLoading = false
-            fileListing = null
+//            fileListingLoading = false
+//            fileListing = null
 
-            columnListingLoading = false
-            columnListing = null
+//            columnListingLoading = false
+//            columnListing = null
 
             writingOutput = false
             wroteOutputPath = null
 
             inputChanged = false
+        }
+    }
+
+
+    private fun updateTableSummaryProgress() {
+        if (! state.tableSummaryLoading) {
+            return
+        }
+
+        val mainLocation = mainLocation()!!
+
+        async {
+            val activeTasks = ClientContext.clientRestTaskRepository.lookupActive(mainLocation)
+            if (activeTasks.isEmpty()) {
+                return@async
+            }
+
+            check(activeTasks.size == 1)
+            val taskId = activeTasks.first()
+            val taskModel: TaskModel = ClientContext.clientRestTaskRepository.query(taskId)!!
+
+            val result =
+                taskModel.finalResult ?: taskModel.partialResult!!
+
+            when (result) {
+                is ExecutionSuccess -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val resultValue = result.value.get() as Map<String, Map<String, Any>>
+                    val tableSummary = TableSummary.fromCollection(resultValue)
+
+                    @Suppress("UNCHECKED_CAST")
+                    val resultDetail = result.detail.get() as Map<String, String>?
+                    val tableSummaryProgress = resultDetail?.let { SummaryProgress.fromCollection(it) }
+
+                    setState {
+                        if (this.tableSummaryProgress != tableSummaryProgress) {
+                            this.tableSummaryProgress = tableSummaryProgress
+                        }
+
+                        if (this.tableSummary != tableSummary) {
+                            this.tableSummary = tableSummary
+                        }
+                    }
+                }
+
+                is ExecutionFailure -> {
+                    setState {
+                        error = result.errorMessage
+                    }
+                }
+            }
+
+            val isDone = taskModel.finalResult != null
+
+            setState {
+                tableSummaryLoading = ! isDone
+            }
+
+            if (! isDone) {
+                tableSummaryProgressDebounce.apply()
+            }
         }
     }
 
@@ -333,22 +427,102 @@ class FilterController(
                 padding(1.em)
             }
 
-            renderInput(mainLocation, clientState)
+            renderInputs(mainLocation, clientState)
+
             renderSpacing()
 
             renderOutput(mainLocation, clientState)
+
             renderSpacing()
 
-            renderProgress()
+            renderStatus(mainLocation, clientState)
+
             renderSpacing()
 
-            renderFiles()
-            renderSpacing()
-
-            renderFilters(mainLocation, clientState)
+            renderColumnList(mainLocation, clientState)
         }
 
-        renderRun(mainLocation)
+        renderRun(mainLocation, clientState)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderInputs(
+        mainLocation: ObjectLocation,
+        clientState: SessionState
+    ) {
+        child(FilterInputs::class) {
+            attrs {
+                this.mainLocation = mainLocation
+                this.clientState = clientState
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderOutput(
+        mainLocation: ObjectLocation,
+        clientState: SessionState
+    ) {
+        child(FilterOutput::class) {
+            attrs {
+                this.mainLocation = mainLocation
+                this.clientState = clientState
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderStatus(
+        mainLocation: ObjectLocation,
+        clientState: SessionState
+    ) {
+        child(FilterStatus::class) {
+            attrs {
+                this.mainLocation = mainLocation
+                this.clientState = clientState
+                this.error = state.error
+                this.initialTableSummaryLoading = state.initialTableSummaryLoading
+                this.summaryProgress = state.tableSummaryProgress
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderColumnList(
+        mainLocation: ObjectLocation,
+        clientState: SessionState
+    ) {
+        child(FilterColumnList::class) {
+            attrs {
+                this.mainLocation = mainLocation
+                this.clientState = clientState
+                this.tableSummary = state.tableSummary
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderRun(
+        mainLocation: ObjectLocation,
+        clientState: SessionState
+    ) {
+        styledDiv {
+            css {
+                position = Position.fixed
+                bottom = 0.px
+                right = 0.px
+                marginRight = 2.em
+                marginBottom = 2.em
+            }
+
+            child(FilterRun::class) {
+                attrs {
+                    this.mainLocation = mainLocation
+                    this.clientState = clientState
+                }
+            }
+        }
     }
 
 
@@ -362,251 +536,100 @@ class FilterController(
     }
 
 
-    private fun RBuilder.renderInput(
-            mainLocation: ObjectLocation,
-            clientState: SessionState
-    ) {
-        child(DefaultAttributeEditor::class) {
-            attrs {
-                this.clientState = clientState
-                objectLocation = mainLocation
-                attributeName = FilterConventions.inputAttribute
-            }
-        }
-    }
-
-
-    private fun RBuilder.renderOutput(
-            mainLocation: ObjectLocation,
-            clientState: SessionState
-    ) {
-        child(DefaultAttributeEditor::class) {
-            attrs {
-                this.clientState = clientState
-                objectLocation = mainLocation
-                attributeName = FilterConventions.outputAttribute
-            }
-        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderProgress() {
-        styledDiv {
-            css {
-                fontSize = 2.em
-                fontFamily = "monospace"
-                fontWeight = FontWeight.bold
-                backgroundColor = Color("rgba(255, 255, 255, 0.5)")
-                padding(0.5.em)
-//                margin(1.em)
-            }
-
-            +"Status -> "
-
-            val error = state.error
-            if (error != null) {
-                +"Error: $error"
-                return
-            }
-
-            if (state.fileListingLoading) {
-                +"Working: listing files"
-                return
-            }
-
-            if (state.columnListingLoading) {
-                +"Working: listing columns"
-                return
-            }
-
-            if (state.writingOutput) {
-                +"Working: writing output"
-                return
-            }
-
-            val wrotePath = state.wroteOutputPath
-            if (wrotePath != null) {
-                +"Wrote: $wrotePath"
-                return
-            }
-
-//            +"Showing columns (${state.columnDetails?.size ?: 0} of ${state.columnListing?.size})"
-            +"Showing columns (${state.columnListing?.size})"
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderFiles() {
-        val fileListing = state.fileListing
-
-        child(MaterialPaper::class) {
-            child(MaterialCardContent::class) {
-                styledDiv {
-                    css {
-                        maxHeight = 20.em
-                        overflowY = Overflow.auto
-                    }
-
-                    styledSpan {
-                        css {
-                            fontSize = 2.em
-                        }
-
-                        +"Input Files"
-                    }
-
-                    if (fileListing == null) {
-                        +"..."
-                    }
-                    else {
-                        ol {
-                            for (filePath in fileListing) {
-                                li {
-                                    attrs {
-                                        key = filePath
-                                    }
-                                    +filePath
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderFilters(
-        mainLocation: ObjectLocation,
-        clientState: SessionState
-    ) {
-        val columnListing = state.columnListing
-
-        if (columnListing == null) {
-            +"..."
-            return
-        }
-
-        val criteriaDefinition = clientState
-            .graphDefinitionAttempt
-            .successful
-            .objectDefinitions[mainLocation]!!
-            .attributeDefinitions[FilterConventions.criteriaAttributeName]!!
-        val criteriaSpec = (criteriaDefinition as ValueAttributeDefinition).value as CriteriaSpec
-
-//        val columnDetails = state.columnDetails
-
-        for (index in columnListing.indices) {
-            styledDiv {
-                key = index.toString()
-
-                css {
-                    marginBottom = 1.em
-                }
-
-                // val graphStructure = clientState.graphStructure()
-                val columnName = columnListing[index]
-
-                child(ColumnFilter::class) {
-                    attrs {
-                        this.mainLocation = mainLocation
-                        this.clientState = clientState
-//                        this.criteriaSpec = criteriaSpec
-                        this.requiredValues = criteriaSpec.columnRequiredValues[columnName]
-
-                        columnIndex = index
-                        this.columnName = columnName
-//                        valueSummary =
-//                            if (columnDetails?.size ?: 0 > index) {
-//                                columnDetails!![index]
+//    private fun RBuilder.renderProgress() {
+//        styledDiv {
+//            css {
+//                backgroundColor = Color("rgba(255, 255, 255, 0.5)")
+//                padding(0.5.em)
+//            }
+//
+//            if (state.error != null) {
+//                styledSpan {
+//                    css {
+//                        fontSize = 2.em
+//                        fontFamily = "monospace"
+//                        fontWeight = FontWeight.bold
+//                    }
+//                    +"Error: ${state.error!!}"
+//                }
+//            }
+//            else if (state.columnListingLoading) {
+//                styledSpan {
+//                    css {
+//                        fontSize = 2.em
+//                        fontFamily = "monospace"
+//                        fontWeight = FontWeight.bold
+//                    }
+//                    +"Working: listing columns"
+//                }
+//            }
+//            else if (state.tableSummaryLoading) {
+//                styledSpan {
+//                    css {
+//                        fontSize = 2.em
+//                        fontFamily = "monospace"
+//                        fontWeight = FontWeight.bold
+//                    }
+//                    +"Working: indexing column contents"
+//                }
+//
+//                val remainingFiles = state.tableSummaryProgress?.remainingFiles
+//                if (remainingFiles != null) {
+//                    table {
+//                        thead {
+//                            tr {
+//                                th { +"File" }
+//                                th { +"Progress" }
 //                            }
-//                            else {
-//                                null
+//                        }
+//                        tbody {
+//                            for (e in remainingFiles.entries) {
+//                                tr {
+//                                    key = e.key
+//
+//                                    td {
+//                                        +e.key
+//                                    }
+//                                    td {
+//                                        +e.value
+//                                    }
+//                                }
 //                            }
-                    }
-                }
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderRun(
-            mainLocation: ObjectLocation
-    ) {
-        styledDiv {
-            css {
-                position = Position.fixed
-                bottom = 0.px
-                right = 0.px
-                marginRight = 2.em
-                marginBottom = 2.em
-            }
-
-            renderRunFab(mainLocation)
-        }
-    }
-
-
-    private fun RBuilder.renderRunFab(
-            mainLocation: ObjectLocation
-    ) {
-        child(MaterialFab::class) {
-            attrs {
-                title = when {
-                    state.writingOutput ->
-                        "Running..."
-
-                    else ->
-                        "Run"
-                }
-
-                style = reactStyle {
-                    backgroundColor =
-                            if (state.writingOutput) {
-                                Color.white
-                            }
-                            else {
-                                Color.gold
-                            }
-
-                    width = 5.em
-                    height = 5.em
-                }
-            }
-
-            if (state.writingOutput) {
-                child(MaterialCircularProgress::class) {}
-            }
-            else if (state.inputChanged) {
-                child(RefreshIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            fontSize = 3.em
-                        }
-
-                        onClick = {
-                            refresh()
-                        }
-                    }
-                }
-            }
-            else {
-                child(PlayArrowIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            fontSize = 3.em
-                        }
-
-                        onClick = {
-                            applyFilter(mainLocation)
-                        }
-                    }
-                }
-            }
-        }
-    }
+//                        }
+//                    }
+//                }
+//            }
+//            else if (state.writingOutput) {
+//                styledSpan {
+//                    css {
+//                        fontSize = 2.em
+//                        fontFamily = "monospace"
+//                        fontWeight = FontWeight.bold
+//                    }
+//                    +"Working: writing output"
+//                }
+//            }
+//            else if (state.wroteOutputPath != null) {
+//                styledSpan {
+//                    css {
+//                        fontSize = 2.em
+//                        fontFamily = "monospace"
+//                        fontWeight = FontWeight.bold
+//                    }
+//                    +"Wrote: ${state.wroteOutputPath!!}"
+//                }
+//            }
+//            else {
+//                styledSpan {
+//                    css {
+//                        fontSize = 2.em
+//                        fontFamily = "monospace"
+//                        fontWeight = FontWeight.bold
+//                    }
+//                    +"Showing columns (${state.columnListing?.size})"
+//                }
+//            }
+//        }
+//    }
 }

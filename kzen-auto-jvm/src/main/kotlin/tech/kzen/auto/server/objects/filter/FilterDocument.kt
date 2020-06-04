@@ -9,6 +9,8 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
+import tech.kzen.auto.common.paradigm.task.api.ManagedTask
+import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.util.AutoJvmUtils
 import tech.kzen.lib.common.reflect.Reflect
 import java.nio.file.Path
@@ -21,7 +23,8 @@ class FilterDocument(
         private val criteria: CriteriaSpec
 ):
     DocumentArchetype(),
-    DetachedAction
+    DetachedAction,
+    ManagedTask
 {
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun execute(request: DetachedRequest): ExecutionResult {
@@ -32,17 +35,20 @@ class FilterDocument(
             ?: return ExecutionFailure("Please provide a valid input path")
 
         return when (action) {
-            FilterConventions.actionColumns ->
+            FilterConventions.actionListFiles ->
+                actionListFiles(inputPaths)
+
+            FilterConventions.actionListColumns ->
                 actionColumnListing(inputPaths)
 
-            FilterConventions.actionSummary ->
-                actionColumnSummary(inputPaths, request)
+            FilterConventions.actionLookupOutput ->
+                actionLookupOutput()
 
-            FilterConventions.actionApply ->
+            FilterConventions.actionSummaryLookup ->
+                actionColumnSummaryLookup(inputPaths)
+
+            FilterConventions.actionFilter ->
                 actionApplyFilter(inputPaths)
-
-            FilterConventions.actionFiles ->
-                actionListFiles(inputPaths)
 
             else ->
                 return ExecutionFailure("Unknown action: $action")
@@ -52,8 +58,7 @@ class FilterDocument(
 
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun inputPaths(): List<Path>? {
-        return FileListing.list(input)
-//
+        return FileListingAction.list(input)
 //        val parsedInputPath = AutoJvmUtils.parsePath(input)
 //            ?: return null
 //
@@ -69,24 +74,28 @@ class FilterDocument(
 
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun actionColumnListing(inputPaths: List<Path>): ExecutionResult {
-        val columnNames = ColumnListing.columnNamesMerge(inputPaths)
+        val columnNames = ColumnListingAction.columnNamesMerge(inputPaths)
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(columnNames))
     }
 
 
-    private suspend fun actionColumnSummary(
-        inputPaths: List<Path>,
-        request: DetachedRequest
+    private suspend fun actionColumnSummaryLookup(
+        inputPaths: List<Path>
     ): ExecutionResult {
-        val columnName = request.parameters.get(FilterConventions.columnKey)
-            ?: return ExecutionFailure("'${FilterConventions.columnKey}' required")
+        val columnNames = ColumnListingAction.columnNamesMerge(inputPaths)
+        return ColumnSummaryAction.lookupSummary(
+            inputPaths, columnNames)
+    }
 
-        val summary = ColumnSummary.summarizeAll(
-            inputPaths, columnName)
 
-        return ExecutionSuccess.ofValue(
-            ExecutionValue.of(summary.toCollection()))
+    private suspend fun actionLookupOutput(): ExecutionResult {
+        val parsedOutputPath = AutoJvmUtils.parsePath(output)
+            ?: return ExecutionFailure("Invalid output: $output")
+
+        val outputPath = parsedOutputPath.toAbsolutePath().normalize()
+
+        return ApplyFilterAction.lookupOutput(outputPath)
     }
 
 
@@ -98,9 +107,9 @@ class FilterDocument(
 
         val outputPath = parsedOutputPath.toAbsolutePath().normalize()
 
-        val columnNames = ColumnListing.columnNamesMerge(inputPaths)
+        val columnNames = ColumnListingAction.columnNamesMerge(inputPaths)
 
-        return ApplyFilter.applyFilter(
+        return ApplyFilterAction.applyFilter(
             inputPaths, columnNames, outputPath, criteria)
     }
 
@@ -110,5 +119,71 @@ class FilterDocument(
     ): ExecutionResult {
         return ExecutionSuccess.ofValue(ExecutionValue.of(
             inputPaths.map { it.toString() }))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun start(request: DetachedRequest, handle: TaskHandle) {
+        val action = request.parameters.get(FilterConventions.actionParameter)
+        if (action == null) {
+            handle.complete(ExecutionFailure(
+                "'${FilterConventions.actionParameter}' expected"))
+            return
+        }
+
+        val inputPaths = inputPaths()
+        if (inputPaths == null) {
+            handle.complete(ExecutionFailure(
+                "Please provide a valid input path"))
+            return
+        }
+
+        val columnNames = ColumnListingAction.columnNamesMerge(inputPaths)
+
+        when (action) {
+//            FilterConventions.actionFiles -> {
+//                val result = actionListFiles(inputPaths)
+//                handle.complete(result)
+//            }
+//
+//            FilterConventions.actionColumns -> {
+//                val result = actionColumnListing(inputPaths)
+//                handle.complete(result)
+//            }
+
+            FilterConventions.actionSummaryRun -> {
+//                val result = actionColumnSummary(inputPaths, request)
+//                handle.complete(result)
+                actionColumnSummaryAsync(inputPaths, columnNames, /*request,*/ handle)
+            }
+
+            FilterConventions.actionFilter -> {
+                val result = actionApplyFilter(inputPaths)
+                handle.complete(result)
+            }
+
+            else -> {
+                handle.complete(ExecutionFailure(
+                    "Unknown action: $action"))
+            }
+        }
+    }
+
+
+    private suspend fun actionColumnSummaryAsync(
+        inputPaths: List<Path>,
+        columnNames: List<String>,
+//        request: DetachedRequest,
+        handle: TaskHandle
+    ) {
+//        val columnName = request.parameters.get(FilterConventions.columnKey)
+//        if (columnName == null) {
+//            handle.complete(ExecutionFailure(
+//                "'${FilterConventions.columnKey}' required"))
+//            return
+//        }
+
+        ColumnSummaryAction.summarizeAllAsync(
+            inputPaths, columnNames, handle)
     }
 }

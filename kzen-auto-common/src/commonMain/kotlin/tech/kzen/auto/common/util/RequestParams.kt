@@ -9,6 +9,12 @@ data class RequestParams(
         val empty = RequestParams(mapOf())
 
 
+        fun of(vararg entries: Pair<String, String>): RequestParams {
+            return RequestParams(
+                entries.toMap().mapValues { listOf(it.value) })
+        }
+
+
         fun parse(paramsLine: String): RequestParams {
             val params = paramsLine.split('&')
 

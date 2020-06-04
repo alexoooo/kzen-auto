@@ -12,6 +12,7 @@ import tech.kzen.auto.common.service.GraphInstanceCreator
 import tech.kzen.auto.server.service.exec.EmptyExecutionInitializer
 import tech.kzen.auto.server.service.exec.ModelActionExecutor
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
+import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
 import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
@@ -64,6 +65,8 @@ object ServerContext {
             EmptyExecutionInitializer,
             actionExecutor)
 
+    val modelTaskRepository = ModelTaskRepository(
+        graphStore, graphCreator)
 
     private val graphInstanceCreator = GraphInstanceCreator(
             graphStore, graphCreator)

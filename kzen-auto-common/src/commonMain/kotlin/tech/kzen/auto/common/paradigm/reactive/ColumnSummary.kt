@@ -1,14 +1,14 @@
 package tech.kzen.auto.common.paradigm.reactive
 
 
-data class ValueSummary(
+data class ColumnSummary(
     val count: Long,
     val nominalValueSummary: NominalValueSummary,
     val numericValueSummary: StatisticValueSummary,
     val opaqueValueSummary: OpaqueValueSummary
 ) {
     companion object {
-        val empty = ValueSummary(
+        val empty = ColumnSummary(
             0,
             NominalValueSummary.empty,
             StatisticValueSummary.empty,
@@ -20,8 +20,8 @@ data class ValueSummary(
         private const val opaqueKey = "opaque"
 
         @Suppress("UNCHECKED_CAST")
-        fun fromCollection(collection: Map<String, Any>): ValueSummary {
-            return ValueSummary(
+        fun fromCollection(collection: Map<String, Any>): ColumnSummary {
+            return ColumnSummary(
                 collection[countKey] as Long,
                 NominalValueSummary.fromCollection(collection[nominalKey] as Map<String, String>),
                 StatisticValueSummary.fromCollection(collection[numericKey] as Map<String, Any>),

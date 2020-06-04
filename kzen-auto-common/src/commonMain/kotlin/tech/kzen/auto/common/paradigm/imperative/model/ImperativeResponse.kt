@@ -18,7 +18,7 @@ data class ImperativeResponse(
         @Suppress("UNCHECKED_CAST")
         fun fromCollection(collection: Map<String, Any?>): ImperativeResponse {
             val executionResult = (collection[resultKey] as? Map<String, Any>)?.let {
-                ExecutionResult.fromCollection(it)
+                ExecutionResult.fromJsonCollection(it)
             }
 
             val controlTransition = (collection[transitionKey] as? Map<String, Any>)?.let {
@@ -36,7 +36,7 @@ data class ImperativeResponse(
 
     fun toCollection(): Map<String, Any?> {
         return mapOf(
-                resultKey to executionResult?.toCollection(),
+                resultKey to executionResult?.toJsonCollection(),
                 transitionKey to controlTransition?.toCollection(),
                 CommonRestApi.fieldDigest to executionModelDigest.asString()
         )

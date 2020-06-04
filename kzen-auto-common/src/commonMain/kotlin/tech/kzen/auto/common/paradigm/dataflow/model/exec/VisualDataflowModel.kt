@@ -17,7 +17,7 @@ data class VisualDataflowModel(
         val empty = VisualDataflowModel(persistentMapOf())
 
 
-        fun toCollection(
+        fun toJsonCollection(
                 model: VisualDataflowModel
         ): Map<String, Any> {
             return model
@@ -26,7 +26,7 @@ data class VisualDataflowModel(
                         it.key.asString()
                     }
                     .mapValues {
-                        VisualVertexModel.toCollection(it.value)
+                        VisualVertexModel.toJsonCollection(it.value)
                     }
         }
 
