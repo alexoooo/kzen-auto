@@ -47,8 +47,8 @@ class FilterDocument(
             FilterConventions.actionSummaryLookup ->
                 actionColumnSummaryLookup(inputPaths)
 
-            FilterConventions.actionFilter ->
-                actionApplyFilter(inputPaths)
+//            FilterConventions.actionFilter ->
+//                actionApplyFilterAsync(inputPaths)
 
             else ->
                 return ExecutionFailure("Unknown action: $action")
@@ -99,21 +99,6 @@ class FilterDocument(
     }
 
 
-    private suspend fun actionApplyFilter(
-        inputPaths: List<Path>
-    ): ExecutionResult {
-        val parsedOutputPath = AutoJvmUtils.parsePath(output)
-            ?: return ExecutionFailure("Invalid output: $output")
-
-        val outputPath = parsedOutputPath.toAbsolutePath().normalize()
-
-        val columnNames = ColumnListingAction.columnNamesMerge(inputPaths)
-
-        return ApplyFilterAction.applyFilter(
-            inputPaths, columnNames, outputPath, criteria)
-    }
-
-
     private fun actionListFiles(
         inputPaths: List<Path>
     ): ExecutionResult {
@@ -151,15 +136,16 @@ class FilterDocument(
 //                handle.complete(result)
 //            }
 
-            FilterConventions.actionSummaryRun -> {
+            FilterConventions.actionSummaryTask -> {
 //                val result = actionColumnSummary(inputPaths, request)
 //                handle.complete(result)
                 actionColumnSummaryAsync(inputPaths, columnNames, /*request,*/ handle)
             }
 
-            FilterConventions.actionFilter -> {
-                val result = actionApplyFilter(inputPaths)
-                handle.complete(result)
+            FilterConventions.actionFilterTask -> {
+                actionApplyFilterAsync(
+                    inputPaths, columnNames, handle)
+//                handle.complete(result)
             }
 
             else -> {
@@ -185,5 +171,24 @@ class FilterDocument(
 
         ColumnSummaryAction.summarizeAllAsync(
             inputPaths, columnNames, handle)
+    }
+
+
+    private suspend fun actionApplyFilterAsync(
+        inputPaths: List<Path>,
+        columnNames: List<String>,
+        handle: TaskHandle
+    ) {
+        val parsedOutputPath = AutoJvmUtils.parsePath(output)
+        if (parsedOutputPath == null) {
+            handle.complete(ExecutionFailure(
+                "Invalid output location: $output"))
+            return
+        }
+
+        val outputPath = parsedOutputPath.toAbsolutePath().normalize()
+
+        ApplyFilterAction.applyFilterAsync(
+            inputPaths, columnNames, outputPath, criteria, handle)
     }
 }

@@ -7,6 +7,7 @@ data class ColumnSummary(
     val numericValueSummary: StatisticValueSummary,
     val opaqueValueSummary: OpaqueValueSummary
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val empty = ColumnSummary(
             0,
@@ -31,6 +32,17 @@ data class ColumnSummary(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    fun isEmpty(): Boolean {
+        return count == 0L &&
+                nominalValueSummary.isEmpty() &&
+                numericValueSummary.isEmpty() &&
+                opaqueValueSummary.isEmpty()
+
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun toCollection(): Map<String, Any> {
         return mapOf(
             countKey to count,

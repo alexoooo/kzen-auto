@@ -1,15 +1,12 @@
 package tech.kzen.auto.client.objects.document.filter
 
-import kotlinx.css.em
-import kotlinx.css.height
-import kotlinx.css.width
+import kotlinx.css.*
 import react.RBuilder
 import react.RProps
 import react.RPureComponent
 import react.RState
 import tech.kzen.auto.client.service.global.SessionState
-import tech.kzen.auto.client.wrap.MaterialFab
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
@@ -21,7 +18,16 @@ class FilterRun(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var mainLocation: ObjectLocation,
-        var clientState: SessionState
+        var clientState: SessionState,
+
+        var summaryDone: Boolean,
+        var summaryRunning: Boolean,
+
+        var filterDone: Boolean,
+        var filterRunning: Boolean,
+
+        var onSummaryTask: () -> Unit,
+        var onFilterTask: () -> Unit
     ): RProps
 
 
@@ -34,60 +40,81 @@ class FilterRun(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+//        val runnable = ! props.summaryDone || ! props.filterDone
+
         child(MaterialFab::class) {
             attrs {
                 title = when {
+                    ! props.summaryDone ->
+                        "Index column values"
+
 //                    state.writingOutput ->
 //                        "Running..."
 
                     else ->
-                        "Run"
+                        "Filter"
                 }
 
                 style = reactStyle {
-//                    backgroundColor =
-//                        if (state.writingOutput) {
-//                            Color.white
-//                        }
-//                        else {
-//                            Color.gold
-//                        }
+                    backgroundColor =
+                        if (props.summaryRunning || props.filterRunning) {
+                            Color.white
+                        }
+                        else {
+                            Color.gold
+                        }
 
                     width = 5.em
                     height = 5.em
                 }
-            }
-            +"foo"
 
-//            if (state.writingOutput) {
-//                child(MaterialCircularProgress::class) {}
-//            }
-//            else if (state.inputChanged) {
-//                child(RefreshIcon::class) {
-//                    attrs {
-//                        style = reactStyle {
-//                            fontSize = 3.em
-//                        }
-//
-//                        onClick = {
-//                            refresh()
-//                        }
-//                    }
-//                }
-//            }
-//            else {
-//                child(PlayArrowIcon::class) {
-//                    attrs {
-//                        style = reactStyle {
-//                            fontSize = 3.em
-//                        }
-//
-//                        onClick = {
-//                            applyFilter(mainLocation)
-//                        }
-//                    }
-//                }
-//            }
+                onClick = {
+                    if (props.summaryRunning) {
+                        // TODO
+                    }
+                    else if (! props.summaryDone) {
+                        props.onSummaryTask()
+                    }
+                    else if (props.filterRunning) {
+                        // TODO
+                    }
+                    else if (! props.filterDone) {
+                        props.onFilterTask()
+                    }
+                }
+            }
+
+            if (props.summaryRunning) {
+                child(MaterialCircularProgress::class) {}
+            }
+            else if (! props.summaryDone) {
+                child(MenuBookIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+
+//                        onClick = {}
+                    }
+                }
+            }
+            else if (props.filterRunning) {
+                child(MaterialCircularProgress::class) {}
+            }
+            else if (! props.filterDone) {
+                child(PlayArrowIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            fontSize = 3.em
+                        }
+
+//                        onClick = {}
+                    }
+                }
+            }
+            else {
+                +"X"
+            }
         }
     }
 }

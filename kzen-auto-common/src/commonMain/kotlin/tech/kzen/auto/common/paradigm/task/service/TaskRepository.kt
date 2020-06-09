@@ -26,4 +26,9 @@ interface TaskRepository {
     suspend fun lookupActive(
         taskLocation: ObjectLocation
     ): Set<TaskId>
+
+
+//    suspend fun lookupAll(
+//        taskLocation: ObjectLocation
+//    ): Set<TaskId>
 }

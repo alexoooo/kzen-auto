@@ -13,7 +13,8 @@ import styled.styledSpan
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.wrap.MaterialCardContent
 import tech.kzen.auto.client.wrap.MaterialPaper
-import tech.kzen.auto.common.paradigm.reactive.SummaryProgress
+import tech.kzen.auto.common.paradigm.reactive.TableSummary
+import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
@@ -28,8 +29,17 @@ class FilterStatus(
         var clientState: SessionState,
 
         var error: String?,
+
         var initialTableSummaryLoading: Boolean,
-        var summaryProgress: SummaryProgress?
+        var summaryTaskRunning: Boolean,
+        var summaryEmpty: Boolean,
+        var summaryProgress: TaskProgress?,
+        var tableSummary: TableSummary?,
+
+        var filterTaskStateLoading: Boolean,
+        var filterTaskRunning: Boolean,
+        var filterTaskProgress: TaskProgress?,
+        var filterTaskOutput: String?
     ): RProps
 
 
@@ -55,16 +65,20 @@ class FilterStatus(
                     if (props.initialTableSummaryLoading) {
                         +"Looking up column values"
                     }
-                    else if (props.summaryProgress != null) {
+                    else if (props.filterTaskStateLoading) {
+                        +"Looking up filtering state"
+                    }
+                    else if (props.filterTaskProgress != null) {
 //                        +"Indexing column values"
 
-                        val remainingFiles = props.summaryProgress!!.remainingFiles
+                        val progress = props.filterTaskProgress!!
+                        val remainingFiles = progress.remainingFiles
 
                         if (remainingFiles.isEmpty()) {
-                            +"Showing column filters, ready apply filters"
+                            +"Filtering done"
                         }
                         else {
-                            +"Showing partial column filters, indexing values"
+                            +"Filtering"
 
                             table {
                                 thead {
@@ -90,102 +104,54 @@ class FilterStatus(
                             }
                         }
                     }
+                    else if (props.filterTaskOutput != null) {
+                        +"Finished filtering, ready to apply filters again"
+                    }
+                    else if (props.summaryProgress != null) {
+//                        +"Indexing column values"
+
+                        val summaryProgress = props.summaryProgress!!
+                        val remainingFiles = summaryProgress.remainingFiles
+
+                        if (remainingFiles.isEmpty()) {
+                            +"Ready to apply filters"
+                        }
+                        else if (props.summaryEmpty && ! props.summaryTaskRunning) {
+                            +"Column values not indexed yet"
+                        }
+                        else {
+                            +"Indexing column values, showing partial column filters"
+
+                            table {
+                                thead {
+                                    tr {
+                                        th { +"File" }
+                                        th { +"Progress" }
+                                    }
+                                }
+                                tbody {
+                                    for (e in remainingFiles.entries) {
+                                        tr {
+                                            key = e.key
+
+                                            td {
+                                                +e.key
+                                            }
+                                            td {
+                                                +e.value
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (props.tableSummary != null) {
+                        +"Finished indexing column values, ready to apply filters"
+//                        +"Ready to apply filters"
+                    }
                 }
             }
         }
-
-//        styledDiv {
-//            css {
-//                backgroundColor = Color("rgba(255, 255, 255, 0.5)")
-//                padding(0.5.em)
-//            }
-//
-//            if (state.error != null) {
-//                styledSpan {
-//                    css {
-//                        fontSize = 2.em
-//                        fontFamily = "monospace"
-//                        fontWeight = FontWeight.bold
-//                    }
-//                    +"Error: ${state.error!!}"
-//                }
-//            }
-//            else if (state.columnListingLoading) {
-//                styledSpan {
-//                    css {
-//                        fontSize = 2.em
-//                        fontFamily = "monospace"
-//                        fontWeight = FontWeight.bold
-//                    }
-//                    +"Working: listing columns"
-//                }
-//            }
-//            else if (state.tableSummaryLoading) {
-//                styledSpan {
-//                    css {
-//                        fontSize = 2.em
-//                        fontFamily = "monospace"
-//                        fontWeight = FontWeight.bold
-//                    }
-//                    +"Working: indexing column contents"
-//                }
-//
-//                val remainingFiles = state.tableSummaryProgress?.remainingFiles
-//                if (remainingFiles != null) {
-//                    table {
-//                        thead {
-//                            tr {
-//                                th { +"File" }
-//                                th { +"Progress" }
-//                            }
-//                        }
-//                        tbody {
-//                            for (e in remainingFiles.entries) {
-//                                tr {
-//                                    key = e.key
-//
-//                                    td {
-//                                        +e.key
-//                                    }
-//                                    td {
-//                                        +e.value
-//                                    }
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//            else if (state.writingOutput) {
-//                styledSpan {
-//                    css {
-//                        fontSize = 2.em
-//                        fontFamily = "monospace"
-//                        fontWeight = FontWeight.bold
-//                    }
-//                    +"Working: writing output"
-//                }
-//            }
-//            else if (state.wroteOutputPath != null) {
-//                styledSpan {
-//                    css {
-//                        fontSize = 2.em
-//                        fontFamily = "monospace"
-//                        fontWeight = FontWeight.bold
-//                    }
-//                    +"Wrote: ${state.wroteOutputPath!!}"
-//                }
-//            }
-//            else {
-//                styledSpan {
-//                    css {
-//                        fontSize = 2.em
-//                        fontFamily = "monospace"
-//                        fontWeight = FontWeight.bold
-//                    }
-//                    +"Showing columns (${state.columnListing?.size})"
-//                }
-//            }
-//        }
     }
 }

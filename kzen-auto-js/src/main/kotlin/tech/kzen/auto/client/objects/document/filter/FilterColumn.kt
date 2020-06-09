@@ -166,7 +166,7 @@ class FilterColumn(
             css {
                 borderTopWidth = 1.px
                 borderTopStyle = BorderStyle.solid
-                borderTopColor = Color.gray
+                borderTopColor = Color.lightGray
             }
 
             renderCardHeader(columnSummary)
@@ -230,6 +230,8 @@ class FilterColumn(
                                 onClick = {
                                     onOpenToggle()
                                 }
+
+                                disabled = (props.columnSummary?.isEmpty() ?: true)
                             }
 
                             if (state.open) {

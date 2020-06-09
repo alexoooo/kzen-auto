@@ -30,7 +30,8 @@ class FilterOutput(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var mainLocation: ObjectLocation,
-        var clientState: SessionState
+        var clientState: SessionState,
+        var filterRunning: Boolean
     ): RProps
 
 
@@ -61,6 +62,12 @@ class FilterOutput(
 
         val outputInfo = state.outputInfo
         if (outputInfo == null && ! state.loading) {
+            setState {
+                loading = true
+            }
+        }
+
+        if (props.filterRunning != prevProps.filterRunning) {
             setState {
                 loading = true
             }
@@ -174,7 +181,7 @@ class FilterOutput(
                     }
                 }
                 else {
-                    +"Already exists, will over-write (last modified ${outputInfo.modifiedTime})"
+                    +"Exists, last modified: ${outputInfo.modifiedTime}"
                 }
             }
         }

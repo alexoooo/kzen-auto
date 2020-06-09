@@ -78,9 +78,8 @@ object ColumnSummaryAction {
         handle: TaskHandle
     ) {
         val initialTableSummary = TableSummary(builder)
-        var progress = SummaryProgress.ofNotStarted(
+        var progress = TaskProgress.ofNotStarted(
             remainingInputPaths.map { it.fileName.toString() })
-
         handle.update(ExecutionSuccess(
             ExecutionValue.of(initialTableSummary.toCollection()),
             ExecutionValue.of(progress.toCollection())))
@@ -118,15 +117,21 @@ object ColumnSummaryAction {
         inputPath: Path,
         columnNames: List<String>,
         partialResult: Map<String, ColumnSummary>,
-        previousProgress: SummaryProgress,
+        previousProgress: TaskProgress,
         handle: TaskHandle
     ):
-            Pair<Map<String, ColumnSummary>?, SummaryProgress>
+            Pair<Map<String, ColumnSummary>?, TaskProgress>
     {
         logger.info("Summarizing columns: {}", inputPath)
 
         val builders = mutableMapOf<String, ValueSummaryBuilder>()
-        var nextProgress = previousProgress
+
+        var nextProgress = previousProgress.update(
+            inputPath.fileName.toString(),
+            "Started")
+        handle.update(ExecutionSuccess(
+            ExecutionValue.of(TableSummary(partialResult).toCollection()),
+            ExecutionValue.of(nextProgress.toCollection())))
 
         FileStreamer.open(inputPath)!!.use { stream ->
             for (columnName in stream.header()) {
@@ -147,7 +152,6 @@ object ColumnSummaryAction {
                     nextProgress = nextProgress.update(
                         inputPath.fileName.toString(),
                         formatCount(count))
-
                     handle.update(ExecutionSuccess(
                         ExecutionValue.of(updatedTableSummary.toCollection()),
                         ExecutionValue.of(nextProgress.toCollection())))
@@ -183,6 +187,15 @@ object ColumnSummaryAction {
                     "Done: " + formatCount(count))
                 logger.info("Finished file summary: {}", formatCount(count))
             }
+
+            val combinedResults = columnNames.map {
+                it to ValueSummaryBuilder.merge(
+                    (partialResult[it] ?: ColumnSummary.empty),
+                    builders[it]!!.build())
+            }.toMap()
+            handle.update(ExecutionSuccess(
+                ExecutionValue.of(TableSummary(combinedResults).toCollection()),
+                ExecutionValue.of(nextProgress.toCollection())))
         }
 
         return Pair(
@@ -225,7 +238,7 @@ object ColumnSummaryAction {
 
         return ExecutionSuccess(
             ExecutionValue.of(TableSummary(builder).toCollection()),
-            ExecutionValue.of(SummaryProgress.ofNotStarted(
+            ExecutionValue.of(TaskProgress.ofNotStarted(
                 notLoaded.map { it.fileName.toString() }
             ).toCollection()))
     }
@@ -410,7 +423,7 @@ object ColumnSummaryAction {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun formatCount(count: Long): String {
+    fun formatCount(count: Long): String {
         return String.format("%,d", count)
     }
 }

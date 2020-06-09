@@ -25,8 +25,8 @@ object FilterConventions {
     const val actionListColumns = "columns"
     const val actionLookupOutput = "output"
     const val actionSummaryLookup = "summary-lookup"
-    const val actionSummaryRun = "summary-run"
-    const val actionFilter = "filter"
+    const val actionSummaryTask = "summary-run"
+    const val actionFilterTask = "filter"
 
 
     fun isFeature(documentNotation: DocumentNotation): Boolean {

@@ -121,6 +121,7 @@ class ModelTaskRepository(
 
         override fun complete(result: ExecutionResult) {
             model = model.copy(
+                partialResult = null,
                 finalResult = result,
                 state = TaskState.Done)
 

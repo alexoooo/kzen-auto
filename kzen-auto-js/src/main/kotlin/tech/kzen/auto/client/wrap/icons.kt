@@ -388,3 +388,15 @@ external class ExpandLessIcon: Component<IconProps, RState> {
 external class ExpandMoreIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("Scanner")
+external class ScannerIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("MenuBook")
+external class MenuBookIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
