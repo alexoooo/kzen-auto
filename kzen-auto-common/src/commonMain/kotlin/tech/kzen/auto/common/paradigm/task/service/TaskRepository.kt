@@ -18,6 +18,11 @@ interface TaskRepository {
     ): TaskModel?
 
 
+    /**
+     * @param taskId obtained by submitting the task, or looking up active tasks
+     * @return if taskId is active (running) or has recently terminated,
+     *      null if it either never ran or terminated too long ago
+     */
     suspend fun cancel(
         taskId: TaskId
     ): TaskModel?
@@ -26,9 +31,4 @@ interface TaskRepository {
     suspend fun lookupActive(
         taskLocation: ObjectLocation
     ): Set<TaskId>
-
-
-//    suspend fun lookupAll(
-//        taskLocation: ObjectLocation
-//    ): Set<TaskId>
 }

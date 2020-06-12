@@ -20,6 +20,7 @@ import tech.kzen.auto.common.paradigm.reactive.TableSummary
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
+import tech.kzen.auto.common.paradigm.task.model.TaskState
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -42,12 +43,11 @@ class FilterController(
 
         var error: String?,
 
-//        var initialTableSummaryLoading: Boolean,
-
         var initialTableSummaryLoading: Boolean,
         var tableSummaryTaskRunning: Boolean,
         var tableSummaryTaskId: TaskId?,
         var tableSummaryTaskProgress: TaskProgress?,
+        var tableSummaryTaskState: TaskState?,
         var tableSummary: TableSummary?,
 
         var filterTaskStateLoading: Boolean,
@@ -107,6 +107,7 @@ class FilterController(
         tableSummaryTaskRunning = false
         tableSummaryTaskId = null
         tableSummaryTaskProgress = null
+        tableSummaryTaskState = null
         tableSummary = null
 
         filterTaskStateLoading = false
@@ -129,6 +130,8 @@ class FilterController(
 
     override fun componentWillUnmount() {
         ClientContext.sessionGlobal.unobserve(this)
+        tableSummaryProgressDebounce.cancel()
+        filterProgressDebounce.cancel()
     }
 
 
@@ -156,7 +159,6 @@ class FilterController(
         }
 
         if (state.initialTableSummaryLoading && ! prevState.initialTableSummaryLoading) {
-//            console.log("^^^^ getInitialTableSummary")
             getInitialTableSummary()
             return
         }
@@ -204,9 +206,61 @@ class FilterController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun getInitialTableSummary() {
+//        console.log("^^^^^^^^^^ getInitialTableSummary")
         val mainLocation = mainLocation()!!
 
         async {
+            val activeTasks = ClientContext.clientRestTaskRepository.lookupActive(mainLocation)
+            if (activeTasks.isNotEmpty()) {
+                check(activeTasks.size == 1)
+                val taskId = activeTasks.first()
+                val model = ClientContext.clientRestTaskRepository.query(taskId)!!
+                val action = model.request.parameters.get(FilterConventions.actionParameter)
+                if (action == FilterConventions.actionSummaryTask) {
+                    val result =
+                        model.finalResult ?: model.partialResult!!
+
+                    when (result) {
+                        is ExecutionSuccess -> {
+                            @Suppress("UNCHECKED_CAST")
+                            val resultValue = result.value.get() as Map<String, Map<String, Any>>
+                            val tableSummary = TableSummary.fromCollection(resultValue)
+
+                            @Suppress("UNCHECKED_CAST")
+                            val resultDetail = result.detail.get() as Map<String, String>?
+                            val tableSummaryProgress = resultDetail?.let { TaskProgress.fromCollection(it) }
+
+                            setState {
+                                this.tableSummaryTaskProgress = tableSummaryProgress
+                                this.tableSummary = tableSummary
+                            }
+                        }
+
+                        is ExecutionFailure -> {
+                            setState {
+                                error = result.errorMessage
+                            }
+                        }
+                    }
+
+                    val isDone = model.finalResult != null
+
+                    setState {
+                        tableSummaryTaskRunning = ! isDone
+                        tableSummaryTaskId = model.taskId
+                        initialTableSummaryLoading = false
+                        tableSummaryTaskState = model.state
+                    }
+
+                    if (! isDone) {
+//                        console.log("^^^^^^^ apply tableSummaryProgressDebounce")
+                        tableSummaryProgressDebounce.apply()
+                    }
+
+                    return@async
+                }
+            }
+
             val result = ClientContext.restClient.performDetached(
                 mainLocation,
                 FilterConventions.actionParameter to FilterConventions.actionSummaryLookup)
@@ -242,6 +296,7 @@ class FilterController(
 
 
     private fun submitOrResumeTableSummaryTask() {
+//        console.log("^^^^^^^^^^ submitOrResumeTableSummaryTask")
         val mainLocation = mainLocation()!!
 
         async {
@@ -304,11 +359,64 @@ class FilterController(
             setState {
                 tableSummaryTaskRunning = ! isDone
                 tableSummaryTaskId = taskModel.taskId
+                tableSummaryTaskState = taskModel.state
             }
 
 //            console.log("^^^^ about to tableSummaryProgressDebounce - $isDone")
             if (! isDone) {
+                console.log("^^^^^^^ apply tableSummaryProgressDebounce")
                 tableSummaryProgressDebounce.apply()
+            }
+        }
+    }
+
+
+
+    private fun cancelTableSummaryTask() {
+        if (! state.tableSummaryTaskRunning) {
+            return
+        }
+
+        val taskId = state.tableSummaryTaskId
+            ?: return
+
+        async {
+            setState {
+                filterTaskRunning = false
+            }
+
+            val taskModel = ClientContext.clientRestTaskRepository.cancel(taskId)
+                ?: return@async
+
+            setState {
+                tableSummaryTaskState = TaskState.Cancelled
+            }
+
+            when (
+                val result = taskModel.finalResult!!
+            ) {
+                is ExecutionSuccess -> {
+                    console.log("%%%%%% result.value: ${result.value}")
+
+                    @Suppress("UNCHECKED_CAST")
+                    val resultValue = result.value.get() as Map<String, Map<String, Any>>
+                    val tableSummary = TableSummary.fromCollection(resultValue)
+
+                    @Suppress("UNCHECKED_CAST")
+                    val resultDetail = result.detail.get() as Map<String, String>?
+                    val tableSummaryProgress = resultDetail?.let { TaskProgress.fromCollection(it) }
+
+                    setState {
+                        this.tableSummaryTaskProgress = tableSummaryProgress
+                        this.tableSummary = tableSummary
+                    }
+                }
+
+                is ExecutionFailure -> {
+                    setState {
+                        error = result.errorMessage
+                    }
+                }
             }
         }
     }
@@ -438,7 +546,7 @@ class FilterController(
                 filterTaskId = taskModel.taskId
             }
 
-            console.log("^^^^ about to filterProgressDebounce - $isDone")
+//            console.log("^^^^ about to filterProgressDebounce - $isDone")
             if (! isDone) {
                 filterProgressDebounce.apply()
             }
@@ -693,6 +801,7 @@ class FilterController(
                 this.summaryTaskRunning = state.tableSummaryTaskRunning
                 this.summaryEmpty = (state.tableSummary ?: TableSummary.empty).isEmpty()
                 this.summaryProgress = state.tableSummaryTaskProgress
+                this.summaryState = state.tableSummaryTaskState
                 this.tableSummary = state.tableSummary
 
                 this.filterTaskStateLoading = state.filterTaskStateLoading
@@ -740,6 +849,7 @@ class FilterController(
                             ! (state.tableSummary?.isEmpty() ?: true)
 
                     summaryRunning = state.initialTableSummaryLoading || state.tableSummaryTaskRunning
+//                    summaryState = state.tableSummaryTaskState
 
                     filterDone = state.filterTaskProgress?.remainingFiles?.isEmpty() ?: false
                     filterRunning = state.filterTaskRunning
@@ -748,8 +858,16 @@ class FilterController(
                         submitOrResumeTableSummaryTask()
                     }
 
+                    onSummaryCancel = {
+                        cancelTableSummaryTask()
+                    }
+
                     onFilterTask = {
                         submitOrResumeTableFilterTask()
+                    }
+
+                    onFilterCancel = {
+
                     }
                 }
             }

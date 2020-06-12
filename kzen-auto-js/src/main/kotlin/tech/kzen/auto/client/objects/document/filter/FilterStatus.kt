@@ -15,6 +15,7 @@ import tech.kzen.auto.client.wrap.MaterialCardContent
 import tech.kzen.auto.client.wrap.MaterialPaper
 import tech.kzen.auto.common.paradigm.reactive.TableSummary
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
+import tech.kzen.auto.common.paradigm.task.model.TaskState
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
@@ -34,6 +35,7 @@ class FilterStatus(
         var summaryTaskRunning: Boolean,
         var summaryEmpty: Boolean,
         var summaryProgress: TaskProgress?,
+        var summaryState: TaskState?,
         var tableSummary: TableSummary?,
 
         var filterTaskStateLoading: Boolean,
@@ -147,8 +149,12 @@ class FilterStatus(
                         }
                     }
                     else if (props.tableSummary != null) {
-                        +"Finished indexing column values, ready to apply filters"
-//                        +"Ready to apply filters"
+                        if (props.summaryState == TaskState.Cancelled) {
+                            +"Paused indexing column values, ready to resume or apply filters"
+                        }
+                        else {
+                            +"Finished indexing column values, ready to apply filters"
+                        }
                     }
                 }
             }

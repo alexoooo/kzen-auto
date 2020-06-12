@@ -22,12 +22,15 @@ class FilterRun(
 
         var summaryDone: Boolean,
         var summaryRunning: Boolean,
+//        var summaryState: TaskState?,
 
         var filterDone: Boolean,
         var filterRunning: Boolean,
 
         var onSummaryTask: () -> Unit,
-        var onFilterTask: () -> Unit
+        var onSummaryCancel: () -> Unit,
+        var onFilterTask: () -> Unit,
+        var onFilterCancel: () -> Unit
     ): RProps
 
 
@@ -45,6 +48,9 @@ class FilterRun(
         child(MaterialFab::class) {
             attrs {
                 title = when {
+                    props.summaryRunning ->
+                        "Pause index"
+
                     ! props.summaryDone ->
                         "Index column values"
 
@@ -70,7 +76,7 @@ class FilterRun(
 
                 onClick = {
                     if (props.summaryRunning) {
-                        // TODO
+                        props.onSummaryCancel()
                     }
                     else if (! props.summaryDone) {
                         props.onSummaryTask()
@@ -86,6 +92,7 @@ class FilterRun(
 
             if (props.summaryRunning) {
                 child(MaterialCircularProgress::class) {}
+                +"X"
             }
             else if (! props.summaryDone) {
                 child(MenuBookIcon::class) {
