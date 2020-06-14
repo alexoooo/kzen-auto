@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.filter
 
 import kotlinx.css.*
+import kotlinx.html.title
 import react.*
 import react.dom.key
 import react.dom.li
@@ -28,7 +29,8 @@ class FilterInputs(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var mainLocation: ObjectLocation,
-        var clientState: SessionState
+        var clientState: SessionState,
+        var taskRunning: Boolean
     ): RProps
 
 
@@ -121,12 +123,19 @@ class FilterInputs(
                 marginTop = 0.5.em
             }
 
+            attrs {
+                if (props.taskRunning) {
+                    title = "Disabled while task running"
+                }
+            }
+
             child(DefaultAttributeEditor::class) {
                 attrs {
                     clientState = props.clientState
                     objectLocation = props.mainLocation
                     attributeName = FilterConventions.inputAttribute
                     labelOverride = "Pattern"
+                    disabled = props.taskRunning
                 }
             }
         }

@@ -9,6 +9,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 open class AttributeEditorProps(
         var clientState: SessionState,
         var objectLocation: ObjectLocation,
-        var attributeName: AttributeName,
-        var labelOverride: String?
+        var attributeName: AttributeName//,
+//        var labelOverride: String?,
+//        var disabled: Boolean
 ): RProps

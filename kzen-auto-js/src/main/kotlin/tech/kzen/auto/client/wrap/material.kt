@@ -204,6 +204,7 @@ external interface TextFieldProps: RProps {
     var multiline: Boolean
     var fullWidth: Boolean
     var margin: String
+    var disabled: Boolean
 }
 
 

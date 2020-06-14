@@ -828,6 +828,7 @@ class FilterController(
             attrs {
                 this.mainLocation = mainLocation
                 this.clientState = clientState
+                this.taskRunning = state.tableSummaryTaskRunning || state.filterTaskRunning
             }
         }
     }

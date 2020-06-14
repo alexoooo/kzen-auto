@@ -4,6 +4,7 @@ import kotlinx.css.em
 import kotlinx.css.fontFamily
 import kotlinx.css.fontSize
 import kotlinx.css.marginTop
+import kotlinx.html.title
 import react.*
 import react.dom.div
 import styled.css
@@ -56,18 +57,16 @@ class FilterOutput(
         prevState: State,
         snapshot: Any
     ) {
-        if (state.loading && ! prevState.loading) {
-            getOutputInfo()
-        }
-
-        val outputInfo = state.outputInfo
-        if (outputInfo == null && ! state.loading) {
-            setState {
-                loading = true
+        if (state.loading) {
+            if (! prevState.loading) {
+                getOutputInfo()
             }
+            return
         }
 
-        if (props.filterRunning != prevProps.filterRunning) {
+        if (state.outputInfo == null ||
+                props.filterRunning != prevProps.filterRunning
+        ) {
             setState {
                 loading = true
             }
@@ -107,6 +106,16 @@ class FilterOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onInputChanged() {
+        setState {
+            loading = true
+            outputInfo = null
+            error = null
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         child(MaterialPaper::class) {
             child(MaterialCardContent::class) {
@@ -131,12 +140,23 @@ class FilterOutput(
                 marginTop = 0.5.em
             }
 
+            attrs {
+                if (props.filterRunning) {
+                    title = "Disabled filter running"
+                }
+            }
+
             child(DefaultAttributeEditor::class) {
                 attrs {
                     clientState = props.clientState
                     objectLocation = props.mainLocation
                     attributeName = FilterConventions.outputAttribute
                     labelOverride = "File"
+                    disabled = props.filterRunning
+                    onChange = {
+//                        console.log("%%% onInputChanged")
+                        onInputChanged()
+                    }
                 }
             }
         }

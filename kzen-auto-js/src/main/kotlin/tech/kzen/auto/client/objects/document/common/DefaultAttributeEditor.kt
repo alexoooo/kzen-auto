@@ -9,14 +9,17 @@ import react.*
 import react.dom.br
 import react.dom.div
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
+import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
@@ -26,15 +29,28 @@ import tech.kzen.lib.platform.collect.toPersistentList
 
 
 class DefaultAttributeEditor(
-        props: AttributeEditorProps
+        props: Props
 ):
-        RPureComponent<AttributeEditorProps, DefaultAttributeEditor.State>(props),
+        RPureComponent<DefaultAttributeEditor.Props, DefaultAttributeEditor.State>(props),
         ExecutionRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val wrapperName = ObjectName("DefaultAttributeEditor")
     }
+
+
+    class Props(
+        var labelOverride: String?,
+        var disabled: Boolean,
+        var onChange: ((AttributeNotation) -> Unit)?,
+
+        clientState: SessionState,
+        objectLocation: ObjectLocation,
+        attributeName: AttributeName
+    ): AttributeEditorProps(
+        clientState, objectLocation, attributeName//, labelOverride, disabled
+    )
 
 
     class State(
@@ -62,7 +78,7 @@ class DefaultAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: AttributeEditorProps) {
+    override fun State.init(props: Props) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
         @Suppress("MoveVariableDeclarationIntoWhen")
@@ -166,21 +182,22 @@ class DefaultAttributeEditor(
 
 
     private suspend fun editAttributeCommand() {
-        if (state.value != null) {
-            ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
-                    props.objectLocation,
-                    props.attributeName,
-                    ScalarAttributeNotation(state.value!!)))
-        }
-        else {
-            ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
-                    props.objectLocation,
-                    props.attributeName,
+        val attributeNotation =
+            if (state.value != null) {
+                ScalarAttributeNotation(state.value!!)
+            }
+            else {
                     ListAttributeNotation(
                             state.values!!.map { ScalarAttributeNotation(it) }.toPersistentList()
                     )
-            ))
-        }
+            }
+
+        props.onChange?.invoke(attributeNotation)
+
+        ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
+            props.objectLocation,
+            props.attributeName,
+            attributeNotation))
 
         setState {
             pending = false
@@ -266,6 +283,8 @@ class DefaultAttributeEditor(
                     val target = it.target as HTMLInputElement
                     onValueChange(target.value)
                 }
+
+                disabled = props.disabled
             }
         }
     }

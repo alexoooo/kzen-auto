@@ -27,10 +27,11 @@ class AttributeController(
 
         clientState: SessionState,
         objectLocation: ObjectLocation,
-        attributeName: AttributeName,
-        labelOverride: String?
+        attributeName: AttributeName//,
+//        labelOverride: String?,
+//        disabled: Boolean
     ): AttributeEditorProps(
-        clientState, objectLocation, attributeName, labelOverride
+        clientState, objectLocation, attributeName//, labelOverride, disabled
     )
 
 
