@@ -21,7 +21,8 @@ class FilterRun(
         var clientState: SessionState,
 
         var summaryDone: Boolean,
-        var summaryRunning: Boolean,
+        var summaryInitialRunning: Boolean,
+        var summaryTaskRunning: Boolean,
 //        var summaryState: TaskState?,
 
         var filterDone: Boolean,
@@ -48,8 +49,14 @@ class FilterRun(
         child(MaterialFab::class) {
             attrs {
                 title = when {
-                    props.summaryRunning ->
+                    props.summaryInitialRunning ->
+                        "Loading"
+
+                    props.summaryTaskRunning ->
                         "Pause index"
+
+                    props.filterRunning ->
+                        "Stop filtering"
 
                     ! props.summaryDone ->
                         "Index column values"
@@ -63,7 +70,10 @@ class FilterRun(
 
                 style = reactStyle {
                     backgroundColor =
-                        if (props.summaryRunning || props.filterRunning) {
+                        if (props.summaryInitialRunning ||
+                                props.summaryTaskRunning ||
+                                props.filterRunning
+                        ) {
                             Color.white
                         }
                         else {
@@ -75,14 +85,14 @@ class FilterRun(
                 }
 
                 onClick = {
-                    if (props.summaryRunning) {
+                    if (props.summaryTaskRunning) {
                         props.onSummaryCancel()
                     }
                     else if (! props.summaryDone) {
                         props.onSummaryTask()
                     }
                     else if (props.filterRunning) {
-                        // TODO
+                        props.onFilterCancel()
                     }
                     else if (! props.filterDone) {
                         props.onFilterTask()
@@ -90,9 +100,11 @@ class FilterRun(
                 }
             }
 
-            if (props.summaryRunning) {
+            if (props.summaryInitialRunning) {
                 child(MaterialCircularProgress::class) {}
-                +"X"
+            }
+            else if (props.summaryTaskRunning) {
+                renderProgressWithPause()
             }
             else if (! props.summaryDone) {
                 child(MenuBookIcon::class) {
@@ -100,13 +112,11 @@ class FilterRun(
                         style = reactStyle {
                             fontSize = 3.em
                         }
-
-//                        onClick = {}
                     }
                 }
             }
             else if (props.filterRunning) {
-                child(MaterialCircularProgress::class) {}
+                renderProgressWithStop()
             }
             else if (! props.filterDone) {
                 child(PlayArrowIcon::class) {
@@ -114,13 +124,49 @@ class FilterRun(
                         style = reactStyle {
                             fontSize = 3.em
                         }
-
-//                        onClick = {}
                     }
                 }
             }
             else {
                 +"X"
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderProgressWithPause() {
+        child(MaterialCircularProgress::class) {}
+
+        child(PauseIcon::class) {
+            attrs {
+                style = reactStyle {
+                    fontSize = 3.em
+                    margin = "auto"
+                    position = Position.absolute
+                    top = 0.px
+                    left = 0.px
+                    bottom = 0.px
+                    right = 0.px
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderProgressWithStop() {
+        child(MaterialCircularProgress::class) {}
+
+        child(StopIcon::class) {
+            attrs {
+                style = reactStyle {
+                    fontSize = 3.em
+                    margin = "auto"
+                    position = Position.absolute
+                    top = 0.px
+                    left = 0.px
+                    bottom = 0.px
+                    right = 0.px
+                }
             }
         }
     }

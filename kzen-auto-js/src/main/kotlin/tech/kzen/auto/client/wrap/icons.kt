@@ -400,3 +400,9 @@ external class ScannerIcon: Component<IconProps, RState> {
 external class MenuBookIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("Stop")
+external class StopIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

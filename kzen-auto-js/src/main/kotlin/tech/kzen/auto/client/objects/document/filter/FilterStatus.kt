@@ -41,6 +41,7 @@ class FilterStatus(
         var filterTaskStateLoading: Boolean,
         var filterTaskRunning: Boolean,
         var filterTaskProgress: TaskProgress?,
+        var filterTaskState: TaskState?,
         var filterTaskOutput: String?
     ): RProps
 
@@ -107,7 +108,12 @@ class FilterStatus(
                         }
                     }
                     else if (props.filterTaskOutput != null) {
-                        +"Finished filtering, ready to apply filters again"
+                        if (props.filterTaskState == TaskState.Cancelled) {
+                            +"Filtering stopped, ready to apply filters again"
+                        }
+                        else {
+                            +"Finished filtering, ready to apply filters again"
+                        }
                     }
                     else if (props.summaryProgress != null) {
 //                        +"Indexing column values"
