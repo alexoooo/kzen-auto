@@ -30,7 +30,8 @@ class FilterColumnList(
     class Props(
         var mainLocation: ObjectLocation,
         var clientState: SessionState,
-        var tableSummary: TableSummary?
+        var tableSummary: TableSummary?,
+        var filterRunning: Boolean
     ): RProps
 
 
@@ -159,6 +160,8 @@ class FilterColumnList(
                         this.columnName = columnName
 
                         columnSummary = tableSummary.columnSummaries[columnName]
+
+                        filterRunning = props.filterRunning
                     }
                 }
             }

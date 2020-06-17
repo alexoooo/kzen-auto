@@ -49,7 +49,9 @@ class FilterColumn(
 
         var columnIndex: Int,
         var columnName: String,
-        var columnSummary: ColumnSummary?
+        var columnSummary: ColumnSummary?,
+
+        var filterRunning: Boolean
     ): RProps
 
 
@@ -335,6 +337,7 @@ class FilterColumn(
                                 child(MaterialCheckbox::class) {
                                     attrs {
                                         this.checked = checked
+                                        this.disabled = props.filterRunning
 
                                         onChange = {
                                             onCriteriaChange(e.key, columnRequired)

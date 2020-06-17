@@ -43,7 +43,6 @@ class FilterOutput(
     ): RState
 
 
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
         loading = false
@@ -106,7 +105,7 @@ class FilterOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onInputChanged() {
+    private fun onAttributeChanged() {
         setState {
             loading = true
             outputInfo = null
@@ -154,8 +153,7 @@ class FilterOutput(
                     labelOverride = "File"
                     disabled = props.filterRunning
                     onChange = {
-//                        console.log("%%% onInputChanged")
-                        onInputChanged()
+                        onAttributeChanged()
                     }
                 }
             }

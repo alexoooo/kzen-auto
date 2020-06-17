@@ -30,7 +30,8 @@ class FilterInputs(
     class Props(
         var mainLocation: ObjectLocation,
         var clientState: SessionState,
-        var taskRunning: Boolean
+        var taskRunning: Boolean,
+        var onChange: ((List<String>?) -> Unit)
     ): RProps
 
 
@@ -54,12 +55,25 @@ class FilterInputs(
         prevState: State,
         snapshot: Any
     ) {
-        if (state.fileListingLoading && ! prevState.fileListingLoading) {
-            getFileListing()
+//        console.log("^6666 6^^^^^^^^: ${state.fileListing} - ${prevState.fileListing}")
+        if (state.fileListing != prevState.fileListing) {
+//            console.log("^6666 props.onChange: ${state.fileListing}")
+            props.onChange(state.fileListing)
         }
 
-        val fileListing = state.fileListing
-        if (fileListing == null && ! state.fileListingLoading) {
+        if (state.error != null) {
+//            console.log("&%&^%&%^&% FilterInputs componentDidUpdate - ${state.error}")
+            return
+        }
+
+        if (state.fileListingLoading) {
+            if (! prevState.fileListingLoading) {
+                getFileListing()
+            }
+            return
+        }
+
+        if (state.fileListing == null) {
             setState {
                 fileListingLoading = true
             }
@@ -68,23 +82,37 @@ class FilterInputs(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onAttributeChanged() {
+        setState {
+            fileListingLoading = true
+            fileListing = null
+            error = null
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun getFileListing() {
         async {
+//            console.log("^^^^ getFileListing requesting")
             val result = ClientContext.restClient.performDetached(
                 props.mainLocation,
                 FilterConventions.actionParameter to FilterConventions.actionListFiles)
+//            console.log("^^^^ getFileListing got: $result")
 
             when (result) {
                 is ExecutionSuccess -> {
                     @Suppress("UNCHECKED_CAST")
                     val resultValue = result.value.get() as List<String>
 
+//                    console.log("&&&&&& FilterInputs ||| fileListing - $resultValue")
                     setState {
                         fileListing = resultValue
                     }
                 }
 
                 is ExecutionFailure -> {
+//                    console.log("&&&&&& FilterInputs ||| error - ${result.errorMessage}")
                     setState {
                         error = result.errorMessage
                     }
@@ -136,6 +164,9 @@ class FilterInputs(
                     attributeName = FilterConventions.inputAttribute
                     labelOverride = "Pattern"
                     disabled = props.taskRunning
+                    onChange = {
+                        onAttributeChanged()
+                    }
                 }
             }
         }

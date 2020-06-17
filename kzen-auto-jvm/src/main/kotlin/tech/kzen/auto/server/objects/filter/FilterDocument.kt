@@ -31,21 +31,18 @@ class FilterDocument(
         val action = request.parameters.get(FilterConventions.actionParameter)
             ?: return ExecutionFailure("'${FilterConventions.actionParameter}' expected")
 
-        val inputPaths = inputPaths()
-            ?: return ExecutionFailure("Please provide a valid input path")
-
         return when (action) {
             FilterConventions.actionListFiles ->
-                actionListFiles(inputPaths)
+                actionListFiles()
 
             FilterConventions.actionListColumns ->
-                actionColumnListing(inputPaths)
+                actionColumnListing()
 
             FilterConventions.actionLookupOutput ->
                 actionLookupOutput()
 
             FilterConventions.actionSummaryLookup ->
-                actionColumnSummaryLookup(inputPaths)
+                actionColumnSummaryLookup()
 
 //            FilterConventions.actionFilter ->
 //                actionApplyFilterAsync(inputPaths)
@@ -73,16 +70,20 @@ class FilterDocument(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun actionColumnListing(inputPaths: List<Path>): ExecutionResult {
+    private suspend fun actionColumnListing(): ExecutionResult {
+        val inputPaths = inputPaths()
+            ?: return ExecutionFailure("Please provide a valid input path")
+
         val columnNames = ColumnListingAction.columnNamesMerge(inputPaths)
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(columnNames))
     }
 
 
-    private suspend fun actionColumnSummaryLookup(
-        inputPaths: List<Path>
-    ): ExecutionResult {
+    private suspend fun actionColumnSummaryLookup(): ExecutionResult {
+        val inputPaths = inputPaths()
+            ?: return ExecutionFailure("Please provide a valid input path")
+
         val columnNames = ColumnListingAction.columnNamesMerge(inputPaths)
         return ColumnSummaryAction.lookupSummary(
             inputPaths, columnNames)
@@ -99,9 +100,10 @@ class FilterDocument(
     }
 
 
-    private fun actionListFiles(
-        inputPaths: List<Path>
-    ): ExecutionResult {
+    private suspend fun actionListFiles(): ExecutionResult {
+        val inputPaths = inputPaths()
+            ?: return ExecutionFailure("Please provide a valid input path")
+
         return ExecutionSuccess.ofValue(ExecutionValue.of(
             inputPaths.map { it.toString() }))
     }

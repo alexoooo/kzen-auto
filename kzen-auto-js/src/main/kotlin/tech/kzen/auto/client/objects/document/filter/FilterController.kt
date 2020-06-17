@@ -56,9 +56,9 @@ class FilterController(
         var filterTaskId: TaskId?,
         var filterTaskProgress: TaskProgress?,
         var filterTaskState: TaskState?,
-        var filterTaskOutput: String?,
+        var filterTaskOutput: String?//,
 
-        var inputChanged: Boolean
+//        var inputs: List<String>?
     ): RState
 
 
@@ -118,7 +118,7 @@ class FilterController(
         filterTaskProgress = null
         filterTaskOutput = null
 
-        inputChanged = false
+//        inputs = null
     }
 
 
@@ -143,19 +143,19 @@ class FilterController(
     ) {
 //        console.log("%$%$%%$ componentDidUpdate")
 
-        val clientState = state.clientState ?: return
-        val mainLocation = mainLocation(clientState) ?: return
+//        val clientState = state.clientState ?: return
+//        val mainLocation = mainLocation(clientState) ?: return
 
-        val prevClientState = prevState.clientState
-        if (prevClientState != null &&
-                inputPath(clientState, mainLocation) != inputPath(prevClientState, mainLocation)) {
-            setState {
-                inputChanged = true
-            }
-        }
+//        val prevClientState = prevState.clientState
+//        if (prevClientState != null &&
+//                inputPath(clientState, mainLocation) != inputPath(prevClientState, mainLocation)) {
+//            setState {
+//                inputChanged = true
+//            }
+//        }
 
         if (state.error != null) {
-//            console.log("error: ${state.error}")
+//            console.log("componentDidUpdate: ${state.error}")
             return
         }
 
@@ -173,6 +173,7 @@ class FilterController(
             return
         }
 
+//        return
         if (! state.initialTableSummaryLoading &&
                 ! state.tableSummaryTaskRunning &&
                 state.tableSummary != null)
@@ -283,6 +284,7 @@ class FilterController(
                 }
 
                 is ExecutionFailure -> {
+//                    console.log("^^^ error: ${result.errorMessage}")
                     setState {
                         error = result.errorMessage
                     }
@@ -734,20 +736,16 @@ class FilterController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun refresh() {
+    private fun onInputChange(/*inputs: List<String>?*/) {
+        if (state.initialTableSummaryLoading) {
+//            console.log("^^^^^^^^ onInputChange - already loading")
+            return
+        }
+//        console.log("^^^^^^^^ onInputChange - refreshing")
+
         setState {
-            error = null
-
-//            fileListingLoading = false
-//            fileListing = null
-
-//            columnListingLoading = false
-//            columnListing = null
-
-//            filterTaskRunning = false
-//            filterTaskOutput = null
-
-            inputChanged = false
+            tableSummary = null
+            initialTableSummaryLoading = false
         }
     }
 
@@ -776,14 +774,6 @@ class FilterController(
         }
 
         return ObjectLocation(documentPath, NotationConventions.mainObjectPath)
-    }
-
-
-    private fun inputPath(clientState: SessionState, mainLocation: ObjectLocation): String {
-        val mainObjectNotation = clientState
-            .graphStructure().graphNotation.documents[mainLocation.documentPath]!!
-
-        return FilterConventions.getInput(mainObjectNotation)
     }
 
 
@@ -829,6 +819,10 @@ class FilterController(
                 this.mainLocation = mainLocation
                 this.clientState = clientState
                 this.taskRunning = state.tableSummaryTaskRunning || state.filterTaskRunning
+
+                onChange = {
+                    onInputChange(/*it*/)
+                }
             }
         }
     }
@@ -884,6 +878,7 @@ class FilterController(
                 this.mainLocation = mainLocation
                 this.clientState = clientState
                 this.tableSummary = state.tableSummary
+                this.filterRunning = state.filterTaskRunning
             }
         }
     }

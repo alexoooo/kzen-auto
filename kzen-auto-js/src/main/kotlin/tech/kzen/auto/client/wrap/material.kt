@@ -318,6 +318,8 @@ external interface CheckboxProps: RProps {
 
     var checked: Boolean
     var onChange: (e: Event) -> Unit
+
+    var disabled: Boolean
 }
 
 

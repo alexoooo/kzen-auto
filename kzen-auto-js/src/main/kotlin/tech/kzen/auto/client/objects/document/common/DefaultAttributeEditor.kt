@@ -187,12 +187,11 @@ class DefaultAttributeEditor(
                 ScalarAttributeNotation(state.value!!)
             }
             else {
-                    ListAttributeNotation(
-                            state.values!!.map { ScalarAttributeNotation(it) }.toPersistentList()
-                    )
+                ListAttributeNotation(state
+                        .values!!
+                        .map { ScalarAttributeNotation(it) }
+                        .toPersistentList())
             }
-
-        props.onChange?.invoke(attributeNotation)
 
         ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
             props.objectLocation,
@@ -202,6 +201,8 @@ class DefaultAttributeEditor(
         setState {
             pending = false
         }
+
+        props.onChange?.invoke(attributeNotation)
     }
 
 
