@@ -1,10 +1,10 @@
 package tech.kzen.auto.client.objects.document.filter
 
 import kotlinx.css.*
-import react.RBuilder
-import react.RProps
-import react.RPureComponent
-import react.RState
+import kotlinx.html.js.onMouseOutFunction
+import kotlinx.html.js.onMouseOverFunction
+import react.*
+import react.dom.div
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -36,16 +36,60 @@ class FilterRun(
 
 
     class State(
-//        var columnListingLoading: Boolean,
-//        var columnListing: List<String>?,
+        var fabHover: Boolean,
         var error: String?
     ): RState
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: Props) {
+        fabHover = false
+        error = null
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onOuterEnter() {
+        setState {
+            fabHover = true
+        }
+    }
+
+
+    private fun onOuterLeave() {
+        setState {
+            fabHover = false
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
 //        val runnable = ! props.summaryDone || ! props.filterDone
 
+        div {
+            attrs {
+                onMouseOverFunction = {
+                    onOuterEnter()
+                }
+                onMouseOutFunction = {
+                    onOuterLeave()
+                }
+            }
+
+            renderInner()
+        }
+    }
+
+
+    private fun RBuilder.renderInner() {
+        renderSecondaryActions()
+        renderMainAction()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderMainAction() {
         child(MaterialFab::class) {
             attrs {
                 title = when {
@@ -71,8 +115,8 @@ class FilterRun(
                 style = reactStyle {
                     backgroundColor =
                         if (props.summaryInitialRunning ||
-                                props.summaryTaskRunning ||
-                                props.filterRunning
+                            props.summaryTaskRunning ||
+                            props.filterRunning
                         ) {
                             Color.white
                         }
@@ -166,6 +210,42 @@ class FilterRun(
                     left = 0.px
                     bottom = 0.px
                     right = 0.px
+                }
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderSecondaryActions() {
+        val showIndex = ! (
+                props.summaryInitialRunning ||
+                props.summaryTaskRunning  ||
+                props.filterRunning ||
+                ! props.summaryDone)
+
+        child(MaterialIconButton::class) {
+            attrs {
+                title = "Index column values"
+
+                style = reactStyle {
+                    if (! state.fabHover || ! showIndex) {
+                        visibility = Visibility.hidden
+                    }
+
+//                    marginRight = (-0.5).em
+                }
+
+                onClick = {
+                    props.onSummaryTask()
+                }
+            }
+
+            child(MenuBookIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        fontSize = 1.5.em
+                    }
                 }
             }
         }

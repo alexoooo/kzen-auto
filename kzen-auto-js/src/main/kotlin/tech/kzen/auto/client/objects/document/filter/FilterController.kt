@@ -387,6 +387,7 @@ class FilterController(
             setState {
 //                filterTaskRunning = false
                 tableSummaryTaskRunning = false
+                tableSummaryTaskId = null
             }
 
             val taskModel = ClientContext.clientRestTaskRepository.cancel(taskId)
@@ -550,6 +551,7 @@ class FilterController(
             filterTaskStateLoading = false
             filterTaskStateLoaded = true
             filterTaskId = taskId
+            tableSummaryTaskId = null
         }
 
         if (! isDone) {
@@ -615,6 +617,7 @@ class FilterController(
                 filterTaskRunning = ! isDone
                 filterTaskId = taskModel.taskId
                 filterTaskState = taskModel.state
+                tableSummaryTaskId = null
             }
 
 //            console.log("^^^^ about to filterProgressDebounce - $isDone")

@@ -128,7 +128,7 @@ class FilterStatus(
                             +"Column values not indexed yet"
                         }
                         else {
-                            +"Indexing column values, showing partial column filters"
+                            +"Column value indexing is not done, showing partial column filters"
 
                             table {
                                 thead {
