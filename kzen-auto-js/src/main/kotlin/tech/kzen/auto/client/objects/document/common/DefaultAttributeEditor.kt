@@ -44,6 +44,7 @@ class DefaultAttributeEditor(
         var labelOverride: String?,
         var disabled: Boolean,
         var onChange: ((AttributeNotation) -> Unit)?,
+        var invalid: Boolean,
 
         clientState: SessionState,
         objectLocation: ObjectLocation,
@@ -286,6 +287,7 @@ class DefaultAttributeEditor(
                 }
 
                 disabled = props.disabled
+                error = props.invalid
             }
         }
     }

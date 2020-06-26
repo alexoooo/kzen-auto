@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.filter
 
 import kotlinx.css.em
 import kotlinx.css.fontSize
+import kotlinx.css.padding
 import react.RBuilder
 import react.RProps
 import react.RPureComponent
@@ -12,6 +13,7 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.wrap.MaterialCardContent
+import tech.kzen.auto.client.wrap.MaterialCircularProgress
 import tech.kzen.auto.client.wrap.MaterialPaper
 import tech.kzen.auto.common.paradigm.reactive.TableSummary
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
@@ -32,6 +34,7 @@ class FilterStatus(
         var error: String?,
 
         var initialTableSummaryLoading: Boolean,
+        var initialTableSummaryLoaded: Boolean,
         var summaryTaskRunning: Boolean,
         var summaryEmpty: Boolean,
         var summaryProgress: TaskProgress?,
@@ -64,8 +67,23 @@ class FilterStatus(
                     +"Status"
                 }
 
+                if (! props.initialTableSummaryLoaded) {
+                    styledDiv {
+                        css {
+                            padding(1.em)
+                        }
+
+                        +"Loading..."
+                        br {}
+                        child(MaterialCircularProgress::class) {}
+                    }
+                }
+
                 styledDiv {
-                    if (props.initialTableSummaryLoading) {
+                    if (props.error != null) {
+                        +"Error: ${props.error}"
+                    }
+                    else if (props.initialTableSummaryLoading) {
                         +"Looking up column values"
                     }
                     else if (props.filterTaskStateLoading) {

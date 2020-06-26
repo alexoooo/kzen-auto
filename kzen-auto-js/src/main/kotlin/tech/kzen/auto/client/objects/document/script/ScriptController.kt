@@ -16,7 +16,10 @@ import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
+import tech.kzen.auto.client.wrap.ArrowDownwardIcon
+import tech.kzen.auto.client.wrap.MaterialIconButton
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -123,52 +126,8 @@ class ScriptController:
             prevState: State,
             snapshot: Any
     ) {
-        val clientState = state.clientState
-                ?: return
-
-//        if (clientState.activeHost() == null &&
-//                clientState.navigationRoute.documentPath != null)
-//        {
-//            ClientContext.navigationGlobal.parameterize(RequestParams(
-//                    mapOf(RibbonRun.runningKey to listOf(clientState.navigationRoute.documentPath.asString()))
-//            ))
-//        }
-
-//        if (state.graphStructure == null) {
-////            console.log("~~~ not ready - componentDidUpdate")
-//            return
-//        }
-//        console.log("%#$%#$%#$ componentDidUpdate",
-//                state.imperativeModel?.frames?.map { it.path.asString() })
-
-//        val runningHost = clientState.activeHost()
-//        if ((prevState.runningHost == null || prevState.graphStructure == null) &&
-//                runningHost != null &&
-//                state.imperativeModel == null)
-//        {
-//            val graphStructure = state.graphStructure!!
-//            async {
-//                ClientContext.executionRepository.executionModel(
-//                        runningHost, graphStructure)
-//            }
-//            return
-//        }
-//
-////        console.log("%#$%#$%#$ componentDidUpdate", state.documentPath, prevState.documentPath)
-//        if (state.documentPath != null &&
-//                state.documentPath != prevState.documentPath &&
-//                state.imperativeModel?.frames?.find { it.path == state.documentPath} == null)
-//        {
-//            async {
-//                val executionModel = ClientContext.executionRepository.executionModel(
-//                        state.documentPath!!,
-//                        state.graphStructure!!)
-//
-//                setState {
-//                    imperativeModel = executionModel
-//                }
-//            }
-//        }
+//        val clientState = state.clientState
+//                ?: return
     }
 
 
@@ -179,67 +138,6 @@ class ScriptController:
             this.clientState = clientState
         }
     }
-
-//    override fun handleNavigation(
-//            documentPath: DocumentPath?,
-//            parameters: RequestParams
-//    ) {
-////        console.log("^^^^^^ script - handleNavigation", documentPath, parameters)
-//
-//        setState {
-//            this.documentPath = documentPath
-//
-//            runningHost = parameters.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
-//        }
-//    }
-
-
-//    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
-//        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent) &&
-//                event.documentPath == state.documentPath) {
-//            return
-//        }
-//
-//        setState {
-//            this.graphStructure = graphDefinition.successful.graphStructure
-//        }
-//    }
-
-
-//    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
-//
-//
-//    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
-////        console.log("^^^^^ onStoreRefresh")
-//        setState {
-//            this.graphStructure = graphDefinition.successful.graphStructure
-//        }
-//    }
-
-
-//    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {}
-
-
-//    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {
-////        console.log("^^^^ onExecutionModel: " +
-////                "$host - ${state.documentPath} - ${state.runningHost} - $executionModel")
-//
-////        if (state.documentPath != host &&
-////                executionModel.frames.find { it.path == state.documentPath} == null)
-//        if (state.runningHost != null && state.runningHost != host ||
-//                state.runningHost == null &&
-//                state.documentPath != host &&
-//                executionModel.frames.find { it.path == state.documentPath} == null)
-//        {
-//            return
-//        }
-//
-////        console.log("Assign exec model")
-//
-//        setState {
-//            imperativeModel = executionModel
-//        }
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -290,12 +188,6 @@ class ScriptController:
     override fun RBuilder.render() {
         val clientState = state.clientState
                 ?: return
-
-//        val structure = state.graphStructure
-//                ?: return
-//
-//        val documentPath: DocumentPath = state.documentPath
-//                ?: return
 
         val documentPath = clientState.navigationRoute.documentPath
                 ?: return
@@ -348,17 +240,15 @@ class ScriptController:
                 css {
                     paddingLeft = 1.em
                 }
-                nonEmptySteps(/*graphStructure,*/ documentPath, stepLocations, clientState, imperativeModel)
+                nonEmptySteps(documentPath, stepLocations, imperativeModel)
             }
         }
     }
 
 
     private fun RBuilder.nonEmptySteps(
-//            graphStructure: GraphStructure,
             documentPath: DocumentPath,
             stepLocations: List<ObjectLocation>,
-            clientState: SessionState,
             imperativeModel: ImperativeModel
     ) {
 //        +"nonEmptySteps: $stepLocations"
@@ -445,8 +335,6 @@ class ScriptController:
                 }
             }
 
-//            +"Index: $index"
-
             child(MaterialIconButton::class) {
                 attrs {
                     style = reactStyle {
@@ -470,7 +358,6 @@ class ScriptController:
     private fun RBuilder.renderStep(
             index: Int,
             objectLocation: ObjectLocation,
-//            graphStructure: GraphStructure,
             imperativeModel: ImperativeModel,
             stepCount: Int
     ) {
@@ -516,13 +403,4 @@ class ScriptController:
             }
         }
     }
-
-//    private fun RBuilder.refresh() {
-//        input (type = InputType.button) {
-//            attrs {
-//                value = "Reload"
-//                onClickFunction = { onRefresh() }
-//            }
-//        }
-//    }
 }

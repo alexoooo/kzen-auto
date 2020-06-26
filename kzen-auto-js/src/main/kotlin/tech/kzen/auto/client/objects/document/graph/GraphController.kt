@@ -10,7 +10,6 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
-import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
@@ -28,19 +27,16 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescript
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
-import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.*
-import tech.kzen.lib.common.model.structure.notation.cqrs.*
+import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
-import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.persistentListOf
 import tech.kzen.lib.platform.collect.persistentMapOf
 
@@ -152,28 +148,6 @@ class GraphController:
     }
 
 
-//    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
-//        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent) &&
-//                event.documentPath == state.documentPath) {
-//            return
-//        }
-//
-//        setState {
-//            this.graphStructure = graphDefinition.successful.graphStructure
-//        }
-//    }
-//
-//
-//    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
-//
-//
-//    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
-//        setState {
-//            this.graphStructure = graphDefinition.successful.graphStructure
-//        }
-//    }
-
-
     override fun onClientState(clientState: SessionState) {
         setState {
             this.clientState = clientState
@@ -197,17 +171,6 @@ class GraphController:
             this.visualDataflowModel = visualDataflowModel
         }
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    override suspend fun beforeExecution(objectLocation: ObjectLocation) {}
-//
-//
-//    override suspend fun onExecutionModel(executionModel: ExecutionModel) {
-//        setState {
-//            execution = executionModel
-//        }
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

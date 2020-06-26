@@ -19,6 +19,7 @@ import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 
 
 class FilterInputs(
@@ -36,17 +37,21 @@ class FilterInputs(
 
 
     class State(
+        var fileListingLoaded: Boolean,
         var fileListingLoading: Boolean,
         var fileListing: List<String>?,
-        var error: String?
+        var error: String?,
+        var changedAttributeNotation: AttributeNotation?
     ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
+        fileListingLoaded = false
         fileListingLoading = false
         fileListing = null
         error = null
+        changedAttributeNotation = null
     }
 
 
@@ -55,8 +60,8 @@ class FilterInputs(
         prevState: State,
         snapshot: Any
     ) {
-//        console.log("^6666 6^^^^^^^^: ${state.fileListing} - ${prevState.fileListing}")
-        if (state.fileListing != prevState.fileListing) {
+//        console.log("^6666 FilterInputs - componentDidUpdate")
+        if (state.fileListing != prevState.fileListing && state.changedAttributeNotation != null) {
 //            console.log("^6666 props.onChange: ${state.fileListing}")
             props.onChange(state.fileListing)
         }
@@ -68,31 +73,40 @@ class FilterInputs(
 
         if (state.fileListingLoading) {
             if (! prevState.fileListingLoading) {
+//                console.log("^^^^^ getFileListing")
                 getFileListing()
             }
             return
         }
 
         if (state.fileListing == null) {
+//            console.log("^^^^^ fileListingLoading = true")
             setState {
                 fileListingLoading = true
+                fileListingLoaded = false
             }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onAttributeChanged() {
+    private fun onAttributeChanged(attributeNotation: AttributeNotation) {
         setState {
             fileListingLoading = true
+            fileListingLoaded = false
             fileListing = null
             error = null
+            changedAttributeNotation = attributeNotation
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun getFileListing() {
+        setState {
+            error = null
+        }
+
         async {
 //            console.log("^^^^ getFileListing requesting")
             val result = ClientContext.restClient.performDetached(
@@ -120,6 +134,7 @@ class FilterInputs(
             }
 
             setState {
+                fileListingLoaded = true
                 fileListingLoading = false
             }
         }
@@ -128,6 +143,9 @@ class FilterInputs(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        val invalid = state.error != null ||
+                state.fileListing == null && ! state.fileListingLoaded
+
         child(MaterialPaper::class) {
             child(MaterialCardContent::class) {
                 styledSpan {
@@ -137,15 +155,15 @@ class FilterInputs(
                     +"Input"
                 }
 
-                renderPattern()
+                renderPattern(invalid)
 
-                renderFiles()
+                renderFiles(invalid)
             }
         }
     }
 
 
-    private fun RBuilder.renderPattern() {
+    private fun RBuilder.renderPattern(invalid: Boolean) {
         styledDiv {
             css {
                 marginTop = 0.5.em
@@ -165,15 +183,21 @@ class FilterInputs(
                     labelOverride = "Pattern"
                     disabled = props.taskRunning
                     onChange = {
-                        onAttributeChanged()
+                        onAttributeChanged(it)
                     }
+
+                    this.invalid = invalid
                 }
             }
         }
     }
 
 
-    private fun RBuilder.renderFiles() {
+    private fun RBuilder.renderFiles(invalid: Boolean) {
+        if (invalid) {
+            return
+        }
+
         val error = state.error
         if (error != null) {
             +"Listing error: $error"

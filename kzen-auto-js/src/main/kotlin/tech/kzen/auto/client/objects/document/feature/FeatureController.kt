@@ -152,7 +152,6 @@ class FeatureController(
     }
 
 
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun handleNavigation(
             documentPath: DocumentPath?,

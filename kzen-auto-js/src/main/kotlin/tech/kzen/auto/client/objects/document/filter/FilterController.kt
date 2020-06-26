@@ -44,6 +44,7 @@ class FilterController(
         var error: String?,
 
         var initialTableSummaryLoading: Boolean,
+        var initialTableSummaryLoaded: Boolean,
         var tableSummaryTaskRunning: Boolean,
         var tableSummaryTaskId: TaskId?,
         var tableSummaryTaskProgress: TaskProgress?,
@@ -56,10 +57,28 @@ class FilterController(
         var filterTaskId: TaskId?,
         var filterTaskProgress: TaskProgress?,
         var filterTaskState: TaskState?,
-        var filterTaskOutput: String?//,
-
-//        var inputs: List<String>?
+        var filterTaskOutput: String?
     ): RState
+
+
+    private fun State.mainLocation(): ObjectLocation? {
+        val clientState = clientState
+            ?: return null
+
+        val documentPath = clientState
+            .navigationRoute
+            .documentPath
+            ?: return null
+
+        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
+            ?: return null
+
+        if (! FilterConventions.isFeature(documentNotation)) {
+            return null
+        }
+
+        return ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -105,6 +124,7 @@ class FilterController(
         error = null
 
         initialTableSummaryLoading = false
+        initialTableSummaryLoaded = false
         tableSummaryTaskRunning = false
         tableSummaryTaskId = null
         tableSummaryTaskProgress = null
@@ -117,8 +137,6 @@ class FilterController(
         filterTaskId = null
         filterTaskProgress = null
         filterTaskOutput = null
-
-//        inputs = null
     }
 
 
@@ -141,18 +159,30 @@ class FilterController(
             prevState: State,
             snapshot: Any
     ) {
-//        console.log("%$%$%%$ componentDidUpdate")
+        if (state.clientState != null &&
+                prevState.clientState != null &&
+                state.mainLocation() != prevState.mainLocation())
+        {
+            setState {
+                error = null
 
-//        val clientState = state.clientState ?: return
-//        val mainLocation = mainLocation(clientState) ?: return
+                initialTableSummaryLoading = false
+                initialTableSummaryLoaded = false
+                tableSummaryTaskRunning = false
+                tableSummaryTaskId = null
+                tableSummaryTaskProgress = null
+                tableSummaryTaskState = null
+                tableSummary = null
 
-//        val prevClientState = prevState.clientState
-//        if (prevClientState != null &&
-//                inputPath(clientState, mainLocation) != inputPath(prevClientState, mainLocation)) {
-//            setState {
-//                inputChanged = true
-//            }
-//        }
+                filterTaskStateLoading = false
+                filterTaskStateLoaded = false
+                filterTaskRunning = false
+                filterTaskId = null
+                filterTaskProgress = null
+                filterTaskOutput = null
+            }
+            return
+        }
 
         if (state.error != null) {
 //            console.log("componentDidUpdate: ${state.error}")
@@ -173,7 +203,6 @@ class FilterController(
             return
         }
 
-//        return
         if (! state.initialTableSummaryLoading &&
                 ! state.tableSummaryTaskRunning &&
                 state.tableSummary != null)
@@ -209,7 +238,8 @@ class FilterController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun getInitialTableSummary() {
 //        console.log("^^^^^^^^^^ getInitialTableSummary")
-        val mainLocation = mainLocation()!!
+        val mainLocation = state.mainLocation()
+            ?: return
 
         async {
             val activeTasks = ClientContext.clientRestTaskRepository.lookupActive(mainLocation)
@@ -235,6 +265,7 @@ class FilterController(
                             setState {
                                 this.tableSummaryTaskProgress = tableSummaryProgress
                                 this.tableSummary = tableSummary
+                                error = null
                             }
                         }
 
@@ -251,6 +282,7 @@ class FilterController(
                         tableSummaryTaskRunning = ! isDone
                         tableSummaryTaskId = model.taskId
                         initialTableSummaryLoading = false
+                        initialTableSummaryLoaded = true
                         tableSummaryTaskState = model.state
                     }
 
@@ -280,11 +312,12 @@ class FilterController(
                     setState {
                         this.tableSummary = tableSummary
                         this.tableSummaryTaskProgress = summaryProgress
+                        error = null
                     }
                 }
 
                 is ExecutionFailure -> {
-//                    console.log("^^^ error: ${result.errorMessage}")
+//                    console.log("^^^ getInitialTableSummary error: ${result.errorMessage}")
                     setState {
                         error = result.errorMessage
                     }
@@ -293,6 +326,7 @@ class FilterController(
 
             setState {
                 initialTableSummaryLoading = false
+                initialTableSummaryLoaded = true
             }
         }
     }
@@ -300,7 +334,8 @@ class FilterController(
 
     private fun submitOrResumeTableSummaryTask() {
 //        console.log("^^^^^^^^^^ submitOrResumeTableSummaryTask")
-        val mainLocation = mainLocation()!!
+        val mainLocation = state.mainLocation()
+            ?: return
 
         async {
             val taskModel: TaskModel =
@@ -363,6 +398,7 @@ class FilterController(
                 tableSummaryTaskRunning = ! isDone
                 tableSummaryTaskId = taskModel.taskId
                 tableSummaryTaskState = taskModel.state
+                initialTableSummaryLoaded = true
             }
 
 //            console.log("^^^^ about to tableSummaryProgressDebounce - $isDone")
@@ -395,6 +431,7 @@ class FilterController(
 
             setState {
                 tableSummaryTaskState = TaskState.Cancelled
+                initialTableSummaryLoaded = true
             }
 
             when (
@@ -478,6 +515,7 @@ class FilterController(
             setState {
                 tableSummaryTaskRunning = ! isDone
                 tableSummaryTaskId = taskId
+                initialTableSummaryLoaded = true
             }
 
             if (! isDone) {
@@ -491,7 +529,8 @@ class FilterController(
     private suspend fun lookupRunningTableFilterTask() {
 //        console.log("^^^^^^^ lookupTableFilterTask")
 
-        val mainLocation = mainLocation()!!
+        val mainLocation = state.mainLocation()
+            ?: return
 
         val activeTasks = ClientContext.clientRestTaskRepository.lookupActive(mainLocation)
         if (activeTasks.isEmpty()) {
@@ -561,7 +600,8 @@ class FilterController(
 
 
     private fun submitOrResumeTableFilterTask() {
-        val mainLocation = mainLocation()!!
+        val mainLocation = state.mainLocation()
+            ?: return
 
         async {
             val activeTasks = ClientContext.clientRestTaskRepository.lookupActive(mainLocation)
@@ -747,36 +787,11 @@ class FilterController(
 //        console.log("^^^^^^^^ onInputChange - refreshing")
 
         setState {
+            error = null
             tableSummary = null
             initialTableSummaryLoading = false
+            initialTableSummaryLoaded = false
         }
-    }
-
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun mainLocation(): ObjectLocation? {
-        val clientState = state.clientState
-            ?: return null
-
-        return mainLocation(clientState)
-    }
-
-
-    private fun mainLocation(clientState: SessionState): ObjectLocation? {
-        val documentPath = clientState
-                .navigationRoute
-                .documentPath
-                ?: return null
-
-        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
-                ?: return null
-
-        if (! FilterConventions.isFeature(documentNotation)) {
-            return null
-        }
-
-        return ObjectLocation(documentPath, NotationConventions.mainObjectPath)
     }
 
 
@@ -785,9 +800,17 @@ class FilterController(
         val clientState = state.clientState
                 ?: return
 
-        val mainLocation = mainLocation()
+        val mainLocation = state.mainLocation()
                 ?: return
 
+        render(clientState, mainLocation)
+    }
+
+
+    private fun RBuilder.render(
+        clientState: SessionState,
+        mainLocation: ObjectLocation
+    ) {
         styledDiv {
             css {
                 padding(1.em)
@@ -824,6 +847,7 @@ class FilterController(
                 this.taskRunning = state.tableSummaryTaskRunning || state.filterTaskRunning
 
                 onChange = {
+//                    console.log("^^^ on input change")
                     onInputChange(/*it*/)
                 }
             }
@@ -856,6 +880,7 @@ class FilterController(
                 this.error = state.error
 
                 this.initialTableSummaryLoading = state.initialTableSummaryLoading
+                this.initialTableSummaryLoaded = state.initialTableSummaryLoaded
                 this.summaryTaskRunning = state.tableSummaryTaskRunning
                 this.summaryEmpty = (state.tableSummary ?: TableSummary.empty).isEmpty()
                 this.summaryProgress = state.tableSummaryTaskProgress
