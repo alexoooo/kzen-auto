@@ -43,6 +43,7 @@ class FilterController(
 
         var error: String?,
 
+        var inputListing: List<String>?,
         var initialTableSummaryLoading: Boolean,
         var initialTableSummaryLoaded: Boolean,
         var tableSummaryTaskRunning: Boolean,
@@ -78,6 +79,27 @@ class FilterController(
         }
 
         return ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+    }
+
+
+    private fun State.clearExceptClientState() {
+        error = null
+
+        inputListing = null
+        initialTableSummaryLoading = false
+        initialTableSummaryLoaded = false
+        tableSummaryTaskRunning = false
+        tableSummaryTaskId = null
+        tableSummaryTaskProgress = null
+        tableSummaryTaskState = null
+        tableSummary = null
+
+        filterTaskStateLoading = false
+        filterTaskStateLoaded = false
+        filterTaskRunning = false
+        filterTaskId = null
+        filterTaskProgress = null
+        filterTaskOutput = null
     }
 
 
@@ -120,23 +142,7 @@ class FilterController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
         clientState = null
-
-        error = null
-
-        initialTableSummaryLoading = false
-        initialTableSummaryLoaded = false
-        tableSummaryTaskRunning = false
-        tableSummaryTaskId = null
-        tableSummaryTaskProgress = null
-        tableSummaryTaskState = null
-        tableSummary = null
-
-        filterTaskStateLoading = false
-        filterTaskStateLoaded = false
-        filterTaskRunning = false
-        filterTaskId = null
-        filterTaskProgress = null
-        filterTaskOutput = null
+        clearExceptClientState()
     }
 
 
@@ -163,24 +169,7 @@ class FilterController(
                 prevState.clientState != null &&
                 state.mainLocation() != prevState.mainLocation())
         {
-            setState {
-                error = null
-
-                initialTableSummaryLoading = false
-                initialTableSummaryLoaded = false
-                tableSummaryTaskRunning = false
-                tableSummaryTaskId = null
-                tableSummaryTaskProgress = null
-                tableSummaryTaskState = null
-                tableSummary = null
-
-                filterTaskStateLoading = false
-                filterTaskStateLoaded = false
-                filterTaskRunning = false
-                filterTaskId = null
-                filterTaskProgress = null
-                filterTaskOutput = null
-            }
+            state.clearExceptClientState()
             return
         }
 
@@ -779,7 +768,20 @@ class FilterController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onInputChange(/*inputs: List<String>?*/) {
+    private fun onInputListing(inputs: List<String>?) {
+//        console.log("^^^^^^^ FilterController - onInputListing - $inputs / ${state.inputListing}")
+        setState {
+            this.inputListing = inputs
+        }
+    }
+
+
+    private fun onInputChange(inputs: List<String>?) {
+//        console.log("^^^^^^^ FilterController - onInputChange - $inputs")
+        setState {
+            inputListing = inputs
+        }
+
         if (state.initialTableSummaryLoading) {
 //            console.log("^^^^^^^^ onInputChange - already loading")
             return
@@ -797,6 +799,8 @@ class FilterController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+//        console.log("%%%%%% FilterController - render - ${state.inputListing}")
+
         val clientState = state.clientState
                 ?: return
 
@@ -846,10 +850,8 @@ class FilterController(
                 this.clientState = clientState
                 this.taskRunning = state.tableSummaryTaskRunning || state.filterTaskRunning
 
-                onChange = {
-//                    console.log("^^^ on input change")
-                    onInputChange(/*it*/)
-                }
+                onListing = this@FilterController::onInputListing
+                onChange = this@FilterController::onInputChange
             }
         }
     }
@@ -878,6 +880,7 @@ class FilterController(
                 this.mainLocation = mainLocation
                 this.clientState = clientState
                 this.error = state.error
+                this.inputListing = state.inputListing
 
                 this.initialTableSummaryLoading = state.initialTableSummaryLoading
                 this.initialTableSummaryLoaded = state.initialTableSummaryLoaded
@@ -901,11 +904,13 @@ class FilterController(
         mainLocation: ObjectLocation,
         clientState: SessionState
     ) {
+//        console.log("^^^^ FilterController - renderColumnList - ${state.inputListing}")
         child(FilterColumnList::class) {
             attrs {
                 this.mainLocation = mainLocation
                 this.clientState = clientState
                 this.tableSummary = state.tableSummary
+                this.inputListing = state.inputListing
                 this.filterRunning = state.filterTaskRunning
             }
         }
@@ -929,6 +934,7 @@ class FilterController(
                 attrs {
                     this.mainLocation = mainLocation
                     this.clientState = clientState
+                    this.inputListing = state.inputListing
 
                     summaryDone = (state.tableSummaryTaskProgress?.remainingFiles?.isEmpty() ?: false) ||
                             ! (state.tableSummary?.isEmpty() ?: true)

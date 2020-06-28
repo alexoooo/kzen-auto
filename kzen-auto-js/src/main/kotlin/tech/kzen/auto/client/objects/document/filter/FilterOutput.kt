@@ -56,6 +56,15 @@ class FilterOutput(
         prevState: State,
         snapshot: Any
     ) {
+        if (props.mainLocation != prevProps.mainLocation) {
+            setState {
+                loading = false
+                outputInfo = null
+                error = null
+            }
+            return
+        }
+
         if (state.loading) {
             if (! prevState.loading) {
                 getOutputInfo()

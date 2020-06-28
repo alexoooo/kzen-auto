@@ -33,6 +33,7 @@ class FilterStatus(
 
         var error: String?,
 
+        var inputListing: List<String>?,
         var initialTableSummaryLoading: Boolean,
         var initialTableSummaryLoaded: Boolean,
         var summaryTaskRunning: Boolean,
@@ -134,13 +135,16 @@ class FilterStatus(
                         }
                     }
                     else if (props.summaryProgress != null) {
-//                        +"Indexing column values"
-
                         val summaryProgress = props.summaryProgress!!
                         val remainingFiles = summaryProgress.remainingFiles
 
                         if (remainingFiles.isEmpty()) {
-                            +"Ready to apply filters"
+                            if (props.inputListing?.isEmpty() != false) {
+                                +"No inputs selected"
+                            }
+                            else {
+                                +"Ready to apply filters"
+                            }
                         }
                         else if (props.summaryEmpty && ! props.summaryTaskRunning) {
                             +"Column values not indexed yet"

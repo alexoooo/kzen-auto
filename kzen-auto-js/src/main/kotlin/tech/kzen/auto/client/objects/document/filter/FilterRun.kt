@@ -20,6 +20,8 @@ class FilterRun(
         var mainLocation: ObjectLocation,
         var clientState: SessionState,
 
+        var inputListing: List<String>?,
+
         var summaryDone: Boolean,
         var summaryInitialRunning: Boolean,
         var summaryTaskRunning: Boolean,
@@ -65,6 +67,10 @@ class FilterRun(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        if (props.inputListing?.isEmpty() != false) {
+            return
+        }
+
 //        val runnable = ! props.summaryDone || ! props.filterDone
 
         div {

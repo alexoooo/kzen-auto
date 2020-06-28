@@ -31,6 +31,7 @@ class FilterColumnList(
         var mainLocation: ObjectLocation,
         var clientState: SessionState,
         var tableSummary: TableSummary?,
+        var inputListing: List<String>?,
         var filterRunning: Boolean
     ): RProps
 
@@ -55,12 +56,28 @@ class FilterColumnList(
         prevState: State,
         snapshot: Any
     ) {
+//        console.log("^^^^^ FilterColumnList - componentDidUpdate - " +
+//                "${props.mainLocation} / ${prevProps.mainLocation}")
+
+        if (props.mainLocation != prevProps.mainLocation ||
+                props.inputListing != prevProps.inputListing) {
+//            console.log("############# FilterColumnList reset for new location")
+            setState {
+                columnListingLoading = true
+                columnListing = null
+                error = null
+            }
+            return
+        }
+
         if (state.columnListingLoading && ! prevState.columnListingLoading) {
             getColumnListing()
         }
 
         val columnListing = state.columnListing
-        if (columnListing == null && ! state.columnListingLoading) {
+        if (! state.columnListingLoading &&
+                columnListing == null && state.error == null
+        ) {
             setState {
                 columnListingLoading = true
             }

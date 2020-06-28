@@ -32,7 +32,8 @@ class FilterInputs(
         var mainLocation: ObjectLocation,
         var clientState: SessionState,
         var taskRunning: Boolean,
-        var onChange: ((List<String>?) -> Unit)
+        var onChange: ((List<String>?) -> Unit),
+        var onListing: ((List<String>?) -> Unit)
     ): RProps
 
 
@@ -46,6 +47,10 @@ class FilterInputs(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var mounted: Boolean = false
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
         fileListingLoaded = false
         fileListingLoading = false
@@ -55,15 +60,45 @@ class FilterInputs(
     }
 
 
+    override fun componentDidMount() {
+        mounted = true
+    }
+
+
+    override fun componentWillUnmount() {
+        mounted = false
+    }
+
+
     override fun componentDidUpdate(
         prevProps: Props,
         prevState: State,
         snapshot: Any
     ) {
+        if (! mounted) {
+            console.log("^^^^^^ !!!! FilterInputs componentDidUpdate without mounted!?!?")
+        }
+
+        if (props.mainLocation != prevProps.mainLocation) {
+            setState {
+                fileListingLoaded = false
+                fileListingLoading = false
+                fileListing = null
+                error = null
+                changedAttributeNotation = null
+            }
+            props.onListing(null)
+            return
+        }
+
 //        console.log("^6666 FilterInputs - componentDidUpdate")
-        if (state.fileListing != prevState.fileListing && state.changedAttributeNotation != null) {
-//            console.log("^6666 props.onChange: ${state.fileListing}")
-            props.onChange(state.fileListing)
+        if (state.fileListing != prevState.fileListing) {
+            if (state.changedAttributeNotation != null) {
+                props.onChange(state.fileListing)
+            }
+            else {
+                props.onListing(state.fileListing)
+            }
         }
 
         if (state.error != null) {
@@ -91,6 +126,11 @@ class FilterInputs(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onAttributeChanged(attributeNotation: AttributeNotation) {
+        console.log("############## onAttributeChanged - $mounted")
+        if (! mounted) {
+            return
+        }
+
         setState {
             fileListingLoading = true
             fileListingLoaded = false
@@ -103,6 +143,11 @@ class FilterInputs(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun getFileListing() {
+//        console.log("############## getFileListing - $mounted")
+        if (! mounted) {
+            return
+        }
+
         setState {
             error = null
         }
@@ -114,6 +159,11 @@ class FilterInputs(
                 FilterConventions.actionParameter to FilterConventions.actionListFiles)
 //            console.log("^^^^ getFileListing got: $result")
 
+//            console.log("############## getFileListing - result - $mounted")
+            if (! mounted) {
+                return@async
+            }
+
             when (result) {
                 is ExecutionSuccess -> {
                     @Suppress("UNCHECKED_CAST")
@@ -122,15 +172,22 @@ class FilterInputs(
 //                    console.log("&&&&&& FilterInputs ||| fileListing - $resultValue")
                     setState {
                         fileListing = resultValue
+                        error = null
                     }
                 }
 
                 is ExecutionFailure -> {
 //                    console.log("&&&&&& FilterInputs ||| error - ${result.errorMessage}")
                     setState {
+                        fileListing = null
                         error = result.errorMessage
                     }
                 }
+            }
+
+//            console.log("############## getFileListing - after - $mounted")
+            if (! mounted) {
+                return@async
             }
 
             setState {

@@ -126,6 +126,18 @@ class DefaultAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun componentDidUpdate(
+        prevProps: Props,
+        prevState: State,
+        snapshot: Any
+    ) {
+        if (props.objectLocation != prevProps.objectLocation) {
+            state.init(props)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
         flush()
     }
