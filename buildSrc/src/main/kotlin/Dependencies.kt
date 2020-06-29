@@ -1,8 +1,9 @@
 //const val kotlinVersion = "1.4-M1"
 const val kotlinVersion = "1.3.72"
 
-const val springBootVersion = "2.2.6.RELEASE"
-//const val springBootVersion = "2.3.0.RELEASE"
+const val springBootVersion = "2.2.8.RELEASE"
+//const val springBootVersion = "2.3.1.RELEASE"
+
 const val dependencyManagementVersion = "1.0.9.RELEASE"
 
 const val coroutinesVersion = "1.3.7"
