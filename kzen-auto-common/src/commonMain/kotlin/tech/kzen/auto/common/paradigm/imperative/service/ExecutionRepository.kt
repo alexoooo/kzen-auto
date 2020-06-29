@@ -367,7 +367,7 @@ class ExecutionRepository(
             graphStructure: GraphStructure,
             delayMillis: Int = 0
     ): ImperativeResponse {
-        if (host !in models) {
+        if (models[host]?.frames?.isEmpty() != false) {
             start(host, graphStructure)
         }
 
