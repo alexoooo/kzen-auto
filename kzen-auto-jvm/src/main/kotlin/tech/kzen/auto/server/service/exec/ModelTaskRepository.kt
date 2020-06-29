@@ -10,7 +10,12 @@ import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.common.paradigm.task.model.TaskState
 import tech.kzen.auto.common.paradigm.task.service.TaskRepository
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.structure.notation.cqrs.DeletedDocumentEvent
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
+import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import java.time.Instant
@@ -22,7 +27,8 @@ class ModelTaskRepository(
     private val graphStore: LocalGraphStore,
     private val graphCreator: GraphCreator
 ):
-    TaskRepository
+    TaskRepository,
+    LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -33,6 +39,68 @@ class ModelTaskRepository(
     //-----------------------------------------------------------------------------------------------------------------
     private val active = mutableMapOf<TaskId, ActiveHandle>()
     private val terminated = mutableMapOf<TaskId, TaskModel>()
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}
+
+
+    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+
+
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+        when (event) {
+            is DeletedDocumentEvent ->
+                documentDeleted(event)
+
+            is RenamedDocumentRefactorEvent ->
+                documentRenamed(event)
+
+            else -> {}
+        }
+    }
+
+
+    private fun documentDeleted(event: DeletedDocumentEvent) {
+        val terminatedDeletedModel =
+            terminated.values.find { it.taskLocation.documentPath == event.documentPath }
+        if (terminatedDeletedModel != null) {
+            terminated.remove(terminatedDeletedModel.taskId)
+            return
+        }
+
+        val activeDeletedModel =
+            active.values.find { it.model.taskLocation.documentPath == event.documentPath }
+        if (activeDeletedModel != null) {
+            activeDeletedModel.requestCancel()
+            activeDeletedModel.awaitTerminal()
+            terminated.remove(activeDeletedModel.model.taskId)
+        }
+    }
+
+
+    private fun documentRenamed(event: RenamedDocumentRefactorEvent) {
+        val terminatedRenamedModel =
+            terminated.values.find { it.taskLocation.documentPath == event.documentPath }
+        if (terminatedRenamedModel != null) {
+            terminated.remove(terminatedRenamedModel.taskId)
+
+            val newTaskLocation = terminatedRenamedModel.taskLocation.copy(
+                documentPath = event.createdWithNewName.destination)
+
+            terminated[terminatedRenamedModel.taskId] = terminatedRenamedModel.copy(taskLocation = newTaskLocation)
+            return
+        }
+
+        val activeRenamedModel =
+            active.values.find { it.model.taskLocation.documentPath == event.documentPath }
+        if (activeRenamedModel != null) {
+            val newTaskLocation = activeRenamedModel.model.taskLocation.copy(
+                documentPath = event.createdWithNewName.destination)
+
+            activeRenamedModel.model = activeRenamedModel.model.copy(taskLocation = newTaskLocation)
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -112,7 +180,6 @@ class ModelTaskRepository(
 
     //-----------------------------------------------------------------------------------------------------------------
     private inner class ActiveHandle(
-//        val task: ManagedTask,
         var model: TaskModel
     ): TaskHandle {
         private var cancelRequested = AtomicBoolean(false)

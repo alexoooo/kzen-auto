@@ -1,6 +1,7 @@
+
+import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.springframework.boot.gradle.tasks.bundling.BootJar
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 
 plugins {
@@ -68,4 +69,17 @@ tasks.getByName<Jar>("jar") {
 
 tasks.getByName<BootJar>("bootJar") {
     archiveClassifier.set("boot")
+}
+
+
+tasks {
+    val sourcesJar by creating(Jar::class) {
+        archiveClassifier.set("sources")
+        from(sourceSets.getByName("main").allSource)
+    }
+
+    artifacts {
+        archives(sourcesJar)
+        archives(jar)
+    }
 }

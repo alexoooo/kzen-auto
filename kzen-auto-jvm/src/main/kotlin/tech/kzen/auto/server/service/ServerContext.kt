@@ -33,7 +33,6 @@ object ServerContext {
     //-----------------------------------------------------------------------------------------------------------------
     private val notationMetadataReader = NotationMetadataReader()
 
-
     private val fileLocator = GradleLocator()
     private val fileMedia = FileNotationMedia(fileLocator)
 
@@ -105,6 +104,7 @@ object ServerContext {
             graphStore.observe(executionRepository)
             graphStore.observe(activeDataflowRepository)
             graphStore.observe(visualDataflowRepository)
+            graphStore.observe(modelTaskRepository)
         }
     }
 
