@@ -1,5 +1,9 @@
 /*@import url(https://cloud.typography.com/7463094/7169552/css/fonts.css);*/
 
+body {
+    font-family: Roboto, Arial, Helvetica, sans-serif;
+}
+
 // NB: referenced in CssClasses.kt
 
 #root {
@@ -9,7 +13,6 @@
     right: 0;
     bottom: 0;
     color: #16103F;
-    font-family: Arial, Helvetica, sans-serif;
 }
 
 

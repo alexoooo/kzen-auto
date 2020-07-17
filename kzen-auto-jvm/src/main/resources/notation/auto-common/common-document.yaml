@@ -84,9 +84,21 @@ Filter:
     input: String
     output: String
     criteria: CriteriaSpec
-#    criteria:
-#      is: CriteriaSpec
-#      by: CriteriaSpecDefiner
+
+
+Process:
+  abstract: true
+  is: Document
+  class: tech.kzen.auto.server.objects.filter.FilterDocument
+  title: "Data Process"
+  icon: TableChart
+  input: path/to/input.csv
+  output: ../work/out.csv
+  criteria: {}
+  meta:
+    input: String
+    output: String
+    criteria: CriteriaSpec
 
 
 CriteriaSpec:

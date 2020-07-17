@@ -7,6 +7,7 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 object FilterConventions {
+    val processObjectName = ObjectName("Process")
     val archetypeObjectName = ObjectName("Filter")
     val criteriaAttributeName = AttributeName("criteria")
 
@@ -29,7 +30,7 @@ object FilterConventions {
     const val actionFilterTask = "filter"
 
 
-    fun isFeature(documentNotation: DocumentNotation): Boolean {
+    fun isFilter(documentNotation: DocumentNotation): Boolean {
         val mainObjectNotation =
             documentNotation.objects.notations[NotationConventions.mainObjectPath]
                 ?: return false
@@ -38,7 +39,8 @@ object FilterConventions {
             mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
                 ?: return false
 
-        return mainObjectIs == archetypeObjectName.value
+        return mainObjectIs == archetypeObjectName.value ||
+                mainObjectIs == processObjectName.value
     }
 
 

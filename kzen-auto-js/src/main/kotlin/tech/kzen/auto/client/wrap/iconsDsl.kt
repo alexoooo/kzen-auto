@@ -132,6 +132,9 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "KeyboardReturn" ->
             KeyboardReturnIcon::class
 
+        "PlayForWork" ->
+            PlayForWorkIcon::class
+
         else ->
             TextureIcon::class
     }

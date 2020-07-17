@@ -224,6 +224,12 @@ InvokeCallTool:
   delegate: InvokeCall
 
 
+#InvokeInputTool:
+#  is: RibbonTool
+#  parent: LogicGroup
+#  delegate: InvokeInput
+
+
 #######################################################################################################################
 
 

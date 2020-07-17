@@ -11,6 +11,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.auto.client.objects.document.feature.FeatureController
 import tech.kzen.auto.client.objects.document.filter.FilterController
 import tech.kzen.auto.client.objects.document.graph.GraphController
+import tech.kzen.auto.client.objects.document.process.ProcessController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.command.StepCommander
 import tech.kzen.auto.client.objects.document.script.ScriptController
@@ -69,6 +70,13 @@ reflectionRegistry.put(
     listOf("archetype", "attributeController")
 ) { args ->
     GraphController.Wrapper(args[0] as ObjectLocation, args[1] as AttributeController.Wrapper)
+}
+
+reflectionRegistry.put(
+    "tech.kzen.auto.client.objects.document.process.ProcessController\$Wrapper",
+    listOf("archetype")
+) { args ->
+    ProcessController.Wrapper(args[0] as ObjectLocation)
 }
 
 reflectionRegistry.put(

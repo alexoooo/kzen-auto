@@ -406,3 +406,9 @@ external class MenuBookIcon: Component<IconProps, RState> {
 external class StopIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("PlayForWork")
+external class PlayForWorkIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

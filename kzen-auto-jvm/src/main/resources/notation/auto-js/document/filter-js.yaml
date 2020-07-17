@@ -4,3 +4,9 @@ FilterController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.filter.FilterController$Wrapper
   archetype: Filter
+
+
+ProcessController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.process.ProcessController$Wrapper
+  archetype: Process

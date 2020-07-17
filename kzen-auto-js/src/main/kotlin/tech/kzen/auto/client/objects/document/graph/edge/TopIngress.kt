@@ -23,15 +23,19 @@ class TopIngress(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var attributeName: AttributeName?,
-            var ingressColor: Color
+            var ingressColor: Color,
+            var parentWidth: LinearDimension?
     ): RProps
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        val parentWidth = props.parentWidth ?: CellController.cardWidth
+        val halfWidth = parentWidth.div(2)
+
         styledDiv {
             css {
-                width = CellController.cardWidth.div(2).plus(CellController.arrowSide)
+                width = halfWidth.plus(CellController.arrowSide)
                 height = CellController.ingressLength
             }
 

@@ -75,9 +75,9 @@ class FilterInputs(
         prevState: State,
         snapshot: Any
     ) {
-        if (! mounted) {
-            console.log("^^^^^^ !!!! FilterInputs componentDidUpdate without mounted!?!?")
-        }
+//        if (! mounted) {
+//            console.log("^^^^^^ !!!! FilterInputs componentDidUpdate without mounted!?!?")
+//        }
 
         if (props.mainLocation != prevProps.mainLocation) {
             setState {
@@ -126,7 +126,7 @@ class FilterInputs(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onAttributeChanged(attributeNotation: AttributeNotation) {
-        console.log("############## onAttributeChanged - $mounted")
+//        console.log("############## onAttributeChanged - $mounted")
         if (! mounted) {
             return
         }
@@ -288,7 +288,7 @@ class FilterInputs(
                     css {
                         marginTop = 0.px
                         marginBottom = 0.px
-                        marginLeft = (-25).px
+                        marginLeft = (-15).px
                     }
 
                     for (filePath in fileListing) {

@@ -20,12 +20,16 @@ class BottomEgress(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var egressColor: Color
+            var egressColor: Color,
+            var parentWidth: LinearDimension?
     ): RProps
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        val parentWidth = props.parentWidth ?: CellController.cardWidth
+        val halfWidth = parentWidth.div(2)
+
         styledDiv {
             css {
                 height = CellController.egressLength
@@ -40,7 +44,7 @@ class BottomEgress(
 
                 bottom = 2.em
                 top = 3.em
-                left = CellController.cardWidth.div(2).minus(1.em)
+                left = halfWidth.minus(1.em)
                 zIndex = -2
 
                 backgroundColor = props.egressColor
@@ -52,7 +56,9 @@ class BottomEgress(
                 position = Position.absolute
                 bottom = 0.em
 
-                width = CellController.cardWidth.div(2).plus(CellController.arrowSide)
+//                width = halfWidth.plus(CellController.arrowSide)
+//                width = 100.pct.plus(CellController.arrowSide)
+                width = 100.pct
                 height = CellController.egressLength
                 zIndex = -1
             }
@@ -64,7 +70,7 @@ class BottomEgress(
                     width = CellController.arrowSide
                     height = CellController.arrowSide.div(2)
 
-                    marginLeft = CellController.cardWidth.div(2).minus(CellController.cardHorizontalMargin)
+                    marginLeft = halfWidth.minus(CellController.cardHorizontalMargin)
                 }
             }
 
@@ -77,7 +83,7 @@ class BottomEgress(
                     borderLeft(CellController.arrowSide, BorderStyle.solid, Color.transparent)
                     borderRight(CellController.arrowSide, BorderStyle.solid, Color.transparent)
 
-                    marginLeft = CellController.cardWidth.div(2).minus(CellController.arrowSide)
+                    marginLeft = halfWidth.minus(CellController.arrowSide)
                 }
             }
         }

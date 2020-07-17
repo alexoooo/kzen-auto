@@ -143,6 +143,15 @@ InvokeCall:
       call: true
 
 
+#InvokeInput:
+#  abstract: true
+#  is: Action
+#  class: tech.kzen.auto.common.objects.document.script.invoke.InvokeInput
+#  icon: PlayForWork
+#  title: "Input Parameter"
+#  description: "Value supplied when Invoking this sub-script"
+
+
 ################################################################
 
 

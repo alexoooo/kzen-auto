@@ -9,7 +9,6 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.CropperWrapper
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
@@ -74,7 +73,7 @@ class FilterController(
         val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
             ?: return null
 
-        if (! FilterConventions.isFeature(documentNotation)) {
+        if (! FilterConventions.isFilter(documentNotation)) {
             return null
         }
 
@@ -127,9 +126,6 @@ class FilterController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var cropperWrapper: CropperWrapper? = null
-    private var screenshotBytes: ByteArray? = null
-
     private var tableSummaryProgressDebounce: FunctionWithDebounce = lodash.debounce({
         updateTableSummaryProgress()
     }, 5_000)
