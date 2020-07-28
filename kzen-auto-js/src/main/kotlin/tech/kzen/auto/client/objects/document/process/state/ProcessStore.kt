@@ -6,7 +6,7 @@ import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 
 
-class ProcessStore: SessionGlobal.Observer
+class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Subscriber {
@@ -68,30 +68,29 @@ class ProcessStore: SessionGlobal.Observer
         }
 
         if (initial) {
-            dispatch(ListInputsRequest)
+            dispatch(InitiateProcessEffect)
+//            dispatch(ListInputsRequest)
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun dispatch(action: ProcessAction) {
-        if (state == null) {
-            return
-        }
+    override fun dispatch(action: ProcessAction) {
+        val prevState = state
+            ?: return
 
-        val prevState = state!!
         val nextState = ProcessReducer.reduce(prevState, action)
 
         if (nextState != prevState) {
             state = nextState
             subscriber?.onProcessState(state)
+        }
 
-            async {
-                val outcomeAction = ProcessEffect.effect(nextState, prevState, action)
+        async {
+            val outcomeAction = ProcessEffect.effect(nextState, prevState, action)
 
-                if (outcomeAction != null) {
-                    dispatch(outcomeAction)
-                }
+            if (outcomeAction != null) {
+                dispatch(outcomeAction)
             }
         }
     }

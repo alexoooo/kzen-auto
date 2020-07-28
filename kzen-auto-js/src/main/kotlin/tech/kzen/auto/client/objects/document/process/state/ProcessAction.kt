@@ -6,15 +6,37 @@ sealed class ProcessAction
 
 
 //---------------------------------------------------------------------------------------------------------------------
+object InitiateProcessEffect: ProcessAction()
+
+
+//---------------------------------------------------------------------------------------------------------------------
 object ListInputsRequest: ProcessAction()
 
 
-data class ListInputsResponse(
+sealed class ListInputsResponse: ProcessAction()
+
+
+data class ListInputsResult(
     val fileListing: List<String>
-): ProcessAction()
+): ListInputsResponse()
 
 
 data class ListInputsError(
     val message: String
+): ListInputsResponse()
+
+
+//---------------------------------------------------------------------------------------------------------------------
+object ListColumnsRequest: ProcessAction()
+
+
+data class ListColumnsResponse(
+    val columnListing: List<String>
 ): ProcessAction()
+
+
+data class ListColumnsError(
+    val message: String
+): ProcessAction()
+
 

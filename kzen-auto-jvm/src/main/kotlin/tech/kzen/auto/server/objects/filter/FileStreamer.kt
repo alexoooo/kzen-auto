@@ -19,7 +19,7 @@ object FileStreamer {
 //        val filename = inputPath.fileName
         val extension = MoreFiles.getFileExtension(inputPath)
         val withoutExtension = MoreFiles.getNameWithoutExtension(inputPath)
-
+        
         var input: InputStream? = null
         var reader: BufferedReader? = null
         try {

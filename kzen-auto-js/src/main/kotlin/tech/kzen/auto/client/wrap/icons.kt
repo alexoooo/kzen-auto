@@ -66,6 +66,12 @@ external class SaveIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("SaveAlt")
+external class SaveAltIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("Cancel")
 external class CancelIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?

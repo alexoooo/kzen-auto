@@ -73,7 +73,7 @@ class ProcessController(
             this.processState = processState
         }
     }
-    
+
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
@@ -98,18 +98,27 @@ class ProcessController(
         child(ProcessInput::class) {
             attrs {
                 this.processState = processState
+                dispatcher = store
             }
         }
     }
 
 
     private fun RBuilder.renderFilter(processState: ProcessState) {
-        child(ProcessFilter::class) {}
+        child(ProcessFilter::class) {
+            attrs {
+                this.processState = processState
+            }
+        }
     }
 
 
     private fun RBuilder.renderOutput(processState: ProcessState) {
-        child(ProcessOutput::class) {}
+        child(ProcessOutput::class) {
+            attrs {
+                this.processState = processState
+            }
+        }
     }
 
 
@@ -123,7 +132,11 @@ class ProcessController(
                 marginBottom = 2.em
             }
 
-            +"Run"
+            child(ProcessRun::class) {
+                attrs {
+                    this.processState = processState
+                }
+            }
         }
     }
 }

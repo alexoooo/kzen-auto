@@ -482,7 +482,9 @@ class VertexController(
 
     private fun RBuilder.renderAttributes() {
         val vertexLocation = props.cellDescriptor.objectLocation
-        val objectMetadata = props.clientState.graphStructure().graphMetadata.objectMetadata[vertexLocation]!!
+
+        val objectMetadata = props
+            .clientState.graphStructure().graphMetadata.objectMetadata[vertexLocation]!!
 
         val editableAttributes = objectMetadata.attributes.values.keys.filterNot {
             AutoConventions.isManaged(it) ||

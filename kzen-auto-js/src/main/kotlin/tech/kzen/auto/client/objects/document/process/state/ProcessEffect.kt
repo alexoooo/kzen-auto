@@ -13,9 +13,17 @@ object ProcessEffect {
         action: ProcessAction
     ): ProcessAction? {
         return when (action) {
-            ListInputsRequest -> {
+            InitiateProcessEffect ->
+                ListInputsRequest
+
+            ListInputsRequest ->
                 loadFileListing(state)
-            }
+
+            ListColumnsRequest ->
+                loadColumnListing(state)
+
+            is ListInputsResponse ->
+                ListColumnsRequest
 
             else -> null
         }
@@ -34,7 +42,29 @@ object ProcessEffect {
                 @Suppress("UNCHECKED_CAST")
                 val resultValue = result.value.get() as List<String>
 
-                ListInputsResponse(resultValue)
+                ListInputsResult(resultValue)
+            }
+
+            is ExecutionFailure -> {
+                ListInputsError(result.errorMessage)
+            }
+        }
+    }
+
+
+    private suspend fun loadColumnListing(
+        state: ProcessState
+    ): ProcessAction {
+        val result = ClientContext.restClient.performDetached(
+            state.mainLocation,
+            FilterConventions.actionParameter to FilterConventions.actionListColumns)
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val resultValue = result.value.get() as List<String>
+
+                ListColumnsResponse(resultValue)
             }
 
             is ExecutionFailure -> {

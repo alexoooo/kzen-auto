@@ -15,6 +15,11 @@ data class ProcessState(
     val fileListing: List<String>? = null,
     val fileListingError: String? = null,
 
+    val columnListingLoaded: Boolean = false,
+    val columnListingLoading: Boolean = false,
+    val columnListing: List<String>? = null,
+    var columnListingError: String? = null,
+
     val tableSummaryTaskRunning: Boolean = false,
 
     val filterTaskRunning: Boolean = false

@@ -9,15 +9,23 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
+import tech.kzen.auto.client.objects.document.process.state.ProcessState
+import tech.kzen.auto.client.wrap.SaveAltIcon
+import tech.kzen.auto.client.wrap.reactStyle
 
 
 class ProcessOutput(
-    props: RProps
+    props: Props
 ):
-    RPureComponent<RProps, RState>(props)
+    RPureComponent<ProcessOutput.Props, ProcessOutput.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    class Props(
+        var processState: ProcessState
+    ): RProps
 
+
+    class State: RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -49,18 +57,44 @@ class ProcessOutput(
                         padding(0.5.em)
                     }
 
-                    styledSpan {
-                        css {
-                            fontSize = 2.em
-                        }
-                        +"Output"
-                    }
+                    renderContent()
+                }
+            }
+        }
+    }
 
-                    styledDiv {
-                        +"..."
+
+    private fun RBuilder.renderContent() {
+        renderHeader()
+        renderOutput()
+    }
+
+
+    private fun RBuilder.renderHeader() {
+        styledDiv {
+            child(SaveAltIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        fontSize = 1.75.em
+                        marginRight = 0.25.em
                     }
                 }
             }
+
+            styledSpan {
+                css {
+                    fontSize = 2.em
+                }
+
+                +"Output"
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderOutput() {
+        styledDiv {
+            +"..."
         }
     }
 }
