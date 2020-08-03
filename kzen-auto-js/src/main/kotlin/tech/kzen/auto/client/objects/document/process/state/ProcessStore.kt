@@ -68,16 +68,15 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
         }
 
         if (initial) {
-            dispatch(InitiateProcessEffect)
-//            dispatch(ListInputsRequest)
+            dispatchAsync(InitiateProcessEffect)
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun dispatch(action: ProcessAction) {
+    override suspend fun dispatch(action: ProcessAction): List<ProcessAction> {
         val prevState = state
-            ?: return
+            ?: return listOf()
 
         val nextState = ProcessReducer.reduce(prevState, action)
 
@@ -86,12 +85,18 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
             subscriber?.onProcessState(state)
         }
 
-        async {
-            val outcomeAction = ProcessEffect.effect(nextState, prevState, action)
+        val outcomeAction = ProcessEffect.effect(nextState, prevState, action)
+            ?: return listOf()
 
-            if (outcomeAction != null) {
-                dispatch(outcomeAction)
-            }
+        val additionalEffects = dispatch(outcomeAction)
+
+        return listOf(outcomeAction) + additionalEffects
+    }
+
+
+    override fun dispatchAsync(action: ProcessAction) {
+        async {
+            dispatch(action)
         }
     }
 }

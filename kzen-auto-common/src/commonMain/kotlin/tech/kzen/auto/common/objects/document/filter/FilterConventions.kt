@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.filter
 
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -10,6 +11,7 @@ object FilterConventions {
     val processObjectName = ObjectName("Process")
     val archetypeObjectName = ObjectName("Filter")
     val criteriaAttributeName = AttributeName("criteria")
+    val criteriaAttributePath = AttributePath.ofName(criteriaAttributeName)
 
     const val columnKey = "column"
     private const val inputKey = "input"

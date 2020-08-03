@@ -5,6 +5,7 @@ import react.*
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.process.filter.ProcessFilterList
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.objects.document.process.state.ProcessStore
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -105,9 +106,10 @@ class ProcessController(
 
 
     private fun RBuilder.renderFilter(processState: ProcessState) {
-        child(ProcessFilter::class) {
+        child(ProcessFilterList::class) {
             attrs {
                 this.processState = processState
+                this.dispatcher = store
             }
         }
     }

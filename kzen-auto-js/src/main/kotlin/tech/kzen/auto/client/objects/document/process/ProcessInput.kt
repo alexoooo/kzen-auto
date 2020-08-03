@@ -41,7 +41,7 @@ class ProcessInput(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onAttributeChanged(attributeNotation: AttributeNotation) {
 //        console.log("############## onAttributeChanged - $attributeNotation")
-        props.dispatcher.dispatch(ListInputsRequest)
+        props.dispatcher.dispatchAsync(ListInputsRequest)
     }
 
 
@@ -91,12 +91,14 @@ class ProcessInput(
         else {
             renderFileListing()
 
-            val columnListingError = props.processState.columnListingError
-            if (columnListingError != null) {
-                renderError(columnListingError)
-            }
-            else {
-                renderColumnListing()
+            if (props.processState.fileListing?.size ?: 0 > 0) {
+                val columnListingError = props.processState.columnListingError
+                if (columnListingError != null) {
+                    renderError(columnListingError)
+                }
+                else {
+                    renderColumnListing()
+                }
             }
         }
     }
@@ -167,14 +169,20 @@ class ProcessInput(
                 maxHeight = 15.em
                 overflowY = Overflow.auto
                 marginTop = 0.5.em
+                position = Position.relative
             }
 
-            styledSpan {
+            styledDiv {
                 css {
                     color = Color("rgba(0, 0, 0, 0.54)")
                     fontFamily = "Roboto, Helvetica, Arial, sans-serif"
                     fontWeight = FontWeight.w400
                     fontSize = 13.px
+
+                    position = Position.sticky
+                    top = 0.px
+                    left = 0.px
+                    backgroundColor = Color("rgba(255, 255, 255, 0.9)")
                 }
                 +"Files"
             }
@@ -197,7 +205,7 @@ class ProcessInput(
                         css {
                             marginTop = 0.px
                             marginBottom = 0.px
-                            marginLeft = (-15).px
+//                            marginLeft = (-10).px
                         }
 
                         for (filePath in fileListing) {
@@ -230,14 +238,20 @@ class ProcessInput(
                 maxHeight = 10.em
                 overflowY = Overflow.auto
                 marginTop = 0.5.em
+                position = Position.relative
             }
 
-            styledSpan {
+            styledDiv {
                 css {
                     color = Color("rgba(0, 0, 0, 0.54)")
                     fontFamily = "Roboto, Helvetica, Arial, sans-serif"
                     fontWeight = FontWeight.w400
                     fontSize = 13.px
+
+                    position = Position.sticky
+                    top = 0.px
+                    left = 0.px
+                    backgroundColor = Color("rgba(255, 255, 255, 0.9)")
                 }
                 +"Columns"
             }
@@ -251,27 +265,22 @@ class ProcessInput(
 
                 columnListing.isEmpty() -> {
                     styledDiv {
-                        +"None"
+                        +"Not available"
                     }
                 }
 
                 else -> {
-                    styledDiv {
+                    styledOl {
                         css {
-                            backgroundColor = Color.lightGray
+                            marginTop = 0.px
+                            marginBottom = 0.px
+//                            marginLeft = (-10).px
                         }
 
-                        for ((index, columnName) in columnListing.withIndex()) {
-                            styledSpan {
-                                key = "$index|$columnName"
+                        for (columnName in columnListing) {
+                            li {
+                                key = columnName
 
-                                css {
-                                    whiteSpace = WhiteSpace.nowrap
-                                    backgroundColor = Color.whiteSmoke
-                                    margin(5.px)
-                                }
-
-                                +"${index + 1}) "
                                 +columnName
                             }
                         }

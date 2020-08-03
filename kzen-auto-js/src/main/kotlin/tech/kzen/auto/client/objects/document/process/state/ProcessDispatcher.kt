@@ -2,5 +2,10 @@ package tech.kzen.auto.client.objects.document.process.state
 
 
 interface ProcessDispatcher {
-    fun dispatch(action: ProcessAction)
+    /**
+     * @return effects of given action
+     */
+    suspend fun dispatch(action: ProcessAction): List<ProcessAction>
+
+    fun dispatchAsync(action: ProcessAction)
 }

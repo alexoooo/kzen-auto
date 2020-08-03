@@ -22,7 +22,10 @@ data class ProcessState(
 
     val tableSummaryTaskRunning: Boolean = false,
 
-    val filterTaskRunning: Boolean = false
+    val filterTaskRunning: Boolean = false,
+
+    val filterAddingLoading: Boolean = false,
+    val filterAddingError: String? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
