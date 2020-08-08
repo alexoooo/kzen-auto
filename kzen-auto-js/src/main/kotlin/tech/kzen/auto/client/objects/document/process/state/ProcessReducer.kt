@@ -1,5 +1,12 @@
 package tech.kzen.auto.client.objects.document.process.state
 
+import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
+import tech.kzen.auto.common.paradigm.reactive.TableSummary
+import tech.kzen.auto.common.paradigm.reactive.TaskProgress
+import tech.kzen.auto.common.paradigm.task.model.TaskState
+
 
 object ProcessReducer {
     //-----------------------------------------------------------------------------------------------------------------
@@ -17,6 +24,12 @@ object ProcessReducer {
 
             is ListColumnsAction ->
                 reduceListColumns(state, action)
+
+            is ProcessTaskAction ->
+                reduceTask(state, action)
+
+            is SummaryLookupAction ->
+                reduceSummaryLookup(state, action)
 
             is FilterAction ->
                 reduceFilter(state, action)
@@ -79,21 +92,136 @@ object ProcessReducer {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun reduceTask(
+        state: ProcessState,
+        action: ProcessTaskAction
+    ): ProcessState {
+        return when (action) {
+            ProcessTaskLookupRequest -> state.copy(
+                taskLoading = true)
+
+            is ProcessTaskLookupResponse -> {
+                val model = action.taskModel
+
+                if (model == null) {
+                    state.copy(
+                        taskLoading = false,
+                        taskLoaded = true,
+                        taskModel = null,
+                        taskProgress = null,
+                        indexTaskRunning = false,
+                        filterTaskRunning = false)
+                }
+                else {
+                    val result =
+                        model.finalResult ?: model.partialResult!!
+
+                    val requestAction = model.request.parameters.get(FilterConventions.actionParameter)!!
+                    val isIndexing = requestAction == FilterConventions.actionSummaryTask
+                    val isRunning = model.state == TaskState.Running
+
+                    when (result) {
+                        is ExecutionSuccess -> {
+                            @Suppress("UNCHECKED_CAST")
+                            val resultValue = result.value.get() as Map<String, Map<String, Any>>
+                            val tableSummary = TableSummary.fromCollection(resultValue)
+
+                            @Suppress("UNCHECKED_CAST")
+                            val resultDetail = result.detail.get() as Map<String, String>?
+                            val tableSummaryProgress = resultDetail?.let { TaskProgress.fromCollection(it) }
+
+                            state.copy(
+                                taskLoading = false,
+                                taskLoaded = true,
+                                taskModel = model,
+                                taskProgress = tableSummaryProgress,
+                                indexTaskRunning = isRunning && isIndexing,
+                                filterTaskRunning = isRunning && ! isIndexing,
+                                tableSummary = tableSummary,
+                                tableSummaryLoaded = true,
+                                tableSummaryLoading = false)
+                        }
+
+                        is ExecutionFailure -> {
+                            state.copy(
+                                taskLoading = false,
+                                taskLoaded = true,
+                                taskModel = model,
+                                taskLoadError = result.errorMessage)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun reduceSummaryLookup(
+        state: ProcessState,
+        action: SummaryLookupAction
+    ): ProcessState {
+        return when (action) {
+            SummaryLookupRequest -> state.copy(
+                tableSummaryLoading = true)
+
+            is SummaryLookupResult -> {
+                when (
+                    val result = action.result
+                ) {
+                    is ExecutionSuccess -> {
+                        @Suppress("UNCHECKED_CAST")
+                        val resultValue = result.value.get() as Map<String, Map<String, Any>>
+                        val tableSummary = TableSummary.fromCollection(resultValue)
+
+                        @Suppress("UNCHECKED_CAST")
+                        val resultDetail = result.detail.get() as Map<String, String>
+                        val summaryProgress = TaskProgress.fromCollection(resultDetail)
+
+                        state.copy(
+                            tableSummaryLoading = false,
+                            tableSummaryLoaded = true,
+                            tableSummaryError = null,
+                            tableSummary = tableSummary,
+                            taskProgress = summaryProgress)
+                    }
+
+                    is ExecutionFailure -> {
+                        state.copy(
+                            tableSummaryLoading = false,
+                            tableSummaryError = result.errorMessage)
+                    }
+                }
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun reduceFilter(
         state: ProcessState,
         action: FilterAction
     ): ProcessState {
         return when (action) {
             is FilterAddRequest -> state.copy(
-                filterAddingLoading = true,
-                filterAddingError = null)
+                filterAddLoading = true,
+                filterAddError = null)
 
             FilterAddResponse -> state.copy(
-                filterAddingLoading = false)
+                filterAddLoading = false)
 
             is FilterAddError -> state.copy(
-                filterAddingLoading = false,
-                filterAddingError = action.message)
+                filterAddLoading = false,
+                filterAddError = action.message)
+
+
+            is FilterUpdateRequest -> state.copy(
+                filterUpdateLoading = true,
+                filterUpdateError = null)
+
+            is FilterUpdateResult -> state.copy(
+                filterAddLoading = false,
+                filterUpdateError = action.errorMessage)
 
 
             is FilterRemoveRequest -> state

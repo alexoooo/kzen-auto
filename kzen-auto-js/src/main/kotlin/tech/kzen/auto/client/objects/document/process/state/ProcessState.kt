@@ -2,6 +2,9 @@ package tech.kzen.auto.client.objects.document.process.state
 
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.auto.common.paradigm.reactive.TableSummary
+import tech.kzen.auto.common.paradigm.reactive.TaskProgress
+import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.service.notation.NotationConventions
 
@@ -18,14 +21,25 @@ data class ProcessState(
     val columnListingLoaded: Boolean = false,
     val columnListingLoading: Boolean = false,
     val columnListing: List<String>? = null,
-    var columnListingError: String? = null,
+    val columnListingError: String? = null,
 
-    val tableSummaryTaskRunning: Boolean = false,
-
+    val taskLoaded: Boolean = false,
+    val taskLoading: Boolean = false,
+    val indexTaskRunning: Boolean = false,
     val filterTaskRunning: Boolean = false,
+    val taskModel: TaskModel? = null,
+    val taskProgress: TaskProgress? = null,
+    val taskLoadError: String? = null,
 
-    val filterAddingLoading: Boolean = false,
-    val filterAddingError: String? = null
+    val tableSummaryLoaded: Boolean = false,
+    val tableSummaryLoading: Boolean = false,
+    val tableSummary: TableSummary? = null,
+    val tableSummaryError: String? = null,
+
+    val filterAddLoading: Boolean = false,
+    val filterAddError: String? = null,
+    val filterUpdateLoading: Boolean = false,
+    val filterUpdateError: String? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -68,6 +82,6 @@ data class ProcessState(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun taskRunning(): Boolean {
-        return tableSummaryTaskRunning || filterTaskRunning
+        return indexTaskRunning || filterTaskRunning
     }
 }

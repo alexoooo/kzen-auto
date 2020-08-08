@@ -45,6 +45,7 @@ class ProcessFilterAdd(
     private fun onAdd() {
         setState {
             adding = true
+            selectedColumn = null
         }
     }
 
@@ -52,6 +53,7 @@ class ProcessFilterAdd(
     private fun onCancel() {
         setState {
             adding = false
+//            selectedColumn = null
         }
     }
 
@@ -79,13 +81,13 @@ class ProcessFilterAdd(
                 }
             }
 
-            if (props.processState.filterAddingLoading) {
+            if (props.processState.filterAddLoading) {
                 +"Adding..."
             }
             else {
-                if (props.processState.filterAddingError != null) {
+                if (props.processState.filterAddError != null) {
                     styledDiv {
-                        +"Error: ${props.processState.filterAddingError}"
+                        +"Error: ${props.processState.filterAddError}"
                     }
                 }
 

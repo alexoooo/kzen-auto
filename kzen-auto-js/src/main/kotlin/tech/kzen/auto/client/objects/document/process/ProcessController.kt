@@ -83,7 +83,10 @@ class ProcessController(
 
         styledDiv {
             css {
-                padding(1.em)
+//                padding(1.em)
+//                padding(2.em)
+//                padding(2.5.em)
+                padding(3.em)
             }
 
             renderInput(processState)

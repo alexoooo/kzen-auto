@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.common
 
-
 import kotlinx.css.em
 import kotlinx.css.fontSize
 import org.w3c.dom.HTMLInputElement
@@ -12,70 +11,51 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
-import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
-import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.collect.toPersistentList
 
 
-class DefaultAttributeEditor(
-        props: Props
+class AttributePathValueEditor(
+    props: Props
 ):
-        RPureComponent<DefaultAttributeEditor.Props, DefaultAttributeEditor.State>(props),
-        ExecutionRepository.Observer
+    RPureComponent<AttributePathValueEditor.Props, AttributePathValueEditor.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        val wrapperName = ObjectName("DefaultAttributeEditor")
-    }
-
-
     class Props(
         var labelOverride: String?,
         var disabled: Boolean,
         var onChange: ((AttributeNotation) -> Unit)?,
         var invalid: Boolean,
 
-        clientState: SessionState,
-        objectLocation: ObjectLocation,
-        attributeName: AttributeName
-    ): AttributeEditorProps(
-        clientState, objectLocation, attributeName//, labelOverride, disabled
-    )
+        var clientState: SessionState,
+        var objectLocation: ObjectLocation,
+        var attributePath: AttributePath,
+
+        var valueType: TypeMetadata
+    ): RProps
 
 
     class State(
-            var value: String?,
-            var values: List<String>?,
+        var value: String?,
+        var values: List<String>?,
 
-            var submitDebounce: FunctionWithDebounce,
-            var pending: Boolean
+        var pending: Boolean
     ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Reflect
-    class Wrapper(
-            objectLocation: ObjectLocation
-    ):
-            AttributeEditorWrapper(objectLocation)
-    {
-        override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>): ReactElement {
-            return input.child(DefaultAttributeEditor::class) {
-                handler()
-            }
-        }
-    }
+    private var submitDebounce: FunctionWithDebounce = lodash.debounce({
+        submitEditAsync()
+    }, 1000)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -83,8 +63,15 @@ class DefaultAttributeEditor(
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val attributeNotation = props.clientState.graphStructure().graphNotation.transitiveAttribute(
-                props.objectLocation, props.attributeName)
+        val attributeNotation = props
+            .clientState
+            .graphStructure()
+            .graphNotation
+            .transitiveAttribute(props.objectLocation, props.attributePath)
+
+        checkNotNull(attributeNotation) {
+            "missing: ${props.objectLocation} | ${props.attributePath}"
+        }
 
         when (attributeNotation) {
             is ScalarAttributeNotation -> {
@@ -102,57 +89,46 @@ class DefaultAttributeEditor(
                     values = stringValues
                 }
             }
-        }
 
-        submitDebounce = lodash.debounce({
-            editAttributeCommandAsync()
-        }, 1000)
+            is MapAttributeNotation -> TODO()
+        }
 
         pending = false
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        async {
-            ClientContext.executionRepository.observe(this)
-        }
-    }
-
-
-    override fun componentWillUnmount() {
-        ClientContext.executionRepository.unobserve(this)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidUpdate(
-        prevProps: Props,
-        prevState: State,
-        snapshot: Any
-    ) {
-        if (props.objectLocation != prevProps.objectLocation) {
-            state.init(props)
-        }
-    }
+//    override fun componentDidMount() {
+//        async {
+//            ClientContext.executionRepository.observe(this)
+//        }
+//    }
+//
+//
+//    override fun componentWillUnmount() {
+//        ClientContext.executionRepository.unobserve(this)
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
-        flush()
-    }
-
-
-    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel?) {}
+//    override fun componentDidUpdate(
+//        prevProps: Props,
+//        prevState: State,
+//        snapshot: Any
+//    ) {
+//        if (props.objectLocation != prevProps.objectLocation) {
+//            state.init(props)
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun flush() {
+    suspend fun flush() {
 //        println("ParameterEditor | flush")
 
-        state.submitDebounce.cancel()
+        submitDebounce.cancel()
         if (state.pending) {
-            editAttributeCommand()
+            submitEdit()
         }
     }
 
@@ -166,7 +142,7 @@ class DefaultAttributeEditor(
 
 //        console.log("onValueChange")
 
-        state.submitDebounce.apply()
+        submitDebounce.apply()
     }
 
 
@@ -181,34 +157,45 @@ class DefaultAttributeEditor(
         }
 
 //        console.log("onValueChange")
-
-        state.submitDebounce.apply()
+        submitDebounce.apply()
     }
 
 
-    private fun editAttributeCommandAsync() {
+    private fun submitEditAsync() {
         async {
-            editAttributeCommand()
+            submitEdit()
         }
     }
 
 
-    private suspend fun editAttributeCommand() {
+    private suspend fun submitEdit() {
         val attributeNotation =
             if (state.value != null) {
                 ScalarAttributeNotation(state.value!!)
             }
             else {
                 ListAttributeNotation(state
-                        .values!!
-                        .map { ScalarAttributeNotation(it) }
-                        .toPersistentList())
+                    .values!!
+                    .map { ScalarAttributeNotation(it) }
+                    .toPersistentList())
             }
 
-        ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
-            props.objectLocation,
-            props.attributeName,
-            attributeNotation))
+        val command =
+            if (props.attributePath.nesting.segments.isEmpty()) {
+                UpsertAttributeCommand(
+                    props.objectLocation,
+                    props.attributePath.attribute,
+                    attributeNotation)
+            }
+            else {
+                UpdateInAttributeCommand(
+                    props.objectLocation,
+                    props.attributePath,
+                    attributeNotation)
+            }
+
+        // TODO: handle error
+        ClientContext.mirroredGraphStore.apply(command)
 
         setState {
             pending = false
@@ -218,32 +205,49 @@ class DefaultAttributeEditor(
     }
 
 
+    private fun formattedLabel(): String {
+        val labelOverride = props.labelOverride
+        if (labelOverride != null) {
+            return labelOverride
+        }
+
+        val defaultLabel =
+            if (props.attributePath.nesting.segments.isEmpty()) {
+                props.attributePath.attribute.value
+            }
+            else {
+                props.attributePath.nesting.segments.last().asString()
+            }
+
+        val upperCamelCase = defaultLabel.capitalize()
+
+        val results = Regex("[A-Z][a-z]*").findAll(upperCamelCase)
+        val words = results.map { it.groups[0]!!.value }
+
+        return words.joinToString(" ")
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val attributeMetadata: AttributeMetadata = props
-            .clientState
-            .graphStructure()
-            .graphMetadata
-            .get(props.objectLocation)
-            ?.attributes
-            ?.get(props.attributeName)
-            ?: return
+//        val attributeMetadata: AttributeMetadata = props
+//            .clientState
+//            .graphStructure()
+//            .graphMetadata
+//            .get(props.objectLocation)
+//            ?.attributes
+//            ?.get(props.attributePath.attribute)
+//            ?: return
 
 //        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
 //                props.objectLocation, props.attributeName)
 
-//        val type = props.attributeMetadata.type
-        val type = attributeMetadata.type
+        val type = props.valueType
+//        val type = attributeMetadata.type
 
-        if (type == null) {
-//            +"${props.attributeName} - ${props.attributeNotation}"
-            +"${props.attributeName} (type missing)"
-        }
-        else if (type.className == ClassNames.kotlinString ||
-                type.className == ClassNames.kotlinInt ||
-                type.className == ClassNames.kotlinDouble) {
-//            val textValue = props.attributeNotation?.asString() ?: ""
-//            val textValue = attributeNotation?.asString() ?: ""
+        if (type.className == ClassNames.kotlinString ||
+            type.className == ClassNames.kotlinInt ||
+            type.className == ClassNames.kotlinDouble) {
             val textValue = state.value ?: ""
             renderString(textValue)
         }
@@ -261,17 +265,14 @@ class DefaultAttributeEditor(
             val booleanValue = state.value == "true"
             renderBoolean(booleanValue)
         }
-        else if (attributeMetadata.definerReference?.name?.value == "Self") {
-            // NB: don't render
-        }
         else {
-            +"${props.attributeName} (type not supported)"
+            +"${props.attributePath} (type not supported)"
 
             div {
 //                +"type: ${props.attributeMetadata.type?.className?.get()}"
-                +"type: ${attributeMetadata.type?.className?.get()}"
+                +"type: ${type.className.get()}"
                 br {}
-                +"generics: ${attributeMetadata.type?.generics?.map { it.className.get() }}"
+                +"generics: ${type.generics.map { it.className.get() }}"
             }
 
 //            +"${props.attributeName} - $attributeNotation"
@@ -347,31 +348,16 @@ class DefaultAttributeEditor(
                     val target = it.target as HTMLTextAreaElement
                     val lines = target.value.split(Regex("\\n+"))
                     val values =
-                            if (lines.size == 1 && lines[0].isEmpty()) {
-                                listOf()
-                            }
-                            else {
-                                lines
-                            }
+                        if (lines.size == 1 && lines[0].isEmpty()) {
+                            listOf()
+                        }
+                        else {
+                            lines
+                        }
 
                     onValuesChange(values)
                 }
             }
         }
-    }
-
-
-    private fun formattedLabel(): String {
-        val labelOverride = props.labelOverride
-        if (labelOverride != null) {
-            return labelOverride
-        }
-
-        val upperCamelCase = props.attributeName.value.capitalize()
-
-        val results = Regex("[A-Z][a-z]*").findAll(upperCamelCase)
-        val words = results.map { it.groups[0]!!.value }
-
-        return words.joinToString(" ")
     }
 }

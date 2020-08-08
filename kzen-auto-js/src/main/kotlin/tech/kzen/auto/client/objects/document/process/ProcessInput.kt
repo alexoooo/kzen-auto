@@ -8,10 +8,7 @@ import react.RPureComponent
 import react.RState
 import react.dom.key
 import react.dom.li
-import styled.css
-import styled.styledDiv
-import styled.styledOl
-import styled.styledSpan
+import styled.*
 import tech.kzen.auto.client.objects.document.common.DefaultAttributeEditor
 import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.process.state.ListInputsRequest
@@ -63,7 +60,8 @@ class ProcessInput(
 
                 styledDiv {
                     css {
-                        padding(0.5.em)
+//                        padding(0.5.em)
+                        padding(1.em)
                     }
 
                     renderContent()
@@ -278,8 +276,12 @@ class ProcessInput(
                         }
 
                         for (columnName in columnListing) {
-                            li {
+                            styledLi {
                                 key = columnName
+
+//                                css {
+//                                    display = Display.inlineBlock
+//                                }
 
                                 +columnName
                             }

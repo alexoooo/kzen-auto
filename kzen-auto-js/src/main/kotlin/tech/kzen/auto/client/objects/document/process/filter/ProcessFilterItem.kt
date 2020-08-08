@@ -6,35 +6,38 @@ import react.dom.span
 import react.dom.tbody
 import react.dom.tr
 import styled.*
-import tech.kzen.auto.client.objects.document.process.state.FilterRemoveError
-import tech.kzen.auto.client.objects.document.process.state.FilterRemoveRequest
-import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
-import tech.kzen.auto.client.objects.document.process.state.ProcessState
+import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
+import tech.kzen.auto.client.objects.document.process.state.*
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.DeleteIcon
-import tech.kzen.auto.client.wrap.ExpandLessIcon
-import tech.kzen.auto.client.wrap.ExpandMoreIcon
-import tech.kzen.auto.client.wrap.MaterialIconButton
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
+import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.lib.common.model.attribute.AttributeNesting
+import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.platform.ClassNames
+import tech.kzen.lib.platform.collect.persistentListOf
 
 
 class ProcessFilterItem(
     props: Props
 ):
-    RPureComponent<ProcessFilterItem.Props, ProcessFilterItem.State>(props) {
+    RPureComponent<ProcessFilterItem.Props, ProcessFilterItem.State>(props)
+{
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var processState: ProcessState,
         var dispatcher: ProcessDispatcher,
         var criteriaSpec: CriteriaSpec,
         var columnName: String
-    ) : RProps
+    ): RProps
 
 
     class State(
         var open: Boolean,
         var removeError: String?
-    ) : RState
+    ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -67,8 +70,19 @@ class ProcessFilterItem(
     }
 
 
+//    private fun onValuesChange(newValues: List<String>) {
+//        props.dispatcher.dispatchAsync(FilterUpdateRequest(
+//            props.columnName, newValues
+//        ))
+//    }
+
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        val requiredValues = props.criteriaSpec.columnRequiredValues[props.columnName]
+            ?: return
+
         styledDiv {
             css {
                 borderTopWidth = 1.px
@@ -78,8 +92,20 @@ class ProcessFilterItem(
 
             renderHeader()
 
-            if (state.open) {
-                renderBody()
+            if (state.open || requiredValues.isNotEmpty()) {
+                styledDiv {
+                    css {
+                        marginLeft = 1.em
+                        marginRight = 1.em
+                    }
+
+                    if (state.open) {
+                        renderDetail()
+                    }
+                    else {
+                        renderSummary(requiredValues)
+                    }
+                }
             }
         }
     }
@@ -153,7 +179,35 @@ class ProcessFilterItem(
     }
 
 
-    private fun RBuilder.renderBody(/*valueSummary: ColumnSummary?*/) {
-        +"${props.criteriaSpec.columnRequiredValues[props.columnName]}"
+    private fun RBuilder.renderSummary(requiredValues: Set<String>) {
+        +requiredValues.joinToString {
+            if (it.isBlank()) {
+                "(blank)"
+            }
+            else {
+                it
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderDetail(/*valueSummary: ColumnSummary?*/) {
+        child(AttributePathValueEditor::class) {
+            attrs {
+                labelOverride = "Filter values (one per line)"
+
+                clientState = props.processState.clientState
+                objectLocation = props.processState.mainLocation
+
+                attributePath = AttributePath(
+                    FilterConventions.criteriaAttributeName,
+                    AttributeNesting(persistentListOf(AttributeSegment.ofKey(props.columnName))))
+
+                valueType = TypeMetadata(
+                    ClassNames.kotlinList,
+                    listOf(TypeMetadata(
+                        ClassNames.kotlinString, listOf())))
+            }
+        }
     }
 }

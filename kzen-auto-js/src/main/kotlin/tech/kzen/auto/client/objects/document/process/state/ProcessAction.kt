@@ -1,5 +1,8 @@
 package tech.kzen.auto.client.objects.document.process.state
 
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.task.model.TaskModel
+
 
 //---------------------------------------------------------------------------------------------------------------------
 sealed class ProcessAction
@@ -76,3 +79,39 @@ object FilterRemoveResponse: FilterAction()
 data class FilterRemoveError(
     val message: String
 ): FilterAction()
+
+
+//--------------------------------------------------------------
+data class FilterUpdateRequest(
+    val columnName: String,
+    val filterValues: List<String>
+): FilterAction()
+
+
+data class FilterUpdateResult(
+    val errorMessage: String?
+): FilterAction()
+
+
+//---------------------------------------------------------------------------------------------------------------------
+sealed class ProcessTaskAction: ProcessAction()
+
+
+object ProcessTaskLookupRequest: ProcessTaskAction()
+
+
+data class ProcessTaskLookupResponse(
+    val taskModel: TaskModel?
+): ProcessTaskAction()
+
+
+//---------------------------------------------------------------------------------------------------------------------
+sealed class SummaryLookupAction: ProcessAction()
+
+
+object SummaryLookupRequest: SummaryLookupAction()
+
+
+data class SummaryLookupResult(
+    val result: ExecutionResult
+): SummaryLookupAction()

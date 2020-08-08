@@ -181,6 +181,8 @@ class TargetSpecEditor(
                     }
                 }
             }
+
+            else -> {}
         }
     }
 

@@ -8,11 +8,14 @@ import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.PositionIndex
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertMapEntryInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphSuccess
 import tech.kzen.lib.platform.collect.persistentListOf
+import tech.kzen.lib.platform.collect.toPersistentList
 
 
 object ProcessEffect {
@@ -26,20 +29,43 @@ object ProcessEffect {
             InitiateProcessEffect ->
                 ListInputsRequest
 
+
             ListInputsRequest ->
                 loadFileListing(state)
+
+            is ListInputsResponse ->
+                ListColumnsRequest
+
 
             ListColumnsRequest ->
                 loadColumnListing(state)
 
-            is ListInputsResponse ->
-                ListColumnsRequest
+            is ListColumnsResponse ->
+                loadTask(state)
+
+
+            is ProcessTaskLookupResponse ->
+                if (action.taskModel == null) {
+                    SummaryLookupRequest
+                }
+                else {
+                    null
+                }
+
+
+            SummaryLookupRequest ->
+                lookupSummary(state)
+
 
             is FilterAddRequest ->
                 submitFilterAdd(state, action.columnName)
 
             is FilterRemoveRequest ->
                 submitFilterRemove(state, action.columnName)
+
+            is FilterUpdateRequest ->
+                submitFilterUpdate(state, action.columnName, action.filterValues)
+
 
             else -> null
         }
@@ -89,6 +115,35 @@ object ProcessEffect {
                 ListInputsError(result.errorMessage)
             }
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun loadTask(
+        state: ProcessState
+    ): ProcessAction {
+        val activeTasks = ClientContext.clientRestTaskRepository.lookupActive(state.mainLocation)
+
+        if (activeTasks.isEmpty()) {
+            return ProcessTaskLookupResponse(null)
+        }
+
+        val taskId = activeTasks.single()
+        val model = ClientContext.clientRestTaskRepository.query(taskId)!!
+
+        return ProcessTaskLookupResponse(model)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun lookupSummary(
+        state: ProcessState
+    ): ProcessAction {
+        val result = ClientContext.restClient.performDetached(
+            state.mainLocation,
+            FilterConventions.actionParameter to FilterConventions.actionSummaryLookup)
+
+        return SummaryLookupResult(result)
     }
 
 
@@ -143,5 +198,36 @@ object ProcessEffect {
             is MirroredGraphSuccess ->
                 FilterRemoveResponse
         }
+    }
+
+
+    private suspend fun submitFilterUpdate(
+        state: ProcessState,
+        columnName: String,
+        filterValues: List<String>
+    ): ProcessAction {
+        val columnAttributeSegment = AttributeSegment.ofKey(columnName)
+        val columnAttributePath = FilterConventions.criteriaAttributePath.copy(
+            nesting = AttributeNesting(persistentListOf(columnAttributeSegment)))
+
+//            ClientContext.mirroredGraphStore.apply(
+//                UpdateInAttributeCommand(
+//                    props.processState.mainLocation,
+//                    props.attributeName,
+//                    attributeNotation)
+//            )
+
+//        val result =
+        ClientContext.mirroredGraphStore.apply(
+            UpdateInAttributeCommand(
+                state.mainLocation,
+                columnAttributePath,
+                ListAttributeNotation(
+                    filterValues
+                        .map { ScalarAttributeNotation(it) }
+                        .toPersistentList()))
+        )
+
+        return FilterUpdateResult(null)
     }
 }
