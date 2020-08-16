@@ -4,18 +4,19 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
+import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.PositionIndex
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertMapEntryInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveInAttributeCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphSuccess
 import tech.kzen.lib.platform.collect.persistentListOf
-import tech.kzen.lib.platform.collect.toPersistentList
 
 
 object ProcessEffect {
@@ -56,6 +57,9 @@ object ProcessEffect {
             SummaryLookupRequest ->
                 lookupSummary(state)
 
+            is ProcessTaskRunRequest ->
+                runSummaryTask(state)
+
 
             is FilterAddRequest ->
                 submitFilterAdd(state, action.columnName)
@@ -63,8 +67,14 @@ object ProcessEffect {
             is FilterRemoveRequest ->
                 submitFilterRemove(state, action.columnName)
 
-            is FilterUpdateRequest ->
-                submitFilterUpdate(state, action.columnName, action.filterValues)
+            is FilterValueAddRequest ->
+                submitFilterValueAdd(state, action.columnName, action.filterValue)
+
+            is FilterValueRemoveRequest ->
+                submitFilterValueRemove(state, action.columnName, action.filterValue)
+
+//            is FilterUpdateRequest ->
+//                submitFilterUpdate(state, action.columnName, action.filterValues)
 
 
             else -> null
@@ -147,6 +157,20 @@ object ProcessEffect {
     }
 
 
+    private suspend fun runSummaryTask(
+        state: ProcessState
+    ): ProcessAction {
+        val result = ClientContext.clientRestTaskRepository.submit(
+            state.mainLocation,
+            DetachedRequest(
+                RequestParams.of(
+                    FilterConventions.actionParameter to FilterConventions.actionSummaryTask),
+                null))
+
+        return ProcessTaskRunResponse(result)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun submitFilterAdd(
         state: ProcessState,
@@ -192,42 +216,104 @@ object ProcessEffect {
 
         return when (result) {
             is MirroredGraphError ->
-                FilterRemoveError(
+                FilterUpdateResult(
                     result.error.message ?: "Failed: ${result.remote}")
 
             is MirroredGraphSuccess ->
-                FilterRemoveResponse
+                FilterUpdateResult(null)
         }
     }
 
 
-    private suspend fun submitFilterUpdate(
+//    private suspend fun submitFilterUpdate(
+//        state: ProcessState,
+//        columnName: String,
+//        filterValues: List<String>
+//    ): ProcessAction {
+//        val columnAttributeSegment = AttributeSegment.ofKey(columnName)
+//        val columnAttributePath = FilterConventions.criteriaAttributePath.copy(
+//            nesting = AttributeNesting(persistentListOf(columnAttributeSegment)))
+//
+////            ClientContext.mirroredGraphStore.apply(
+////                UpdateInAttributeCommand(
+////                    props.processState.mainLocation,
+////                    props.attributeName,
+////                    attributeNotation)
+////            )
+//
+//        ClientContext.mirroredGraphStore.apply(
+//            UpdateInAttributeCommand(
+//                state.mainLocation,
+//                columnAttributePath,
+//                ListAttributeNotation(
+//                    filterValues
+//                        .map { ScalarAttributeNotation(it) }
+//                        .toPersistentList())))
+//
+//        return FilterUpdateResult(null)
+//    }
+
+
+    private suspend fun submitFilterValueAdd(
         state: ProcessState,
         columnName: String,
-        filterValues: List<String>
+        filterValue: String
     ): ProcessAction {
         val columnAttributeSegment = AttributeSegment.ofKey(columnName)
         val columnAttributePath = FilterConventions.criteriaAttributePath.copy(
             nesting = AttributeNesting(persistentListOf(columnAttributeSegment)))
 
-//            ClientContext.mirroredGraphStore.apply(
-//                UpdateInAttributeCommand(
-//                    props.processState.mainLocation,
-//                    props.attributeName,
-//                    attributeNotation)
-//            )
+        val containingList = state
+            .clientState
+            .graphStructure()
+            .graphNotation
+            .transitiveAttribute(state.mainLocation, columnAttributePath)
+            as ListAttributeNotation
 
-//        val result =
-        ClientContext.mirroredGraphStore.apply(
-            UpdateInAttributeCommand(
+        val result = ClientContext.mirroredGraphStore.apply(
+            InsertListItemInAttributeCommand(
                 state.mainLocation,
                 columnAttributePath,
-                ListAttributeNotation(
-                    filterValues
-                        .map { ScalarAttributeNotation(it) }
-                        .toPersistentList()))
-        )
+                PositionIndex(containingList.values.size),
+                ScalarAttributeNotation(filterValue)))
 
-        return FilterUpdateResult(null)
+        val errorMessage =
+            (result as? MirroredGraphError)?.error?.message
+
+        return FilterUpdateResult(errorMessage)
+    }
+
+
+    private suspend fun submitFilterValueRemove(
+        state: ProcessState,
+        columnName: String,
+        filterValue: String
+    ): ProcessAction {
+        val columnAttributeSegment = AttributeSegment.ofKey(columnName)
+        val columnAttributePath = FilterConventions.criteriaAttributePath.copy(
+            nesting = AttributeNesting(persistentListOf(columnAttributeSegment)))
+
+        val containingList = state
+            .clientState
+            .graphStructure()
+            .graphNotation
+            .transitiveAttribute(state.mainLocation, columnAttributePath)
+                as ListAttributeNotation
+
+        val filterValueIndex = containingList.values.indexOfFirst { it.asString() == filterValue }
+
+        val itemPath = columnAttributePath.copy(nesting =
+            columnAttributePath.nesting.push(AttributeSegment.ofIndex(filterValueIndex)))
+
+        val result = ClientContext.mirroredGraphStore.apply(
+            RemoveInAttributeCommand(
+                state.mainLocation,
+                itemPath,
+                false))
+
+        val errorMessage =
+            (result as? MirroredGraphError)?.error?.message
+
+        return FilterUpdateResult(errorMessage)
     }
 }

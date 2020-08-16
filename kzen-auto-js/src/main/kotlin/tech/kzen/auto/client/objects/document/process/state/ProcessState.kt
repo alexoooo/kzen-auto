@@ -25,6 +25,7 @@ data class ProcessState(
 
     val taskLoaded: Boolean = false,
     val taskLoading: Boolean = false,
+    val taskStarting: Boolean = false,
     val indexTaskRunning: Boolean = false,
     val filterTaskRunning: Boolean = false,
     val taskModel: TaskModel? = null,
@@ -37,9 +38,9 @@ data class ProcessState(
     val tableSummaryError: String? = null,
 
     val filterAddLoading: Boolean = false,
-    val filterAddError: String? = null,
-    val filterUpdateLoading: Boolean = false,
-    val filterUpdateError: String? = null
+    val filterAddError: String? = null
+//    val filterUpdateLoading: Boolean = false,
+//    val filterUpdateError: String? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

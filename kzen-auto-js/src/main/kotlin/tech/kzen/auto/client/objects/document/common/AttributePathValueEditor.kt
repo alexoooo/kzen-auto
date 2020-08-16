@@ -7,6 +7,7 @@ import org.w3c.dom.HTMLTextAreaElement
 import react.*
 import react.dom.br
 import react.dom.div
+import tech.kzen.auto.client.objects.document.script.step.attribute.SelectStepEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
@@ -43,6 +44,20 @@ class AttributePathValueEditor(
         var valueType: TypeMetadata
     ): RProps
 
+    private fun Props.valuesAttribute(): AttributeNotation {
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val attributeNotation = clientState
+            .graphStructure()
+            .graphNotation
+            .transitiveAttribute(objectLocation, attributePath)
+
+        checkNotNull(attributeNotation) {
+            "missing: $objectLocation | $attributePath"
+        }
+
+        return attributeNotation
+    }
+
 
     class State(
         var value: String?,
@@ -60,40 +75,58 @@ class AttributePathValueEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-//        console.log("ParameterEditor | State.init - ${props.name}")
+        val attributeNotation = props.valuesAttribute()
 
-        @Suppress("MoveVariableDeclarationIntoWhen")
-        val attributeNotation = props
-            .clientState
-            .graphStructure()
-            .graphNotation
-            .transitiveAttribute(props.objectLocation, props.attributePath)
+        val (value, values) = extractValues(attributeNotation)
 
-        checkNotNull(attributeNotation) {
-            "missing: ${props.objectLocation} | ${props.attributePath}"
-        }
+        this.value = value
+        this.values = values
 
-        when (attributeNotation) {
+        pending = false
+    }
+
+
+    private fun extractValues(attributeNotation: AttributeNotation): Pair<String?, List<String>?> {
+        return when (attributeNotation) {
             is ScalarAttributeNotation -> {
                 val scalarValue = attributeNotation.value
-
-                value = scalarValue
-                values = null
+                scalarValue to null
             }
 
             is ListAttributeNotation -> {
                 if (attributeNotation.values.all { it.asString() != null }) {
                     val stringValues = attributeNotation.values.map { it.asString()!! }
 
-                    value = null
-                    values = stringValues
+                    null to stringValues
+                }
+                else {
+                    null to null
                 }
             }
 
             is MapAttributeNotation -> TODO()
         }
+    }
 
-        pending = false
+
+    override fun componentDidUpdate(
+        prevProps: Props,
+        prevState: State,
+        snapshot: Any
+    ) {
+        if (props.clientState == prevProps.clientState) {
+            return
+        }
+
+        val attributeNotation = props.valuesAttribute()
+        val (value, values) = extractValues(attributeNotation)
+
+        if (value != state.value || values != state.values) {
+            setState {
+                this.value = value
+                this.values = values
+            }
+        }
     }
 
 
@@ -247,7 +280,8 @@ class AttributePathValueEditor(
 
         if (type.className == ClassNames.kotlinString ||
             type.className == ClassNames.kotlinInt ||
-            type.className == ClassNames.kotlinDouble) {
+            type.className == ClassNames.kotlinDouble
+        ) {
             val textValue = state.value ?: ""
             renderString(textValue)
         }
@@ -336,6 +370,8 @@ class AttributePathValueEditor(
 
 
     private fun RBuilder.renderListOfPrimitive(stateValues: List<String>) {
+//        console.log("%%%%%%%% renderListOfPrimitive: $stateValues")
+
         child(MaterialTextField::class) {
             attrs {
                 fullWidth = true

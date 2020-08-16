@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.process.state
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
 
 
@@ -73,18 +74,30 @@ data class FilterRemoveRequest(
 ): FilterAction()
 
 
-object FilterRemoveResponse: FilterAction()
-
-
-data class FilterRemoveError(
-    val message: String
-): FilterAction()
+//object FilterRemoveResponse: FilterAction()
+//
+//
+//data class FilterRemoveError(
+//    val message: String
+//): FilterAction()
 
 
 //--------------------------------------------------------------
-data class FilterUpdateRequest(
+//data class FilterUpdateRequest(
+//    val columnName: String,
+//    val filterValues: List<String>
+//): FilterAction()
+
+
+data class FilterValueAddRequest(
     val columnName: String,
-    val filterValues: List<String>
+    val filterValue: String
+): FilterAction()
+
+
+data class FilterValueRemoveRequest(
+    val columnName: String,
+    val filterValue: String
 ): FilterAction()
 
 
@@ -102,6 +115,17 @@ object ProcessTaskLookupRequest: ProcessTaskAction()
 
 data class ProcessTaskLookupResponse(
     val taskModel: TaskModel?
+): ProcessTaskAction()
+
+
+data class ProcessTaskRunRequest(
+    val type: ProcessTaskType
+): ProcessTaskAction()
+
+
+data class ProcessTaskRunResponse(
+    val taskModel: TaskModel/*,
+    val taskProgress: TaskProgress*/
 ): ProcessTaskAction()
 
 

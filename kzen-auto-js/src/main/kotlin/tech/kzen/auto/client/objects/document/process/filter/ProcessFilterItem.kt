@@ -2,16 +2,17 @@ package tech.kzen.auto.client.objects.document.process.filter
 
 import kotlinx.css.*
 import react.*
-import react.dom.span
-import react.dom.tbody
-import react.dom.tr
+import react.dom.*
 import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
+import tech.kzen.auto.client.objects.document.filter.FilterColumn
 import tech.kzen.auto.client.objects.document.process.state.*
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.auto.common.paradigm.reactive.ColumnSummary
+import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -26,6 +27,33 @@ class ProcessFilterItem(
     RPureComponent<ProcessFilterItem.Props, ProcessFilterItem.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private const val maxValueLength = 96
+        private const val abbreviationSuffix = "..."
+
+
+        private fun formatCount(count: Long): String {
+            return count.toString()
+                .replace(Regex("(\\d)(?=(\\d{3})+(?!\\d))"), "$1,")
+        }
+
+
+        private fun abbreviateValue(value: String): String {
+            if (value.isBlank()) {
+                return "$value(blank)"
+            }
+
+            if (value.length < maxValueLength) {
+                return value
+            }
+
+            val truncated = value.substring(0, maxValueLength - abbreviationSuffix.length)
+            return truncated + abbreviationSuffix
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var processState: ProcessState,
         var dispatcher: ProcessDispatcher,
@@ -36,7 +64,8 @@ class ProcessFilterItem(
 
     class State(
         var open: Boolean,
-        var removeError: String?
+        var removeError: String?,
+        var updateError: String?
     ): RState
 
 
@@ -44,25 +73,65 @@ class ProcessFilterItem(
     override fun State.init(props: Props) {
         open = false
         removeError = null
+        updateError = null
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onDelete() {
+        if (state.removeError != null) {
+            setState {
+                updateError = null
+            }
+        }
+
         async {
             val effect = props.dispatcher.dispatch(
                 FilterRemoveRequest(props.columnName)
-            ).single()
+            ).single() as FilterUpdateResult
 
-            if (effect is FilterRemoveError) {
+            if (effect.errorMessage != null) {
                 setState {
-                    removeError = effect.message
+                    removeError = effect.errorMessage
                 }
             }
         }
     }
 
 
+    private fun onCriteriaChange(
+        value: String,
+        added: Boolean
+    ) {
+        val request =
+            if (added) {
+                FilterValueAddRequest(props.columnName, value)
+            }
+            else {
+                FilterValueRemoveRequest(props.columnName, value)
+            }
+
+        if (state.updateError != null) {
+            setState {
+                updateError = null
+            }
+        }
+
+        async {
+            val effect = props.dispatcher.dispatch(
+                request
+            ).single() as FilterUpdateResult
+
+            if (effect.errorMessage != null) {
+                setState {
+                    updateError = effect.errorMessage
+                }
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun onOpenToggle() {
         setState {
             open = ! open
@@ -70,18 +139,12 @@ class ProcessFilterItem(
     }
 
 
-//    private fun onValuesChange(newValues: List<String>) {
-//        props.dispatcher.dispatchAsync(FilterUpdateRequest(
-//            props.columnName, newValues
-//        ))
-//    }
-
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val requiredValues = props.criteriaSpec.columnRequiredValues[props.columnName]
             ?: return
+
+        val columnSummary = props.processState.tableSummary?.columnSummaries?.get(props.columnName)
 
         styledDiv {
             css {
@@ -90,7 +153,7 @@ class ProcessFilterItem(
                 borderTopColor = Color.lightGray
             }
 
-            renderHeader()
+            renderHeader(columnSummary)
 
             if (state.open || requiredValues.isNotEmpty()) {
                 styledDiv {
@@ -100,7 +163,7 @@ class ProcessFilterItem(
                     }
 
                     if (state.open) {
-                        renderDetail()
+                        renderDetail(requiredValues, columnSummary)
                     }
                     else {
                         renderSummary(requiredValues)
@@ -111,7 +174,7 @@ class ProcessFilterItem(
     }
 
 
-    private fun RBuilder.renderHeader(/*valueSummary: ColumnSummary?*/) {
+    private fun RBuilder.renderHeader(columnSummary: ColumnSummary?) {
         styledTable {
             css {
                 width = 100.pct
@@ -137,6 +200,11 @@ class ProcessFilterItem(
                         css {
                             width = 20.em
                             textAlign = TextAlign.right
+                        }
+
+                        if (columnSummary != null) {
+                            val countFormat = formatCount(columnSummary.count)
+                            +"Count: $countFormat"
                         }
 
                         span {
@@ -180,6 +248,8 @@ class ProcessFilterItem(
 
 
     private fun RBuilder.renderSummary(requiredValues: Set<String>) {
+//        console.log("requiredValues: $requiredValues")
+
         +requiredValues.joinToString {
             if (it.isBlank()) {
                 "(blank)"
@@ -191,10 +261,101 @@ class ProcessFilterItem(
     }
 
 
-    private fun RBuilder.renderDetail(/*valueSummary: ColumnSummary?*/) {
+    private fun RBuilder.renderDetail(requiredValues: Set<String>, columnSummary: ColumnSummary?) {
+        renderEditValues()
+
+        if (columnSummary == null) {
+            return
+        }
+
+        val hasNominal = ! columnSummary.nominalValueSummary.isEmpty()
+        if (hasNominal) {
+            renderHistogram(requiredValues, columnSummary.nominalValueSummary)
+        }
+    }
+
+
+    private fun RBuilder.renderHistogram(requiredValues: Set<String>, histogram: NominalValueSummary) {
+        styledDiv {
+            css {
+                maxHeight = 20.em
+                overflowY = Overflow.auto
+            }
+
+            if (state.updateError != null) {
+                +"Error: ${state.updateError}"
+            }
+
+            table {
+                styledThead {
+                    tr {
+                        styledTh {
+                            css {
+                                position = Position.sticky
+                                top = 0.px
+                                backgroundColor = Color.white
+                            }
+                            +"Filter"
+                        }
+                        styledTh {
+                            css {
+                                position = Position.sticky
+                                top = 0.px
+                                backgroundColor = Color.white
+                            }
+                            +"Value"
+                        }
+                        styledTh {
+                            css {
+                                position = Position.sticky
+                                top = 0.px
+                                backgroundColor = Color.white
+                            }
+                            +"Count"
+                        }
+                    }
+                }
+
+                tbody {
+                    for (e in histogram.histogram.entries) {
+                        val checked = requiredValues.contains(e.key)
+
+                        tr {
+                            key = e.key
+
+                            td {
+                                child(MaterialCheckbox::class) {
+                                    attrs {
+                                        this.checked = checked
+//                                        this.disabled = props.filterRunning
+
+                                        onChange = {
+                                            onCriteriaChange(e.key, ! checked)
+                                        }
+                                    }
+                                }
+                            }
+
+                            td {
+                                val abbreviated = abbreviateValue(e.key)
+                                +abbreviated
+                            }
+
+                            td {
+                                +formatCount(e.value)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderEditValues() {
         child(AttributePathValueEditor::class) {
             attrs {
-                labelOverride = "Filter values (one per line)"
+                labelOverride = "Filter values"
 
                 clientState = props.processState.clientState
                 objectLocation = props.processState.mainLocation

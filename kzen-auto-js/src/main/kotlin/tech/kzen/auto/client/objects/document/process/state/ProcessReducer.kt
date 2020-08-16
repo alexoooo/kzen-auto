@@ -113,8 +113,7 @@ object ProcessReducer {
                         filterTaskRunning = false)
                 }
                 else {
-                    val result =
-                        model.finalResult ?: model.partialResult!!
+                    val result = model.finalOrPartialResult()
 
                     val requestAction = model.request.parameters.get(FilterConventions.actionParameter)!!
                     val isIndexing = requestAction == FilterConventions.actionSummaryTask
@@ -123,7 +122,9 @@ object ProcessReducer {
                     when (result) {
                         is ExecutionSuccess -> {
                             @Suppress("UNCHECKED_CAST")
-                            val resultValue = result.value.get() as Map<String, Map<String, Any>>
+                            val resultValue =
+                                result.value.get() as Map<String, Map<String, Any>>
+
                             val tableSummary = TableSummary.fromCollection(resultValue)
 
                             @Suppress("UNCHECKED_CAST")
@@ -152,6 +153,13 @@ object ProcessReducer {
                     }
                 }
             }
+
+            is ProcessTaskRunRequest -> state.copy(
+                taskStarting = true)
+
+            is ProcessTaskRunResponse -> state.copy(
+                taskModel = action.taskModel,
+                taskStarting = false)
         }
     }
 
@@ -215,18 +223,30 @@ object ProcessReducer {
                 filterAddError = action.message)
 
 
-            is FilterUpdateRequest -> state.copy(
-                filterUpdateLoading = true,
-                filterUpdateError = null)
+//            is FilterUpdateRequest -> state.copy(
+//                filterUpdateLoading = true,
+//                filterUpdateError = null)
+//
+//            is FilterValueAddRequest -> state.copy(
+//                filterUpdateLoading = true,
+//                filterUpdateError = null)
+//
+//            is FilterValueRemoveRequest -> state.copy(
+//                filterUpdateLoading = true,
+//                filterUpdateError = null)
+//
+//            is FilterUpdateResult -> state.copy(
+//                filterUpdateLoading = false,
+//                filterUpdateError = action.errorMessage)
 
-            is FilterUpdateResult -> state.copy(
-                filterAddLoading = false,
-                filterUpdateError = action.errorMessage)
-
+//            is FilterUpdateRequest -> state
+            is FilterValueAddRequest -> state
+            is FilterValueRemoveRequest -> state
+            is FilterUpdateResult -> state
 
             is FilterRemoveRequest -> state
-            FilterRemoveResponse -> state
-            is FilterRemoveError -> state
+//            FilterRemoveResponse -> state
+//            is FilterRemoveError -> state
         }
     }
 }

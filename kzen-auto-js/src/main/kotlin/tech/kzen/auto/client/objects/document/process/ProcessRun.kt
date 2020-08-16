@@ -6,7 +6,7 @@ import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import react.*
 import react.dom.div
-import tech.kzen.auto.client.objects.document.process.state.ProcessState
+import tech.kzen.auto.client.objects.document.process.state.*
 import tech.kzen.auto.client.wrap.MaterialFab
 import tech.kzen.auto.client.wrap.MenuBookIcon
 import tech.kzen.auto.client.wrap.reactStyle
@@ -19,7 +19,8 @@ class ProcessRun(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-        var processState: ProcessState
+        var processState: ProcessState,
+        var dispatcher: ProcessDispatcher
     ): RProps
 
 
@@ -49,6 +50,13 @@ class ProcessRun(
     }
 
 
+    private fun onRun() {
+        props.dispatcher.dispatchAsync(
+            ProcessTaskRunRequest(
+                ProcessTaskType.Index))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         div {
@@ -75,6 +83,12 @@ class ProcessRun(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderMainAction() {
         child(MaterialFab::class) {
+            attrs {
+                onClick = {
+                    onRun()
+                }
+            }
+
             child(MenuBookIcon::class) {
                 attrs {
                     style = reactStyle {

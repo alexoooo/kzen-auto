@@ -70,6 +70,8 @@ class ProcessController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onProcessState(processState: ProcessState?) {
+//        console.log("^^^^^ onProcessState!!")
+
         setState {
             this.processState = processState
         }
@@ -140,6 +142,7 @@ class ProcessController(
             child(ProcessRun::class) {
                 attrs {
                     this.processState = processState
+                    dispatcher = store
                 }
             }
         }

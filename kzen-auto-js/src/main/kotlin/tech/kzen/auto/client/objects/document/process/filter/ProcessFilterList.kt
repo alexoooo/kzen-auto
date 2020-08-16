@@ -122,6 +122,7 @@ class ProcessFilterList(
             .objectDefinitions[props.processState.mainLocation]!!
             .attributeDefinitions[FilterConventions.criteriaAttributeName]!!
         val criteriaSpec = (criteriaDefinition as ValueAttributeDefinition).value as CriteriaSpec
+//        console.log("^^^^^^^^^ !!! criteriaSpec: $criteriaSpec")
 
         styledDiv {
             renderFilterList(criteriaSpec)
