@@ -31,7 +31,7 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.toPersistentMap
-import kotlin.browser.document
+import kotlinx.browser.document
 import kotlin.js.Json
 import kotlin.js.json
 

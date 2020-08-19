@@ -22,12 +22,11 @@ kotlin {
         @Suppress("UNUSED_VARIABLE")
         val commonMain by getting {
             dependencies {
-                implementation(kotlin("stdlib-common"))
+//                implementation(kotlin("stdlib-common"))
                 implementation("org.jetbrains:kotlin-css:$kotlinxCssVersion")
 //                implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:$serializationVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$coroutinesVersion")
-//                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$coroutinesVersion")
+//                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$coroutinesVersion")
 
                 implementation("tech.kzen.lib:kzen-lib-common-metadata:$kzenLibVersion")
             }
@@ -45,7 +44,7 @@ kotlin {
         @Suppress("UNUSED_VARIABLE")
         val jvmMain by getting {
             dependencies {
-                implementation(kotlin("stdlib-jdk8"))
+//                implementation(kotlin("stdlib-jdk8"))
                 implementation("ch.qos.logback:logback-classic:$logbackVersion")
                 implementation("org.jetbrains:kotlin-css-jvm:$kotlinxCssVersion")
 //                implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationVersion")
@@ -65,9 +64,9 @@ kotlin {
         @Suppress("UNUSED_VARIABLE")
         val jsMain by getting {
             dependencies {
-                implementation(kotlin("stdlib-js"))
+//                implementation(kotlin("stdlib-js"))
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-js:$serializationVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$coroutinesVersion")
+//                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$coroutinesVersion")
                 implementation("tech.kzen.lib:kzen-lib-common-js:$kzenLibVersion")
                 implementation(npm("immutable", immutaleJsVersion))
             }

@@ -21,7 +21,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
-import kotlin.browser.document
+import kotlinx.browser.document
 import kotlin.js.Json
 import kotlin.js.json
 

@@ -44,6 +44,7 @@ class AttributePathValueEditor(
         var valueType: TypeMetadata
     ): RProps
 
+
     private fun Props.valuesAttribute(): AttributeNotation {
         @Suppress("MoveVariableDeclarationIntoWhen")
         val attributeNotation = clientState

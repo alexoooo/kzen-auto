@@ -1,6 +1,5 @@
-//@file:Suppress("unused")
-//
-//package tech.kzen.auto.client
+@file:Suppress("unused")
+package tech.kzen.auto.client
 //
 ////import tech.kzen.auto.common.getAnswerFoo
 //import kotlin.browser.window

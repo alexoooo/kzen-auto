@@ -9,7 +9,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
-import kotlin.browser.window
+import kotlinx.browser.window
 
 
 class NavigationGlobal(

@@ -22,7 +22,7 @@ import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.common.service.store.DirectGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
-import kotlin.browser.window
+import kotlinx.browser.window
 
 
 object ClientContext {

@@ -10,7 +10,7 @@ import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
-import kotlin.browser.document
+import kotlinx.browser.document
 import kotlin.js.Json
 import kotlin.js.json
 
