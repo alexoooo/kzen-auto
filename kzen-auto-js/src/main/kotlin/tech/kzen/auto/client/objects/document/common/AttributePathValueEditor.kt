@@ -7,7 +7,6 @@ import org.w3c.dom.HTMLTextAreaElement
 import react.*
 import react.dom.br
 import react.dom.div
-import tech.kzen.auto.client.objects.document.script.step.attribute.SelectStepEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
@@ -30,6 +29,30 @@ class AttributePathValueEditor(
 ):
     RPureComponent<AttributePathValueEditor.Props, AttributePathValueEditor.State>(props)
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        fun isValue(typeMetadata: TypeMetadata): Boolean {
+            val className = typeMetadata.className
+            if (ClassNames.isPrimitive(className)) {
+                return true
+            }
+
+            val isContainer =
+                className == ClassNames.kotlinList ||
+                className == ClassNames.kotlinSet
+
+            if (! isContainer) {
+                return false
+            }
+
+            val containerGeneric = typeMetadata.generics.getOrNull(0)
+                ?: return false
+
+            return ClassNames.isPrimitive(containerGeneric.className)
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var labelOverride: String?,
@@ -70,7 +93,9 @@ class AttributePathValueEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var submitDebounce: FunctionWithDebounce = lodash.debounce({
-        submitEditAsync()
+        async {
+            submitEdit()
+        }
     }, 1000)
 
 
@@ -132,34 +157,7 @@ class AttributePathValueEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    override fun componentDidMount() {
-//        async {
-//            ClientContext.executionRepository.observe(this)
-//        }
-//    }
-//
-//
-//    override fun componentWillUnmount() {
-//        ClientContext.executionRepository.unobserve(this)
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    override fun componentDidUpdate(
-//        prevProps: Props,
-//        prevState: State,
-//        snapshot: Any
-//    ) {
-//        if (props.objectLocation != prevProps.objectLocation) {
-//            state.init(props)
-//        }
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     suspend fun flush() {
-//        println("ParameterEditor | flush")
-
         submitDebounce.cancel()
         if (state.pending) {
             submitEdit()
@@ -173,8 +171,6 @@ class AttributePathValueEditor(
             value = newValue
             pending = true
         }
-
-//        console.log("onValueChange")
 
         submitDebounce.apply()
     }
@@ -190,15 +186,7 @@ class AttributePathValueEditor(
             pending = true
         }
 
-//        console.log("onValueChange")
         submitDebounce.apply()
-    }
-
-
-    private fun submitEditAsync() {
-        async {
-            submitEdit()
-        }
     }
 
 
@@ -208,8 +196,17 @@ class AttributePathValueEditor(
                 ScalarAttributeNotation(state.value!!)
             }
             else {
-                ListAttributeNotation(state
-                    .values!!
+                val values = state.values!!
+                val isSet = props.valueType.className == ClassNames.kotlinSet
+                val adjustedValues =
+                    if (isSet) {
+                        values.toSet().toList()
+                    }
+                    else {
+                        values
+                    }
+
+                ListAttributeNotation(adjustedValues
                     .map { ScalarAttributeNotation(it) }
                     .toPersistentList())
             }
@@ -279,38 +276,28 @@ class AttributePathValueEditor(
         val type = props.valueType
 //        val type = attributeMetadata.type
 
-        if (type.className == ClassNames.kotlinString ||
+        if (! isValue(type)) {
+            +"${props.attributePath} (not a value)"
+        }
+        else if (
+            type.className == ClassNames.kotlinString ||
             type.className == ClassNames.kotlinInt ||
             type.className == ClassNames.kotlinDouble
         ) {
             val textValue = state.value ?: ""
             renderString(textValue)
         }
-        else if (type.className == ClassNames.kotlinList) {
-            val listGeneric = type.generics.getOrNull(0)
-            if (listGeneric?.className?.let { ClassNames.isPrimitive(it) } == true) {
-                val textValues = state.values ?: listOf()
-                renderListOfPrimitive(textValues)
-            }
-            else {
-                +"List of: ${listGeneric?.className ?: ClassNames.kotlinAny}"
-            }
-        }
         else if (type.className == ClassNames.kotlinBoolean) {
             val booleanValue = state.value == "true"
             renderBoolean(booleanValue)
         }
         else {
-            +"${props.attributePath} (type not supported)"
+            val isList = type.className == ClassNames.kotlinList
+            val isSet = type.className == ClassNames.kotlinSet
+            check(isList || isSet)
 
-            div {
-//                +"type: ${props.attributeMetadata.type?.className?.get()}"
-                +"type: ${type.className.get()}"
-                br {}
-                +"generics: ${type.generics.map { it.className.get() }}"
-            }
-
-//            +"${props.attributeName} - $attributeNotation"
+            val textValues = state.values ?: listOf()
+            renderListOfPrimitive(textValues)
         }
     }
 
@@ -371,8 +358,6 @@ class AttributePathValueEditor(
 
 
     private fun RBuilder.renderListOfPrimitive(stateValues: List<String>) {
-//        console.log("%%%%%%%% renderListOfPrimitive: $stateValues")
-
         child(MaterialTextField::class) {
             attrs {
                 fullWidth = true

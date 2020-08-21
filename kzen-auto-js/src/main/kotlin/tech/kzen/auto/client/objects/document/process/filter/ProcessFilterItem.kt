@@ -5,7 +5,6 @@ import react.*
 import react.dom.*
 import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
-import tech.kzen.auto.client.objects.document.filter.FilterColumn
 import tech.kzen.auto.client.objects.document.process.state.*
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
@@ -280,6 +279,7 @@ class ProcessFilterItem(
             css {
                 maxHeight = 20.em
                 overflowY = Overflow.auto
+                marginTop = 0.5.em
             }
 
             if (state.updateError != null) {
@@ -293,7 +293,9 @@ class ProcessFilterItem(
                             css {
                                 position = Position.sticky
                                 top = 0.px
-                                backgroundColor = Color.white
+//                                backgroundColor = Color.white
+                                backgroundColor = Color("rgba(255, 255, 255, 0.9)")
+                                zIndex = 999
                             }
                             +"Filter"
                         }
@@ -301,7 +303,9 @@ class ProcessFilterItem(
                             css {
                                 position = Position.sticky
                                 top = 0.px
-                                backgroundColor = Color.white
+//                                backgroundColor = Color.white
+                                backgroundColor = Color("rgba(255, 255, 255, 0.9)")
+                                zIndex = 999
                             }
                             +"Value"
                         }
@@ -309,7 +313,9 @@ class ProcessFilterItem(
                             css {
                                 position = Position.sticky
                                 top = 0.px
-                                backgroundColor = Color.white
+//                                backgroundColor = Color.white
+                                backgroundColor = Color("rgba(255, 255, 255, 0.9)")
+                                zIndex = 999
                             }
                             +"Count"
                         }
@@ -365,7 +371,7 @@ class ProcessFilterItem(
                     AttributeNesting(persistentListOf(AttributeSegment.ofKey(props.columnName))))
 
                 valueType = TypeMetadata(
-                    ClassNames.kotlinList,
+                    ClassNames.kotlinSet,
                     listOf(TypeMetadata(
                         ClassNames.kotlinString, listOf())))
             }

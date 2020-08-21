@@ -1,31 +1,23 @@
 package tech.kzen.auto.client.objects.document.common
 
 
-import kotlinx.css.em
-import kotlinx.css.fontSize
-import org.w3c.dom.HTMLInputElement
-import org.w3c.dom.HTMLTextAreaElement
 import react.*
 import react.dom.br
 import react.dom.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
-import tech.kzen.lib.platform.ClassNames
-import tech.kzen.lib.platform.collect.toPersistentList
 
 
 class DefaultAttributeEditor(
@@ -54,13 +46,10 @@ class DefaultAttributeEditor(
     )
 
 
-    class State(
-            var value: String?,
-            var values: List<String>?,
+    class State: RState
 
-            var submitDebounce: FunctionWithDebounce,
-            var pending: Boolean
-    ): RState
+
+    private var attributePathValueEditor: AttributePathValueEditor? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -75,40 +64,6 @@ class DefaultAttributeEditor(
                 handler()
             }
         }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-//        console.log("ParameterEditor | State.init - ${props.name}")
-
-        @Suppress("MoveVariableDeclarationIntoWhen")
-        val attributeNotation = props.clientState.graphStructure().graphNotation.transitiveAttribute(
-                props.objectLocation, props.attributeName)
-
-        when (attributeNotation) {
-            is ScalarAttributeNotation -> {
-                val scalarValue = attributeNotation.value
-
-                value = scalarValue
-                values = null
-            }
-
-            is ListAttributeNotation -> {
-                if (attributeNotation.values.all { it.asString() != null }) {
-                    val stringValues = attributeNotation.values.map { it.asString()!! }
-
-                    value = null
-                    values = stringValues
-                }
-            }
-        }
-
-        submitDebounce = lodash.debounce({
-            editAttributeCommandAsync()
-        }, 1000)
-
-        pending = false
     }
 
 
@@ -139,7 +94,7 @@ class DefaultAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
-        flush()
+        attributePathValueEditor?.flush()
     }
 
 
@@ -147,74 +102,18 @@ class DefaultAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun flush() {
-//        println("ParameterEditor | flush")
-
-        state.submitDebounce.cancel()
-        if (state.pending) {
-            editAttributeCommand()
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun onValueChange(newValue: String) {
-        setState {
-            value = newValue
-            pending = true
+    private fun formattedLabel(): String {
+        val labelOverride = props.labelOverride
+        if (labelOverride != null) {
+            return labelOverride
         }
 
-//        console.log("onValueChange")
+        val upperCamelCase = props.attributeName.value.capitalize()
 
-        state.submitDebounce.apply()
-    }
+        val results = Regex("[A-Z][a-z]*").findAll(upperCamelCase)
+        val words = results.map { it.groups[0]!!.value }
 
-
-    private fun onValuesChange(newValues: List<String>) {
-        if (state.values == newValues) {
-            return
-        }
-
-        setState {
-            values = newValues
-            pending = true
-        }
-
-//        console.log("onValueChange")
-
-        state.submitDebounce.apply()
-    }
-
-
-    private fun editAttributeCommandAsync() {
-        async {
-            editAttributeCommand()
-        }
-    }
-
-
-    private suspend fun editAttributeCommand() {
-        val attributeNotation =
-            if (state.value != null) {
-                ScalarAttributeNotation(state.value!!)
-            }
-            else {
-                ListAttributeNotation(state
-                        .values!!
-                        .map { ScalarAttributeNotation(it) }
-                        .toPersistentList())
-            }
-
-        ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
-            props.objectLocation,
-            props.attributeName,
-            attributeNotation))
-
-        setState {
-            pending = false
-        }
-
-        props.onChange?.invoke(attributeNotation)
+        return words.joinToString(" ")
     }
 
 
@@ -229,149 +128,53 @@ class DefaultAttributeEditor(
             ?.get(props.attributeName)
             ?: return
 
-//        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
-//                props.objectLocation, props.attributeName)
-
-//        val type = props.attributeMetadata.type
         val type = attributeMetadata.type
 
-        if (type == null) {
-//            +"${props.attributeName} - ${props.attributeNotation}"
-            +"${props.attributeName} (type missing)"
-        }
-        else if (type.className == ClassNames.kotlinString ||
-                type.className == ClassNames.kotlinInt ||
-                type.className == ClassNames.kotlinDouble) {
-//            val textValue = props.attributeNotation?.asString() ?: ""
-//            val textValue = attributeNotation?.asString() ?: ""
-            val textValue = state.value ?: ""
-            renderString(textValue)
-        }
-        else if (type.className == ClassNames.kotlinList) {
-            val listGeneric = type.generics.getOrNull(0)
-            if (listGeneric?.className?.let { ClassNames.isPrimitive(it) } == true) {
-                val textValues = state.values ?: listOf()
-                renderListOfPrimitive(textValues)
-            }
-            else {
-                +"List of: ${listGeneric?.className ?: ClassNames.kotlinAny}"
-            }
-        }
-        else if (type.className == ClassNames.kotlinBoolean) {
-            val booleanValue = state.value == "true"
-            renderBoolean(booleanValue)
-        }
-        else if (attributeMetadata.definerReference?.name?.value == "Self") {
-            // NB: don't render
-        }
-        else {
-            +"${props.attributeName} (type not supported)"
-
-            div {
-//                +"type: ${props.attributeMetadata.type?.className?.get()}"
-                +"type: ${attributeMetadata.type?.className?.get()}"
-                br {}
-                +"generics: ${attributeMetadata.type?.generics?.map { it.className.get() }}"
+        when {
+            type == null -> {
+                +"${props.attributeName} (type missing)"
             }
 
-//            +"${props.attributeName} - $attributeNotation"
+            attributeMetadata.definerReference?.name?.value == "Self" -> {
+                // NB: don't render
+            }
+
+            AttributePathValueEditor.isValue(type) -> {
+                renderValueEditor(type)
+            }
+
+            else -> {
+                +"${props.attributeName} (type not supported)"
+
+                div {
+                    +"type: ${attributeMetadata.type?.className?.get()}"
+                    br {}
+                    +"generics: ${attributeMetadata.type?.generics?.map { it.className.get() }}"
+                }
+            }
         }
     }
 
 
-    private fun RBuilder.renderString(stateValue: String) {
-        child(MaterialTextField::class) {
+    private fun RBuilder.renderValueEditor(type: TypeMetadata) {
+        child(AttributePathValueEditor::class) {
             attrs {
-                fullWidth = true
+                labelOverride = formattedLabel()
 
-                label = formattedLabel()
-                value = stateValue
+                clientState = props.clientState
+                objectLocation = props.objectLocation
+                attributePath = AttributePath.ofName(props.attributeName)
 
-                // https://stackoverflow.com/questions/54052525/how-to-change-material-ui-textfield-bottom-and-label-color-on-error-and-on-focus
-//                InputLabelProps = NestedInputLabelProps(reactStyle {
-//                    color = Color("rgb(66, 66, 66)")
-//                })
+                valueType = type
 
                 onChange = {
-                    val target = it.target as HTMLInputElement
-                    onValueChange(target.value)
-                }
-
-                disabled = props.disabled
-                error = props.invalid
-            }
-        }
-    }
-
-
-    private fun RBuilder.renderBoolean(stateValue: Boolean) {
-        val inputId = "material-react-switch-id"
-
-        child(MaterialInputLabel::class) {
-            attrs {
-                htmlFor = inputId
-
-                style = reactStyle {
-                    fontSize = 0.8.em
+                    props.onChange?.invoke(it)
                 }
             }
 
-            +formattedLabel()
-        }
-
-        child(MaterialSwitch::class) {
-            attrs {
-                id = inputId
-
-                checked = stateValue
-
-                onChange = {
-                    val target = it.target as HTMLInputElement
-                    onValueChange(target.checked.toString())
-                }
+            ref {
+                attributePathValueEditor = it as? AttributePathValueEditor
             }
         }
-    }
-
-
-    private fun RBuilder.renderListOfPrimitive(stateValues: List<String>) {
-        child(MaterialTextField::class) {
-            attrs {
-                fullWidth = true
-                multiline = true
-
-                label = formattedLabel() + " (one per line)"
-                value = stateValues.joinToString("\n")
-
-                onChange = {
-                    val target = it.target as HTMLTextAreaElement
-                    val lines = target.value.split(Regex("\\n+"))
-                    val values =
-                            if (lines.size == 1 && lines[0].isEmpty()) {
-                                listOf()
-                            }
-                            else {
-                                lines
-                            }
-
-                    onValuesChange(values)
-                }
-            }
-        }
-    }
-
-
-    private fun formattedLabel(): String {
-        val labelOverride = props.labelOverride
-        if (labelOverride != null) {
-            return labelOverride
-        }
-
-        val upperCamelCase = props.attributeName.value.capitalize()
-
-        val results = Regex("[A-Z][a-z]*").findAll(upperCamelCase)
-        val words = results.map { it.groups[0]!!.value }
-
-        return words.joinToString(" ")
     }
 }
