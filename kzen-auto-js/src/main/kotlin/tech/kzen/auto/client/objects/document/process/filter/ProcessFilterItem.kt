@@ -12,6 +12,8 @@ import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.reactive.ColumnSummary
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
+import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
+import tech.kzen.auto.common.paradigm.reactive.StatisticValueSummary
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -271,6 +273,37 @@ class ProcessFilterItem(
         if (hasNominal) {
             renderHistogram(requiredValues, columnSummary.nominalValueSummary)
         }
+
+        val hasNumeric = ! columnSummary.numericValueSummary.isEmpty()
+        if (hasNumeric) {
+            renderNumeric(columnSummary.numericValueSummary)
+        }
+
+        val hasSample = ! columnSummary.opaqueValueSummary.isEmpty()
+        if (hasSample) {
+            renderSample(columnSummary.opaqueValueSummary)
+        }
+    }
+
+
+    private fun RBuilder.renderEditValues() {
+        child(AttributePathValueEditor::class) {
+            attrs {
+                labelOverride = "Filter values"
+
+                clientState = props.processState.clientState
+                objectLocation = props.processState.mainLocation
+
+                attributePath = AttributePath(
+                    FilterConventions.criteriaAttributeName,
+                    AttributeNesting(persistentListOf(AttributeSegment.ofKey(props.columnName))))
+
+                valueType = TypeMetadata(
+                    ClassNames.kotlinSet,
+                    listOf(TypeMetadata(
+                        ClassNames.kotlinString, listOf())))
+            }
+        }
     }
 
 
@@ -293,7 +326,6 @@ class ProcessFilterItem(
                             css {
                                 position = Position.sticky
                                 top = 0.px
-//                                backgroundColor = Color.white
                                 backgroundColor = Color("rgba(255, 255, 255, 0.9)")
                                 zIndex = 999
                             }
@@ -303,7 +335,6 @@ class ProcessFilterItem(
                             css {
                                 position = Position.sticky
                                 top = 0.px
-//                                backgroundColor = Color.white
                                 backgroundColor = Color("rgba(255, 255, 255, 0.9)")
                                 zIndex = 999
                             }
@@ -313,7 +344,6 @@ class ProcessFilterItem(
                             css {
                                 position = Position.sticky
                                 top = 0.px
-//                                backgroundColor = Color.white
                                 backgroundColor = Color("rgba(255, 255, 255, 0.9)")
                                 zIndex = 999
                             }
@@ -358,22 +388,111 @@ class ProcessFilterItem(
     }
 
 
-    private fun RBuilder.renderEditValues() {
-        child(AttributePathValueEditor::class) {
-            attrs {
-                labelOverride = "Filter values"
+    private fun RBuilder.renderNumeric(density: StatisticValueSummary) {
+        styledDiv {
+            css {
+                maxHeight = 20.em
+                overflowY = Overflow.auto
+                marginTop = 0.5.em
+            }
 
-                clientState = props.processState.clientState
-                objectLocation = props.processState.mainLocation
+            table {
+                styledThead {
+                    tr {
+                        styledTh {
+                            css {
+                                position = Position.sticky
+                                top = 0.px
+                                backgroundColor = Color.white
+                            }
+                            +"Statistic"
+                        }
+                        styledTh {
+                            css {
+                                position = Position.sticky
+                                top = 0.px
+                                backgroundColor = Color.white
+                            }
+                            +"Value"
+                        }
+                    }
+                }
 
-                attributePath = AttributePath(
-                    FilterConventions.criteriaAttributeName,
-                    AttributeNesting(persistentListOf(AttributeSegment.ofKey(props.columnName))))
+                tbody {
+                    tr {
+                        td { +"Count" }
+                        td {
+                            +"${density.count}"
+                        }
+                    }
 
-                valueType = TypeMetadata(
-                    ClassNames.kotlinSet,
-                    listOf(TypeMetadata(
-                        ClassNames.kotlinString, listOf())))
+                    tr {
+                        td { +"Sum" }
+                        td {
+                            +"${density.sum}"
+                        }
+                    }
+
+                    tr {
+                        td { +"Minimum" }
+                        td {
+                            +"${density.min}"
+                        }
+                    }
+
+                    tr {
+                        td { +"Maximum" }
+                        td {
+                            +"${density.max}"
+                        }
+                    }
+
+                    tr {
+                        td { +"Average" }
+                        td {
+                            +"${density.sum / density.count}"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderSample(opaque: OpaqueValueSummary) {
+        styledDiv {
+            css {
+                maxHeight = 20.em
+                overflowY = Overflow.auto
+                marginTop = 0.5.em
+            }
+
+            table {
+                styledThead {
+                    tr {
+                        styledTh {
+                            css {
+                                position = Position.sticky
+                                top = 0.px
+                                backgroundColor = Color.white
+                            }
+                            +"Random Sample"
+                        }
+                    }
+                }
+
+                tbody {
+                    for (value in opaque.sample) {
+                        tr {
+                            key = value
+
+                            td {
+                                val abbreviated = abbreviateValue(value)
+                                +abbreviated
+                            }
+                        }
+                    }
+                }
             }
         }
     }

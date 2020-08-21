@@ -72,7 +72,7 @@ class ValueSummaryBuilder {
     private val textHistogram = HashMultiset.create<String>()
     private val textSample = mutableListOf<String>()
 
-//    private val numericHistogram = TreeMultiset.create<Double>()
+    private var histogramOverflow: Boolean = false
     private var emptyCount: Long = 0
     private var textCount: Long = 0
     private var numberCount: Long = 0
@@ -88,7 +88,7 @@ class ValueSummaryBuilder {
         if (trimmed.isEmpty()) {
             emptyCount++
 
-            if (textSample.isEmpty()) {
+            if (! histogramOverflow) {
                 textHistogram.add("")
             }
             return
@@ -101,25 +101,35 @@ class ValueSummaryBuilder {
             sum += doubleValue
             min = min.coerceAtMost(doubleValue)
             max = max.coerceAtLeast(doubleValue)
+
+            addSample(trimmed)
         }
         else {
             textCount++
 
-            if (textSample.isNotEmpty()) {
-                val randomIndex = (Math.random() * textSample.size).toInt()
-                textSample[randomIndex] = trimmed
-            }
-            else {
+            if (! histogramOverflow) {
                 textHistogram.add(trimmed)
 
                 if (textHistogram.elementSet().size > sampleThreshold) {
-                    val iterator = textHistogram.elementSet().iterator()
-                    while (textSample.size < maxSampleSize) {
-                        textSample.add(iterator.next())
-                    }
+                    textHistogram.elementSet().forEach(this::addSample)
                     textHistogram.clear()
+                    histogramOverflow = true
                 }
             }
+            else {
+                addSample(trimmed)
+            }
+        }
+    }
+
+
+    private fun addSample(value: String) {
+        if (textSample.size < sampleThreshold) {
+            textSample.add(value)
+        }
+        else {
+            val randomIndex = (Math.random() * textSample.size).toInt()
+            textSample[randomIndex] = value
         }
     }
 
