@@ -4,6 +4,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.reactive.TableSummary
+import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
@@ -67,5 +68,17 @@ data class TaskModel(
             result.value.get() as Map<String, Map<String, Any>>
 
         return TableSummary.fromCollection(resultValue)
+    }
+
+
+    fun taskProgress(): TaskProgress? {
+        val result = finalOrPartialResult() as? ExecutionSuccess
+            ?: return null
+
+        @Suppress("UNCHECKED_CAST")
+        val resultDetail = result.detail.get() as? Map<String, String>
+            ?: return null
+
+        return TaskProgress.fromCollection(resultDetail)
     }
 }

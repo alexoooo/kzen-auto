@@ -39,8 +39,6 @@ data class ProcessState(
 
     val filterAddLoading: Boolean = false,
     val filterAddError: String? = null
-//    val filterUpdateLoading: Boolean = false,
-//    val filterUpdateError: String? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

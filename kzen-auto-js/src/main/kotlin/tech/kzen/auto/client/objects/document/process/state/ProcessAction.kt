@@ -1,7 +1,9 @@
 package tech.kzen.auto.client.objects.document.process.state
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.reactive.TableSummary
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
+import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
 
 
@@ -124,8 +126,17 @@ data class ProcessTaskRunRequest(
 
 
 data class ProcessTaskRunResponse(
-    val taskModel: TaskModel/*,
-    val taskProgress: TaskProgress*/
+    val taskModel: TaskModel
+): ProcessTaskAction()
+
+
+data class ProcessTaskRefreshRequest(
+    val taskId: TaskId
+): ProcessTaskAction()
+
+
+data class ProcessTaskRefreshResponse(
+    val taskModel: TaskModel?
 ): ProcessTaskAction()
 
 
@@ -137,5 +148,17 @@ object SummaryLookupRequest: SummaryLookupAction()
 
 
 data class SummaryLookupResult(
-    val result: ExecutionResult
+    val tableSummary: TableSummary,
+    val taskProgress: TaskProgress
 ): SummaryLookupAction()
+
+
+data class SummaryLookupError(
+    val errorMessage: String
+): SummaryLookupAction()
+
+
+//---------------------------------------------------------------------------------------------------------------------
+data class ProcessRefreshSchedule(
+    val refreshAction: ProcessAction
+): ProcessAction()

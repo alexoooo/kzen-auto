@@ -6,8 +6,7 @@ import react.RBuilder
 import react.RProps
 import react.RPureComponent
 import react.RState
-import react.dom.key
-import react.dom.li
+import react.dom.*
 import styled.*
 import tech.kzen.auto.client.objects.document.common.DefaultAttributeEditor
 import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
@@ -17,6 +16,7 @@ import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.InputIcon
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 
 
@@ -98,6 +98,11 @@ class ProcessInput(
                     renderColumnListing()
                 }
             }
+        }
+
+        val taskProgress = props.processState.taskProgress
+        if (taskProgress != null) {
+            renderProgress(taskProgress)
         }
     }
 
@@ -284,6 +289,85 @@ class ProcessInput(
 //                                }
 
                                 +columnName
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderProgress(taskProgress: TaskProgress) {
+        if (! props.processState.taskRunning()) {
+            return
+        }
+
+        styledDiv {
+            css {
+                marginTop = 0.5.em
+            }
+
+            styledDiv {
+                css {
+                    color = Color("rgba(0, 0, 0, 0.54)")
+                    fontFamily = "Roboto, Helvetica, Arial, sans-serif"
+                    fontWeight = FontWeight.w400
+                    fontSize = 13.px
+                }
+
+                when {
+                    props.processState.filterTaskRunning -> {
+                        +"Filtering"
+                    }
+
+                    props.processState.indexTaskRunning -> {
+                        +"Indexing"
+                    }
+                }
+            }
+
+            styledDiv {
+                css {
+                    maxHeight = 20.em
+                    overflowY = Overflow.auto
+                }
+
+                table {
+                    thead {
+                        tr {
+                            styledTh {
+                                css {
+                                    position = Position.sticky
+                                    top = 0.px
+                                    backgroundColor = Color("rgba(255, 255, 255, 0.9)")
+                                    zIndex = 999
+                                }
+                                +"File"
+                            }
+
+                            styledTh {
+                                css {
+                                    position = Position.sticky
+                                    top = 0.px
+                                    backgroundColor = Color("rgba(255, 255, 255, 0.9)")
+                                    zIndex = 999
+                                }
+                                +"Progress"
+                            }
+                        }
+                    }
+                    tbody {
+                        for (e in taskProgress.remainingFiles.entries) {
+                            tr {
+                                key = e.key
+
+                                td {
+                                    +e.key
+                                }
+                                td {
+                                    +e.value
+                                }
                             }
                         }
                     }

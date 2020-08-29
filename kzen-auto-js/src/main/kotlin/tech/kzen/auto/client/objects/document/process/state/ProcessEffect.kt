@@ -5,6 +5,10 @@ import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
+import tech.kzen.auto.common.paradigm.reactive.TableSummary
+import tech.kzen.auto.common.paradigm.reactive.TaskProgress
+import tech.kzen.auto.common.paradigm.task.model.TaskId
+import tech.kzen.auto.common.paradigm.task.model.TaskState
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -45,20 +49,44 @@ object ProcessEffect {
                 loadTask(state)
 
 
-            is ProcessTaskLookupResponse ->
-                if (action.taskModel == null) {
+            is ProcessTaskLookupResponse -> when {
+                action.taskModel == null ->
                     SummaryLookupRequest
-                }
-                else {
-                    null
-                }
 
+                action.taskModel.state == TaskState.Running ->
+                    ProcessRefreshSchedule(
+                        ProcessTaskRefreshRequest(action.taskModel.taskId))
+
+                else -> null
+            }
 
             SummaryLookupRequest ->
                 lookupSummary(state)
 
             is ProcessTaskRunRequest ->
                 runSummaryTask(state)
+
+            is ProcessTaskRunResponse ->
+                if (action.taskModel.state == TaskState.Running) {
+                    ProcessRefreshSchedule(
+                        ProcessTaskRefreshRequest(action.taskModel.taskId))
+                }
+                else {
+                    null
+                }
+
+            is ProcessTaskRefreshRequest ->
+                refreshTask(action.taskId)
+
+            is ProcessTaskRefreshResponse ->
+                if (action.taskModel != null && action.taskModel.state == TaskState.Running) {
+//                    println("^^^^ ProcessTaskRefreshResponse - scheduling")
+                    ProcessRefreshSchedule(
+                        ProcessTaskRefreshRequest(action.taskModel.taskId))
+                }
+                else {
+                    null
+                }
 
 
             is FilterAddRequest ->
@@ -145,6 +173,14 @@ object ProcessEffect {
     }
 
 
+    private suspend fun refreshTask(
+        taskId: TaskId
+    ): ProcessAction {
+        val model = ClientContext.clientRestTaskRepository.query(taskId)
+        return ProcessTaskRefreshResponse(model)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun lookupSummary(
         state: ProcessState
@@ -153,7 +189,24 @@ object ProcessEffect {
             state.mainLocation,
             FilterConventions.actionParameter to FilterConventions.actionSummaryLookup)
 
-        return SummaryLookupResult(result)
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val resultValue = result.value.get() as Map<String, Map<String, Any>>
+                val tableSummary = TableSummary.fromCollection(resultValue)
+
+                @Suppress("UNCHECKED_CAST")
+                val resultDetail = result.detail.get() as Map<String, String>
+                val summaryProgress = TaskProgress.fromCollection(resultDetail)
+
+                SummaryLookupResult(
+                    tableSummary, summaryProgress)
+            }
+
+            is ExecutionFailure -> {
+                SummaryLookupError(result.errorMessage)
+            }
+        }
     }
 
 

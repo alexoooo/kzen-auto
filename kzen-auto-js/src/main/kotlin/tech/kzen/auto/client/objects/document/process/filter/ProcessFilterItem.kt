@@ -145,7 +145,17 @@ class ProcessFilterItem(
         val requiredValues = props.criteriaSpec.columnRequiredValues[props.columnName]
             ?: return
 
-        val columnSummary = props.processState.tableSummary?.columnSummaries?.get(props.columnName)
+        val processState = props.processState
+
+        val missing =
+            if (processState.columnListing == null) {
+                false
+            }
+            else {
+                ! processState.columnListing.contains(props.columnName)
+            }
+
+        val columnSummary = processState.tableSummary?.columnSummaries?.get(props.columnName)
 
         styledDiv {
             css {
@@ -154,7 +164,7 @@ class ProcessFilterItem(
                 borderTopColor = Color.lightGray
             }
 
-            renderHeader(columnSummary)
+            renderHeader(columnSummary, missing)
 
             if (state.open || requiredValues.isNotEmpty()) {
                 styledDiv {
@@ -175,7 +185,10 @@ class ProcessFilterItem(
     }
 
 
-    private fun RBuilder.renderHeader(columnSummary: ColumnSummary?) {
+    private fun RBuilder.renderHeader(
+        columnSummary: ColumnSummary?,
+        missing: Boolean
+    ) {
         styledTable {
             css {
                 width = 100.pct
@@ -191,9 +204,23 @@ class ProcessFilterItem(
                         styledSpan {
                             css {
                                 fontSize = 1.5.em
+
+                                if (missing) {
+                                    color = Color.gray
+                                }
                             }
 
                             +props.columnName
+                        }
+
+                        if (missing) {
+                            styledSpan {
+                                css {
+                                    color = Color.gray
+                                    marginLeft = 0.5.em
+                                }
+                                +"(missing in Input)"
+                            }
                         }
                     }
 

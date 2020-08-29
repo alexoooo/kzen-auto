@@ -4,6 +4,8 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.client.wrap.FunctionWithDebounce
+import tech.kzen.auto.client.wrap.lodash
 
 
 class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
@@ -18,6 +20,14 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
     private var subscriber: Subscriber? = null
     private var mounted = false
     private var state: ProcessState? = null
+
+    private var refreshAction: ProcessAction? = null
+
+    private val refreshDebounce: FunctionWithDebounce = lodash.debounce({
+        refreshAction?.let {
+            dispatchAsync(it)
+        }
+    }, 5_000)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -36,6 +46,19 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
         mounted = false
 
         ClientContext.sessionGlobal.unobserve(this)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun clearRefresh() {
+        refreshDebounce.cancel()
+        refreshAction = null
+    }
+
+
+    private fun scheduleRefresh(action: ProcessAction) {
+        refreshAction = action
+        refreshDebounce.apply()
     }
 
 
@@ -68,6 +91,7 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
         }
 
         if (initial) {
+            clearRefresh()
             dispatchAsync(InitiateProcessEffect)
         }
     }
@@ -90,7 +114,17 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
 
         val additionalEffects = dispatch(outcomeAction)
 
-        return listOf(outcomeAction) + additionalEffects
+        val allEffects = listOf(outcomeAction) + additionalEffects
+
+        val refreshSchedule = allEffects
+            .filterIsInstance<ProcessRefreshSchedule>()
+            .lastOrNull()
+
+        if (refreshSchedule != null) {
+            scheduleRefresh(refreshSchedule.refreshAction)
+        }
+
+        return allEffects
     }
 
 

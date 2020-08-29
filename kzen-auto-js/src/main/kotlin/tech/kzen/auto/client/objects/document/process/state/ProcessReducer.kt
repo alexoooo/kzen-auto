@@ -17,6 +17,7 @@ object ProcessReducer {
         return when (action) {
             //--------------------------------------------------
             InitiateProcessEffect -> state
+            is ProcessRefreshSchedule -> state
 
             //--------------------------------------------------
             is ListInputsAction ->
@@ -121,15 +122,8 @@ object ProcessReducer {
 
                     when (result) {
                         is ExecutionSuccess -> {
-                            @Suppress("UNCHECKED_CAST")
-                            val resultValue =
-                                result.value.get() as Map<String, Map<String, Any>>
-
-                            val tableSummary = TableSummary.fromCollection(resultValue)
-
-                            @Suppress("UNCHECKED_CAST")
-                            val resultDetail = result.detail.get() as Map<String, String>?
-                            val tableSummaryProgress = resultDetail?.let { TaskProgress.fromCollection(it) }
+                            val tableSummary = model.tableSummary()!!
+                            val tableSummaryProgress = model.taskProgress()!!
 
                             state.copy(
                                 taskLoading = false,
@@ -157,9 +151,44 @@ object ProcessReducer {
             is ProcessTaskRunRequest -> state.copy(
                 taskStarting = true)
 
-            is ProcessTaskRunResponse -> state.copy(
-                taskModel = action.taskModel,
-                taskStarting = false)
+            is ProcessTaskRunResponse -> {
+                val isRunning = action.taskModel.state == TaskState.Running
+                val requestAction = action.taskModel.request.parameters.get(FilterConventions.actionParameter)!!
+                val isIndexing = requestAction == FilterConventions.actionSummaryTask
+
+                state.copy(
+                    taskModel = action.taskModel,
+                    tableSummary = action.taskModel.tableSummary(),
+                    taskProgress = action.taskModel.taskProgress(),
+                    indexTaskRunning = isRunning && isIndexing,
+                    filterTaskRunning = isRunning && ! isIndexing,
+                    taskStarting = false)
+            }
+
+            is ProcessTaskRefreshRequest ->
+                state
+
+            is ProcessTaskRefreshResponse -> {
+                if (action.taskModel == null) {
+                    state.copy(
+                        taskModel = null,
+                        taskProgress = null,
+                        indexTaskRunning = false,
+                        filterTaskRunning = false)
+                }
+                else {
+                    val isRunning = action.taskModel.state == TaskState.Running
+                    val requestAction = action.taskModel.request.parameters.get(FilterConventions.actionParameter)!!
+                    val isIndexing = requestAction == FilterConventions.actionSummaryTask
+
+                    state.copy(
+                        taskModel = action.taskModel,
+                        tableSummary = action.taskModel.tableSummary(),
+                        taskProgress = action.taskModel.taskProgress(),
+                        indexTaskRunning = isRunning && isIndexing,
+                        filterTaskRunning = isRunning && ! isIndexing)
+                }
+            }
         }
     }
 
@@ -173,34 +202,16 @@ object ProcessReducer {
             SummaryLookupRequest -> state.copy(
                 tableSummaryLoading = true)
 
-            is SummaryLookupResult -> {
-                when (
-                    val result = action.result
-                ) {
-                    is ExecutionSuccess -> {
-                        @Suppress("UNCHECKED_CAST")
-                        val resultValue = result.value.get() as Map<String, Map<String, Any>>
-                        val tableSummary = TableSummary.fromCollection(resultValue)
+            is SummaryLookupError -> state.copy(
+                tableSummaryLoading = false,
+                tableSummaryError = action.errorMessage)
 
-                        @Suppress("UNCHECKED_CAST")
-                        val resultDetail = result.detail.get() as Map<String, String>
-                        val summaryProgress = TaskProgress.fromCollection(resultDetail)
-
-                        state.copy(
-                            tableSummaryLoading = false,
-                            tableSummaryLoaded = true,
-                            tableSummaryError = null,
-                            tableSummary = tableSummary,
-                            taskProgress = summaryProgress)
-                    }
-
-                    is ExecutionFailure -> {
-                        state.copy(
-                            tableSummaryLoading = false,
-                            tableSummaryError = result.errorMessage)
-                    }
-                }
-            }
+            is SummaryLookupResult -> state.copy(
+                    tableSummaryLoading = false,
+                    tableSummaryLoaded = true,
+                    tableSummaryError = null,
+                    tableSummary = action.tableSummary,
+                    taskProgress = action.taskProgress)
         }
     }
 
@@ -223,30 +234,11 @@ object ProcessReducer {
                 filterAddError = action.message)
 
 
-//            is FilterUpdateRequest -> state.copy(
-//                filterUpdateLoading = true,
-//                filterUpdateError = null)
-//
-//            is FilterValueAddRequest -> state.copy(
-//                filterUpdateLoading = true,
-//                filterUpdateError = null)
-//
-//            is FilterValueRemoveRequest -> state.copy(
-//                filterUpdateLoading = true,
-//                filterUpdateError = null)
-//
-//            is FilterUpdateResult -> state.copy(
-//                filterUpdateLoading = false,
-//                filterUpdateError = action.errorMessage)
-
-//            is FilterUpdateRequest -> state
             is FilterValueAddRequest -> state
             is FilterValueRemoveRequest -> state
             is FilterUpdateResult -> state
 
             is FilterRemoveRequest -> state
-//            FilterRemoveResponse -> state
-//            is FilterRemoveError -> state
         }
     }
 }
