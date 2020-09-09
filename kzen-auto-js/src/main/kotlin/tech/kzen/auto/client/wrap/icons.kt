@@ -418,3 +418,15 @@ external class StopIcon: Component<IconProps, RState> {
 external class PlayForWorkIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("Error")
+external class ErrorIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("ErrorOutline")
+external class ErrorOutlineIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

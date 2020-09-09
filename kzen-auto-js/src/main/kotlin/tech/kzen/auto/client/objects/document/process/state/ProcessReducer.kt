@@ -32,6 +32,9 @@ object ProcessReducer {
             is SummaryLookupAction ->
                 reduceSummaryLookup(state, action)
 
+            is OutputLookupAction ->
+                reduceOutputLookup(state, action)
+
             is FilterAction ->
                 reduceFilter(state, action)
 
@@ -101,95 +104,127 @@ object ProcessReducer {
             ProcessTaskLookupRequest -> state.copy(
                 taskLoading = true)
 
-            is ProcessTaskLookupResponse -> {
-                val model = action.taskModel
-
-                if (model == null) {
-                    state.copy(
-                        taskLoading = false,
-                        taskLoaded = true,
-                        taskModel = null,
-                        taskProgress = null,
-                        indexTaskRunning = false,
-                        filterTaskRunning = false)
-                }
-                else {
-                    val result = model.finalOrPartialResult()
-
-                    val requestAction = model.request.parameters.get(FilterConventions.actionParameter)!!
-                    val isIndexing = requestAction == FilterConventions.actionSummaryTask
-                    val isRunning = model.state == TaskState.Running
-
-                    when (result) {
-                        is ExecutionSuccess -> {
-                            val tableSummary = model.tableSummary()!!
-                            val tableSummaryProgress = model.taskProgress()!!
-
-                            state.copy(
-                                taskLoading = false,
-                                taskLoaded = true,
-                                taskModel = model,
-                                taskProgress = tableSummaryProgress,
-                                indexTaskRunning = isRunning && isIndexing,
-                                filterTaskRunning = isRunning && ! isIndexing,
-                                tableSummary = tableSummary,
-                                tableSummaryLoaded = true,
-                                tableSummaryLoading = false)
-                        }
-
-                        is ExecutionFailure -> {
-                            state.copy(
-                                taskLoading = false,
-                                taskLoaded = true,
-                                taskModel = model,
-                                taskLoadError = result.errorMessage)
-                        }
-                    }
-                }
-            }
+            is ProcessTaskLookupResponse ->
+                reduceTaskLookupResponse(state, action)
 
             is ProcessTaskRunRequest -> state.copy(
                 taskStarting = true)
 
-            is ProcessTaskRunResponse -> {
-                val isRunning = action.taskModel.state == TaskState.Running
-                val requestAction = action.taskModel.request.parameters.get(FilterConventions.actionParameter)!!
-                val isIndexing = requestAction == FilterConventions.actionSummaryTask
-
-                state.copy(
-                    taskModel = action.taskModel,
-                    tableSummary = action.taskModel.tableSummary(),
-                    taskProgress = action.taskModel.taskProgress(),
-                    indexTaskRunning = isRunning && isIndexing,
-                    filterTaskRunning = isRunning && ! isIndexing,
-                    taskStarting = false)
-            }
+            is ProcessTaskRunResponse ->
+                reduceTaskRunResponse(state, action)
 
             is ProcessTaskRefreshRequest ->
                 state
 
-            is ProcessTaskRefreshResponse -> {
-                if (action.taskModel == null) {
-                    state.copy(
-                        taskModel = null,
-                        taskProgress = null,
-                        indexTaskRunning = false,
-                        filterTaskRunning = false)
-                }
-                else {
-                    val isRunning = action.taskModel.state == TaskState.Running
-                    val requestAction = action.taskModel.request.parameters.get(FilterConventions.actionParameter)!!
-                    val isIndexing = requestAction == FilterConventions.actionSummaryTask
+            is ProcessTaskRefreshResponse ->
+                reduceTaskRefreshResponse(state, action)
+        }
+    }
 
-                    state.copy(
-                        taskModel = action.taskModel,
-                        tableSummary = action.taskModel.tableSummary(),
-                        taskProgress = action.taskModel.taskProgress(),
-                        indexTaskRunning = isRunning && isIndexing,
-                        filterTaskRunning = isRunning && ! isIndexing)
-                }
+
+    private fun reduceTaskLookupResponse(
+        state: ProcessState,
+        action: ProcessTaskLookupResponse
+    ): ProcessState {
+        val model = action.taskModel
+            ?: return state.copy(
+                taskLoading = false,
+                taskLoaded = true,
+                taskModel = null,
+                taskProgress = null,
+                indexTaskRunning = false,
+                filterTaskRunning = false)
+
+        val result = model.finalOrPartialResult()
+
+        val requestAction = model.request.parameters.get(FilterConventions.actionParameter)!!
+        val isIndexing = requestAction == FilterConventions.actionSummaryTask
+        val isRunning = model.state == TaskState.Running
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                val tableSummary = model.tableSummary()!!
+                val tableSummaryProgress = model.taskProgress()!!
+
+                state.copy(
+                    taskLoading = false,
+                    taskLoaded = true,
+                    taskModel = model,
+                    taskProgress = tableSummaryProgress,
+                    indexTaskRunning = isRunning && isIndexing,
+                    filterTaskRunning = isRunning && ! isIndexing,
+                    tableSummary = tableSummary,
+                    tableSummaryLoaded = true,
+                    tableSummaryLoading = false)
+            }
+
+            is ExecutionFailure -> {
+                state.copy(
+                    taskLoading = false,
+                    taskLoaded = true,
+                    taskModel = model,
+                    taskLoadError = result.errorMessage)
             }
         }
+    }
+
+
+    private fun reduceTaskRunResponse(
+        state: ProcessState,
+        action: ProcessTaskRunResponse
+    ): ProcessState {
+        val isRunning = action.taskModel.state == TaskState.Running
+        val requestAction = action.taskModel.request.parameters.get(FilterConventions.actionParameter)!!
+        val isIndexing = requestAction == FilterConventions.actionSummaryTask
+
+        val tableSummary =
+            if (isIndexing) {
+                action.taskModel.tableSummary()
+            }
+            else {
+                state.tableSummary
+            }
+
+        return state.copy(
+            taskModel = action.taskModel,
+            tableSummary = tableSummary,
+            taskProgress = action.taskModel.taskProgress(),
+            indexTaskRunning = isRunning && isIndexing,
+            filterTaskRunning = isRunning && ! isIndexing,
+            taskStarting = false)
+    }
+
+
+    private fun reduceTaskRefreshResponse(
+        state: ProcessState,
+        action: ProcessTaskRefreshResponse
+    ): ProcessState {
+        if (action.taskModel == null) {
+            return state.copy(
+                taskModel = null,
+                taskProgress = null,
+                indexTaskRunning = false,
+                filterTaskRunning = false)
+        }
+
+        val isRunning = action.taskModel.state == TaskState.Running
+        val requestAction = action.taskModel.request.parameters.get(FilterConventions.actionParameter)!!
+        val isIndexing = requestAction == FilterConventions.actionSummaryTask
+
+        val tableSummary =
+            if (isIndexing) {
+                action.taskModel.tableSummary()
+            }
+            else {
+                state.tableSummary
+            }
+
+        return state.copy(
+            taskModel = action.taskModel,
+            tableSummary = tableSummary,
+            taskProgress = action.taskModel.taskProgress(),
+            indexTaskRunning = isRunning && isIndexing,
+            filterTaskRunning = isRunning && ! isIndexing)
     }
 
 
@@ -212,6 +247,27 @@ object ProcessReducer {
                     tableSummaryError = null,
                     tableSummary = action.tableSummary,
                     taskProgress = action.taskProgress)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun reduceOutputLookup(
+        state: ProcessState,
+        action: OutputLookupAction
+    ): ProcessState {
+        return when (action) {
+            OutputLookupRequest -> state.copy(
+                outputLoading = true)
+
+            is OutputLookupError -> state.copy(
+                outputLoading = false,
+                outputError = action.errorMessage)
+
+            is OutputLookupResult -> state.copy(
+                outputLoading = false,
+                outputInfo = action.outputInfo,
+                outputError = null)
         }
     }
 

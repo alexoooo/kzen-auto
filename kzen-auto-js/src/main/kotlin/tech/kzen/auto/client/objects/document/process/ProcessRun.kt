@@ -1,15 +1,12 @@
 package tech.kzen.auto.client.objects.document.process
 
-import kotlinx.css.em
-import kotlinx.css.fontSize
+import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import react.*
 import react.dom.div
 import tech.kzen.auto.client.objects.document.process.state.*
-import tech.kzen.auto.client.wrap.MaterialFab
-import tech.kzen.auto.client.wrap.MenuBookIcon
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 
 
 class ProcessRun(
@@ -50,10 +47,31 @@ class ProcessRun(
     }
 
 
-    private fun onRun() {
+    private fun onRunIndex() {
         props.dispatcher.dispatchAsync(
             ProcessTaskRunRequest(
                 ProcessTaskType.Index))
+    }
+
+
+    private fun onRunMain(readyToRun: Boolean, hasSummary: Boolean) {
+        if (! readyToRun) {
+            return
+        }
+
+        if (props.processState.isTaskRunning()) {
+            // pause
+        }
+        else if (hasSummary) {
+            props.dispatcher.dispatchAsync(
+                ProcessTaskRunRequest(
+                    ProcessTaskType.Filter))
+        }
+        else {
+            props.dispatcher.dispatchAsync(
+                ProcessTaskRunRequest(
+                    ProcessTaskType.Index))
+        }
     }
 
 
@@ -75,24 +93,112 @@ class ProcessRun(
 
 
     private fun RBuilder.renderInner() {
-        renderSecondaryActions()
-        renderMainAction()
+        val readyToRun =
+            ! props.processState.isInitialLoading() &&
+                    ! props.processState.isLoadingError() &&
+                    (props.processState.columnListing?.isNotEmpty() ?: false)
+
+        val hasSummary =
+            props.processState.tableSummary?.columnSummaries?.isNotEmpty() ?: false
+
+        renderSecondaryActions(readyToRun, hasSummary)
+        renderMainAction(readyToRun, hasSummary)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderMainAction() {
+    private fun RBuilder.renderMainAction(readyToRun: Boolean, hasSummary: Boolean) {
         child(MaterialFab::class) {
             attrs {
-                onClick = {
-                    onRun()
+                style = reactStyle {
+                    backgroundColor =
+                        if (readyToRun) {
+                            Color.gold
+                        }
+                        else {
+                            Color.white
+                        }
+
+                    width = 5.em
+                    height = 5.em
                 }
+
+                onClick = {
+                    onRunMain(readyToRun, hasSummary)
+                }
+
+//                if (! readyToRun) {
+//                    disabled = true
+//                }
+
+                title =
+                    when {
+                        props.processState.isInitialLoading() ->
+                            "Loading"
+
+                        props.processState.isLoadingError() || ! readyToRun ->
+                            "Please specify valid input"
+
+                        props.processState.indexTaskRunning ->
+                            "Pause index"
+
+                        props.processState.filterTaskRunning ->
+                            "Stop filter"
+
+                        hasSummary ->
+                            "Filter"
+
+                        else ->
+                            "Index"
+                    }
             }
 
-            child(MenuBookIcon::class) {
-                attrs {
-                    style = reactStyle {
-                        fontSize = 3.em
+            when {
+                props.processState.isInitialLoading() -> {
+                    child(MaterialCircularProgress::class) {}
+                }
+
+                props.processState.isLoadingError() -> {
+                    child(ErrorIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                fontSize = 3.em
+                            }
+                        }
+                    }
+                }
+
+                ! readyToRun -> {
+                    child(ErrorOutlineIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                fontSize = 3.em
+                            }
+                        }
+                    }
+                }
+
+                props.processState.isTaskRunning() -> {
+                    renderProgressWithPause()
+                }
+
+                hasSummary -> {
+                    child(PlayArrowIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                fontSize = 3.em
+                            }
+                        }
+                    }
+                }
+
+                else -> {
+                    child(MenuBookIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                fontSize = 3.em
+                            }
+                        }
                     }
                 }
             }
@@ -101,7 +207,55 @@ class ProcessRun(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderSecondaryActions() {
-        +"x"
+    private fun RBuilder.renderSecondaryActions(readyToRun: Boolean, hasSummary: Boolean) {
+        val showIndex =
+            ! props.processState.isTaskRunning() &&
+            readyToRun &&
+            hasSummary &&
+            ! (props.processState.taskProgress?.remainingFiles?.isEmpty() ?: true)
+
+        child(MaterialIconButton::class) {
+            attrs {
+                title = "Index column values"
+
+                style = reactStyle {
+                    if (! state.fabHover || ! showIndex) {
+                        visibility = Visibility.hidden
+                    }
+                }
+
+                onClick = {
+                    onRunIndex()
+                }
+            }
+
+            child(MenuBookIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        fontSize = 1.5.em
+                    }
+                }
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderProgressWithPause() {
+        child(MaterialCircularProgress::class) {}
+
+        child(PauseIcon::class) {
+            attrs {
+                style = reactStyle {
+                    fontSize = 3.em
+                    margin = "auto"
+                    position = Position.absolute
+                    top = 0.px
+                    left = 0.px
+                    bottom = 0.px
+                    right = 0.px
+                }
+            }
+        }
     }
 }

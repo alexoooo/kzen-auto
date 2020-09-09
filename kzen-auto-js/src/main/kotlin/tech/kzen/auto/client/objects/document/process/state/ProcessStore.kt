@@ -109,12 +109,13 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
             subscriber?.onProcessState(state)
         }
 
-        val outcomeAction = ProcessEffect.effect(nextState, prevState, action)
-            ?: return listOf()
+        val outcomeActions = ProcessEffect.effect(nextState, /*prevState,*/ action)
 
-        val additionalEffects = dispatch(outcomeAction)
-
-        val allEffects = listOf(outcomeAction) + additionalEffects
+        val allEffects =
+            outcomeActions +
+            outcomeActions.flatMap{
+                dispatch(it)
+            }
 
         val refreshSchedule = allEffects
             .filterIsInstance<ProcessRefreshSchedule>()

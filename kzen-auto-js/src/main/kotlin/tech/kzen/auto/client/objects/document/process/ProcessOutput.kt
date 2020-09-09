@@ -1,17 +1,24 @@
 package tech.kzen.auto.client.objects.document.process
 
 import kotlinx.css.*
+import kotlinx.html.title
 import react.RBuilder
 import react.RProps
 import react.RPureComponent
 import react.RState
+import react.dom.div
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.common.DefaultAttributeEditor
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
+import tech.kzen.auto.client.objects.document.process.state.ListInputsRequest
+import tech.kzen.auto.client.objects.document.process.state.OutputLookupRequest
+import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.SaveAltIcon
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.filter.FilterConventions
 
 
 class ProcessOutput(
@@ -21,11 +28,18 @@ class ProcessOutput(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-        var processState: ProcessState
+        var processState: ProcessState,
+        var dispatcher: ProcessDispatcher
     ): RProps
 
 
     class State: RState
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onFileChanged() {
+        props.dispatcher.dispatchAsync(OutputLookupRequest)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -94,7 +108,81 @@ class ProcessOutput(
 
     private fun RBuilder.renderOutput() {
         styledDiv {
-            +"..."
+            renderFile()
+            renderInfo()
+        }
+    }
+
+
+    private fun RBuilder.renderFile() {
+        styledDiv {
+            css {
+                marginTop = 0.5.em
+            }
+
+            attrs {
+                if (props.processState.filterTaskRunning) {
+                    title = "Disabled filter running"
+                }
+            }
+
+            child(DefaultAttributeEditor::class) {
+                attrs {
+                    clientState = props.processState.clientState
+                    objectLocation = props.processState.mainLocation
+                    attributeName = FilterConventions.outputAttribute
+                    labelOverride = "File"
+                    disabled = props.processState.filterTaskRunning
+                    onChange = {
+                        onFileChanged()
+                    }
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderInfo() {
+        val error = props.processState.outputError
+        if (error != null) {
+            +"Lookup error: $error"
+            return
+        }
+
+        val outputInfo = props.processState.outputInfo
+
+        styledDiv {
+            css {
+                marginTop = 0.5.em
+            }
+
+            if (outputInfo == null) {
+                +"..."
+            }
+            else {
+                div {
+                    +"Absolute path: "
+
+                    styledSpan {
+                        css {
+                            fontFamily = "monospace"
+                        }
+
+                        +outputInfo.absolutePath
+                    }
+                }
+
+                if (outputInfo.modifiedTime == null) {
+                    +"Does not exist, will create"
+
+                    if (! outputInfo.folderExists) {
+                        +" (along with containing folder)"
+                    }
+                }
+                else {
+                    +"Exists, last modified: ${outputInfo.modifiedTime}"
+                }
+            }
         }
     }
 }

@@ -136,7 +136,7 @@ class ProcessInput(
             }
 
             attrs {
-                if (props.processState.taskRunning()) {
+                if (props.processState.isTaskRunning()) {
                     title = "Disabled while task running"
                 }
             }
@@ -147,7 +147,7 @@ class ProcessInput(
                     objectLocation = props.processState.mainLocation
                     attributeName = FilterConventions.inputAttribute
                     labelOverride = "File Path"
-                    disabled = props.processState.taskRunning()
+                    disabled = props.processState.isTaskRunning()
                     onChange = {
                         onAttributeChanged(it)
                     }
@@ -299,7 +299,7 @@ class ProcessInput(
 
 
     private fun RBuilder.renderProgress(taskProgress: TaskProgress) {
-        if (! props.processState.taskRunning()) {
+        if (! props.processState.isTaskRunning()) {
             return
         }
 

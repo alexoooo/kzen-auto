@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.process.state
 
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.auto.common.objects.document.filter.OutputInfo
 import tech.kzen.auto.common.paradigm.reactive.TableSummary
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
@@ -22,6 +23,11 @@ data class ProcessState(
     val columnListingLoading: Boolean = false,
     val columnListing: List<String>? = null,
     val columnListingError: String? = null,
+
+    val outputLoaded: Boolean = false,
+    val outputLoading: Boolean = false,
+    val outputInfo: OutputInfo? = null,
+    val outputError: String? = null,
 
     val taskLoaded: Boolean = false,
     val taskLoading: Boolean = false,
@@ -80,7 +86,20 @@ data class ProcessState(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun taskRunning(): Boolean {
+    fun isTaskRunning(): Boolean {
         return indexTaskRunning || filterTaskRunning
+    }
+
+
+    fun isInitialLoading(): Boolean {
+        return fileListingLoading || columnListingLoading || taskLoading || outputLoading
+    }
+
+
+    fun isLoadingError(): Boolean {
+        return columnListingError != null ||
+                fileListingError != null ||
+                taskLoadError != null ||
+                tableSummaryError != null
     }
 }

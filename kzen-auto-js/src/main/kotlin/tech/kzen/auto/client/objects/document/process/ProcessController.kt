@@ -124,6 +124,7 @@ class ProcessController(
         child(ProcessOutput::class) {
             attrs {
                 this.processState = processState
+                this.dispatcher = store
             }
         }
     }

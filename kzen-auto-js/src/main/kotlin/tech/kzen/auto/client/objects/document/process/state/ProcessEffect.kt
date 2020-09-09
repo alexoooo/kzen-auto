@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.process.state
 
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.auto.common.objects.document.filter.OutputInfo
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
@@ -27,13 +28,16 @@ object ProcessEffect {
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun effect(
         state: ProcessState,
-        prevState: ProcessState,
+//        prevState: ProcessState,
         action: ProcessAction
-    ): ProcessAction? {
-        return when (action) {
-            InitiateProcessEffect ->
-                ListInputsRequest
+    ): List<ProcessAction> {
+        if (action == InitiateProcessEffect) {
+            return listOf(ListInputsRequest, OutputLookupRequest)
+        }
 
+        val nextAction = when (action) {
+            OutputLookupRequest ->
+                lookupOutput(state)
 
             ListInputsRequest ->
                 loadFileListing(state)
@@ -45,7 +49,12 @@ object ProcessEffect {
             ListColumnsRequest ->
                 loadColumnListing(state)
 
+
             is ListColumnsResponse ->
+                ProcessTaskLookupRequest
+
+
+            ProcessTaskLookupRequest ->
                 loadTask(state)
 
 
@@ -60,11 +69,13 @@ object ProcessEffect {
                 else -> null
             }
 
+
             SummaryLookupRequest ->
                 lookupSummary(state)
 
+
             is ProcessTaskRunRequest ->
-                runSummaryTask(state)
+                runTask(state, action.type)
 
             is ProcessTaskRunResponse ->
                 if (action.taskModel.state == TaskState.Running) {
@@ -79,10 +90,21 @@ object ProcessEffect {
                 refreshTask(action.taskId)
 
             is ProcessTaskRefreshResponse ->
-                if (action.taskModel != null && action.taskModel.state == TaskState.Running) {
-//                    println("^^^^ ProcessTaskRefreshResponse - scheduling")
-                    ProcessRefreshSchedule(
-                        ProcessTaskRefreshRequest(action.taskModel.taskId))
+                if (action.taskModel != null) {
+                    if (action.taskModel.state == TaskState.Running) {
+                        ProcessRefreshSchedule(
+                            ProcessTaskRefreshRequest(action.taskModel.taskId))
+                    }
+                    else {
+                        val requestAction = action.taskModel.request.parameters.get(FilterConventions.actionParameter)!!
+                        val isFiltering = requestAction == FilterConventions.actionFilterTask
+                        if (isFiltering) {
+                            OutputLookupRequest
+                        }
+                        else {
+                            null
+                        }
+                    }
                 }
                 else {
                     null
@@ -101,11 +123,13 @@ object ProcessEffect {
             is FilterValueRemoveRequest ->
                 submitFilterValueRemove(state, action.columnName, action.filterValue)
 
-//            is FilterUpdateRequest ->
-//                submitFilterUpdate(state, action.columnName, action.filterValues)
-
 
             else -> null
+        }
+
+        return when (nextAction) {
+            null -> listOf()
+            else -> listOf(nextAction)
         }
     }
 
@@ -150,7 +174,7 @@ object ProcessEffect {
             }
 
             is ExecutionFailure -> {
-                ListInputsError(result.errorMessage)
+                ListColumnsError(result.errorMessage)
             }
         }
     }
@@ -159,7 +183,7 @@ object ProcessEffect {
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun loadTask(
         state: ProcessState
-    ): ProcessAction {
+    ): ProcessTaskLookupResponse {
         val activeTasks = ClientContext.clientRestTaskRepository.lookupActive(state.mainLocation)
 
         if (activeTasks.isEmpty()) {
@@ -184,7 +208,7 @@ object ProcessEffect {
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun lookupSummary(
         state: ProcessState
-    ): ProcessAction {
+    ): SummaryLookupAction {
         val result = ClientContext.restClient.performDetached(
             state.mainLocation,
             FilterConventions.actionParameter to FilterConventions.actionSummaryLookup)
@@ -210,14 +234,48 @@ object ProcessEffect {
     }
 
 
-    private suspend fun runSummaryTask(
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun lookupOutput(
         state: ProcessState
     ): ProcessAction {
+        val result = ClientContext.restClient.performDetached(
+            state.mainLocation,
+            FilterConventions.actionParameter to FilterConventions.actionLookupOutput)
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val resultValue = result.value.get() as Map<String, Any?>
+                val outputInfo = OutputInfo.fromCollection(resultValue)
+
+                OutputLookupResult(outputInfo)
+            }
+
+            is ExecutionFailure -> {
+                OutputLookupError(result.errorMessage)
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun runTask(
+        state: ProcessState,
+        type: ProcessTaskType
+    ): ProcessAction {
+        val action = when (type) {
+            ProcessTaskType.Index ->
+                FilterConventions.actionSummaryTask
+
+            ProcessTaskType.Filter ->
+                FilterConventions.actionFilterTask
+        }
+
         val result = ClientContext.clientRestTaskRepository.submit(
             state.mainLocation,
             DetachedRequest(
                 RequestParams.of(
-                    FilterConventions.actionParameter to FilterConventions.actionSummaryTask),
+                    FilterConventions.actionParameter to action),
                 null))
 
         return ProcessTaskRunResponse(result)
@@ -276,35 +334,6 @@ object ProcessEffect {
                 FilterUpdateResult(null)
         }
     }
-
-
-//    private suspend fun submitFilterUpdate(
-//        state: ProcessState,
-//        columnName: String,
-//        filterValues: List<String>
-//    ): ProcessAction {
-//        val columnAttributeSegment = AttributeSegment.ofKey(columnName)
-//        val columnAttributePath = FilterConventions.criteriaAttributePath.copy(
-//            nesting = AttributeNesting(persistentListOf(columnAttributeSegment)))
-//
-////            ClientContext.mirroredGraphStore.apply(
-////                UpdateInAttributeCommand(
-////                    props.processState.mainLocation,
-////                    props.attributeName,
-////                    attributeNotation)
-////            )
-//
-//        ClientContext.mirroredGraphStore.apply(
-//            UpdateInAttributeCommand(
-//                state.mainLocation,
-//                columnAttributePath,
-//                ListAttributeNotation(
-//                    filterValues
-//                        .map { ScalarAttributeNotation(it) }
-//                        .toPersistentList())))
-//
-//        return FilterUpdateResult(null)
-//    }
 
 
     private suspend fun submitFilterValueAdd(

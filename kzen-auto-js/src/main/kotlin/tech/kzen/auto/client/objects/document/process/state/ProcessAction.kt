@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.process.state
 
+import tech.kzen.auto.common.objects.document.filter.OutputInfo
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.reactive.TableSummary
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
@@ -156,6 +157,23 @@ data class SummaryLookupResult(
 data class SummaryLookupError(
     val errorMessage: String
 ): SummaryLookupAction()
+
+
+//---------------------------------------------------------------------------------------------------------------------
+sealed class OutputLookupAction: ProcessAction()
+
+
+object OutputLookupRequest: OutputLookupAction()
+
+
+data class OutputLookupResult(
+    val outputInfo: OutputInfo
+): OutputLookupAction()
+
+
+data class OutputLookupError(
+    val errorMessage: String
+): OutputLookupAction()
 
 
 //---------------------------------------------------------------------------------------------------------------------
