@@ -59,18 +59,26 @@ class ProcessRun(
             return
         }
 
-        if (props.processState.isTaskRunning()) {
-            // pause
-        }
-        else if (hasSummary) {
-            props.dispatcher.dispatchAsync(
-                ProcessTaskRunRequest(
-                    ProcessTaskType.Filter))
-        }
-        else {
-            props.dispatcher.dispatchAsync(
-                ProcessTaskRunRequest(
-                    ProcessTaskType.Index))
+        when {
+            props.processState.isTaskRunning() -> {
+                val taskId = props.processState.taskModel?.taskId
+                    ?: return
+
+                props.dispatcher.dispatchAsync(
+                    ProcessTaskStopRequest(taskId))
+            }
+
+            hasSummary -> {
+                props.dispatcher.dispatchAsync(
+                    ProcessTaskRunRequest(
+                        ProcessTaskType.Filter))
+            }
+
+            else -> {
+                props.dispatcher.dispatchAsync(
+                    ProcessTaskRunRequest(
+                        ProcessTaskType.Index))
+            }
         }
     }
 

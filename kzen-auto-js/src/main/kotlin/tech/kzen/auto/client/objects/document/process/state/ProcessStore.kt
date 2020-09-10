@@ -98,7 +98,35 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun dispatch(action: ProcessAction): List<ProcessAction> {
+    override suspend fun dispatch(action: ProcessAction): List<SingularProcessAction> {
+        val transitiveActions =  action
+            .flatten()
+            .flatMap { dispatchSingular(it) }
+
+//        console.log("ProcessStore - allEffects: " +
+//                "${action::class.simpleName} - ${transitiveActions.map { it::class.simpleName }}")
+
+        val refreshSchedule = transitiveActions
+            .filterIsInstance<ProcessRefreshAction>()
+            .lastOrNull()
+
+        if (refreshSchedule != null) {
+//            console.log("ProcessStore - refreshSchedule: $refreshSchedule")
+
+            when (refreshSchedule) {
+                is ProcessRefreshSchedule ->
+                    scheduleRefresh(refreshSchedule.refreshAction)
+
+                ProcessRefreshCancel ->
+                    clearRefresh()
+            }
+        }
+
+        return transitiveActions
+    }
+
+
+    private suspend fun dispatchSingular(action: SingularProcessAction): List<SingularProcessAction> {
         val prevState = state
             ?: return listOf()
 
@@ -109,23 +137,17 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
             subscriber?.onProcessState(state)
         }
 
-        val outcomeActions = ProcessEffect.effect(nextState, /*prevState,*/ action)
+        val effectAction = ProcessEffect.effect(nextState, /*prevState,*/ action)
+            ?: return listOf(action)
 
-        val allEffects =
-            outcomeActions +
-            outcomeActions.flatMap{
-                dispatch(it)
-            }
+        val transitiveActions = effectAction
+            .flatten()
+            .flatMap { dispatchSingular(it) }
 
-        val refreshSchedule = allEffects
-            .filterIsInstance<ProcessRefreshSchedule>()
-            .lastOrNull()
+//        console.log("ProcessStore processSingular: " +
+//                "${action::class.simpleName} - ${transitiveActions.map { it::class.simpleName }}")
 
-        if (refreshSchedule != null) {
-            scheduleRefresh(refreshSchedule.refreshAction)
-        }
-
-        return allEffects
+        return listOf(action) + transitiveActions
     }
 
 

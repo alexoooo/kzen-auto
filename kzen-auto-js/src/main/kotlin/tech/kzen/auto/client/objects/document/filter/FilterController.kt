@@ -675,7 +675,7 @@ class FilterController(
 
             when (
                 val result = taskModel.finalResult!!
-                ) {
+            ) {
                 is ExecutionSuccess -> {
 //                    console.log("%%%%%% result.value: ${result.value}")
 

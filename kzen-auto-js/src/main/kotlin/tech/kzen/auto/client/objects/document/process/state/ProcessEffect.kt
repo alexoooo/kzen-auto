@@ -29,13 +29,15 @@ object ProcessEffect {
     suspend fun effect(
         state: ProcessState,
 //        prevState: ProcessState,
-        action: ProcessAction
-    ): List<ProcessAction> {
+        action: SingularProcessAction
+    ): ProcessAction? {
+//        console.log("ProcessEffect action: ", action)
+
         if (action == InitiateProcessEffect) {
-            return listOf(ListInputsRequest, OutputLookupRequest)
+            return CompoundProcessAction(ListInputsRequest, OutputLookupRequest)
         }
 
-        val nextAction = when (action) {
+        return when (action) {
             OutputLookupRequest ->
                 lookupOutput(state)
 
@@ -58,16 +60,8 @@ object ProcessEffect {
                 loadTask(state)
 
 
-            is ProcessTaskLookupResponse -> when {
-                action.taskModel == null ->
-                    SummaryLookupRequest
-
-                action.taskModel.state == TaskState.Running ->
-                    ProcessRefreshSchedule(
-                        ProcessTaskRefreshRequest(action.taskModel.taskId))
-
-                else -> null
-            }
+            is ProcessTaskLookupResponse ->
+                taskLoaded(action)
 
 
             SummaryLookupRequest ->
@@ -78,37 +72,19 @@ object ProcessEffect {
                 runTask(state, action.type)
 
             is ProcessTaskRunResponse ->
-                if (action.taskModel.state == TaskState.Running) {
-                    ProcessRefreshSchedule(
-                        ProcessTaskRefreshRequest(action.taskModel.taskId))
-                }
-                else {
-                    null
-                }
+                taskRunning(action)
 
             is ProcessTaskRefreshRequest ->
                 refreshTask(action.taskId)
 
             is ProcessTaskRefreshResponse ->
-                if (action.taskModel != null) {
-                    if (action.taskModel.state == TaskState.Running) {
-                        ProcessRefreshSchedule(
-                            ProcessTaskRefreshRequest(action.taskModel.taskId))
-                    }
-                    else {
-                        val requestAction = action.taskModel.request.parameters.get(FilterConventions.actionParameter)!!
-                        val isFiltering = requestAction == FilterConventions.actionFilterTask
-                        if (isFiltering) {
-                            OutputLookupRequest
-                        }
-                        else {
-                            null
-                        }
-                    }
-                }
-                else {
-                    null
-                }
+                refreshTaskLoop(action)
+
+            is ProcessTaskStopRequest ->
+                stopTask(action)
+
+            is ProcessTaskStopResponse ->
+                taskStopped(action)
 
 
             is FilterAddRequest ->
@@ -125,11 +101,6 @@ object ProcessEffect {
 
 
             else -> null
-        }
-
-        return when (nextAction) {
-            null -> listOf()
-            else -> listOf(nextAction)
         }
     }
 
@@ -197,11 +168,74 @@ object ProcessEffect {
     }
 
 
+    private fun taskLoaded(
+        action: ProcessTaskLookupResponse
+    ): ProcessAction? {
+        val taskModel = action.taskModel
+            ?: return SummaryLookupRequest
+
+        if (taskModel.state == TaskState.Running) {
+            return ProcessRefreshSchedule(
+                ProcessTaskRefreshRequest(action.taskModel.taskId))
+        }
+
+        return null
+    }
+
+
     private suspend fun refreshTask(
         taskId: TaskId
     ): ProcessAction {
         val model = ClientContext.clientRestTaskRepository.query(taskId)
         return ProcessTaskRefreshResponse(model)
+    }
+
+
+    private fun refreshTaskLoop(
+        action: ProcessTaskRefreshResponse
+    ): ProcessAction? {
+        val taskModel = action.taskModel
+            ?: return null
+
+        if (taskModel.state == TaskState.Running) {
+            return ProcessRefreshSchedule(
+                ProcessTaskRefreshRequest(action.taskModel.taskId))
+        }
+
+        val requestAction = taskModel.requestAction()
+        val isFiltering = requestAction == FilterConventions.actionFilterTask
+
+        if (isFiltering) {
+            return OutputLookupRequest
+        }
+
+        return null
+    }
+
+
+    private suspend fun stopTask(
+        action: ProcessTaskStopRequest
+    ): ProcessTaskStopResponse? {
+        val taskModel = ClientContext.clientRestTaskRepository.cancel(action.taskId)
+            ?: return null
+
+        return ProcessTaskStopResponse(taskModel)
+    }
+
+
+    private fun taskStopped(
+        action: ProcessTaskStopResponse
+    ): ProcessAction? {
+        val requestAction = action.taskModel.requestAction()
+        val isFiltering = requestAction == FilterConventions.actionFilterTask
+
+        return if (isFiltering) {
+            CompoundProcessAction(
+                ProcessRefreshCancel, OutputLookupRequest)
+        }
+        else {
+            ProcessRefreshCancel
+        }
     }
 
 
@@ -279,6 +313,18 @@ object ProcessEffect {
                 null))
 
         return ProcessTaskRunResponse(result)
+    }
+
+
+    private fun taskRunning(
+        action: ProcessTaskRunResponse
+    ): ProcessAction? {
+        if (action.taskModel.state != TaskState.Running) {
+            return null
+        }
+
+        return ProcessRefreshSchedule(
+            ProcessTaskRefreshRequest(action.taskModel.taskId))
     }
 
 

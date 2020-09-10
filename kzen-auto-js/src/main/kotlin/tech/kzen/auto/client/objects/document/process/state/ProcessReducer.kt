@@ -12,12 +12,12 @@ object ProcessReducer {
     //-----------------------------------------------------------------------------------------------------------------
     fun reduce(
         state: ProcessState,
-        action: ProcessAction
+        action: SingularProcessAction
     ): ProcessState {
         return when (action) {
             //--------------------------------------------------
             InitiateProcessEffect -> state
-            is ProcessRefreshSchedule -> state
+            is ProcessRefreshAction -> state
 
             //--------------------------------------------------
             is ListInputsAction ->
@@ -118,6 +118,12 @@ object ProcessReducer {
 
             is ProcessTaskRefreshResponse ->
                 reduceTaskRefreshResponse(state, action)
+
+            is ProcessTaskStopRequest -> state.copy(
+                taskStopping = true)
+
+            is ProcessTaskStopResponse ->
+                reduceTaskStopResponse(state, action)
         }
     }
 
@@ -137,13 +143,13 @@ object ProcessReducer {
 
         val result = model.finalOrPartialResult()
 
-        val requestAction = model.request.parameters.get(FilterConventions.actionParameter)!!
+        val requestAction = model.requestAction()
         val isIndexing = requestAction == FilterConventions.actionSummaryTask
         val isRunning = model.state == TaskState.Running
 
         return when (result) {
             is ExecutionSuccess -> {
-                val tableSummary = model.tableSummary()!!
+                val tableSummary = TableSummary.fromExecutionSuccess(result)
                 val tableSummaryProgress = model.taskProgress()!!
 
                 state.copy(
@@ -174,12 +180,12 @@ object ProcessReducer {
         action: ProcessTaskRunResponse
     ): ProcessState {
         val isRunning = action.taskModel.state == TaskState.Running
-        val requestAction = action.taskModel.request.parameters.get(FilterConventions.actionParameter)!!
+        val requestAction = action.taskModel.requestAction()
         val isIndexing = requestAction == FilterConventions.actionSummaryTask
 
         val tableSummary =
             if (isIndexing) {
-                action.taskModel.tableSummary()
+                TableSummary.fromTaskModel(action.taskModel)
             }
             else {
                 state.tableSummary
@@ -208,12 +214,12 @@ object ProcessReducer {
         }
 
         val isRunning = action.taskModel.state == TaskState.Running
-        val requestAction = action.taskModel.request.parameters.get(FilterConventions.actionParameter)!!
+        val requestAction = action.taskModel.requestAction()
         val isIndexing = requestAction == FilterConventions.actionSummaryTask
 
         val tableSummary =
             if (isIndexing) {
-                action.taskModel.tableSummary()
+                TableSummary.fromTaskModel(action.taskModel)
             }
             else {
                 state.tableSummary
@@ -225,6 +231,30 @@ object ProcessReducer {
             taskProgress = action.taskModel.taskProgress(),
             indexTaskRunning = isRunning && isIndexing,
             filterTaskRunning = isRunning && ! isIndexing)
+    }
+
+
+    private fun reduceTaskStopResponse(
+        state: ProcessState,
+        action: ProcessTaskStopResponse
+    ): ProcessState {
+        val requestAction = action.taskModel.requestAction()
+        val isIndexing = requestAction == FilterConventions.actionSummaryTask
+
+        val tableSummary =
+            if (isIndexing) {
+                TableSummary.fromTaskModel(action.taskModel)
+            }
+            else {
+                state.tableSummary
+            }
+
+        return state.copy(
+            taskStopping = false,
+            tableSummary = tableSummary,
+            indexTaskRunning = false,
+            filterTaskRunning = false,
+            taskProgress = null)
     }
 
 

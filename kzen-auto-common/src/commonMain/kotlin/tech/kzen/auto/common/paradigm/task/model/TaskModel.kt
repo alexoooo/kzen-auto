@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.paradigm.task.model
 
+import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
@@ -59,18 +60,6 @@ data class TaskModel(
     }
 
 
-    fun tableSummary(): TableSummary? {
-        val result = finalOrPartialResult() as? ExecutionSuccess
-            ?: return null
-
-        @Suppress("UNCHECKED_CAST")
-        val resultValue =
-            result.value.get() as Map<String, Map<String, Any>>
-
-        return TableSummary.fromCollection(resultValue)
-    }
-
-
     fun taskProgress(): TaskProgress? {
         val result = finalOrPartialResult() as? ExecutionSuccess
             ?: return null
@@ -80,5 +69,10 @@ data class TaskModel(
             ?: return null
 
         return TaskProgress.fromCollection(resultDetail)
+    }
+
+
+    fun requestAction(): String {
+        return request.parameters.get(FilterConventions.actionParameter)!!
     }
 }

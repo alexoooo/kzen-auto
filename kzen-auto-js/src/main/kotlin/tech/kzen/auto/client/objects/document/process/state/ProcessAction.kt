@@ -9,15 +9,52 @@ import tech.kzen.auto.common.paradigm.task.model.TaskModel
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class ProcessAction
+sealed class ProcessAction {
+    abstract fun flatten(): List<SingularProcessAction>
+}
+
+
+sealed class SingularProcessAction: ProcessAction() {
+    override fun flatten(): List<SingularProcessAction> =
+        listOf(this)
+}
+
+
+data class CompoundProcessAction(
+    val actions: List<ProcessAction>
+):
+    ProcessAction()
+{
+    constructor(vararg processActions: ProcessAction): this(processActions.asList())
+
+
+    override fun flatten(): List<SingularProcessAction> {
+        val builder = mutableListOf<SingularProcessAction>()
+        flattenInto(builder)
+        return builder
+    }
+
+
+    private fun flattenInto(builder: MutableList<SingularProcessAction>) {
+        for (action in actions) {
+            when (action) {
+                is CompoundProcessAction ->
+                    action.flattenInto(builder)
+
+                is SingularProcessAction ->
+                    builder.add(action)
+            }
+        }
+    }
+}
 
 
 //---------------------------------------------------------------------------------------------------------------------
-object InitiateProcessEffect: ProcessAction()
+object InitiateProcessEffect: SingularProcessAction()
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class ListInputsAction: ProcessAction()
+sealed class ListInputsAction: SingularProcessAction()
 
 
 object ListInputsRequest: ListInputsAction()
@@ -37,7 +74,7 @@ data class ListInputsError(
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class ListColumnsAction: ProcessAction()
+sealed class ListColumnsAction: SingularProcessAction()
 
 
 object ListColumnsRequest: ListColumnsAction()
@@ -54,7 +91,7 @@ data class ListColumnsError(
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class FilterAction: ProcessAction()
+sealed class FilterAction: SingularProcessAction()
 
 
 //--------------------------------------------------------------
@@ -77,21 +114,7 @@ data class FilterRemoveRequest(
 ): FilterAction()
 
 
-//object FilterRemoveResponse: FilterAction()
-//
-//
-//data class FilterRemoveError(
-//    val message: String
-//): FilterAction()
-
-
 //--------------------------------------------------------------
-//data class FilterUpdateRequest(
-//    val columnName: String,
-//    val filterValues: List<String>
-//): FilterAction()
-
-
 data class FilterValueAddRequest(
     val columnName: String,
     val filterValue: String
@@ -110,7 +133,7 @@ data class FilterUpdateResult(
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class ProcessTaskAction: ProcessAction()
+sealed class ProcessTaskAction: SingularProcessAction()
 
 
 object ProcessTaskLookupRequest: ProcessTaskAction()
@@ -141,8 +164,19 @@ data class ProcessTaskRefreshResponse(
 ): ProcessTaskAction()
 
 
+data class ProcessTaskStopRequest(
+    val taskId: TaskId
+): ProcessTaskAction()
+
+
+data class ProcessTaskStopResponse(
+    val taskModel: TaskModel
+): ProcessTaskAction()
+
+
+
 //---------------------------------------------------------------------------------------------------------------------
-sealed class SummaryLookupAction: ProcessAction()
+sealed class SummaryLookupAction: SingularProcessAction()
 
 
 object SummaryLookupRequest: SummaryLookupAction()
@@ -160,7 +194,7 @@ data class SummaryLookupError(
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class OutputLookupAction: ProcessAction()
+sealed class OutputLookupAction: SingularProcessAction()
 
 
 object OutputLookupRequest: OutputLookupAction()
@@ -177,6 +211,12 @@ data class OutputLookupError(
 
 
 //---------------------------------------------------------------------------------------------------------------------
+sealed class ProcessRefreshAction: SingularProcessAction()
+
+
 data class ProcessRefreshSchedule(
     val refreshAction: ProcessAction
-): ProcessAction()
+): ProcessRefreshAction()
+
+
+object ProcessRefreshCancel: ProcessRefreshAction()

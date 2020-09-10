@@ -32,6 +32,7 @@ data class ProcessState(
     val taskLoaded: Boolean = false,
     val taskLoading: Boolean = false,
     val taskStarting: Boolean = false,
+    val taskStopping: Boolean = false,
     val indexTaskRunning: Boolean = false,
     val filterTaskRunning: Boolean = false,
     val taskModel: TaskModel? = null,
