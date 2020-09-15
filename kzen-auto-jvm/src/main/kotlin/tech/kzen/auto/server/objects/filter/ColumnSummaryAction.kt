@@ -66,7 +66,7 @@ object ColumnSummaryAction {
                 ExecutionValue.of(tableSummary.toCollection())))
         }
         else {
-            summarizeRemainingAsync(inputPaths, columnNames, builder, handle)
+            summarizeRemainingAsync(notLoaded, columnNames, builder, handle)
         }
     }
 
@@ -84,7 +84,7 @@ object ColumnSummaryAction {
             ExecutionValue.of(initialTableSummary.toCollection()),
             ExecutionValue.of(progress.toCollection())))
 
-        Thread(Runnable {
+        Thread {
             val remainingInputPathsBuilder = remainingInputPaths.toMutableList()
             while (remainingInputPathsBuilder.isNotEmpty()) {
                 val inputPath = remainingInputPathsBuilder.removeAt(0)
@@ -92,7 +92,8 @@ object ColumnSummaryAction {
                 val (columnSummaries,
                     nextProgress
                 ) = buildValueSummariesAsync(
-                    inputPath, columnNames, builder, /*remainingInputPathsBuilder, */progress, handle)
+                    inputPath, columnNames, builder, /*remainingInputPathsBuilder, */progress, handle
+                )
                 progress = nextProgress
 
                 if (columnSummaries == null) {
@@ -107,9 +108,12 @@ object ColumnSummaryAction {
                 }
             }
 
-            handle.complete(ExecutionSuccess.ofValue(
-                ExecutionValue.of(builder.mapValues { it.value.toCollection() })))
-        }).start()
+            handle.complete(
+                ExecutionSuccess.ofValue(
+                    ExecutionValue.of(builder.mapValues { it.value.toCollection() })
+                )
+            )
+        }.start()
     }
 
 

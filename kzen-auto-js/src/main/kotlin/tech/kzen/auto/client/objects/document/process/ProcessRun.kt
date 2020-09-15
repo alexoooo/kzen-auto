@@ -220,7 +220,10 @@ class ProcessRun(
             ! props.processState.isTaskRunning() &&
             readyToRun &&
             hasSummary &&
-            ! (props.processState.taskProgress?.remainingFiles?.isEmpty() ?: true)
+            (props.processState.taskProgress?.remainingFiles?.isNotEmpty() ?: true)
+
+//        console.log("^^^^ renderSecondaryActions: " +
+//                "${props.processState.taskProgress?.remainingFiles}")
 
         child(MaterialIconButton::class) {
             attrs {
