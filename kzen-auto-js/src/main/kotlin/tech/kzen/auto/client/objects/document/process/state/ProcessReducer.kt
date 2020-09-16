@@ -4,7 +4,6 @@ import tech.kzen.auto.common.objects.document.filter.FilterConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.reactive.TableSummary
-import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.model.TaskState
 
 
@@ -16,7 +15,9 @@ object ProcessReducer {
     ): ProcessState {
         return when (action) {
             //--------------------------------------------------
-            InitiateProcessEffect -> state
+            is InitiateProcessAction ->
+                reduceInitiate(state, action)
+
             is ProcessRefreshAction -> state
 
             //--------------------------------------------------
@@ -41,6 +42,21 @@ object ProcessReducer {
             //--------------------------------------------------
 //            else ->
 //                state
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun reduceInitiate(
+        state: ProcessState,
+        action: InitiateProcessAction
+    ): ProcessState {
+        return when (action) {
+            InitiateProcessStart -> state.copy(
+                initiating = true)
+
+            InitiateProcessDone -> state.copy(
+                initiating = false)
         }
     }
 

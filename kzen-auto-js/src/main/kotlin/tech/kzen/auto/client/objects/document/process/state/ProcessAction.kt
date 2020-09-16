@@ -50,7 +50,13 @@ data class CompoundProcessAction(
 
 
 //---------------------------------------------------------------------------------------------------------------------
-object InitiateProcessEffect: SingularProcessAction()
+sealed class InitiateProcessAction: SingularProcessAction()
+
+
+object InitiateProcessStart: InitiateProcessAction()
+
+
+object InitiateProcessDone: InitiateProcessAction()
 
 
 //---------------------------------------------------------------------------------------------------------------------

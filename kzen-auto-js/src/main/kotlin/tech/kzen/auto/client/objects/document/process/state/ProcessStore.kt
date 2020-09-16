@@ -92,7 +92,10 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
 
         if (initial) {
             clearRefresh()
-            dispatchAsync(InitiateProcessEffect)
+            async {
+                dispatch(InitiateProcessStart)
+                dispatch(InitiateProcessDone)
+            }
         }
     }
 

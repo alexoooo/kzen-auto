@@ -102,9 +102,9 @@ class ProcessRun(
 
     private fun RBuilder.renderInner() {
         val readyToRun =
-            ! props.processState.isInitialLoading() &&
-                    ! props.processState.isLoadingError() &&
-                    (props.processState.columnListing?.isNotEmpty() ?: false)
+            ! props.processState.initiating &&
+            ! props.processState.isLoadingError() &&
+            (props.processState.columnListing?.isNotEmpty() ?: false)
 
         val hasSummary =
             props.processState.tableSummary?.columnSummaries?.isNotEmpty() ?: false
@@ -141,7 +141,7 @@ class ProcessRun(
 
                 title =
                     when {
-                        props.processState.isInitialLoading() ->
+                        props.processState.initiating ->
                             "Loading"
 
                         props.processState.isLoadingError() || ! readyToRun ->
@@ -162,7 +162,7 @@ class ProcessRun(
             }
 
             when {
-                props.processState.isInitialLoading() -> {
+                props.processState.initiating -> {
                     child(MaterialCircularProgress::class) {}
                 }
 

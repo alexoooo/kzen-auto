@@ -8,6 +8,7 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.process.filter.ProcessFilterList
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.objects.document.process.state.ProcessStore
+import tech.kzen.auto.client.wrap.MaterialLinearProgress
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -83,11 +84,10 @@ class ProcessController(
         val processState = state.processState
             ?: return
 
+        renderInitialLoading(processState)
+
         styledDiv {
             css {
-//                padding(1.em)
-//                padding(2.em)
-//                padding(2.5.em)
                 padding(3.em)
             }
 
@@ -97,6 +97,28 @@ class ProcessController(
         }
 
         renderRun(processState)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderInitialLoading(processState: ProcessState) {
+        if (processState.initiating) {
+            styledDiv {
+                css {
+                    position = Position.relative
+                }
+
+                styledDiv {
+                    css {
+                        position = Position.absolute
+                        left = 0.em
+                        top = 0.em
+                        width = 100.pct
+                    }
+                    child(MaterialLinearProgress::class) {}
+                }
+            }
+        }
     }
 
 

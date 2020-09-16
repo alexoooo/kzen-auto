@@ -14,6 +14,8 @@ data class ProcessState(
     val clientState: SessionState,
     val mainLocation: ObjectLocation,
 
+    val initiating: Boolean = false,
+
     val fileListingLoaded: Boolean = false,
     val fileListingLoading: Boolean = false,
     val fileListing: List<String>? = null,
@@ -92,9 +94,9 @@ data class ProcessState(
     }
 
 
-    fun isInitialLoading(): Boolean {
-        return fileListingLoading || columnListingLoading || taskLoading || outputLoading
-    }
+//    fun isInitialLoading(): Boolean {
+//        return fileListingLoading || columnListingLoading || taskLoading || outputLoading
+//    }
 
 
     fun isLoadingError(): Boolean {

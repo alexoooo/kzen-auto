@@ -33,7 +33,7 @@ object ProcessEffect {
     ): ProcessAction? {
 //        console.log("ProcessEffect action: ", action)
 
-        if (action == InitiateProcessEffect) {
+        if (action == InitiateProcessStart) {
             return CompoundProcessAction(ListInputsRequest, OutputLookupRequest)
         }
 
