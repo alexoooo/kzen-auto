@@ -229,17 +229,25 @@ class ProjectController(
             }
         }
 
+        val headerHeight = (state.headerHeight ?: 64).px
         styledDiv {
             css {
+                marginTop = headerHeight
                 marginLeft = sidebarWidth
-                marginTop = (state.headerHeight ?: 64).px
+//                position = Position.relative
             }
 
             if (state.commandError != null) {
                 +"!! ERROR: ${state.commandError}"
             }
 
-            props.stageController.child(this) {}
+            val context = StageController.CoordinateContext(
+                stageTop = headerHeight,
+                stageLeft = sidebarWidth)
+
+            StageController.StageContext.Provider(context) {
+                props.stageController.child(this) {}
+            }
         }
     }
 }

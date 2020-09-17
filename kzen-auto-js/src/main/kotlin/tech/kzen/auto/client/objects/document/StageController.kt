@@ -1,9 +1,6 @@
 package tech.kzen.auto.client.objects.document
 
-import kotlinx.css.em
-import kotlinx.css.fontSize
-import kotlinx.css.marginLeft
-import kotlinx.css.paddingTop
+import kotlinx.css.*
 import react.*
 import styled.css
 import styled.styledDiv
@@ -32,14 +29,30 @@ class StageController(
         NavigationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
+    data class CoordinateContext(
+        val stageTop: LinearDimension,
+        val stageLeft: LinearDimension
+    ) {
+        companion object {
+            val origin = CoordinateContext(0.px, 0.px)
+        }
+    }
+
+
+    companion object {
+        val StageContext = createContext(CoordinateContext.origin)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var documentControllers: List<DocumentController>
+        var documentControllers: List<DocumentController>
     ): RProps
 
 
     class State(
-            var structure: GraphStructure?,
-            var documentPath: DocumentPath?
+        var structure: GraphStructure?,
+        var documentPath: DocumentPath?
     ): RState
 
 

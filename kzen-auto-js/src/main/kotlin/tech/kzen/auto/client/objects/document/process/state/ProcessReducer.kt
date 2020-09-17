@@ -124,7 +124,8 @@ object ProcessReducer {
                 reduceTaskLookupResponse(state, action)
 
             is ProcessTaskRunRequest -> state.copy(
-                taskStarting = true)
+                taskStarting = true,
+                indexTaskFinished = false)
 
             is ProcessTaskRunResponse ->
                 reduceTaskRunResponse(state, action)
@@ -222,11 +223,13 @@ object ProcessReducer {
         action: ProcessTaskRefreshResponse
     ): ProcessState {
         if (action.taskModel == null) {
+            val indexTaskFinished = state.indexTaskRunning
             return state.copy(
                 taskModel = null,
                 taskProgress = null,
                 indexTaskRunning = false,
-                filterTaskRunning = false)
+                filterTaskRunning = false,
+                indexTaskFinished = indexTaskFinished)
         }
 
         val isRunning = action.taskModel.state == TaskState.Running
@@ -241,12 +244,17 @@ object ProcessReducer {
                 state.tableSummary
             }
 
+        val taskProcess = action.taskModel.taskProgress()
+        val indexTaskFinished =
+            isIndexing && action.taskModel.state == TaskState.Done && taskProcess == null
+
         return state.copy(
             taskModel = action.taskModel,
             tableSummary = tableSummary,
-            taskProgress = action.taskModel.taskProgress(),
+            taskProgress = taskProcess,
             indexTaskRunning = isRunning && isIndexing,
-            filterTaskRunning = isRunning && ! isIndexing)
+            filterTaskRunning = isRunning && ! isIndexing,
+            indexTaskFinished = indexTaskFinished)
     }
 
 
@@ -270,7 +278,8 @@ object ProcessReducer {
             tableSummary = tableSummary,
             indexTaskRunning = false,
             filterTaskRunning = false,
-            taskProgress = null)
+            taskProgress = null,
+            indexTaskFinished = false)
     }
 
 

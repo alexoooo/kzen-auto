@@ -60,8 +60,9 @@ class TargetSpecEditor(
     @Reflect
     class Wrapper(
             objectLocation: ObjectLocation
-    ) :
-            AttributeEditorWrapper(objectLocation) {
+    ):
+            AttributeEditorWrapper(objectLocation)
+    {
         override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>): ReactElement {
             return input.child(TargetSpecEditor::class) {
                 handler()

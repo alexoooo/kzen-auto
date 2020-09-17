@@ -9,7 +9,6 @@ import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
 import tech.kzen.auto.client.objects.document.common.DefaultAttributeEditor
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.auto.client.objects.document.feature.FeatureController
-import tech.kzen.auto.client.objects.document.filter.FilterController
 import tech.kzen.auto.client.objects.document.graph.GraphController
 import tech.kzen.auto.client.objects.document.process.ProcessController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
@@ -56,13 +55,6 @@ reflectionRegistry.put(
     listOf("archetype")
 ) { args ->
     FeatureController.Wrapper(args[0] as ObjectLocation)
-}
-
-reflectionRegistry.put(
-    "tech.kzen.auto.client.objects.document.filter.FilterController\$Wrapper",
-    listOf("archetype")
-) { args ->
-    FilterController.Wrapper(args[0] as ObjectLocation)
 }
 
 reflectionRegistry.put(

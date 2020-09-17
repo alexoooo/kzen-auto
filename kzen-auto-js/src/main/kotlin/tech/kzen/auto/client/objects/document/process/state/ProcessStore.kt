@@ -32,6 +32,8 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
 
     //-----------------------------------------------------------------------------------------------------------------
     fun didMount(subscriber: Subscriber) {
+//        console.log("^^^^ ProcessStore - mount")
+
         this.subscriber = subscriber
         mounted = true
 
@@ -42,8 +44,11 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
 
 
     fun willUnmount() {
+//        console.log("^^^^ ProcessStore - unmount")
+
         subscriber = null
         mounted = false
+        state = null
 
         ClientContext.sessionGlobal.unobserve(this)
     }
@@ -69,12 +74,8 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
         }
 
         val nextState = when {
-            state == null -> {
+            state == null || ProcessState.tryMainLocation(clientState) != state!!.mainLocation -> {
                 ProcessState.tryCreate(clientState)
-            }
-
-            ProcessState.tryMainLocation(clientState) != state!!.mainLocation -> {
-                null
             }
 
             else -> {
@@ -83,7 +84,8 @@ class ProcessStore: SessionGlobal.Observer, ProcessDispatcher
         }
 
         val initial =
-            state == null && nextState != null
+            state == null && nextState != null ||
+            state?.mainLocation != nextState?.mainLocation
 
         if (state != nextState) {
             state = nextState

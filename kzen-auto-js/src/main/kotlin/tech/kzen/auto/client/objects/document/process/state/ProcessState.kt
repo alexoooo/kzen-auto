@@ -45,6 +45,7 @@ data class ProcessState(
     val tableSummaryLoading: Boolean = false,
     val tableSummary: TableSummary? = null,
     val tableSummaryError: String? = null,
+    val indexTaskFinished: Boolean = false,
 
     val filterAddLoading: Boolean = false,
     val filterAddError: String? = null

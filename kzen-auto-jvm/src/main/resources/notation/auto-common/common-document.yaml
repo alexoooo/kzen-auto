@@ -71,19 +71,19 @@ Feature:
 ################################################################
 
 
-Filter:
-  abstract: true
-  is: Document
-  class: tech.kzen.auto.server.objects.filter.FilterDocument
-  title: "Data Filter"
-  icon: FilterList
-  input: path/to/input.csv
-  output: ../work/out.csv
-  criteria: {}
-  meta:
-    input: String
-    output: String
-    criteria: CriteriaSpec
+#Filter:
+#  abstract: true
+#  is: Document
+#  class: tech.kzen.auto.server.objects.filter.FilterDocument
+#  title: "Data Filter"
+#  icon: FilterList
+#  input: path/to/input.csv
+#  output: ../work/out.csv
+#  criteria: {}
+#  meta:
+#    input: String
+#    output: String
+#    criteria: CriteriaSpec
 
 
 Process:

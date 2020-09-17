@@ -5,6 +5,7 @@ import react.*
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.StageController
 import tech.kzen.auto.client.objects.document.process.filter.ProcessFilterList
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.objects.document.process.state.ProcessStore
@@ -15,15 +16,12 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Suppress("unused")
 class ProcessController(
-    props: Props
+    props: RProps
 ):
-    RPureComponent<ProcessController.Props, ProcessController.State>(props),
+    RPureComponent<RProps, ProcessController.State>(props),
     ProcessStore.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
-    class Props: RProps
-
-
     class State(
         var processState: ProcessState?
     ): RState
@@ -41,6 +39,7 @@ class ProcessController(
         }
 
         override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
+//        override fun child(input: RBuilder, handler: RHandler<DocumentControllerProps>): ReactElement {
             return input.child(ProcessController::class) {
                 handler()
             }
@@ -50,11 +49,10 @@ class ProcessController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private val store = ProcessStore()
-//    private var mounted = false
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun State.init(props: RProps) {
         processState = null
     }
 
@@ -102,21 +100,21 @@ class ProcessController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderInitialLoading(processState: ProcessState) {
-        if (processState.initiating) {
+        if (! processState.initiating) {
+            return
+        }
+
+        StageController.StageContext.Consumer { context ->
             styledDiv {
                 css {
-                    position = Position.relative
+                    position = Position.fixed
+                    top = context.stageTop
+                    left = context.stageLeft
+                    width = 100.pct
+                    zIndex = 99
                 }
 
-                styledDiv {
-                    css {
-                        position = Position.absolute
-                        left = 0.em
-                        top = 0.em
-                        width = 100.pct
-                    }
-                    child(MaterialLinearProgress::class) {}
-                }
+                child(MaterialLinearProgress::class) {}
             }
         }
     }
