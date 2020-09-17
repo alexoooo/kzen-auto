@@ -71,25 +71,10 @@ Feature:
 ################################################################
 
 
-#Filter:
-#  abstract: true
-#  is: Document
-#  class: tech.kzen.auto.server.objects.filter.FilterDocument
-#  title: "Data Filter"
-#  icon: FilterList
-#  input: path/to/input.csv
-#  output: ../work/out.csv
-#  criteria: {}
-#  meta:
-#    input: String
-#    output: String
-#    criteria: CriteriaSpec
-
-
 Process:
   abstract: true
   is: Document
-  class: tech.kzen.auto.server.objects.filter.FilterDocument
+  class: tech.kzen.auto.server.objects.process.ProcessDocument
   title: "Data Process"
   icon: TableChart
   input: path/to/input.csv
@@ -103,14 +88,14 @@ Process:
 
 CriteriaSpec:
   abstract: true
-  class: tech.kzen.auto.common.objects.document.filter.CriteriaSpec
+  class: tech.kzen.auto.common.objects.document.process.CriteriaSpec
   meta:
     ref:
       by: CriteriaSpecDefiner
 
 
 CriteriaSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.filter.CriteriaSpec$Definer
+  class: tech.kzen.auto.common.objects.document.process.CriteriaSpec$Definer
 
 #CriteriaSpecCreator:
 #  class: tech.kzen.auto.common.objects.document.filter.CriteriaSpecCreator

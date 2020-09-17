@@ -6,8 +6,6 @@ import tech.kzen.lib.common.reflect.ReflectionRegistry
 import tech.kzen.lib.common.reflect.ModuleReflection
 import tech.kzen.auto.server.objects.feature.ScreenshotCropper
 import tech.kzen.auto.server.objects.feature.ScreenshotTaker
-import tech.kzen.auto.server.objects.filter.FilterDocument
-import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
 import tech.kzen.auto.server.objects.graph.AccumulateSink
 import tech.kzen.auto.common.paradigm.dataflow.api.input.RequiredInput
 import tech.kzen.auto.server.objects.graph.AppendText
@@ -23,6 +21,8 @@ import tech.kzen.auto.server.objects.graph.RepeatProcessor
 import tech.kzen.auto.common.paradigm.dataflow.api.output.BatchOutput
 import tech.kzen.auto.server.objects.graph.ReplaceProcessor
 import tech.kzen.auto.server.objects.graph.SelectLast
+import tech.kzen.auto.server.objects.process.ProcessDocument
+import tech.kzen.auto.common.objects.document.process.CriteriaSpec
 import tech.kzen.auto.server.objects.script.browser.CloseBrowser
 import tech.kzen.auto.server.objects.script.browser.FocusElement
 import tech.kzen.auto.common.objects.document.feature.TargetSpec
@@ -58,13 +58,6 @@ reflectionRegistry.put(
     listOf()
 ) {
     ScreenshotTaker()
-}
-
-reflectionRegistry.put(
-    "tech.kzen.auto.server.objects.filter.FilterDocument",
-    listOf("input", "output", "criteria")
-) { args ->
-    FilterDocument(args[0] as String, args[1] as String, args[2] as CriteriaSpec)
 }
 
 reflectionRegistry.put(
@@ -128,6 +121,13 @@ reflectionRegistry.put(
     listOf("first", "second", "output")
 ) { args ->
     SelectLast(args[0] as OptionalInput<Any>, args[1] as OptionalInput<Any>, args[2] as RequiredOutput<Any>)
+}
+
+reflectionRegistry.put(
+    "tech.kzen.auto.server.objects.process.ProcessDocument",
+    listOf("input", "output", "criteria")
+) { args ->
+    ProcessDocument(args[0] as String, args[1] as String, args[2] as CriteriaSpec)
 }
 
 reflectionRegistry.put(

@@ -14,8 +14,8 @@ import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.FilterListIcon
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
-import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.auto.common.objects.document.process.CriteriaSpec
+import tech.kzen.auto.common.objects.document.process.FilterConventions
 import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 
 

@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.objects.document.process.state
 
 import tech.kzen.auto.client.service.global.SessionState
-import tech.kzen.auto.common.objects.document.filter.FilterConventions
-import tech.kzen.auto.common.objects.document.filter.OutputInfo
+import tech.kzen.auto.common.objects.document.process.FilterConventions
+import tech.kzen.auto.common.objects.document.process.OutputInfo
 import tech.kzen.auto.common.paradigm.reactive.TableSummary
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.model.TaskModel

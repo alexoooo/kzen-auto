@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.filter
+package tech.kzen.auto.common.objects.document.process
 
 
 data class OutputInfo(

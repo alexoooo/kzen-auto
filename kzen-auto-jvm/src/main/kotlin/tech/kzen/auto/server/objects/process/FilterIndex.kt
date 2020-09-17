@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.filter
+package tech.kzen.auto.server.objects.process
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

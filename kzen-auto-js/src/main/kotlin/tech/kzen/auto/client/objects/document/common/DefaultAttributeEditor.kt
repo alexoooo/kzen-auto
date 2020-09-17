@@ -160,6 +160,8 @@ class DefaultAttributeEditor(
         child(AttributePathValueEditor::class) {
             attrs {
                 labelOverride = formattedLabel()
+                disabled = props.disabled
+                invalid = props.invalid
 
                 clientState = props.clientState
                 objectLocation = props.objectLocation

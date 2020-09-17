@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.filter
+package tech.kzen.auto.server.objects.process
 
 import com.google.common.collect.LinkedHashMultiset
 import kotlinx.coroutines.Dispatchers

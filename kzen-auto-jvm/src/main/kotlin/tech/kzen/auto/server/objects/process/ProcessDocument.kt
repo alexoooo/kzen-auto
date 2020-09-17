@@ -1,8 +1,8 @@
-package tech.kzen.auto.server.objects.filter
+package tech.kzen.auto.server.objects.process
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
-import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.auto.common.objects.document.process.CriteriaSpec
+import tech.kzen.auto.common.objects.document.process.FilterConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -17,7 +17,7 @@ import java.nio.file.Path
 
 
 @Reflect
-class FilterDocument(
+class ProcessDocument(
         private val input: String,
         private val output: String,
         private val criteria: CriteriaSpec

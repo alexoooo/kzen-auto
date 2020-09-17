@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.filter
+package tech.kzen.auto.common.objects.document.process
 
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath

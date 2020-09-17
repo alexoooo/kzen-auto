@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.process.filter
 
 import kotlinx.css.*
+import kotlinx.html.title
 import react.*
 import react.dom.*
 import styled.*
@@ -8,8 +9,8 @@ import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
 import tech.kzen.auto.client.objects.document.process.state.*
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
-import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.auto.common.objects.document.process.CriteriaSpec
+import tech.kzen.auto.common.objects.document.process.FilterConventions
 import tech.kzen.auto.common.paradigm.reactive.ColumnSummary
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
 import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
@@ -157,6 +158,10 @@ class ProcessFilterItem(
 
         val columnSummary = processState.tableSummary?.columnSummaries?.get(props.columnName)
 
+        val editDisabled =
+            props.processState.initiating ||
+            props.processState.filterTaskRunning
+
         styledDiv {
             css {
                 borderTopWidth = 1.px
@@ -164,7 +169,7 @@ class ProcessFilterItem(
                 borderTopColor = Color.lightGray
             }
 
-            renderHeader(columnSummary, missing)
+            renderHeader(columnSummary, missing, editDisabled)
 
             if (state.open || requiredValues.isNotEmpty()) {
                 styledDiv {
@@ -174,7 +179,19 @@ class ProcessFilterItem(
                     }
 
                     if (state.open) {
-                        renderDetail(requiredValues, columnSummary)
+                        if (editDisabled) {
+                            attrs {
+                                title =
+                                    if (props.processState.initiating) {
+                                        "Disabled while loading"
+                                    }
+                                    else {
+                                        "Disabled while filter running"
+                                    }
+                            }
+                        }
+
+                        renderDetail(requiredValues, columnSummary, editDisabled)
                     }
                     else {
                         renderSummary(requiredValues)
@@ -187,7 +204,8 @@ class ProcessFilterItem(
 
     private fun RBuilder.renderHeader(
         columnSummary: ColumnSummary?,
-        missing: Boolean
+        missing: Boolean,
+        editDisabled: Boolean
     ) {
         styledTable {
             css {
@@ -235,7 +253,7 @@ class ProcessFilterItem(
                             +"Count: $countFormat"
                         }
 
-                        span {
+                        styledSpan {
                             val removeError = state.removeError
                             if (removeError != null) {
                                 +removeError
@@ -246,6 +264,8 @@ class ProcessFilterItem(
                                     onClick = {
                                         onDelete()
                                     }
+
+                                    disabled = editDisabled
                                 }
 
                                 child(DeleteIcon::class) {}
@@ -289,8 +309,12 @@ class ProcessFilterItem(
     }
 
 
-    private fun RBuilder.renderDetail(requiredValues: Set<String>, columnSummary: ColumnSummary?) {
-        renderEditValues()
+    private fun RBuilder.renderDetail(
+        requiredValues: Set<String>,
+        columnSummary: ColumnSummary?,
+        editDisabled: Boolean
+    ) {
+        renderEditValues(editDisabled)
 
         if (columnSummary == null) {
             return
@@ -298,7 +322,7 @@ class ProcessFilterItem(
 
         val hasNominal = ! columnSummary.nominalValueSummary.isEmpty()
         if (hasNominal) {
-            renderHistogram(requiredValues, columnSummary.nominalValueSummary)
+            renderHistogram(requiredValues, columnSummary.nominalValueSummary, editDisabled)
         }
 
         val hasNumeric = ! columnSummary.numericValueSummary.isEmpty()
@@ -313,10 +337,15 @@ class ProcessFilterItem(
     }
 
 
-    private fun RBuilder.renderEditValues() {
+    private fun RBuilder.renderEditValues(editDisabled: Boolean) {
+        if (state.updateError != null) {
+            +"Error: ${state.updateError}"
+        }
+
         child(AttributePathValueEditor::class) {
             attrs {
                 labelOverride = "Filter values"
+                disabled = editDisabled
 
                 clientState = props.processState.clientState
                 objectLocation = props.processState.mainLocation
@@ -334,16 +363,16 @@ class ProcessFilterItem(
     }
 
 
-    private fun RBuilder.renderHistogram(requiredValues: Set<String>, histogram: NominalValueSummary) {
+    private fun RBuilder.renderHistogram(
+        requiredValues: Set<String>,
+        histogram: NominalValueSummary,
+        editDisabled: Boolean
+    ) {
         styledDiv {
             css {
                 maxHeight = 20.em
                 overflowY = Overflow.auto
                 marginTop = 0.5.em
-            }
-
-            if (state.updateError != null) {
-                +"Error: ${state.updateError}"
             }
 
             table {
@@ -390,7 +419,7 @@ class ProcessFilterItem(
                                 child(MaterialCheckbox::class) {
                                     attrs {
                                         this.checked = checked
-//                                        this.disabled = props.filterRunning
+                                        disabled = editDisabled
 
                                         onChange = {
                                             onCriteriaChange(e.key, ! checked)

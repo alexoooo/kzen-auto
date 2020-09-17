@@ -15,7 +15,7 @@ import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.InputIcon
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.auto.common.objects.document.process.FilterConventions
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 
@@ -79,10 +79,16 @@ class ProcessInput(
 
 
     private fun RBuilder.renderContent() {
-        renderHeader()
-        renderFilePath()
-
         val fileListingError = props.processState.fileListingError
+        val columnListingError = props.processState.columnListingError
+
+        val hasError =
+            fileListingError != null ||
+            columnListingError != null
+
+        renderHeader()
+        renderFilePath(hasError)
+
         if (fileListingError != null) {
             renderError(fileListingError)
         }
@@ -90,7 +96,6 @@ class ProcessInput(
             renderFileListing()
 
             if (props.processState.fileListing?.size ?: 0 > 0) {
-                val columnListingError = props.processState.columnListingError
                 if (columnListingError != null) {
                     renderError(columnListingError)
                 }
@@ -129,15 +134,25 @@ class ProcessInput(
     }
 
 
-    private fun RBuilder.renderFilePath() {
+    private fun RBuilder.renderFilePath(hasError: Boolean) {
+        val editDisabled =
+            props.processState.initiating ||
+            props.processState.isTaskRunning()
+
         styledDiv {
             css {
                 marginTop = 0.5.em
             }
 
             attrs {
-                if (props.processState.isTaskRunning()) {
-                    title = "Disabled while task running"
+                if (editDisabled) {
+                    title =
+                        if (props.processState.initiating) {
+                            "Disabled while loading"
+                        }
+                        else {
+                            "Disabled while task running"
+                        }
                 }
             }
 
@@ -147,12 +162,13 @@ class ProcessInput(
                     objectLocation = props.processState.mainLocation
                     attributeName = FilterConventions.inputAttribute
                     labelOverride = "File Path"
-                    disabled = props.processState.isTaskRunning()
+
+                    disabled = editDisabled
+                    invalid = hasError
+
                     onChange = {
                         onAttributeChanged(it)
                     }
-
-//                    this.invalid = invalid
                 }
             }
         }

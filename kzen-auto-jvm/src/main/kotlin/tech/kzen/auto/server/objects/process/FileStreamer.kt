@@ -1,10 +1,10 @@
-package tech.kzen.auto.server.objects.filter
+package tech.kzen.auto.server.objects.process
 
 import com.google.common.io.MoreFiles
 import org.apache.commons.csv.CSVFormat
-import tech.kzen.auto.server.objects.filter.model.CsvRecordStream
-import tech.kzen.auto.server.objects.filter.model.RecordStream
-import tech.kzen.auto.server.objects.filter.model.TsvRecordStream
+import tech.kzen.auto.server.objects.process.model.CsvRecordStream
+import tech.kzen.auto.server.objects.process.model.RecordStream
+import tech.kzen.auto.server.objects.process.model.TsvRecordStream
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader

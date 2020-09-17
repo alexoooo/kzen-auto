@@ -57,8 +57,8 @@ class AttributePathValueEditor(
     class Props(
         var labelOverride: String?,
         var disabled: Boolean,
-        var onChange: ((AttributeNotation) -> Unit)?,
         var invalid: Boolean,
+        var onChange: ((AttributeNotation) -> Unit)?,
 
         var clientState: SessionState,
         var objectLocation: ObjectLocation,
@@ -379,6 +379,9 @@ class AttributePathValueEditor(
 
                     onValuesChange(values)
                 }
+
+                disabled = props.disabled
+                error = props.invalid
             }
         }
     }

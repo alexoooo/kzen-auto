@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.filter.model
+package tech.kzen.auto.server.objects.process.model
 
 
 interface RecordItem {

@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.filter.model
+package tech.kzen.auto.server.objects.process.model
 
 import com.google.common.collect.HashMultiset
 import tech.kzen.auto.common.paradigm.reactive.ColumnSummary

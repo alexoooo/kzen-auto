@@ -12,13 +12,12 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.common.DefaultAttributeEditor
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
-import tech.kzen.auto.client.objects.document.process.state.ListInputsRequest
 import tech.kzen.auto.client.objects.document.process.state.OutputLookupRequest
 import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.SaveAltIcon
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.filter.FilterConventions
+import tech.kzen.auto.common.objects.document.process.FilterConventions
 
 
 class ProcessOutput(
@@ -107,22 +106,34 @@ class ProcessOutput(
 
 
     private fun RBuilder.renderOutput() {
+        val error = props.processState.outputError
+
         styledDiv {
-            renderFile()
-            renderInfo()
+            renderFile(error)
+            renderInfo(error)
         }
     }
 
 
-    private fun RBuilder.renderFile() {
+    private fun RBuilder.renderFile(error: String?) {
+        val editDisabled =
+            props.processState.initiating ||
+            props.processState.filterTaskRunning
+
         styledDiv {
             css {
                 marginTop = 0.5.em
             }
 
             attrs {
-                if (props.processState.filterTaskRunning) {
-                    title = "Disabled filter running"
+                if (editDisabled) {
+                    title =
+                        if (props.processState.initiating) {
+                            "Disabled while loading"
+                        }
+                        else {
+                            "Disabled while filter running"
+                        }
                 }
             }
 
@@ -132,7 +143,10 @@ class ProcessOutput(
                     objectLocation = props.processState.mainLocation
                     attributeName = FilterConventions.outputAttribute
                     labelOverride = "File"
-                    disabled = props.processState.filterTaskRunning
+
+                    disabled = editDisabled
+                    invalid = error != null
+
                     onChange = {
                         onFileChanged()
                     }
@@ -142,10 +156,9 @@ class ProcessOutput(
     }
 
 
-    private fun RBuilder.renderInfo() {
-        val error = props.processState.outputError
+    private fun RBuilder.renderInfo(error: String?) {
         if (error != null) {
-            +"Lookup error: $error"
+            +"Error: $error"
             return
         }
 

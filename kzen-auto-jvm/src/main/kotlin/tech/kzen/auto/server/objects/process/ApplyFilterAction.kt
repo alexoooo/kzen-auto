@@ -1,17 +1,17 @@
-package tech.kzen.auto.server.objects.filter
+package tech.kzen.auto.server.objects.process
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
-import tech.kzen.auto.common.objects.document.filter.OutputInfo
+import tech.kzen.auto.common.objects.document.process.CriteriaSpec
+import tech.kzen.auto.common.objects.document.process.OutputInfo
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.server.objects.filter.model.RecordStream
+import tech.kzen.auto.server.objects.process.model.RecordStream
 import java.io.BufferedWriter
 import java.nio.file.Files
 import java.nio.file.Path
@@ -84,7 +84,7 @@ object ApplyFilterAction
 
         val filterColumns = columnNames.intersect(criteriaSpec.columnRequiredValues.keys).toList()
 
-        Thread(Runnable {
+        Thread {
             Files.newBufferedWriter(outputPath).use { output ->
                 var first = true
                 for (inputPath in inputPaths) {
@@ -101,16 +101,18 @@ object ApplyFilterAction
                             progress,
                             inputPath,
                             outputValue,
-                            handle)
+                            handle
+                        )
                     }
 
                     first = false
                 }
             }
 
-            handle.complete(ExecutionSuccess.ofValue(
-                outputValue))
-        }).start()
+            handle.complete(
+                ExecutionSuccess.ofValue(
+                    outputValue))
+        }.start()
 
         logger.info("Done: $outputPath | $criteriaSpec | $inputPaths")
 
@@ -172,7 +174,7 @@ object ApplyFilterAction
                 @Suppress("MapGetWithNotNullAssertionOperator")
                 val requiredValues = criteriaSpec.columnRequiredValues[filterColumn]!!
 
-                if (! requiredValues.contains(value)) {
+                if (requiredValues.isNotEmpty() && ! requiredValues.contains(value)) {
                     continue@next_record
                 }
             }

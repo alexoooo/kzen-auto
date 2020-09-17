@@ -9,12 +9,12 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.auto.common.objects.document.feature.TargetSpecCreator
 import tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
-import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
 import tech.kzen.auto.common.objects.document.graph.DataflowWiring
 import tech.kzen.auto.common.objects.document.graph.EdgesDefiner
 import tech.kzen.auto.common.objects.document.graph.GraphDocument
 import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
+import tech.kzen.auto.common.objects.document.process.CriteriaSpec
 import tech.kzen.auto.common.objects.document.script.action.PrintlnAction
 import tech.kzen.auto.common.objects.document.script.action.ReferenceAction
 import tech.kzen.auto.common.objects.document.script.action.SleepAction
@@ -52,13 +52,6 @@ reflectionRegistry.put(
 }
 
 reflectionRegistry.put(
-    "tech.kzen.auto.common.objects.document.filter.CriteriaSpec\$Definer",
-    listOf()
-) {
-    CriteriaSpec.Definer
-}
-
-reflectionRegistry.put(
     "tech.kzen.auto.common.objects.document.graph.DataflowWiring",
     listOf()
 ) {
@@ -77,6 +70,13 @@ reflectionRegistry.put(
     listOf("vertices", "edges")
 ) { args ->
     GraphDocument(args[0] as List<Dataflow<*>>, args[1] as List<EdgeDescriptor>)
+}
+
+reflectionRegistry.put(
+    "tech.kzen.auto.common.objects.document.process.CriteriaSpec\$Definer",
+    listOf()
+) {
+    CriteriaSpec.Definer
 }
 
 reflectionRegistry.put(

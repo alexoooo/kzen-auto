@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.filter
+package tech.kzen.auto.server.objects.process
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -9,7 +9,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.reactive.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.server.objects.filter.model.ValueSummaryBuilder
+import tech.kzen.auto.server.objects.process.model.ValueSummaryBuilder
 import tech.kzen.auto.util.AutoJvmUtils
 import java.nio.file.Files
 import java.nio.file.Path

@@ -9,7 +9,7 @@ import tech.kzen.auto.client.objects.document.process.state.FilterAddRequest
 import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.filter.CriteriaSpec
+import tech.kzen.auto.common.objects.document.process.CriteriaSpec
 import kotlinx.browser.document
 import kotlin.js.Json
 import kotlin.js.json
@@ -73,6 +73,14 @@ class ProcessFilterAdd(
     override fun RBuilder.render() {
         val columnListing = props.processState.columnListing
             ?: return
+
+        val editDisabled =
+            props.processState.initiating ||
+            props.processState.filterTaskRunning
+
+        if (editDisabled) {
+            return
+        }
 
         styledDiv {
             if (state.adding) {

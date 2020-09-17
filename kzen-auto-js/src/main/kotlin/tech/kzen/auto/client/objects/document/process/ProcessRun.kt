@@ -54,8 +54,8 @@ class ProcessRun(
     }
 
 
-    private fun onRunMain(readyToRun: Boolean, hasSummary: Boolean) {
-        if (! readyToRun) {
+    private fun onRunMain(readyToRun: Boolean, hasSummary: Boolean, inProgress: Boolean) {
+        if (! readyToRun || inProgress) {
             return
         }
 
@@ -109,13 +109,17 @@ class ProcessRun(
         val hasSummary =
             props.processState.tableSummary?.columnSummaries?.isNotEmpty() ?: false
 
-        renderSecondaryActions(readyToRun, hasSummary)
-        renderMainAction(readyToRun, hasSummary)
+        val inProgress =
+            props.processState.taskStarting ||
+            props.processState.taskStopping
+
+        renderSecondaryActions(readyToRun, hasSummary, inProgress)
+        renderMainAction(readyToRun, hasSummary, inProgress)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderMainAction(readyToRun: Boolean, hasSummary: Boolean) {
+    private fun RBuilder.renderMainAction(readyToRun: Boolean, hasSummary: Boolean, inProgress: Boolean) {
         child(MaterialFab::class) {
             attrs {
                 style = reactStyle {
@@ -132,12 +136,8 @@ class ProcessRun(
                 }
 
                 onClick = {
-                    onRunMain(readyToRun, hasSummary)
+                    onRunMain(readyToRun, hasSummary, inProgress)
                 }
-
-//                if (! readyToRun) {
-//                    disabled = true
-//                }
 
                 title =
                     when {
@@ -187,7 +187,7 @@ class ProcessRun(
                 }
 
                 props.processState.isTaskRunning() -> {
-                    renderProgressWithPause()
+                    renderProgressWithPause(inProgress)
                 }
 
                 hasSummary -> {
@@ -215,11 +215,12 @@ class ProcessRun(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderSecondaryActions(readyToRun: Boolean, hasSummary: Boolean) {
+    private fun RBuilder.renderSecondaryActions(readyToRun: Boolean, hasSummary: Boolean, inProgress: Boolean) {
         val showIndex =
             ! props.processState.isTaskRunning() &&
             readyToRun &&
             hasSummary &&
+            ! inProgress &&
             (props.processState.taskProgress?.remainingFiles?.isNotEmpty() ?:
                     ! props.processState.indexTaskFinished)
 
@@ -254,8 +255,12 @@ class ProcessRun(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderProgressWithPause() {
+    private fun RBuilder.renderProgressWithPause(inProgress: Boolean) {
         child(MaterialCircularProgress::class) {}
+
+        if (inProgress) {
+            return
+        }
 
         child(PauseIcon::class) {
             attrs {
