@@ -7,7 +7,7 @@ import org.springframework.web.reactive.config.EnableWebFlux
 
 @EnableWebFlux
 @SpringBootApplication
-class KzenAutoApp
+class KzenAutoMain
 
 
 fun kzenAutoInit() {
@@ -19,5 +19,5 @@ fun kzenAutoInit() {
 
 fun main(args: Array<String>) {
     kzenAutoInit()
-    runApplication<KzenAutoApp>(*args)
+    runApplication<KzenAutoMain>(*args)
 }

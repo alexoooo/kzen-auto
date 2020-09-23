@@ -9,18 +9,14 @@ import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
 import tech.kzen.auto.client.objects.document.process.state.*
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.process.ColumnCriteria
 import tech.kzen.auto.common.objects.document.process.CriteriaSpec
-import tech.kzen.auto.common.objects.document.process.FilterConventions
 import tech.kzen.auto.common.paradigm.reactive.ColumnSummary
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
 import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
 import tech.kzen.auto.common.paradigm.reactive.StatisticValueSummary
-import tech.kzen.lib.common.model.attribute.AttributeNesting
-import tech.kzen.lib.common.model.attribute.AttributePath
-import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.platform.ClassNames
-import tech.kzen.lib.platform.collect.persistentListOf
 
 
 class ProcessFilterItem(
@@ -120,9 +116,10 @@ class ProcessFilterItem(
         }
 
         async {
-            val effect = props.dispatcher.dispatch(
-                request
-            ).single() as FilterUpdateResult
+            val actions = props.dispatcher.dispatch(request)
+            console.log("^^ - $request - $actions")
+
+            val effect = actions.single() as FilterUpdateResult
 
             if (effect.errorMessage != null) {
                 setState {
@@ -143,7 +140,7 @@ class ProcessFilterItem(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val requiredValues = props.criteriaSpec.columnRequiredValues[props.columnName]
+        val columnCriteria = props.criteriaSpec.columns[props.columnName]
             ?: return
 
         val processState = props.processState
@@ -171,7 +168,7 @@ class ProcessFilterItem(
 
             renderHeader(columnSummary, missing, editDisabled)
 
-            if (state.open || requiredValues.isNotEmpty()) {
+            if (state.open || columnCriteria.values.isNotEmpty()) {
                 styledDiv {
                     css {
                         marginLeft = 1.em
@@ -191,10 +188,10 @@ class ProcessFilterItem(
                             }
                         }
 
-                        renderDetail(requiredValues, columnSummary, editDisabled)
+                        renderDetail(columnCriteria, columnSummary, editDisabled)
                     }
                     else {
-                        renderSummary(requiredValues)
+                        renderSummary(columnCriteria)
                     }
                 }
             }
@@ -295,10 +292,14 @@ class ProcessFilterItem(
     }
 
 
-    private fun RBuilder.renderSummary(requiredValues: Set<String>) {
-//        console.log("requiredValues: $requiredValues")
+    private fun RBuilder.renderSummary(columnCriteria: ColumnCriteria) {
+        if (columnCriteria.values.isEmpty()) {
+            return
+        }
 
-        +requiredValues.joinToString {
+        +"${columnCriteria.type}: "
+
+        +columnCriteria.values.joinToString {
             if (it.isBlank()) {
                 "(blank)"
             }
@@ -310,7 +311,7 @@ class ProcessFilterItem(
 
 
     private fun RBuilder.renderDetail(
-        requiredValues: Set<String>,
+        columnCriteria: ColumnCriteria,
         columnSummary: ColumnSummary?,
         editDisabled: Boolean
     ) {
@@ -322,7 +323,7 @@ class ProcessFilterItem(
 
         val hasNominal = ! columnSummary.nominalValueSummary.isEmpty()
         if (hasNominal) {
-            renderHistogram(requiredValues, columnSummary.nominalValueSummary, editDisabled)
+            renderHistogram(columnCriteria, columnSummary.nominalValueSummary, editDisabled)
         }
 
         val hasNumeric = ! columnSummary.numericValueSummary.isEmpty()
@@ -350,9 +351,7 @@ class ProcessFilterItem(
                 clientState = props.processState.clientState
                 objectLocation = props.processState.mainLocation
 
-                attributePath = AttributePath(
-                    FilterConventions.criteriaAttributeName,
-                    AttributeNesting(persistentListOf(AttributeSegment.ofKey(props.columnName))))
+                attributePath = CriteriaSpec.columnValuesAttributePath(props.columnName)
 
                 valueType = TypeMetadata(
                     ClassNames.kotlinSet,
@@ -364,7 +363,7 @@ class ProcessFilterItem(
 
 
     private fun RBuilder.renderHistogram(
-        requiredValues: Set<String>,
+        columnCriteria: ColumnCriteria,
         histogram: NominalValueSummary,
         editDisabled: Boolean
     ) {
@@ -410,7 +409,7 @@ class ProcessFilterItem(
 
                 tbody {
                     for (e in histogram.histogram.entries) {
-                        val checked = requiredValues.contains(e.key)
+                        val checked = columnCriteria.values.contains(e.key)
 
                         tr {
                             key = e.key

@@ -33,7 +33,7 @@ import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
-import tech.kzen.lib.common.model.structure.notation.PositionIndex
+import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.util.Digest
@@ -215,8 +215,8 @@ class RestHandler {
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
 
-        val indexInDocument: PositionIndex = serverRequest.getParam(
-                CommonRestApi.paramPositionIndex, PositionIndex.Companion::parse)
+        val indexInDocument: PositionRelation = serverRequest.getParam(
+                CommonRestApi.paramPositionIndex, PositionRelation.Companion::parse)
 
         val objectNotation: ObjectNotation = serverRequest.getParam(
                 CommonRestApi.paramObjectNotation, ServerContext.yamlParser::parseObject)
@@ -249,8 +249,8 @@ class RestHandler {
         val objectPath: ObjectPath = serverRequest.getParam(
                 CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
 
-        val indexInDocument: PositionIndex = serverRequest.getParam(
-                CommonRestApi.paramPositionIndex, PositionIndex.Companion::parse)
+        val indexInDocument: PositionRelation = serverRequest.getParam(
+                CommonRestApi.paramPositionIndex, PositionRelation.Companion::parse)
 
         return applyAndDigest(
                 ShiftObjectCommand(
@@ -286,14 +286,14 @@ class RestHandler {
         val containingList: AttributePath = serverRequest.getParam(
                 CommonRestApi.paramAttributePath, AttributePath.Companion::parse)
 
-        val indexInList: PositionIndex = serverRequest.getParam(
-                CommonRestApi.paramPositionIndex, PositionIndex.Companion::parse)
+        val indexInList: PositionRelation = serverRequest.getParam(
+                CommonRestApi.paramPositionIndex, PositionRelation.Companion::parse)
 
         val objectName: ObjectName = serverRequest.getParam(
                 CommonRestApi.paramObjectName, ::ObjectName)
 
-        val positionInDocument: PositionIndex = serverRequest.getParam(
-                CommonRestApi.paramSecondaryPosition, PositionIndex.Companion::parse)
+        val positionInDocument: PositionRelation = serverRequest.getParam(
+                CommonRestApi.paramSecondaryPosition, PositionRelation.Companion::parse)
 
         val objectNotation: ObjectNotation = serverRequest.getParam(
                 CommonRestApi.paramObjectNotation, ServerContext.yamlParser::parseObject)
@@ -379,8 +379,8 @@ class RestHandler {
         val containingList: AttributePath = serverRequest.getParam(
                 CommonRestApi.paramAttributePath, AttributePath.Companion::parse)
 
-        val indexInList: PositionIndex = serverRequest.getParam(
-                CommonRestApi.paramPositionIndex, PositionIndex.Companion::parse)
+        val indexInList: PositionRelation = serverRequest.getParam(
+                CommonRestApi.paramPositionIndex, PositionRelation.Companion::parse)
 
         val itemNotation: AttributeNotation = serverRequest.getParam(
                 CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
@@ -404,8 +404,8 @@ class RestHandler {
         val containingMap: AttributePath = serverRequest.getParam(
                 CommonRestApi.paramAttributePath, AttributePath.Companion::parse)
 
-        val indexInMap: PositionIndex = serverRequest.getParam(
-                CommonRestApi.paramPositionIndex, PositionIndex.Companion::parse)
+        val indexInMap: PositionRelation = serverRequest.getParam(
+                CommonRestApi.paramPositionIndex, PositionRelation.Companion::parse)
 
         val mapKey: AttributeSegment = serverRequest.getParam(
                 CommonRestApi.paramAttributeKey, AttributeSegment.Companion::parse)
@@ -450,6 +450,32 @@ class RestHandler {
     }
 
 
+    fun removeListItemInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+                CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
+
+        val objectPath: ObjectPath = serverRequest.getParam(
+                CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
+
+        val attributePath: AttributePath = serverRequest.getParam(
+                CommonRestApi.paramAttributePath, AttributePath.Companion::parse)
+
+        val itemNotation: AttributeNotation = serverRequest.getParam(
+            CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
+
+        val removeContainerIfEmpty: Boolean = serverRequest
+            .tryGetParam(CommonRestApi.paramAttributeCleanupContainer) { i -> i == "true"}
+            ?: false
+
+        return applyAndDigest(
+            RemoveListItemInAttributeCommand(
+                ObjectLocation(documentPath, objectPath),
+                attributePath,
+                itemNotation,
+                removeContainerIfEmpty))
+    }
+
+
     fun shiftInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
         val documentPath: DocumentPath = serverRequest.getParam(
                 CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
@@ -460,8 +486,8 @@ class RestHandler {
         val attributePath: AttributePath = serverRequest.getParam(
                 CommonRestApi.paramAttributePath, AttributePath.Companion::parse)
 
-        val newPosition: PositionIndex = serverRequest.getParam(
-                CommonRestApi.paramPositionIndex, PositionIndex.Companion::parse)
+        val newPosition: PositionRelation = serverRequest.getParam(
+                CommonRestApi.paramPositionIndex, PositionRelation.Companion::parse)
 
         return applyAndDigest(
                 ShiftInAttributeCommand(
@@ -551,9 +577,9 @@ class RestHandler {
         val addCommand = InsertObjectInListAttributeCommand(
                 ObjectLocation.parse("main/Script.yaml#main"),
                 AttributePath.parse("steps"),
-                PositionIndex.parse("7"),
+                PositionRelation.parse("7"),
                 ObjectName("Escape"),
-                PositionIndex.parse("8"),
+                PositionRelation.parse("8"),
                 ServerContext.yamlParser.parseObject("is: SendEscape"))
 
         // http://localhost:8080/command/object/remove-in?path=main%2FScript.yaml&object=main&in-attribute=steps.7

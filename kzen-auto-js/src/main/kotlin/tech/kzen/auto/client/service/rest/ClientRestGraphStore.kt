@@ -102,6 +102,13 @@ class ClientRestGraphStore(
                     command.objectLocation, command.attributePath, command.removeContainerIfEmpty)
 
 
+            is RemoveListItemInAttributeCommand ->{
+                val unparsed = notationParser.unparseAttribute(command.item)
+                restClient.removeListItemInAttributeCommand(
+                    command.objectLocation, command.containingList, unparsed, command.removeContainerIfEmpty)
+            }
+
+
             is ShiftInAttributeCommand ->
                 restClient.shiftInAttribute(
                         command.objectLocation, command.attributePath, command.newPosition)
@@ -128,7 +135,7 @@ class ClientRestGraphStore(
 
 
             else ->
-                throw UnsupportedOperationException("Unknown: $command")
+                throw UnsupportedOperationException("Unknown REST client endpoint: $command")
         }
     }
 }

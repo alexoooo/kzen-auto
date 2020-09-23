@@ -5,7 +5,7 @@ import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
-import tech.kzen.lib.common.model.structure.notation.PositionIndex
+import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.reflect.Reflect
@@ -59,12 +59,12 @@ class ScriptCommander(
                 archetypeObjectLocation.toReference().name)
 
         val command = InsertObjectInListAttributeCommand(
-                containingObjectLocation,
-                containingAttributePath,
-                PositionIndex(indexInContainingAttribute),
-                newName,
-                PositionIndex(endOfDocumentPosition),
-                objectNotation)
+            containingObjectLocation,
+            containingAttributePath,
+            PositionRelation.at(indexInContainingAttribute),
+            newName,
+            PositionRelation.at(endOfDocumentPosition),
+            objectNotation)
 
         val stepCommander = byArchetype[archetypeObjectLocation]
 

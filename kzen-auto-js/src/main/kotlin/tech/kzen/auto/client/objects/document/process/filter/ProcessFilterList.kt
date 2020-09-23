@@ -133,11 +133,11 @@ class ProcessFilterList(
 
     private fun RBuilder.renderFilterList(criteriaSpec: CriteriaSpec) {
         styledDiv {
-            for ((index, columnName) in criteriaSpec.columnRequiredValues.keys.withIndex()) {
+            for ((index, columnName) in criteriaSpec.columns.keys.withIndex()) {
                 styledDiv {
                     key = columnName
 
-                    if (index < criteriaSpec.columnRequiredValues.size - 1) {
+                    if (index < criteriaSpec.columns.size - 1) {
                         css {
                             marginBottom = 1.em
                         }

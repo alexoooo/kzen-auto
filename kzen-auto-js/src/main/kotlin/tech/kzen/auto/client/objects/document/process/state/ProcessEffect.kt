@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.process.state
 
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.common.objects.document.process.CriteriaSpec
 import tech.kzen.auto.common.objects.document.process.FilterConventions
 import tech.kzen.auto.common.objects.document.process.OutputInfo
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
@@ -333,17 +334,10 @@ object ProcessEffect {
         state: ProcessState,
         columnName: String
     ): ProcessAction {
-        val columnAttributeSegment = AttributeSegment.ofKey(columnName)
+        val command = CriteriaSpec.addCommand(state.mainLocation, columnName)
 
-        val result = ClientContext.mirroredGraphStore.apply(
-            InsertMapEntryInAttributeCommand(
-                state.mainLocation,
-                FilterConventions.criteriaAttributePath,
-                PositionIndex(0),
-                columnAttributeSegment,
-                ListAttributeNotation.empty,
-                true
-            ))
+        val result = ClientContext.mirroredGraphStore
+            .apply(command)
 
         return when (result) {
             is MirroredGraphError ->
@@ -360,16 +354,10 @@ object ProcessEffect {
         state: ProcessState,
         columnName: String
     ): ProcessAction {
-        val columnAttributeSegment = AttributeSegment.ofKey(columnName)
-        val columnAttributePath = FilterConventions.criteriaAttributePath.copy(
-            nesting = AttributeNesting(persistentListOf(columnAttributeSegment)))
+        val command = CriteriaSpec.removeCommand(state.mainLocation, columnName)
 
-        val result = ClientContext.mirroredGraphStore.apply(
-            RemoveInAttributeCommand(
-                state.mainLocation,
-                columnAttributePath,
-                true)
-        )
+        val result = ClientContext.mirroredGraphStore
+            .apply(command)
 
         return when (result) {
             is MirroredGraphError ->
@@ -387,23 +375,10 @@ object ProcessEffect {
         columnName: String,
         filterValue: String
     ): ProcessAction {
-        val columnAttributeSegment = AttributeSegment.ofKey(columnName)
-        val columnAttributePath = FilterConventions.criteriaAttributePath.copy(
-            nesting = AttributeNesting(persistentListOf(columnAttributeSegment)))
+        val command = CriteriaSpec.addValueCommand(
+            state.mainLocation, columnName, filterValue)
 
-        val containingList = state
-            .clientState
-            .graphStructure()
-            .graphNotation
-            .transitiveAttribute(state.mainLocation, columnAttributePath)
-            as ListAttributeNotation
-
-        val result = ClientContext.mirroredGraphStore.apply(
-            InsertListItemInAttributeCommand(
-                state.mainLocation,
-                columnAttributePath,
-                PositionIndex(containingList.values.size),
-                ScalarAttributeNotation(filterValue)))
+        val result = ClientContext.mirroredGraphStore.apply(command)
 
         val errorMessage =
             (result as? MirroredGraphError)?.error?.message
@@ -417,27 +392,10 @@ object ProcessEffect {
         columnName: String,
         filterValue: String
     ): ProcessAction {
-        val columnAttributeSegment = AttributeSegment.ofKey(columnName)
-        val columnAttributePath = FilterConventions.criteriaAttributePath.copy(
-            nesting = AttributeNesting(persistentListOf(columnAttributeSegment)))
+        val command = CriteriaSpec.removeValueCommand(
+            state.mainLocation, columnName, filterValue)
 
-        val containingList = state
-            .clientState
-            .graphStructure()
-            .graphNotation
-            .transitiveAttribute(state.mainLocation, columnAttributePath)
-                as ListAttributeNotation
-
-        val filterValueIndex = containingList.values.indexOfFirst { it.asString() == filterValue }
-
-        val itemPath = columnAttributePath.copy(nesting =
-            columnAttributePath.nesting.push(AttributeSegment.ofIndex(filterValueIndex)))
-
-        val result = ClientContext.mirroredGraphStore.apply(
-            RemoveInAttributeCommand(
-                state.mainLocation,
-                itemPath,
-                false))
+        val result = ClientContext.mirroredGraphStore.apply(command)
 
         val errorMessage =
             (result as? MirroredGraphError)?.error?.message

@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.process.ColumnCriteriaType
 import tech.kzen.auto.common.objects.document.process.CriteriaSpec
 import tech.kzen.auto.common.objects.document.process.OutputInfo
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
@@ -82,7 +83,7 @@ object ApplyFilterAction
             }
         }
 
-        val filterColumns = columnNames.intersect(criteriaSpec.columnRequiredValues.keys).toList()
+        val filterColumns = columnNames.intersect(criteriaSpec.columns.keys).toList()
 
         Thread {
             Files.newBufferedWriter(outputPath).use { output ->
@@ -172,10 +173,23 @@ object ApplyFilterAction
                 val value = record.get(filterColumn)
 
                 @Suppress("MapGetWithNotNullAssertionOperator")
-                val requiredValues = criteriaSpec.columnRequiredValues[filterColumn]!!
+                val columnCriteria = criteriaSpec.columns[filterColumn]!!
 
-                if (requiredValues.isNotEmpty() && ! requiredValues.contains(value)) {
-                    continue@next_record
+                if (columnCriteria.values.isNotEmpty()) {
+                    val present = columnCriteria.values.contains(value)
+
+                    val allow =
+                        when (columnCriteria.type) {
+                            ColumnCriteriaType.RequireAny ->
+                                present
+
+                            ColumnCriteriaType.ExcludeAll ->
+                                ! present
+                        }
+
+                    if (! allow) {
+                        continue@next_record
+                    }
                 }
             }
 

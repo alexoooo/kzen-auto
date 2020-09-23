@@ -20,7 +20,7 @@ import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ResourceLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.structure.notation.PositionIndex
+import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.resource.ResourceListing
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.model.structure.scan.DocumentScan
@@ -98,13 +98,13 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun createDocument(
-            documentPath: DocumentPath,
-            deparsedDocumentNotation: String
+        documentPath: DocumentPath,
+        unparsedDocumentNotation: String
     ): Digest {
         return getDigest(
                 CommonRestApi.commandDocumentCreate,
                 CommonRestApi.paramDocumentPath to documentPath.asString(),
-                CommonRestApi.paramDocumentNotation to deparsedDocumentNotation)
+                CommonRestApi.paramDocumentNotation to unparsedDocumentNotation)
     }
 
 
@@ -119,16 +119,16 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun addObject(
-            objectLocation: ObjectLocation,
-            indexInDocument: PositionIndex,
-            deparsedObjectNotation: String
+        objectLocation: ObjectLocation,
+        indexInDocument: PositionRelation,
+        unparsedObjectNotation: String
     ): Digest {
         return getDigest(
                 CommonRestApi.commandObjectAdd,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramPositionIndex to indexInDocument.asString(),
-                CommonRestApi.paramObjectNotation to deparsedObjectNotation)
+                CommonRestApi.paramObjectNotation to unparsedObjectNotation)
     }
 
 
@@ -144,7 +144,7 @@ class ClientRestApi(
 
     suspend fun shiftObject(
             objectLocation: ObjectLocation,
-            newPositionInDocument: PositionIndex
+            newPositionInDocument: PositionRelation
     ): Digest {
         return getDigest(
                 CommonRestApi.commandObjectShift,
@@ -167,12 +167,12 @@ class ClientRestApi(
 
 
     suspend fun insertObjectInList(
-            containingObjectLocation: ObjectLocation,
-            containingList: AttributePath,
-            indexInList: PositionIndex,
-            objectName: ObjectName,
-            positionInDocument: PositionIndex,
-            deparsedObjectNotation: String
+        containingObjectLocation: ObjectLocation,
+        containingList: AttributePath,
+        indexInList: PositionRelation,
+        objectName: ObjectName,
+        positionInDocument: PositionRelation,
+        unparsedObjectNotation: String
     ): Digest {
         return getDigest(
                 CommonRestApi.commandObjectInsertInList,
@@ -182,7 +182,7 @@ class ClientRestApi(
                 CommonRestApi.paramPositionIndex to indexInList.asString(),
                 CommonRestApi.paramObjectName to objectName.value,
                 CommonRestApi.paramSecondaryPosition to positionInDocument.asString(),
-                CommonRestApi.paramObjectNotation to deparsedObjectNotation)
+                CommonRestApi.paramObjectNotation to unparsedObjectNotation)
     }
 
 
@@ -200,38 +200,38 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun upsertAttribute(
-            objectLocation: ObjectLocation,
-            attributeName: AttributeName,
-            deparsedAttributeNotation: String
+        objectLocation: ObjectLocation,
+        attributeName: AttributeName,
+        unparsedAttributeNotation: String
     ): Digest {
         return getDigest(
                 CommonRestApi.commandAttributeUpsert,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramAttributeName to attributeName.value,
-                CommonRestApi.paramAttributeNotation to deparsedAttributeNotation)
+                CommonRestApi.paramAttributeNotation to unparsedAttributeNotation)
     }
 
 
     suspend fun updateInAttribute(
-            objectLocation: ObjectLocation,
-            attributePath: AttributePath,
-            deparsedAttributeNotation: String
+        objectLocation: ObjectLocation,
+        attributePath: AttributePath,
+        unparsedAttributeNotation: String
     ): Digest {
         return getDigest(
                 CommonRestApi.commandAttributeUpdateIn,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramAttributePath to attributePath.asString(),
-                CommonRestApi.paramAttributeNotation to deparsedAttributeNotation)
+                CommonRestApi.paramAttributeNotation to unparsedAttributeNotation)
     }
 
 
     suspend fun insertListItemInAttribute(
-            objectLocation: ObjectLocation,
-            containingList: AttributePath,
-            indexInList: PositionIndex,
-            deparsedItemNotation: String
+        objectLocation: ObjectLocation,
+        containingList: AttributePath,
+        indexInList: PositionRelation,
+        unparsedItemNotation: String
     ): Digest {
         return getDigest(
                 CommonRestApi.commandAttributeInsertItemIn,
@@ -239,17 +239,17 @@ class ClientRestApi(
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramAttributePath to containingList.asString(),
                 CommonRestApi.paramPositionIndex to indexInList.asString(),
-                CommonRestApi.paramAttributeNotation to deparsedItemNotation)
+                CommonRestApi.paramAttributeNotation to unparsedItemNotation)
     }
 
 
     suspend fun insertMapEntryInAttribute(
-            objectLocation: ObjectLocation,
-            containingMap: AttributePath,
-            indexInMap: PositionIndex,
-            mapKey: AttributeSegment,
-            deparsedValueNotation: String,
-            createAncestorsIfAbsent: Boolean
+        objectLocation: ObjectLocation,
+        containingMap: AttributePath,
+        indexInMap: PositionRelation,
+        mapKey: AttributeSegment,
+        unparsedValueNotation: String,
+        createAncestorsIfAbsent: Boolean
     ): Digest {
         return getDigest(
             CommonRestApi.commandAttributeInsertEntryIn,
@@ -258,15 +258,15 @@ class ClientRestApi(
             CommonRestApi.paramAttributePath to containingMap.asString(),
             CommonRestApi.paramPositionIndex to indexInMap.asString(),
             CommonRestApi.paramAttributeKey to mapKey.asKey(),
-            CommonRestApi.paramAttributeNotation to deparsedValueNotation,
+            CommonRestApi.paramAttributeNotation to unparsedValueNotation,
             CommonRestApi.paramAttributeCreateContainer to createAncestorsIfAbsent.toString())
     }
 
 
     suspend fun removeInAttribute(
-            objectLocation: ObjectLocation,
-            attributePath: AttributePath,
-            removeContainerIfEmpty: Boolean
+        objectLocation: ObjectLocation,
+        attributePath: AttributePath,
+        removeContainerIfEmpty: Boolean
     ): Digest {
         return getDigest(
             CommonRestApi.commandAttributeRemoveIn,
@@ -277,30 +277,46 @@ class ClientRestApi(
     }
 
 
-    suspend fun shiftInAttribute(
-            objectLocation: ObjectLocation,
-            attributePath: AttributePath,
-            newPosition: PositionIndex
+    suspend fun removeListItemInAttributeCommand(
+        objectLocation: ObjectLocation,
+        attributePath: AttributePath,
+        unparsedItemNotation: String,
+        removeContainerIfEmpty: Boolean
     ): Digest {
         return getDigest(
-                CommonRestApi.commandAttributeShiftIn,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                CommonRestApi.paramAttributePath to attributePath.asString(),
-                CommonRestApi.paramPositionIndex to newPosition.asString())
+            CommonRestApi.commandAttributeRemoveItemIn,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributePath to attributePath.asString(),
+            CommonRestApi.paramAttributeNotation to unparsedItemNotation,
+            CommonRestApi.paramAttributeCleanupContainer to removeContainerIfEmpty.toString())
+    }
+
+
+    suspend fun shiftInAttribute(
+        objectLocation: ObjectLocation,
+        attributePath: AttributePath,
+        newPosition: PositionRelation
+    ): Digest {
+        return getDigest(
+            CommonRestApi.commandAttributeShiftIn,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributePath to attributePath.asString(),
+            CommonRestApi.paramPositionIndex to newPosition.asString())
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun refactorName(
-            objectLocation: ObjectLocation,
-            newName: ObjectName
+        objectLocation: ObjectLocation,
+        newName: ObjectName
     ): Digest {
         return getDigest(
-                CommonRestApi.commandRefactorObjectRename,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                CommonRestApi.paramObjectName to newName.value)
+            CommonRestApi.commandRefactorObjectRename,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramObjectName to newName.value)
     }
 
 

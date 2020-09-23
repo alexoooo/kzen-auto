@@ -5,7 +5,7 @@ import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
-import tech.kzen.lib.common.model.structure.notation.PositionIndex
+import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.reflect.Reflect
@@ -44,12 +44,12 @@ class MappingCommander(
                 itemArchetype.objectPath.name)
 
         val command = InsertObjectInListAttributeCommand(
-                containingObjectLocation,
-                ScriptDocument.stepsAttributePath,
-                PositionIndex(0),
-                newName,
-                PositionIndex(endOfDocumentPosition),
-                objectNotation)
+            containingObjectLocation,
+            ScriptDocument.stepsAttributePath,
+            PositionRelation.first,
+            newName,
+            PositionRelation.at(endOfDocumentPosition),
+            objectNotation)
 
         return listOf(command)
     }

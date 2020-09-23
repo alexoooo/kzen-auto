@@ -181,7 +181,7 @@ class ProcessFilterAdd(
         }
 
         val selectOptions = columnListing
-            .filter { it !in props.criteriaSpec.columnRequiredValues }
+            .filter { it !in props.criteriaSpec.columns }
             .map { ReactSelectOption(it, it) }
             .toTypedArray()
 

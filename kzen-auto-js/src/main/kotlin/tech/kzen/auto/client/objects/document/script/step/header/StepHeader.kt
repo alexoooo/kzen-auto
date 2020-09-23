@@ -18,7 +18,7 @@ import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.PositionIndex
+import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftInAttributeCommand
 import kotlin.js.Date
@@ -268,10 +268,9 @@ class StepHeader(
 //            console.log("^^^^ onShift", index, offset, props.attributeNesting)
 
             ClientContext.mirroredGraphStore.apply(ShiftInAttributeCommand(
-                    containingObjectLocation,
-                    objectAttributePath,
-//                    props.attributePath,
-                    PositionIndex(index + offset)))
+                containingObjectLocation,
+                objectAttributePath,
+                PositionRelation.at(index + offset)))
         }
     }
 

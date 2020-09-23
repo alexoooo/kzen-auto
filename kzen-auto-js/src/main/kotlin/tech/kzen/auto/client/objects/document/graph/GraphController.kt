@@ -249,9 +249,8 @@ class GraphController:
                     InsertListItemInAttributeCommand(
                             containingObjectLocation,
                             GraphDocument.edgesAttributePath,
-                            PositionIndex(edgesNotation.values.size),
-                            attributeNotation
-                    )
+                            PositionRelation.at(edgesNotation.values.size),
+                            attributeNotation)
                 }
                 else {
                     val objectNotation = ObjectNotation
@@ -262,13 +261,12 @@ class GraphController:
                     val verticesNotation = DataflowMatrix.verticesNotation(documentNotation)
 
                     InsertObjectInListAttributeCommand(
-                            containingObjectLocation,
-                            GraphDocument.verticesAttributePath,
-                            PositionIndex(verticesNotation.values.size),
-                            AutoConventions.randomAnonymous(),
-                            PositionIndex(documentNotation.objects.notations.values.size),
-                            objectNotation
-                    )
+                        containingObjectLocation,
+                        GraphDocument.verticesAttributePath,
+                        PositionRelation.at(verticesNotation.values.size),
+                        AutoConventions.randomAnonymous(),
+                        PositionRelation.at(documentNotation.objects.notations.values.size),
+                        objectNotation)
                 }
 
         async {
