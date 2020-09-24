@@ -347,6 +347,7 @@ object ProcessReducer {
 
             is FilterValueAddRequest -> state
             is FilterValueRemoveRequest -> state
+            is FilterTypeChangeRequest -> state
             is FilterUpdateResult -> state
 
             is FilterRemoveRequest -> state

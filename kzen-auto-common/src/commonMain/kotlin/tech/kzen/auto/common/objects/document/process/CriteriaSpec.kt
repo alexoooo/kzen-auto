@@ -51,12 +51,28 @@ data class CriteriaSpec(
         }
 
 
-        fun removeValueCommand(mainLocation: ObjectLocation, columnName: String, filterValue: String): NotationCommand {
+        fun removeValueCommand(
+            mainLocation: ObjectLocation,
+            columnName: String,
+            filterValue: String
+        ): NotationCommand {
             return RemoveListItemInAttributeCommand(
                 mainLocation,
                 columnValuesAttributePath(columnName),
                 ScalarAttributeNotation(filterValue),
                 false)
+        }
+
+
+        fun updateTypeCommand(
+            mainLocation: ObjectLocation,
+            columnName: String,
+            criteriaType: ColumnCriteriaType
+        ): NotationCommand {
+            return UpdateInAttributeCommand(
+                mainLocation,
+                columnTypeAttributePath(columnName),
+                ScalarAttributeNotation(criteriaType.name))
         }
 
 
@@ -69,6 +85,11 @@ data class CriteriaSpec(
         fun columnValuesAttributePath(columnName: String): AttributePath {
             val columnAttributePath = columnAttributePath(columnName)
             return columnAttributePath.nest(ColumnCriteria.valuesAttributeSegment)
+        }
+
+        fun columnTypeAttributePath(columnName: String): AttributePath {
+            val columnAttributePath = columnAttributePath(columnName)
+            return columnAttributePath.nest(ColumnCriteria.typeAttributeSegment)
         }
     }
 

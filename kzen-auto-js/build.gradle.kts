@@ -45,6 +45,7 @@ dependencies {
 
     implementation(npm("@material-ui/core", materialUiCoreVersion))
     implementation(npm("@material-ui/icons", materialUiIconsVersion))
+    implementation(npm("@material-ui/lab", materialUiLabVersion))
     implementation(npm("cropperjs", cropperJsVersion))
     implementation(npm("lodash", lodashVersion))
     implementation(npm("react-select", reactSelectVersion))

@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.process.filter
 
 import kotlinx.css.*
 import kotlinx.html.title
+import org.w3c.dom.events.Event
 import react.*
 import react.dom.*
 import styled.*
@@ -10,6 +11,7 @@ import tech.kzen.auto.client.objects.document.process.state.*
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.process.ColumnCriteria
+import tech.kzen.auto.common.objects.document.process.ColumnCriteriaType
 import tech.kzen.auto.common.objects.document.process.CriteriaSpec
 import tech.kzen.auto.common.paradigm.reactive.ColumnSummary
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
@@ -117,7 +119,25 @@ class ProcessFilterItem(
 
         async {
             val actions = props.dispatcher.dispatch(request)
-            console.log("^^ - $request - $actions")
+//            console.log("^^ - $request - $actions")
+
+            val effect = actions.single() as FilterUpdateResult
+
+            if (effect.errorMessage != null) {
+                setState {
+                    updateError = effect.errorMessage
+                }
+            }
+        }
+    }
+
+
+    private fun onTypeChange(
+        type: ColumnCriteriaType
+    ) {
+        async {
+            val actions = props.dispatcher.dispatch(
+                FilterTypeChangeRequest(props.columnName, type))
 
             val effect = actions.single() as FilterUpdateResult
 
@@ -315,7 +335,7 @@ class ProcessFilterItem(
         columnSummary: ColumnSummary?,
         editDisabled: Boolean
     ) {
-        renderEditValues(editDisabled)
+        renderEditCriteria(columnCriteria, editDisabled)
 
         if (columnSummary == null) {
             return
@@ -338,11 +358,66 @@ class ProcessFilterItem(
     }
 
 
-    private fun RBuilder.renderEditValues(editDisabled: Boolean) {
+    private fun RBuilder.renderEditCriteria(columnCriteria: ColumnCriteria, editDisabled: Boolean) {
         if (state.updateError != null) {
             +"Error: ${state.updateError}"
         }
 
+        styledDiv {
+            css {
+                marginBottom = 0.5.em
+            }
+            renderEditType(columnCriteria, editDisabled)
+        }
+
+        renderEditValues(editDisabled)
+    }
+
+
+    private fun RBuilder.renderEditType(columnCriteria: ColumnCriteria, editDisabled: Boolean) {
+//        +"type: ${columnCriteria.type}"
+
+        child(MaterialToggleButtonGroup::class) {
+            attrs {
+                value = columnCriteria.type.name
+                exclusive = true
+                onChange = { _, v ->
+                    if (v is String) {
+                        onTypeChange(ColumnCriteriaType.valueOf(v))
+                    }
+                }
+            }
+
+            child(MaterialToggleButton::class) {
+                attrs {
+                    value = ColumnCriteriaType.RequireAny.name
+                    disabled = editDisabled
+                }
+                styledSpan {
+                    css {
+                        fontWeight = FontWeight.bold
+                    }
+                    +"Require any"
+                }
+            }
+
+            child(MaterialToggleButton::class) {
+                attrs {
+                    value = ColumnCriteriaType.ExcludeAll.name
+                    disabled = editDisabled
+                }
+                styledSpan {
+                    css {
+                        fontWeight = FontWeight.bold
+                    }
+                    +"Exclude all"
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderEditValues(editDisabled: Boolean) {
         child(AttributePathValueEditor::class) {
             attrs {
                 labelOverride = "Filter values"

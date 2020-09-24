@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.process.state
 
+import tech.kzen.auto.common.objects.document.process.ColumnCriteriaType
 import tech.kzen.auto.common.objects.document.process.OutputInfo
 import tech.kzen.auto.common.paradigm.reactive.TableSummary
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
@@ -129,6 +130,12 @@ data class FilterValueAddRequest(
 data class FilterValueRemoveRequest(
     val columnName: String,
     val filterValue: String
+): FilterAction()
+
+
+data class FilterTypeChangeRequest(
+    val columnName: String,
+    val criteriaType: ColumnCriteriaType
 ): FilterAction()
 
 

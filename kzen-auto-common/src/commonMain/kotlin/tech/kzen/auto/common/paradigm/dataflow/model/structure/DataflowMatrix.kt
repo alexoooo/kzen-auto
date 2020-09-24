@@ -147,7 +147,7 @@ data class DataflowMatrix(
 
     val usedColumns: Int = rows
             .map { it.last().coordinate.column }
-            .max()
+            .maxOrNull()
             ?.let { it + 1 }
             ?: 0
 

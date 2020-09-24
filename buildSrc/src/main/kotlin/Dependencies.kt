@@ -36,6 +36,7 @@ const val commonsCompressVersion = "1.20"
 
 const val materialUiCoreVersion = "4.11.0"
 const val materialUiIconsVersion = "4.9.1"
+const val materialUiLabVersion = "4.0.0-alpha.56"
 const val cropperJsVersion = "1.5.9"
 const val lodashVersion = "4.17.20"
 const val reactSelectVersion = "3.1.0"

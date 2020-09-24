@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.process.state
 
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.common.objects.document.process.ColumnCriteriaType
 import tech.kzen.auto.common.objects.document.process.CriteriaSpec
 import tech.kzen.auto.common.objects.document.process.FilterConventions
 import tech.kzen.auto.common.objects.document.process.OutputInfo
@@ -99,6 +100,9 @@ object ProcessEffect {
 
             is FilterValueRemoveRequest ->
                 submitFilterValueRemove(state, action.columnName, action.filterValue)
+
+            is FilterTypeChangeRequest ->
+                submitFilterTypeChange(state, action.columnName, action.criteriaType)
 
 
             else -> null
@@ -377,6 +381,23 @@ object ProcessEffect {
     ): ProcessAction {
         val command = CriteriaSpec.addValueCommand(
             state.mainLocation, columnName, filterValue)
+
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        val errorMessage =
+            (result as? MirroredGraphError)?.error?.message
+
+        return FilterUpdateResult(errorMessage)
+    }
+
+
+    private suspend fun submitFilterTypeChange(
+        state: ProcessState,
+        columnName: String,
+        criteriaType: ColumnCriteriaType
+    ): ProcessAction {
+        val command = CriteriaSpec.updateTypeCommand(
+            state.mainLocation, columnName, criteriaType)
 
         val result = ClientContext.mirroredGraphStore.apply(command)
 
