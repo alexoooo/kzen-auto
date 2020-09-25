@@ -196,7 +196,7 @@ class ValueSummaryBuilder {
 
         var otherCount = 0L
         while (builder.size > maxNominalBuckets) {
-            val minCount = builder.entries.minBy { it.value }!!.value
+            val minCount = builder.entries.minByOrNull { it.value }!!.value
             val iterator = builder.iterator()
             while (iterator.hasNext() && builder.size > maxNominalBuckets) {
                 val next = iterator.next()
