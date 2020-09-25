@@ -8,6 +8,7 @@ import java.net.URI
 
 
 // TODO: test on Mac
+// TODO: check for "latest" version
 class WebDriverOptionDao {
     // NB: chromedriver distribution has changed - https://stackoverflow.com/a/55266105
     private val options: List<WebDriverOption> = listOf(
@@ -22,31 +23,31 @@ class WebDriverOptionDao {
                     BrowserLauncher.Firefox,
                     OperatingSystem.Linux,
                     CpuArchitecture.X86_64,
-                    "0.26.0",
-                    URI("https://github.com/mozilla/geckodriver/releases/download/v0.26.0/geckodriver-v0.26.0-linux64.tar.gz")
+                    "0.27.0",
+                    URI("https://github.com/mozilla/geckodriver/releases/download/v0.27.0/geckodriver-v0.27.0-linux64.tar.gz")
             ),
 
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_32,
-                    "83.0.4103.39",
-                    URI("https://chromedriver.storage.googleapis.com/83.0.4103.39/chromedriver_win32.zip")
+                    "85.0.4183.87",
+                    URI("https://chromedriver.storage.googleapis.com/85.0.4183.87/chromedriver_win32.zip")
             ),
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_64,
-                    "83.0.4103.39",
-                    URI("https://chromedriver.storage.googleapis.com/83.0.4103.39/chromedriver_win32.zip")
+                    "85.0.4183.87",
+                    URI("https://chromedriver.storage.googleapis.com/85.0.4183.87/chromedriver_win32.zip")
             ),
 
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.OsX,
                     CpuArchitecture.X86_64,
-                    "83.0.4103.39",
-                    URI("https://chromedriver.storage.googleapis.com/83.0.4103.39/chromedriver_mac64.zip")
+                    "85.0.4183.87",
+                    URI("https://chromedriver.storage.googleapis.com/85.0.4183.87/chromedriver_mac64.zip")
             ))
 
 

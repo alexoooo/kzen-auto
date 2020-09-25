@@ -41,7 +41,9 @@ class OpenBrowser(
                 // http://chromedriver.chromium.org/extensions
                 // https://stackoverflow.com/a/44884633/1941359
                 val chromeOptions = ChromeOptions()
-                chromeOptions.setExperimentalOption("useAutomationExtension", false)
+
+                // TODO: deprecated?
+//                chromeOptions.setExperimentalOption("useAutomationExtension", false)
 
                 // https://www.maketecheasier.com/download-save-chrome-extension/
                 for (extensionFile in extensionFiles) {
