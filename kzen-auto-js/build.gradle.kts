@@ -1,10 +1,11 @@
 plugins {
     id("org.jetbrains.kotlin.js")
+    `maven-publish`
 }
 
 
 kotlin {
-    target {
+    js {
         useCommonJs()
 
 //        produceExecutable()
@@ -53,3 +54,17 @@ dependencies {
 
 
 run {}
+
+
+publishing {
+    repositories {
+        mavenLocal()
+    }
+
+    publications {
+        create<MavenPublication>("js") {
+//            println("Components: " + components.asMap.keys)
+            from(components["kotlin"])
+        }
+    }
+}

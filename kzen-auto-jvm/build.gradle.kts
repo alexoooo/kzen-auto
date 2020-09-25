@@ -9,6 +9,7 @@ plugins {
     id("io.spring.dependency-management") version dependencyManagementVersion
     kotlin("jvm")
     kotlin("plugin.spring") version kotlinVersion
+    `maven-publish`
 }
 
 
@@ -74,14 +75,31 @@ tasks.getByName<BootJar>("bootJar") {
 }
 
 
-tasks {
-    val sourcesJar by creating(Jar::class) {
-        archiveClassifier.set("sources")
-        from(sourceSets.getByName("main").allSource)
+val sourcesJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("sources")
+    from(sourceSets.main.get().allSource)
+}
+//tasks {
+//    val sourcesJar by creating(Jar::class) {
+//        archiveClassifier.set("sources")
+//        from(sourceSets.getByName("main").allSource)
+//    }
+//
+//    artifacts {
+//        archives(sourcesJar)
+//        archives(jar)
+//    }
+//}
+
+publishing {
+    repositories {
+        mavenLocal()
     }
 
-    artifacts {
-        archives(sourcesJar)
-        archives(jar)
+    publications {
+        create<MavenPublication>("jvm") {
+            from(components["java"])
+            artifact(sourcesJar.get())
+        }
     }
 }

@@ -1,5 +1,6 @@
 plugins {
     kotlin("multiplatform")
+    `maven-publish`
 }
 
 kotlin {
@@ -76,6 +77,21 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-js"))
             }
+        }
+    }
+}
+
+
+publishing {
+    repositories {
+        mavenLocal()
+    }
+
+    publications {
+        create<MavenPublication>("common") {
+//            println("Components: " + components.asMap.keys)
+            from(components["kotlin"])
+//            artifact(sourcesJar.get())
         }
     }
 }
