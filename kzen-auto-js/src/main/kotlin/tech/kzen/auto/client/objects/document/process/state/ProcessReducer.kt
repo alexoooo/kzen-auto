@@ -214,6 +214,7 @@ object ProcessReducer {
             taskProgress = action.taskModel.taskProgress(),
             indexTaskRunning = isRunning && isIndexing,
             filterTaskRunning = isRunning && ! isIndexing,
+            taskError = action.taskModel.errorMessage(),
             taskStarting = false)
     }
 
@@ -254,7 +255,8 @@ object ProcessReducer {
             taskProgress = taskProcess,
             indexTaskRunning = isRunning && isIndexing,
             filterTaskRunning = isRunning && ! isIndexing,
-            indexTaskFinished = indexTaskFinished)
+            indexTaskFinished = indexTaskFinished,
+            taskError = action.taskModel.errorMessage())
     }
 
 

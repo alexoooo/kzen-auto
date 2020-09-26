@@ -40,6 +40,7 @@ data class ProcessState(
     val taskModel: TaskModel? = null,
     val taskProgress: TaskProgress? = null,
     val taskLoadError: String? = null,
+    val taskError: String? = null,
 
     val tableSummaryLoaded: Boolean = false,
     val tableSummaryLoading: Boolean = false,
@@ -105,5 +106,14 @@ data class ProcessState(
                 fileListingError != null ||
                 taskLoadError != null ||
                 tableSummaryError != null
+    }
+
+
+    fun nextErrorMessage(): String? {
+        return columnListingError
+            ?: fileListingError
+            ?: taskLoadError
+            ?: taskError
+            ?: tableSummaryError
     }
 }

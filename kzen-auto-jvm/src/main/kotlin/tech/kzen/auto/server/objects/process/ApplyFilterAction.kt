@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.process.ColumnCriteriaType
 import tech.kzen.auto.common.objects.document.process.CriteriaSpec
 import tech.kzen.auto.common.objects.document.process.OutputInfo
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
@@ -71,7 +72,7 @@ object ApplyFilterAction
         logger.info("Starting: $outputPath | $criteriaSpec | $inputPaths")
 
         val outputValue = ExecutionValue.of(outputPath.toString())
-        var progress = TaskProgress.ofNotStarted(
+        val progress = TaskProgress.ofNotStarted(
             inputPaths.map { it.fileName.toString() })
         handle.update(ExecutionSuccess(
             outputValue,
@@ -83,42 +84,77 @@ object ApplyFilterAction
             }
         }
 
-        val filterColumns = columnNames.intersect(criteriaSpec.columns.keys).toList()
-
         Thread {
-            Files.newBufferedWriter(outputPath).use { output ->
-                var first = true
-                for (inputPath in inputPaths) {
-                    logger.info("Reading: $inputPath")
-
-                    FileStreamer.open(inputPath)!!.use { stream ->
-                        progress = filterStream(
-                            stream,
-                            output,
-                            columnNames,
-                            filterColumns,
-                            criteriaSpec,
-                            first,
-                            progress,
-                            inputPath,
-                            outputValue,
-                            handle
-                        )
-                    }
-
-                    first = false
-                }
-            }
-
-            handle.complete(
-                ExecutionSuccess.ofValue(
-                    outputValue))
+            filterSync(inputPaths, columnNames, outputPath, criteriaSpec, handle, progress, outputValue)
         }.start()
 
         logger.info("Done: $outputPath | $criteriaSpec | $inputPaths")
 
         return ExecutionSuccess.ofValue(
             outputValue)
+    }
+
+
+    private fun filterSync(
+        inputPaths: List<Path>,
+        columnNames: List<String>,
+        outputPath: Path,
+        criteriaSpec: CriteriaSpec,
+        handle: TaskHandle,
+        progress: TaskProgress,
+        outputValue: ExecutionValue
+    ) {
+        try {
+            filterSyncChecked(inputPaths, columnNames, outputPath, criteriaSpec, handle, progress, outputValue)
+        }
+        catch (e: Exception) {
+            handle.complete(
+                ExecutionFailure(
+                    "Can't open file: ${e.message}"))
+            return
+        }
+
+        handle.complete(
+            ExecutionSuccess.ofValue(
+                outputValue))
+    }
+
+
+    private fun filterSyncChecked(
+        inputPaths: List<Path>,
+        columnNames: List<String>,
+        outputPath: Path,
+        criteriaSpec: CriteriaSpec,
+        handle: TaskHandle,
+        progress: TaskProgress,
+        outputValue: ExecutionValue
+    ) {
+        val filterColumns = columnNames.intersect(criteriaSpec.columns.keys).toList()
+        var nextProgress = progress
+
+        Files.newBufferedWriter(outputPath).use { output ->
+            var first = true
+            for (inputPath in inputPaths) {
+                logger.info("Reading: $inputPath")
+
+                FileStreamer.open(inputPath)!!.use { stream ->
+                    nextProgress = filterStream(
+                        stream,
+                        output,
+                        columnNames,
+                        filterColumns,
+                        criteriaSpec,
+                        first,
+                        nextProgress,
+                        inputPath,
+                        outputValue,
+                        handle
+                    )
+                }
+
+                first = false
+            }
+        }
     }
 
 

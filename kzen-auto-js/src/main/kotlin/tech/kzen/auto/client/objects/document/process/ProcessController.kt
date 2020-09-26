@@ -89,6 +89,17 @@ class ProcessController(
                 padding(3.em)
             }
 
+            if (processState.nextErrorMessage() != null) {
+                styledDiv {
+                    css {
+                        margin(1.em)
+                        color =  Color.crimson
+                        fontWeight = FontWeight.bold
+                    }
+                    +"Error: ${processState.nextErrorMessage()}"
+                }
+            }
+
             renderInput(processState)
             renderFilter(processState)
             renderOutput(processState)

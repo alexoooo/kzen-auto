@@ -317,7 +317,13 @@ class ProcessFilterItem(
             return
         }
 
-        +"${columnCriteria.type}: "
+        val label =
+            when (columnCriteria.type) {
+                ColumnCriteriaType.RequireAny -> "Require"
+                ColumnCriteriaType.ExcludeAll -> "Exclude"
+            }
+
+        +"$label: "
 
         +columnCriteria.values.joinToString {
             if (it.isBlank()) {

@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.paradigm.task.model
 
 import tech.kzen.auto.common.objects.document.process.FilterConventions
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
@@ -34,7 +35,7 @@ data class TaskModel(
                 DetachedRequest.fromJsonCollection(collection[requestKey] as Map<String, String?>),
                 TaskState.valueOf(collection[stateKey] as String),
                 collection[partialResultKey]?.let { ExecutionSuccess.fromJsonCollection(it as Map<String, Any?>) },
-                collection[finalResultKey]?.let { ExecutionSuccess.fromJsonCollection(it as Map<String, Any?>) }
+                collection[finalResultKey]?.let { ExecutionResult.fromJsonCollection(it as Map<String, Any?>) }
             )
         }
     }
@@ -56,6 +57,14 @@ data class TaskModel(
     //-----------------------------------------------------------------------------------------------------------------
     fun finalOrPartialResult(): ExecutionResult {
         return finalResult ?: partialResult!!
+    }
+
+
+    fun errorMessage(): String? {
+        return when (finalResult) {
+            is ExecutionFailure -> finalResult.errorMessage
+            else -> null
+        }
     }
 
 
