@@ -18,10 +18,11 @@ data class TableSummary(
         }
 
 
-        fun fromExecutionSuccess(result: ExecutionSuccess): TableSummary {
+        fun fromExecutionSuccess(result: ExecutionSuccess): TableSummary? {
             @Suppress("UNCHECKED_CAST")
             val resultValue =
-                result.value.get() as Map<String, Map<String, Any>>
+                result.value.get() as? Map<String, Map<String, Any>>
+                ?: return null
 
             return fromCollection(resultValue)
         }

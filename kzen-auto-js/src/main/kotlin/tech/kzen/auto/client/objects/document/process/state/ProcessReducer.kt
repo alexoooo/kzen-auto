@@ -166,7 +166,10 @@ object ProcessReducer {
 
         return when (result) {
             is ExecutionSuccess -> {
-                val tableSummary = TableSummary.fromExecutionSuccess(result)
+                val tableSummary =
+                    TableSummary.fromExecutionSuccess(result)
+                    ?: state.tableSummary
+
                 val tableSummaryProgress = model.taskProgress()!!
 
                 state.copy(
