@@ -113,6 +113,9 @@ class ProcessRun(
             props.processState.taskStarting ||
             props.processState.taskStopping
 
+//        console.log("^^^^^^ renderInner | " +
+//                "$readyToRun - $hasSummary - $inProgress")
+
         renderSecondaryActions(readyToRun, hasSummary, inProgress)
         renderMainAction(readyToRun, hasSummary, inProgress)
     }

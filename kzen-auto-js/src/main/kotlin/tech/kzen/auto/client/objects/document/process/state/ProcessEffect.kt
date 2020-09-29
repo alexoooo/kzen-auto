@@ -179,12 +179,29 @@ object ProcessEffect {
         val taskModel = action.taskModel
             ?: return SummaryLookupRequest
 
-        if (taskModel.state == TaskState.Running) {
-            return ProcessRefreshSchedule(
-                ProcessTaskRefreshRequest(action.taskModel.taskId))
-        }
+        val tableSummary =
+            (taskModel.finalOrPartialResult() as? ExecutionSuccess)?.let {
+                TableSummary.fromExecutionSuccess(it)
+            }
 
-        return null
+        val firstAction =
+            if (tableSummary == null) {
+                SummaryLookupRequest
+            }
+            else {
+                null
+            }
+
+        val secondAction =
+            if (taskModel.state == TaskState.Running) {
+                ProcessRefreshSchedule(
+                    ProcessTaskRefreshRequest(action.taskModel.taskId))
+            }
+            else {
+                null
+            }
+
+        return CompoundProcessAction.of(firstAction, secondAction)
     }
 
 

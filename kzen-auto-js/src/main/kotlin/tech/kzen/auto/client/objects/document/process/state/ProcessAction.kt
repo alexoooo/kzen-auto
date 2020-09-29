@@ -25,6 +25,22 @@ data class CompoundProcessAction(
 ):
     ProcessAction()
 {
+    companion object {
+        fun of(vararg processActions: ProcessAction?): ProcessAction? {
+            return of(processActions.asList())
+        }
+
+        @Suppress("MemberVisibilityCanBePrivate")
+        fun of(actions: List<ProcessAction?>): ProcessAction? {
+            val notNull = actions.filterNotNull()
+            return when (notNull.size) {
+                0 -> null
+                1 -> notNull.single()
+                else -> CompoundProcessAction(notNull)
+            }
+        }
+    }
+
     constructor(vararg processActions: ProcessAction): this(processActions.asList())
 
 
