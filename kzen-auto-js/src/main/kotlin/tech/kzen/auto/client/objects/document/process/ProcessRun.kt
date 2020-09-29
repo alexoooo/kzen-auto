@@ -9,6 +9,7 @@ import tech.kzen.auto.client.objects.document.process.state.*
 import tech.kzen.auto.client.wrap.*
 
 
+// TODO: inline within flow?
 class ProcessRun(
     props: Props
 ):
