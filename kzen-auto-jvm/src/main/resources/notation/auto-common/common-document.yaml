@@ -77,27 +77,39 @@ Process:
   class: tech.kzen.auto.server.objects.process.ProcessDocument
   title: "Data Process"
   icon: TableChart
-  input: path/to/input.csv
+#  input: path/to/input.csv
+  input: ./
+  filter: {}
+  pivot:
+    rows: []
+    values: {}
   output: ../work/out.csv
-  criteria: {}
   meta:
     input: String
+    filter: FilterSpec
+    pivot: PivotSpec
     output: String
-    criteria: CriteriaSpec
 
 
-CriteriaSpec:
+FilterSpec:
   abstract: true
-  class: tech.kzen.auto.common.objects.document.process.CriteriaSpec
+  class: tech.kzen.auto.common.objects.document.process.FilterSpec
   meta:
     ref:
-      by: CriteriaSpecDefiner
+      by: FilterSpecDefiner
 
 
-CriteriaSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.process.CriteriaSpec$Definer
-
-#CriteriaSpecCreator:
-#  class: tech.kzen.auto.common.objects.document.filter.CriteriaSpecCreator
+FilterSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.process.FilterSpec$Definer
 
 
+PivotSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.process.PivotSpec
+  meta:
+    ref:
+      by: PivotSpecDefiner
+
+
+PivotSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.process.PivotSpec$Definer

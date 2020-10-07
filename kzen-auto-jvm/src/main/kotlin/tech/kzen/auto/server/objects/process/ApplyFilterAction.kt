@@ -4,8 +4,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.objects.document.process.ColumnCriteriaType
-import tech.kzen.auto.common.objects.document.process.CriteriaSpec
+import tech.kzen.auto.common.objects.document.process.ColumnFilterType
+import tech.kzen.auto.common.objects.document.process.FilterSpec
 import tech.kzen.auto.common.objects.document.process.OutputInfo
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
@@ -66,10 +66,10 @@ object ApplyFilterAction
         inputPaths: List<Path>,
         columnNames: List<String>,
         outputPath: Path,
-        criteriaSpec: CriteriaSpec,
+        filterSpec: FilterSpec,
         handle: TaskHandle
     ): ExecutionResult {
-        logger.info("Starting: $outputPath | $criteriaSpec | $inputPaths")
+        logger.info("Starting: $outputPath | $filterSpec | $inputPaths")
 
         val outputValue = ExecutionValue.of(outputPath.toString())
         val progress = TaskProgress.ofNotStarted(
@@ -85,10 +85,10 @@ object ApplyFilterAction
         }
 
         Thread {
-            filterSync(inputPaths, columnNames, outputPath, criteriaSpec, handle, progress, outputValue)
+            filterSync(inputPaths, columnNames, outputPath, filterSpec, handle, progress, outputValue)
         }.start()
 
-        logger.info("Done: $outputPath | $criteriaSpec | $inputPaths")
+        logger.info("Done: $outputPath | $filterSpec | $inputPaths")
 
         return ExecutionSuccess.ofValue(
             outputValue)
@@ -99,13 +99,13 @@ object ApplyFilterAction
         inputPaths: List<Path>,
         columnNames: List<String>,
         outputPath: Path,
-        criteriaSpec: CriteriaSpec,
+        filterSpec: FilterSpec,
         handle: TaskHandle,
         progress: TaskProgress,
         outputValue: ExecutionValue
     ) {
         try {
-            filterSyncChecked(inputPaths, columnNames, outputPath, criteriaSpec, handle, progress, outputValue)
+            filterSyncChecked(inputPaths, columnNames, outputPath, filterSpec, handle, progress, outputValue)
         }
         catch (e: Exception) {
             handle.complete(
@@ -124,12 +124,12 @@ object ApplyFilterAction
         inputPaths: List<Path>,
         columnNames: List<String>,
         outputPath: Path,
-        criteriaSpec: CriteriaSpec,
+        filterSpec: FilterSpec,
         handle: TaskHandle,
         progress: TaskProgress,
         outputValue: ExecutionValue
     ) {
-        val filterColumns = columnNames.intersect(criteriaSpec.columns.keys).toList()
+        val filterColumns = columnNames.intersect(filterSpec.columns.keys).toList()
         var nextProgress = progress
 
         Files.newBufferedWriter(outputPath).use { output ->
@@ -143,7 +143,7 @@ object ApplyFilterAction
                         output,
                         columnNames,
                         filterColumns,
-                        criteriaSpec,
+                        filterSpec,
                         first,
                         nextProgress,
                         inputPath,
@@ -164,7 +164,7 @@ object ApplyFilterAction
         output: BufferedWriter,
         columnNames: List<String>,
         filterColumns: List<String>,
-        criteriaSpec: CriteriaSpec,
+        filterSpec: FilterSpec,
         writHeader: Boolean,
         previousProgress: TaskProgress,
         inputPath: Path,
@@ -209,17 +209,17 @@ object ApplyFilterAction
                 val value = record.get(filterColumn)
 
                 @Suppress("MapGetWithNotNullAssertionOperator")
-                val columnCriteria = criteriaSpec.columns[filterColumn]!!
+                val columnCriteria = filterSpec.columns[filterColumn]!!
 
                 if (columnCriteria.values.isNotEmpty()) {
                     val present = columnCriteria.values.contains(value)
 
                     val allow =
                         when (columnCriteria.type) {
-                            ColumnCriteriaType.RequireAny ->
+                            ColumnFilterType.RequireAny ->
                                 present
 
-                            ColumnCriteriaType.ExcludeAll ->
+                            ColumnFilterType.ExcludeAll ->
                                 ! present
                         }
 

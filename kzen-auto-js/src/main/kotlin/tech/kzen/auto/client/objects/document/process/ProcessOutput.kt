@@ -17,7 +17,7 @@ import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.SaveAltIcon
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.process.FilterConventions
+import tech.kzen.auto.common.objects.document.process.ProcessConventions
 
 
 class ProcessOutput(
@@ -141,7 +141,7 @@ class ProcessOutput(
                 attrs {
                     clientState = props.processState.clientState
                     objectLocation = props.processState.mainLocation
-                    attributeName = FilterConventions.outputAttribute
+                    attributeName = ProcessConventions.outputAttribute
                     labelOverride = "File"
 
                     disabled = editDisabled

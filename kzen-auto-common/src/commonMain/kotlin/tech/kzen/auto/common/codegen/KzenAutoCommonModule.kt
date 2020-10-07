@@ -14,7 +14,8 @@ import tech.kzen.auto.common.objects.document.graph.EdgesDefiner
 import tech.kzen.auto.common.objects.document.graph.GraphDocument
 import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
-import tech.kzen.auto.common.objects.document.process.CriteriaSpec
+import tech.kzen.auto.common.objects.document.process.FilterSpec
+import tech.kzen.auto.common.objects.document.process.PivotSpec
 import tech.kzen.auto.common.objects.document.script.action.PrintlnAction
 import tech.kzen.auto.common.objects.document.script.action.ReferenceAction
 import tech.kzen.auto.common.objects.document.script.action.SleepAction
@@ -73,10 +74,17 @@ reflectionRegistry.put(
 }
 
 reflectionRegistry.put(
-    "tech.kzen.auto.common.objects.document.process.CriteriaSpec\$Definer",
+    "tech.kzen.auto.common.objects.document.process.FilterSpec\$Definer",
     listOf()
 ) {
-    CriteriaSpec.Definer
+    FilterSpec.Definer
+}
+
+reflectionRegistry.put(
+    "tech.kzen.auto.common.objects.document.process.PivotSpec\$Definer",
+    listOf()
+) {
+    PivotSpec.Definer
 }
 
 reflectionRegistry.put(

@@ -2,7 +2,6 @@ package tech.kzen.auto.client.objects.document.process.filter
 
 import kotlinx.css.*
 import kotlinx.html.title
-import org.w3c.dom.events.Event
 import react.*
 import react.dom.*
 import styled.*
@@ -10,9 +9,9 @@ import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
 import tech.kzen.auto.client.objects.document.process.state.*
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.process.ColumnCriteria
-import tech.kzen.auto.common.objects.document.process.ColumnCriteriaType
-import tech.kzen.auto.common.objects.document.process.CriteriaSpec
+import tech.kzen.auto.common.objects.document.process.ColumnFilterSpec
+import tech.kzen.auto.common.objects.document.process.ColumnFilterType
+import tech.kzen.auto.common.objects.document.process.FilterSpec
 import tech.kzen.auto.common.paradigm.reactive.ColumnSummary
 import tech.kzen.auto.common.paradigm.reactive.NominalValueSummary
 import tech.kzen.auto.common.paradigm.reactive.OpaqueValueSummary
@@ -57,7 +56,7 @@ class ProcessFilterItem(
     class Props(
         var processState: ProcessState,
         var dispatcher: ProcessDispatcher,
-        var criteriaSpec: CriteriaSpec,
+        var filterSpec: FilterSpec,
         var columnName: String
     ): RProps
 
@@ -133,7 +132,7 @@ class ProcessFilterItem(
 
 
     private fun onTypeChange(
-        type: ColumnCriteriaType
+        type: ColumnFilterType
     ) {
         async {
             val actions = props.dispatcher.dispatch(
@@ -160,7 +159,7 @@ class ProcessFilterItem(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val columnCriteria = props.criteriaSpec.columns[props.columnName]
+        val columnCriteria = props.filterSpec.columns[props.columnName]
             ?: return
 
         val processState = props.processState
@@ -312,20 +311,20 @@ class ProcessFilterItem(
     }
 
 
-    private fun RBuilder.renderSummary(columnCriteria: ColumnCriteria) {
-        if (columnCriteria.values.isEmpty()) {
+    private fun RBuilder.renderSummary(columnFilterSpec: ColumnFilterSpec) {
+        if (columnFilterSpec.values.isEmpty()) {
             return
         }
 
         val label =
-            when (columnCriteria.type) {
-                ColumnCriteriaType.RequireAny -> "Require"
-                ColumnCriteriaType.ExcludeAll -> "Exclude"
+            when (columnFilterSpec.type) {
+                ColumnFilterType.RequireAny -> "Require"
+                ColumnFilterType.ExcludeAll -> "Exclude"
             }
 
         +"$label: "
 
-        +columnCriteria.values.joinToString {
+        +columnFilterSpec.values.joinToString {
             if (it.isBlank()) {
                 "(blank)"
             }
@@ -337,11 +336,11 @@ class ProcessFilterItem(
 
 
     private fun RBuilder.renderDetail(
-        columnCriteria: ColumnCriteria,
+        columnFilterSpec: ColumnFilterSpec,
         columnSummary: ColumnSummary?,
         editDisabled: Boolean
     ) {
-        renderEditCriteria(columnCriteria, editDisabled)
+        renderEditCriteria(columnFilterSpec, editDisabled)
 
         if (columnSummary == null) {
             return
@@ -349,7 +348,7 @@ class ProcessFilterItem(
 
         val hasNominal = ! columnSummary.nominalValueSummary.isEmpty()
         if (hasNominal) {
-            renderHistogram(columnCriteria, columnSummary.nominalValueSummary, editDisabled)
+            renderHistogram(columnFilterSpec, columnSummary.nominalValueSummary, editDisabled)
         }
 
         val hasNumeric = ! columnSummary.numericValueSummary.isEmpty()
@@ -364,7 +363,7 @@ class ProcessFilterItem(
     }
 
 
-    private fun RBuilder.renderEditCriteria(columnCriteria: ColumnCriteria, editDisabled: Boolean) {
+    private fun RBuilder.renderEditCriteria(columnFilterSpec: ColumnFilterSpec, editDisabled: Boolean) {
         if (state.updateError != null) {
             +"Error: ${state.updateError}"
         }
@@ -373,30 +372,30 @@ class ProcessFilterItem(
             css {
                 marginBottom = 0.5.em
             }
-            renderEditType(columnCriteria, editDisabled)
+            renderEditType(columnFilterSpec, editDisabled)
         }
 
         renderEditValues(editDisabled)
     }
 
 
-    private fun RBuilder.renderEditType(columnCriteria: ColumnCriteria, editDisabled: Boolean) {
+    private fun RBuilder.renderEditType(columnFilterSpec: ColumnFilterSpec, editDisabled: Boolean) {
 //        +"type: ${columnCriteria.type}"
 
         child(MaterialToggleButtonGroup::class) {
             attrs {
-                value = columnCriteria.type.name
+                value = columnFilterSpec.type.name
                 exclusive = true
                 onChange = { _, v ->
                     if (v is String) {
-                        onTypeChange(ColumnCriteriaType.valueOf(v))
+                        onTypeChange(ColumnFilterType.valueOf(v))
                     }
                 }
             }
 
             child(MaterialToggleButton::class) {
                 attrs {
-                    value = ColumnCriteriaType.RequireAny.name
+                    value = ColumnFilterType.RequireAny.name
                     disabled = editDisabled
                 }
                 styledSpan {
@@ -409,7 +408,7 @@ class ProcessFilterItem(
 
             child(MaterialToggleButton::class) {
                 attrs {
-                    value = ColumnCriteriaType.ExcludeAll.name
+                    value = ColumnFilterType.ExcludeAll.name
                     disabled = editDisabled
                 }
                 styledSpan {
@@ -432,7 +431,7 @@ class ProcessFilterItem(
                 clientState = props.processState.clientState
                 objectLocation = props.processState.mainLocation
 
-                attributePath = CriteriaSpec.columnValuesAttributePath(props.columnName)
+                attributePath = FilterSpec.columnValuesAttributePath(props.columnName)
 
                 valueType = TypeMetadata(
                     ClassNames.kotlinSet,
@@ -444,7 +443,7 @@ class ProcessFilterItem(
 
 
     private fun RBuilder.renderHistogram(
-        columnCriteria: ColumnCriteria,
+        columnFilterSpec: ColumnFilterSpec,
         histogram: NominalValueSummary,
         editDisabled: Boolean
     ) {
@@ -490,7 +489,7 @@ class ProcessFilterItem(
 
                 tbody {
                     for (e in histogram.histogram.entries) {
-                        val checked = columnCriteria.values.contains(e.key)
+                        val checked = columnFilterSpec.values.contains(e.key)
 
                         tr {
                             key = e.key

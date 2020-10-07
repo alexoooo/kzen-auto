@@ -15,9 +15,8 @@ import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.InputIcon
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.process.FilterConventions
+import tech.kzen.auto.common.objects.document.process.ProcessConventions
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
-import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 
 
 class ProcessInput(
@@ -160,7 +159,7 @@ class ProcessInput(
                 attrs {
                     clientState = props.processState.clientState
                     objectLocation = props.processState.mainLocation
-                    attributeName = FilterConventions.inputAttribute
+                    attributeName = ProcessConventions.inputAttribute
                     labelOverride = "File Path"
 
                     disabled = editDisabled

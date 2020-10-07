@@ -7,6 +7,7 @@ import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.StageController
 import tech.kzen.auto.client.objects.document.process.filter.ProcessFilterList
+import tech.kzen.auto.client.objects.document.process.pivot.ProcessPivot
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.objects.document.process.state.ProcessStore
 import tech.kzen.auto.client.wrap.MaterialLinearProgress
@@ -102,6 +103,7 @@ class ProcessController(
 
             renderInput(processState)
             renderFilter(processState)
+            renderPivot(processState)
             renderOutput(processState)
         }
 
@@ -143,6 +145,16 @@ class ProcessController(
 
     private fun RBuilder.renderFilter(processState: ProcessState) {
         child(ProcessFilterList::class) {
+            attrs {
+                this.processState = processState
+                this.dispatcher = store
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderPivot(processState: ProcessState) {
+        child(ProcessPivot::class) {
             attrs {
                 this.processState = processState
                 this.dispatcher = store

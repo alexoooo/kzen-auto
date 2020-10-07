@@ -1,10 +1,7 @@
 package tech.kzen.auto.client.objects.document.process.state
 
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.common.objects.document.process.ColumnCriteriaType
-import tech.kzen.auto.common.objects.document.process.CriteriaSpec
-import tech.kzen.auto.common.objects.document.process.FilterConventions
-import tech.kzen.auto.common.objects.document.process.OutputInfo
+import tech.kzen.auto.common.objects.document.process.*
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
@@ -13,17 +10,8 @@ import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskState
 import tech.kzen.auto.common.util.RequestParams
-import tech.kzen.lib.common.model.attribute.AttributeNesting
-import tech.kzen.lib.common.model.attribute.AttributeSegment
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.PositionIndex
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.InsertMapEntryInAttributeCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveInAttributeCommand
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphSuccess
-import tech.kzen.lib.platform.collect.persistentListOf
 
 
 object ProcessEffect {
@@ -102,7 +90,17 @@ object ProcessEffect {
                 submitFilterValueRemove(state, action.columnName, action.filterValue)
 
             is FilterTypeChangeRequest ->
-                submitFilterTypeChange(state, action.columnName, action.criteriaType)
+                submitFilterTypeChange(state, action.columnName, action.filterType)
+
+
+            is PivotRowAddRequest ->
+                submitPivotRowAdd(state, action.columnName)
+
+            is PivotRowRemoveRequest ->
+                submitPivotRowRemove(state, action.columnName)
+
+            is PivotRowClearRequest ->
+                submitPivotRowClear(state)
 
 
             else -> null
@@ -116,7 +114,7 @@ object ProcessEffect {
     ): ProcessAction {
         val result = ClientContext.restClient.performDetached(
             state.mainLocation,
-            FilterConventions.actionParameter to FilterConventions.actionListFiles)
+            ProcessConventions.actionParameter to ProcessConventions.actionListFiles)
 
         return when (result) {
             is ExecutionSuccess -> {
@@ -139,7 +137,7 @@ object ProcessEffect {
     ): ProcessAction {
         val result = ClientContext.restClient.performDetached(
             state.mainLocation,
-            FilterConventions.actionParameter to FilterConventions.actionListColumns)
+            ProcessConventions.actionParameter to ProcessConventions.actionListColumns)
 
         return when (result) {
             is ExecutionSuccess -> {
@@ -225,7 +223,7 @@ object ProcessEffect {
         }
 
         val requestAction = taskModel.requestAction()
-        val isFiltering = requestAction == FilterConventions.actionFilterTask
+        val isFiltering = requestAction == ProcessConventions.actionFilterTask
 
         if (isFiltering) {
             return OutputLookupRequest
@@ -249,7 +247,7 @@ object ProcessEffect {
         action: ProcessTaskStopResponse
     ): ProcessAction? {
         val requestAction = action.taskModel.requestAction()
-        val isFiltering = requestAction == FilterConventions.actionFilterTask
+        val isFiltering = requestAction == ProcessConventions.actionFilterTask
 
         return if (isFiltering) {
             CompoundProcessAction(
@@ -267,7 +265,7 @@ object ProcessEffect {
     ): SummaryLookupAction {
         val result = ClientContext.restClient.performDetached(
             state.mainLocation,
-            FilterConventions.actionParameter to FilterConventions.actionSummaryLookup)
+            ProcessConventions.actionParameter to ProcessConventions.actionSummaryLookup)
 
         return when (result) {
             is ExecutionSuccess -> {
@@ -296,7 +294,7 @@ object ProcessEffect {
     ): ProcessAction {
         val result = ClientContext.restClient.performDetached(
             state.mainLocation,
-            FilterConventions.actionParameter to FilterConventions.actionLookupOutput)
+            ProcessConventions.actionParameter to ProcessConventions.actionLookupOutput)
 
         return when (result) {
             is ExecutionSuccess -> {
@@ -321,17 +319,17 @@ object ProcessEffect {
     ): ProcessAction {
         val action = when (type) {
             ProcessTaskType.Index ->
-                FilterConventions.actionSummaryTask
+                ProcessConventions.actionSummaryTask
 
             ProcessTaskType.Filter ->
-                FilterConventions.actionFilterTask
+                ProcessConventions.actionFilterTask
         }
 
         val result = ClientContext.clientRestTaskRepository.submit(
             state.mainLocation,
             DetachedRequest(
                 RequestParams.of(
-                    FilterConventions.actionParameter to action),
+                    ProcessConventions.actionParameter to action),
                 null))
 
         return ProcessTaskRunResponse(result)
@@ -355,7 +353,7 @@ object ProcessEffect {
         state: ProcessState,
         columnName: String
     ): ProcessAction {
-        val command = CriteriaSpec.addCommand(state.mainLocation, columnName)
+        val command = FilterSpec.addCommand(state.mainLocation, columnName)
 
         val result = ClientContext.mirroredGraphStore
             .apply(command)
@@ -375,7 +373,7 @@ object ProcessEffect {
         state: ProcessState,
         columnName: String
     ): ProcessAction {
-        val command = CriteriaSpec.removeCommand(state.mainLocation, columnName)
+        val command = FilterSpec.removeCommand(state.mainLocation, columnName)
 
         val result = ClientContext.mirroredGraphStore
             .apply(command)
@@ -396,7 +394,7 @@ object ProcessEffect {
         columnName: String,
         filterValue: String
     ): ProcessAction {
-        val command = CriteriaSpec.addValueCommand(
+        val command = FilterSpec.addValueCommand(
             state.mainLocation, columnName, filterValue)
 
         val result = ClientContext.mirroredGraphStore.apply(command)
@@ -411,10 +409,10 @@ object ProcessEffect {
     private suspend fun submitFilterTypeChange(
         state: ProcessState,
         columnName: String,
-        criteriaType: ColumnCriteriaType
+        filterType: ColumnFilterType
     ): ProcessAction {
-        val command = CriteriaSpec.updateTypeCommand(
-            state.mainLocation, columnName, criteriaType)
+        val command = FilterSpec.updateTypeCommand(
+            state.mainLocation, columnName, filterType)
 
         val result = ClientContext.mirroredGraphStore.apply(command)
 
@@ -430,7 +428,7 @@ object ProcessEffect {
         columnName: String,
         filterValue: String
     ): ProcessAction {
-        val command = CriteriaSpec.removeValueCommand(
+        val command = FilterSpec.removeValueCommand(
             state.mainLocation, columnName, filterValue)
 
         val result = ClientContext.mirroredGraphStore.apply(command)
@@ -439,5 +437,53 @@ object ProcessEffect {
             (result as? MirroredGraphError)?.error?.message
 
         return FilterUpdateResult(errorMessage)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun submitPivotRowAdd(
+        state: ProcessState,
+        columnName: String
+    ): ProcessAction {
+        val command = PivotSpec.addRowCommand(
+            state.mainLocation, columnName)
+
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        val errorMessage =
+            (result as? MirroredGraphError)?.error?.message
+
+        return PivotUpdateResult(errorMessage)
+    }
+
+
+    private suspend fun submitPivotRowRemove(
+        state: ProcessState,
+        columnName: String
+    ): ProcessAction {
+        val command = PivotSpec.removeRowCommand(
+            state.mainLocation, columnName)
+
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        val errorMessage =
+            (result as? MirroredGraphError)?.error?.message
+
+        return PivotUpdateResult(errorMessage)
+    }
+
+
+    private suspend fun submitPivotRowClear(
+        state: ProcessState
+    ): ProcessAction {
+        val command = PivotSpec.clearRowCommand(
+            state.mainLocation)
+
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        val errorMessage =
+            (result as? MirroredGraphError)?.error?.message
+
+        return PivotUpdateResult(errorMessage)
     }
 }

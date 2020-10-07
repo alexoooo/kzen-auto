@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.process.state
 
-import tech.kzen.auto.common.objects.document.process.FilterConventions
+import tech.kzen.auto.common.objects.document.process.ProcessConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.reactive.TableSummary
@@ -161,7 +161,7 @@ object ProcessReducer {
         val result = model.finalOrPartialResult()
 
         val requestAction = model.requestAction()
-        val isIndexing = requestAction == FilterConventions.actionSummaryTask
+        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
         val isRunning = model.state == TaskState.Running
 
         return when (result) {
@@ -201,7 +201,7 @@ object ProcessReducer {
     ): ProcessState {
         val isRunning = action.taskModel.state == TaskState.Running
         val requestAction = action.taskModel.requestAction()
-        val isIndexing = requestAction == FilterConventions.actionSummaryTask
+        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
 
         val tableSummary =
             if (isIndexing) {
@@ -238,7 +238,7 @@ object ProcessReducer {
 
         val isRunning = action.taskModel.state == TaskState.Running
         val requestAction = action.taskModel.requestAction()
-        val isIndexing = requestAction == FilterConventions.actionSummaryTask
+        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
 
         val tableSummary =
             if (isIndexing) {
@@ -268,7 +268,7 @@ object ProcessReducer {
         action: ProcessTaskStopResponse
     ): ProcessState {
         val requestAction = action.taskModel.requestAction()
-        val isIndexing = requestAction == FilterConventions.actionSummaryTask
+        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
 
         val tableSummary =
             if (isIndexing) {
@@ -354,8 +354,24 @@ object ProcessReducer {
             is FilterValueRemoveRequest -> state
             is FilterTypeChangeRequest -> state
             is FilterUpdateResult -> state
-
             is FilterRemoveRequest -> state
+
+
+            is PivotRowAddRequest -> state.copy(
+                pivotLoading = true,
+                pivotError = null)
+
+            is PivotRowRemoveRequest -> state.copy(
+                pivotLoading = true,
+                pivotError = null)
+
+            PivotRowClearRequest -> state.copy(
+                pivotLoading = true,
+                pivotError = null)
+
+            is PivotUpdateResult -> state.copy(
+                pivotLoading = false,
+                pivotError = action.errorMessage)
         }
     }
 }

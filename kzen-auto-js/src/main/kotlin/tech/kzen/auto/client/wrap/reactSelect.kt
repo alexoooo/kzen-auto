@@ -33,6 +33,8 @@ external interface ReactSelectProps: RProps {
 
     var menuPortalTarget: HTMLElement
 
+//    var isMulti: Boolean
+
 //    var id: String
 //    var variant: String
 //    var color: String
@@ -42,3 +44,30 @@ external interface ReactSelectProps: RProps {
 }
 
 
+
+@JsName("default")
+external class ReactSelectMulti: Component<ReactSelectMultiProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+external interface ReactSelectMultiProps: RProps {
+    var id: String
+
+    var value: Array<ReactSelectOption>
+
+    var options: Array<ReactSelectOption>
+
+    var onChange: (Array<ReactSelectOption>?) -> Unit
+
+    var components: Json
+
+    var menuContainerStyle: Json
+
+    var styles: Json
+
+    var menuPortalTarget: HTMLElement
+
+    var isMulti: Boolean
+    var isDisabled: Boolean
+}

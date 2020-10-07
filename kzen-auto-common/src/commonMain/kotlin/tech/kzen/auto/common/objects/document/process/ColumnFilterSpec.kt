@@ -7,8 +7,8 @@ import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.platform.collect.persistentMapOf
 
 
-data class ColumnCriteria(
-    val type: ColumnCriteriaType,
+data class ColumnFilterSpec(
+    val type: ColumnFilterType,
     val values: Set<String>
 ) {
     companion object {
@@ -16,15 +16,15 @@ data class ColumnCriteria(
         val valuesAttributeSegment = AttributeSegment.ofKey("values")
 
         val emptyNotation = MapAttributeNotation(persistentMapOf(
-            typeAttributeSegment to ScalarAttributeNotation(ColumnCriteriaType.RequireAny.name),
+            typeAttributeSegment to ScalarAttributeNotation(ColumnFilterType.RequireAny.name),
             valuesAttributeSegment to ListAttributeNotation.empty))
 
 
-        fun ofNotation(attributeNotation: MapAttributeNotation): ColumnCriteria {
+        fun ofNotation(attributeNotation: MapAttributeNotation): ColumnFilterSpec {
             val typeAttribute =
                 attributeNotation.get(typeAttributeSegment) as ScalarAttributeNotation
 
-            val type = ColumnCriteriaType.valueOf(typeAttribute.value)
+            val type = ColumnFilterType.valueOf(typeAttribute.value)
 
             val valuesAttribute =
                 attributeNotation.get(valuesAttributeSegment) as ListAttributeNotation
@@ -35,7 +35,7 @@ data class ColumnCriteria(
                 .map { it.value }
                 .toSet()
 
-            return ColumnCriteria(type, values)
+            return ColumnFilterSpec(type, values)
         }
     }
 }

@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.process.state
 
-import tech.kzen.auto.common.objects.document.process.ColumnCriteriaType
+import tech.kzen.auto.common.objects.document.process.ColumnFilterType
 import tech.kzen.auto.common.objects.document.process.OutputInfo
 import tech.kzen.auto.common.paradigm.reactive.TableSummary
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
@@ -151,13 +151,59 @@ data class FilterValueRemoveRequest(
 
 data class FilterTypeChangeRequest(
     val columnName: String,
-    val criteriaType: ColumnCriteriaType
+    val filterType: ColumnFilterType
 ): FilterAction()
 
 
 data class FilterUpdateResult(
     val errorMessage: String?
 ): FilterAction()
+
+
+//---------------------------------------------------------------------------------------------------------------------
+sealed class PivotAction: SingularProcessAction()
+
+
+data class PivotUpdateResult(
+    val errorMessage: String?
+): FilterAction()
+
+
+//--------------------------------------------------------------
+data class PivotRowAddRequest(
+    val columnName: String
+): FilterAction()
+
+
+data class PivotRowRemoveRequest(
+    val columnName: String
+): FilterAction()
+
+
+object PivotRowClearRequest: FilterAction()
+
+
+//--------------------------------------------------------------
+//data class PivotValueAddRequest(
+//    val columnName: String
+//): FilterAction()
+//
+//
+//data class PivotValueRemoveRequest(
+//    val columnName: String
+//): FilterAction()
+//
+//
+//data class PivotValueTypeAddRequest(
+//    val columnName: String,
+//    val valueType: PivotValueType
+//): FilterAction()
+//
+//
+//data class PivotValueTypeRemoveRequest(
+//    val columnName: String,
+//    val valueType: PivotValueType
+//): FilterAction()
 
 
 //---------------------------------------------------------------------------------------------------------------------

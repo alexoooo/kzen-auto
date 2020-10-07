@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.objects.document.process.state
 
 import tech.kzen.auto.client.service.global.SessionState
-import tech.kzen.auto.common.objects.document.process.FilterConventions
 import tech.kzen.auto.common.objects.document.process.OutputInfo
+import tech.kzen.auto.common.objects.document.process.ProcessConventions
 import tech.kzen.auto.common.paradigm.reactive.TableSummary
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
@@ -26,6 +26,12 @@ data class ProcessState(
     val columnListing: List<String>? = null,
     val columnListingError: String? = null,
 
+    val filterAddLoading: Boolean = false,
+    val filterAddError: String? = null,
+
+    val pivotLoading: Boolean = false,
+    val pivotError: String? = null,
+
     val outputLoaded: Boolean = false,
     val outputLoading: Boolean = false,
     val outputInfo: OutputInfo? = null,
@@ -46,10 +52,7 @@ data class ProcessState(
     val tableSummaryLoading: Boolean = false,
     val tableSummary: TableSummary? = null,
     val tableSummaryError: String? = null,
-    val indexTaskFinished: Boolean = false,
-
-    val filterAddLoading: Boolean = false,
-    val filterAddError: String? = null
+    val indexTaskFinished: Boolean = false
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -81,7 +84,7 @@ data class ProcessState(
                 .documents[documentPath]
                 ?: return null
 
-            if (! FilterConventions.isFilter(documentNotation)) {
+            if (! ProcessConventions.isFilter(documentNotation)) {
                 return null
             }
 

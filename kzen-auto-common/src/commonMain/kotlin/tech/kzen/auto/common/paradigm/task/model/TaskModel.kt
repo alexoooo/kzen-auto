@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.paradigm.task.model
 
-import tech.kzen.auto.common.objects.document.process.FilterConventions
+import tech.kzen.auto.common.objects.document.process.ProcessConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -81,6 +81,6 @@ data class TaskModel(
 
 
     fun requestAction(): String {
-        return request.parameters.get(FilterConventions.actionParameter)!!
+        return request.parameters.get(ProcessConventions.actionParameter)!!
     }
 }

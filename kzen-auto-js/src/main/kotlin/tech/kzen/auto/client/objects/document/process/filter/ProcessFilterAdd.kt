@@ -9,7 +9,7 @@ import tech.kzen.auto.client.objects.document.process.state.FilterAddRequest
 import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.process.CriteriaSpec
+import tech.kzen.auto.common.objects.document.process.FilterSpec
 import kotlinx.browser.document
 import kotlin.js.Json
 import kotlin.js.json
@@ -24,7 +24,7 @@ class ProcessFilterAdd(
     class Props(
         var processState: ProcessState,
         var dispatcher: ProcessDispatcher,
-        var criteriaSpec: CriteriaSpec
+        var filterSpec: FilterSpec
     ): RProps
 
 
@@ -181,7 +181,7 @@ class ProcessFilterAdd(
         }
 
         val selectOptions = columnListing
-            .filter { it !in props.criteriaSpec.columns }
+            .filter { it !in props.filterSpec.columns }
             .map { ReactSelectOption(it, it) }
             .toTypedArray()
 

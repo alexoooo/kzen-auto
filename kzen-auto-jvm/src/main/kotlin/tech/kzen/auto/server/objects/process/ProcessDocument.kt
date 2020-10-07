@@ -1,8 +1,9 @@
 package tech.kzen.auto.server.objects.process
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.auto.common.objects.document.process.CriteriaSpec
-import tech.kzen.auto.common.objects.document.process.FilterConventions
+import tech.kzen.auto.common.objects.document.process.FilterSpec
+import tech.kzen.auto.common.objects.document.process.PivotSpec
+import tech.kzen.auto.common.objects.document.process.ProcessConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -18,9 +19,10 @@ import java.nio.file.Path
 
 @Reflect
 class ProcessDocument(
-        private val input: String,
-        private val output: String,
-        private val criteria: CriteriaSpec
+    private val input: String,
+    private val filter: FilterSpec,
+    private val pivot: PivotSpec,
+    private val output: String
 ):
     DocumentArchetype(),
     DetachedAction,
@@ -28,20 +30,20 @@ class ProcessDocument(
 {
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun execute(request: DetachedRequest): ExecutionResult {
-        val action = request.parameters.get(FilterConventions.actionParameter)
-            ?: return ExecutionFailure("'${FilterConventions.actionParameter}' expected")
+        val action = request.parameters.get(ProcessConventions.actionParameter)
+            ?: return ExecutionFailure("'${ProcessConventions.actionParameter}' expected")
 
         return when (action) {
-            FilterConventions.actionListFiles ->
+            ProcessConventions.actionListFiles ->
                 actionListFiles()
 
-            FilterConventions.actionListColumns ->
+            ProcessConventions.actionListColumns ->
                 actionColumnListing()
 
-            FilterConventions.actionLookupOutput ->
+            ProcessConventions.actionLookupOutput ->
                 actionLookupOutput()
 
-            FilterConventions.actionSummaryLookup ->
+            ProcessConventions.actionSummaryLookup ->
                 actionColumnSummaryLookup()
 
 //            FilterConventions.actionFilter ->
@@ -111,10 +113,10 @@ class ProcessDocument(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun start(request: DetachedRequest, handle: TaskHandle) {
-        val action = request.parameters.get(FilterConventions.actionParameter)
+        val action = request.parameters.get(ProcessConventions.actionParameter)
         if (action == null) {
             handle.complete(ExecutionFailure(
-                "'${FilterConventions.actionParameter}' expected"))
+                "'${ProcessConventions.actionParameter}' expected"))
             return
         }
 
@@ -138,13 +140,13 @@ class ProcessDocument(
 //                handle.complete(result)
 //            }
 
-            FilterConventions.actionSummaryTask -> {
+            ProcessConventions.actionSummaryTask -> {
 //                val result = actionColumnSummary(inputPaths, request)
 //                handle.complete(result)
                 actionColumnSummaryAsync(inputPaths, columnNames, /*request,*/ handle)
             }
 
-            FilterConventions.actionFilterTask -> {
+            ProcessConventions.actionFilterTask -> {
                 actionApplyFilterAsync(
                     inputPaths, columnNames, handle)
 //                handle.complete(result)
@@ -191,6 +193,6 @@ class ProcessDocument(
         val outputPath = parsedOutputPath.toAbsolutePath().normalize()
 
         ApplyFilterAction.applyFilterAsync(
-            inputPaths, columnNames, outputPath, criteria, handle)
+            inputPaths, columnNames, outputPath, filter, handle)
     }
 }

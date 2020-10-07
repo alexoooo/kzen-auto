@@ -22,7 +22,8 @@ import tech.kzen.auto.common.paradigm.dataflow.api.output.BatchOutput
 import tech.kzen.auto.server.objects.graph.ReplaceProcessor
 import tech.kzen.auto.server.objects.graph.SelectLast
 import tech.kzen.auto.server.objects.process.ProcessDocument
-import tech.kzen.auto.common.objects.document.process.CriteriaSpec
+import tech.kzen.auto.common.objects.document.process.FilterSpec
+import tech.kzen.auto.common.objects.document.process.PivotSpec
 import tech.kzen.auto.server.objects.script.browser.CloseBrowser
 import tech.kzen.auto.server.objects.script.browser.FocusElement
 import tech.kzen.auto.common.objects.document.feature.TargetSpec
@@ -125,9 +126,9 @@ reflectionRegistry.put(
 
 reflectionRegistry.put(
     "tech.kzen.auto.server.objects.process.ProcessDocument",
-    listOf("input", "output", "criteria")
+    listOf("input", "filter", "pivot", "output")
 ) { args ->
-    ProcessDocument(args[0] as String, args[1] as String, args[2] as CriteriaSpec)
+    ProcessDocument(args[0] as String, args[1] as FilterSpec, args[2] as PivotSpec, args[3] as String)
 }
 
 reflectionRegistry.put(
