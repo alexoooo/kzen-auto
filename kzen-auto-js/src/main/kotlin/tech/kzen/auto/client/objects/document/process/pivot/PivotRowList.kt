@@ -1,27 +1,26 @@
 package tech.kzen.auto.client.objects.document.process.pivot
 
 import kotlinx.browser.document
-import kotlinx.css.em
-import kotlinx.css.fontSize
+import kotlinx.css.*
 import react.RBuilder
 import react.RProps
 import react.RPureComponent
 import react.RState
+import styled.css
 import styled.styledDiv
+import styled.styledSpan
 import tech.kzen.auto.client.objects.document.process.state.*
-import tech.kzen.auto.client.wrap.MaterialInputLabel
 import tech.kzen.auto.client.wrap.ReactSelectMulti
 import tech.kzen.auto.client.wrap.ReactSelectOption
-import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.process.PivotSpec
 import kotlin.js.Json
 import kotlin.js.json
 
 
-class ProcessPivotRowList(
+class PivotRowList(
     props: Props
 ):
-    RPureComponent<ProcessPivotRowList.Props, RState>(props)
+    RPureComponent<PivotRowList.Props, RState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
@@ -36,12 +35,11 @@ class ProcessPivotRowList(
         val oldRows = props.pivotSpec.rows
 
         val action =
-            if (options.isNullOrEmpty()) {
-                check(oldRows.isNotEmpty()) { "Already empty" }
+            if (options.isNullOrEmpty() && oldRows.size > 1) {
                 PivotRowClearRequest
             }
             else {
-                val newRows = options.map { it.value }
+                val newRows = options?.map { it.value } ?: listOf()
 
                 val added = newRows.filter { it !in oldRows }
                 val removed = oldRows.filter { it !in newRows }
@@ -69,24 +67,35 @@ class ProcessPivotRowList(
             ?: return
 
         styledDiv {
-            val selectId = "material-react-select-id"
+            css {
+                borderTopWidth = 1.px
+                borderTopStyle = BorderStyle.solid
+                borderTopColor = Color.lightGray
+                paddingTop = 0.5.em
+            }
 
-            child(MaterialInputLabel::class) {
-                attrs {
-                    htmlFor = selectId
+//            val selectId = "material-react-select-id"
 
-                    style = reactStyle {
-                        fontSize = 0.8.em
-                    }
+//            child(MaterialInputLabel::class) {
+//                attrs {
+//                    htmlFor = selectId
+//                    style = reactStyle {
+//                        fontSize = 0.8.em
+//                    }
+//                }
+//                +"Rows"
+//            }
+            styledSpan {
+                css {
+                    fontSize = 1.5.em
                 }
-
                 +"Rows"
             }
 
             child(ReactSelectMulti::class) {
                 attrs {
                     isMulti = true
-                    id = selectId
+//                    id = selectId
 
                     value = props.pivotSpec.rows.map { ReactSelectOption(it, it) }.toTypedArray()
 

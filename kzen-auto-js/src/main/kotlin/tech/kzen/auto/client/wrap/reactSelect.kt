@@ -18,20 +18,14 @@ external class ReactSelect: Component<ReactSelectProps, RState> {
 
 external interface ReactSelectProps: RProps {
     var id: String
-
     var value: ReactSelectOption?
-
     var options: Array<ReactSelectOption>
-
     var onChange: (ReactSelectOption) -> Unit
-
     var components: Json
-
     var menuContainerStyle: Json
-
     var styles: Json
-
     var menuPortalTarget: HTMLElement
+    var placeholder: String
 
 //    var isMulti: Boolean
 

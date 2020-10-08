@@ -4,19 +4,22 @@ import react.RBuilder
 import react.RProps
 import react.RPureComponent
 import react.RState
-import styled.styledDiv
 import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.common.objects.document.process.PivotSpec
+import tech.kzen.auto.common.objects.document.process.PivotValueSpec
 
 
-class ProcessPivotValueList(
+class PivotValueTypes(
     props: Props
 ):
-    RPureComponent<ProcessPivotValueList.Props, RState>(props)
+    RPureComponent<PivotValueTypes.Props, RState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
+        var columnName: String,
+        var pivotValueSpec: PivotValueSpec,
+
         var pivotSpec: PivotSpec,
         var processState: ProcessState,
         var dispatcher: ProcessDispatcher
@@ -24,9 +27,15 @@ class ProcessPivotValueList(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+//    private fun onDelete() {
+//        props.dispatcher.dispatchAsync(
+//            PivotValueRemoveRequest(props.columnName)
+//        )
+//    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        styledDiv {
-            +"[Values] - ${props.pivotSpec.values}"
-        }
+        +" - ${props.pivotValueSpec.types}"
     }
 }

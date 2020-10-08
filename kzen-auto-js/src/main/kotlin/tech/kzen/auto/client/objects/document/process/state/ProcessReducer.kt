@@ -39,6 +39,9 @@ object ProcessReducer {
             is FilterAction ->
                 reduceFilter(state, action)
 
+            is PivotAction ->
+                reducePivot(state, action)
+
             //--------------------------------------------------
 //            else ->
 //                state
@@ -355,17 +358,17 @@ object ProcessReducer {
             is FilterTypeChangeRequest -> state
             is FilterUpdateResult -> state
             is FilterRemoveRequest -> state
+        }
+    }
 
 
-            is PivotRowAddRequest -> state.copy(
-                pivotLoading = true,
-                pivotError = null)
-
-            is PivotRowRemoveRequest -> state.copy(
-                pivotLoading = true,
-                pivotError = null)
-
-            PivotRowClearRequest -> state.copy(
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun reducePivot(
+        state: ProcessState,
+        action: PivotAction
+    ): ProcessState {
+        return when (action) {
+            is PivotUpdateRequest -> state.copy(
                 pivotLoading = true,
                 pivotError = null)
 

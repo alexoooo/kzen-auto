@@ -10,6 +10,7 @@ import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskState
 import tech.kzen.auto.common.util.RequestParams
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphSuccess
 
@@ -101,6 +102,18 @@ object ProcessEffect {
 
             is PivotRowClearRequest ->
                 submitPivotRowClear(state)
+
+            is PivotValueAddRequest ->
+                submitPivotValueAdd(state, action.columnName)
+
+            is PivotValueRemoveRequest ->
+                submitPivotValueRemove(state, action.columnName)
+
+            is PivotValueTypeAddRequest ->
+                submitPivotValueTypeAdd(state, action.columnName, action.valueType)
+
+            is PivotValueTypeRemoveRequest ->
+                submitPivotValueTypeRemove(state, action.columnName, action.valueType)
 
 
             else -> null
@@ -441,45 +454,56 @@ object ProcessEffect {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun submitPivotRowAdd(
-        state: ProcessState,
-        columnName: String
-    ): ProcessAction {
-        val command = PivotSpec.addRowCommand(
-            state.mainLocation, columnName)
-
-        val result = ClientContext.mirroredGraphStore.apply(command)
-
-        val errorMessage =
-            (result as? MirroredGraphError)?.error?.message
-
-        return PivotUpdateResult(errorMessage)
+    private suspend fun submitPivotRowAdd(state: ProcessState, columnName: String): ProcessAction {
+        return submitPivotUpdate(PivotSpec.addRowCommand(
+            state.mainLocation, columnName))
     }
 
 
-    private suspend fun submitPivotRowRemove(
-        state: ProcessState,
-        columnName: String
-    ): ProcessAction {
-        val command = PivotSpec.removeRowCommand(
-            state.mainLocation, columnName)
-
-        val result = ClientContext.mirroredGraphStore.apply(command)
-
-        val errorMessage =
-            (result as? MirroredGraphError)?.error?.message
-
-        return PivotUpdateResult(errorMessage)
+    private suspend fun submitPivotRowRemove(state: ProcessState, columnName: String): ProcessAction {
+        return submitPivotUpdate(PivotSpec.removeRowCommand(
+            state.mainLocation, columnName))
     }
 
 
-    private suspend fun submitPivotRowClear(
-        state: ProcessState
-    ): ProcessAction {
-        val command = PivotSpec.clearRowCommand(
-            state.mainLocation)
+    private suspend fun submitPivotRowClear(state: ProcessState): ProcessAction {
+        return submitPivotUpdate(PivotSpec.clearRowCommand(
+            state.mainLocation))
+    }
 
-        val result = ClientContext.mirroredGraphStore.apply(command)
+
+    private suspend fun submitPivotValueAdd(state: ProcessState, columnName: String): ProcessAction {
+        return submitPivotUpdate(PivotSpec.addValueCommand(
+            state.mainLocation, columnName))
+    }
+
+
+    private suspend fun submitPivotValueRemove(state: ProcessState, columnName: String): ProcessAction {
+        return submitPivotUpdate(PivotSpec.removeValueCommand(
+            state.mainLocation, columnName))
+    }
+
+
+    private suspend fun submitPivotValueTypeAdd(
+        state: ProcessState, columnName: String, valueType: PivotValueType
+    ): ProcessAction {
+        return submitPivotUpdate(PivotSpec.addValueTypeCommand(
+            state.mainLocation, columnName, valueType))
+    }
+
+
+    private suspend fun submitPivotValueTypeRemove(
+        state: ProcessState, columnName: String, valueType: PivotValueType
+    ): ProcessAction {
+        return submitPivotUpdate(PivotSpec.removeValueTypeCommand(
+            state.mainLocation, columnName, valueType))
+    }
+
+
+    private suspend fun submitPivotUpdate(
+        pivotUpdateCommand: NotationCommand
+    ): ProcessAction {
+        val result = ClientContext.mirroredGraphStore.apply(pivotUpdateCommand)
 
         val errorMessage =
             (result as? MirroredGraphError)?.error?.message

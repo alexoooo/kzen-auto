@@ -2,6 +2,7 @@ package tech.kzen.auto.common.objects.document.process
 
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.AttributeDefinitionAttempt
 import tech.kzen.lib.common.model.definition.GraphDefinition
@@ -13,10 +14,7 @@ import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveListItemInAttributeCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.reflect.Reflect
 
 
@@ -60,9 +58,50 @@ data class PivotSpec(
         }
 
 
-//        fun rowsAttributePath(columnName: String): AttributePath {
-//            val columnAttributePath = FilterSpec.columnAttributePath(columnName)
-//            return columnAttributePath.nest(ColumnFilterSpec.valuesAttributeSegment)
+        fun addValueCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
+            return UpdateInAttributeCommand(
+                mainLocation,
+                valuePath(columnName),
+                ListAttributeNotation.empty)
+        }
+
+
+        fun removeValueCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
+            return RemoveInAttributeCommand(
+                mainLocation,
+                valuePath(columnName),
+                false)
+        }
+
+
+        fun addValueTypeCommand(
+            mainLocation: ObjectLocation, columnName: String, valueType: PivotValueType
+        ): NotationCommand {
+            return InsertListItemInAttributeCommand(
+                mainLocation,
+                valuePath(columnName),
+                PositionRelation.afterLast,
+                ScalarAttributeNotation(valueType.name))
+        }
+
+
+        fun removeValueTypeCommand(
+            mainLocation: ObjectLocation, columnName: String, valueType: PivotValueType
+        ): NotationCommand {
+            return RemoveListItemInAttributeCommand(
+                mainLocation,
+                valuePath(columnName),
+                ScalarAttributeNotation(valueType.name),
+                false)
+        }
+
+
+        private fun valuePath(columnName: String): AttributePath {
+            return valuesAttributePath.nest(AttributeSegment.ofKey(columnName))
+        }
+
+//        private fun valueTypePath(columnName: String): AttributePath {
+//            return valuesAttributePath.nest(AttributeSegment.ofKey(columnName))
 //        }
     }
 

@@ -90,7 +90,8 @@ class ProcessPivot(
 
         styledDiv {
             css {
-                marginBottom = 0.5.em
+//                marginBottom = 0.5.em
+                marginBottom = 1.em
             }
             renderRows(pivotSpec)
         }
@@ -124,7 +125,7 @@ class ProcessPivot(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderRows(pivotSpec: PivotSpec) {
-        child(ProcessPivotRowList::class) {
+        child(PivotRowList::class) {
             attrs {
                 this.pivotSpec = pivotSpec
                 processState = props.processState
@@ -135,7 +136,7 @@ class ProcessPivot(
 
 
     private fun RBuilder.renderValues(pivotSpec: PivotSpec) {
-        child(ProcessPivotValueList::class) {
+        child(PivotValueList::class) {
             attrs {
                 this.pivotSpec = pivotSpec
                 processState = props.processState
