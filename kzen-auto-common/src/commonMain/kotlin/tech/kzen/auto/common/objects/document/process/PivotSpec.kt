@@ -161,4 +161,10 @@ data class PivotSpec(
                 ValueAttributeDefinition(spec))
         }
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun isEmpty(): Boolean =
+        rows.isEmpty() &&
+        values.isEmpty()
 }

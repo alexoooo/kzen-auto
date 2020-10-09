@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.process.filter
 
+import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.title
 import react.*
@@ -10,7 +11,6 @@ import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.process.FilterSpec
-import kotlinx.browser.document
 import kotlin.js.Json
 import kotlin.js.json
 
@@ -74,13 +74,16 @@ class ProcessFilterAdd(
         val columnListing = props.processState.columnListing
             ?: return
 
+        val unusedOptions = columnListing
+            .filter { it !in props.filterSpec.columns }
+
+        if (unusedOptions.isEmpty()) {
+            return
+        }
+
         val editDisabled =
             props.processState.initiating ||
             props.processState.filterTaskRunning
-
-        if (editDisabled) {
-            return
-        }
 
         styledDiv {
             if (state.adding) {
@@ -106,7 +109,7 @@ class ProcessFilterAdd(
                             width = 15.em
                         }
 
-                        renderSelect(columnListing)
+                        renderSelect(unusedOptions, editDisabled)
                     }
 
                     renderCancelButton()
@@ -165,7 +168,7 @@ class ProcessFilterAdd(
     }
 
 
-    private fun RBuilder.renderSelect(columnListing: List<String>) {
+    private fun RBuilder.renderSelect(unusedOptions: List<String>, editDisabled: Boolean) {
         val selectId = "material-react-select-id"
 
         child(MaterialInputLabel::class) {
@@ -180,8 +183,7 @@ class ProcessFilterAdd(
             +"Column name"
         }
 
-        val selectOptions = columnListing
-            .filter { it !in props.filterSpec.columns }
+        val selectOptions = unusedOptions
             .map { ReactSelectOption(it, it) }
             .toTypedArray()
 
@@ -200,6 +202,8 @@ class ProcessFilterAdd(
 
                     onColumnSelected(it.value)
                 }
+
+                isDisabled = editDisabled
 
                 // https://stackoverflow.com/a/51844542/1941359
                 val styleTransformer: (Json, Json) -> Json = { base, _ ->

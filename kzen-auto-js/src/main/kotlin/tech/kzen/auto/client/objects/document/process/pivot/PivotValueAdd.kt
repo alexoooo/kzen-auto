@@ -79,6 +79,13 @@ class PivotValueAdd(
         val columnListing = props.processState.columnListing
             ?: return
 
+        val unusedOptions = columnListing
+            .filter { it !in props.pivotSpec.values }
+
+        if (unusedOptions.isEmpty()) {
+            return
+        }
+
         val editDisabled =
             props.processState.initiating ||
             props.processState.filterTaskRunning ||
@@ -98,7 +105,7 @@ class PivotValueAdd(
                         width = 15.em
                     }
 
-                    renderSelect(columnListing, editDisabled)
+                    renderSelect(unusedOptions, editDisabled)
                 }
 
                 renderCancelButton()
@@ -110,7 +117,7 @@ class PivotValueAdd(
     }
 
 
-    fun RBuilder.renderSelect(columnListing: List<String>, editDisabled: Boolean) {
+    fun RBuilder.renderSelect(unusedOptions: List<String>, editDisabled: Boolean) {
         val selectId = "material-react-select-id"
 
         child(MaterialInputLabel::class) {
@@ -125,8 +132,7 @@ class PivotValueAdd(
             +"Column name"
         }
 
-        val selectOptions = columnListing
-            .filter { it !in props.pivotSpec.values }
+        val selectOptions = unusedOptions
             .map { ReactSelectOption(it, it) }
             .toTypedArray()
 

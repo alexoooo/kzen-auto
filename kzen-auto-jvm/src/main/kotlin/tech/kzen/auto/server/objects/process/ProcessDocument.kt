@@ -98,7 +98,7 @@ class ProcessDocument(
 
         val outputPath = parsedOutputPath.toAbsolutePath().normalize()
 
-        return ApplyFilterAction.lookupOutput(outputPath)
+        return ApplyProcessAction.lookupOutput(outputPath)
     }
 
 
@@ -192,7 +192,7 @@ class ProcessDocument(
 
         val outputPath = parsedOutputPath.toAbsolutePath().normalize()
 
-        ApplyFilterAction.applyFilterAsync(
-            inputPaths, columnNames, outputPath, filter, handle)
+        ApplyProcessAction.applyProcessAsync(
+            inputPaths, columnNames, outputPath, filter, pivot, handle)
     }
 }

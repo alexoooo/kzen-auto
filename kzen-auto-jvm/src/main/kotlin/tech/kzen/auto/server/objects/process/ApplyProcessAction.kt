@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.process.ColumnFilterType
 import tech.kzen.auto.common.objects.document.process.FilterSpec
 import tech.kzen.auto.common.objects.document.process.OutputInfo
+import tech.kzen.auto.common.objects.document.process.PivotSpec
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -21,10 +22,10 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 
-object ApplyFilterAction
+object ApplyProcessAction
 {
     //-----------------------------------------------------------------------------------------------------------------
-    private val logger = LoggerFactory.getLogger(ApplyFilterAction::class.java)
+    private val logger = LoggerFactory.getLogger(ApplyProcessAction::class.java)
 
     private val modifiedFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
@@ -62,11 +63,12 @@ object ApplyFilterAction
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun applyFilterAsync(
+    suspend fun applyProcessAsync(
         inputPaths: List<Path>,
         columnNames: List<String>,
         outputPath: Path,
         filterSpec: FilterSpec,
+        pivotSpec: PivotSpec,
         handle: TaskHandle
     ): ExecutionResult {
         logger.info("Starting: $outputPath | $filterSpec | $inputPaths")
@@ -85,7 +87,8 @@ object ApplyFilterAction
         }
 
         Thread {
-            filterSync(inputPaths, columnNames, outputPath, filterSpec, handle, progress, outputValue)
+            processSync(
+                inputPaths, columnNames, outputPath, filterSpec, pivotSpec, handle, progress, outputValue)
         }.start()
 
         logger.info("Done: $outputPath | $filterSpec | $inputPaths")
@@ -95,17 +98,19 @@ object ApplyFilterAction
     }
 
 
-    private fun filterSync(
+    private fun processSync(
         inputPaths: List<Path>,
         columnNames: List<String>,
         outputPath: Path,
         filterSpec: FilterSpec,
+        pivotSpec: PivotSpec,
         handle: TaskHandle,
         progress: TaskProgress,
         outputValue: ExecutionValue
     ) {
         try {
-            filterSyncChecked(inputPaths, columnNames, outputPath, filterSpec, handle, progress, outputValue)
+            processSyncChecked(
+                inputPaths, columnNames, outputPath, filterSpec, pivotSpec, handle, progress, outputValue)
         }
         catch (e: Exception) {
             handle.complete(
@@ -120,6 +125,26 @@ object ApplyFilterAction
     }
 
 
+    private fun processSyncChecked(
+        inputPaths: List<Path>,
+        columnNames: List<String>,
+        outputPath: Path,
+        filterSpec: FilterSpec,
+        pivotSpec: PivotSpec,
+        handle: TaskHandle,
+        progress: TaskProgress,
+        outputValue: ExecutionValue
+    ) {
+        if (pivotSpec.isEmpty()) {
+            filterSyncChecked(
+                inputPaths, columnNames, outputPath, filterSpec, handle, progress, outputValue)
+        }
+        else {
+            TODO("pivot")
+        }
+    }
+
+
     private fun filterSyncChecked(
         inputPaths: List<Path>,
         columnNames: List<String>,
@@ -130,6 +155,15 @@ object ApplyFilterAction
         outputValue: ExecutionValue
     ) {
         val filterColumns = columnNames.intersect(filterSpec.columns.keys).toList()
+
+//        val filterPath =
+//            if (pivotSpec.isEmpty()) {
+//                outputPath
+//            }
+//            else {
+//                Path.of("$outputPath.tmp")
+//            }
+
         var nextProgress = progress
 
         Files.newBufferedWriter(outputPath).use { output ->
