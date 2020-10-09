@@ -82,11 +82,8 @@ class PivotValueAdd(
 
         val editDisabled =
             props.processState.initiating ||
-            props.processState.filterTaskRunning
-
-        if (editDisabled) {
-            return
-        }
+            props.processState.filterTaskRunning ||
+            props.processState.pivotLoading
 
         styledDiv {
             if (state.adding) {
@@ -102,7 +99,7 @@ class PivotValueAdd(
                         width = 15.em
                     }
 
-                    renderSelect(columnListing)
+                    renderSelect(columnListing, editDisabled)
                 }
 
                 renderCancelButton()
@@ -114,7 +111,7 @@ class PivotValueAdd(
     }
 
 
-    fun RBuilder.renderSelect(columnListing: List<String>) {
+    fun RBuilder.renderSelect(columnListing: List<String>, editDisabled: Boolean) {
         val selectId = "material-react-select-id"
 
         child(MaterialInputLabel::class) {
@@ -149,6 +146,8 @@ class PivotValueAdd(
 //                    console.log("^^^^^ selected: $it")
                     onColumnSelected(it.value)
                 }
+
+                isDisabled = editDisabled
 
                 // https://stackoverflow.com/a/51844542/1941359
                 val styleTransformer: (Json, Json) -> Json = { base, _ ->

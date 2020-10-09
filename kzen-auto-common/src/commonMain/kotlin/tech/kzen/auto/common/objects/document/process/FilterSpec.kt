@@ -27,7 +27,7 @@ data class FilterSpec(
             return InsertMapEntryInAttributeCommand(
                 mainLocation,
                 ProcessConventions.filterAttributePath,
-                PositionRelation.at(0),
+                PositionRelation.afterLast,
                 columnAttributeSegment,
                 ColumnFilterSpec.emptyNotation,
                 true)

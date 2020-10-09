@@ -101,7 +101,10 @@ class PivotValueItem(
                         onDelete()
                     }
 
-                    disabled = props.processState.pivotLoading
+                    disabled =
+                        props.processState.initiating ||
+                        props.processState.filterTaskRunning ||
+                        props.processState.pivotLoading
                 }
 
                 child(DeleteIcon::class) {}

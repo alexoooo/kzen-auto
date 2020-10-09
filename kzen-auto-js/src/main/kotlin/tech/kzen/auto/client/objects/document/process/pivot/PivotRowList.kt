@@ -121,7 +121,10 @@ class PivotRowList(
                     //   see: https://react-select.com/advanced#portaling
                     menuPortalTarget = document.body!!
 
-                    isDisabled = props.processState.pivotLoading
+                    isDisabled =
+                        props.processState.pivotLoading ||
+                        props.processState.filterTaskRunning ||
+                        props.processState.initiating
                 }
             }
         }

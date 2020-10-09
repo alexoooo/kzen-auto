@@ -29,5 +29,19 @@ external interface ToggleButtonGroupProps: RProps {
     var value: String
     var exclusive: Boolean
     var onChange: (e: Event, v: Any?) -> Unit
+    var size: String
+}
+
+
+@JsName("ToggleButtonGroup")
+external class MaterialToggleButtonMultiGroup: Component<ToggleButtonGroupMultiProps, RState> {
+    override fun render(): ReactElement?
+}
+
+external interface ToggleButtonGroupMultiProps: RProps {
+    var value: Array<String>
+    var exclusive: Boolean
+    var onChange: (e: Event, v: Array<String>) -> Unit
+    var size: String
 }
 

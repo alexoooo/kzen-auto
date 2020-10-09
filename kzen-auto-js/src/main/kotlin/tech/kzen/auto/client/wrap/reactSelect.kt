@@ -27,7 +27,7 @@ external interface ReactSelectProps: RProps {
     var menuPortalTarget: HTMLElement
     var placeholder: String
 
-//    var isMulti: Boolean
+    var isDisabled: Boolean
 
 //    var id: String
 //    var variant: String
