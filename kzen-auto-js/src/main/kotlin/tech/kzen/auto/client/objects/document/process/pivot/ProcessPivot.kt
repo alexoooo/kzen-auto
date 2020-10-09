@@ -88,6 +88,11 @@ class ProcessPivot(
 
         renderHeader()
 
+        if (props.processState.columnListing == null) {
+            // TODO: is this good usability?
+            return
+        }
+
         styledDiv {
             css {
 //                marginBottom = 0.5.em

@@ -59,10 +59,17 @@ data class PivotSpec(
 
 
         fun addValueCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
-            return UpdateInAttributeCommand(
+            return InsertMapEntryInAttributeCommand(
                 mainLocation,
-                valuePath(columnName),
-                ListAttributeNotation.empty)
+                valuesAttributePath,
+                PositionRelation.afterLast,
+                AttributeSegment.ofKey(columnName),
+                ListAttributeNotation.empty,
+                true)
+//            return UpdateInAttributeCommand(
+//                mainLocation,
+//                valuePath(columnName),
+//                ListAttributeNotation.empty)
         }
 
 

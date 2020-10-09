@@ -64,8 +64,7 @@ class PivotValueAdd(
 
         async {
             props.dispatcher.dispatch(
-                PivotValueAddRequest(columnName)
-            )
+                PivotValueAddRequest(columnName))
 
             setState {
                 selectedColumn = null
