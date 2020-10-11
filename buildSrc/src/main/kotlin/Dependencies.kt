@@ -32,6 +32,7 @@ const val kotlinCssVersion = "1.0.0-$wrapperKotlinVersion"
 const val guavaVersion = "29.0-jre"
 const val seleniumVersion = "3.141.59"
 const val commonsCompressVersion = "1.20"
+const val fastutilVersion = "8.4.2"
 
 const val materialUiCoreVersion = "4.11.0"
 const val materialUiIconsVersion = "4.9.1"

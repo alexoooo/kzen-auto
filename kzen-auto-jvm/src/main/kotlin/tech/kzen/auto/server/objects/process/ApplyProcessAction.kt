@@ -15,6 +15,11 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.process.model.RecordStream
+import tech.kzen.auto.server.objects.process.pivot.PivotBuilder
+import tech.kzen.auto.server.objects.process.pivot.row.RowIndex
+import tech.kzen.auto.server.objects.process.pivot.row.signature.MapRowSignatureIndex
+import tech.kzen.auto.server.objects.process.pivot.row.value.MapRowValueIndex
+import tech.kzen.auto.server.objects.process.pivot.stats.MapValueStatistics
 import java.io.BufferedWriter
 import java.nio.file.Files
 import java.nio.file.Path
@@ -98,6 +103,7 @@ object ApplyProcessAction
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun processSync(
         inputPaths: List<Path>,
         columnNames: List<String>,
@@ -125,6 +131,7 @@ object ApplyProcessAction
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun processSyncChecked(
         inputPaths: List<Path>,
         columnNames: List<String>,
@@ -140,11 +147,13 @@ object ApplyProcessAction
                 inputPaths, columnNames, outputPath, filterSpec, handle, progress, outputValue)
         }
         else {
-            TODO("pivot")
+            pivotSyncChecked(
+                inputPaths, columnNames, outputPath, filterSpec, pivotSpec, handle, progress, outputValue)
         }
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun filterSyncChecked(
         inputPaths: List<Path>,
         columnNames: List<String>,
@@ -155,14 +164,6 @@ object ApplyProcessAction
         outputValue: ExecutionValue
     ) {
         val filterColumns = columnNames.intersect(filterSpec.columns.keys).toList()
-
-//        val filterPath =
-//            if (pivotSpec.isEmpty()) {
-//                outputPath
-//            }
-//            else {
-//                Path.of("$outputPath.tmp")
-//            }
 
         var nextProgress = progress
 
@@ -281,6 +282,152 @@ object ApplyProcessAction
                 inputPath.fileName.toString(),
                 "Finished " + ColumnSummaryAction.formatCount(count) +
                         ", wrote " + ColumnSummaryAction.formatCount(writtenCount)
+            )
+            logger.info("Finished file filter: {}", ColumnSummaryAction.formatCount(count))
+        }
+        handle.update(ExecutionSuccess(
+            outputValue,
+            ExecutionValue.of(nextProgress.toCollection())))
+
+        return nextProgress
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun pivotSyncChecked(
+        inputPaths: List<Path>,
+        columnNames: List<String>,
+        outputPath: Path,
+        filterSpec: FilterSpec,
+        pivotSpec: PivotSpec,
+        handle: TaskHandle,
+        progress: TaskProgress,
+        outputValue: ExecutionValue
+    ) {
+        val filterColumns = columnNames.intersect(filterSpec.columns.keys).toList()
+
+        val pivotBuilder = PivotBuilder(
+            pivotSpec,
+            RowIndex(
+                MapRowValueIndex(),
+                MapRowSignatureIndex()),
+            MapValueStatistics(
+                pivotSpec.values.map { it.value.types.size }.sum())
+        )
+
+        var nextProgress = progress
+
+        for (inputPath in inputPaths) {
+            logger.info("Reading: $inputPath")
+
+            FileStreamer.open(inputPath)!!.use { stream ->
+                nextProgress = pivotStream(
+                    stream,
+                    filterColumns,
+                    filterSpec,
+                    pivotBuilder,
+                    nextProgress,
+                    inputPath,
+                    outputValue,
+                    handle
+                )
+            }
+        }
+
+        Files.newBufferedWriter(outputPath).use { output ->
+            val csvPrinter = CSVFormat.DEFAULT.print(output)
+
+            pivotBuilder.view().use { pivotView ->
+                csvPrinter.printRecord(pivotView.header())
+
+                while (pivotView.hasNext()) {
+                    val pivotRecord = pivotView.next()
+                    val pivotValues = pivotRecord.getAll(pivotView.header())
+                    csvPrinter.printRecord(pivotValues)
+                }
+            }
+        }
+    }
+
+
+    private fun pivotStream(
+        input: RecordStream,
+        filterColumns: List<String>,
+        filterSpec: FilterSpec,
+        pivotBuilder: PivotBuilder,
+        previousProgress: TaskProgress,
+        inputPath: Path,
+        outputValue: ExecutionValue,
+        handle: TaskHandle
+    ): TaskProgress {
+        var nextProgress = previousProgress.update(
+            inputPath.fileName.toString(),
+            "Started pivoting")
+        handle.update(ExecutionSuccess(
+            outputValue,
+            ExecutionValue.of(nextProgress.toCollection())))
+
+        var count: Long = 0
+        var pivotCount: Long = 0
+
+        next_record@
+        while (input.hasNext() && ! handle.cancelRequested()) {
+            val record = input.next()
+
+            count++
+            if (count % 250_000 == 0L) {
+                val progressMessage = "Processed ${ColumnSummaryAction.formatCount(count)}, " +
+                        "pivoted ${ColumnSummaryAction.formatCount(pivotCount)}"
+                logger.info(progressMessage)
+
+                nextProgress = nextProgress.update(
+                    inputPath.fileName.toString(),
+                    progressMessage)
+                handle.update(ExecutionSuccess(
+                    outputValue,
+                    ExecutionValue.of(nextProgress.toCollection())))
+            }
+
+            for (filterColumn in filterColumns) {
+                val value = record.get(filterColumn)
+
+                @Suppress("MapGetWithNotNullAssertionOperator")
+                val columnCriteria = filterSpec.columns[filterColumn]!!
+
+                if (columnCriteria.values.isNotEmpty()) {
+                    val present = columnCriteria.values.contains(value)
+
+                    val allow =
+                        when (columnCriteria.type) {
+                            ColumnFilterType.RequireAny ->
+                                present
+
+                            ColumnFilterType.ExcludeAll ->
+                                ! present
+                        }
+
+                    if (! allow) {
+                        continue@next_record
+                    }
+                }
+            }
+
+            pivotCount++
+            pivotBuilder.add(record)
+        }
+
+        if (handle.cancelRequested()) {
+            nextProgress = nextProgress.update(
+                inputPath.fileName.toString(),
+                "Interrupted: " + ColumnSummaryAction.formatCount(count) +
+                        ", wrote " + ColumnSummaryAction.formatCount(pivotCount))
+            logger.info("Cancelled file filter: {}", ColumnSummaryAction.formatCount(count))
+        }
+        else {
+            nextProgress = nextProgress.update(
+                inputPath.fileName.toString(),
+                "Finished " + ColumnSummaryAction.formatCount(count) +
+                        ", wrote " + ColumnSummaryAction.formatCount(pivotCount)
             )
             logger.info("Finished file filter: {}", ColumnSummaryAction.formatCount(count))
         }

@@ -36,6 +36,7 @@ dependencies {
     implementation(group = "com.google.guava", name = "guava", version = guavaVersion)
     implementation(group = "org.seleniumhq.selenium", name = "selenium-java", version = seleniumVersion)
     implementation(group = "org.apache.commons", name = "commons-compress", version = commonsCompressVersion)
+    implementation(group = "it.unimi.dsi", name = "fastutil", version = fastutilVersion)
 
 //    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
 //    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$coroutinesVersion")
