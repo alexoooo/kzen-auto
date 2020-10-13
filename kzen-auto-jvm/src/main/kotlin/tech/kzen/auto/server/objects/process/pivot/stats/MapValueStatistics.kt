@@ -19,4 +19,6 @@ class MapValueStatistics(
     override fun get(rowIndex: Long, columnIndex: Int, valueType: PivotValueType): Double {
         return columns[columnIndex].get(rowIndex, valueType)
     }
+
+    override fun close() {}
 }

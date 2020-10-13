@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.process.pivot.row.signature
 
 
-interface RowSignatureIndex {
+interface RowSignatureIndex: AutoCloseable {
     fun size(): Long
-    fun getOrAddIndex(rowValueIndexes: RowSignature): Long
-    fun getCombo(comboIndex: Long): RowSignature
+    fun getOrAddIndex(rowSignature: RowSignature): Long
+    fun getSignature(signatureOrdinal: Long): RowSignature
 }

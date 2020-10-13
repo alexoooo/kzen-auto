@@ -26,8 +26,8 @@ class MapRowSignatureIndex: RowSignatureIndex {
     }
 
 
-    override fun getOrAddIndex(rowValueIndexes: RowSignature): Long {
-        val indexOrDefault = index.getLong(rowValueIndexes)
+    override fun getOrAddIndex(rowSignature: RowSignature): Long {
+        val indexOrDefault = index.getLong(rowSignature)
 
         if (indexOrDefault != missingSentinel) {
             return indexOrDefault
@@ -35,14 +35,17 @@ class MapRowSignatureIndex: RowSignatureIndex {
 
         val nextIndex = index.size.toLong()
 
-        index[rowValueIndexes] = nextIndex
-        reverseIndices.add(rowValueIndexes)
+        index[rowSignature] = nextIndex
+        reverseIndices.add(rowSignature)
 
         return nextIndex
     }
 
 
-    override fun getCombo(comboIndex: Long): RowSignature {
-        return reverseIndices[comboIndex.toInt()]
+    override fun getSignature(signatureOrdinal: Long): RowSignature {
+        return reverseIndices[signatureOrdinal.toInt()]
     }
+
+
+    override fun close() {}
 }

@@ -40,4 +40,7 @@ class MapRowValueIndex: RowValueIndex {
     override fun getValue(valueIndex: Long): String {
         return reverseIndex[valueIndex.toInt()]
     }
+
+
+    override fun close() {}
 }

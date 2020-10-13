@@ -17,12 +17,22 @@ import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.process.model.RecordStream
 import tech.kzen.auto.server.objects.process.pivot.PivotBuilder
 import tech.kzen.auto.server.objects.process.pivot.row.RowIndex
+import tech.kzen.auto.server.objects.process.pivot.row.digest.MapDigestIndex
 import tech.kzen.auto.server.objects.process.pivot.row.signature.MapRowSignatureIndex
+import tech.kzen.auto.server.objects.process.pivot.row.signature.StoreRowSignatureIndex
+import tech.kzen.auto.server.objects.process.pivot.row.store.FileIndexedSignatureStore
+import tech.kzen.auto.server.objects.process.pivot.row.store.FileIndexedStoreOffset
+import tech.kzen.auto.server.objects.process.pivot.row.store.FileIndexedTextStore
 import tech.kzen.auto.server.objects.process.pivot.row.value.MapRowValueIndex
+import tech.kzen.auto.server.objects.process.pivot.row.value.StoreRowValueIndex
 import tech.kzen.auto.server.objects.process.pivot.stats.MapValueStatistics
+import tech.kzen.auto.util.AutoJvmUtils
+import tech.kzen.auto.util.WorkUtils
 import java.io.BufferedWriter
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -33,6 +43,10 @@ object ApplyProcessAction
     private val logger = LoggerFactory.getLogger(ApplyProcessAction::class.java)
 
     private val modifiedFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+
+//    private const val progressItems = 1_000
+    private const val progressItems = 10_000
+//    private const val progressItems = 250_000
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -114,15 +128,22 @@ object ApplyProcessAction
         progress: TaskProgress,
         outputValue: ExecutionValue
     ) {
+        val tempName = AutoJvmUtils.sanitizeFilename(LocalTime.now().toString())
+        val tempDir = WorkUtils.resolve(Path.of("data-process", tempName))
+
         try {
+            Files.createDirectories(tempDir)
             processSyncChecked(
-                inputPaths, columnNames, outputPath, filterSpec, pivotSpec, handle, progress, outputValue)
+                inputPaths, columnNames, outputPath, filterSpec, pivotSpec, handle, progress, outputValue, tempDir)
         }
         catch (e: Exception) {
             handle.complete(
                 ExecutionFailure(
                     "Can't open file: ${e.message}"))
             return
+        }
+        finally {
+            cleanupTempDir(tempDir)
         }
 
         handle.complete(
@@ -140,7 +161,8 @@ object ApplyProcessAction
         pivotSpec: PivotSpec,
         handle: TaskHandle,
         progress: TaskProgress,
-        outputValue: ExecutionValue
+        outputValue: ExecutionValue,
+        tempDir: Path
     ) {
         if (pivotSpec.isEmpty()) {
             filterSyncChecked(
@@ -148,7 +170,7 @@ object ApplyProcessAction
         }
         else {
             pivotSyncChecked(
-                inputPaths, columnNames, outputPath, filterSpec, pivotSpec, handle, progress, outputValue)
+                inputPaths, columnNames, outputPath, filterSpec, pivotSpec, handle, progress, outputValue, tempDir)
         }
     }
 
@@ -227,8 +249,8 @@ object ApplyProcessAction
             val record = input.next()
 
             count++
-            if (count % 250_000 == 0L) {
-                val progressMessage = "Processed ${ColumnSummaryAction.formatCount( count)}, " +
+            if (count % progressItems == 0L) {
+                val progressMessage = "Filtered ${ColumnSummaryAction.formatCount( count )}, " +
                         "wrote ${ColumnSummaryAction.formatCount(writtenCount)}"
                 logger.info(progressMessage)
 
@@ -302,48 +324,46 @@ object ApplyProcessAction
         pivotSpec: PivotSpec,
         handle: TaskHandle,
         progress: TaskProgress,
-        outputValue: ExecutionValue
+        outputValue: ExecutionValue,
+        tempDir: Path
     ) {
         val filterColumns = columnNames.intersect(filterSpec.columns.keys).toList()
 
-        val pivotBuilder = PivotBuilder(
-            pivotSpec,
-            RowIndex(
-                MapRowValueIndex(),
-                MapRowSignatureIndex()),
-            MapValueStatistics(
-                pivotSpec.values.map { it.value.types.size }.sum())
-        )
+        val pivotBuilder =
+//            memoryPivot(pivotSpec)
+            filePivot(pivotSpec, tempDir)
 
-        var nextProgress = progress
+        pivotBuilder.use {
+            var nextProgress = progress
 
-        for (inputPath in inputPaths) {
-            logger.info("Reading: $inputPath")
+            for (inputPath in inputPaths) {
+                logger.info("Reading: $inputPath")
 
-            FileStreamer.open(inputPath)!!.use { stream ->
-                nextProgress = pivotStream(
-                    stream,
-                    filterColumns,
-                    filterSpec,
-                    pivotBuilder,
-                    nextProgress,
-                    inputPath,
-                    outputValue,
-                    handle
-                )
+                FileStreamer.open(inputPath)!!.use { stream ->
+                    nextProgress = pivotStream(
+                        stream,
+                        filterColumns,
+                        filterSpec,
+                        pivotBuilder,
+                        nextProgress,
+                        inputPath,
+                        outputValue,
+                        handle
+                    )
+                }
             }
-        }
 
-        Files.newBufferedWriter(outputPath).use { output ->
-            val csvPrinter = CSVFormat.DEFAULT.print(output)
+            Files.newBufferedWriter(outputPath).use { output ->
+                val csvPrinter = CSVFormat.DEFAULT.print(output)
 
-            pivotBuilder.view().use { pivotView ->
-                csvPrinter.printRecord(pivotView.header())
+                pivotBuilder.view().use { pivotView ->
+                    csvPrinter.printRecord(pivotView.header())
 
-                while (pivotView.hasNext()) {
-                    val pivotRecord = pivotView.next()
-                    val pivotValues = pivotRecord.getAll(pivotView.header())
-                    csvPrinter.printRecord(pivotValues)
+                    while (pivotView.hasNext()) {
+                        val pivotRecord = pivotView.next()
+                        val pivotValues = pivotRecord.getAll(pivotView.header())
+                        csvPrinter.printRecord(pivotValues)
+                    }
                 }
             }
         }
@@ -375,7 +395,7 @@ object ApplyProcessAction
             val record = input.next()
 
             count++
-            if (count % 250_000 == 0L) {
+            if (count % progressItems == 0L) {
                 val progressMessage = "Processed ${ColumnSummaryAction.formatCount(count)}, " +
                         "pivoted ${ColumnSummaryAction.formatCount(pivotCount)}"
                 logger.info(progressMessage)
@@ -436,5 +456,59 @@ object ApplyProcessAction
             ExecutionValue.of(nextProgress.toCollection())))
 
         return nextProgress
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun memoryPivot(pivotSpec: PivotSpec): PivotBuilder {
+        return PivotBuilder(
+            pivotSpec,
+            RowIndex(
+                MapRowValueIndex(),
+                MapRowSignatureIndex()),
+            MapValueStatistics(
+                pivotSpec.values.map { it.value.types.size }.sum())
+        )
+    }
+
+
+    private fun filePivot(pivotSpec: PivotSpec, tempDir: Path): PivotBuilder {
+        val rowTextContentFile = tempDir.resolve("row-text-value.bin")
+        val rowTextIndexFile= tempDir.resolve("row-text-index.bin")
+        val rowSignatureFile = tempDir.resolve("row-signature.bin")
+
+        val rowValueIndex =
+            StoreRowValueIndex(
+                MapDigestIndex(),
+                FileIndexedTextStore(
+                    rowTextContentFile,
+                    FileIndexedStoreOffset(rowTextIndexFile)))
+        val rowSignatureIndex =
+            StoreRowSignatureIndex(
+                MapDigestIndex(),
+                FileIndexedSignatureStore(
+                    rowSignatureFile,
+                    pivotSpec.rows.size))
+
+        return PivotBuilder(
+            pivotSpec,
+            RowIndex(
+                rowValueIndex,
+                rowSignatureIndex),
+            MapValueStatistics(
+                pivotSpec.values.map { it.value.types.size }.sum()))
+    }
+
+
+    private fun cleanupTempDir(tempDir: Path) {
+        try {
+            Files.walk(tempDir)
+                .sorted(Comparator.reverseOrder())
+                .map(Path::toFile)
+                .forEach(File::delete)
+        }
+        catch (e: Exception) {
+            logger.error("Unable to cleanup", e)
+        }
     }
 }

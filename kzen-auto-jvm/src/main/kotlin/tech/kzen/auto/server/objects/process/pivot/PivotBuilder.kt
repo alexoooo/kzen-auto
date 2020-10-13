@@ -12,7 +12,9 @@ class PivotBuilder(
     private val pivotSpec: PivotSpec,
     private val rowIndex: RowIndex,
     private val valueStatistics: ValueStatistics
-) {
+):
+    AutoCloseable
+{
     companion object {
         private const val missingRowCellValue = "<missing>"
     }
@@ -109,5 +111,11 @@ class PivotBuilder(
                 viewing = false
             }
         }
+    }
+
+
+    override fun close() {
+        rowIndex.close()
+        valueStatistics.close()
     }
 }

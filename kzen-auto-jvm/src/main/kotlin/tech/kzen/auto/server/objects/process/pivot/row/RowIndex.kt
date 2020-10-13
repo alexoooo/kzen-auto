@@ -8,7 +8,9 @@ import tech.kzen.auto.server.objects.process.pivot.row.value.RowValueIndex
 class RowIndex(
     private val rowValueIndex: RowValueIndex,
     private val rowSignatureIndex: RowSignatureIndex
-) {
+):
+    AutoCloseable
+{
     companion object {
         private const val missingRowValueIndex = -1L
     }
@@ -38,7 +40,7 @@ class RowIndex(
 
 
     fun rowValues(rowIndex: Long): List<String?> {
-        val rowValueIndexList = rowSignatureIndex.getCombo(rowIndex)
+        val rowValueIndexList = rowSignatureIndex.getSignature(rowIndex)
 
         val rowValues = mutableListOf<String?>()
         for (valueIndex in rowValueIndexList.valueIndexes) {
@@ -54,5 +56,11 @@ class RowIndex(
         }
 
         return rowValues
+    }
+
+
+    override fun close() {
+        rowValueIndex.close()
+        rowSignatureIndex.close()
     }
 }
