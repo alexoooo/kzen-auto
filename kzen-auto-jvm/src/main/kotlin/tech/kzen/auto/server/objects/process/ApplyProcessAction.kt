@@ -467,7 +467,7 @@ object ApplyProcessAction
                 MapRowValueIndex(),
                 MapRowSignatureIndex()),
             MapValueStatistics(
-                pivotSpec.values.map { it.value.types.size }.sum())
+                pivotSpec.valueColumnCount())
         )
     }
 
@@ -496,7 +496,7 @@ object ApplyProcessAction
                 rowValueIndex,
                 rowSignatureIndex),
             MapValueStatistics(
-                pivotSpec.values.map { it.value.types.size }.sum()))
+                pivotSpec.valueColumnCount()))
     }
 
 

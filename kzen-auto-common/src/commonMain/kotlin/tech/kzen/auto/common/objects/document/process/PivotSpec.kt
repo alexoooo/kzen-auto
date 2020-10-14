@@ -167,4 +167,9 @@ data class PivotSpec(
     fun isEmpty(): Boolean =
         rows.isEmpty() &&
         values.isEmpty()
+
+
+    fun valueColumnCount(): Int {
+        return values.map { it.value.types.size }.sum()
+    }
 }
