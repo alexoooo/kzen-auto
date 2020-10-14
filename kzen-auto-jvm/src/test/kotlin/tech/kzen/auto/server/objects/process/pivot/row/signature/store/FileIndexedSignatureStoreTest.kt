@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.process.pivot.row.store
+package tech.kzen.auto.server.objects.process.pivot.row.signature.store
 
 import tech.kzen.auto.server.objects.process.pivot.row.signature.RowSignature
 import java.nio.file.Files

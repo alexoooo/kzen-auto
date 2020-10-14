@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.process.pivot.row.store
+package tech.kzen.auto.server.objects.process.pivot.row.value.store
 
 
 interface IndexedStoreOffset: AutoCloseable {

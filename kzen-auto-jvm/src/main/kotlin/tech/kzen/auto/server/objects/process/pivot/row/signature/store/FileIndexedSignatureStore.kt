@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.process.pivot.row.store
+package tech.kzen.auto.server.objects.process.pivot.row.signature.store
 
 import com.google.common.primitives.Longs
 import tech.kzen.auto.server.objects.process.pivot.row.signature.RowSignature

@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.process.pivot.stats
 
 import tech.kzen.auto.common.objects.document.process.PivotValueType
+import java.nio.ByteBuffer
 
 
 /**
@@ -13,6 +14,13 @@ data class MutableStatistics(
     private var min: Double = Double.POSITIVE_INFINITY,
     private var max: Double = Double.NEGATIVE_INFINITY
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        const val sizeInBytes = Long.SIZE_BYTES + Double.SIZE_BYTES * 4;
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun accept(value: Double) {
         ++count
 //        simpleSum += value
@@ -22,6 +30,34 @@ data class MutableStatistics(
     }
 
 
+    fun clear() {
+        count = 0
+        sum = 0.0
+        sumCompensation = 0.0
+        min = Double.POSITIVE_INFINITY
+        max = Double.NEGATIVE_INFINITY
+    }
+
+
+    fun save(buffer: ByteBuffer) {
+        buffer.putLong(count)
+        buffer.putDouble(sum)
+        buffer.putDouble(sumCompensation)
+        buffer.putDouble(min)
+        buffer.putDouble(max)
+    }
+
+
+    fun load(buffer: ByteBuffer) {
+        count = buffer.long
+        sum = buffer.double
+        sumCompensation = buffer.double
+        min = buffer.double
+        max = buffer.double
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun get(valueType: PivotValueType): Double {
         return when (valueType) {
             PivotValueType.Count -> getCount().toDouble()
@@ -59,6 +95,7 @@ data class MutableStatistics(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun sumWithCompensation(value: Double) {
         val tmp = value - sumCompensation
         val velvel = sum + tmp // Little wolf of rounding error

@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.process.pivot.row.signature
 
 import tech.kzen.auto.server.objects.process.pivot.row.digest.DigestIndex
-import tech.kzen.auto.server.objects.process.pivot.row.store.IndexedSignatureStore
+import tech.kzen.auto.server.objects.process.pivot.row.signature.store.IndexedSignatureStore
 
 
 class StoreRowSignatureIndex(

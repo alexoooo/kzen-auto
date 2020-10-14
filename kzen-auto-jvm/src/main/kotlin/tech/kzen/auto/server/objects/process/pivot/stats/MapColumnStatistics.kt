@@ -16,7 +16,9 @@ class MapColumnStatistics {
 
 
     fun get(rowIndex: Long, valueType: PivotValueType): Double {
-        val rowStats = stats.getOrPut(rowIndex) { MutableStatistics() }
+        val rowStats = stats.get(rowIndex)
+            ?: return ValueStatistics.missingValue
+
         return rowStats.get(valueType)
     }
 }

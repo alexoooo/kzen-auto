@@ -10,28 +10,33 @@ import tech.kzen.auto.server.objects.process.pivot.stats.ValueStatistics
 
 
 class PivotBuilder(
-    private val pivotSpec: PivotSpec,
+    pivotSpec: PivotSpec,
     private val rowIndex: RowIndex,
     private val valueStatistics: ValueStatistics
 ):
     AutoCloseable
 {
+    //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val missingRowCellValue = "<missing>"
+        private const val missingStatisticCellValue = ""
     }
 
+
+    //-----------------------------------------------------------------------------------------------------------------
     private val rowColumns = pivotSpec.rows.toList()
     private val valueColumns = pivotSpec.values.keys.toList()
-    private val buffer = DoubleArray(pivotSpec.valueColumnCount())
+//    private val buffer = DoubleArray(pivotSpec.valueColumnCount())
+    private val valueBuffer = DoubleArray(valueColumns.size)
 
     private val header: List<String>
     private val headerIndex: Map<String, Int>
-    private val columnTypes: List<IndexedValue<PivotValueType>>
+    private val valueTypes: List<IndexedValue<PivotValueType>>
 
     init {
         val headerBuffer = mutableListOf<String>()
         val headerIndexBuffer = mutableMapOf<String, Int>()
-        val columnTypesBuffer = mutableListOf<IndexedValue<PivotValueType>>()
+        val valueTypesBuffer = mutableListOf<IndexedValue<PivotValueType>>()
 
         for (rowColumn in rowColumns) {
             headerBuffer.add(rowColumn)
@@ -45,29 +50,31 @@ class PivotBuilder(
                 val valueHeader = "$valueColumn - $valueType"
                 headerBuffer.add(valueHeader)
                 headerIndexBuffer[valueHeader] = headerIndexBuffer.size
-                columnTypesBuffer.add(IndexedValue(index, valueType))
+                valueTypesBuffer.add(IndexedValue(index, valueType))
             }
         }
 
         header = headerBuffer
         headerIndex = headerIndexBuffer
-        columnTypes = columnTypesBuffer
+        valueTypes = valueTypesBuffer
     }
 
+
+    //----------------------------------------------------------
     private var viewing = false
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     fun add(recordItem: RecordItem) {
         check(! viewing) { "Can't add while viewing" }
 
-//        var rowIndexCache = -1L
         var present = false
         for (i in valueColumns.indices) {
             val valueColumnName = valueColumns[i]
             val valueColumnValue = recordItem.get(valueColumnName)
 
             if (valueColumnValue.isNullOrEmpty()) {
-                buffer[i] = ValueStatistics.missingValue
+                valueBuffer[i] = ValueStatistics.missingValue
                 continue
             }
             else {
@@ -78,17 +85,12 @@ class PivotBuilder(
                 ?.let { ValueStatistics.normalize(it) }
                 ?: Double.NaN
 
-            buffer[i] = asNumber
-//            if (rowIndexCache == -1L) {
-//                rowIndexCache = rowIndex(recordItem)
-//            }
-
-//            valueStatistics.add(rowIndexCache, i, asNumber)
+            valueBuffer[i] = asNumber
         }
 
         if (present) {
             val rowOrdinal = rowIndex(recordItem)
-            valueStatistics.add(rowOrdinal, buffer)
+            valueStatistics.add(rowOrdinal, valueBuffer)
         }
     }
 
@@ -99,25 +101,10 @@ class PivotBuilder(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     fun view(): RecordStream {
         check(! viewing) { "Already viewing" }
         viewing = true
-
-        val header = mutableListOf<String>()
-        val headerIndex = mutableMapOf<String, Int>()
-
-        for (rowColumn in rowColumns) {
-            header.add(rowColumn)
-            headerIndex[rowColumn] = headerIndex.size
-        }
-
-        for ((valueColumn, valueTypes) in pivotSpec.values) {
-            for (valueType in valueTypes.types) {
-                val valueHeader = "$valueColumn - $valueType"
-                header.add(valueHeader)
-                headerIndex[valueHeader] = headerIndex.size
-            }
-        }
 
         val rowCount = rowIndex.size
         var nextRowIndex = 0L
@@ -137,17 +124,19 @@ class PivotBuilder(
                 val rowValues = rowIndex.rowValues(nextRowIndex)
                 cells.addAll(rowValues.map { it ?: missingRowCellValue })
 
-                val values = valueStatistics.get(nextRowIndex, columnTypes)
-                for (value in values) {
-                    cells.add(value.toString())
-                }
+                val statisticValues = valueStatistics.get(nextRowIndex, valueTypes)
 
-//                for ((columnIndex, valueTypes) in pivotSpec.values.values.withIndex()) {
-//                    for (valueType in valueTypes.types) {
-//                        val value = valueStatistics.get(nextRowIndex, columnIndex, valueType)
-//                        cells.add(value.toString())
-//                    }
-//                }
+                for (value in statisticValues) {
+                    val asString =
+                        if (ValueStatistics.isMissing(value)) {
+                            missingStatisticCellValue
+                        }
+                        else {
+                            value.toString()
+                        }
+
+                    cells.add(asString)
+                }
 
                 nextRowIndex++
 
@@ -162,6 +151,7 @@ class PivotBuilder(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
         rowIndex.close()
         valueStatistics.close()

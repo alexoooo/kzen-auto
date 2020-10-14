@@ -169,7 +169,7 @@ data class PivotSpec(
         values.isEmpty()
 
 
-    fun valueColumnCount(): Int {
-        return values.map { it.value.types.size }.sum()
-    }
+//    fun valueColumnCount(): Int {
+//        return values.map { it.value.types.size }.sum()
+//    }
 }

@@ -20,12 +20,14 @@ import tech.kzen.auto.server.objects.process.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.process.pivot.row.digest.MapDigestIndex
 import tech.kzen.auto.server.objects.process.pivot.row.signature.MapRowSignatureIndex
 import tech.kzen.auto.server.objects.process.pivot.row.signature.StoreRowSignatureIndex
-import tech.kzen.auto.server.objects.process.pivot.row.store.FileIndexedSignatureStore
-import tech.kzen.auto.server.objects.process.pivot.row.store.FileIndexedStoreOffset
-import tech.kzen.auto.server.objects.process.pivot.row.store.FileIndexedTextStore
+import tech.kzen.auto.server.objects.process.pivot.row.signature.store.FileIndexedSignatureStore
 import tech.kzen.auto.server.objects.process.pivot.row.value.MapRowValueIndex
 import tech.kzen.auto.server.objects.process.pivot.row.value.StoreRowValueIndex
+import tech.kzen.auto.server.objects.process.pivot.row.value.store.FileIndexedStoreOffset
+import tech.kzen.auto.server.objects.process.pivot.row.value.store.FileIndexedTextStore
 import tech.kzen.auto.server.objects.process.pivot.stats.MapValueStatistics
+import tech.kzen.auto.server.objects.process.pivot.stats.StoreValueStatistics
+import tech.kzen.auto.server.objects.process.pivot.stats.store.FileValueStatisticsStore
 import tech.kzen.auto.util.AutoJvmUtils
 import tech.kzen.auto.util.WorkUtils
 import java.io.BufferedWriter
@@ -467,7 +469,7 @@ object ApplyProcessAction
                 MapRowValueIndex(),
                 MapRowSignatureIndex()),
             MapValueStatistics(
-                pivotSpec.valueColumnCount())
+                pivotSpec.values.size)
         )
     }
 
@@ -476,13 +478,17 @@ object ApplyProcessAction
         val rowTextContentFile = tempDir.resolve("row-text-value.bin")
         val rowTextIndexFile= tempDir.resolve("row-text-index.bin")
         val rowSignatureFile = tempDir.resolve("row-signature.bin")
+        val valueStatisticsFile = tempDir.resolve("value-statistics.bin")
 
         val rowValueIndex =
             StoreRowValueIndex(
                 MapDigestIndex(),
                 FileIndexedTextStore(
                     rowTextContentFile,
-                    FileIndexedStoreOffset(rowTextIndexFile)))
+                    FileIndexedStoreOffset(rowTextIndexFile)
+                )
+            )
+
         val rowSignatureIndex =
             StoreRowSignatureIndex(
                 MapDigestIndex(),
@@ -490,13 +496,19 @@ object ApplyProcessAction
                     rowSignatureFile,
                     pivotSpec.rows.size))
 
+        val valueStatistics =
+            StoreValueStatistics(
+                FileValueStatisticsStore(
+                    valueStatisticsFile,
+                    pivotSpec.values.size
+                ))
+
         return PivotBuilder(
             pivotSpec,
             RowIndex(
                 rowValueIndex,
                 rowSignatureIndex),
-            MapValueStatistics(
-                pivotSpec.valueColumnCount()))
+            valueStatistics)
     }
 
 

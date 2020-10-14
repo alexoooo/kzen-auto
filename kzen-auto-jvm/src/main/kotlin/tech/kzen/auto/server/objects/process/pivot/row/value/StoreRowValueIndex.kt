@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.process.pivot.row.value
 
 import tech.kzen.auto.server.objects.process.pivot.row.digest.DigestIndex
-import tech.kzen.auto.server.objects.process.pivot.row.store.IndexedTextStore
+import tech.kzen.auto.server.objects.process.pivot.row.value.store.IndexedTextStore
 import tech.kzen.lib.common.util.Digest
 
 
