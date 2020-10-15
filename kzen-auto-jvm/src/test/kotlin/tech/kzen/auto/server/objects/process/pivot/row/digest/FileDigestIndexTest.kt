@@ -40,7 +40,7 @@ class FileDigestIndexTest {
 
 
     @Test
-    fun oneMillionDigest() {
+    fun oneThousandDigest() {
 //        for (count in 1 .. 1_000_000) {
 //            println("===============================================")
 //            println("count: $count")
@@ -53,8 +53,8 @@ class FileDigestIndexTest {
 //                val count = 227 // failed @5
     //            val count = 250 // failed @2
     //            val count = 500
-//                val count = 1_000
-                val count = 100_000
+                val count = 1_000
+//                val count = 100_000
 //                val count = 1_000_000
                 val builder = Digest.Builder()
 

@@ -17,7 +17,7 @@ import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.process.model.RecordStream
 import tech.kzen.auto.server.objects.process.pivot.PivotBuilder
 import tech.kzen.auto.server.objects.process.pivot.row.RowIndex
-import tech.kzen.auto.server.objects.process.pivot.row.digest.FileDigestIndex
+import tech.kzen.auto.server.objects.process.pivot.row.digest.H2DigestIndex
 import tech.kzen.auto.server.objects.process.pivot.row.signature.MapRowSignatureIndex
 import tech.kzen.auto.server.objects.process.pivot.row.signature.StoreRowSignatureIndex
 import tech.kzen.auto.server.objects.process.pivot.row.signature.store.FileIndexedSignatureStore
@@ -139,9 +139,10 @@ object ApplyProcessAction
                 inputPaths, columnNames, outputPath, filterSpec, pivotSpec, handle, progress, outputValue, tempDir)
         }
         catch (e: Exception) {
+            logger.warn("Data processing failed", e)
             handle.complete(
                 ExecutionFailure(
-                    "Can't open file: ${e.message}"))
+                    "Unable to process: ${e.message}"))
             return
         }
         finally {
@@ -482,14 +483,22 @@ object ApplyProcessAction
         val rowValueDigestDir = tempDir.resolve("row-text-digest")
         val rowSignatureDigestDir = tempDir.resolve("row-signature-digest")
 
-        val rowValueDigestIndex = FileDigestIndex(rowValueDigestDir)
+        val rowValueDigestIndex =
+//            FileDigestIndex(rowValueDigestDir)
+//            MapDbDigestIndex(rowValueDigestDir)
+            H2DigestIndex(rowValueDigestDir)
+
         val rowValueIndex = StoreRowValueIndex(
             rowValueDigestIndex,
             FileIndexedTextStore(
                 rowTextContentFile,
                 FileIndexedStoreOffset(rowTextIndexFile)))
 
-        val rowSignatureDigestIndex = FileDigestIndex(rowSignatureDigestDir)
+        val rowSignatureDigestIndex =
+//            FileDigestIndex(rowSignatureDigestDir)
+//            MapDbDigestIndex(rowSignatureDigestDir)
+            H2DigestIndex(rowSignatureDigestDir)
+
         val rowSignatureIndex = StoreRowSignatureIndex(
             rowSignatureDigestIndex,
             FileIndexedSignatureStore(
