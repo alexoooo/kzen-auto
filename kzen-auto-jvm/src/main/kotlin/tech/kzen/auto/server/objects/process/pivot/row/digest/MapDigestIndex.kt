@@ -25,6 +25,8 @@ class MapDigestIndex: DigestIndex {
 
 
     override fun getOrAdd(digest: Digest): DigestOrdinal {
+        check(digest != Digest.zero)
+
         val existing = index.getInt(digest)
 
         if (existing != missingSentinel) {

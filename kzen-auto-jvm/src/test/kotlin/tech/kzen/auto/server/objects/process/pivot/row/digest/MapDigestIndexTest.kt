@@ -16,12 +16,12 @@ class MapDigestIndexTest {
     fun singleDigest() {
         val digestIndex = MapDigestIndex()
 
-        val initialIndex = digestIndex.getOrAdd(Digest.zero)
+        val initialIndex = digestIndex.getOrAdd(Digest.empty)
         assert(initialIndex.wasAdded())
         assertEquals(0, initialIndex.ordinal())
         assertEquals(1, digestIndex.size())
 
-        val retrievedIndex = digestIndex.getOrAdd(Digest.zero)
+        val retrievedIndex = digestIndex.getOrAdd(Digest.empty)
         assertFalse(retrievedIndex.wasAdded())
         assertEquals(0, retrievedIndex.ordinal())
     }

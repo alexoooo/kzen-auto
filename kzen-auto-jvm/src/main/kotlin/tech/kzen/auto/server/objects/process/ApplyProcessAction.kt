@@ -17,7 +17,7 @@ import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.process.model.RecordStream
 import tech.kzen.auto.server.objects.process.pivot.PivotBuilder
 import tech.kzen.auto.server.objects.process.pivot.row.RowIndex
-import tech.kzen.auto.server.objects.process.pivot.row.digest.MapDigestIndex
+import tech.kzen.auto.server.objects.process.pivot.row.digest.FileDigestIndex
 import tech.kzen.auto.server.objects.process.pivot.row.signature.MapRowSignatureIndex
 import tech.kzen.auto.server.objects.process.pivot.row.signature.StoreRowSignatureIndex
 import tech.kzen.auto.server.objects.process.pivot.row.signature.store.FileIndexedSignatureStore
@@ -479,35 +479,32 @@ object ApplyProcessAction
         val rowTextIndexFile= tempDir.resolve("row-text-index.bin")
         val rowSignatureFile = tempDir.resolve("row-signature.bin")
         val valueStatisticsFile = tempDir.resolve("value-statistics.bin")
+        val rowValueDigestDir = tempDir.resolve("row-text-digest")
+        val rowSignatureDigestDir = tempDir.resolve("row-signature-digest")
 
-        val rowValueIndex =
-            StoreRowValueIndex(
-                MapDigestIndex(),
-                FileIndexedTextStore(
-                    rowTextContentFile,
-                    FileIndexedStoreOffset(rowTextIndexFile)
-                )
-            )
+        val rowValueDigestIndex = FileDigestIndex(rowValueDigestDir)
+        val rowValueIndex = StoreRowValueIndex(
+            rowValueDigestIndex,
+            FileIndexedTextStore(
+                rowTextContentFile,
+                FileIndexedStoreOffset(rowTextIndexFile)))
 
-        val rowSignatureIndex =
-            StoreRowSignatureIndex(
-                MapDigestIndex(),
-                FileIndexedSignatureStore(
-                    rowSignatureFile,
-                    pivotSpec.rows.size))
+        val rowSignatureDigestIndex = FileDigestIndex(rowSignatureDigestDir)
+        val rowSignatureIndex = StoreRowSignatureIndex(
+            rowSignatureDigestIndex,
+            FileIndexedSignatureStore(
+                rowSignatureFile,
+                pivotSpec.rows.size))
 
-        val valueStatistics =
-            StoreValueStatistics(
-                FileValueStatisticsStore(
-                    valueStatisticsFile,
-                    pivotSpec.values.size
-                ))
+        val valueStatistics = StoreValueStatistics(
+            FileValueStatisticsStore(
+                valueStatisticsFile,
+                pivotSpec.values.size
+            ))
 
         return PivotBuilder(
             pivotSpec,
-            RowIndex(
-                rowValueIndex,
-                rowSignatureIndex),
+            RowIndex(rowValueIndex, rowSignatureIndex),
             valueStatistics)
     }
 
