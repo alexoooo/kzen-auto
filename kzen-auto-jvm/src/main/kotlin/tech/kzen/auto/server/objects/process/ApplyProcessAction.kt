@@ -23,6 +23,7 @@ import tech.kzen.auto.server.objects.process.pivot.row.signature.StoreRowSignatu
 import tech.kzen.auto.server.objects.process.pivot.row.signature.store.FileIndexedSignatureStore
 import tech.kzen.auto.server.objects.process.pivot.row.value.MapRowValueIndex
 import tech.kzen.auto.server.objects.process.pivot.row.value.StoreRowValueIndex
+import tech.kzen.auto.server.objects.process.pivot.row.value.store.BufferedIndexedTextStore
 import tech.kzen.auto.server.objects.process.pivot.row.value.store.FileIndexedStoreOffset
 import tech.kzen.auto.server.objects.process.pivot.row.value.store.FileIndexedTextStore
 import tech.kzen.auto.server.objects.process.pivot.stats.MapValueStatistics
@@ -488,11 +489,14 @@ object ApplyProcessAction
 //            MapDbDigestIndex(rowValueDigestDir)
             H2DigestIndex(rowValueDigestDir)
 
-        val rowValueIndex = StoreRowValueIndex(
-            rowValueDigestIndex,
+        val indexedTextStore = BufferedIndexedTextStore(
             FileIndexedTextStore(
                 rowTextContentFile,
                 FileIndexedStoreOffset(rowTextIndexFile)))
+
+        val rowValueIndex = StoreRowValueIndex(
+            rowValueDigestIndex,
+            indexedTextStore)
 
         val rowSignatureDigestIndex =
 //            FileDigestIndex(rowSignatureDigestDir)

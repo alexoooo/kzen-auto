@@ -1,6 +1,9 @@
 package tech.kzen.auto.server.objects.process.pivot.row.value.store
 
 import com.google.common.primitives.Longs
+import it.unimi.dsi.fastutil.ints.IntList
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.Path
@@ -28,8 +31,16 @@ class FileIndexedStoreOffset(
     private var endOffset = 0L
     private val readBuffer = ByteArray(Long.SIZE_BYTES * 2)
 
+    private val writeBufferBytes = ByteArrayOutputStream()
+    private val writeBuffer = DataOutputStream(writeBufferBytes)
+
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun size(): Long {
+        return fileSize / Long.SIZE_BYTES
+    }
+
+
     override fun endOffset(): Long {
         return endOffset
 //        return get(fileSize / Long.SIZE_BYTES).endOffset()
@@ -72,6 +83,26 @@ class FileIndexedStoreOffset(
         handle.writeLong(endOffset)
 
         fileSize += Long.SIZE_BYTES
+        previousOffset = fileSize
+    }
+
+
+    override fun addAll(lengths: IntList) {
+        seek(fileSize)
+
+        for (i in 0 until lengths.size) {
+            val length = lengths.getInt(i)
+            endOffset += length
+            writeBuffer.writeLong(endOffset)
+        }
+
+        writeBuffer.flush()
+        val offsetBytes = writeBufferBytes.toByteArray()
+        writeBufferBytes.reset()
+
+        handle.write(offsetBytes)
+
+        fileSize += lengths.size * Long.SIZE_BYTES
         previousOffset = fileSize
     }
 

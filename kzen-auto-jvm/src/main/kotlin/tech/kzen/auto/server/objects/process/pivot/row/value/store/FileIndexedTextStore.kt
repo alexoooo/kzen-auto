@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.objects.process.pivot.row.value.store
 
+import it.unimi.dsi.fastutil.ints.IntArrayList
+import java.io.ByteArrayOutputStream
 import java.io.RandomAccessFile
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -14,6 +16,10 @@ class FileIndexedTextStore(
     private val handle: RandomAccessFile
     private var previousOffset = 0L
     private var readBuffer = ByteArray(64)
+
+    private val writeBufferBytes = ByteArrayOutputStream()
+    private val lengthBuffer = IntArrayList()
+//    private val writeBuffer = DataOutputStream(writeBufferBytes)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -32,8 +38,28 @@ class FileIndexedTextStore(
     }
 
 
-    override fun get(textIndex: Long): String {
-        val span = indexedStoreOffset.get(textIndex)
+    fun addAll(textValues: List<String>) {
+        val offset = indexedStoreOffset.endOffset()
+        seek(offset)
+
+        for (text in textValues) {
+            val encoded = text.encodeToByteArray()
+            previousOffset += encoded.size
+            writeBufferBytes.write(encoded)
+            lengthBuffer.add(encoded.size)
+        }
+
+        val writeBites = writeBufferBytes.toByteArray()
+        writeBufferBytes.reset()
+        handle.write(writeBites)
+
+        indexedStoreOffset.addAll(lengthBuffer)
+        lengthBuffer.clear()
+    }
+
+
+    override fun get(textOrdinal: Long): String {
+        val span = indexedStoreOffset.get(textOrdinal)
         seek(span.offset)
         return read(span.length)
     }
