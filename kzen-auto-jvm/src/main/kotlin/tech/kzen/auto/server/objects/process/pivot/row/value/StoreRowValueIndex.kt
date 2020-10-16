@@ -1,33 +1,68 @@
 package tech.kzen.auto.server.objects.process.pivot.row.value
 
+import net.openhft.hashing.LongTupleHashFunction
 import tech.kzen.auto.server.objects.process.pivot.row.digest.DigestIndex
 import tech.kzen.auto.server.objects.process.pivot.row.value.store.IndexedTextStore
-import tech.kzen.lib.common.util.Digest
 
 
 class StoreRowValueIndex(
     private val digestIndex: DigestIndex,
-    private val indexedTextStore: IndexedTextStore
+    private val indexedTextStore: IndexedTextStore/*,
+    private val cacheSize: Int = 1024*/
 ):
     RowValueIndex
 {
-    override fun getOrAddIndex(value: String): Long {
-        val valueDigest = Digest.ofUtf8(value)
-        val valueIndex = digestIndex.getOrAdd(valueDigest)
+    //-----------------------------------------------------------------------------------------------------------------
+//    companion object {
+//        private const val missingOrdinal = -1L
+//    }
 
-        if (valueIndex.wasAdded()) {
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private val hashBuffer = LongArray(2)
+
+//    private val cache = Object2LongLinkedOpenHashMap<String>()
+//
+//    init {
+//        cache.defaultReturnValue(missingOrdinal)
+//    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun getOrAddIndex(value: String): Long {
+//        val cachedOrdinal = cache.getAndMoveToLast(value)
+//        if (cachedOrdinal != missingOrdinal) {
+//            return cachedOrdinal
+//        }
+
+//        val digestHigh = LongHashFunction.metro().hashChars(value)
+//        val digestLow = LongHashFunction.wy_3().hashChars(value)
+//        val valueIndex = digestIndex.getOrAdd(digestHigh, digestLow)
+        LongTupleHashFunction.murmur_3().hashChars(value, hashBuffer)
+        val valueOrdinal = digestIndex.getOrAdd(hashBuffer[0], hashBuffer[1])
+
+        if (valueOrdinal.wasAdded()) {
             indexedTextStore.add(value)
         }
 
-        return valueIndex.ordinal()
+        val ordinal = valueOrdinal.ordinal()
+
+//        cache[value] = cachedOrdinal
+//        if (cache.size == cacheSize) {
+//            cache.removeFirstLong()
+//        }
+
+        return ordinal
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override fun getValue(valueIndex: Long): String {
         return indexedTextStore.get(valueIndex)
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
         digestIndex.close()
         indexedTextStore.close()

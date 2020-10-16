@@ -155,10 +155,10 @@ class ProcessRun(
                             "Pause index"
 
                         props.processState.filterTaskRunning ->
-                            "Stop filter"
+                            "Stop processing"
 
                         hasSummary ->
-                            "Filter"
+                            "Run"
 
                         else ->
                             "Index"

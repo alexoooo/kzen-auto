@@ -24,7 +24,13 @@ class MapDigestIndex: DigestIndex {
     }
 
 
-    override fun getOrAdd(digest: Digest): DigestOrdinal {
+    override fun getOrAdd(digestHigh: Long, digestLow: Long): DigestOrdinal {
+        val a = (digestHigh shr 32).toInt()
+        val b = digestHigh.toInt()
+        val c = (digestLow shr 32).toInt()
+        val d = digestLow.toInt()
+        val digest = Digest(a, b, c, d)
+
         check(digest != Digest.zero)
 
         val existing = index.getInt(digest)

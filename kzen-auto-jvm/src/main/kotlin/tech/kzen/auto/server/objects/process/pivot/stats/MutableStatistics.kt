@@ -57,6 +57,15 @@ data class MutableStatistics(
     }
 
 
+    fun copyFrom(prototype: MutableStatistics) {
+        count = prototype.count
+        sum = prototype.sum
+        sumCompensation = prototype.sumCompensation
+        min = prototype.min
+        max = prototype.max
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun get(valueType: PivotValueType): Double {
         return when (valueType) {

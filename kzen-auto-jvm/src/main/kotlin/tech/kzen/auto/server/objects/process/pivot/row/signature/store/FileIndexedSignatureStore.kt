@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.process.pivot.row.signature.store
 
 import com.google.common.primitives.Longs
 import tech.kzen.auto.server.objects.process.pivot.row.signature.RowSignature
+import java.io.ByteArrayOutputStream
 import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.Path
@@ -35,10 +36,12 @@ class FileIndexedSignatureStore(
     private var buffer = ByteArray(signatureBytes(signatureSize))
     private var previousOffset = 0L
 
+    private val writeBufferBytes = ByteArrayOutputStream()
+
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun get(signatureIndex: Long): RowSignature {
-        val offset = signatureIndex * buffer.size
+    override fun get(signatureOrdinal: Long): RowSignature {
+        val offset = signatureOrdinal * buffer.size
         seek(offset)
         handle.read(buffer)
         previousOffset = offset + buffer.size
@@ -74,6 +77,30 @@ class FileIndexedSignatureStore(
 
         handle.write(buffer)
         fileSize += buffer.size
+        previousOffset = fileSize
+    }
+
+
+    fun addAll(signatures: List<RowSignature>) {
+        seek(fileSize)
+
+        for (signature in signatures) {
+            for ((i, valueIndex) in signature.valueIndexes.withIndex()) {
+                var remainingBytes = valueIndex
+                for (j in 7 downTo 0) {
+                    buffer[i * Long.SIZE_BYTES + j] = (remainingBytes and 0xffL).toByte()
+                    remainingBytes = remainingBytes shr 8
+                }
+            }
+
+            writeBufferBytes.write(buffer)
+        }
+
+        val bytes = writeBufferBytes.toByteArray()
+        writeBufferBytes.reset()
+        handle.write(bytes)
+
+        fileSize += bytes.size
         previousOffset = fileSize
     }
 

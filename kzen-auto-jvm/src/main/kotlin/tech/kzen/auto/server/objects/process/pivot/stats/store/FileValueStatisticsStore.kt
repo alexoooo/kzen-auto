@@ -1,8 +1,13 @@
 package tech.kzen.auto.server.objects.process.pivot.stats.store
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap
+import it.unimi.dsi.fastutil.longs.LongArrayList
+import it.unimi.dsi.fastutil.longs.LongList
+import it.unimi.dsi.fastutil.longs.LongSortedSet
 import tech.kzen.auto.common.objects.document.process.PivotValueType
 import tech.kzen.auto.server.objects.process.pivot.stats.MutableStatistics
 import tech.kzen.auto.server.objects.process.pivot.stats.ValueStatistics
+import java.io.ByteArrayOutputStream
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.file.Files
@@ -13,8 +18,15 @@ class FileValueStatisticsStore(
     file: Path,
     valueColumnCount: Int
 ):
+    ValueStatistics,
     AutoCloseable
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private const val writeBufferLimit = 8 * 1024
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private val rowSizeInBytes = valueColumnCount * MutableStatistics.sizeInBytes
 
@@ -36,12 +48,108 @@ class FileValueStatisticsStore(
 
     private val fileBufferBytes = ByteArray(rowSizeInBytes)
     private val fileBuffer = ByteBuffer.wrap(fileBufferBytes)
+    private val writeBuffer = ByteArrayOutputStream()
 
     private var previousOffset = 0L
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(rowOrdinal: Long, values: DoubleArray) {
+    fun valueColumnCount(): Int {
+        return statisticsBuffer.size
+    }
+
+
+    fun size(): Long {
+        return fileSize / rowSizeInBytes
+    }
+
+
+    fun writeAll(modified: LongSortedSet, stats: Long2ObjectMap<Array<MutableStatistics>>) {
+        val ordinalBuffer = LongArrayList()
+        var previousOrdinal = -1L
+        val iterator = modified.iterator()
+        while (iterator.hasNext()) {
+            val ordinal = iterator.nextLong()
+            if (previousOrdinal == -1L || ordinal == previousOrdinal + 1) {
+                ordinalBuffer.add(ordinal)
+            }
+            else {
+                writeChunk(ordinalBuffer, stats)
+                ordinalBuffer.clear()
+                ordinalBuffer.add(ordinal)
+            }
+            previousOrdinal = ordinal
+        }
+
+        writeChunk(ordinalBuffer, stats)
+    }
+
+
+    private fun writeChunk(chunk: LongList, stats: Long2ObjectMap<Array<MutableStatistics>>) {
+        if (chunk.isEmpty()) {
+            return
+        }
+
+        val first = chunk.getLong(0)
+        val firstOffset = offset(first)
+        fillGap(firstOffset)
+        seek(firstOffset)
+
+        var totalSize = 0
+        var bufferSize = 0
+
+        val iterator = chunk.iterator()
+        while (iterator.hasNext()) {
+            val ordinal = iterator.nextLong()
+            val rowStats = stats.get(ordinal)
+
+            for (rowStat in rowStats) {
+                rowStat.save(fileBuffer)
+                fileBuffer.clear()
+                writeBuffer.write(fileBufferBytes)
+
+                bufferSize += fileBufferBytes.size
+                totalSize += fileBufferBytes.size
+            }
+
+            if (bufferSize >= writeBufferLimit) {
+                val bytes = writeBuffer.toByteArray()
+                writeBuffer.reset()
+                handle.write(bytes)
+                bufferSize = 0
+            }
+        }
+
+        if (bufferSize > 0) {
+            val bytes = writeBuffer.toByteArray()
+            writeBuffer.reset()
+            handle.write(bytes)
+        }
+
+        fileSize = fileSize.coerceAtLeast(firstOffset + totalSize)
+        previousOffset += totalSize
+    }
+
+
+    fun load(rowOrdinal: Long, buffer: Array<MutableStatistics>) {
+        val offset = offset(rowOrdinal)
+
+        if (offset >= fileSize) {
+            for (stat in buffer) {
+                stat.clear()
+            }
+        }
+        else {
+            read(offset)
+
+            for (i in statisticsBuffer.indices) {
+                buffer[i].copyFrom(statisticsBuffer[i])
+            }
+        }
+    }
+
+
+    override fun addOrUpdate(rowOrdinal: Long, values: DoubleArray) {
         val offset = offset(rowOrdinal)
 
         fillGap(offset)
@@ -76,11 +184,18 @@ class FileValueStatisticsStore(
 
     private fun append(values: DoubleArray) {
         for (i in statisticsBuffer.indices) {
+            val value = values[i]
             val statistics = statisticsBuffer[i]
+
             statistics.clear()
-            statistics.accept(values[i])
+
+            if (! ValueStatistics.isMissing(value)) {
+                statistics.accept(value)
+            }
+
             statistics.save(fileBuffer)
         }
+
         seek(fileSize)
         handle.write(fileBufferBytes)
         fileBuffer.clear()
@@ -93,8 +208,13 @@ class FileValueStatisticsStore(
         read(offset)
 
         for (i in statisticsBuffer.indices) {
+            val value = values[i]
             val statistics = statisticsBuffer[i]
-            statistics.accept(values[i])
+
+            if (! ValueStatistics.isMissing(value)) {
+                statistics.accept(value)
+            }
+
             statistics.save(fileBuffer)
         }
 
@@ -106,7 +226,7 @@ class FileValueStatisticsStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun get(rowOrdinal: Long, valueTypes: List<IndexedValue<PivotValueType>>): DoubleArray {
+    override fun get(rowOrdinal: Long, valueTypes: List<IndexedValue<PivotValueType>>): DoubleArray {
         val offset = offset(rowOrdinal)
 
         val values = DoubleArray(valueTypes.size)

@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.process
 
+import com.google.common.base.Stopwatch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
@@ -20,14 +21,15 @@ import tech.kzen.auto.server.objects.process.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.process.pivot.row.digest.H2DigestIndex
 import tech.kzen.auto.server.objects.process.pivot.row.signature.MapRowSignatureIndex
 import tech.kzen.auto.server.objects.process.pivot.row.signature.StoreRowSignatureIndex
+import tech.kzen.auto.server.objects.process.pivot.row.signature.store.BufferedIndexedSignatureStore
 import tech.kzen.auto.server.objects.process.pivot.row.signature.store.FileIndexedSignatureStore
 import tech.kzen.auto.server.objects.process.pivot.row.value.MapRowValueIndex
 import tech.kzen.auto.server.objects.process.pivot.row.value.StoreRowValueIndex
 import tech.kzen.auto.server.objects.process.pivot.row.value.store.BufferedIndexedTextStore
 import tech.kzen.auto.server.objects.process.pivot.row.value.store.FileIndexedStoreOffset
 import tech.kzen.auto.server.objects.process.pivot.row.value.store.FileIndexedTextStore
-import tech.kzen.auto.server.objects.process.pivot.stats.MapValueStatistics
-import tech.kzen.auto.server.objects.process.pivot.stats.StoreValueStatistics
+import tech.kzen.auto.server.objects.process.pivot.stats.BufferedValueStatistics
+import tech.kzen.auto.server.objects.process.pivot.stats.map.MapValueStatistics
 import tech.kzen.auto.server.objects.process.pivot.stats.store.FileValueStatisticsStore
 import tech.kzen.auto.util.AutoJvmUtils
 import tech.kzen.auto.util.WorkUtils
@@ -38,6 +40,7 @@ import java.nio.file.Path
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.TimeUnit
 
 
 object ApplyProcessAction
@@ -393,15 +396,21 @@ object ApplyProcessAction
 
         var count: Long = 0
         var pivotCount: Long = 0
+        val outerStopwatch = Stopwatch.createStarted()
+        val innerStopwatch = Stopwatch.createStarted()
 
         next_record@
         while (input.hasNext() && ! handle.cancelRequested()) {
             val record = input.next()
 
-            count++
-            if (count % progressItems == 0L) {
-                val progressMessage = "Processed ${ColumnSummaryAction.formatCount(count)}, " +
-                        "pivoted ${ColumnSummaryAction.formatCount(pivotCount)}"
+            if (count != 0L && count % progressItems == 0L) {
+                val progressMessage =
+                    "Processed ${ColumnSummaryAction.formatCount(count)}, " +
+                    "pivoted ${ColumnSummaryAction.formatCount(pivotCount)} " +
+                    "at ${ColumnSummaryAction.formatCount(
+                        (1000.0 * progressItems / innerStopwatch.elapsed(TimeUnit.MILLISECONDS)).toLong())}/s"
+                innerStopwatch.reset().start()
+
                 logger.info(progressMessage)
 
                 nextProgress = nextProgress.update(
@@ -411,6 +420,7 @@ object ApplyProcessAction
                     outputValue,
                     ExecutionValue.of(nextProgress.toCollection())))
             }
+            count++
 
             for (filterColumn in filterColumns) {
                 val value = record.get(filterColumn)
@@ -440,21 +450,26 @@ object ApplyProcessAction
             pivotBuilder.add(record)
         }
 
+        val speedMessage =
+            "at ${ColumnSummaryAction.formatCount(
+                (1000.0 * count / outerStopwatch.elapsed(TimeUnit.MILLISECONDS)).toLong())}/s overall"
         if (handle.cancelRequested()) {
-            nextProgress = nextProgress.update(
-                inputPath.fileName.toString(),
+            val message =
                 "Interrupted: " + ColumnSummaryAction.formatCount(count) +
-                        ", wrote " + ColumnSummaryAction.formatCount(pivotCount))
-            logger.info("Cancelled file filter: {}", ColumnSummaryAction.formatCount(count))
+                ", wrote " + ColumnSummaryAction.formatCount(pivotCount) +
+                " $speedMessage"
+            nextProgress = nextProgress.update(inputPath.fileName.toString(), message)
+            logger.info(message)
         }
         else {
-            nextProgress = nextProgress.update(
-                inputPath.fileName.toString(),
+            val message =
                 "Finished " + ColumnSummaryAction.formatCount(count) +
-                        ", wrote " + ColumnSummaryAction.formatCount(pivotCount)
-            )
-            logger.info("Finished file filter: {}", ColumnSummaryAction.formatCount(count))
+                ", wrote " + ColumnSummaryAction.formatCount(pivotCount) +
+                " $speedMessage"
+            nextProgress = nextProgress.update(inputPath.fileName.toString(), message)
+            logger.info(message)
         }
+
         handle.update(ExecutionSuccess(
             outputValue,
             ExecutionValue.of(nextProgress.toCollection())))
@@ -495,21 +510,22 @@ object ApplyProcessAction
                 FileIndexedStoreOffset(rowTextIndexFile)))
 
         val rowValueIndex = StoreRowValueIndex(
-            rowValueDigestIndex,
-            indexedTextStore)
+            rowValueDigestIndex, indexedTextStore)
 
         val rowSignatureDigestIndex =
 //            FileDigestIndex(rowSignatureDigestDir)
 //            MapDbDigestIndex(rowSignatureDigestDir)
             H2DigestIndex(rowSignatureDigestDir)
 
-        val rowSignatureIndex = StoreRowSignatureIndex(
-            rowSignatureDigestIndex,
+        val indexedSignatureStore = BufferedIndexedSignatureStore(
             FileIndexedSignatureStore(
                 rowSignatureFile,
                 pivotSpec.rows.size))
 
-        val valueStatistics = StoreValueStatistics(
+        val rowSignatureIndex = StoreRowSignatureIndex(
+            rowSignatureDigestIndex, indexedSignatureStore)
+
+        val valueStatistics = BufferedValueStatistics(
             FileValueStatisticsStore(
                 valueStatisticsFile,
                 pivotSpec.values.size

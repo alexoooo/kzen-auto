@@ -90,7 +90,7 @@ class PivotBuilder(
 
         if (present) {
             val rowOrdinal = rowIndex(recordItem)
-            valueStatistics.add(rowOrdinal, valueBuffer)
+            valueStatistics.addOrUpdate(rowOrdinal, valueBuffer)
         }
     }
 

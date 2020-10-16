@@ -21,7 +21,7 @@ class FileValueStatisticsStoreTest {
     @Test
     fun countOfSingle() {
         use(1) { store ->
-            store.add(0, doubleArrayOf(1.0))
+            store.addOrUpdate(0, doubleArrayOf(1.0))
 
             val values = store.get(0, listOf(
                 IndexedValue(0, PivotValueType.Count)))
@@ -34,9 +34,9 @@ class FileValueStatisticsStoreTest {
     @Test
     fun countAndSumOfFew() {
         use(1) { store ->
-            store.add(1, doubleArrayOf(10.0))
-            store.add(1, doubleArrayOf(15.0))
-            store.add(0, doubleArrayOf(42.0))
+            store.addOrUpdate(1, doubleArrayOf(10.0))
+            store.addOrUpdate(1, doubleArrayOf(15.0))
+            store.addOrUpdate(0, doubleArrayOf(42.0))
 
             val firstValues = store.get(0, listOf(
                 IndexedValue(0, PivotValueType.Count),
@@ -58,7 +58,7 @@ class FileValueStatisticsStoreTest {
     @Test
     fun sumOfTwoColumns() {
         use(2) { store ->
-            store.add(0, doubleArrayOf(10.0, 20.0))
+            store.addOrUpdate(0, doubleArrayOf(10.0, 20.0))
 
             val values = store.get(0, listOf(
                 IndexedValue(0, PivotValueType.Sum),

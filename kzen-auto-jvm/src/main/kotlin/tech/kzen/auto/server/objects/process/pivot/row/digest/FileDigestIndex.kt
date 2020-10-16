@@ -103,7 +103,13 @@ class FileDigestIndex(
     }
 
 
-    override fun getOrAdd(digest: Digest): DigestOrdinal {
+    override fun getOrAdd(digestHigh: Long, digestLow: Long): DigestOrdinal {
+        val digestA = (digestHigh shr 32).toInt()
+        val digestB = digestHigh.toInt()
+        val digestC = (digestLow shr 32).toInt()
+        val digestD = digestLow.toInt()
+        val digest = Digest(digestA, digestB, digestC, digestD)
+
         check(digest != Digest.zero)
 
         writeDigest(digest, digestBuffer)

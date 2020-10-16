@@ -55,6 +55,7 @@ class BufferedIndexedTextStore(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
         fileIndexedTextStore.close()
     }
