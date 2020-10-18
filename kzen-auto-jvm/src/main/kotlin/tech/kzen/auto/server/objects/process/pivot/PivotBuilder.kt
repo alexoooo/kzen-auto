@@ -4,7 +4,7 @@ import tech.kzen.auto.common.objects.document.process.PivotSpec
 import tech.kzen.auto.common.objects.document.process.PivotValueType
 import tech.kzen.auto.server.objects.process.model.ListRecordItem
 import tech.kzen.auto.server.objects.process.model.RecordItem
-import tech.kzen.auto.server.objects.process.model.RecordStream
+import tech.kzen.auto.server.objects.process.stream.RecordStream
 import tech.kzen.auto.server.objects.process.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.process.pivot.stats.ValueStatistics
 
@@ -109,7 +109,7 @@ class PivotBuilder(
         val rowCount = rowIndex.size
         var nextRowIndex = 0L
 
-        return object : RecordStream {
+        return object: RecordStream {
             override fun header(): List<String> {
                 return header
             }

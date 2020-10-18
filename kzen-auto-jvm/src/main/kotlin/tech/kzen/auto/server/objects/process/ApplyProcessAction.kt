@@ -15,7 +15,6 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.server.objects.process.model.RecordStream
 import tech.kzen.auto.server.objects.process.pivot.PivotBuilder
 import tech.kzen.auto.server.objects.process.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.process.pivot.row.digest.H2DigestIndex
@@ -31,6 +30,7 @@ import tech.kzen.auto.server.objects.process.pivot.row.value.store.FileIndexedTe
 import tech.kzen.auto.server.objects.process.pivot.stats.BufferedValueStatistics
 import tech.kzen.auto.server.objects.process.pivot.stats.map.MapValueStatistics
 import tech.kzen.auto.server.objects.process.pivot.stats.store.FileValueStatisticsStore
+import tech.kzen.auto.server.objects.process.stream.RecordStream
 import tech.kzen.auto.util.AutoJvmUtils
 import tech.kzen.auto.util.WorkUtils
 import java.io.BufferedWriter
@@ -334,6 +334,8 @@ object ApplyProcessAction
         outputValue: ExecutionValue,
         tempDir: Path
     ) {
+//        val source = MultiRecordSource(inputPaths)
+
         val filterColumns = columnNames.intersect(filterSpec.columns.keys).toList()
 
         val pivotBuilder =

@@ -24,13 +24,10 @@ class MapValueStatistics(
 
 
     override fun get(rowOrdinal: Long, valueTypes: List<IndexedValue<PivotValueType>>): DoubleArray {
-        check(valueTypes.size == columns.size)
-
         val values = DoubleArray(valueTypes.size)
-        for (i in columns.indices) {
+        for (i in valueTypes.indices) {
             values[i] = get(rowOrdinal, valueTypes[i].index, valueTypes[i].value)
         }
-
         return values
     }
 

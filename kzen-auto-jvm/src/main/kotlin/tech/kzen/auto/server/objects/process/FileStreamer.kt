@@ -2,9 +2,9 @@ package tech.kzen.auto.server.objects.process
 
 import com.google.common.io.MoreFiles
 import org.apache.commons.csv.CSVFormat
-import tech.kzen.auto.server.objects.process.model.CsvRecordStream
-import tech.kzen.auto.server.objects.process.model.RecordStream
-import tech.kzen.auto.server.objects.process.model.TsvRecordStream
+import tech.kzen.auto.server.objects.process.stream.CsvRecordStream
+import tech.kzen.auto.server.objects.process.stream.RecordStream
+import tech.kzen.auto.server.objects.process.stream.TsvRecordStream
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader

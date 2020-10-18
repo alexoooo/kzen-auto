@@ -1,6 +1,8 @@
-package tech.kzen.auto.server.objects.process.model
+package tech.kzen.auto.server.objects.process.stream
 
 import org.apache.commons.csv.CSVParser
+import tech.kzen.auto.server.objects.process.model.CsvRecordItem
+import tech.kzen.auto.server.objects.process.model.RecordItem
 
 
 class CsvRecordStream(

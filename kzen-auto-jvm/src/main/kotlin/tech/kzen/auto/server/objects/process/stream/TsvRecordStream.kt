@@ -1,5 +1,7 @@
-package tech.kzen.auto.server.objects.process.model
+package tech.kzen.auto.server.objects.process.stream
 
+import tech.kzen.auto.server.objects.process.model.ListRecordItem
+import tech.kzen.auto.server.objects.process.model.RecordItem
 import java.io.BufferedReader
 
 
