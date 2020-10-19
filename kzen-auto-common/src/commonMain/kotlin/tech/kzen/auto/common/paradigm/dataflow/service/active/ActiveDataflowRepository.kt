@@ -516,8 +516,14 @@ class ActiveDataflowRepository(
 
             val inputLocation = sourceVertex.objectLocation
             val inputActiveModel = activeDataflowModel.vertices[inputLocation]!!
-            val message = inputActiveModel.message!!
-            input.set(message)
+
+            val message = inputActiveModel.message
+            if (message != null) {
+                input.set(message)
+            }
+            else {
+                input.clear()
+            }
 
             populatedInputCount++
         }
