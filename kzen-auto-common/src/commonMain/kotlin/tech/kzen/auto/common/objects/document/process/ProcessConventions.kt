@@ -18,13 +18,13 @@ object ProcessConventions {
 
 //    const val columnKey = "column"
     private const val inputKey = "input"
-    private const val outputKey = "output"
+//    private const val outputKey = "output"
 
 //    const val nameKey = "name"
 //    const val progressKey = "progress"
 
     val inputAttribute = AttributeName(inputKey)
-    val outputAttribute = AttributeName(outputKey)
+//    val outputAttribute = AttributeName(outputKey)
 
     const val actionParameter = "action"
     const val actionListFiles = "files"

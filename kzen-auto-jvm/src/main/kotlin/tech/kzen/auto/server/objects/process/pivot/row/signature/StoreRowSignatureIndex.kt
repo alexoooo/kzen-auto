@@ -11,9 +11,9 @@ class StoreRowSignatureIndex(
     private val cacheSize: Int = 4 * 1024*/
 ): RowSignatureIndex {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private const val missingOrdinal = -1L
-    }
+//    companion object {
+//        private const val missingOrdinal = -1L
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -33,14 +33,6 @@ class StoreRowSignatureIndex(
 
 
     override fun getOrAddIndex(rowSignature: RowSignature): Long {
-//        val cachedOrdinal = cache.getAndMoveToLast(rowSignature)
-//        if (cachedOrdinal != missingOrdinal) {
-//            return cachedOrdinal
-//        }
-
-//        val digestHigh = LongHashFunction.metro().hashLongs(rowSignature.valueIndexes)
-//        val digestLow = LongHashFunction.wy_3().hashLongs(rowSignature.valueIndexes)
-//        val valueOrdinal = digestIndex.getOrAdd(digestHigh, digestLow)
         LongTupleHashFunction.murmur_3().hashLongs(rowSignature.valueIndexes, hashBuffer)
         val valueOrdinal = digestIndex.getOrAdd(hashBuffer[0], hashBuffer[1])
 

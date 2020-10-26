@@ -15,9 +15,8 @@ import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
 import tech.kzen.auto.client.objects.document.process.state.OutputLookupRequest
 import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
-import tech.kzen.auto.client.wrap.SaveAltIcon
+import tech.kzen.auto.client.wrap.PageviewIcon
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.process.ProcessConventions
 
 
 class ProcessOutput(
@@ -77,6 +76,7 @@ class ProcessOutput(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderContent() {
         renderHeader()
 
@@ -89,9 +89,10 @@ class ProcessOutput(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderHeader() {
         styledDiv {
-            child(SaveAltIcon::class) {
+            child(PageviewIcon::class) {
                 attrs {
                     style = reactStyle {
                         fontSize = 1.75.em
@@ -105,22 +106,26 @@ class ProcessOutput(
                     fontSize = 2.em
                 }
 
-                +"Output"
+//                +"Output"
+                +"View"
             }
         }
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderOutput() {
         val error = props.processState.outputError
 
         styledDiv {
-            renderFile(error)
+//            renderFile(error)
             renderInfo(error)
+            renderPreview(error)
         }
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderFile(error: String?) {
         val editDisabled =
             props.processState.initiating ||
@@ -147,7 +152,7 @@ class ProcessOutput(
                 attrs {
                     clientState = props.processState.clientState
                     objectLocation = props.processState.mainLocation
-                    attributeName = ProcessConventions.outputAttribute
+//                    attributeName = ProcessConventions.outputAttribute
                     labelOverride = "File"
 
                     disabled = editDisabled
@@ -162,6 +167,7 @@ class ProcessOutput(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderInfo(error: String?) {
         if (error != null) {
             +"Error: $error"
@@ -192,16 +198,29 @@ class ProcessOutput(
                 }
 
                 if (outputInfo.modifiedTime == null) {
+//                    +"Does not exist, will create"
                     +"Does not exist, will create"
 
-                    if (! outputInfo.folderExists) {
-                        +" (along with containing folder)"
-                    }
+//                    if (! outputInfo.folderExists) {
+//                        +" (along with containing folder)"
+//                    }
                 }
                 else {
                     +"Exists, last modified: ${outputInfo.modifiedTime}"
                 }
             }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderPreview(error: String?) {
+        if (error != null) {
+            return
+        }
+
+        styledDiv {
+            +"[Preview]"
         }
     }
 }

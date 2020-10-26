@@ -430,3 +430,9 @@ external class ErrorIcon: Component<IconProps, RState> {
 external class ErrorOutlineIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("Pageview")
+external class PageviewIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

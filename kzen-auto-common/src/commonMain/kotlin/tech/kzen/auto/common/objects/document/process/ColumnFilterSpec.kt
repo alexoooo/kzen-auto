@@ -4,13 +4,18 @@ import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.Digestible
 import tech.kzen.lib.platform.collect.persistentMapOf
 
 
 data class ColumnFilterSpec(
     val type: ColumnFilterType,
     val values: Set<String>
-) {
+):
+    Digestible
+{
+    //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val typeAttributeSegment = AttributeSegment.ofKey("type")
         val valuesAttributeSegment = AttributeSegment.ofKey("values")
@@ -37,5 +42,12 @@ data class ColumnFilterSpec(
 
             return ColumnFilterSpec(type, values)
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun digest(builder: Digest.Builder) {
+        builder.addInt(type.ordinal)
+        builder.addDigestibleUnorderedList(values.map { Digest.ofUtf8(it) })
     }
 }

@@ -11,15 +11,18 @@ class RowIndex(
 ):
     AutoCloseable
 {
+    //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val missingRowValueIndex = -1L
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     val size: Long
             get() = rowSignatureIndex.size()
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     fun indexOf(rowValues: List<String?>): Long {
         val rowValueIndexList = LongArray(rowValues.size)
 
@@ -35,7 +38,8 @@ class RowIndex(
             rowValueIndexList[rowValue.index] = rowValueIndex
         }
 
-        return rowSignatureIndex.getOrAddIndex(RowSignature(rowValueIndexList))
+        return rowSignatureIndex.getOrAddIndex(
+            RowSignature(rowValueIndexList))
     }
 
 

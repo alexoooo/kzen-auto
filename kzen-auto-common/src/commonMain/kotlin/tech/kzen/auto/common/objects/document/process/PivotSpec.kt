@@ -16,13 +16,17 @@ import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.Digestible
 
 
 data class PivotSpec(
     val rows: Set<String>,
 //    val columns: List<String>,
     val values: Map<String, PivotValueSpec>
-) {
+):
+    Digestible
+{
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val rowsKey = AttributeSegment.ofKey("rows")
@@ -169,7 +173,15 @@ data class PivotSpec(
         values.isEmpty()
 
 
+
 //    fun valueColumnCount(): Int {
 //        return values.map { it.value.types.size }.sum()
 //    }
+
+
+    override fun digest(builder: Digest.Builder) {
+//        val values: Map<String, PivotValueSpec>
+        builder.addDigestibleUnorderedList(rows.map { Digest.ofUtf8(it) })
+        builder.addDigestibleUnorderedMap(values.mapKeys { Digest.ofUtf8(it.key) })
+    }
 }

@@ -15,11 +15,13 @@ import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.Digestible
 
 
 data class FilterSpec(
     val columns: Map<String, ColumnFilterSpec>
-) {
+): Digestible {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         fun addCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
@@ -126,5 +128,11 @@ data class FilterSpec(
             return AttributeDefinitionAttempt.success(
                     ValueAttributeDefinition(FilterSpec(definitionMap)))
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun digest(builder: Digest.Builder) {
+        builder.addDigestibleUnorderedMap(columns.mapKeys { Digest.ofUtf8(it.key) })
     }
 }

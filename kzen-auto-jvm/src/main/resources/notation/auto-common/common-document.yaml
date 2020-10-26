@@ -83,12 +83,12 @@ Process:
   pivot:
     rows: []
     values: {}
-  output: ../work/out.csv
+#  output: ../work/out.csv
   meta:
     input: String
     filter: FilterSpec
     pivot: PivotSpec
-    output: String
+#    output: String
 
 
 FilterSpec:

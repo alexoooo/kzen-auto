@@ -38,6 +38,8 @@ class ModelTaskRepository(
 
     //-----------------------------------------------------------------------------------------------------------------
     private val active = mutableMapOf<TaskId, ActiveHandle>()
+
+    // TODO: is this necessary?
     private val terminated = mutableMapOf<TaskId, TaskModel>()
 
 

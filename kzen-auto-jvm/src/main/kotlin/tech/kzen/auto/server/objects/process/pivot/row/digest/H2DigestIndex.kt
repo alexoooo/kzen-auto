@@ -1,7 +1,6 @@
 package tech.kzen.auto.server.objects.process.pivot.row.digest
 
 import it.unimi.dsi.fastutil.longs.Long2LongLinkedOpenHashMap
-import net.openhft.hashing.LongHashFunction
 import org.h2.mvstore.MVMap
 import org.h2.mvstore.MVStore
 import java.nio.file.Files
@@ -21,11 +20,9 @@ class H2DigestIndex(
     //-----------------------------------------------------------------------------------------------------------------
     private var nextOrdinal = 0L
 
-//    private val store: MVStore
     private val storeA: MVStore
     private val storeB: MVStore
 
-//    private val map: MVMap<ByteArray, Long>
     private val mapA: MVMap<ByteArray, Long>
     private val mapB: MVMap<ByteArray, Long>
 
@@ -33,11 +30,6 @@ class H2DigestIndex(
 
     init {
         Files.createDirectories(dir)
-
-//        store = MVStore.Builder()
-//            .fileName(dir.resolve("h2").toString())
-//            .open()
-//        map = store.openMap("digest")
 
         storeA = MVStore.Builder()
             .fileName(dir.resolve("h2-a").toString())
@@ -83,13 +75,6 @@ class H2DigestIndex(
             (digestLow shr 48).toByte(),
             (digestLow shr 56).toByte())
 
-//        val a = (digestHigh shr 32).toInt()
-//        val b = digestHigh.toInt()
-//        val c = (digestLow shr 32).toInt()
-//        val d = digestLow.toInt()
-//        val digest = Digest(a, b, c, d)
-//        val bytes = digest.toByteArray()
-
         val map =
             if (binaryPartition(bytes)) {
                 mapA
@@ -120,7 +105,8 @@ class H2DigestIndex(
 
 
     private fun binaryPartition(bytes: ByteArray): Boolean {
-        return LongHashFunction.xx().hashBytes(bytes) < 0
+        return bytes.sum() >= 0
+//        return LongHashFunction.xx().hashBytes(bytes) < 0
     }
 
 

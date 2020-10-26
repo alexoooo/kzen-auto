@@ -1,16 +1,17 @@
 package tech.kzen.auto.server.objects.process.pivot
 
-import tech.kzen.auto.common.objects.document.process.PivotSpec
+import tech.kzen.auto.common.objects.document.process.PivotValueSpec
 import tech.kzen.auto.common.objects.document.process.PivotValueType
 import tech.kzen.auto.server.objects.process.model.ListRecordItem
 import tech.kzen.auto.server.objects.process.model.RecordItem
-import tech.kzen.auto.server.objects.process.stream.RecordStream
 import tech.kzen.auto.server.objects.process.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.process.pivot.stats.ValueStatistics
+import tech.kzen.auto.server.objects.process.stream.RecordStream
 
 
 class PivotBuilder(
-    pivotSpec: PivotSpec,
+    rows: Set<String>,
+    values: Set<String>,
     private val rowIndex: RowIndex,
     private val valueStatistics: ValueStatistics
 ):
@@ -24,40 +25,10 @@ class PivotBuilder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val rowColumns = pivotSpec.rows.toList()
-    private val valueColumns = pivotSpec.values.keys.toList()
+    private val rowColumns = rows.toList()
+    private val valueColumns = values.toList()
 //    private val buffer = DoubleArray(pivotSpec.valueColumnCount())
     private val valueBuffer = DoubleArray(valueColumns.size)
-
-    private val header: List<String>
-    private val headerIndex: Map<String, Int>
-    private val valueTypes: List<IndexedValue<PivotValueType>>
-
-    init {
-        val headerBuffer = mutableListOf<String>()
-        val headerIndexBuffer = mutableMapOf<String, Int>()
-        val valueTypesBuffer = mutableListOf<IndexedValue<PivotValueType>>()
-
-        for (rowColumn in rowColumns) {
-            headerBuffer.add(rowColumn)
-            headerIndexBuffer[rowColumn] = headerIndexBuffer.size
-        }
-
-        for ((index, e) in pivotSpec.values.toList().withIndex()) {
-            val valueColumn = e.first
-            val valueTypes = e.second
-            for (valueType in valueTypes.types) {
-                val valueHeader = "$valueColumn - $valueType"
-                headerBuffer.add(valueHeader)
-                headerIndexBuffer[valueHeader] = headerIndexBuffer.size
-                valueTypesBuffer.add(IndexedValue(index, valueType))
-            }
-        }
-
-        header = headerBuffer
-        headerIndex = headerIndexBuffer
-        valueTypes = valueTypesBuffer
-    }
 
 
     //----------------------------------------------------------
@@ -88,8 +59,10 @@ class PivotBuilder(
             valueBuffer[i] = asNumber
         }
 
+        // NB: get row index
+        val rowOrdinal = rowIndex(recordItem)
+
         if (present) {
-            val rowOrdinal = rowIndex(recordItem)
             valueStatistics.addOrUpdate(rowOrdinal, valueBuffer)
         }
     }
@@ -102,9 +75,42 @@ class PivotBuilder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun view(): RecordStream {
+//    fun view(): RecordStream {
+//        return view()
+//    }
+
+
+    fun view(values: Map<String, PivotValueSpec>): RecordStream {
         check(! viewing) { "Already viewing" }
         viewing = true
+
+        val header: List<String>
+        val headerIndex: Map<String, Int>
+        val valueTypes: List<IndexedValue<PivotValueType>>
+
+        val headerBuffer = mutableListOf<String>()
+        val headerIndexBuffer = mutableMapOf<String, Int>()
+        val valueTypesBuffer = mutableListOf<IndexedValue<PivotValueType>>()
+
+        for (rowColumn in rowColumns) {
+            headerBuffer.add(rowColumn)
+            headerIndexBuffer[rowColumn] = headerIndexBuffer.size
+        }
+
+        for ((index, e) in values.toList().withIndex()) {
+            val valueColumn = e.first
+            val valueTypes = e.second
+            for (valueType in valueTypes.types) {
+                val valueHeader = "$valueColumn - $valueType"
+                headerBuffer.add(valueHeader)
+                headerIndexBuffer[valueHeader] = headerIndexBuffer.size
+                valueTypesBuffer.add(IndexedValue(index, valueType))
+            }
+        }
+
+        header = headerBuffer
+        headerIndex = headerIndexBuffer
+        valueTypes = valueTypesBuffer
 
         val rowCount = rowIndex.size
         var nextRowIndex = 0L

@@ -9,6 +9,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.reactive.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
+import tech.kzen.auto.server.objects.process.model.ProcessRunSignature
 import tech.kzen.auto.server.objects.process.model.ValueSummaryBuilder
 import tech.kzen.auto.util.AutoJvmUtils
 import java.nio.file.Files
@@ -28,8 +29,7 @@ object ColumnSummaryAction {
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun summarizeAllAsync(
-        inputPaths: List<Path>,
-        columnNames: List<String>,
+        runSignature: ProcessRunSignature,
         handle: TaskHandle
     ) {
         val notLoaded = mutableListOf<Path>()
@@ -37,14 +37,14 @@ object ColumnSummaryAction {
         val builder = mutableMapOf<String, ColumnSummary>()
 
         next_input_path@
-        for (inputPath in inputPaths) {
+        for (inputPath in runSignature.inputs) {
             val indexDir = FilterIndex.inputIndexPath(inputPath)
             if (! Files.isDirectory(indexDir)) {
                 notLoaded.add(inputPath)
                 continue
             }
 
-            for (columnName in columnNames) {
+            for (columnName in runSignature.columnNames) {
                 val columnDirName = AutoJvmUtils.sanitizeFilename(columnName)
                 val columnDir = indexDir.resolve(columnDirName)
 
@@ -66,14 +66,14 @@ object ColumnSummaryAction {
                 ExecutionValue.of(tableSummary.toCollection())))
         }
         else {
-            summarizeRemainingAsync(notLoaded, columnNames, builder, handle)
+            summarizeRemainingAsync(notLoaded, runSignature, builder, handle)
         }
     }
 
 
     private fun summarizeRemainingAsync(
         remainingInputPaths: List<Path>,
-        columnNames: List<String>,
+        runSignature: ProcessRunSignature,
         builder: MutableMap<String, ColumnSummary>,
         handle: TaskHandle
     ) {
@@ -92,7 +92,7 @@ object ColumnSummaryAction {
                 val (columnSummaries,
                     nextProgress
                 ) = buildValueSummariesAsync(
-                    inputPath, columnNames, builder, /*remainingInputPathsBuilder, */progress, handle
+                    inputPath, runSignature.columnNames, builder, progress, handle
                 )
                 progress = nextProgress
 
@@ -101,7 +101,7 @@ object ColumnSummaryAction {
                     break
                 }
 
-                for (columnName in columnNames) {
+                for (columnName in runSignature.columnNames) {
                     val columnSummary = columnSummaries[columnName] ?: error("Missing: $columnName")
                     val cumulative = builder.getOrDefault(columnName, ColumnSummary.empty)
                     builder[columnName] = ValueSummaryBuilder.merge(cumulative, columnSummary)
@@ -210,22 +210,21 @@ object ColumnSummaryAction {
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun lookupSummary(
-        inputPaths: List<Path>,
-        columnNames: List<String>
+        runSignature: ProcessRunSignature
     ): ExecutionResult {
         val notLoaded = mutableListOf<Path>()
 
         val builder = mutableMapOf<String, ColumnSummary>()
 
         next_input_path@
-        for (inputPath in inputPaths) {
+        for (inputPath in runSignature.inputs) {
             val indexDir = FilterIndex.inputIndexPath(inputPath)
             if (! Files.isDirectory(indexDir)) {
                 notLoaded.add(inputPath)
                 continue
             }
 
-            for (columnName in columnNames) {
+            for (columnName in runSignature.columnNames) {
                 val columnDirName = AutoJvmUtils.sanitizeFilename(columnName)
                 val columnDir = indexDir.resolve(columnDirName)
 

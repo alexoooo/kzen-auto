@@ -12,7 +12,8 @@ import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.task.api.ManagedTask
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.util.AutoJvmUtils
+import tech.kzen.auto.server.objects.process.model.ProcessRunSignature
+import tech.kzen.auto.server.objects.process.model.ProcessRunSpec
 import tech.kzen.lib.common.reflect.Reflect
 import java.nio.file.Path
 
@@ -21,13 +22,19 @@ import java.nio.file.Path
 class ProcessDocument(
     private val input: String,
     private val filter: FilterSpec,
-    private val pivot: PivotSpec,
-    private val output: String
+    private val pivot: PivotSpec/*,
+    private val output: String*/
 ):
     DocumentArchetype(),
     DetachedAction,
     ManagedTask
 {
+    //-----------------------------------------------------------------------------------------------------------------
+//    companion object {
+//        private val dataProcessDir = Path.of("data-process")
+//    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun execute(request: DetachedRequest): ExecutionResult {
         val action = request.parameters.get(ProcessConventions.actionParameter)
@@ -46,9 +53,6 @@ class ProcessDocument(
             ProcessConventions.actionSummaryLookup ->
                 actionColumnSummaryLookup()
 
-//            FilterConventions.actionFilter ->
-//                actionApplyFilterAsync(inputPaths)
-
             else ->
                 return ExecutionFailure("Unknown action: $action")
         }
@@ -58,17 +62,37 @@ class ProcessDocument(
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun inputPaths(): List<Path>? {
         return FileListingAction.list(input)
-//        val parsedInputPath = AutoJvmUtils.parsePath(input)
-//            ?: return null
-//
-//        val inputPath = parsedInputPath.toAbsolutePath().normalize()
-//
-//        if (! Files.isRegularFile(inputPath)) {
-//            return null
-//        }
-//
-//        return inputPath
     }
+
+
+    private suspend fun runSpec(): ProcessRunSpec? {
+        val inputPaths = inputPaths()
+            ?: return null
+
+        val columnNames = ColumnListingAction.columnNamesMerge(inputPaths)
+
+        return ProcessRunSpec(
+            inputPaths, columnNames, filter, pivot)
+    }
+
+
+    private suspend fun runDir(): Path? {
+        val runSpec = runSpec()
+            ?: return null
+
+        val runSignature = runSpec.toSignature()
+
+        return ProcessWorkPool.resolveRunDir(runSignature)
+//        return runDir(runSignature)
+    }
+
+
+//    private fun runDir(runSignature: ProcessRunSignature): Path {
+//        val tempName = runSignature.digest().asString()
+//        val tempPath = dataProcessDir.resolve(tempName)
+//        val workDir = WorkUtils.resolve(tempPath)
+//        return workDir.toAbsolutePath().normalize()
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -83,22 +107,20 @@ class ProcessDocument(
 
 
     private suspend fun actionColumnSummaryLookup(): ExecutionResult {
-        val inputPaths = inputPaths()
+        val runSpec = runSpec()
             ?: return ExecutionFailure("Please provide a valid input path")
 
-        val columnNames = ColumnListingAction.columnNamesMerge(inputPaths)
-        return ColumnSummaryAction.lookupSummary(
-            inputPaths, columnNames)
+        val runSignature = runSpec.toSignature()
+
+        return ColumnSummaryAction.lookupSummary(runSignature)
     }
 
 
     private suspend fun actionLookupOutput(): ExecutionResult {
-        val parsedOutputPath = AutoJvmUtils.parsePath(output)
-            ?: return ExecutionFailure("Invalid output: $output")
+        val runDir = runDir()
+            ?: return ExecutionFailure("Missing run dir")
 
-        val outputPath = parsedOutputPath.toAbsolutePath().normalize()
-
-        return ApplyProcessAction.lookupOutput(outputPath)
+        return ApplyProcessAction.lookupOutput(runDir)
     }
 
 
@@ -120,36 +142,22 @@ class ProcessDocument(
             return
         }
 
-        val inputPaths = inputPaths()
-        if (inputPaths == null) {
+        val runSpec = runSpec()
+
+        if (runSpec == null) {
             handle.complete(ExecutionFailure(
                 "Please provide a valid input path"))
             return
         }
 
-        val columnNames = ColumnListingAction.columnNamesMerge(inputPaths)
-
         when (action) {
-//            FilterConventions.actionFiles -> {
-//                val result = actionListFiles(inputPaths)
-//                handle.complete(result)
-//            }
-//
-//            FilterConventions.actionColumns -> {
-//                val result = actionColumnListing(inputPaths)
-//                handle.complete(result)
-//            }
-
             ProcessConventions.actionSummaryTask -> {
-//                val result = actionColumnSummary(inputPaths, request)
-//                handle.complete(result)
-                actionColumnSummaryAsync(inputPaths, columnNames, /*request,*/ handle)
+                val runSignature = runSpec.toSignature()
+                actionColumnSummaryAsync(runSignature, handle)
             }
 
             ProcessConventions.actionFilterTask -> {
-                actionApplyFilterAsync(
-                    inputPaths, columnNames, handle)
-//                handle.complete(result)
+                actionApplyFilterAsync(runSpec, handle)
             }
 
             else -> {
@@ -161,38 +169,22 @@ class ProcessDocument(
 
 
     private suspend fun actionColumnSummaryAsync(
-        inputPaths: List<Path>,
-        columnNames: List<String>,
-//        request: DetachedRequest,
+        runSignature: ProcessRunSignature,
         handle: TaskHandle
     ) {
-//        val columnName = request.parameters.get(FilterConventions.columnKey)
-//        if (columnName == null) {
-//            handle.complete(ExecutionFailure(
-//                "'${FilterConventions.columnKey}' required"))
-//            return
-//        }
-
         ColumnSummaryAction.summarizeAllAsync(
-            inputPaths, columnNames, handle)
+            runSignature, handle)
     }
 
 
     private suspend fun actionApplyFilterAsync(
-        inputPaths: List<Path>,
-        columnNames: List<String>,
+        runSpec: ProcessRunSpec,
         handle: TaskHandle
     ) {
-        val parsedOutputPath = AutoJvmUtils.parsePath(output)
-        if (parsedOutputPath == null) {
-            handle.complete(ExecutionFailure(
-                "Invalid output location: $output"))
-            return
-        }
-
-        val outputPath = parsedOutputPath.toAbsolutePath().normalize()
+        val runSignature = runSpec.toSignature()
+        val runDir = ProcessWorkPool.getOrPrepareRunDir(runSignature)
 
         ApplyProcessAction.applyProcessAsync(
-            inputPaths, columnNames, outputPath, filter, pivot, handle)
+            runSpec, runDir, handle)
     }
 }
