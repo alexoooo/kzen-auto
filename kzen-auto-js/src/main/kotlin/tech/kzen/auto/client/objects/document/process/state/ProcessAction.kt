@@ -21,6 +21,11 @@ sealed class SingularProcessAction: ProcessAction() {
 }
 
 
+interface ProcessUpdateResult {
+    val errorMessage: String?
+}
+
+
 data class CompoundProcessAction(
     val actions: List<ProcessAction>
 ):
@@ -77,7 +82,13 @@ object InitiateProcessDone: InitiateProcessAction()
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class ListInputsAction: SingularProcessAction()
+sealed class InputProcessAction: SingularProcessAction()
+
+
+object InputsUpdatedRequest: InputProcessAction()
+
+
+sealed class ListInputsAction: InputProcessAction()
 
 
 object ListInputsRequest: ListInputsAction()
@@ -117,48 +128,41 @@ data class ListColumnsError(
 sealed class FilterAction: SingularProcessAction()
 
 
+sealed class FilterUpdateRequest: FilterAction()
+
+
+data class FilterUpdateResult(
+    override val errorMessage: String?
+): FilterAction(), ProcessUpdateResult
+
+
 //--------------------------------------------------------------
 data class FilterAddRequest(
     val columnName: String
-): FilterAction()
+): FilterUpdateRequest()
 
 
-object FilterAddResponse: FilterAction()
-
-
-data class FilterAddError(
-    val message: String
-): FilterAction()
-
-
-//--------------------------------------------------------------
 data class FilterRemoveRequest(
     val columnName: String
-): FilterAction()
+): FilterUpdateRequest()
 
 
-//--------------------------------------------------------------
 data class FilterValueAddRequest(
     val columnName: String,
     val filterValue: String
-): FilterAction()
+): FilterUpdateRequest()
 
 
 data class FilterValueRemoveRequest(
     val columnName: String,
     val filterValue: String
-): FilterAction()
+): FilterUpdateRequest()
 
 
 data class FilterTypeChangeRequest(
     val columnName: String,
     val filterType: ColumnFilterType
-): FilterAction()
-
-
-data class FilterUpdateResult(
-    val errorMessage: String?
-): FilterAction()
+): FilterUpdateRequest()
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -169,8 +173,8 @@ sealed class PivotUpdateRequest: PivotAction()
 
 
 data class PivotUpdateResult(
-    val errorMessage: String?
-): PivotAction()
+    override val errorMessage: String?
+): PivotAction(), ProcessUpdateResult
 
 
 //--------------------------------------------------------------
@@ -250,7 +254,6 @@ data class ProcessTaskStopRequest(
 data class ProcessTaskStopResponse(
     val taskModel: TaskModel
 ): ProcessTaskAction()
-
 
 
 //---------------------------------------------------------------------------------------------------------------------

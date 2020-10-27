@@ -38,7 +38,7 @@ object ProcessWorkPool {
 
         val initialInfoYaml = """
             process-signature: ${WorkUtils.processSignature}
-            status: Running
+            status: Working
         """.trimIndent()
 
         Files.write(

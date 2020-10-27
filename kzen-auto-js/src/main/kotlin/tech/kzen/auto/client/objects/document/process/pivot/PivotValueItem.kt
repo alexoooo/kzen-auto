@@ -1,9 +1,10 @@
 package tech.kzen.auto.client.objects.document.process.pivot
 
 import kotlinx.css.*
-import kotlinx.html.js.onMouseOutFunction
-import kotlinx.html.js.onMouseOverFunction
-import react.*
+import react.RBuilder
+import react.RProps
+import react.RPureComponent
+import react.RState
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.process.state.PivotValueRemoveRequest
@@ -31,30 +32,31 @@ class PivotValueItem(
         var dispatcher: ProcessDispatcher
     ): RProps
 
+
     class State(
-        var hover: Boolean
+//        var hover: Boolean
     ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        hover = false
+//        hover = false
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onMouseOver() {
-        setState {
-            hover = true
-        }
-    }
-
-
-    private fun onMouseOut() {
-        setState {
-            hover = false
-        }
-    }
+//    private fun onMouseOver() {
+//        setState {
+//            hover = true
+//        }
+//    }
+//
+//
+//    private fun onMouseOut() {
+//        setState {
+//            hover = false
+//        }
+//    }
 
 
     private fun onDelete() {
@@ -66,15 +68,15 @@ class PivotValueItem(
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         styledDiv {
-            attrs {
-                onMouseOverFunction = {
-                    onMouseOver()
-                }
-
-                onMouseOutFunction = {
-                    onMouseOut()
-                }
-            }
+//            attrs {
+//                onMouseOverFunction = {
+//                    onMouseOver()
+//                }
+//
+//                onMouseOutFunction = {
+//                    onMouseOut()
+//                }
+//            }
 
             css {
                 width = 100.pct
@@ -92,9 +94,9 @@ class PivotValueItem(
                         marginBottom = (-0.6).em
                         marginLeft = 0.25.em
 
-                        if (! state.hover) {
-                            visibility = Visibility.hidden
-                        }
+//                        if (! state.hover) {
+//                            visibility = Visibility.hidden
+//                        }
                     }
 
                     onClick = {

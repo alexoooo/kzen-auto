@@ -21,8 +21,8 @@ object ProcessReducer {
             is ProcessRefreshAction -> state
 
             //--------------------------------------------------
-            is ListInputsAction ->
-                reduceListInputs(state, action)
+            is InputProcessAction ->
+                reduceInputs(state, action)
 
             is ListColumnsAction ->
                 reduceListColumns(state, action)
@@ -65,11 +65,13 @@ object ProcessReducer {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun reduceListInputs(
+    private fun reduceInputs(
         state: ProcessState,
-        action: ListInputsAction
+        action: InputProcessAction
     ): ProcessState {
         return when (action) {
+            InputsUpdatedRequest -> state
+
             ListInputsRequest -> state.copy(
                 fileListingLoading = true,
                 fileListing = null,
@@ -341,23 +343,13 @@ object ProcessReducer {
         action: FilterAction
     ): ProcessState {
         return when (action) {
-            is FilterAddRequest -> state.copy(
-                filterAddLoading = true,
-                filterAddError = null)
+            is FilterUpdateRequest -> state.copy(
+                filterLoading = true,
+                filterError = null)
 
-            FilterAddResponse -> state.copy(
-                filterAddLoading = false)
-
-            is FilterAddError -> state.copy(
-                filterAddLoading = false,
-                filterAddError = action.message)
-
-
-            is FilterValueAddRequest -> state
-            is FilterValueRemoveRequest -> state
-            is FilterTypeChangeRequest -> state
-            is FilterUpdateResult -> state
-            is FilterRemoveRequest -> state
+            is FilterUpdateResult -> state.copy(
+                filterLoading = false,
+                filterError = action.errorMessage)
         }
     }
 

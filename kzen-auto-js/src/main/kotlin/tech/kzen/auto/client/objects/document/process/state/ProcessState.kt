@@ -26,8 +26,8 @@ data class ProcessState(
     val columnListing: List<String>? = null,
     val columnListingError: String? = null,
 
-    val filterAddLoading: Boolean = false,
-    val filterAddError: String? = null,
+    val filterLoading: Boolean = false,
+    val filterError: String? = null,
 
     val pivotLoading: Boolean = false,
     val pivotError: String? = null,

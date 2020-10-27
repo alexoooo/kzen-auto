@@ -24,13 +24,19 @@ object ProcessEffect {
     ): ProcessAction? {
 //        console.log("ProcessEffect action: ", action)
 
-        if (action == InitiateProcessStart) {
+        if (action == InitiateProcessStart ||
+                action == InputsUpdatedRequest
+        ) {
             return CompoundProcessAction(ListInputsRequest, OutputLookupRequest)
         }
 
         return when (action) {
             OutputLookupRequest ->
                 lookupOutput(state)
+
+
+//            InputsUpdatedRequest ->
+//                ListInputsRequest
 
             ListInputsRequest ->
                 loadFileListing(state)
@@ -44,7 +50,12 @@ object ProcessEffect {
 
 
             is ListColumnsResponse ->
-                ProcessTaskLookupRequest
+                if (action.columnListing.isNotEmpty()) {
+                    ProcessTaskLookupRequest
+                }
+                else {
+                    null
+                }
 
 
             ProcessTaskLookupRequest ->
@@ -115,6 +126,13 @@ object ProcessEffect {
             is PivotValueTypeRemoveRequest ->
                 submitPivotValueTypeRemove(state, action.columnName, action.valueType)
 
+            is ProcessUpdateResult ->
+                if (action.errorMessage == null) {
+                    OutputLookupRequest
+                }
+                else {
+                    null
+                }
 
             else -> null
         }
@@ -147,7 +165,11 @@ object ProcessEffect {
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun loadColumnListing(
         state: ProcessState
-    ): ProcessAction {
+    ): ProcessAction? {
+        if (state.fileListing.isNullOrEmpty()) {
+            return null
+        }
+
         val result = ClientContext.restClient.performDetached(
             state.mainLocation,
             ProcessConventions.actionParameter to ProcessConventions.actionListColumns)
@@ -304,7 +326,11 @@ object ProcessEffect {
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun lookupOutput(
         state: ProcessState
-    ): ProcessAction {
+    ): ProcessAction? {
+        if (state.columnListing.isNullOrEmpty()) {
+            return null
+        }
+
         val result = ClientContext.restClient.performDetached(
             state.mainLocation,
             ProcessConventions.actionParameter to ProcessConventions.actionLookupOutput)
@@ -373,11 +399,11 @@ object ProcessEffect {
 
         return when (result) {
             is MirroredGraphError ->
-                FilterAddError(
+                FilterUpdateResult(
                     result.error.message ?: "Failed: ${result.remote}")
 
             is MirroredGraphSuccess ->
-                FilterAddResponse
+                FilterUpdateResult(null)
         }
     }
 

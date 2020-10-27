@@ -92,13 +92,10 @@ class ProcessFilterAdd(
                 }
             }
 
-            if (props.processState.filterAddLoading) {
-                +"Adding..."
-            }
-            else {
-                if (props.processState.filterAddError != null) {
+            if (! props.processState.filterLoading) {
+                if (props.processState.filterError != null) {
                     styledDiv {
-                        +"Error: ${props.processState.filterAddError}"
+                        +"Error: ${props.processState.filterError}"
                     }
                 }
 

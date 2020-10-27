@@ -10,7 +10,7 @@ import react.dom.*
 import styled.*
 import tech.kzen.auto.client.objects.document.common.DefaultAttributeEditor
 import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
-import tech.kzen.auto.client.objects.document.process.state.ListInputsRequest
+import tech.kzen.auto.client.objects.document.process.state.InputsUpdatedRequest
 import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.InputIcon
@@ -37,7 +37,12 @@ class ProcessInput(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onAttributeChanged(/*attributeNotation: AttributeNotation*/) {
 //        console.log("############## onAttributeChanged - $attributeNotation")
-        props.dispatcher.dispatchAsync(ListInputsRequest)
+//        props.dispatcher.dispatchAsync(ListInputsRequest)
+        props.dispatcher.dispatchAsync(InputsUpdatedRequest)
+//        props.dispatcher.dispatchAsync(
+//            CompoundProcessAction(
+//                ListInputsRequest
+//            ))
     }
 
 

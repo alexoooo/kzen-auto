@@ -80,8 +80,7 @@ class ProcessOutput(
     private fun RBuilder.renderContent() {
         renderHeader()
 
-        if (props.processState.columnListing == null) {
-            // TODO: is this good usability?
+        if (props.processState.columnListing.isNullOrEmpty()) {
             return
         }
 
