@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.process.pivot.row.value.store
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
+import tech.kzen.auto.server.objects.process.pivot.store.OffsetStore
 import java.io.ByteArrayOutputStream
 import java.io.RandomAccessFile
 import java.nio.charset.StandardCharsets
@@ -10,7 +11,7 @@ import java.nio.file.Path
 
 class FileIndexedTextStore(
     file: Path,
-    private val indexedStoreOffset: IndexedStoreOffset
+    private val offsetStore: OffsetStore
 ): IndexedTextStore {
     //-----------------------------------------------------------------------------------------------------------------
     private val handle: RandomAccessFile
@@ -31,15 +32,15 @@ class FileIndexedTextStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun add(text: String) {
-        val offset = indexedStoreOffset.endOffset()
+        val offset = offsetStore.endOffset()
         seek(offset)
         val length = write(text)
-        indexedStoreOffset.add(length)
+        offsetStore.add(length)
     }
 
 
     fun addAll(textValues: List<String>) {
-        val offset = indexedStoreOffset.endOffset()
+        val offset = offsetStore.endOffset()
         seek(offset)
 
         for (text in textValues) {
@@ -53,13 +54,13 @@ class FileIndexedTextStore(
         writeBufferBytes.reset()
         handle.write(writeBites)
 
-        indexedStoreOffset.addAll(lengthBuffer)
+        offsetStore.addAll(lengthBuffer)
         lengthBuffer.clear()
     }
 
 
     override fun get(textOrdinal: Long): String {
-        val span = indexedStoreOffset.get(textOrdinal)
+        val span = offsetStore.get(textOrdinal)
         seek(span.offset)
         return read(span.length)
     }
@@ -99,6 +100,6 @@ class FileIndexedTextStore(
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
         handle.close()
-        indexedStoreOffset.close()
+        offsetStore.close()
     }
 }

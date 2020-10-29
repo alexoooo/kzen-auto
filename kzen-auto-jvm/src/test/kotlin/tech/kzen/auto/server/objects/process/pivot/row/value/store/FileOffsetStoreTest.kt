@@ -1,11 +1,12 @@
 package tech.kzen.auto.server.objects.process.pivot.row.value.store
 
+import tech.kzen.auto.server.objects.process.pivot.store.FileOffsetStore
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 
-class FileIndexedStoreOffsetTest {
+class FileOffsetStoreTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun emptyHasZeroSize() {
@@ -81,11 +82,11 @@ class FileIndexedStoreOffsetTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun use(consumer: (FileIndexedStoreOffset) -> Unit) {
+    private fun use(consumer: (FileOffsetStore) -> Unit) {
         val file = createTempFile("FileIndexedStoreOffsetTest").toPath()
 
         try {
-            FileIndexedStoreOffset(file).use {
+            FileOffsetStore(file).use {
                 consumer.invoke(it)
             }
         }

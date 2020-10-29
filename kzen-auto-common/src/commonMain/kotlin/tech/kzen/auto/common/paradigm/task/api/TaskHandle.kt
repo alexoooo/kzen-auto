@@ -5,6 +5,8 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 
 
 interface TaskHandle {
+    fun updateAsync(activeState: Any)
+
     fun complete(result: ExecutionResult)
 
     fun completeCancelled()

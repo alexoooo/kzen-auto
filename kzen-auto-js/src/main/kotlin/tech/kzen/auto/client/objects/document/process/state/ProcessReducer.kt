@@ -322,7 +322,7 @@ object ProcessReducer {
         action: OutputLookupAction
     ): ProcessState {
         return when (action) {
-            OutputLookupRequest -> state.copy(
+            is OutputLookupRequest -> state.copy(
                 outputLoading = true)
 
             is OutputLookupError -> state.copy(

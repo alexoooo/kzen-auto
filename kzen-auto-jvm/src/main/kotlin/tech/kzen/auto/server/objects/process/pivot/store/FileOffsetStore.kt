@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.process.pivot.row.value.store
+package tech.kzen.auto.server.objects.process.pivot.store
 
 import com.google.common.primitives.Longs
 import it.unimi.dsi.fastutil.ints.IntList
@@ -9,10 +9,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 
-class FileIndexedStoreOffset(
+class FileOffsetStore(
     file: Path
 ):
-    IndexedStoreOffset
+    OffsetStore
 {
     //-----------------------------------------------------------------------------------------------------------------
     private var fileSize: Long =
@@ -47,7 +47,7 @@ class FileIndexedStoreOffset(
     }
 
 
-    override fun get(index: Long): IndexedStoreOffset.Span {
+    override fun get(index: Long): OffsetStore.Span {
         val previousEnd: Long
         val endOffset: Long
 
@@ -71,7 +71,7 @@ class FileIndexedStoreOffset(
 
         val length = (endOffset - previousEnd).toInt()
 
-        return IndexedStoreOffset.Span(
+        return OffsetStore.Span(
             previousEnd, length)
     }
 

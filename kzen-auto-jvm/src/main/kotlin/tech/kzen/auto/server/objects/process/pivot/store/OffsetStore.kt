@@ -1,16 +1,16 @@
-package tech.kzen.auto.server.objects.process.pivot.row.value.store
+package tech.kzen.auto.server.objects.process.pivot.store
 
 import it.unimi.dsi.fastutil.ints.IntList
 
 
-interface IndexedStoreOffset: AutoCloseable {
+interface OffsetStore: AutoCloseable {
     data class Span(
         val offset: Long,
         val length: Int
     ) {
-//        fun endOffset(): Long {
-//            return offset + length
-//        }
+        fun endOffset(): Long {
+            return offset + length
+        }
     }
 
 

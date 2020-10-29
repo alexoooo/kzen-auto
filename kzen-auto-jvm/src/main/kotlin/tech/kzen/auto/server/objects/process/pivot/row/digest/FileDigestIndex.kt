@@ -2,14 +2,12 @@ package tech.kzen.auto.server.objects.process.pivot.row.digest
 
 import com.google.common.io.BaseEncoding
 import com.google.common.primitives.UnsignedBytes
-import com.google.common.util.concurrent.Uninterruptibles
+import tech.kzen.auto.server.objects.process.pivot.store.StoreUtils
 import tech.kzen.lib.common.util.Digest
 import java.io.RandomAccessFile
-import java.io.SyncFailedException
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
 
 
 // see: http://sux.di.unimi.it/docs/it/unimi/dsi/sux4j/io/BucketedHashStore.html
@@ -39,23 +37,6 @@ class FileDigestIndex(
                 .putInt(collisionSentinel)
                 .putLong(-1)
         }
-
-
-        private const val releaseRetryAttempts = 64
-
-        private fun release(handle: RandomAccessFile) {
-            for (tryCount in 0 until releaseRetryAttempts) {
-                try {
-                    handle.fd.sync()
-                    break
-                }
-                catch (e: SyncFailedException) {
-                    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS)
-                }
-            }
-
-            handle.close()
-        }
     }
 
 
@@ -79,7 +60,7 @@ class FileDigestIndex(
             if (size < fileCacheSize) {
                 return false
             }
-            release(eldest.value)
+            StoreUtils.flushAndClose(eldest.value)
             return true
         }
     }

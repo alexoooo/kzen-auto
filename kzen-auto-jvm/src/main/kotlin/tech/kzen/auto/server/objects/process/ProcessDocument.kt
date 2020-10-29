@@ -48,7 +48,7 @@ class ProcessDocument(
                 actionColumnListing()
 
             ProcessConventions.actionLookupOutput ->
-                actionLookupOutput()
+                actionLookupOutput(request)
 
             ProcessConventions.actionSummaryLookup ->
                 actionColumnSummaryLookup()
@@ -116,11 +116,11 @@ class ProcessDocument(
     }
 
 
-    private suspend fun actionLookupOutput(): ExecutionResult {
+    private suspend fun actionLookupOutput(request: DetachedRequest): ExecutionResult {
         val runDir = runDir()
             ?: return ExecutionFailure("Missing run dir")
 
-        return ApplyProcessAction.lookupOutput(runDir)
+        return ApplyProcessAction.lookupOutput(runDir, request)
     }
 
 

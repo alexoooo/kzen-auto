@@ -16,15 +16,11 @@ object ProcessConventions {
     val pivotAttributeName = AttributeName("pivot")
     val pivotAttributePath = AttributePath.ofName(pivotAttributeName)
 
-//    const val columnKey = "column"
     private const val inputKey = "input"
-//    private const val outputKey = "output"
-
-//    const val nameKey = "name"
-//    const val progressKey = "progress"
+    const val startRowKey = "from"
+    const val rowCountKey = "count"
 
     val inputAttribute = AttributeName(inputKey)
-//    val outputAttribute = AttributeName(outputKey)
 
     const val actionParameter = "action"
     const val actionListFiles = "files"
@@ -33,6 +29,7 @@ object ProcessConventions {
     const val actionSummaryLookup = "summary-lookup"
     const val actionSummaryTask = "summary-run"
     const val actionFilterTask = "filter"
+    const val actionPreviewStartParameter = "from"
 
 
     fun isFilter(documentNotation: DocumentNotation): Boolean {
@@ -44,14 +41,6 @@ object ProcessConventions {
             mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
                 ?: return false
 
-//        return mainObjectIs == archetypeObjectName.value ||
-//                mainObjectIs == processObjectName.value
         return mainObjectIs == processObjectName.value
     }
-
-
-//    fun getInput(documentNotation: DocumentNotation): String {
-//        val mainObjectNotation = documentNotation.objects.notations[NotationConventions.mainObjectPath]!!
-//        return mainObjectNotation.get(inputAttribute)?.asString() ?: ""
-//    }
 }

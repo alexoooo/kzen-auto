@@ -169,6 +169,25 @@ class ModelTaskRepository(
     }
 
 
+    fun activeAsyncStates(): Map<TaskId, Any> {
+        return active
+            .mapValues { it.value.asyncState }
+            .filterValues { it != null }
+            .mapValues { it.value!! }
+    }
+
+
+//    fun findActiveState(predicate: (Any) -> Boolean): Pair<TaskId, Any>? {
+//        for (e in active) {
+//            val activeState = e.value.activeState
+//            if (activeState != null && predicate.invoke(activeState)) {
+//                return e.key to activeState
+//            }
+//        }
+//        return null
+//    }
+
+
     private fun addTerminated(taskModel: TaskModel) {
         terminated[taskModel.taskId] = taskModel
 
@@ -186,6 +205,12 @@ class ModelTaskRepository(
     ): TaskHandle {
         private var cancelRequested = AtomicBoolean(false)
         private val completeLatch = CountDownLatch(1)
+        var asyncState: Any? = null
+
+
+        override fun updateAsync(activeState: Any) {
+            this.asyncState = activeState
+        }
 
 
         override fun complete(result: ExecutionResult) {

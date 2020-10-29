@@ -27,12 +27,14 @@ object ProcessEffect {
         if (action == InitiateProcessStart ||
                 action == InputsUpdatedRequest
         ) {
-            return CompoundProcessAction(ListInputsRequest, OutputLookupRequest)
+            return CompoundProcessAction(
+                ListInputsRequest,
+                OutputLookupRequest(0, OutputPreview.defaultRowCount))
         }
 
         return when (action) {
-            OutputLookupRequest ->
-                lookupOutput(state)
+            is OutputLookupRequest ->
+                lookupOutput(state, action.startRow, action.rowCount)
 
 
 //            InputsUpdatedRequest ->
@@ -128,7 +130,7 @@ object ProcessEffect {
 
             is ProcessUpdateResult ->
                 if (action.errorMessage == null) {
-                    OutputLookupRequest
+                    OutputLookupRequest(0, OutputPreview.defaultRowCount)
                 }
                 else {
                     null
@@ -261,7 +263,8 @@ object ProcessEffect {
         val isFiltering = requestAction == ProcessConventions.actionFilterTask
 
         if (isFiltering) {
-            return OutputLookupRequest
+//            return OutputLookupRequest(
+//                0, OutputPreview.defaultRowCount)
         }
 
         return null
@@ -286,7 +289,7 @@ object ProcessEffect {
 
         return if (isFiltering) {
             CompoundProcessAction(
-                ProcessRefreshCancel, OutputLookupRequest)
+                ProcessRefreshCancel/*, OutputLookupRequest*/)
         }
         else {
             ProcessRefreshCancel
@@ -325,7 +328,9 @@ object ProcessEffect {
 
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun lookupOutput(
-        state: ProcessState
+        state: ProcessState,
+        startRow: Int,
+        rowCount: Int
     ): ProcessAction? {
         if (state.columnListing.isNullOrEmpty()) {
             return null
@@ -333,7 +338,10 @@ object ProcessEffect {
 
         val result = ClientContext.restClient.performDetached(
             state.mainLocation,
-            ProcessConventions.actionParameter to ProcessConventions.actionLookupOutput)
+            ProcessConventions.actionParameter to ProcessConventions.actionLookupOutput,
+            ProcessConventions.startRowKey to startRow.toString(),
+            ProcessConventions.rowCountKey to rowCount.toString()
+        )
 
         return when (result) {
             is ExecutionSuccess -> {

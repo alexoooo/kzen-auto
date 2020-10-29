@@ -42,7 +42,7 @@ class TsvRecordStream(
         val line = nextLine!!
         nextLine = reader.readLine()
         val values = line.split(delimiter)
-        return ListRecordItem(headerIndex, values)
+        return ListRecordItem(header, headerIndex, values)
     }
 
 

@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.process.pivot.row.value.store
 
+import tech.kzen.auto.server.objects.process.pivot.store.FileOffsetStore
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -47,7 +48,7 @@ class FileIndexedTextStoreTest {
         val valueFile = createTempFile("FileIndexedTextStoreTest-value").toPath()
 
         try {
-            FileIndexedStoreOffset(
+            FileOffsetStore(
                 offsetFile
             ).use { offsetStore ->
                 FileIndexedTextStore(

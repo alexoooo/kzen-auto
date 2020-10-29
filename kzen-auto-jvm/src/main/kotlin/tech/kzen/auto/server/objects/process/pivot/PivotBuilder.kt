@@ -147,7 +147,7 @@ class PivotBuilder(
                 nextRowIndex++
 
                 return ListRecordItem(
-                    headerIndex, cells)
+                    header, headerIndex, cells)
             }
 
             override fun close() {

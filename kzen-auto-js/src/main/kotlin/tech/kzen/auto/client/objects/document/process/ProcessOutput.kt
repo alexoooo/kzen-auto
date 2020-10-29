@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.process
 
 import kotlinx.css.*
-import kotlinx.html.title
 import react.RBuilder
 import react.RProps
 import react.RPureComponent
@@ -10,9 +9,7 @@ import react.dom.div
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
-import tech.kzen.auto.client.objects.document.common.DefaultAttributeEditor
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
-import tech.kzen.auto.client.objects.document.process.state.OutputLookupRequest
 import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.PageviewIcon
@@ -35,9 +32,9 @@ class ProcessOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onFileChanged() {
-        props.dispatcher.dispatchAsync(OutputLookupRequest)
-    }
+//    private fun onFileChanged() {
+//        props.dispatcher.dispatchAsync(OutputLookupRequest)
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -125,45 +122,45 @@ class ProcessOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderFile(error: String?) {
-        val editDisabled =
-            props.processState.initiating ||
-            props.processState.filterTaskRunning
-
-        styledDiv {
-            css {
-                marginTop = 0.5.em
-            }
-
-            attrs {
-                if (editDisabled) {
-                    title =
-                        if (props.processState.initiating) {
-                            "Disabled while loading"
-                        }
-                        else {
-                            "Disabled while filter running"
-                        }
-                }
-            }
-
-            child(DefaultAttributeEditor::class) {
-                attrs {
-                    clientState = props.processState.clientState
-                    objectLocation = props.processState.mainLocation
-//                    attributeName = ProcessConventions.outputAttribute
-                    labelOverride = "File"
-
-                    disabled = editDisabled
-                    invalid = error != null
-
-                    onChange = {
-                        onFileChanged()
-                    }
-                }
-            }
-        }
-    }
+//    private fun RBuilder.renderFile(error: String?) {
+//        val editDisabled =
+//            props.processState.initiating ||
+//            props.processState.filterTaskRunning
+//
+//        styledDiv {
+//            css {
+//                marginTop = 0.5.em
+//            }
+//
+//            attrs {
+//                if (editDisabled) {
+//                    title =
+//                        if (props.processState.initiating) {
+//                            "Disabled while loading"
+//                        }
+//                        else {
+//                            "Disabled while filter running"
+//                        }
+//                }
+//            }
+//
+//            child(DefaultAttributeEditor::class) {
+//                attrs {
+//                    clientState = props.processState.clientState
+//                    objectLocation = props.processState.mainLocation
+////                    attributeName = ProcessConventions.outputAttribute
+//                    labelOverride = "File"
+//
+//                    disabled = editDisabled
+//                    invalid = error != null
+//
+//                    onChange = {
+//                        onFileChanged()
+//                    }
+//                }
+//            }
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

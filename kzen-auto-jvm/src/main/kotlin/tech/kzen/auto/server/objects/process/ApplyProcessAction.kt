@@ -5,15 +5,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.objects.document.process.ColumnFilterType
-import tech.kzen.auto.common.objects.document.process.OutputInfo
-import tech.kzen.auto.common.objects.document.process.PivotSpec
+import tech.kzen.auto.common.objects.document.process.*
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
+import tech.kzen.auto.server.objects.process.filter.IndexedCsvTable
+import tech.kzen.auto.server.objects.process.model.ProcessAsyncState
 import tech.kzen.auto.server.objects.process.model.ProcessRunSignature
 import tech.kzen.auto.server.objects.process.model.ProcessRunSpec
 import tech.kzen.auto.server.objects.process.pivot.PivotBuilder
@@ -26,13 +27,14 @@ import tech.kzen.auto.server.objects.process.pivot.row.signature.store.FileIndex
 import tech.kzen.auto.server.objects.process.pivot.row.value.MapRowValueIndex
 import tech.kzen.auto.server.objects.process.pivot.row.value.StoreRowValueIndex
 import tech.kzen.auto.server.objects.process.pivot.row.value.store.BufferedIndexedTextStore
-import tech.kzen.auto.server.objects.process.pivot.row.value.store.FileIndexedStoreOffset
 import tech.kzen.auto.server.objects.process.pivot.row.value.store.FileIndexedTextStore
 import tech.kzen.auto.server.objects.process.pivot.stats.BufferedValueStatistics
 import tech.kzen.auto.server.objects.process.pivot.stats.map.MapValueStatistics
 import tech.kzen.auto.server.objects.process.pivot.stats.store.FileValueStatisticsStore
+import tech.kzen.auto.server.objects.process.pivot.store.BufferedOffsetStore
+import tech.kzen.auto.server.objects.process.pivot.store.FileOffsetStore
 import tech.kzen.auto.server.objects.process.stream.RecordStream
-import java.io.BufferedWriter
+import tech.kzen.auto.server.service.ServerContext
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.ZoneId
@@ -54,21 +56,31 @@ object ApplyProcessAction
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun lookupOutput(
-        runDir: Path
+        runDir: Path,
+        request: DetachedRequest
     ): ExecutionResult {
 //        val absolutePath = outputPath.normalize().toAbsolutePath().toString()
 
         val info =
             if (! Files.exists(runDir)) {
                 OutputInfo(
-//                    absolutePath,
                     runDir.toString(),
-                    null/*,
-                    Files.exists(outputPath.parent)*/)
+                    null,
+                    null)
             }
             else {
+                val startRow = request.getInt(ProcessConventions.startRowKey) ?: 0
+                val rowCount = request.getInt(ProcessConventions.rowCountKey) ?: OutputPreview.defaultRowCount
+
+                val activeState = ServerContext
+                    .modelTaskRepository
+                    .activeAsyncStates()
+                    .values
+                    .filterIsInstance<ProcessAsyncState>()
+                    .singleOrNull { it.runDir == runDir }
+
+
                 val fileTime = withContext(Dispatchers.IO) {
-//                    Files.getLastModifiedTime(outputPath)
                     Files.getLastModifiedTime(runDir)
                 }
 
@@ -80,9 +92,8 @@ object ApplyProcessAction
 
                 OutputInfo(
                     runDir.toString(),
-//                    absolutePath,
-                    formattedTime/*,
-                     true*/)
+                    formattedTime,
+                    null)
             }
 
         return ExecutionSuccess.ofValue(
@@ -153,16 +164,14 @@ object ApplyProcessAction
         progress: TaskProgress,
         outputValue: ExecutionValue
     ) {
-        val outputPath = runDir.resolve("output.csv")
-
         val runSignature = runSpec.toSignature()
         if (! runSignature.hasPivot()) {
             filterSyncChecked(
-                runSignature, outputPath, handle, progress, outputValue)
+                runSignature, runDir, handle, progress, outputValue)
         }
         else {
             pivotSyncChecked(
-                runSpec, outputPath, handle, progress, outputValue, runDir)
+                runSpec, runDir, handle, progress, outputValue)
         }
     }
 
@@ -170,7 +179,7 @@ object ApplyProcessAction
     //-----------------------------------------------------------------------------------------------------------------
     private fun filterSyncChecked(
         runSignature: ProcessRunSignature,
-        outputPath: Path,
+        runDir: Path,
         handle: TaskHandle,
         progress: TaskProgress,
         outputValue: ExecutionValue
@@ -178,10 +187,12 @@ object ApplyProcessAction
         val filterColumns = runSignature.columnNames
             .intersect(runSignature.filter.columns.keys).toList()
 
+        val tableBuilder = IndexedCsvTable(
+            runSignature.columnNames, runDir)
+
         var nextProgress = progress
 
-        Files.newBufferedWriter(outputPath).use { output ->
-            var first = true
+        tableBuilder.use { output ->
             for (inputPath in runSignature.inputs) {
                 logger.info("Reading: $inputPath")
 
@@ -191,15 +202,12 @@ object ApplyProcessAction
                         output,
                         runSignature,
                         filterColumns,
-                        first,
                         nextProgress,
                         inputPath,
                         outputValue,
                         handle
                     )
                 }
-
-                first = false
             }
         }
     }
@@ -208,10 +216,10 @@ object ApplyProcessAction
     // TODO: refactor (too many arguments)
     private fun filterStream(
         input: RecordStream,
-        output: BufferedWriter,
+        output: IndexedCsvTable,
         runSignature: ProcessRunSignature,
         filterColumns: List<String>,
-        writHeader: Boolean,
+//        writHeader: Boolean,
         previousProgress: TaskProgress,
         inputPath: Path,
         outputValue: ExecutionValue,
@@ -224,11 +232,11 @@ object ApplyProcessAction
             outputValue,
             ExecutionValue.of(nextProgress.toCollection())))
 
-        val csvPrinter = CSVFormat.DEFAULT.print(output)
-
-        if (writHeader) {
-            csvPrinter.printRecord(runSignature.columnNames)
-        }
+//        val csvPrinter = CSVFormat.DEFAULT.print(output)
+//
+//        if (writHeader) {
+//            csvPrinter.printRecord(runSignature.columnNames)
+//        }
 
         var count: Long = 0
         var writtenCount: Long = 0
@@ -277,8 +285,9 @@ object ApplyProcessAction
 
             writtenCount++
 
-            val values = record.getAll(runSignature.columnNames)
-            csvPrinter.printRecord(values)
+            val values = record.getOrEmptyAll(runSignature.columnNames)
+            output.add(values)
+//            csvPrinter.printRecord(values)
         }
 
         if (handle.cancelRequested()) {
@@ -307,13 +316,12 @@ object ApplyProcessAction
     //-----------------------------------------------------------------------------------------------------------------
     private fun pivotSyncChecked(
         runSignature: ProcessRunSpec,
-        outputPath: Path,
+        runDir: Path,
         handle: TaskHandle,
         progress: TaskProgress,
-        outputValue: ExecutionValue,
-        tempDir: Path
+        outputValue: ExecutionValue
     ) {
-//        val source = MultiRecordSource(inputPaths)
+        val outputPath = runDir.resolve("output.csv")
 
         val filterColumns = runSignature.columnNames
             .intersect(runSignature.filter.columns.keys)
@@ -321,8 +329,7 @@ object ApplyProcessAction
 
         val pivotBuilder =
 //            memoryPivot(pivotSpec)
-//            filePivot(runSignature.pivotRows, runSignature.pivotValues, tempDir)
-            filePivot(runSignature.pivot.rows, runSignature.pivot.values.keys, tempDir)
+            filePivot(runSignature.pivot.rows, runSignature.pivot.values.keys, runDir)
 
         pivotBuilder.use {
             var nextProgress = progress
@@ -495,10 +502,13 @@ object ApplyProcessAction
 //            MapDbDigestIndex(rowValueDigestDir)
             H2DigestIndex(rowValueDigestDir)
 
+        val textOffsetStore = BufferedOffsetStore(
+            FileOffsetStore(rowTextIndexFile))
         val indexedTextStore = BufferedIndexedTextStore(
             FileIndexedTextStore(
                 rowTextContentFile,
-                FileIndexedStoreOffset(rowTextIndexFile)))
+                textOffsetStore
+            ))
 
         val rowValueIndex = StoreRowValueIndex(
             rowValueDigestIndex, indexedTextStore)

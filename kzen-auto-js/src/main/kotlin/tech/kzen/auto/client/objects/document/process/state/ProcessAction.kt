@@ -278,7 +278,10 @@ data class SummaryLookupError(
 sealed class OutputLookupAction: SingularProcessAction()
 
 
-object OutputLookupRequest: OutputLookupAction()
+data class OutputLookupRequest(
+    val startRow: Int,
+    val rowCount: Int
+): OutputLookupAction()
 
 
 data class OutputLookupResult(
