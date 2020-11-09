@@ -27,8 +27,18 @@ class FileOffsetStore(
     private val handle: RandomAccessFile =
         RandomAccessFile(file.toFile(), "rw")
 
-    private var previousOffset = 0L
-    private var endOffset = 0L
+    private var endOffset =
+        if (fileSize == 0L) {
+            0L
+        }
+        else {
+            handle.seek(fileSize - Long.SIZE_BYTES)
+            val offset = handle.readLong()
+            handle.seek(0)
+            offset
+        }
+
+    private var previousPosition = 0L
     private val readBuffer = ByteArray(Long.SIZE_BYTES * 2)
 
     private val writeBufferBytes = ByteArrayOutputStream()
@@ -55,12 +65,12 @@ class FileOffsetStore(
             previousEnd = 0L
             seek(index * Long.SIZE_BYTES)
             endOffset = handle.readLong()
-            previousOffset += Long.SIZE_BYTES
+            previousPosition += Long.SIZE_BYTES
         }
         else {
             seek((index - 1) * Long.SIZE_BYTES)
             handle.read(readBuffer)
-            previousOffset += readBuffer.size
+            previousPosition += readBuffer.size
             previousEnd = Longs.fromBytes(
                 readBuffer[0], readBuffer[1], readBuffer[2], readBuffer[3],
                 readBuffer[4], readBuffer[5], readBuffer[6], readBuffer[7])
@@ -83,7 +93,7 @@ class FileOffsetStore(
         handle.writeLong(endOffset)
 
         fileSize += Long.SIZE_BYTES
-        previousOffset = fileSize
+        previousPosition = fileSize
     }
 
 
@@ -103,18 +113,18 @@ class FileOffsetStore(
         handle.write(offsetBytes)
 
         fileSize += lengths.size * Long.SIZE_BYTES
-        previousOffset = fileSize
+        previousPosition = fileSize
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun seek(offset: Long) {
-        if (previousOffset == offset) {
+    private fun seek(position: Long) {
+        if (previousPosition == position) {
             return
         }
 
-        handle.seek(offset)
-        previousOffset = offset
+        handle.seek(position)
+        previousPosition = position
     }
 
 

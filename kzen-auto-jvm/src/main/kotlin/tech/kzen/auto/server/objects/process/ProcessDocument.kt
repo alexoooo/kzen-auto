@@ -14,6 +14,7 @@ import tech.kzen.auto.common.paradigm.task.api.ManagedTask
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.process.model.ProcessRunSignature
 import tech.kzen.auto.server.objects.process.model.ProcessRunSpec
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import java.nio.file.Path
 
@@ -22,19 +23,13 @@ import java.nio.file.Path
 class ProcessDocument(
     private val input: String,
     private val filter: FilterSpec,
-    private val pivot: PivotSpec/*,
-    private val output: String*/
+    private val pivot: PivotSpec,
+    private val selfLocation: ObjectLocation
 ):
     DocumentArchetype(),
     DetachedAction,
     ManagedTask
 {
-    //-----------------------------------------------------------------------------------------------------------------
-//    companion object {
-//        private val dataProcessDir = Path.of("data-process")
-//    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun execute(request: DetachedRequest): ExecutionResult {
         val action = request.parameters.get(ProcessConventions.actionParameter)
@@ -76,22 +71,13 @@ class ProcessDocument(
     }
 
 
-    private suspend fun runDir(): Path? {
-        val runSpec = runSpec()
-            ?: return null
-
-        val runSignature = runSpec.toSignature()
-
-        return ProcessWorkPool.resolveRunDir(runSignature)
-//        return runDir(runSignature)
-    }
-
-
-//    private fun runDir(runSignature: ProcessRunSignature): Path {
-//        val tempName = runSignature.digest().asString()
-//        val tempPath = dataProcessDir.resolve(tempName)
-//        val workDir = WorkUtils.resolve(tempPath)
-//        return workDir.toAbsolutePath().normalize()
+//    private suspend fun runDir(): Path? {
+//        val runSpec = runSpec()
+//            ?: return null
+//
+//        val runSignature = runSpec.toSignature()
+//
+//        return ProcessWorkPool.resolveRunDir(runSignature)
 //    }
 
 
@@ -117,10 +103,14 @@ class ProcessDocument(
 
 
     private suspend fun actionLookupOutput(request: DetachedRequest): ExecutionResult {
-        val runDir = runDir()
-            ?: return ExecutionFailure("Missing run dir")
+        val runSpec = runSpec()
+            ?: return ExecutionFailure("Missing run")
 
-        return ApplyProcessAction.lookupOutput(runDir, request)
+        val runSignature = runSpec.toSignature()
+        val runDir = ProcessWorkPool.resolveRunDir(runSignature)
+
+        return ApplyProcessAction.lookupOutput(
+            selfLocation, runSignature, runDir, request)
     }
 
 

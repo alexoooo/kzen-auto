@@ -81,6 +81,7 @@ object CommonRestApi {
     private const val taskPrefix = "/task/"
     const val taskSubmit = "${taskPrefix}submit"
     const val taskCancel = "${taskPrefix}cancel"
+    const val taskRequest = "${taskPrefix}request"
     const val taskLookup = "${taskPrefix}lookup"
     const val taskQuery = "${taskPrefix}query"
 

@@ -6,15 +6,12 @@ import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.process.*
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.server.objects.process.filter.IndexedCsvTable
-import tech.kzen.auto.server.objects.process.model.ProcessAsyncState
 import tech.kzen.auto.server.objects.process.model.ProcessRunSignature
 import tech.kzen.auto.server.objects.process.model.ProcessRunSpec
 import tech.kzen.auto.server.objects.process.pivot.PivotBuilder
@@ -35,6 +32,7 @@ import tech.kzen.auto.server.objects.process.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.process.pivot.store.FileOffsetStore
 import tech.kzen.auto.server.objects.process.stream.RecordStream
 import tech.kzen.auto.server.service.ServerContext
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.ZoneId
@@ -56,11 +54,11 @@ object ApplyProcessAction
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun lookupOutput(
+        objectLocation: ObjectLocation,
+        runSignature: ProcessRunSignature,
         runDir: Path,
         request: DetachedRequest
     ): ExecutionResult {
-//        val absolutePath = outputPath.normalize().toAbsolutePath().toString()
-
         val info =
             if (! Files.exists(runDir)) {
                 OutputInfo(
@@ -69,16 +67,26 @@ object ApplyProcessAction
                     null)
             }
             else {
-                val startRow = request.getInt(ProcessConventions.startRowKey) ?: 0
+                val startRow = request.getLong(ProcessConventions.startRowKey) ?: 0
                 val rowCount = request.getInt(ProcessConventions.rowCountKey) ?: OutputPreview.defaultRowCount
 
-                val activeState = ServerContext
+                val taskId = ServerContext
                     .modelTaskRepository
-                    .activeAsyncStates()
-                    .values
-                    .filterIsInstance<ProcessAsyncState>()
-                    .singleOrNull { it.runDir == runDir }
+                    .lookupActive(objectLocation)
+                    .singleOrNull()
+                if (taskId != null) {
+                    val result = ServerContext
+                        .modelTaskRepository
+                        .request(taskId, DetachedRequest(
+                            RequestParams.of(
+                                ProcessConventions.startRowKey to startRow.toString(),
+                                ProcessConventions.rowCountKey to rowCount.toString()
+                            ), null))
 
+                    if (result != null) {
+                        return result
+                    }
+                }
 
                 val fileTime = withContext(Dispatchers.IO) {
                     Files.getLastModifiedTime(runDir)
@@ -90,10 +98,22 @@ object ApplyProcessAction
                     .toLocalDateTime()
                     .format(modifiedFormatter)
 
+//                val header = runSignature.columnNames
+//                val preview = OutputPreview(header)
+                val preview =
+                    if (! runSignature.hasPivot()) {
+                        IndexedCsvTable(runSignature.columnNames, runDir).use {
+                            it.preview(startRow, rowCount)
+                        }
+                    }
+                    else {
+                        null
+                    }
+
                 OutputInfo(
                     runDir.toString(),
                     formattedTime,
-                    null)
+                    preview)
             }
 
         return ExecutionSuccess.ofValue(
@@ -219,7 +239,6 @@ object ApplyProcessAction
         output: IndexedCsvTable,
         runSignature: ProcessRunSignature,
         filterColumns: List<String>,
-//        writHeader: Boolean,
         previousProgress: TaskProgress,
         inputPath: Path,
         outputValue: ExecutionValue,
@@ -232,17 +251,18 @@ object ApplyProcessAction
             outputValue,
             ExecutionValue.of(nextProgress.toCollection())))
 
-//        val csvPrinter = CSVFormat.DEFAULT.print(output)
-//
-//        if (writHeader) {
-//            csvPrinter.printRecord(runSignature.columnNames)
-//        }
-
         var count: Long = 0
         var writtenCount: Long = 0
 
         next_record@
         while (input.hasNext() && ! handle.cancelRequested()) {
+            handle.processQueries { request ->
+                val startRow = request.getLong(ProcessConventions.startRowKey)!!
+                val rowCount = request.getInt(ProcessConventions.rowCountKey)!!
+                val preview = output.preview(startRow, rowCount)
+                ExecutionSuccess(ExecutionValue.of(preview.toCollection()), NullExecutionValue)
+            }
+
             val record = input.next()
 
             count++
@@ -287,7 +307,6 @@ object ApplyProcessAction
 
             val values = record.getOrEmptyAll(runSignature.columnNames)
             output.add(values)
-//            csvPrinter.printRecord(values)
         }
 
         if (handle.cancelRequested()) {

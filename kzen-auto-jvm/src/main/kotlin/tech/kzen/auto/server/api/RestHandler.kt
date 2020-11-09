@@ -10,6 +10,7 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
@@ -904,6 +905,38 @@ class RestHandler {
         return ServerResponse
             .ok()
             .body(Mono.just(result!!))
+    }
+
+
+    fun taskRequest(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val taskId: TaskId = serverRequest
+            .getParam(CommonRestApi.paramTaskId) { TaskId(it) }
+
+        val params = mutableMapOf<String, List<String>>()
+        for (e in serverRequest.queryParams()) {
+            if (e.key == CommonRestApi.paramTaskId) {
+                continue
+            }
+            params[e.key] = e.value
+        }
+
+        return serverRequest
+            .bodyToMono(ByteArray::class.java)
+            .map { Optional.of(ImmutableByteArray.wrap(it)) }
+            .defaultIfEmpty(Optional.empty())
+            .flatMap { optionalBody ->
+                val body = optionalBody.orElse(null)
+
+                val detachedRequest = DetachedRequest(RequestParams(params), body)
+
+                val execution: ExecutionResult = runBlocking {
+                    ServerContext.modelTaskRepository.request(taskId, detachedRequest)
+                } ?: ExecutionFailure("Task not found")
+
+                ServerResponse
+                    .ok()
+                    .body(Mono.just(execution.toJsonCollection()))
+            }
     }
 
 

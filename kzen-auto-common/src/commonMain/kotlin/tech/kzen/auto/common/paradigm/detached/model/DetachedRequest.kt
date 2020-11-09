@@ -30,6 +30,10 @@ data class DetachedRequest(
         return getSingle(parameterName)?.toIntOrNull()
     }
 
+    fun getLong(parameterName: String): Long? {
+        return getSingle(parameterName)?.toLongOrNull()
+    }
+
 
     fun toJsonCollection(): Map<String, Any?> {
         return mapOf(

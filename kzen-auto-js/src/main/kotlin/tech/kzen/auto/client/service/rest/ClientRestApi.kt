@@ -563,6 +563,40 @@ class ClientRestApi(
     }
 
 
+    suspend fun taskRequest(
+        taskId: TaskId,
+        vararg parameters: Pair<String, String>
+    ): ExecutionResult {
+        val responseJson = getJson(
+            CommonRestApi.taskRequest,
+            CommonRestApi.paramTaskId to taskId.identifier,
+            *parameters)
+
+        @Suppress("UNCHECKED_CAST")
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
+
+        return ExecutionResult.fromJsonCollection(responseCollection)
+    }
+
+
+    suspend fun taskRequest(
+        taskId: TaskId,
+        body: ByteArray,
+        vararg parameters: Pair<String, String>
+    ): ExecutionResult {
+        val responseJson = postJson(
+            CommonRestApi.taskRequest,
+            body,
+            CommonRestApi.paramTaskId to taskId.identifier,
+            *parameters)
+
+        @Suppress("UNCHECKED_CAST")
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
+
+        return ExecutionResult.fromJsonCollection(responseCollection)
+    }
+
+
     suspend fun taskLookup(
         objectLocation: ObjectLocation
     ): Set<TaskId> {

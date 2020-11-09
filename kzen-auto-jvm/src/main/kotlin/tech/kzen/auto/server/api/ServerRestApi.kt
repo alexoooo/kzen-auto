@@ -60,6 +60,8 @@ class ServerRestApi(
         GET(CommonRestApi.taskSubmit, counterHandler::taskSubmit)
         GET(CommonRestApi.taskQuery, counterHandler::taskQuery)
         GET(CommonRestApi.taskCancel, counterHandler::taskCancel)
+        GET(CommonRestApi.taskRequest, counterHandler::taskRequest)
+        POST(CommonRestApi.taskRequest, counterHandler::taskRequest)
         GET(CommonRestApi.taskLookup, counterHandler::taskLookup)
 
         // provide value from client

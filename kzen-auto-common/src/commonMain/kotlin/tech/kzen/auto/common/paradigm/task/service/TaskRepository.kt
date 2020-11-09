@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.paradigm.task.service
 
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
@@ -26,6 +27,12 @@ interface TaskRepository {
     suspend fun cancel(
         taskId: TaskId
     ): TaskModel?
+
+
+    suspend fun request(
+        taskId: TaskId,
+        request: DetachedRequest
+    ): ExecutionResult?
 
 
     suspend fun lookupActive(

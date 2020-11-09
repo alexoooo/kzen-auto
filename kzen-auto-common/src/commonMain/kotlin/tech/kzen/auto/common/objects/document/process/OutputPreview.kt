@@ -6,7 +6,8 @@ data class OutputPreview(
     val rows: List<List<String>>
 ) {
     companion object {
-        const val defaultRowCount = 1_000
+        const val defaultRowCount = 100
+//        const val defaultRowCount = 1_000
 
         private const val headerKey = "header"
         private const val rowsKey = "rows"

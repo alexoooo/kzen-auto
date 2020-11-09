@@ -5,15 +5,14 @@ import react.RBuilder
 import react.RProps
 import react.RPureComponent
 import react.RState
-import react.dom.div
-import styled.css
-import styled.styledDiv
-import styled.styledSpan
+import react.dom.*
+import styled.*
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
 import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.PageviewIcon
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.process.OutputPreview
 
 
 class ProcessOutput(
@@ -102,7 +101,6 @@ class ProcessOutput(
                     fontSize = 2.em
                 }
 
-//                +"Output"
                 +"View"
             }
         }
@@ -112,55 +110,16 @@ class ProcessOutput(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderOutput() {
         val error = props.processState.outputError
+        val outputPreview = props.processState.outputInfo?.preview
 
         styledDiv {
-//            renderFile(error)
             renderInfo(error)
-            renderPreview(error)
+
+            if (outputPreview != null) {
+                renderPreview(outputPreview)
+            }
         }
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    private fun RBuilder.renderFile(error: String?) {
-//        val editDisabled =
-//            props.processState.initiating ||
-//            props.processState.filterTaskRunning
-//
-//        styledDiv {
-//            css {
-//                marginTop = 0.5.em
-//            }
-//
-//            attrs {
-//                if (editDisabled) {
-//                    title =
-//                        if (props.processState.initiating) {
-//                            "Disabled while loading"
-//                        }
-//                        else {
-//                            "Disabled while filter running"
-//                        }
-//                }
-//            }
-//
-//            child(DefaultAttributeEditor::class) {
-//                attrs {
-//                    clientState = props.processState.clientState
-//                    objectLocation = props.processState.mainLocation
-////                    attributeName = ProcessConventions.outputAttribute
-//                    labelOverride = "File"
-//
-//                    disabled = editDisabled
-//                    invalid = error != null
-//
-//                    onChange = {
-//                        onFileChanged()
-//                    }
-//                }
-//            }
-//        }
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -210,13 +169,46 @@ class ProcessOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderPreview(error: String?) {
-        if (error != null) {
-            return
-        }
-
+    private fun RBuilder.renderPreview(outputPreview: OutputPreview) {
         styledDiv {
-            +"[Preview]"
+            css {
+                maxHeight = 30.em
+                overflowY = Overflow.auto
+            }
+
+            styledTable {
+                thead {
+                    tr {
+                        for (header in outputPreview.header) {
+                            styledTh {
+                                css {
+                                    position = Position.sticky
+                                    top = 0.px
+                                    backgroundColor = Color("rgba(255, 255, 255, 0.9)")
+                                    zIndex = 999
+                                }
+                                key = header
+                                +header
+                            }
+                        }
+                    }
+                }
+
+                tbody {
+                    for (row in outputPreview.rows.withIndex()) {
+                        tr {
+                            key = row.index.toString()
+
+                            for (value in row.value.withIndex()) {
+                                th {
+                                    key = value.index.toString()
+                                    +value.value
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

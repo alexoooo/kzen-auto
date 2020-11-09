@@ -77,18 +77,16 @@ Process:
   class: tech.kzen.auto.server.objects.process.ProcessDocument
   title: "Data Process"
   icon: TableChart
-#  input: path/to/input.csv
   input: ./
   filter: {}
   pivot:
     rows: []
     values: {}
-#  output: ../work/out.csv
   meta:
     input: String
     filter: FilterSpec
     pivot: PivotSpec
-#    output: String
+    selfLocation: SelfLocation
 
 
 FilterSpec:

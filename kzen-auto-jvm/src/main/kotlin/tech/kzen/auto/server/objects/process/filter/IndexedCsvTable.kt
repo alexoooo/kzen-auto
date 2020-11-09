@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.process.filter
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 import org.apache.commons.csv.CSVPrinter
+import tech.kzen.auto.common.objects.document.process.OutputPreview
 import tech.kzen.auto.server.objects.process.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.process.pivot.store.FileOffsetStore
 import tech.kzen.auto.server.objects.process.pivot.store.StoreUtils
@@ -109,6 +110,15 @@ class IndexedCsvTable(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun preview(start: Long, count: Int): OutputPreview {
+        val builder = mutableListOf<List<String>>()
+        traverse(start, count) {
+            builder.add(it.toList())
+        }
+        return OutputPreview(header, builder)
+    }
+
+
     @Synchronized
     fun traverse(start: Long, count: Int, visitor: (Iterable<String>) -> Unit) {
         // NB: header is first

@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.service.rest
 
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
@@ -25,6 +26,10 @@ class ClientRestTaskRepository(
 
     override suspend fun cancel(taskId: TaskId): TaskModel? {
         return restClient.taskCancel(taskId)
+    }
+
+    override suspend fun request(taskId: TaskId, request: DetachedRequest): ExecutionResult? {
+        TODO("Not yet implemented")
     }
 
 
