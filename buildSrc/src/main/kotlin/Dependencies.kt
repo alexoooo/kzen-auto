@@ -47,3 +47,4 @@ const val lodashVersion = "4.17.20"
 const val reactSelectVersion = "3.1.0"
 
 const val commonsCsvVersion = "1.8"
+const val commonsIoVersion = "2.8.0"

@@ -47,6 +47,7 @@ dependencies {
 //    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$coroutinesVersion")
 
     implementation("org.apache.commons:commons-csv:$commonsCsvVersion")
+    implementation("commons-io:commons-io:$commonsIoVersion")
 }
 
 

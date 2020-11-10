@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.process
 
 import com.google.common.io.MoreFiles
 import org.apache.commons.csv.CSVFormat
+import org.apache.commons.io.input.BOMInputStream
 import tech.kzen.auto.server.objects.process.stream.CsvRecordStream
 import tech.kzen.auto.server.objects.process.stream.RecordStream
 import tech.kzen.auto.server.objects.process.stream.TsvRecordStream
@@ -36,7 +37,7 @@ object FileStreamer {
                     rawInput
                 }
 
-            reader = BufferedReader(InputStreamReader(input!!))
+            reader = BufferedReader(InputStreamReader(BOMInputStream(input)))
 
             return when (adjustedExtension) {
                 "csv" -> {

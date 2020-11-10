@@ -99,8 +99,8 @@ class PivotBuilder(
 
         for ((index, e) in values.toList().withIndex()) {
             val valueColumn = e.first
-            val valueTypes = e.second
-            for (valueType in valueTypes.types) {
+            val valueValueSpec = e.second
+            for (valueType in valueValueSpec.types) {
                 val valueHeader = "$valueColumn - $valueType"
                 headerBuffer.add(valueHeader)
                 headerIndexBuffer[valueHeader] = headerIndexBuffer.size

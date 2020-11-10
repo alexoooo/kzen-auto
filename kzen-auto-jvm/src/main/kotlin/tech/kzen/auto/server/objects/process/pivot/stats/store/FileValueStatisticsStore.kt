@@ -105,12 +105,12 @@ class FileValueStatisticsStore(
 
             for (rowStat in rowStats) {
                 rowStat.save(fileBuffer)
-                fileBuffer.clear()
-                writeBuffer.write(fileBufferBytes)
-
-                bufferSize += fileBufferBytes.size
-                totalSize += fileBufferBytes.size
             }
+            fileBuffer.clear()
+            writeBuffer.write(fileBufferBytes)
+
+            bufferSize += fileBufferBytes.size
+            totalSize += fileBufferBytes.size
 
             if (bufferSize >= writeBufferLimit) {
                 val bytes = writeBuffer.toByteArray()
