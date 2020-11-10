@@ -63,11 +63,11 @@ class BufferedOffsetStore(
 
     override fun add(length: Int) {
         val nextOffset = endOffset
+        val nextOrdinal = size()
 
         endOffset += length
         addBatch.add(length)
 
-        val nextOrdinal = size()
         addIndex[nextOrdinal] = OffsetStore.Span(nextOffset, length)
 
         if (addBatch.size == batchSize) {
