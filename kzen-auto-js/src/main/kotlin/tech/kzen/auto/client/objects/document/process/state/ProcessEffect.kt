@@ -29,12 +29,12 @@ object ProcessEffect {
         ) {
             return CompoundProcessAction(
                 ListInputsRequest,
-                OutputLookupRequest(0, OutputPreview.defaultRowCount))
+                OutputLookupRequest)
         }
 
         return when (action) {
             is OutputLookupRequest ->
-                lookupOutput(state, action.startRow, action.rowCount)
+                lookupOutput(state)
 
 
 //            InputsUpdatedRequest ->
@@ -130,7 +130,7 @@ object ProcessEffect {
 
             is ProcessUpdateResult ->
                 if (action.errorMessage == null) {
-                    OutputLookupRequest(0, OutputPreview.defaultRowCount)
+                    OutputLookupRequest
                 }
                 else {
                     null
@@ -328,9 +328,7 @@ object ProcessEffect {
 
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun lookupOutput(
-        state: ProcessState,
-        startRow: Int,
-        rowCount: Int
+        state: ProcessState
     ): ProcessAction? {
         if (state.columnListing.isNullOrEmpty()) {
             return null
@@ -338,10 +336,7 @@ object ProcessEffect {
 
         val result = ClientContext.restClient.performDetached(
             state.mainLocation,
-            ProcessConventions.actionParameter to ProcessConventions.actionLookupOutput,
-            ProcessConventions.startRowKey to startRow.toString(),
-            ProcessConventions.rowCountKey to rowCount.toString()
-        )
+            ProcessConventions.actionParameter to ProcessConventions.actionLookupOutput)
 
         return when (result) {
             is ExecutionSuccess -> {

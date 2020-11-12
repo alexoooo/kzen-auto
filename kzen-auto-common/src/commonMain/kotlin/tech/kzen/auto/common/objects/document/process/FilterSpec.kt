@@ -89,7 +89,7 @@ data class FilterSpec(
             return columnAttributePath.nest(ColumnFilterSpec.valuesAttributeSegment)
         }
 
-        fun columnTypeAttributePath(columnName: String): AttributePath {
+        private fun columnTypeAttributePath(columnName: String): AttributePath {
             val columnAttributePath = columnAttributePath(columnName)
             return columnAttributePath.nest(ColumnFilterSpec.typeAttributeSegment)
         }

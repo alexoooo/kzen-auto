@@ -70,6 +70,14 @@ class IndexedCsvTable(
 
     //-----------------------------------------------------------------------------------------------------------------
     @Synchronized
+    fun rowCount(): Long {
+        // NB: -1 for header
+        return (offsetStore.size() - 1).coerceAtLeast(0) + pending.size
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Synchronized
     fun add(row: Iterable<String>) {
         pending.add(row)
 
@@ -111,11 +119,13 @@ class IndexedCsvTable(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun preview(start: Long, count: Int): OutputPreview {
+        val adjustedStart = start.coerceAtLeast(0L)
+
         val builder = mutableListOf<List<String>>()
-        traverse(start, count) {
+        traverse(adjustedStart, count) {
             builder.add(it.toList())
         }
-        return OutputPreview(header, builder)
+        return OutputPreview(header, builder, adjustedStart)
     }
 
 
@@ -174,16 +184,17 @@ class IndexedCsvTable(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun seek(offset: Long) {
-        if (previousPosition == offset) {
+    private fun seek(position: Long) {
+        if (previousPosition == position) {
             return
         }
 
-        handle.seek(offset)
-        previousPosition = offset
+        handle.seek(position)
+        previousPosition = position
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     @Synchronized
     override fun close() {
         flushPending()

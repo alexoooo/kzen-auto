@@ -35,14 +35,8 @@ class ProcessInput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onAttributeChanged(/*attributeNotation: AttributeNotation*/) {
-//        console.log("############## onAttributeChanged - $attributeNotation")
-//        props.dispatcher.dispatchAsync(ListInputsRequest)
+    private fun onAttributeChanged() {
         props.dispatcher.dispatchAsync(InputsUpdatedRequest)
-//        props.dispatcher.dispatchAsync(
-//            CompoundProcessAction(
-//                ListInputsRequest
-//            ))
     }
 
 
@@ -171,7 +165,7 @@ class ProcessInput(
                     invalid = hasError
 
                     onChange = {
-                        onAttributeChanged(/*it*/)
+                        onAttributeChanged()
                     }
                 }
             }

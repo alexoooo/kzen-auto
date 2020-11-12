@@ -2,6 +2,7 @@ package tech.kzen.auto.common.objects.document.process
 
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -10,17 +11,24 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 object ProcessConventions {
     private val processObjectName = ObjectName("Process")
 
+    private const val inputKey = "input"
+    val inputAttribute = AttributeName(inputKey)
+
     val filterAttributeName = AttributeName("filter")
     val filterAttributePath = AttributePath.ofName(filterAttributeName)
 
     val pivotAttributeName = AttributeName("pivot")
     val pivotAttributePath = AttributePath.ofName(pivotAttributeName)
 
-    private const val inputKey = "input"
-    const val startRowKey = "from"
-    const val rowCountKey = "count"
+    val outputAttributeName = AttributeName("output")
+    val outputAttributePath = AttributePath.ofName(outputAttributeName)
 
-    val inputAttribute = AttributeName(inputKey)
+    const val previewStartRowKey = "start"
+    val previewStartPath = outputAttributePath.nest(AttributeSegment.ofKey(previewStartRowKey))
+
+    const val previewRowCountKey = "count"
+    val previewCountPath = outputAttributePath.nest(AttributeSegment.ofKey(previewRowCountKey))
+
 
     const val actionParameter = "action"
     const val actionListFiles = "files"
@@ -29,7 +37,7 @@ object ProcessConventions {
     const val actionSummaryLookup = "summary-lookup"
     const val actionSummaryTask = "summary-run"
     const val actionFilterTask = "filter"
-    const val actionPreviewStartParameter = "from"
+//    const val actionPreviewStartParameter = "from"
 
 
     fun isFilter(documentNotation: DocumentNotation): Boolean {

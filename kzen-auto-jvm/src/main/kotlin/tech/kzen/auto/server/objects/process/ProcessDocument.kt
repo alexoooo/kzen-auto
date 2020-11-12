@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.process
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.process.FilterSpec
+import tech.kzen.auto.common.objects.document.process.OutputSpec
 import tech.kzen.auto.common.objects.document.process.PivotSpec
 import tech.kzen.auto.common.objects.document.process.ProcessConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
@@ -24,6 +25,7 @@ class ProcessDocument(
     private val input: String,
     private val filter: FilterSpec,
     private val pivot: PivotSpec,
+    private val output: OutputSpec,
     private val selfLocation: ObjectLocation
 ):
     DocumentArchetype(),
@@ -43,7 +45,7 @@ class ProcessDocument(
                 actionColumnListing()
 
             ProcessConventions.actionLookupOutput ->
-                actionLookupOutput(request)
+                actionLookupOutput()
 
             ProcessConventions.actionSummaryLookup ->
                 actionColumnSummaryLookup()
@@ -102,7 +104,7 @@ class ProcessDocument(
     }
 
 
-    private suspend fun actionLookupOutput(request: DetachedRequest): ExecutionResult {
+    private suspend fun actionLookupOutput(): ExecutionResult {
         val runSpec = runSpec()
             ?: return ExecutionFailure("Missing run")
 
@@ -110,7 +112,7 @@ class ProcessDocument(
         val runDir = ProcessWorkPool.resolveRunDir(runSignature)
 
         return ApplyProcessAction.lookupOutput(
-            selfLocation, runSignature, runDir, request)
+            selfLocation, runSignature, runDir, output)
     }
 
 

@@ -36,6 +36,8 @@ data class ProcessState(
     val outputLoading: Boolean = false,
     val outputInfo: OutputInfo? = null,
     val outputError: String? = null,
+//    val outputPreviewStart: Long = 0,
+//    val outputPreviewCount: Int = OutputPreview.defaultRowCount,
 
     val taskLoaded: Boolean = false,
     val taskLoading: Boolean = false,

@@ -4,6 +4,7 @@ package tech.kzen.auto.common.objects.document.process
 data class OutputInfo(
     val absolutePath: String,
     val modifiedTime: String?,
+    val rowCount: Long,
     val preview: OutputPreview?
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -11,6 +12,7 @@ data class OutputInfo(
         private const val pathKey = "path"
         private const val modifiedTimeKey = "modified"
         private const val previewKey = "preview"
+        private const val countKey = "count"
 
 
         fun fromCollection(collection: Map<String, Any?>): OutputInfo {
@@ -25,6 +27,7 @@ data class OutputInfo(
             return OutputInfo(
                 collection[pathKey] as String,
                 collection[modifiedTimeKey] as String?,
+                (collection[countKey] as String).toLong(),
                 outputPreview)
         }
     }
@@ -35,6 +38,7 @@ data class OutputInfo(
         return mapOf(
             pathKey to absolutePath,
             modifiedTimeKey to modifiedTime,
+            countKey to rowCount.toString(),
             previewKey to preview?.toCollection())
     }
 }

@@ -82,10 +82,14 @@ Process:
   pivot:
     rows: []
     values: {}
+  output:
+    start: 1
+    count: 100
   meta:
     input: String
     filter: FilterSpec
     pivot: PivotSpec
+    output: OutputSpec
     selfLocation: SelfLocation
 
 
@@ -95,7 +99,6 @@ FilterSpec:
   meta:
     ref:
       by: FilterSpecDefiner
-
 
 FilterSpecDefiner:
   class: tech.kzen.auto.common.objects.document.process.FilterSpec$Definer
@@ -108,6 +111,17 @@ PivotSpec:
     ref:
       by: PivotSpecDefiner
 
-
 PivotSpecDefiner:
   class: tech.kzen.auto.common.objects.document.process.PivotSpec$Definer
+
+
+OutputSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.process.OutputSpec
+  meta:
+    ref:
+      by: OutputSpecDefiner
+
+OutputSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.process.OutputSpec$Definer
+

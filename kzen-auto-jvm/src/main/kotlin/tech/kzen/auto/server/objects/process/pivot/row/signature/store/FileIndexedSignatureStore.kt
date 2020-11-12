@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.process.pivot.row.signature.store
 
 import com.google.common.primitives.Longs
 import tech.kzen.auto.server.objects.process.pivot.row.signature.RowSignature
+import tech.kzen.auto.server.objects.process.pivot.store.StoreUtils
 import java.io.ByteArrayOutputStream
 import java.io.RandomAccessFile
 import java.nio.file.Files
@@ -118,6 +119,6 @@ class FileIndexedSignatureStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        handle.close()
+        StoreUtils.flushAndClose(handle)
     }
 }

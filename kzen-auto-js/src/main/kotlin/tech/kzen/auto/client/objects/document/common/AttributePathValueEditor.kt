@@ -5,8 +5,6 @@ import kotlinx.css.fontSize
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLTextAreaElement
 import react.*
-import react.dom.br
-import react.dom.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
@@ -261,27 +259,16 @@ class AttributePathValueEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-//        val attributeMetadata: AttributeMetadata = props
-//            .clientState
-//            .graphStructure()
-//            .graphMetadata
-//            .get(props.objectLocation)
-//            ?.attributes
-//            ?.get(props.attributePath.attribute)
-//            ?: return
-
-//        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
-//                props.objectLocation, props.attributeName)
-
         val type = props.valueType
 //        val type = attributeMetadata.type
 
         if (! isValue(type)) {
-            +"${props.attributePath} (not a value)"
+            +"${props.attributePath} $type (not a value)"
         }
         else if (
             type.className == ClassNames.kotlinString ||
             type.className == ClassNames.kotlinInt ||
+            type.className == ClassNames.kotlinLong ||
             type.className == ClassNames.kotlinDouble
         ) {
             val textValue = state.value ?: ""

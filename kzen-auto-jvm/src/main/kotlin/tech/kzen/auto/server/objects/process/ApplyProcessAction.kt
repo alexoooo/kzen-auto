@@ -7,10 +7,8 @@ import org.apache.commons.csv.CSVFormat
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.process.*
 import tech.kzen.auto.common.paradigm.common.model.*
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.server.objects.process.filter.IndexedCsvTable
 import tech.kzen.auto.server.objects.process.model.ProcessRunSignature
 import tech.kzen.auto.server.objects.process.model.ProcessRunSpec
@@ -57,19 +55,18 @@ object ApplyProcessAction
         objectLocation: ObjectLocation,
         runSignature: ProcessRunSignature,
         runDir: Path,
-        request: DetachedRequest
+        outputSpec: OutputSpec
     ): ExecutionResult {
         val info =
             if (! Files.exists(runDir)) {
                 OutputInfo(
                     runDir.toString(),
                     null,
-                    null)
+                    0L,
+                    OutputPreview(runSignature.columnNames, listOf(), 0L)
+                )
             }
             else {
-                val startRow = request.getLong(ProcessConventions.startRowKey) ?: 0
-                val rowCount = request.getInt(ProcessConventions.rowCountKey) ?: OutputPreview.defaultRowCount
-
                 val taskId = ServerContext
                     .modelTaskRepository
                     .lookupActive(objectLocation)
@@ -77,11 +74,7 @@ object ApplyProcessAction
                 if (taskId != null) {
                     val result = ServerContext
                         .modelTaskRepository
-                        .request(taskId, DetachedRequest(
-                            RequestParams.of(
-                                ProcessConventions.startRowKey to startRow.toString(),
-                                ProcessConventions.rowCountKey to rowCount.toString()
-                            ), null))
+                        .request(taskId, outputSpec.toPreviewRequest())
 
                     if (result != null) {
                         return result
@@ -98,21 +91,26 @@ object ApplyProcessAction
                     .toLocalDateTime()
                     .format(modifiedFormatter)
 
-//                val header = runSignature.columnNames
-//                val preview = OutputPreview(header)
+                val rowCount: Long
+
                 val preview =
                     if (! runSignature.hasPivot()) {
                         IndexedCsvTable(runSignature.columnNames, runDir).use {
-                            it.preview(startRow, rowCount)
+                            rowCount = it.rowCount()
+
+                            val zeroBasedPreview = outputSpec.previewStartZeroBased()
+                            it.preview(zeroBasedPreview, outputSpec.previewCount)
                         }
                     }
                     else {
+                        rowCount = 0L
                         null
                     }
 
                 OutputInfo(
                     runDir.toString(),
                     formattedTime,
+                    rowCount,
                     preview)
             }
 
@@ -257,9 +255,9 @@ object ApplyProcessAction
         next_record@
         while (input.hasNext() && ! handle.cancelRequested()) {
             handle.processQueries { request ->
-                val startRow = request.getLong(ProcessConventions.startRowKey)!!
-                val rowCount = request.getInt(ProcessConventions.rowCountKey)!!
-                val preview = output.preview(startRow, rowCount)
+                val outputSpec = OutputSpec.ofPreviewRequest(request)
+                val zeroBasedPreviewStart = outputSpec.previewStartZeroBased()
+                val preview = output.preview(zeroBasedPreviewStart, outputSpec.previewCount)
                 ExecutionSuccess(ExecutionValue.of(preview.toCollection()), NullExecutionValue)
             }
 

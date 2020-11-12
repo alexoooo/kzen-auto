@@ -130,6 +130,6 @@ class FileOffsetStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        handle.close()
+        StoreUtils.flushAndClose(handle)
     }
 }

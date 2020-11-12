@@ -7,6 +7,7 @@ import it.unimi.dsi.fastutil.longs.LongSortedSet
 import tech.kzen.auto.common.objects.document.process.PivotValueType
 import tech.kzen.auto.server.objects.process.pivot.stats.MutableStatistics
 import tech.kzen.auto.server.objects.process.pivot.stats.ValueStatistics
+import tech.kzen.auto.server.objects.process.pivot.store.StoreUtils
 import java.io.ByteArrayOutputStream
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
@@ -290,6 +291,6 @@ class FileValueStatisticsStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        handle.close()
+        StoreUtils.flushAndClose(handle)
     }
 }

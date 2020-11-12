@@ -1,18 +1,26 @@
 package tech.kzen.auto.client.objects.document.process
 
 import kotlinx.css.*
+import kotlinx.css.properties.boxShadow
 import react.RBuilder
 import react.RProps
 import react.RPureComponent
 import react.RState
-import react.dom.*
+import react.dom.tbody
+import react.dom.thead
+import react.dom.tr
 import styled.*
+import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
+import tech.kzen.auto.client.objects.document.process.state.OutputLookupRequest
 import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.PageviewIcon
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.process.OutputInfo
 import tech.kzen.auto.common.objects.document.process.OutputPreview
+import tech.kzen.auto.common.objects.document.process.ProcessConventions
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
 
 class ProcessOutput(
@@ -34,6 +42,27 @@ class ProcessOutput(
 //    private fun onFileChanged() {
 //        props.dispatcher.dispatchAsync(OutputLookupRequest)
 //    }
+
+    private fun onPreviewRefresh() {
+        props.dispatcher.dispatchAsync(OutputLookupRequest)
+    }
+
+
+    private fun abbreviate(value: String): String {
+        if (value.length < 50) {
+            return value
+        }
+
+//        console.log("^^^^ abbreviating: $value")
+        return value.substring(0, 47) + "..."
+    }
+
+
+    private fun formatRow(rowNumber: Long): String {
+        return rowNumber
+            .toString()
+            .replace(Regex("\\B(?=(\\d{3})+(?!\\d))"), ",")
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -110,13 +139,14 @@ class ProcessOutput(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderOutput() {
         val error = props.processState.outputError
-        val outputPreview = props.processState.outputInfo?.preview
+        val outputInfo = props.processState.outputInfo
+        val outputPreview = outputInfo?.preview
 
         styledDiv {
             renderInfo(error)
 
             if (outputPreview != null) {
-                renderPreview(outputPreview)
+                renderPreview(outputInfo, outputPreview)
             }
         }
     }
@@ -140,52 +170,137 @@ class ProcessOutput(
                 +"..."
             }
             else {
-                div {
-                    +"Absolute path: "
-
-                    styledSpan {
-                        css {
-                            fontFamily = "monospace"
-                        }
-
-                        +outputInfo.absolutePath
-                    }
-                }
+//                div {
+//                    +"Absolute path: "
+//
+//                    styledSpan {
+//                        css {
+//                            fontFamily = "monospace"
+//                        }
+//
+//                        +outputInfo.absolutePath
+//                    }
+//                }
 
                 if (outputInfo.modifiedTime == null) {
-//                    +"Does not exist, will create"
                     +"Does not exist, will create"
-
-//                    if (! outputInfo.folderExists) {
-//                        +" (along with containing folder)"
-//                    }
                 }
-                else {
-                    +"Exists, last modified: ${outputInfo.modifiedTime}"
-                }
+//                else {
+//                    +"Exists, last modified: ${outputInfo.modifiedTime}"
+//                }
             }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderPreview(outputPreview: OutputPreview) {
+    private fun RBuilder.renderPreview(outputInfo: OutputInfo, outputPreview: OutputPreview) {
+        renderPreviewHeader(outputInfo)
+        renderPreviewTable(outputPreview)
+    }
+
+
+    private fun RBuilder.renderPreviewHeader(outputInfo: OutputInfo) {
+        styledDiv {
+            styledDiv {
+                css {
+                    display =Display.inlineBlock
+                }
+
+                child(AttributePathValueEditor::class) {
+                    attrs {
+                        labelOverride = "Start row"
+//                disabled = props.disabled
+//                invalid = props.invalid
+
+                        clientState = props.processState.clientState
+                        objectLocation = props.processState.mainLocation
+                        attributePath = ProcessConventions.previewStartPath
+
+                        valueType = TypeMetadata.long
+
+                        onChange = {
+                            onPreviewRefresh()
+                        }
+                    }
+                }
+            }
+
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+                    marginLeft = 1.em
+                }
+
+                child(AttributePathValueEditor::class) {
+                    attrs {
+                        labelOverride = "Row count"
+
+                        clientState = props.processState.clientState
+                        objectLocation = props.processState.mainLocation
+                        attributePath = ProcessConventions.previewCountPath
+
+                        valueType = TypeMetadata.int
+
+                        onChange = {
+                            onPreviewRefresh()
+                        }
+                    }
+                }
+            }
+
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+                    marginLeft = 1.em
+                }
+
+                +"Total rows: ${formatRow(outputInfo.rowCount)}"
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderPreviewTable(outputPreview: OutputPreview) {
         styledDiv {
             css {
                 maxHeight = 30.em
                 overflowY = Overflow.auto
+                marginTop = 0.5.em
             }
 
             styledTable {
+                css {
+                    borderCollapse = BorderCollapse.collapse
+                }
+
                 thead {
                     tr {
+                        styledTh {
+                            css {
+                                position = Position.sticky
+                                top = 0.px
+//                                backgroundColor = Color("rgba(255, 255, 255, 0.9)")
+                                backgroundColor = Color.white
+                                zIndex = 999
+                                boxShadow(Color.lightGray, 0.px, 2.px, 2.px, 0.px)
+                                paddingLeft = 0.5.em
+                                paddingRight = 0.5.em
+                            }
+                            +"Row Number"
+                        }
+
                         for (header in outputPreview.header) {
                             styledTh {
                                 css {
                                     position = Position.sticky
                                     top = 0.px
-                                    backgroundColor = Color("rgba(255, 255, 255, 0.9)")
+//                                    backgroundColor = Color("rgba(255, 255, 255, 0.9)")
+                                    backgroundColor = Color.white
                                     zIndex = 999
+                                    boxShadow(Color.lightGray, 0.px, 2.px, 2.px, 0.px)
+                                    paddingLeft = 0.5.em
+                                    paddingRight = 0.5.em
                                 }
                                 key = header
                                 +header
@@ -196,13 +311,32 @@ class ProcessOutput(
 
                 tbody {
                     for (row in outputPreview.rows.withIndex()) {
-                        tr {
+                        styledTr {
                             key = row.index.toString()
 
+                            styledTd {
+                                css {
+                                    borderTopStyle = BorderStyle.solid
+                                    borderTopColor = Color.lightGray
+                                    paddingLeft = 0.5.em
+                                    paddingRight = 0.5.em
+                                }
+                                val rowNumber = row.index + outputPreview.startRow
+                                val rowFormat = formatRow(rowNumber + 1)
+                                +rowFormat
+                            }
+
                             for (value in row.value.withIndex()) {
-                                th {
+                                styledTd {
+                                    css {
+                                        borderTopStyle = BorderStyle.solid
+                                        borderTopColor = Color.lightGray
+                                        paddingLeft = 0.5.em
+                                        paddingRight = 0.5.em
+                                    }
+
                                     key = value.index.toString()
-                                    +value.value
+                                    +abbreviate(value.value)
                                 }
                             }
                         }

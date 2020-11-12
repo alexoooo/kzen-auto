@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.process.pivot.row.value.store
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import tech.kzen.auto.server.objects.process.pivot.store.OffsetStore
+import tech.kzen.auto.server.objects.process.pivot.store.StoreUtils
 import java.io.ByteArrayOutputStream
 import java.io.RandomAccessFile
 import java.nio.charset.StandardCharsets
@@ -99,7 +100,7 @@ class FileIndexedTextStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        handle.close()
+        StoreUtils.flushAndClose(handle)
         offsetStore.close()
     }
 }
