@@ -19,5 +19,5 @@ interface TaskHandle {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun processQueries(processor: (DetachedRequest) -> ExecutionResult)
+    fun processRequests(processor: (DetachedRequest) -> ExecutionResult)
 }

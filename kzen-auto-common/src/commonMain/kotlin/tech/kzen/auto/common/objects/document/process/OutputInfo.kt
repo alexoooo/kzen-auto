@@ -16,6 +16,8 @@ data class OutputInfo(
 
 
         fun fromCollection(collection: Map<String, Any?>): OutputInfo {
+//            println("^^^ OutputInfo ## fromCollection - $collection")
+
             @Suppress("UNCHECKED_CAST")
             val outputPreviewCollection =
                 collection[previewKey] as Map<String, Any>?

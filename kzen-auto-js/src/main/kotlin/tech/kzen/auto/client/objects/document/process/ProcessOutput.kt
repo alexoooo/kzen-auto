@@ -15,7 +15,9 @@ import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
 import tech.kzen.auto.client.objects.document.process.state.OutputLookupRequest
 import tech.kzen.auto.client.objects.document.process.state.ProcessDispatcher
 import tech.kzen.auto.client.objects.document.process.state.ProcessState
+import tech.kzen.auto.client.wrap.MaterialButton
 import tech.kzen.auto.client.wrap.PageviewIcon
+import tech.kzen.auto.client.wrap.RefreshIcon
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.process.OutputInfo
 import tech.kzen.auto.common.objects.document.process.OutputPreview
@@ -143,7 +145,7 @@ class ProcessOutput(
         val outputPreview = outputInfo?.preview
 
         styledDiv {
-            renderInfo(error)
+            renderInfo(error, outputInfo)
 
             if (outputPreview != null) {
                 renderPreview(outputInfo, outputPreview)
@@ -153,13 +155,11 @@ class ProcessOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderInfo(error: String?) {
+    private fun RBuilder.renderInfo(error: String?, outputInfo: OutputInfo?) {
         if (error != null) {
             +"Error: $error"
             return
         }
-
-        val outputInfo = props.processState.outputInfo
 
         styledDiv {
             css {
@@ -169,7 +169,7 @@ class ProcessOutput(
             if (outputInfo == null) {
                 +"..."
             }
-            else {
+//            else {
 //                div {
 //                    +"Absolute path: "
 //
@@ -181,14 +181,14 @@ class ProcessOutput(
 //                        +outputInfo.absolutePath
 //                    }
 //                }
-
-                if (outputInfo.modifiedTime == null) {
-                    +"Does not exist, will create"
-                }
+//
+//                if (outputInfo.modifiedTime == null) {
+//                    +"Does not exist, will create"
+//                }
 //                else {
 //                    +"Exists, last modified: ${outputInfo.modifiedTime}"
 //                }
-            }
+//            }
         }
     }
 
@@ -201,17 +201,23 @@ class ProcessOutput(
 
 
     private fun RBuilder.renderPreviewHeader(outputInfo: OutputInfo) {
+        if (outputInfo.modifiedTime == null) {
+            return
+        }
+
         styledDiv {
+            css {
+                width = 100.pct
+            }
+
             styledDiv {
                 css {
-                    display =Display.inlineBlock
+                    display = Display.inlineBlock
                 }
 
                 child(AttributePathValueEditor::class) {
                     attrs {
-                        labelOverride = "Start row"
-//                disabled = props.disabled
-//                invalid = props.invalid
+                        labelOverride = "Start Row"
 
                         clientState = props.processState.clientState
                         objectLocation = props.processState.mainLocation
@@ -234,7 +240,7 @@ class ProcessOutput(
 
                 child(AttributePathValueEditor::class) {
                     attrs {
-                        labelOverride = "Row count"
+                        labelOverride = "Row Count"
 
                         clientState = props.processState.clientState
                         objectLocation = props.processState.mainLocation
@@ -251,11 +257,43 @@ class ProcessOutput(
 
             styledDiv {
                 css {
-                    display = Display.inlineBlock
-                    marginLeft = 1.em
+                    float = Float.right
                 }
 
-                +"Total rows: ${formatRow(outputInfo.rowCount)}"
+                styledDiv {
+                    css {
+                        display = Display.inlineBlock
+                        marginLeft = 1.em
+                    }
+                    +"Total rows: ${formatRow(outputInfo.rowCount)}"
+                }
+
+                styledDiv {
+                    css {
+                        display = Display.inlineBlock
+                        marginLeft = 1.em
+                    }
+
+                    child(MaterialButton::class) {
+                        attrs {
+                            variant = "outlined"
+                            size = "small"
+
+                            onClick = {
+                                onPreviewRefresh()
+                            }
+                        }
+
+                        child(RefreshIcon::class) {
+                            attrs {
+                                style = reactStyle {
+                                    marginRight = 0.25.em
+                                }
+                            }
+                        }
+                        +"Refresh"
+                    }
+                }
             }
         }
     }
@@ -266,7 +304,7 @@ class ProcessOutput(
             css {
                 maxHeight = 30.em
                 overflowY = Overflow.auto
-                marginTop = 0.5.em
+                marginTop = 1.em
             }
 
             styledTable {

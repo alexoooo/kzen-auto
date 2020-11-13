@@ -33,6 +33,7 @@ import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
@@ -48,6 +49,15 @@ object ApplyProcessAction
 //    private const val progressItems = 1_000
     private const val progressItems = 10_000
 //    private const val progressItems = 250_000
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun formatTime(instant: Instant): String {
+        return instant
+            .atZone(ZoneId.systemDefault())
+            .toLocalDateTime()
+            .format(modifiedFormatter)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -85,11 +95,7 @@ object ApplyProcessAction
                     Files.getLastModifiedTime(runDir)
                 }
 
-                val formattedTime = fileTime
-                    .toInstant()
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDateTime()
-                    .format(modifiedFormatter)
+                val formattedTime = formatTime(fileTime.toInstant())
 
                 val rowCount: Long
 
@@ -254,11 +260,21 @@ object ApplyProcessAction
 
         next_record@
         while (input.hasNext() && ! handle.cancelRequested()) {
-            handle.processQueries { request ->
+            handle.processRequests { request ->
                 val outputSpec = OutputSpec.ofPreviewRequest(request)
                 val zeroBasedPreviewStart = outputSpec.previewStartZeroBased()
                 val preview = output.preview(zeroBasedPreviewStart, outputSpec.previewCount)
-                ExecutionSuccess(ExecutionValue.of(preview.toCollection()), NullExecutionValue)
+
+                val outputInfo = OutputInfo(
+                    output.outputPath().toString(),
+                    formatTime(output.modified()),
+                    output.rowCount(),
+                    preview)
+
+                ExecutionSuccess(
+                    ExecutionValue.of(
+                        outputInfo.toCollection()),
+                    NullExecutionValue)
             }
 
             val record = input.next()

@@ -75,7 +75,7 @@ Process:
   abstract: true
   is: Document
   class: tech.kzen.auto.server.objects.process.ProcessDocument
-  title: "Data Process"
+  title: "Report"
   icon: TableChart
   input: ./
   filter: {}

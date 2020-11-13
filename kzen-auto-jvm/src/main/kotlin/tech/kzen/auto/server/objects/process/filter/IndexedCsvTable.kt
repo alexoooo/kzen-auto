@@ -11,6 +11,7 @@ import java.io.OutputStreamWriter
 import java.io.RandomAccessFile
 import java.nio.channels.Channels
 import java.nio.file.Path
+import java.time.Instant
 
 
 class IndexedCsvTable(
@@ -51,6 +52,7 @@ class IndexedCsvTable(
     private val bufferPrinter = CSVPrinter(bufferWriter, format)
 
     private var previousPosition = 0L
+    private var previousModified = Instant.now()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -65,6 +67,16 @@ class IndexedCsvTable(
             offsetStore.add(length)
             previousPosition = length.toLong()
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun outputPath(): Path {
+        return tablePath
+    }
+
+    fun modified(): Instant {
+        return previousModified
     }
 
 
@@ -114,6 +126,7 @@ class IndexedCsvTable(
         StoreUtils.flush(handle)
 
         previousPosition += totalLength
+        previousModified = Instant.now()
     }
 
 

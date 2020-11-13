@@ -264,7 +264,7 @@ class ModelTaskRepository(
         }
 
 
-        override fun processQueries(processor: (DetachedRequest) -> ExecutionResult) {
+        override fun processRequests(processor: (DetachedRequest) -> ExecutionResult) {
             while (requestQueue.isNotEmpty()) {
                 val requestHandle = requestQueue.peek()
                 val response = processor.invoke(requestHandle.request)
