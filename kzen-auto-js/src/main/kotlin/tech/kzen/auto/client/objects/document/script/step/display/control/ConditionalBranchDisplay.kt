@@ -44,7 +44,7 @@ class ConditionalBranchDisplay(
         ): List<ObjectLocation>? {
             val branchNotations = graphStructure
                     .graphNotation
-                    .transitiveAttribute(stepLocation, branchAttributePath)
+                    .firstAttribute(stepLocation, branchAttributePath)
                     as? ListAttributeNotation
                     ?: return null
 

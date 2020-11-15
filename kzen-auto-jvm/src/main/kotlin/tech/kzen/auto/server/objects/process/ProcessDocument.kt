@@ -112,7 +112,7 @@ class ProcessDocument(
         val runDir = ProcessWorkPool.resolveRunDir(runSignature)
 
         return ApplyProcessAction.lookupOutput(
-            selfLocation, runSignature, runDir, output)
+            selfLocation, runSpec, runDir, output)
     }
 
 

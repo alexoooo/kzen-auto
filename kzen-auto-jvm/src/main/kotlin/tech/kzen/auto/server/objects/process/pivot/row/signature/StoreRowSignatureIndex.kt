@@ -7,23 +7,10 @@ import tech.kzen.auto.server.objects.process.pivot.row.signature.store.IndexedSi
 
 class StoreRowSignatureIndex(
     private val digestIndex: DigestIndex,
-    private val indexedSignatureStore: IndexedSignatureStore/*,
-    private val cacheSize: Int = 4 * 1024*/
+    private val indexedSignatureStore: IndexedSignatureStore
 ): RowSignatureIndex {
     //-----------------------------------------------------------------------------------------------------------------
-//    companion object {
-//        private const val missingOrdinal = -1L
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private val hashBuffer = LongArray(2)
-
-//    private val cache = Object2LongLinkedOpenHashMap<RowSignature>()
-//
-//    init {
-//        cache.defaultReturnValue(missingOrdinal)
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -40,14 +27,7 @@ class StoreRowSignatureIndex(
             indexedSignatureStore.add(rowSignature)
         }
 
-        val ordinal = valueOrdinal.ordinal()
-
-//        cache[rowSignature] = cachedOrdinal
-//        if (cache.size == cacheSize) {
-//            cache.removeFirstLong()
-//        }
-
-        return ordinal
+        return valueOrdinal.ordinal()
     }
 
 

@@ -2,7 +2,6 @@ package tech.kzen.auto.common.paradigm.imperative.model.control
 
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
@@ -15,8 +14,8 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 
 sealed class ControlTree {
     companion object {
-        private val branchAttributePath = AttributePath.parse("branch")
-        private val callAttributePath = AttributePath.parse("call")
+        private val branchAttributeName = AttributeName("branch")
+        private val callAttributeName = AttributeName("call")
 
 
         fun readSteps(
@@ -39,7 +38,7 @@ sealed class ControlTree {
         ): BranchControlNode {
             val stepsNotation = graphStructure
                     .graphNotation
-                    .transitiveAttribute(stepLocation, attributeName)
+                    .firstAttribute(stepLocation, attributeName)
                     as? ListAttributeNotation
                     ?: return BranchControlNode(listOf())
 
@@ -75,7 +74,7 @@ sealed class ControlTree {
                 val metadataAttributes = attributeMetadata.value.attributeMetadataNotation
 
                 val callIndicator = metadataAttributes
-                        .get(callAttributePath)
+                        .get(callAttributeName.value)
                         ?.asBoolean()
                         ?: false
                 if (callIndicator) {
@@ -88,7 +87,7 @@ sealed class ControlTree {
                 }
 
                 val branchIndex = metadataAttributes
-                        .get(branchAttributePath)
+                        .get(branchAttributeName.value)
                         ?.asString()
                         ?.toIntOrNull()
                 if (branchIndex != null) {

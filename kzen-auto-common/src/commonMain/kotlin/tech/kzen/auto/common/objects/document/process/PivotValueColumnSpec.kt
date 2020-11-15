@@ -5,19 +5,19 @@ import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
 
 
-data class PivotValueSpec(
+data class PivotValueColumnSpec(
     val types: Set<PivotValueType>
 ):
     Digestible
 {
     companion object {
-        fun ofNotation(notation: ListAttributeNotation): PivotValueSpec {
+        fun ofNotation(notation: ListAttributeNotation): PivotValueColumnSpec {
             val types = notation
                 .values
                 .mapNotNull { it.asString() }
                 .map { PivotValueType.valueOf(it) }
                 .toSet()
-            return PivotValueSpec(types)
+            return PivotValueColumnSpec(types)
         }
     }
 

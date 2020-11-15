@@ -353,7 +353,7 @@ class RibbonController(
                 }
 
                 val description = props.notation
-                        .transitiveAttribute(ribbonTool.delegate, AutoConventions.descriptionAttributePath)
+                        .firstAttribute(ribbonTool.delegate, AutoConventions.descriptionAttributePath)
                         ?.asString()
 
                 if (description != null) {
@@ -363,7 +363,7 @@ class RibbonController(
                 }
 
                 val icon = props.notation
-                        .transitiveAttribute(ribbonTool.delegate, AutoConventions.iconAttributePath)
+                        .firstAttribute(ribbonTool.delegate, AutoConventions.iconAttributePath)
                         ?.asString()
 
                 if (icon != null) {
@@ -377,7 +377,7 @@ class RibbonController(
                 }
 
                 val title = props.notation
-                        .transitiveAttribute(ribbonTool.delegate, AutoConventions.titleAttributePath)
+                        .firstAttribute(ribbonTool.delegate, AutoConventions.titleAttributePath)
                         ?.asString()
                         ?: ribbonTool.delegate.objectPath.name.value
 

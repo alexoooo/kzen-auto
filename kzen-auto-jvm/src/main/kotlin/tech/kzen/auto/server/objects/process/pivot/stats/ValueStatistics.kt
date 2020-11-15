@@ -27,4 +27,6 @@ interface ValueStatistics: AutoCloseable {
     fun addOrUpdate(rowOrdinal: Long, values: DoubleArray)
 
     fun get(rowOrdinal: Long, valueTypes: List<IndexedValue<PivotValueType>>): DoubleArray
+
+//    fun modified(): Instant
 }

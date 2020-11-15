@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.step.attribute
 
+import kotlinx.browser.document
 import kotlinx.css.em
 import kotlinx.css.fontSize
 import org.w3c.dom.HTMLInputElement
@@ -31,7 +32,6 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.toPersistentMap
-import kotlinx.browser.document
 import kotlin.js.Json
 import kotlin.js.json
 
@@ -83,7 +83,7 @@ class TargetSpecEditor(
             .clientState
             .graphStructure()
             .graphNotation
-            .transitiveAttribute(props.objectLocation, props.attributeName)
+            .firstAttribute(props.objectLocation, props.attributeName)
             as? MapAttributeNotation
             ?: return
 

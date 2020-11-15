@@ -29,9 +29,6 @@ class FileValueStatisticsStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val rowSizeInBytes = valueColumnCount * MutableStatistics.sizeInBytes
-
-
     private var fileSize: Long =
         if (! Files.exists(file)) {
             Files.createDirectories(file.parent)
@@ -44,9 +41,8 @@ class FileValueStatisticsStore(
     private val handle: RandomAccessFile =
         RandomAccessFile(file.toFile(), "rw")
 
+    private val rowSizeInBytes = valueColumnCount * MutableStatistics.sizeInBytes
     private val statisticsBuffer = Array(valueColumnCount) { MutableStatistics() }
-
-
     private val fileBufferBytes = ByteArray(rowSizeInBytes)
     private val fileBuffer = ByteBuffer.wrap(fileBufferBytes)
     private val writeBuffer = ByteArrayOutputStream()

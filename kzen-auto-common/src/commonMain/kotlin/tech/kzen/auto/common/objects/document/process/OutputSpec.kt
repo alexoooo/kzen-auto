@@ -43,7 +43,7 @@ data class OutputSpec(
 
             val previewStart = graphStructure
                 .graphNotation
-                .transitiveAttribute(objectLocation, ProcessConventions.previewStartPath)
+                .firstAttribute(objectLocation, ProcessConventions.previewStartPath)
                 ?.asString()
                 ?.replace(",", "")
                 ?.toLongOrNull()
@@ -53,7 +53,7 @@ data class OutputSpec(
 
             val previewCount = graphStructure
                 .graphNotation
-                .transitiveAttribute(objectLocation, ProcessConventions.previewCountPath)
+                .firstAttribute(objectLocation, ProcessConventions.previewCountPath)
                 ?.asString()
                 ?.replace(",", "")
                 ?.toIntOrNull()

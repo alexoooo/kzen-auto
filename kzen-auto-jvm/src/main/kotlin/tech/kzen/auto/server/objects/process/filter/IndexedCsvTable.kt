@@ -81,7 +81,7 @@ class IndexedCsvTable(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Synchronized
+//    @Synchronized
     fun rowCount(): Long {
         // NB: -1 for header
         return (offsetStore.size() - 1).coerceAtLeast(0) + pending.size
@@ -89,7 +89,7 @@ class IndexedCsvTable(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Synchronized
+//    @Synchronized
     fun add(row: Iterable<String>) {
         pending.add(row)
 
@@ -132,24 +132,23 @@ class IndexedCsvTable(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun preview(start: Long, count: Int): OutputPreview {
-        val adjustedStart = start.coerceAtLeast(0L)
-
         val builder = mutableListOf<List<String>>()
-        traverse(adjustedStart, count) {
+        traverseWithoutHeader(start, count.toLong()) {
             builder.add(it.toList())
         }
-        return OutputPreview(header, builder, adjustedStart)
+        return OutputPreview(header, builder, start)
     }
 
 
-    @Synchronized
-    fun traverse(start: Long, count: Int, visitor: (Iterable<String>) -> Unit) {
-        // NB: header is first
-        val adjustedStart = start + 1
+    private fun traverseWithoutHeader(start: Long, count: Long, visitor: (Iterable<String>) -> Unit) {
+        val adjustedStart = start.coerceAtLeast(0L)
 
-        if (adjustedStart < offsetStore.size()) {
-            val storedStartSpan = offsetStore.get(adjustedStart)
-            val storedEnd = (adjustedStart + count).coerceAtMost(offsetStore.size() - 1)
+        // NB: header is first
+        val offsetStoreStart = (adjustedStart + 1)
+
+        if (offsetStoreStart < offsetStore.size()) {
+            val storedStartSpan = offsetStore.get(offsetStoreStart)
+            val storedEnd = (offsetStoreStart + count).coerceAtMost(offsetStore.size() - 1)
             val storedEndSpan = offsetStore.get(storedEnd)
 
             seek(storedStartSpan.offset)
@@ -165,7 +164,7 @@ class IndexedCsvTable(
                 visitor.invoke(row)
 
                 remainingCount--
-                if (remainingCount == 0) {
+                if (remainingCount == 0L) {
                     break
                 }
             }
@@ -178,16 +177,24 @@ class IndexedCsvTable(
                     visitor.invoke(row)
 
                     remainingCount--
-                    if (remainingCount == 0) {
+                    if (remainingCount == 0L) {
                         break
                     }
                 }
             }
         }
         else {
-            val pendingStart = (adjustedStart - offsetStore.size()).toInt()
+            // TODO: test
+            val pendingStart =
+                if (offsetStore.size() == 0L) {
+                    adjustedStart.toInt()
+                }
+                else {
+                    (offsetStoreStart - offsetStore.size()).toInt()
+                }
+
             if (pendingStart < pending.size) {
-                val pendingEnd = (pendingStart + count).coerceAtMost(pending.size)
+                val pendingEnd = (pendingStart + count).coerceAtMost(pending.size.toLong()).toInt()
                 for (i in pendingStart until pendingEnd) {
                     visitor.invoke(pending[i])
                 }
@@ -208,7 +215,7 @@ class IndexedCsvTable(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Synchronized
+//    @Synchronized
     override fun close() {
         flushPending()
         StoreUtils.flushAndClose(handle)

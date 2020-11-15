@@ -48,12 +48,6 @@ class BufferedValueStatistics(
     }
 
 
-    private fun flush() {
-        fileValueStatisticsStore.writeAll(modifiedOrdinals, buffer)
-        modifiedOrdinals.clear()
-    }
-
-
     private fun accept(stats: Array<MutableStatistics>, values: DoubleArray) {
         for (i in stats.indices) {
             val value = values[i]
@@ -98,7 +92,18 @@ class BufferedValueStatistics(
     }
 
 
+    private fun flush() {
+        if (modifiedOrdinals.isEmpty()) {
+            return
+        }
+
+        fileValueStatisticsStore.writeAll(modifiedOrdinals, buffer)
+        modifiedOrdinals.clear()
+    }
+
+
     override fun close() {
+        flush()
         fileValueStatisticsStore.close()
     }
 }

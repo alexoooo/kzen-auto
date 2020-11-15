@@ -67,7 +67,7 @@ class AttributeController(
 
         val editorAttributeNotation = attributeMetadata
                 .attributeMetadataNotation
-                .get(editorAttributePath)
+                .get(editorAttributePath.toNesting())
 
         val editorWrapperName = editorAttributeNotation
                 ?.asString()

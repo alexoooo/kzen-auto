@@ -37,6 +37,7 @@ class ModelDetachedExecutor(
             action.execute(request)
         }
         catch (t: Throwable) {
+            t.printStackTrace()
             ExecutionFailure(t.message ?: "exception")
         }
     }

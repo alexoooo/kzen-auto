@@ -30,7 +30,7 @@ class EdgesDefiner: AttributeDefiner {
 
         val edgesNotation = graphStructure
                 .graphNotation
-                .transitiveAttribute(objectLocation, GraphDocument.edgesAttributeName)
+                .firstAttribute(objectLocation, GraphDocument.edgesAttributeName)
                 as? ListAttributeNotation
                 ?: return AttributeDefinitionAttempt.failure(
                         "'Edges' attribute notation not found: $objectLocation - $attributeName")

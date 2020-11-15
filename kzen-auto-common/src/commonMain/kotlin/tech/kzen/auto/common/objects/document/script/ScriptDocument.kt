@@ -45,7 +45,7 @@ class ScriptDocument(
         ): ObjectName {
             val namePrefix = graphStructure
                     .graphNotation
-                    .transitiveAttribute(archetypeObjectLocation, AutoConventions.titleAttributePath)
+                    .firstAttribute(archetypeObjectLocation, AutoConventions.titleAttributePath)
                     ?.asString()
                     ?: archetypeObjectLocation.objectPath.name.value
 

@@ -29,6 +29,8 @@ object ProcessConventions {
     const val previewRowCountKey = "count"
     val previewCountPath = outputAttributePath.nest(AttributeSegment.ofKey(previewRowCountKey))
 
+    const val previewPivotValuesKey = "values"
+
 
     const val actionParameter = "action"
     const val actionListFiles = "files"

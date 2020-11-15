@@ -50,7 +50,7 @@ class ScriptController:
 
             val stepsNotation = graphStructure
                     .graphNotation
-                    .transitiveAttribute(mainObjectLocation, ScriptDocument.stepsAttributePath)
+                    .firstAttribute(mainObjectLocation, ScriptDocument.stepsAttributePath)
                     as? ListAttributeNotation
                     ?: return null
 

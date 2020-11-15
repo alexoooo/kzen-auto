@@ -112,7 +112,7 @@ data class FilterSpec(
 
             val attributeNotation = graphStructure
                     .graphNotation
-                    .transitiveAttribute(objectLocation, ProcessConventions.filterAttributeName) as? MapAttributeNotation
+                    .firstAttribute(objectLocation, ProcessConventions.filterAttributeName) as? MapAttributeNotation
                     ?: return AttributeDefinitionAttempt.failure(
                             "'${ProcessConventions.filterAttributeName}' attribute notation not found:" +
                                     " $objectLocation - $attributeName")

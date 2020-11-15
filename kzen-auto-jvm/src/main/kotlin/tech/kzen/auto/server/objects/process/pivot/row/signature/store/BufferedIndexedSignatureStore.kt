@@ -25,9 +25,7 @@ class BufferedIndexedSignatureStore(
         nextOrdinal++
 
         if (pending.size >= size) {
-            fileIndexedSignatureStore.addAll(pending)
-            pending.clear()
-            pendingIndex.clear()
+            flush()
         }
     }
 
@@ -54,8 +52,20 @@ class BufferedIndexedSignatureStore(
     }
 
 
+    private fun flush() {
+        if (pending.isEmpty()) {
+            return
+        }
+
+        fileIndexedSignatureStore.addAll(pending)
+        pending.clear()
+        pendingIndex.clear()
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
+        flush()
         fileIndexedSignatureStore.close()
     }
 }

@@ -23,7 +23,7 @@ import tech.kzen.lib.common.util.Digestible
 data class PivotSpec(
     val rows: Set<String>,
 //    val columns: List<String>,
-    val values: Map<String, PivotValueSpec>
+    val values: PivotValueTableSpec
 ):
     Digestible
 {
@@ -131,16 +131,19 @@ data class PivotSpec(
                 "Unexpected attribute name: $attributeName"
             }
 
+//            graphStructure.graphNotation.mergeAttribute(
+//                objectLocation, ProcessConventions.pivotAttributeName)
+
             val rowsAttributeNotation = graphStructure
                 .graphNotation
-                .transitiveAttribute(objectLocation, rowsAttributePath) as? ListAttributeNotation
+                .firstAttribute(objectLocation, rowsAttributePath) as? ListAttributeNotation
                 ?: return AttributeDefinitionAttempt.failure(
                     "'$rowsAttributePath' attribute notation not found:" +
                             " $objectLocation - $attributeName")
 
             val valuesAttributeNotation = graphStructure
                 .graphNotation
-                .transitiveAttribute(objectLocation, valuesAttributePath) as? MapAttributeNotation
+                .firstAttribute(objectLocation, valuesAttributePath) as? MapAttributeNotation
                 ?: return AttributeDefinitionAttempt.failure(
                     "'$valuesAttributePath' attribute notation not found:" +
                             " $objectLocation - $attributeName")
@@ -150,13 +153,7 @@ data class PivotSpec(
                 .map { it.asString()!! }
                 .toSet()
 
-            val values = mutableMapOf<String, PivotValueSpec>()
-
-            for (e in valuesAttributeNotation.values) {
-                val pivotValueNotation = e.value as ListAttributeNotation
-                val pivotValue = PivotValueSpec.ofNotation(pivotValueNotation)
-                values[e.key.asString()] = pivotValue
-            }
+            val values = PivotValueTableSpec.ofNotation(valuesAttributeNotation)
 
             val spec = PivotSpec(
                 rows, values)
@@ -168,20 +165,14 @@ data class PivotSpec(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun isEmpty(): Boolean =
-        rows.isEmpty() &&
-        values.isEmpty()
-
-
-
-//    fun valueColumnCount(): Int {
-//        return values.map { it.value.types.size }.sum()
-//    }
+    fun isEmpty(): Boolean {
+        return rows.isEmpty() &&
+                values.isEmpty()
+    }
 
 
     override fun digest(builder: Digest.Builder) {
-//        val values: Map<String, PivotValueSpec>
         builder.addDigestibleUnorderedList(rows.map { Digest.ofUtf8(it) })
-        builder.addDigestibleUnorderedMap(values.mapKeys { Digest.ofUtf8(it.key) })
+        builder.addDigestible(values)
     }
 }

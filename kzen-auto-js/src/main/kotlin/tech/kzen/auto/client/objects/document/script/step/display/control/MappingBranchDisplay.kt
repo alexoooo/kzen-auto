@@ -14,7 +14,10 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
+import tech.kzen.auto.client.wrap.ArrowDownwardIcon
+import tech.kzen.auto.client.wrap.MaterialIconButton
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -45,7 +48,7 @@ class MappingBranchDisplay(
         ): List<ObjectLocation>? {
             val branchNotations = graphStructure
                     .graphNotation
-                    .transitiveAttribute(stepLocation, branchAttributePath)
+                    .firstAttribute(stepLocation, branchAttributePath)
                     as? ListAttributeNotation
                     ?: return null
 

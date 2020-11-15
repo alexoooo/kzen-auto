@@ -18,7 +18,7 @@ class H2DigestIndex(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var nextOrdinal = 0L
+    private var nextOrdinal: Long
 
     private val storeA: MVStore
     private val storeB: MVStore
@@ -39,6 +39,8 @@ class H2DigestIndex(
             .open()
         mapA = storeA.openMap("digest-a")
         mapB = storeB.openMap("digest-b")
+
+        nextOrdinal = mapA.sizeAsLong() + mapB.sizeAsLong()
 
         cache.defaultReturnValue(missingOrdinal)
     }
@@ -106,12 +108,10 @@ class H2DigestIndex(
 
     private fun binaryPartition(bytes: ByteArray): Boolean {
         return bytes.sum() >= 0
-//        return LongHashFunction.xx().hashBytes(bytes) < 0
     }
 
 
     override fun close() {
-//        store.close()
         storeA.close()
         storeB.close()
     }

@@ -17,7 +17,7 @@ data class ProcessRunSpec(
             columnNames,
             filter,
             pivot.rows,
-            pivot.values.keys
+            pivot.values.columns.keys
         )
     }
 }

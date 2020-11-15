@@ -38,7 +38,7 @@ class TargetSpecDefiner: AttributeDefiner {
 
         val targetNotation = graphStructure
                 .graphNotation
-                .transitiveAttribute(objectLocation, targetAttributeName)
+                .firstAttribute(objectLocation, targetAttributeName)
                 as? MapAttributeNotation
                 ?: return AttributeDefinitionAttempt.failure(
                         "'Target' attribute notation not found: $objectLocation - $attributeName")

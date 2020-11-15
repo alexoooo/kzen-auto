@@ -3,12 +3,13 @@ package tech.kzen.auto.server.objects.process
 import com.google.common.base.Stopwatch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.apache.commons.csv.CSVFormat
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.process.*
 import tech.kzen.auto.common.paradigm.common.model.*
+import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.server.objects.process.filter.IndexedCsvTable
 import tech.kzen.auto.server.objects.process.model.ProcessRunSignature
 import tech.kzen.auto.server.objects.process.model.ProcessRunSpec
@@ -63,17 +64,27 @@ object ApplyProcessAction
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun lookupOutput(
         objectLocation: ObjectLocation,
-        runSignature: ProcessRunSignature,
+        runSpec: ProcessRunSpec,
         runDir: Path,
         outputSpec: OutputSpec
     ): ExecutionResult {
+        val runSignature = runSpec.toSignature()
+
         val info =
             if (! Files.exists(runDir)) {
+                val columnNames =
+                    if (runSignature.hasPivot()) {
+                        PivotBuilder.ExportSignature.of(runSpec.pivot.rows.toList(), runSpec.pivot.values).header
+                    }
+                    else {
+                        runSignature.columnNames
+                    }
+
                 OutputInfo(
-                    runDir.toString(),
+//                    runDir.toString(),
                     null,
                     0L,
-                    OutputPreview(runSignature.columnNames, listOf(), 0L)
+                    OutputPreview(columnNames, listOf(), 0L)
                 )
             }
             else {
@@ -82,9 +93,23 @@ object ApplyProcessAction
                     .lookupActive(objectLocation)
                     .singleOrNull()
                 if (taskId != null) {
+                    val request =
+                        if (runSignature.hasPivot()) {
+                            DetachedRequest(
+                                RequestParams(
+                                    runSpec.pivot.values.toPreviewRequest().parameters.values +
+                                    outputSpec.toPreviewRequest().parameters.values
+                                ),
+                                null
+                            )
+                        }
+                        else {
+                            outputSpec.toPreviewRequest()
+                        }
+
                     val result = ServerContext
                         .modelTaskRepository
-                        .request(taskId, outputSpec.toPreviewRequest())
+                        .request(taskId, request)
 
                     if (result != null) {
                         return result
@@ -97,24 +122,25 @@ object ApplyProcessAction
 
                 val formattedTime = formatTime(fileTime.toInstant())
 
-                val rowCount: Long
+                val zeroBasedPreview = outputSpec.previewStartZeroBased()
 
+                val rowCount: Long
                 val preview =
                     if (! runSignature.hasPivot()) {
                         IndexedCsvTable(runSignature.columnNames, runDir).use {
                             rowCount = it.rowCount()
-
-                            val zeroBasedPreview = outputSpec.previewStartZeroBased()
                             it.preview(zeroBasedPreview, outputSpec.previewCount)
                         }
                     }
                     else {
-                        rowCount = 0L
-                        null
+                        filePivot(runSpec.pivot.rows, runSpec.pivot.values.columns.keys, runDir).use {
+                            rowCount = it.rowCount()
+                            it.preview(runSpec.pivot.values, zeroBasedPreview, outputSpec.previewCount)
+                        }
                     }
 
                 OutputInfo(
-                    runDir.toString(),
+//                    runDir.toString(),
                     formattedTime,
                     rowCount,
                     preview)
@@ -266,7 +292,7 @@ object ApplyProcessAction
                 val preview = output.preview(zeroBasedPreviewStart, outputSpec.previewCount)
 
                 val outputInfo = OutputInfo(
-                    output.outputPath().toString(),
+//                    output.outputPath().toString(),
                     formatTime(output.modified()),
                     output.rowCount(),
                     preview)
@@ -354,7 +380,7 @@ object ApplyProcessAction
         progress: TaskProgress,
         outputValue: ExecutionValue
     ) {
-        val outputPath = runDir.resolve("output.csv")
+//        val outputPath = runDir.resolve("output.csv")
 
         val filterColumns = runSignature.columnNames
             .intersect(runSignature.filter.columns.keys)
@@ -362,7 +388,7 @@ object ApplyProcessAction
 
         val pivotBuilder =
 //            memoryPivot(pivotSpec)
-            filePivot(runSignature.pivot.rows, runSignature.pivot.values.keys, runDir)
+            filePivot(runSignature.pivot.rows, runSignature.pivot.values.columns.keys, runDir)
 
         pivotBuilder.use {
             var nextProgress = progress
@@ -384,21 +410,21 @@ object ApplyProcessAction
                 }
             }
 
-            Files.newBufferedWriter(outputPath).use { output ->
-                val csvPrinter = CSVFormat.DEFAULT.print(output)
-
-                pivotBuilder.view(
-                    runSignature.pivot.values
-                ).use { pivotView ->
-                    csvPrinter.printRecord(pivotView.header())
-
-                    while (pivotView.hasNext()) {
-                        val pivotRecord = pivotView.next()
-                        val pivotValues = pivotRecord.getAll(pivotView.header())
-                        csvPrinter.printRecord(pivotValues)
-                    }
-                }
-            }
+//            Files.newBufferedWriter(outputPath).use { output ->
+//                val csvPrinter = CSVFormat.DEFAULT.print(output)
+//
+//                pivotBuilder.view(
+//                    runSignature.pivot.values
+//                ).use { pivotView ->
+//                    csvPrinter.printRecord(pivotView.header())
+//
+//                    while (pivotView.hasNext()) {
+//                        val pivotRecord = pivotView.next()
+//                        val pivotValues = pivotRecord.getAll(pivotView.header())
+//                        csvPrinter.printRecord(pivotValues)
+//                    }
+//                }
+//            }
         }
     }
 
@@ -427,6 +453,26 @@ object ApplyProcessAction
 
         next_record@
         while (input.hasNext() && ! handle.cancelRequested()) {
+            handle.processRequests { request ->
+                val outputSpec = OutputSpec.ofPreviewRequest(request)
+                val zeroBasedPreviewStart = outputSpec.previewStartZeroBased()
+                val valueTableSpec = PivotValueTableSpec.ofPreviewRequest(request)
+
+                val preview = pivotBuilder.preview(
+                    valueTableSpec, zeroBasedPreviewStart, outputSpec.previewCount)
+
+                val outputInfo = OutputInfo(
+//                    output.outputPath().toString(),
+                    formatTime(Instant.now()),
+                    pivotBuilder.rowCount(),
+                    preview)
+
+                ExecutionSuccess(
+                    ExecutionValue.of(
+                        outputInfo.toCollection()),
+                    NullExecutionValue)
+            }
+
             val record = input.next()
 
             if (count != 0L && count % progressItems == 0L) {
@@ -508,12 +554,12 @@ object ApplyProcessAction
     private fun memoryPivot(pivotSpec: PivotSpec): PivotBuilder {
         return PivotBuilder(
             pivotSpec.rows,
-            pivotSpec.values.keys,
+            pivotSpec.values.columns.keys,
             RowIndex(
                 MapRowValueIndex(),
                 MapRowSignatureIndex()),
             MapValueStatistics(
-                pivotSpec.values.size)
+                pivotSpec.values.columns.size)
         )
     }
 

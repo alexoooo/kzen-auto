@@ -14,7 +14,7 @@ import tech.kzen.auto.client.wrap.DeleteIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.process.PivotSpec
-import tech.kzen.auto.common.objects.document.process.PivotValueSpec
+import tech.kzen.auto.common.objects.document.process.PivotValueColumnSpec
 
 
 class PivotValueItem(
@@ -25,7 +25,7 @@ class PivotValueItem(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var columnName: String,
-        var pivotValueSpec: PivotValueSpec,
+        var pivotValueSpec: PivotValueColumnSpec,
 
         var pivotSpec: PivotSpec,
         var processState: ProcessState,

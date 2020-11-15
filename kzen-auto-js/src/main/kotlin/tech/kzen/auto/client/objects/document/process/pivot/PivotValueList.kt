@@ -43,7 +43,7 @@ class PivotValueList(
 
             styledTable {
                 styledTbody {
-                    for (e in props.pivotSpec.values) {
+                    for (e in props.pivotSpec.values.columns) {
                         styledTr {
                             key = e.key
 

@@ -1,12 +1,11 @@
 package tech.kzen.auto.server.objects.process.pivot
 
-import tech.kzen.auto.common.objects.document.process.PivotValueSpec
+import tech.kzen.auto.common.objects.document.process.OutputPreview
+import tech.kzen.auto.common.objects.document.process.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.process.PivotValueType
-import tech.kzen.auto.server.objects.process.model.ListRecordItem
 import tech.kzen.auto.server.objects.process.model.RecordItem
 import tech.kzen.auto.server.objects.process.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.process.pivot.stats.ValueStatistics
-import tech.kzen.auto.server.objects.process.stream.RecordStream
 
 
 class PivotBuilder(
@@ -25,6 +24,36 @@ class PivotBuilder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    data class ExportSignature(
+        val header: List<String>,
+        val valueTypes: List<IndexedValue<PivotValueType>>
+    ) {
+        companion object {
+            fun of(rowColumns: List<String>, values: PivotValueTableSpec): ExportSignature {
+                val header = mutableListOf<String>()
+                val valueTypes = mutableListOf<IndexedValue<PivotValueType>>()
+
+                for (rowColumn in rowColumns) {
+                    header.add(rowColumn)
+                }
+
+                for ((index, e) in values.columns.toList().withIndex()) {
+                    val valueColumn = e.first
+                    val valueValueSpec = e.second
+                    for (valueType in valueValueSpec.types) {
+                        val valueHeader = "$valueColumn - $valueType"
+                        header.add(valueHeader)
+                        valueTypes.add(IndexedValue(index, valueType))
+                    }
+                }
+
+                return ExportSignature(header, valueTypes)
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private val rowColumns = rows.toList()
     private val valueColumns = values.toList()
 //    private val buffer = DoubleArray(pivotSpec.valueColumnCount())
@@ -32,12 +61,12 @@ class PivotBuilder(
 
 
     //----------------------------------------------------------
-    private var viewing = false
+//    private var viewing = false
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun add(recordItem: RecordItem) {
-        check(! viewing) { "Can't add while viewing" }
+//        check(! viewing) { "Can't add while viewing" }
 
         var present = false
         for (i in valueColumns.indices) {
@@ -46,20 +75,18 @@ class PivotBuilder(
 
             if (valueColumnValue.isNullOrEmpty()) {
                 valueBuffer[i] = ValueStatistics.missingValue
-                continue
             }
             else {
+                val asNumber = valueColumnValue.toDoubleOrNull()
+                    ?.let { ValueStatistics.normalize(it) }
+                    ?: Double.NaN
+
+                valueBuffer[i] = asNumber
                 present = true
             }
-
-            val asNumber = valueColumnValue.toDoubleOrNull()
-                ?.let { ValueStatistics.normalize(it) }
-                ?: Double.NaN
-
-            valueBuffer[i] = asNumber
         }
 
-        // NB: get row index
+        // NB: get row index regardless if any values present
         val rowOrdinal = rowIndex(recordItem)
 
         if (present) {
@@ -75,85 +102,60 @@ class PivotBuilder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    fun view(): RecordStream {
-//        return view()
-//    }
-
-
-    fun view(values: Map<String, PivotValueSpec>): RecordStream {
-        check(! viewing) { "Already viewing" }
-        viewing = true
-
-        val header: List<String>
-        val headerIndex: Map<String, Int>
-        val valueTypes: List<IndexedValue<PivotValueType>>
-
-        val headerBuffer = mutableListOf<String>()
-        val headerIndexBuffer = mutableMapOf<String, Int>()
-        val valueTypesBuffer = mutableListOf<IndexedValue<PivotValueType>>()
-
-        for (rowColumn in rowColumns) {
-            headerBuffer.add(rowColumn)
-            headerIndexBuffer[rowColumn] = headerIndexBuffer.size
-        }
-
-        for ((index, e) in values.toList().withIndex()) {
-            val valueColumn = e.first
-            val valueValueSpec = e.second
-            for (valueType in valueValueSpec.types) {
-                val valueHeader = "$valueColumn - $valueType"
-                headerBuffer.add(valueHeader)
-                headerIndexBuffer[valueHeader] = headerIndexBuffer.size
-                valueTypesBuffer.add(IndexedValue(index, valueType))
+    fun preview(values: PivotValueTableSpec, start: Long, count: Int): OutputPreview {
+        var header: List<String>? = null
+        val builder = mutableListOf<List<String>>()
+        traverseWithHeader(values, start, count.toLong()) { row ->
+            if (header == null) {
+                header = row
+            }
+            else {
+                builder.add(row)
             }
         }
+        return OutputPreview(header!!, builder, start)
+    }
 
-        header = headerBuffer
-        headerIndex = headerIndexBuffer
-        valueTypes = valueTypesBuffer
 
-        val rowCount = rowIndex.size
-        var nextRowIndex = 0L
+    fun traverseWithHeader(
+        values: PivotValueTableSpec,
+        start: Long,
+        count: Long,
+        visitor: (List<String>) -> Unit
+    ) {
+        val exportSignature = ExportSignature.of(rowColumns, values)
 
-        return object: RecordStream {
-            override fun header(): List<String> {
-                return header
+        visitor.invoke(exportSignature.header)
+
+        val adjustedStart = start.coerceAtLeast(0L)
+        val adjustedEnd = (adjustedStart + count).coerceAtMost(rowIndex.size() - 1)
+
+        for (rowNumber in adjustedStart until adjustedEnd) {
+            val row = mutableListOf<String>()
+
+            val rowValues = rowIndex.rowValues(rowNumber)
+            row.addAll(rowValues.map { it ?: missingRowCellValue })
+
+            val statisticValues = valueStatistics.get(rowNumber, exportSignature.valueTypes)
+            for (value in statisticValues) {
+                val asString =
+                    if (ValueStatistics.isMissing(value)) {
+                        missingStatisticCellValue
+                    }
+                    else {
+                        value.toString()
+                    }
+
+                row.add(asString)
             }
 
-            override fun hasNext(): Boolean {
-                return nextRowIndex < rowCount
-            }
-
-            override fun next(): RecordItem {
-                val cells = mutableListOf<String>()
-
-                val rowValues = rowIndex.rowValues(nextRowIndex)
-                cells.addAll(rowValues.map { it ?: missingRowCellValue })
-
-                val statisticValues = valueStatistics.get(nextRowIndex, valueTypes)
-
-                for (value in statisticValues) {
-                    val asString =
-                        if (ValueStatistics.isMissing(value)) {
-                            missingStatisticCellValue
-                        }
-                        else {
-                            value.toString()
-                        }
-
-                    cells.add(asString)
-                }
-
-                nextRowIndex++
-
-                return ListRecordItem(
-                    header, headerIndex, cells)
-            }
-
-            override fun close() {
-                viewing = false
-            }
+            visitor.invoke(row)
         }
+    }
+
+
+    fun rowCount(): Long {
+        return rowIndex.size()
     }
 
 

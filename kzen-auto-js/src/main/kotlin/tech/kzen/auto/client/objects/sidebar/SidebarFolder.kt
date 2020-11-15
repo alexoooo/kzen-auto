@@ -252,7 +252,7 @@ class SidebarFolder(
         processingOption = true
         onOptionsClose()
 
-        val directoryAttribute = props.graphStructure.graphNotation.transitiveAttribute(
+        val directoryAttribute = props.graphStructure.graphNotation.firstAttribute(
                 archetypeLocation, AutoConventions.directoryAttributePath
         ) as? ScalarAttributeNotation
 

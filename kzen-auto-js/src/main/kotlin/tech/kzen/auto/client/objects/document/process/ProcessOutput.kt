@@ -132,7 +132,7 @@ class ProcessOutput(
                     fontSize = 2.em
                 }
 
-                +"View"
+                +"Output"
             }
         }
     }
@@ -359,7 +359,7 @@ class ProcessOutput(
                                     paddingLeft = 0.5.em
                                     paddingRight = 0.5.em
                                 }
-                                val rowNumber = row.index + outputPreview.startRow
+                                val rowNumber = row.index + outputPreview.startRow.coerceAtLeast(0)
                                 val rowFormat = formatRow(rowNumber + 1)
                                 +rowFormat
                             }

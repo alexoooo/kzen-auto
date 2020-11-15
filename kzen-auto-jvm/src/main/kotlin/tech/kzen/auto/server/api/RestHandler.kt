@@ -880,15 +880,16 @@ class RestHandler {
         val taskId: TaskId = serverRequest
             .getParam(CommonRestApi.paramTaskId) { TaskId(it) }
 
-        val model: TaskModel? = runBlocking {
+        val model: TaskModel = runBlocking {
             ServerContext.modelTaskRepository.query(taskId)
         }
+            ?: return ServerResponse.noContent().build()
 
-        val result = model?.toJsonCollection()
+        val result = model.toJsonCollection()
 
         return ServerResponse
             .ok()
-            .body(Mono.just(result!!))
+            .body(Mono.just(result))
     }
 
 
@@ -899,6 +900,7 @@ class RestHandler {
         val model: TaskModel? = runBlocking {
             ServerContext.modelTaskRepository.cancel(taskId)
         }
+            ?: return ServerResponse.noContent().build()
 
         val result = model?.toJsonCollection()
 

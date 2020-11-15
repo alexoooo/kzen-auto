@@ -7,37 +7,16 @@ import tech.kzen.auto.server.objects.process.pivot.row.value.store.IndexedTextSt
 
 class StoreRowValueIndex(
     private val digestIndex: DigestIndex,
-    private val indexedTextStore: IndexedTextStore/*,
-    private val cacheSize: Int = 1024*/
+    private val indexedTextStore: IndexedTextStore
 ):
     RowValueIndex
 {
     //-----------------------------------------------------------------------------------------------------------------
-//    companion object {
-//        private const val missingOrdinal = -1L
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private val hashBuffer = LongArray(2)
-
-//    private val cache = Object2LongLinkedOpenHashMap<String>()
-//
-//    init {
-//        cache.defaultReturnValue(missingOrdinal)
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun getOrAddIndex(value: String): Long {
-//        val cachedOrdinal = cache.getAndMoveToLast(value)
-//        if (cachedOrdinal != missingOrdinal) {
-//            return cachedOrdinal
-//        }
-
-//        val digestHigh = LongHashFunction.metro().hashChars(value)
-//        val digestLow = LongHashFunction.wy_3().hashChars(value)
-//        val valueIndex = digestIndex.getOrAdd(digestHigh, digestLow)
         LongTupleHashFunction.murmur_3().hashChars(value, hashBuffer)
         val valueOrdinal = digestIndex.getOrAdd(hashBuffer[0], hashBuffer[1])
 
@@ -45,14 +24,7 @@ class StoreRowValueIndex(
             indexedTextStore.add(value)
         }
 
-        val ordinal = valueOrdinal.ordinal()
-
-//        cache[value] = cachedOrdinal
-//        if (cache.size == cacheSize) {
-//            cache.removeFirstLong()
-//        }
-
-        return ordinal
+        return valueOrdinal.ordinal()
     }
 
 

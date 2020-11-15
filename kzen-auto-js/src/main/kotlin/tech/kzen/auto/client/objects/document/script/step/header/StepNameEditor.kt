@@ -114,7 +114,7 @@ class StepNameEditor(
     private fun actionTitle(): String {
         return props
                 .notation
-                .transitiveAttribute(
+                .firstAttribute(
                         props.objectLocation, AutoConventions.titleAttributePath)
                 ?.asString()
                 ?: props.notation.getString(

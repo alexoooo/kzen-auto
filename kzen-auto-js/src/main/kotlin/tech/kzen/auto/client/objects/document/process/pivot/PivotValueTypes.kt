@@ -15,7 +15,7 @@ import tech.kzen.auto.client.objects.document.process.state.ProcessState
 import tech.kzen.auto.client.wrap.MaterialToggleButton
 import tech.kzen.auto.client.wrap.MaterialToggleButtonMultiGroup
 import tech.kzen.auto.common.objects.document.process.PivotSpec
-import tech.kzen.auto.common.objects.document.process.PivotValueSpec
+import tech.kzen.auto.common.objects.document.process.PivotValueColumnSpec
 import tech.kzen.auto.common.objects.document.process.PivotValueType
 
 
@@ -27,7 +27,7 @@ class PivotValueTypes(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var columnName: String,
-        var pivotValueSpec: PivotValueSpec,
+        var pivotValueSpec: PivotValueColumnSpec,
 
         var pivotSpec: PivotSpec,
         var processState: ProcessState,

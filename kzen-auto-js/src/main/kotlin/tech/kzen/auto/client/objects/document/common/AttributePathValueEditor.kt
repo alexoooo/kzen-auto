@@ -71,7 +71,7 @@ class AttributePathValueEditor(
         val attributeNotation = clientState
             .graphStructure()
             .graphNotation
-            .transitiveAttribute(objectLocation, attributePath)
+            .firstAttribute(objectLocation, attributePath)
 
         checkNotNull(attributeNotation) {
             "missing: $objectLocation | $attributePath"

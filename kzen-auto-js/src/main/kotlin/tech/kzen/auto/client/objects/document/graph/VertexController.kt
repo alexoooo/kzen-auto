@@ -490,7 +490,7 @@ class VertexController(
             AutoConventions.isManaged(it) ||
                     it == CellCoordinate.rowAttributeName ||
                     it == CellCoordinate.columnAttributeName ||
-                    props.clientState.graphStructure().graphNotation.transitiveAttribute(
+                    props.clientState.graphStructure().graphNotation.firstAttribute(
                             vertexLocation, AttributePath.ofName(it)
                     ) == null
         }
@@ -547,13 +547,13 @@ class VertexController(
             phase: VisualVertexPhase?
     ) {
         val title = props.clientState.graphStructure().graphNotation
-                .transitiveAttribute(
+                .firstAttribute(
                         props.cellDescriptor.objectLocation,
                         AutoConventions.titleAttributePath
                 )?.asString()
 
         val description = props.clientState.graphStructure().graphNotation
-                .transitiveAttribute(
+                .firstAttribute(
                         props.cellDescriptor.objectLocation,
                         AutoConventions.descriptionAttributePath
                 )?.asString()
@@ -681,7 +681,7 @@ class VertexController(
             phase: VisualVertexPhase?
     ) {
         val icon = props.clientState.graphStructure().graphNotation
-                .transitiveAttribute(props.cellDescriptor.objectLocation, AutoConventions.iconAttributePath)
+                .firstAttribute(props.cellDescriptor.objectLocation, AutoConventions.iconAttributePath)
                 ?.asString()
                 ?: defaultIcon
 

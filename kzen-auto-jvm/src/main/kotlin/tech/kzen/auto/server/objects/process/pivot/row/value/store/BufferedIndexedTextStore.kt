@@ -26,9 +26,7 @@ class BufferedIndexedTextStore(
         nextOrdinal++
 
         if (pending.size >= size) {
-            fileIndexedTextStore.addAll(pending)
-            pending.clear()
-            pendingIndex.clear()
+            flush()
         }
     }
 
@@ -55,8 +53,20 @@ class BufferedIndexedTextStore(
     }
 
 
+    private fun flush() {
+        if (pending.isEmpty()) {
+            return
+        }
+
+        fileIndexedTextStore.addAll(pending)
+        pending.clear()
+        pendingIndex.clear()
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
+        flush()
         fileIndexedTextStore.close()
     }
 }

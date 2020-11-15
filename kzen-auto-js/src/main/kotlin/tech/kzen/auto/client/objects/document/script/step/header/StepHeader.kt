@@ -302,7 +302,7 @@ class StepHeader(
 //        +"state.intentToRun ${state.intentToRun}"
 
         val actionDescription = props.graphStructure.graphNotation
-                .transitiveAttribute(props.objectLocation, AutoConventions.descriptionAttributePath)
+                .firstAttribute(props.objectLocation, AutoConventions.descriptionAttributePath)
                 ?.asString()
                 ?: defaultRunDescription
 
@@ -371,7 +371,7 @@ class StepHeader(
             actionDescription: String
     ) {
         val icon = props.graphStructure.graphNotation
-                .transitiveAttribute(props.objectLocation, AutoConventions.iconAttributePath)
+                .firstAttribute(props.objectLocation, AutoConventions.iconAttributePath)
                 ?.asString()
                 ?: defaultRunIcon
 

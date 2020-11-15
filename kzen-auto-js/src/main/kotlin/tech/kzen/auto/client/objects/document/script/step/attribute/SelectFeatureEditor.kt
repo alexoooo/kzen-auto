@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.step.attribute
 
+import kotlinx.browser.document
 import kotlinx.css.em
 import kotlinx.css.fontSize
 import react.*
@@ -24,7 +25,6 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
-import kotlinx.browser.document
 import kotlin.js.Json
 import kotlin.js.json
 
@@ -64,7 +64,7 @@ class SelectFeatureEditor(
 
         @Suppress("MoveVariableDeclarationIntoWhen")
         val attributeNotation = props.clientState.graphStructure().graphNotation
-            .transitiveAttribute(props.objectLocation, props.attributeName)
+            .firstAttribute(props.objectLocation, props.attributeName)
 
         val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 

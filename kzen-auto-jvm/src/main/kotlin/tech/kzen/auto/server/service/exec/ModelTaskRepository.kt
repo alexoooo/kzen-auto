@@ -19,6 +19,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefacto
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedTransferQueue
 import java.util.concurrent.atomic.AtomicBoolean
@@ -39,10 +40,10 @@ class ModelTaskRepository(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val active = mutableMapOf<TaskId, ActiveHandle>()
+    private val active = Collections.synchronizedMap(mutableMapOf<TaskId, ActiveHandle>())
 
     // TODO: is this necessary?
-    private val terminated = mutableMapOf<TaskId, TaskModel>()
+    private val terminated = Collections.synchronizedMap(mutableMapOf<TaskId, TaskModel>())
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -52,6 +53,7 @@ class ModelTaskRepository(
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
 
+    @Synchronized
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         when (event) {
             is DeletedDocumentEvent ->
@@ -156,7 +158,7 @@ class ModelTaskRepository(
 
 
     override suspend fun request(taskId: TaskId, request: DetachedRequest): ExecutionResult? {
-        val handle = active.remove(taskId)
+        val handle = active[taskId]
             ?: return null
 
         return handle.query(request)
