@@ -77,6 +77,12 @@ class AttributePathValueEditor(
             "missing: $objectLocation | $attributePath"
         }
 
+//        val merge = clientState
+//            .graphStructure()
+//            .graphNotation
+//            .mergeAttribute(objectLocation, attributePath)!!
+//        console.log("#!@#@! merge: $objectLocation - $attributePath - $merge")
+
         return attributeNotation
     }
 
@@ -259,6 +265,8 @@ class AttributePathValueEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+//        +"## attributePath ${props.attributePath} - state.value ${state.value}"
+
         val type = props.valueType
 //        val type = attributeMetadata.type
 

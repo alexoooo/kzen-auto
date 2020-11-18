@@ -44,11 +44,14 @@ class ProcessDocument(
             ProcessConventions.actionListColumns ->
                 actionColumnListing()
 
+            ProcessConventions.actionSummaryLookup ->
+                actionColumnSummaryLookup()
+
             ProcessConventions.actionLookupOutput ->
                 actionLookupOutput()
 
-            ProcessConventions.actionSummaryLookup ->
-                actionColumnSummaryLookup()
+            ProcessConventions.actionSave ->
+                actionSave()
 
             else ->
                 return ExecutionFailure("Unknown action: $action")
@@ -73,17 +76,16 @@ class ProcessDocument(
     }
 
 
-//    private suspend fun runDir(): Path? {
-//        val runSpec = runSpec()
-//            ?: return null
-//
-//        val runSignature = runSpec.toSignature()
-//
-//        return ProcessWorkPool.resolveRunDir(runSignature)
-//    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun actionListFiles(): ExecutionResult {
+        val inputPaths = inputPaths()
+            ?: return ExecutionFailure("Please provide a valid input path")
+
+        return ExecutionSuccess.ofValue(ExecutionValue.of(
+            inputPaths.map { it.toString() }))
+    }
+
+
     private suspend fun actionColumnListing(): ExecutionResult {
         val inputPaths = inputPaths()
             ?: return ExecutionFailure("Please provide a valid input path")
@@ -116,12 +118,15 @@ class ProcessDocument(
     }
 
 
-    private suspend fun actionListFiles(): ExecutionResult {
-        val inputPaths = inputPaths()
-            ?: return ExecutionFailure("Please provide a valid input path")
+    private suspend fun actionSave(): ExecutionResult {
+        val runSpec = runSpec()
+            ?: return ExecutionFailure("Missing run")
 
-        return ExecutionSuccess.ofValue(ExecutionValue.of(
-            inputPaths.map { it.toString() }))
+        val runSignature = runSpec.toSignature()
+        val runDir = ProcessWorkPool.resolveRunDir(runSignature)
+
+        return ApplyProcessAction.saveOutput(
+            runSpec, runDir, output)
     }
 
 

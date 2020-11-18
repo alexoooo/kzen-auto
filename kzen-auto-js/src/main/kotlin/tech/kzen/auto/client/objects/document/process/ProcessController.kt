@@ -87,7 +87,7 @@ class ProcessController(
 
         styledDiv {
             css {
-                padding(3.em)
+                padding(3.em, 3.em, 7.em, 3.em)
             }
 
             if (processState.nextErrorMessage() != null) {

@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.process
 import com.google.common.base.Stopwatch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.apache.commons.csv.CSVFormat
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.process.*
 import tech.kzen.auto.common.paradigm.common.model.*
@@ -33,7 +34,9 @@ import tech.kzen.auto.server.objects.process.stream.RecordStream
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -50,6 +53,15 @@ object ApplyProcessAction
 //    private const val progressItems = 1_000
     private const val progressItems = 10_000
 //    private const val progressItems = 250_000
+
+
+    private data class SaveInfo(
+        val path: Path,
+        val defaultPath: Path,
+        val custom: Boolean,
+        val customInvalid: Boolean,
+        val message: String
+    )
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -74,14 +86,17 @@ object ApplyProcessAction
             if (! Files.exists(runDir)) {
                 val columnNames =
                     if (runSignature.hasPivot()) {
-                        PivotBuilder.ExportSignature.of(runSpec.pivot.rows.toList(), runSpec.pivot.values).header
+                        PivotBuilder.ExportSignature.of(
+                            runSpec.pivot.rows.toList(),
+                            runSpec.pivot.values
+                        ).header
                     }
                     else {
                         runSignature.columnNames
                     }
 
                 OutputInfo(
-//                    runDir.toString(),
+                    "Missing, will be created: $runDir",
                     null,
                     0L,
                     OutputPreview(columnNames, listOf(), 0L)
@@ -139,8 +154,10 @@ object ApplyProcessAction
                         }
                     }
 
+                val saveInfo = saveInfo(runDir, outputSpec)
+
                 OutputInfo(
-//                    runDir.toString(),
+                    saveInfo.message,
                     formattedTime,
                     rowCount,
                     preview)
@@ -148,6 +165,106 @@ object ApplyProcessAction
 
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(info.toCollection()))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun saveOutput(
+        runSpec: ProcessRunSpec,
+        runDir: Path,
+        outputSpec: OutputSpec
+    ): ExecutionResult {
+        if (! Files.exists(runDir)) {
+            return ExecutionFailure("Not found: $runDir")
+        }
+
+        val runSignature = runSpec.toSignature()
+
+        val saveInfo = saveInfo(runDir, outputSpec)
+        val outputPath = saveInfo.path
+
+        val successValue = ExecutionSuccess(
+            ExecutionValue.of(outputPath.toString()),
+            NullExecutionValue)
+
+        if (! runSignature.hasPivot() &&
+            saveInfo.path.toAbsolutePath().normalize() ==
+                saveInfo.defaultPath.toAbsolutePath().normalize())
+        {
+            // NB: don't override source of truth
+            return successValue
+        }
+
+        Files.newBufferedWriter(outputPath).use { output ->
+            val csvPrinter = CSVFormat.DEFAULT.print(output)
+
+            if (! runSignature.hasPivot()) {
+                IndexedCsvTable(runSignature.columnNames, runDir).use {
+                    it.traverseWithHeader { row ->
+                        csvPrinter.printRecord(row)
+                    }
+                }
+            }
+            else {
+                filePivot(runSpec.pivot.rows, runSpec.pivot.values.columns.keys, runDir).use {
+                    it.traverseWithHeader(runSpec.pivot.values) { row ->
+                        csvPrinter.printRecord(row)
+                    }
+                }
+            }
+        }
+
+        return successValue
+    }
+
+
+    private fun saveInfo(runDir: Path, outputSpec: OutputSpec): SaveInfo {
+        val defaultPath = runDir.resolve(IndexedCsvTable.tableFile)
+
+        val customPath: Path?
+        val customInvalid: Boolean
+        if (outputSpec.savePath.isBlank()) {
+            customPath = null
+            customInvalid = false
+        }
+        else {
+            customPath = try {
+                Paths.get(outputSpec.savePath)
+            } catch (e: InvalidPathException) {
+                null
+            }
+            customInvalid = customPath == null
+        }
+
+        val pathWithFallback = customPath ?: defaultPath
+
+        val existsMessage =
+            if (Files.exists(pathWithFallback)) {
+                "already exists"
+            }
+            else {
+                "does not exist (will create)"
+            }
+
+        val typeMessage = when {
+            customInvalid ->
+                "Invalid path provided (using default)"
+
+            customPath == null ->
+                "Using default path"
+
+            else ->
+                "Using custom path"
+        }
+
+        val message = "$typeMessage, $existsMessage: ${pathWithFallback.toAbsolutePath().normalize()}"
+
+        return SaveInfo(
+            pathWithFallback,
+            defaultPath,
+            customPath != null || customInvalid,
+            customInvalid,
+            message)
     }
 
 
@@ -292,7 +409,7 @@ object ApplyProcessAction
                 val preview = output.preview(zeroBasedPreviewStart, outputSpec.previewCount)
 
                 val outputInfo = OutputInfo(
-//                    output.outputPath().toString(),
+                    "Running: ${output.outputPath().toAbsolutePath().normalize()}",
                     formatTime(output.modified()),
                     output.rowCount(),
                     preview)
@@ -403,28 +520,13 @@ object ApplyProcessAction
                         runSignature,
                         pivotBuilder,
                         nextProgress,
+                        runDir,
                         inputPath,
                         outputValue,
                         handle
                     )
                 }
             }
-
-//            Files.newBufferedWriter(outputPath).use { output ->
-//                val csvPrinter = CSVFormat.DEFAULT.print(output)
-//
-//                pivotBuilder.view(
-//                    runSignature.pivot.values
-//                ).use { pivotView ->
-//                    csvPrinter.printRecord(pivotView.header())
-//
-//                    while (pivotView.hasNext()) {
-//                        val pivotRecord = pivotView.next()
-//                        val pivotValues = pivotRecord.getAll(pivotView.header())
-//                        csvPrinter.printRecord(pivotValues)
-//                    }
-//                }
-//            }
         }
     }
 
@@ -435,6 +537,7 @@ object ApplyProcessAction
         runSignature: ProcessRunSpec,
         pivotBuilder: PivotBuilder,
         previousProgress: TaskProgress,
+        runDir: Path,
         inputPath: Path,
         outputValue: ExecutionValue,
         handle: TaskHandle
@@ -462,7 +565,7 @@ object ApplyProcessAction
                     valueTableSpec, zeroBasedPreviewStart, outputSpec.previewCount)
 
                 val outputInfo = OutputInfo(
-//                    output.outputPath().toString(),
+                    "Running: $runDir",
                     formatTime(Instant.now()),
                     pivotBuilder.rowCount(),
                     preview)

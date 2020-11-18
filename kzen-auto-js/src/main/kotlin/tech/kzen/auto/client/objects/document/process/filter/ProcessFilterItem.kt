@@ -3,7 +3,10 @@ package tech.kzen.auto.client.objects.document.process.filter
 import kotlinx.css.*
 import kotlinx.html.title
 import react.*
-import react.dom.*
+import react.dom.table
+import react.dom.tbody
+import react.dom.td
+import react.dom.tr
 import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
 import tech.kzen.auto.client.objects.document.process.state.*
@@ -87,7 +90,7 @@ class ProcessFilterItem(
         async {
             val effect = props.dispatcher.dispatch(
                 FilterRemoveRequest(props.columnName)
-            ).single() as FilterUpdateResult
+            ).first() as FilterUpdateResult
 
             if (effect.errorMessage != null) {
                 setState {

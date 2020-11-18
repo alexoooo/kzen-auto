@@ -301,3 +301,8 @@ data class ProcessRefreshSchedule(
 
 
 object ProcessRefreshCancel: ProcessRefreshAction()
+
+
+
+//---------------------------------------------------------------------------------------------------------------------
+object ProcessSaveAction: SingularProcessAction()

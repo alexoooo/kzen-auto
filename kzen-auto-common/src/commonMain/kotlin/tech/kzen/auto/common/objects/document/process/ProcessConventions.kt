@@ -23,11 +23,14 @@ object ProcessConventions {
     val outputAttributeName = AttributeName("output")
     val outputAttributePath = AttributePath.ofName(outputAttributeName)
 
-    const val previewStartRowKey = "start"
-    val previewStartPath = outputAttributePath.nest(AttributeSegment.ofKey(previewStartRowKey))
+    const val previewStartKey = "start"
+    val previewStartPath = outputAttributePath.nest(AttributeSegment.ofKey(previewStartKey))
 
     const val previewRowCountKey = "count"
     val previewCountPath = outputAttributePath.nest(AttributeSegment.ofKey(previewRowCountKey))
+
+    const val saveFileKey = "save"
+    val saveFilePath = outputAttributePath.nest(AttributeSegment.ofKey(saveFileKey))
 
     const val previewPivotValuesKey = "values"
 
@@ -39,7 +42,7 @@ object ProcessConventions {
     const val actionSummaryLookup = "summary-lookup"
     const val actionSummaryTask = "summary-run"
     const val actionFilterTask = "filter"
-//    const val actionPreviewStartParameter = "from"
+    const val actionSave = "save"
 
 
     fun isFilter(documentNotation: DocumentNotation): Boolean {

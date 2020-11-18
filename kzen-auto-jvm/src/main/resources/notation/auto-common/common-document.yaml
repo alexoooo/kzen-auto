@@ -83,8 +83,9 @@ Process:
     rows: []
     values: {}
   output:
+    save: ""
     start: 1
-    count: 100
+    count: 50
   meta:
     input: String
     filter: FilterSpec

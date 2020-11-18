@@ -42,6 +42,9 @@ object ProcessReducer {
             is PivotAction ->
                 reducePivot(state, action)
 
+            ProcessSaveAction ->
+                state
+
             //--------------------------------------------------
 //            else ->
 //                state

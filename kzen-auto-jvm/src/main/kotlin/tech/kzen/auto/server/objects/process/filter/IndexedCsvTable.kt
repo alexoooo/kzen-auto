@@ -23,7 +23,7 @@ class IndexedCsvTable(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val tableFile = Path.of("table.csv")
+        val tableFile = Path.of("table.csv")
         private val offsetFile = Path.of("index.bin")
 
         private val format = CSVFormat.RFC4180
@@ -137,6 +137,14 @@ class IndexedCsvTable(
             builder.add(it.toList())
         }
         return OutputPreview(header, builder, start)
+    }
+
+
+    fun traverseWithHeader(visitor: (Iterable<String>) -> Unit) {
+        visitor.invoke(header)
+        traverseWithoutHeader(0, rowCount()) {
+            visitor.invoke(it)
+        }
     }
 
 

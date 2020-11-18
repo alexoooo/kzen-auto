@@ -136,6 +136,9 @@ object ProcessEffect {
                     null
                 }
 
+            ProcessSaveAction ->
+                processSaveAction(state)
+
             else -> null
         }
     }
@@ -259,15 +262,7 @@ object ProcessEffect {
                 ProcessTaskRefreshRequest(action.taskModel.taskId))
         }
 
-        val requestAction = taskModel.requestAction()
-        val isFiltering = requestAction == ProcessConventions.actionFilterTask
-
-        if (isFiltering) {
-//            return OutputLookupRequest(
-//                0, OutputPreview.defaultRowCount)
-        }
-
-        return null
+        return OutputLookupRequest
     }
 
 
@@ -538,5 +533,33 @@ object ProcessEffect {
             (result as? MirroredGraphError)?.error?.message
 
         return PivotUpdateResult(errorMessage)
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun processSaveAction(
+        state: ProcessState
+    ): ProcessAction? {
+//        if (state.fileListing.isNullOrEmpty()) {
+//            return null
+//        }
+
+//        val result =
+        ClientContext.restClient.performDetached(
+            state.mainLocation,
+            ProcessConventions.actionParameter to ProcessConventions.actionSave)
+
+        return null
+//        return when (result) {
+//            is ExecutionSuccess -> {
+//                @Suppress("UNCHECKED_CAST")
+//                val resultValue = result.value.get() as List<String>
+//
+//                ListColumnsResponse(resultValue)
+//            }
+//
+//            is ExecutionFailure -> {
+//                ListColumnsError(result.errorMessage)
+//            }
+//        }
     }
 }

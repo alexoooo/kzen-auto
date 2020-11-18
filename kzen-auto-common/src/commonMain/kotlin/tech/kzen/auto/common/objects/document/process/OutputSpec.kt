@@ -10,19 +10,22 @@ import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
 
 
 data class OutputSpec(
+    val savePath: String,
     val previewStart: Long,
     val previewCount: Int
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         fun ofPreviewRequest(request: DetachedRequest): OutputSpec {
-            val startRow = request.getLong(ProcessConventions.previewStartRowKey)!!
+            val savePath = request.getSingle(ProcessConventions.saveFileKey)!!
+            val startRow = request.getLong(ProcessConventions.previewStartKey)!!
             val rowCount = request.getInt(ProcessConventions.previewRowCountKey)!!
-            return OutputSpec(startRow, rowCount)
+            return OutputSpec(savePath, startRow, rowCount)
         }
     }
 
@@ -41,32 +44,40 @@ data class OutputSpec(
                 "Unexpected attribute name: $attributeName"
             }
 
-            val previewStart = graphStructure
+            val outputNotation = graphStructure
                 .graphNotation
-                .firstAttribute(objectLocation, ProcessConventions.previewStartPath)
+                .mergeAttribute(objectLocation, ProcessConventions.outputAttributeName)
+                    as MapAttributeNotation
+
+            val savePath = outputNotation
+                .get(ProcessConventions.saveFileKey)
+                ?.asString()!!
+
+            val previewStart = outputNotation
+                .get(ProcessConventions.previewStartKey)
                 ?.asString()
                 ?.replace(",", "")
                 ?.toLongOrNull()
                 ?: return AttributeDefinitionAttempt.failure(
-                    "'${ProcessConventions.previewStartPath}' attribute notation not found:" +
+                    "'${ProcessConventions.previewStartKey}' attribute notation not found:" +
                             " $objectLocation - $attributeName")
 
-            val previewCount = graphStructure
-                .graphNotation
-                .firstAttribute(objectLocation, ProcessConventions.previewCountPath)
+            val previewCount = outputNotation
+                .get(ProcessConventions.previewRowCountKey)
                 ?.asString()
                 ?.replace(",", "")
                 ?.toIntOrNull()
                 ?: return AttributeDefinitionAttempt.failure(
-                    "'${ProcessConventions.previewCountPath}' attribute notation not found:" +
+                    "'${ProcessConventions.previewRowCountKey}' attribute notation not found:" +
                             " $objectLocation - $attributeName")
 
-            val spec = OutputSpec(previewStart, previewCount)
+            val spec = OutputSpec(savePath, previewStart, previewCount)
 
             return AttributeDefinitionAttempt.success(
                 ValueAttributeDefinition(spec))
         }
     }
+
 
     //-----------------------------------------------------------------------------------------------------------------
     fun previewStartZeroBased(): Long {
@@ -78,7 +89,8 @@ data class OutputSpec(
     fun toPreviewRequest(): DetachedRequest {
         return DetachedRequest(
             RequestParams.of(
-                ProcessConventions.previewStartRowKey to previewStart.toString(),
+                ProcessConventions.saveFileKey to savePath,
+                ProcessConventions.previewStartKey to previewStart.toString(),
                 ProcessConventions.previewRowCountKey to previewCount.toString()
             ), null)
     }

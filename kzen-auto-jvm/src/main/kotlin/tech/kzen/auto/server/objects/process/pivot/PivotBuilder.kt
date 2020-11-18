@@ -119,8 +119,8 @@ class PivotBuilder(
 
     fun traverseWithHeader(
         values: PivotValueTableSpec,
-        start: Long,
-        count: Long,
+        start: Long = 0,
+        count: Long = rowCount(),
         visitor: (List<String>) -> Unit
     ) {
         val exportSignature = ExportSignature.of(rowColumns, values)
@@ -131,19 +131,30 @@ class PivotBuilder(
         val adjustedEnd = (adjustedStart + count).coerceAtMost(rowIndex.size() - 1)
 
         for (rowNumber in adjustedStart until adjustedEnd) {
-            val row = mutableListOf<String>()
-
             val rowValues = rowIndex.rowValues(rowNumber)
+
+            val columnCount = rowValues.size + exportSignature.valueTypes.size
+            val row = ArrayList<String>(columnCount)
+
             row.addAll(rowValues.map { it ?: missingRowCellValue })
 
             val statisticValues = valueStatistics.get(rowNumber, exportSignature.valueTypes)
-            for (value in statisticValues) {
-                val asString =
-                    if (ValueStatistics.isMissing(value)) {
-                        missingStatisticCellValue
-                    }
-                    else {
-                        value.toString()
+            for (i in exportSignature.valueTypes.indices) {
+                val value = statisticValues[i]
+                val type = exportSignature.valueTypes[i].value
+
+                val asString = when {
+                        ValueStatistics.isMissing(value) -> {
+                            missingStatisticCellValue
+                        }
+
+                        type == PivotValueType.Count -> {
+                            value.toLong().toString()
+                        }
+
+                        else -> {
+                            value.toString()
+                        }
                     }
 
                 row.add(asString)
