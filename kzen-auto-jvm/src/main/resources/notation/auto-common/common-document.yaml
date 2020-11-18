@@ -36,6 +36,7 @@ Graph:
   abstract: true
   is: Document
   class: tech.kzen.auto.common.objects.document.graph.GraphDocument
+  title: "Time series"
   icon: DeviceHub
   vertices: []
   edges: []
