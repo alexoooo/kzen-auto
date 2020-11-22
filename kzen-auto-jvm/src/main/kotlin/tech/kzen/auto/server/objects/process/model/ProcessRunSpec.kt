@@ -15,7 +15,7 @@ data class ProcessRunSpec(
         return ProcessRunSignature(
             inputs,
             columnNames,
-            filter,
+            filter.filterNonEmpty(),
             pivot.rows,
             pivot.values.columns.keys
         )

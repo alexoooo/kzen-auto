@@ -132,6 +132,13 @@ data class FilterSpec(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun filterNonEmpty(): FilterSpec {
+        return FilterSpec(
+            columns.filterValues { it.values.isNotEmpty() })
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun digest(builder: Digest.Builder) {
         builder.addDigestibleUnorderedMap(columns.mapKeys { Digest.ofUtf8(it.key) })
     }

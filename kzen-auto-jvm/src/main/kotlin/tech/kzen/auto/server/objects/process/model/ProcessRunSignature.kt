@@ -9,7 +9,7 @@ import java.nio.file.Path
 data class ProcessRunSignature(
     val inputs: List<Path>,
     val columnNames: List<String>,
-    val filter: FilterSpec,
+    val nonEmptyFilter: FilterSpec,
     val pivotRows: Set<String>,
     val pivotValues: Set<String>
 ):
@@ -27,7 +27,7 @@ data class ProcessRunSignature(
 
         builder.addDigestibleList(columnNames.map { Digest.ofUtf8(it) })
 
-        builder.addDigestible(filter)
+        builder.addDigestible(nonEmptyFilter)
 
         builder.addDigestibleUnorderedList(pivotRows.map { Digest.ofUtf8(it) })
         builder.addDigestibleUnorderedList(pivotValues.map { Digest.ofUtf8(it) })

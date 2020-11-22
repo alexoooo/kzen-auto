@@ -128,9 +128,9 @@ class PivotBuilder(
         visitor.invoke(exportSignature.header)
 
         val adjustedStart = start.coerceAtLeast(0L)
-        val adjustedEnd = (adjustedStart + count).coerceAtMost(rowIndex.size() - 1)
+        val adjustedEndExclusive = (adjustedStart + count).coerceAtMost(rowIndex.size())
 
-        for (rowNumber in adjustedStart until adjustedEnd) {
+        for (rowNumber in adjustedStart until adjustedEndExclusive) {
             val rowValues = rowIndex.rowValues(rowNumber)
 
             val columnCount = rowValues.size + exportSignature.valueTypes.size

@@ -43,6 +43,9 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 
 
+// TODO: https://stackoverflow.com/questions/3335969/reading-a-gzip-file-from-a-filechannel-java-nio
+// https://javadoc.io/static/com.conversantmedia/disruptor/1.2.9/com/conversantmedia/util/concurrent/PushPullConcurrentQueue.html
+// http://lmax-exchange.github.io/disruptor/user-guide/index.html
 object ApplyProcessAction
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -352,7 +355,7 @@ object ApplyProcessAction
         outputValue: ExecutionValue
     ) {
         val filterColumns = runSignature.columnNames
-            .intersect(runSignature.filter.columns.keys).toList()
+            .intersect(runSignature.nonEmptyFilter.columns.keys).toList()
 
         val tableBuilder = IndexedCsvTable(
             runSignature.columnNames, runDir)
@@ -440,7 +443,7 @@ object ApplyProcessAction
                 val value = record.get(filterColumn)
 
                 @Suppress("MapGetWithNotNullAssertionOperator")
-                val columnCriteria = runSignature.filter.columns[filterColumn]!!
+                val columnCriteria = runSignature.nonEmptyFilter.columns[filterColumn]!!
 
                 if (columnCriteria.values.isNotEmpty()) {
                     val present = columnCriteria.values.contains(value)
