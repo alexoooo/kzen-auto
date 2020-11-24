@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.process.state
 
-import tech.kzen.auto.common.objects.document.process.ProcessConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.reactive.TableSummary
@@ -168,8 +167,9 @@ object ProcessReducer {
 
         val result = model.finalOrPartialResult()
 
-        val requestAction = model.requestAction()
-        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
+//        val requestAction = model.requestAction()
+//        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
+        val isIndexing = false
         val isRunning = model.state == TaskState.Running
 
         return when (result) {
@@ -208,23 +208,25 @@ object ProcessReducer {
         action: ProcessTaskRunResponse
     ): ProcessState {
         val isRunning = action.taskModel.state == TaskState.Running
-        val requestAction = action.taskModel.requestAction()
-        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
+//        val requestAction = action.taskModel.requestAction()
+//        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
 
         val tableSummary =
-            if (isIndexing) {
-                TableSummary.fromTaskModel(action.taskModel)
-            }
-            else {
+//            if (isIndexing) {
+//                TableSummary.fromTaskModel(action.taskModel)
+//            }
+//            else {
                 state.tableSummary
-            }
+//            }
 
         return state.copy(
             taskModel = action.taskModel,
             tableSummary = tableSummary,
             taskProgress = action.taskModel.taskProgress(),
-            indexTaskRunning = isRunning && isIndexing,
-            filterTaskRunning = isRunning && ! isIndexing,
+//            indexTaskRunning = isRunning && isIndexing,
+            indexTaskRunning = false,
+//            filterTaskRunning = isRunning && ! isIndexing,
+            filterTaskRunning = isRunning,
             taskError = action.taskModel.errorMessage(),
             taskStarting = false)
     }
@@ -245,16 +247,17 @@ object ProcessReducer {
         }
 
         val isRunning = action.taskModel.state == TaskState.Running
-        val requestAction = action.taskModel.requestAction()
-        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
+//        val requestAction = action.taskModel.requestAction()
+//        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
+        val isIndexing = false
 
         val tableSummary =
-            if (isIndexing) {
-                TableSummary.fromTaskModel(action.taskModel)
-            }
-            else {
+//            if (isIndexing) {
+//                TableSummary.fromTaskModel(action.taskModel)
+//            }
+//            else {
                 state.tableSummary
-            }
+//            }
 
         val taskProcess = action.taskModel.taskProgress()
         val indexTaskFinished =
@@ -264,8 +267,10 @@ object ProcessReducer {
             taskModel = action.taskModel,
             tableSummary = tableSummary,
             taskProgress = taskProcess,
-            indexTaskRunning = isRunning && isIndexing,
-            filterTaskRunning = isRunning && ! isIndexing,
+//            indexTaskRunning = isRunning && isIndexing,
+            indexTaskRunning = false,
+//            filterTaskRunning = isRunning && ! isIndexing,
+            filterTaskRunning = isRunning,
             indexTaskFinished = indexTaskFinished,
             taskError = action.taskModel.errorMessage())
     }
@@ -275,16 +280,17 @@ object ProcessReducer {
         state: ProcessState,
         action: ProcessTaskStopResponse
     ): ProcessState {
-        val requestAction = action.taskModel.requestAction()
-        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
+//        val requestAction = action.taskModel.requestAction()
+//        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
+        val isIndexing = false
 
         val tableSummary =
-            if (isIndexing) {
-                TableSummary.fromTaskModel(action.taskModel)
-            }
-            else {
+//            if (isIndexing) {
+//                TableSummary.fromTaskModel(action.taskModel)
+//            }
+//            else {
                 state.tableSummary
-            }
+//            }
 
         return state.copy(
             taskStopping = false,

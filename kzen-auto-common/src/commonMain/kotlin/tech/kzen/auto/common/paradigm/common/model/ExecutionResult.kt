@@ -86,6 +86,11 @@ data class ExecutionSuccess(
     }
 
 
+    fun withDetail(detail: ExecutionValue): ExecutionSuccess {
+        return ExecutionSuccess(value, detail)
+    }
+
+
     override fun toJsonCollection(): Map<String, Any?> {
         return mapOf(
                 valueKey to value.toJsonCollection(),

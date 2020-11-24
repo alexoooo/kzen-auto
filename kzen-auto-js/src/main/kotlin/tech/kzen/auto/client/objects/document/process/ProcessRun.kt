@@ -9,7 +9,6 @@ import tech.kzen.auto.client.objects.document.process.state.*
 import tech.kzen.auto.client.wrap.*
 
 
-// TODO: inline within flow?
 class ProcessRun(
     props: Props
 ):
@@ -48,11 +47,11 @@ class ProcessRun(
     }
 
 
-    private fun onRunIndex() {
-        props.dispatcher.dispatchAsync(
-            ProcessTaskRunRequest(
-                ProcessTaskType.Index))
-    }
+//    private fun onRunIndex() {
+//        props.dispatcher.dispatchAsync(
+//            ProcessTaskRunRequest(
+//                ReportTaskType.Index))
+//    }
 
 
     private fun onRunMain(readyToRun: Boolean, hasSummary: Boolean, inProgress: Boolean) {
@@ -72,13 +71,13 @@ class ProcessRun(
             hasSummary -> {
                 props.dispatcher.dispatchAsync(
                     ProcessTaskRunRequest(
-                        ProcessTaskType.Filter))
+                        ReportTaskType.RunReport))
             }
 
             else -> {
-                props.dispatcher.dispatchAsync(
-                    ProcessTaskRunRequest(
-                        ProcessTaskType.Index))
+//                props.dispatcher.dispatchAsync(
+//                    ProcessTaskRunRequest(
+//                        ReportTaskType.Index))
             }
         }
     }
@@ -243,7 +242,7 @@ class ProcessRun(
                 }
 
                 onClick = {
-                    onRunIndex()
+//                    onRunIndex()
                 }
             }
 

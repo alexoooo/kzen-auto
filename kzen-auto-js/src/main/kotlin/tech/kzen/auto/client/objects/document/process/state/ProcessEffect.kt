@@ -280,7 +280,7 @@ object ProcessEffect {
         action: ProcessTaskStopResponse
     ): ProcessAction? {
         val requestAction = action.taskModel.requestAction()
-        val isFiltering = requestAction == ProcessConventions.actionFilterTask
+        val isFiltering = requestAction == ProcessConventions.actionRunTask
 
         return if (isFiltering) {
             CompoundProcessAction(
@@ -352,14 +352,14 @@ object ProcessEffect {
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun runTask(
         state: ProcessState,
-        type: ProcessTaskType
+        type: ReportTaskType
     ): ProcessAction {
         val action = when (type) {
-            ProcessTaskType.Index ->
-                ProcessConventions.actionSummaryTask
+//            ProcessTaskType.Index ->
+//                ProcessConventions.actionSummaryTask
 
-            ProcessTaskType.Filter ->
-                ProcessConventions.actionFilterTask
+            ReportTaskType.RunReport ->
+                ProcessConventions.actionRunTask
         }
 
         val result = ClientContext.clientRestTaskRepository.submit(

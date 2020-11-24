@@ -227,7 +227,7 @@ data class ProcessTaskLookupResponse(
 
 
 data class ProcessTaskRunRequest(
-    val type: ProcessTaskType
+    val type: ReportTaskType
 ): ProcessTaskAction()
 
 

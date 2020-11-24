@@ -7,5 +7,5 @@ interface ManagedTask {
     suspend fun start(
         request: DetachedRequest,
         handle: TaskHandle
-    )
+    ): TaskRun?
 }

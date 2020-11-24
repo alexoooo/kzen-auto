@@ -13,7 +13,7 @@ import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.task.api.ManagedTask
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.server.objects.process.model.ProcessRunSignature
+import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.server.objects.process.model.ProcessRunSpec
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -113,7 +113,7 @@ class ProcessDocument(
         val runSignature = runSpec.toSignature()
         val runDir = ProcessWorkPool.resolveRunDir(runSignature)
 
-        return ApplyProcessAction.lookupOutput(
+        return ReportRunAction.lookupOutput(
             selfLocation, runSpec, runDir, output)
     }
 
@@ -125,18 +125,18 @@ class ProcessDocument(
         val runSignature = runSpec.toSignature()
         val runDir = ProcessWorkPool.resolveRunDir(runSignature)
 
-        return ApplyProcessAction.saveOutput(
+        return ReportRunAction.saveOutput(
             runSpec, runDir, output)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun start(request: DetachedRequest, handle: TaskHandle) {
+    override suspend fun start(request: DetachedRequest, handle: TaskHandle): TaskRun? {
         val action = request.parameters.get(ProcessConventions.actionParameter)
         if (action == null) {
             handle.complete(ExecutionFailure(
                 "'${ProcessConventions.actionParameter}' expected"))
-            return
+            return null
         }
 
         val runSpec = runSpec()
@@ -144,17 +144,17 @@ class ProcessDocument(
         if (runSpec == null) {
             handle.complete(ExecutionFailure(
                 "Please provide a valid input path"))
-            return
+            return null
         }
 
         when (action) {
-            ProcessConventions.actionSummaryTask -> {
-                val runSignature = runSpec.toSignature()
-                actionColumnSummaryAsync(runSignature, handle)
-            }
+//            ProcessConventions.actionSummaryTask -> {
+//                val runSignature = runSpec.toSignature()
+//                actionColumnSummaryAsync(runSignature, handle)
+//            }
 
-            ProcessConventions.actionFilterTask -> {
-                actionApplyFilterAsync(runSpec, handle)
+            ProcessConventions.actionRunTask -> {
+                actionRunReport(runSpec, handle)
             }
 
             else -> {
@@ -162,26 +162,28 @@ class ProcessDocument(
                     "Unknown action: $action"))
             }
         }
+
+        return null
     }
 
 
-    private suspend fun actionColumnSummaryAsync(
-        runSignature: ProcessRunSignature,
-        handle: TaskHandle
-    ) {
-        ColumnSummaryAction.summarizeAllAsync(
-            runSignature, handle)
-    }
+//    private suspend fun actionColumnSummaryAsync(
+//        runSignature: ProcessRunSignature,
+//        handle: TaskHandle
+//    ) {
+//        ColumnSummaryAction.summarizeAllAsync(
+//            runSignature, handle)
+//    }
 
 
-    private suspend fun actionApplyFilterAsync(
+    private suspend fun actionRunReport(
         runSpec: ProcessRunSpec,
         handle: TaskHandle
-    ) {
+    ): TaskRun {
         val runSignature = runSpec.toSignature()
         val runDir = ProcessWorkPool.getOrPrepareRunDir(runSignature)
 
-        ApplyProcessAction.applyProcessAsync(
+        return ReportRunAction.applyProcessAsync(
             runSpec, runDir, handle)
     }
 }

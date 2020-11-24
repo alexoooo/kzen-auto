@@ -1,7 +1,5 @@
 package tech.kzen.auto.server.objects.process
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVPrinter
 import tech.kzen.auto.util.AutoJvmUtils
@@ -19,7 +17,7 @@ object FilterIndex {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun inputIndexPath(absoluteInputPath: Path): Path {
+    fun inputIndexPath(absoluteInputPath: Path): Path {
         val indexSubPath = AutoJvmUtils.sanitizeFilename(
             absoluteInputPath.fileName.toString())
 
@@ -27,9 +25,9 @@ object FilterIndex {
         val workPath = WorkUtils.resolve(pathInWork)
 
         if (! Files.isDirectory(workPath)) {
-            withContext(Dispatchers.IO) {
+//            withContext(Dispatchers.IO) {
                 Files.createDirectories(workPath)
-            }
+//            }
         }
 
         return workPath

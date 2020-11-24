@@ -40,8 +40,9 @@ object ProcessConventions {
     const val actionListColumns = "columns"
     const val actionLookupOutput = "output"
     const val actionSummaryLookup = "summary-lookup"
-    const val actionSummaryTask = "summary-run"
-    const val actionFilterTask = "filter"
+//    const val actionSummaryTask = "summary-run"
+//    const val actionFilterTask = "filter"
+    const val actionRunTask = "run"
     const val actionSave = "save"
 
 

@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.task.api.ManagedTask
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
+import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.common.paradigm.task.model.TaskState
@@ -21,9 +22,7 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.LinkedTransferQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 
 
 class ModelTaskRepository(
@@ -128,7 +127,6 @@ class ModelTaskRepository(
         val taskId = TaskId(Instant.now().toString())
 
         val handle = ActiveHandle(
-//            task,
             TaskModel(
                 taskId,
                 taskLocation,
@@ -140,7 +138,12 @@ class ModelTaskRepository(
 
         active[taskId] = handle
 
-        task.start(request, handle)
+        val run = task.start(request, handle)
+
+        if (run == null) {
+            check(handle.model.state != TaskState.Running)
+            handle.run = run
+        }
 
         return handle.model
     }
@@ -154,14 +157,6 @@ class ModelTaskRepository(
         handle.awaitTerminal()
 
         return handle.model
-    }
-
-
-    override suspend fun request(taskId: TaskId, request: DetachedRequest): ExecutionResult? {
-        val handle = active[taskId]
-            ?: return null
-
-        return handle.query(request)
     }
 
 
@@ -181,23 +176,9 @@ class ModelTaskRepository(
     }
 
 
-//    fun activeAsyncStates(): Map<TaskId, Any> {
-//        return active
-//            .mapValues { it.value.asyncState }
-//            .filterValues { it != null }
-//            .mapValues { it.value!! }
-//    }
-
-
-//    fun findActiveState(predicate: (Any) -> Boolean): Pair<TaskId, Any>? {
-//        for (e in active) {
-//            val activeState = e.value.activeState
-//            if (activeState != null && predicate.invoke(activeState)) {
-//                return e.key to activeState
-//            }
-//        }
-//        return null
-//    }
+    fun queryRun(taskId: TaskId): TaskRun? {
+        return active[taskId]?.run
+    }
 
 
     private fun addTerminated(taskModel: TaskModel) {
@@ -213,19 +194,13 @@ class ModelTaskRepository(
 
     //-----------------------------------------------------------------------------------------------------------------
     private inner class ActiveHandle(
-        var model: TaskModel
+        var model: TaskModel,
+        var run: TaskRun? = null
     ): TaskHandle {
         private var cancelRequested = AtomicBoolean(false)
         private val completeLatch = CountDownLatch(1)
 
-        private val requestQueue = LinkedTransferQueue<RequestHandle>()
-
-//        var asyncState: Any? = null
-
-
-//        override fun updateAsync(activeState: Any) {
-//            this.asyncState = activeState
-//        }
+//        private val requestQueue = LinkedTransferQueue<RequestHandle>()
 
 
         override fun complete(result: ExecutionResult) {
@@ -252,41 +227,27 @@ class ModelTaskRepository(
         }
 
 
+        override fun update(updater: (ExecutionSuccess?) -> ExecutionSuccess) {
+            val nextPartialResult = updater(model.partialResult)
+
+            model = model.copy(
+                partialResult = nextPartialResult)
+        }
+
+
         override fun cancelRequested(): Boolean {
             return cancelRequested.get()
         }
 
 
         private fun terminate() {
+            run?.close()
+
             active.remove(model.taskId)
             addTerminated(model)
 
             completeLatch.countDown()
             Thread.currentThread().interrupt()
-        }
-
-
-        override fun processRequests(processor: (DetachedRequest) -> ExecutionResult) {
-            while (requestQueue.isNotEmpty()) {
-                val requestHandle = requestQueue.peek()
-                val response = processor.invoke(requestHandle.request)
-                requestHandle.response.set(response)
-                requestQueue.take()
-            }
-        }
-
-
-        fun query(request: DetachedRequest): ExecutionResult? {
-            val requestHandle = RequestHandle(request)
-
-            try {
-                requestQueue.transfer(requestHandle)
-            }
-            catch (e: InterruptedException) {
-                return null
-            }
-
-            return requestHandle.response.get()
         }
 
 
@@ -302,10 +263,4 @@ class ModelTaskRepository(
             catch (ignored: InterruptedException) {}
         }
     }
-
-
-    private data class RequestHandle(
-        val request: DetachedRequest,
-        val response: AtomicReference<ExecutionResult> = AtomicReference()
-    )
 }
