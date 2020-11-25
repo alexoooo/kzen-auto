@@ -155,7 +155,6 @@ class ScriptController:
     }
 
 
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(index: Int) {
         val clientState = state.clientState!!
@@ -191,6 +190,10 @@ class ScriptController:
 
         val documentPath = clientState.navigationRoute.documentPath
                 ?: return
+
+        if (! ScriptDocument.isScript(clientState.graphStructure().graphNotation.documents[documentPath]!!)) {
+            return
+        }
 
         val imperativeModel = clientState.imperativeModel
                 ?: ClientContext.executionRepository.emptyState(

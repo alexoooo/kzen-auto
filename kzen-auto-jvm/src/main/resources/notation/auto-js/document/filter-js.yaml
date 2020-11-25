@@ -6,7 +6,7 @@
 #  archetype: Filter
 
 
-ProcessController:
+ReportController:
   is: DocumentController
-  class: tech.kzen.auto.client.objects.document.process.ProcessController$Wrapper
-  archetype: Process
+  class: tech.kzen.auto.client.objects.document.report.ReportController$Wrapper
+  archetype: Report

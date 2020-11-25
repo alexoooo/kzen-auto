@@ -1,11 +1,10 @@
 package tech.kzen.auto.common.paradigm.task.model
 
-import tech.kzen.auto.common.objects.document.process.ProcessConventions
+import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
-import tech.kzen.auto.common.paradigm.reactive.TaskProgress
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
@@ -81,6 +80,6 @@ data class TaskModel(
 
 
     fun requestAction(): String {
-        return request.parameters.get(ProcessConventions.actionParameter)!!
+        return request.parameters.get(ReportConventions.actionParameter)!!
     }
 }

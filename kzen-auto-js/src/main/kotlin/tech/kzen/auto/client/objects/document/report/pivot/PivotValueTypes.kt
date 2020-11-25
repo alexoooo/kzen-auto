@@ -1,0 +1,101 @@
+package tech.kzen.auto.client.objects.document.report.pivot
+
+import kotlinx.css.FontWeight
+import kotlinx.css.fontWeight
+import react.RBuilder
+import react.RProps
+import react.RPureComponent
+import react.RState
+import styled.css
+import styled.styledSpan
+import tech.kzen.auto.client.objects.document.report.state.PivotValueTypeAddRequest
+import tech.kzen.auto.client.objects.document.report.state.PivotValueTypeRemoveRequest
+import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
+import tech.kzen.auto.client.objects.document.report.state.ReportState
+import tech.kzen.auto.client.wrap.MaterialToggleButton
+import tech.kzen.auto.client.wrap.MaterialToggleButtonMultiGroup
+import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
+import tech.kzen.auto.common.objects.document.report.spec.PivotValueColumnSpec
+import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
+
+
+class PivotValueTypes(
+    props: Props
+):
+    RPureComponent<PivotValueTypes.Props, RState>(props)
+{
+    //-----------------------------------------------------------------------------------------------------------------
+    class Props(
+        var columnName: String,
+        var pivotValueSpec: PivotValueColumnSpec,
+
+        var pivotSpec: PivotSpec,
+        var reportState: ReportState,
+        var dispatcher: ReportDispatcher
+    ): RProps
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onTypeChange(valueTypes: Array<String>) {
+        val oldTypes = props.pivotValueSpec.types
+        val newTypes = valueTypes.map { PivotValueType.valueOf(it) }
+
+        val added = newTypes.filter { it !in oldTypes }
+        val removed = oldTypes.filter { it !in newTypes }
+
+        val changeCount = added.size + removed.size
+
+        check(changeCount != 0) { "No change" }
+        check(changeCount <= 1) { "Multiple changes" }
+
+        val action =
+            if (added.isNotEmpty()) {
+                PivotValueTypeAddRequest(props.columnName, added.single())
+            }
+            else {
+                PivotValueTypeRemoveRequest(props.columnName, removed.single())
+            }
+
+        props.dispatcher.dispatchAsync(action)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun RBuilder.render() {
+//        +" - ${props.pivotValueSpec.types}"
+
+        child(MaterialToggleButtonMultiGroup::class) {
+            attrs {
+                exclusive = false
+
+                value = props.pivotValueSpec.types.map { it.name }.toTypedArray()
+
+                onChange = { _, v ->
+                    onTypeChange(v)
+                }
+
+                size = "small"
+            }
+
+            for (valueType in PivotValueType.values()) {
+                child(MaterialToggleButton::class) {
+                    attrs {
+                        key = valueType.name
+                        value = valueType.name
+
+                        disabled =
+                            props.reportState.initiating ||
+                            props.reportState.filterTaskRunning ||
+                            props.reportState.pivotLoading
+                    }
+                    styledSpan {
+                        css {
+                            fontWeight = FontWeight.bold
+                        }
+                        +valueType.name
+                    }
+                }
+            }
+        }
+    }
+}

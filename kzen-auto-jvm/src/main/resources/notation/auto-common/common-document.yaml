@@ -72,10 +72,10 @@ Feature:
 ################################################################
 
 
-Process:
+Report:
   abstract: true
   is: Document
-  class: tech.kzen.auto.server.objects.process.ProcessDocument
+  class: tech.kzen.auto.server.objects.report.ReportDocument
   title: "Report"
   icon: TableChart
   input: ./
@@ -97,33 +97,33 @@ Process:
 
 FilterSpec:
   abstract: true
-  class: tech.kzen.auto.common.objects.document.process.FilterSpec
+  class: tech.kzen.auto.common.objects.document.report.spec.FilterSpec
   meta:
     ref:
       by: FilterSpecDefiner
 
 FilterSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.process.FilterSpec$Definer
+  class: tech.kzen.auto.common.objects.document.report.spec.FilterSpec$Definer
 
 
 PivotSpec:
   abstract: true
-  class: tech.kzen.auto.common.objects.document.process.PivotSpec
+  class: tech.kzen.auto.common.objects.document.report.spec.PivotSpec
   meta:
     ref:
       by: PivotSpecDefiner
 
 PivotSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.process.PivotSpec$Definer
+  class: tech.kzen.auto.common.objects.document.report.spec.PivotSpec$Definer
 
 
 OutputSpec:
   abstract: true
-  class: tech.kzen.auto.common.objects.document.process.OutputSpec
+  class: tech.kzen.auto.common.objects.document.report.spec.OutputSpec
   meta:
     ref:
       by: OutputSpecDefiner
 
 OutputSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.process.OutputSpec$Definer
+  class: tech.kzen.auto.common.objects.document.report.spec.OutputSpec$Definer
 

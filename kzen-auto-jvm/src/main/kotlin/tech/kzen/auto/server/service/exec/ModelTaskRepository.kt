@@ -142,6 +142,8 @@ class ModelTaskRepository(
 
         if (run == null) {
             check(handle.model.state != TaskState.Running)
+        }
+        else {
             handle.run = run
         }
 
