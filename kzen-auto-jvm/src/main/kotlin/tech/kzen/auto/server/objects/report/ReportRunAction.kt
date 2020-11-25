@@ -131,9 +131,9 @@ object ReportRunAction
                     "Unable to process: ${e.message}"))
             return
         }
-        finally {
-            reportHandle.close()
-        }
+//        finally {
+//            reportHandle.close()
+//        }
 
         taskHandle.complete(
             ExecutionSuccess.ofValue(

@@ -85,7 +85,7 @@ class PivotValueTypes(
 
                         disabled =
                             props.reportState.initiating ||
-                            props.reportState.filterTaskRunning ||
+//                            props.reportState.filterTaskRunning ||
                             props.reportState.pivotLoading
                     }
                     styledSpan {

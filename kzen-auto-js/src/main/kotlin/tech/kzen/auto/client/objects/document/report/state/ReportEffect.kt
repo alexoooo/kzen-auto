@@ -134,7 +134,8 @@ object ReportEffect {
 
             is ReportUpdateResult ->
                 if (action.errorMessage == null) {
-                    OutputLookupRequest
+                    CompoundReportAction(
+                        SummaryLookupRequest, OutputLookupRequest)
                 }
                 else {
                     null
@@ -266,7 +267,9 @@ object ReportEffect {
                 ReportTaskRefreshRequest(action.taskModel.taskId))
         }
 
-        return OutputLookupRequest
+//        console.log("$%%$#%$# task done")
+        return CompoundReportAction(
+            SummaryLookupRequest, OutputLookupRequest)
     }
 
 
@@ -282,7 +285,7 @@ object ReportEffect {
 
     private fun taskStopped(
         action: ReportTaskStopResponse
-    ): ReportAction? {
+    ): ReportAction {
         val requestAction = action.taskModel.requestAction()
         val isFiltering = requestAction == ReportConventions.actionRunTask
 
@@ -300,6 +303,8 @@ object ReportEffect {
     private suspend fun lookupSummary(
         state: ReportState
     ): SummaryLookupAction {
+//        console.log("^$^$^$% requesting SummaryLookup")
+
         val result = ClientContext.restClient.performDetached(
             state.mainLocation,
             ReportConventions.actionParameter to ReportConventions.actionSummaryLookup)

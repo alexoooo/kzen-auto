@@ -88,9 +88,11 @@ class ReportFilterItem(
         }
 
         async {
-            val effect = props.dispatcher.dispatch(
-                FilterRemoveRequest(props.columnName)
-            ).first() as FilterUpdateResult
+            val effects = props.dispatcher.dispatch(
+                FilterRemoveRequest(props.columnName))
+//            console.log("%%%% effects: $effects")
+
+            val effect = effects.filterIsInstance<FilterUpdateResult>().first()
 
             if (effect.errorMessage != null) {
                 setState {
