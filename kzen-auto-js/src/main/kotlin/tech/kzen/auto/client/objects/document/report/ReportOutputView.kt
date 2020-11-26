@@ -18,6 +18,7 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
+import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
 
@@ -163,6 +164,15 @@ class ReportOutputView(
                 }
 
                 +"Output"
+            }
+
+            styledSpan {
+                css {
+                    marginLeft = 1.em
+                }
+
+                val status = props.reportState.outputInfo?.status ?: OutputStatus.Missing
+                +status.name
             }
 
 
@@ -381,7 +391,7 @@ class ReportOutputView(
 
                 child(AttributePathValueEditor::class) {
                     attrs {
-                        labelOverride = "Start Row"
+                        labelOverride = "Preview Start Row"
 
                         clientState = props.reportState.clientState
                         objectLocation = props.reportState.mainLocation
@@ -406,7 +416,7 @@ class ReportOutputView(
 
                 child(AttributePathValueEditor::class) {
                     attrs {
-                        labelOverride = "Row Count"
+                        labelOverride = "Preview Row Count"
 
                         clientState = props.reportState.clientState
                         objectLocation = props.reportState.mainLocation

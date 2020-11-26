@@ -209,7 +209,7 @@ class ModelTaskRepository(
             model = model.copy(
                 partialResult = null,
                 finalResult = result,
-                state = TaskState.Done)
+                state = TaskState.FinishedOrFailed)
 
             terminate()
         }

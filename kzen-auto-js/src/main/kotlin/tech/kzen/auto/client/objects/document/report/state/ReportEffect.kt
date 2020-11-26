@@ -92,7 +92,7 @@ object ReportEffect {
                 stopTask(action)
 
             is ReportTaskStopResponse ->
-                taskStopped(action)
+                taskStopped(/*action*/)
 
 
             is FilterAddRequest ->
@@ -142,7 +142,10 @@ object ReportEffect {
                 }
 
             ReportSaveAction ->
-                processSaveAction(state)
+                reportSaveAction(state)
+
+            ReportResetAction ->
+                reportResetAction(state)
 
             else -> null
         }
@@ -284,18 +287,20 @@ object ReportEffect {
 
 
     private fun taskStopped(
-        action: ReportTaskStopResponse
+//        action: ReportTaskStopResponse
     ): ReportAction {
-        val requestAction = action.taskModel.requestAction()
-        val isFiltering = requestAction == ReportConventions.actionRunTask
+//        val requestAction = action.taskModel.requestAction()
+//        val isFiltering = requestAction == ReportConventions.actionRunTask
 
-        return if (isFiltering) {
-            CompoundReportAction(
-                ReportRefreshCancel/*, OutputLookupRequest*/)
-        }
-        else {
-            ReportRefreshCancel
-        }
+        return CompoundReportAction(
+            ReportRefreshCancel, OutputLookupRequest)
+//        return if (isFiltering) {
+//            CompoundReportAction(
+//                ReportRefreshCancel/*, OutputLookupRequest*/)
+//        }
+//        else {
+//            ReportRefreshCancel
+//        }
     }
 
 
@@ -389,8 +394,10 @@ object ReportEffect {
             return null
         }
 
-        return ReportRefreshSchedule(
-            ReportTaskRefreshRequest(action.taskModel.taskId))
+        return CompoundReportAction(
+            ReportRefreshSchedule(
+                ReportTaskRefreshRequest(action.taskModel.taskId)),
+            OutputLookupRequest)
     }
 
 
@@ -551,8 +558,9 @@ object ReportEffect {
         return PivotUpdateResult(errorMessage)
     }
 
+
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun processSaveAction(
+    private suspend fun reportSaveAction(
         state: ReportState
     ): ReportAction? {
 //        if (state.fileListing.isNullOrEmpty()) {
@@ -577,5 +585,31 @@ object ReportEffect {
 //                ListColumnsError(result.errorMessage)
 //            }
 //        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun reportResetAction(
+        state: ReportState
+    ): ReportAction {
+//        if (state.fileListing.isNullOrEmpty()) {
+//            return null
+//        }
+
+        val result = ClientContext.restClient.performDetached(
+            state.mainLocation,
+            ReportConventions.actionParameter to ReportConventions.actionReset)
+
+        return when (result) {
+            is ExecutionSuccess -> {
+//                @Suppress("UNCHECKED_CAST")
+//                val resultValue = result.value.get() as List<String>
+                ReportResetResult(null)
+            }
+
+            is ExecutionFailure -> {
+                ReportResetResult(result.errorMessage)
+            }
+        }
     }
 }

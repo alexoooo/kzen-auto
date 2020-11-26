@@ -3,8 +3,10 @@ package tech.kzen.auto.server.objects.report.pipeline
 import org.apache.commons.csv.CSVFormat
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
+import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
+import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.filter.IndexedCsvTable
 import tech.kzen.auto.server.objects.report.model.RecordItem
 import tech.kzen.auto.server.objects.report.model.ReportRunSignature
@@ -69,7 +71,8 @@ class ReportOutput(
                 "Missing, will be created: $runDir",
                 null,
                 0L,
-                OutputPreview(header, listOf(), 0L)
+                OutputPreview(header, listOf(), 0L),
+                OutputStatus.Missing
             )
         }
 
@@ -246,11 +249,14 @@ class ReportOutput(
 
         val saveInfo = saveInfo(runDir, outputSpec)
 
+        val status = ReportWorkPool.readRunStatus(reportRunSignature)
+
         return OutputInfo(
             saveInfo.message,
             formattedTime,
             rowCount,
-            preview)
+            preview,
+            status)
     }
 
 

@@ -53,6 +53,9 @@ class ReportDocument(
             ReportConventions.actionSave ->
                 actionSave()
 
+            ReportConventions.actionReset ->
+                actionReset()
+
             else ->
                 return ExecutionFailure("Unknown action: $action")
         }
@@ -132,6 +135,17 @@ class ReportDocument(
     }
 
 
+    private suspend fun actionReset(): ExecutionResult {
+        val runSpec = runSpec()
+            ?: return ExecutionFailure("Missing run")
+
+        val runSignature = runSpec.toSignature()
+        val runDir = ReportWorkPool.resolveRunDir(runSignature)
+
+        return ReportRunAction.delete(runDir)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun start(request: DetachedRequest, handle: TaskHandle): TaskRun? {
         val action = request.parameters.get(ReportConventions.actionParameter)
@@ -166,15 +180,6 @@ class ReportDocument(
             }
         }
     }
-
-
-//    private suspend fun actionColumnSummaryAsync(
-//        runSignature: ProcessRunSignature,
-//        handle: TaskHandle
-//    ) {
-//        ColumnSummaryAction.summarizeAllAsync(
-//            runSignature, handle)
-//    }
 
 
     private suspend fun actionRunReport(

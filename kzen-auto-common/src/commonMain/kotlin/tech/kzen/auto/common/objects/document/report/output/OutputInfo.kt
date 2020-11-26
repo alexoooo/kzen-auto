@@ -2,11 +2,11 @@ package tech.kzen.auto.common.objects.document.report.output
 
 
 data class OutputInfo(
-//    val absolutePath: String,
     val saveMessage: String,
     val modifiedTime: String?,
     val rowCount: Long,
-    val preview: OutputPreview?
+    val preview: OutputPreview?,
+    val status: OutputStatus
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -15,6 +15,7 @@ data class OutputInfo(
         private const val modifiedTimeKey = "modified"
         private const val previewKey = "preview"
         private const val countKey = "count"
+        private const val statusKey = "status"
 
 
         fun fromCollection(collection: Map<String, Any?>): OutputInfo {
@@ -28,11 +29,15 @@ data class OutputInfo(
                 outputPreviewCollection
                     ?.let { OutputPreview.fromCollection(it) }
 
+            val status = OutputStatus.valueOf(
+                collection[statusKey] as String)
+
             return OutputInfo(
                 collection[saveMessageKey] as String,
                 collection[modifiedTimeKey] as String?,
                 (collection[countKey] as String).toLong(),
-                outputPreview)
+                outputPreview,
+                status)
         }
     }
 
@@ -44,6 +49,7 @@ data class OutputInfo(
             saveMessageKey to saveMessage,
             modifiedTimeKey to modifiedTime,
             countKey to rowCount.toString(),
-            previewKey to preview?.toCollection())
+            previewKey to preview?.toCollection(),
+            statusKey to status.name)
     }
 }

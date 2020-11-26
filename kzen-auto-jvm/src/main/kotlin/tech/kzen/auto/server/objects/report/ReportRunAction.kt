@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report
 
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
@@ -85,31 +86,45 @@ object ReportRunAction
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    suspend fun delete(
+        runDir: Path
+    ): ExecutionResult {
+        return try {
+            ReportWorkPool.deleteDir(runDir)
+            ExecutionSuccess.empty
+        }
+        catch (e: Exception) {
+            ExecutionFailure(e.message ?: "error")
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     suspend fun startReport(
-        runSpec: ReportRunSpec,
+        reportRunSpec: ReportRunSpec,
         runDir: Path,
         taskHandle: TaskHandle
     ): ReportHandle {
-        logger.info("Starting: $runDir | $runSpec")
+        logger.info("Starting: $runDir | $reportRunSpec")
 
         val outputValue = ExecutionValue.of(runDir.toString())
 
         val progress = TaskProgress.ofNotStarted(
-            runSpec.inputs.map { it.fileName.toString() })
+            reportRunSpec.inputs.map { it.fileName.toString() })
 
         taskHandle.update(ExecutionSuccess(
             outputValue,
             ExecutionValue.of(progress.toCollection())))
 
         val reportHandle = ReportHandle(
-            runSpec, runDir, taskHandle)
+            reportRunSpec, runDir, taskHandle)
 
         Thread {
             processSync(
-                taskHandle, outputValue, reportHandle)
+                taskHandle, outputValue, reportHandle, runDir)
         }.start()
 
-        logger.info("Done: {} | {}", runDir, runSpec)
+        logger.info("Done: {} | {}", runDir, reportRunSpec)
 
         return reportHandle
     }
@@ -119,24 +134,31 @@ object ReportRunAction
     private fun processSync(
         taskHandle: TaskHandle,
         outputValue: ExecutionValue,
-        reportHandle: ReportHandle
+        reportHandle: ReportHandle,
+        runDir: Path
     ) {
         try {
             reportHandle.run()
+
+            if (taskHandle.cancelRequested()) {
+                ReportWorkPool.updateRunStatus(runDir, OutputStatus.Cancelled)
+            }
+            else {
+                ReportWorkPool.updateRunStatus(runDir, OutputStatus.Done)
+            }
+
+            taskHandle.complete(
+                ExecutionSuccess.ofValue(
+                    outputValue))
         }
         catch (e: Exception) {
             logger.warn("Data processing failed", e)
+
+            ReportWorkPool.updateRunStatus(runDir, OutputStatus.Failed)
+
             taskHandle.complete(
                 ExecutionFailure(
                     "Unable to process: ${e.message}"))
-            return
         }
-//        finally {
-//            reportHandle.close()
-//        }
-
-        taskHandle.complete(
-            ExecutionSuccess.ofValue(
-                outputValue))
     }
 }

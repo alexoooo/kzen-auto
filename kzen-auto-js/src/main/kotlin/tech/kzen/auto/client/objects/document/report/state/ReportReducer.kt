@@ -41,8 +41,9 @@ object ReportReducer {
             is PivotAction ->
                 reducePivot(state, action)
 
-            ReportSaveAction ->
-                state
+            ReportSaveAction -> state
+            ReportResetAction -> state
+            is ReportResetResult -> state
 
             //--------------------------------------------------
 //            else ->
@@ -261,7 +262,7 @@ object ReportReducer {
 
         val taskProcess = action.taskModel.taskProgress()
         val indexTaskFinished =
-            isIndexing && action.taskModel.state == TaskState.Done && taskProcess == null
+            isIndexing && action.taskModel.state == TaskState.FinishedOrFailed && taskProcess == null
 
         return state.copy(
             taskModel = action.taskModel,

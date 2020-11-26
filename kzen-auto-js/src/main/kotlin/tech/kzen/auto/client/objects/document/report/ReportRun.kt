@@ -7,6 +7,7 @@ import react.*
 import react.dom.div
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 
 
 class ReportRun(
@@ -47,14 +48,7 @@ class ReportRun(
     }
 
 
-//    private fun onRunIndex() {
-//        props.dispatcher.dispatchAsync(
-//            ProcessTaskRunRequest(
-//                ReportTaskType.Index))
-//    }
-
-
-    private fun onRunMain(readyToRun: Boolean, /*hasSummary: Boolean, */inProgress: Boolean) {
+    private fun onRunMain(readyToRun: Boolean, status: OutputStatus, inProgress: Boolean) {
         if (! readyToRun || inProgress) {
             return
         }
@@ -68,7 +62,10 @@ class ReportRun(
                     ReportTaskStopRequest(taskId))
             }
 
-//            hasSummary -> {
+            status.isTerminal() ->
+                props.dispatcher.dispatchAsync(
+                    ReportResetAction)
+
             else -> {
                 props.dispatcher.dispatchAsync(
                     ReportTaskRunRequest(
@@ -107,28 +104,26 @@ class ReportRun(
             ! props.reportState.isLoadingError() &&
             (props.reportState.columnListing?.isNotEmpty() ?: false)
 
-//        val hasSummary =
-//            props.reportState.tableSummary?.columnSummaries?.isNotEmpty() ?: false
-
         val inProgress =
             props.reportState.taskStarting ||
             props.reportState.taskStopping
 
-//        console.log("^^^^^^ renderInner | " +
-//                "$readyToRun - $hasSummary - $inProgress")
+        val status =
+            props.reportState.outputInfo?.status ?: OutputStatus.Missing
 
-//        renderSecondaryActions(readyToRun, hasSummary, inProgress)
-        renderMainAction(readyToRun, /*hasSummary,*/ inProgress)
+//        +"status: $status"
+
+        renderMainAction(readyToRun, status, inProgress)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderMainAction(readyToRun: Boolean, /*hasSummary: Boolean,*/ inProgress: Boolean) {
+    private fun RBuilder.renderMainAction(readyToRun: Boolean, status: OutputStatus, inProgress: Boolean) {
         child(MaterialFab::class) {
             attrs {
                 style = reactStyle {
                     backgroundColor =
-                        if (readyToRun) {
+                        if (readyToRun && ! status.isTerminal()) {
                             Color.gold
                         }
                         else {
@@ -140,7 +135,7 @@ class ReportRun(
                 }
 
                 onClick = {
-                    onRunMain(readyToRun/*, hasSummary*/, inProgress)
+                    onRunMain(readyToRun, status, inProgress)
                 }
 
                 title =
@@ -157,12 +152,11 @@ class ReportRun(
                         props.reportState.filterTaskRunning ->
                             "Cancel"
 
-//                        hasSummary ->
+                        status.isTerminal() ->
+                            "Reset"
+
                         else ->
                             "Run"
-
-//                        else ->
-//                            "Index"
                     }
             }
 
@@ -195,7 +189,16 @@ class ReportRun(
                     renderProgressWithPause(inProgress)
                 }
 
-//                hasSummary -> {
+                status.isTerminal() -> {
+                    child(ReplayIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                fontSize = 3.em
+                            }
+                        }
+                    }
+                }
+
                 else -> {
                     child(PlayArrowIcon::class) {
                         attrs {
@@ -218,46 +221,6 @@ class ReportRun(
             }
         }
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    private fun RBuilder.renderSecondaryActions(readyToRun: Boolean, hasSummary: Boolean, inProgress: Boolean) {
-//        val showIndex =
-//            ! props.reportState.isTaskRunning() &&
-//            readyToRun &&
-//            hasSummary &&
-//            ! inProgress &&
-//            (props.reportState.taskProgress?.remainingFiles?.isNotEmpty() ?:
-//                    true /*! props.reportState.indexTaskFinished*/)
-//
-////        console.log("^^^^ renderSecondaryActions: " +
-////                "${props.processState.taskProgress?.remainingFiles} - " +
-////                "${props.processState.indexTaskFinished}")
-//
-//        child(MaterialIconButton::class) {
-//            attrs {
-//                title = "Index column values"
-//
-//                style = reactStyle {
-//                    if (! state.fabHover || ! showIndex) {
-//                        visibility = Visibility.hidden
-//                    }
-//                }
-//
-//                onClick = {
-////                    onRunIndex()
-//                }
-//            }
-//
-//            child(MenuBookIcon::class) {
-//                attrs {
-//                    style = reactStyle {
-//                        fontSize = 1.5.em
-//                    }
-//                }
-//            }
-//        }
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

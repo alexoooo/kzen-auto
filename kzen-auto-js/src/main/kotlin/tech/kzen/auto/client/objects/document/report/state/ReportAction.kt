@@ -305,3 +305,12 @@ object ReportRefreshCancel: ReportRefreshAction()
 
 //---------------------------------------------------------------------------------------------------------------------
 object ReportSaveAction: SingularReportAction()
+
+
+//---------------------------------------------------------------------------------------------------------------------
+object ReportResetAction: SingularReportAction()
+
+
+data class ReportResetResult(
+    override val errorMessage: String?
+): SingularReportAction(), ReportUpdateResult
