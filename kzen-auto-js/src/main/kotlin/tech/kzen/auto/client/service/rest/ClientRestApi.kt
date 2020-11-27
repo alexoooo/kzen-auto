@@ -460,6 +460,19 @@ class ClientRestApi(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun linkDetachedDownload(
+        objectLocation: ObjectLocation,
+        vararg parameters: Pair<String, String>
+    ): String {
+        return url(
+            CommonRestApi.actionDetachedDownload,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            *parameters)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     suspend fun visualDataflowModel(
             host: DocumentPath
     ): VisualDataflowModel {
@@ -655,8 +668,8 @@ class ClientRestApi(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): String {
-        val suffix = paramSuffix(*parameters)
-        return httpGet("$baseUrl$commandPath$suffix")
+        return httpGet(
+            url(commandPath, *parameters))
     }
 
 
@@ -664,8 +677,17 @@ class ClientRestApi(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): ByteArray {
+        return httpGetBytes(
+            url(commandPath, *parameters))
+    }
+
+
+    fun url(
+        commandPath: String,
+        vararg parameters: Pair<String, String>
+    ): String {
         val suffix = paramSuffix(*parameters)
-        return httpGetBytes("$baseUrl$commandPath$suffix")
+        return "$baseUrl$commandPath$suffix"
     }
 
 

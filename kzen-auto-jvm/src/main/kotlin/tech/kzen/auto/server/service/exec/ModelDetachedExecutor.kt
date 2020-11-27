@@ -6,6 +6,9 @@ import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.detached.service.DetachedExecutor
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
+import tech.kzen.auto.server.paradigm.detached.DetachedDownloadExecutor
+import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.LocalGraphStore
@@ -14,7 +17,9 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 class ModelDetachedExecutor(
         private val graphStore: LocalGraphStore,
         private val graphCreator: GraphCreator
-): DetachedExecutor {
+):
+    DetachedExecutor, DetachedDownloadExecutor
+{
     override suspend fun execute(
             actionLocation: ObjectLocation,
             request: DetachedRequest
@@ -40,5 +45,27 @@ class ModelDetachedExecutor(
             t.printStackTrace()
             ExecutionFailure(t.message ?: "exception")
         }
+    }
+
+
+    override suspend fun executeDownload(
+        actionLocation: ObjectLocation,
+        request: DetachedRequest
+    ): ExecutionDownloadResult {
+        val graphDefinition = graphStore
+            .graphDefinition()
+            .transitiveSuccessful()
+            .filterDefinitions(AutoConventions.serverAllowed)
+
+        val objectGraph = graphCreator
+            .createGraph(graphDefinition)
+
+        val instance = objectGraph.objectInstances[actionLocation]?.reference
+            ?: error("Not found: $actionLocation")
+
+        val action = instance as? DetachedDownloadAction
+            ?: error("Not DetachedAAction: $actionLocation - $instance")
+
+        return action.executeDownload(request)
     }
 }

@@ -8,6 +8,7 @@ import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.model.TaskProgress
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.ReportSummary
+import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import java.nio.file.Path
@@ -20,6 +21,7 @@ object ReportRunAction
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val logger = LoggerFactory.getLogger(ReportRunAction::class.java)
+    private val mimeTypeCsv = "text/csv"
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -82,6 +84,20 @@ object ReportRunAction
                 ExecutionValue.of(outPath.toString()),
                 NullExecutionValue)
         }
+    }
+
+
+    fun outputDownload(
+        runSpec: ReportRunSpec,
+        runDir: Path,
+        outputSpec: OutputSpec
+    ): ExecutionDownloadResult {
+        val inputStream = ReportHandle.passiveDownload(runSpec, runDir, outputSpec)
+        return ExecutionDownloadResult(
+            inputStream,
+            "report.csv",
+            mimeTypeCsv
+        )
     }
 
 

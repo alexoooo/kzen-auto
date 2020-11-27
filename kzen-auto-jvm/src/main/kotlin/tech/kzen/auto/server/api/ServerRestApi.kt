@@ -52,6 +52,7 @@ class ServerRestApi(
 
         GET(CommonRestApi.actionDetached, counterHandler::actionDetached)
         POST(CommonRestApi.actionDetached, counterHandler::actionDetached)
+        GET(CommonRestApi.actionDetachedDownload, counterHandler::actionDetachedDownload)
 
         GET(CommonRestApi.execModel, counterHandler::execModel)
         GET(CommonRestApi.execReset, counterHandler::execReset)

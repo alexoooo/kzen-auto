@@ -24,6 +24,7 @@ import tech.kzen.auto.server.objects.report.pivot.stats.BufferedValueStatistics
 import tech.kzen.auto.server.objects.report.pivot.stats.store.FileValueStatisticsStore
 import tech.kzen.auto.server.objects.report.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.report.pivot.store.FileOffsetStore
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
@@ -260,27 +261,31 @@ class ReportOutput(
     }
 
 
-    fun save(reportRunSpec: ReportRunSpec, outputSpec: OutputSpec): Path? {
+    fun save(reportRunSpec: ReportRunSpec, outputSpec: OutputSpec): Path {
         check(taskHandle == null)
-
-        if (! Files.exists(runDir)) {
-            return null
-        }
-
-        val runSignature = reportRunSpec.toSignature()
+        check(Files.exists(runDir))
 
         val saveInfo = saveInfo(runDir, outputSpec)
         val outputPath = saveInfo.path
 
+        save(reportRunSpec, outputSpec, saveInfo.path)
+
+        return outputPath
+    }
+
+
+    private fun save(reportRunSpec: ReportRunSpec, outputSpec: OutputSpec, path: Path) {
+        val runSignature = reportRunSpec.toSignature()
+        val saveInfo = saveInfo(runDir, outputSpec)
+
         if (! runSignature.hasPivot() &&
-            saveInfo.path.toAbsolutePath().normalize() ==
-            saveInfo.defaultPath.toAbsolutePath().normalize())
+            path.toAbsolutePath().normalize() ==
+                saveInfo.defaultPath.toAbsolutePath().normalize())
         {
-            // NB: don't override source of truth
-            return outputPath
+            return
         }
 
-        Files.newBufferedWriter(outputPath).use { output ->
+        Files.newBufferedWriter(path).use { output ->
             val csvPrinter = CSVFormat.DEFAULT.print(output)
 
             if (indexedCsvTable != null) {
@@ -295,8 +300,18 @@ class ReportOutput(
                 }
             }
         }
+    }
 
-        return outputPath
+
+    fun download(reportRunSpec: ReportRunSpec, outputSpec: OutputSpec): InputStream {
+        check(taskHandle == null)
+        check(Files.exists(runDir))
+
+        val saveInfo = saveInfo(runDir, outputSpec)
+
+        save(reportRunSpec, outputSpec, saveInfo.defaultPath)
+
+        return Files.newInputStream(saveInfo.defaultPath)
     }
 
 

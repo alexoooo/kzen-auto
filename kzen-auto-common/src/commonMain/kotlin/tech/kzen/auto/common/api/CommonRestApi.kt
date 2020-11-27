@@ -71,6 +71,7 @@ object CommonRestApi {
     const val actionReset = "${actionPrefix}reset"
     const val actionPerform = "${actionPrefix}perform"
     const val actionDetached = "${actionPrefix}detached"
+    const val actionDetachedDownload = "${actionPrefix}download"
 
 
     private const val execPrefix = "/exec/"

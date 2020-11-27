@@ -156,7 +156,8 @@ class ReportRun(
                             "Reset"
 
                         else ->
-                            "Run"
+                            "Play"
+//                            "Run"
                     }
             }
 

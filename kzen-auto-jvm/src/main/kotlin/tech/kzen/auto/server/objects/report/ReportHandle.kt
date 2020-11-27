@@ -11,6 +11,7 @@ import tech.kzen.auto.server.objects.report.pipeline.ReportFilter
 import tech.kzen.auto.server.objects.report.pipeline.ReportInput
 import tech.kzen.auto.server.objects.report.pipeline.ReportOutput
 import tech.kzen.auto.server.objects.report.pipeline.ReportSummary
+import java.io.InputStream
 import java.nio.file.Path
 
 
@@ -44,6 +45,13 @@ class ReportHandle(
         }
 
 
+        fun passiveDownload(reportRunSpec: ReportRunSpec, runDir: Path, outputSpec: OutputSpec): InputStream {
+            return ofPassive(reportRunSpec, runDir).use {
+                it.outputDownload(reportRunSpec, outputSpec)
+            }
+        }
+
+
         private fun ofPassive(reportRunSpec: ReportRunSpec, runDir: Path): ReportHandle {
             return ReportHandle(reportRunSpec, runDir, null)
         }
@@ -65,6 +73,11 @@ class ReportHandle(
 
     private fun outputSave(reportRunSpec: ReportRunSpec, outputSpec: OutputSpec): Path? {
         return output.save(reportRunSpec, outputSpec)
+    }
+
+
+    private fun outputDownload(reportRunSpec: ReportRunSpec, outputSpec: OutputSpec): InputStream {
+        return output.download(reportRunSpec, outputSpec)
     }
 
 

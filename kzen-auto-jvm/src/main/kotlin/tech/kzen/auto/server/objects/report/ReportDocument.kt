@@ -15,6 +15,8 @@ import tech.kzen.auto.common.paradigm.task.api.ManagedTask
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
+import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import java.nio.file.Path
@@ -30,6 +32,7 @@ class ReportDocument(
 ):
     DocumentArchetype(),
     DetachedAction,
+    DetachedDownloadAction,
     ManagedTask
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -59,6 +62,11 @@ class ReportDocument(
             else ->
                 return ExecutionFailure("Unknown action: $action")
         }
+    }
+
+
+    override suspend fun executeDownload(request: DetachedRequest): ExecutionDownloadResult {
+        return actionDownload()
     }
 
 
@@ -143,6 +151,18 @@ class ReportDocument(
         val runDir = ReportWorkPool.resolveRunDir(runSignature)
 
         return ReportRunAction.delete(runDir)
+    }
+
+
+    private suspend fun actionDownload(): ExecutionDownloadResult {
+        val runSpec = runSpec()
+            ?: error("Missing run")
+
+        val runSignature = runSpec.toSignature()
+        val runDir = ReportWorkPool.resolveRunDir(runSignature)
+
+        return ReportRunAction.outputDownload(
+            runSpec, runDir, output)
     }
 
 

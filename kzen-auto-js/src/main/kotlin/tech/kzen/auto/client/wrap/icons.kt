@@ -436,3 +436,9 @@ external class ErrorOutlineIcon: Component<IconProps, RState> {
 external class PageviewIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("CloudDownload")
+external class CloudDownloadIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

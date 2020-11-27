@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.report
 
 import kotlinx.css.*
+import kotlinx.css.properties.TextDecoration
 import kotlinx.css.properties.boxShadow
 import react.*
 import react.dom.tbody
@@ -13,6 +14,7 @@ import tech.kzen.auto.client.objects.document.report.state.OutputLookupRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportSaveAction
 import tech.kzen.auto.client.objects.document.report.state.ReportState
+import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.report.ReportConventions
@@ -212,26 +214,65 @@ class ReportOutputView(
                 +"Refresh"
             }
         }
-        else if (showSave && ! state.savingOpen) {
-            child(MaterialButton::class) {
-                attrs {
-                    variant = "outlined"
-                    size = "small"
+        else if (showSave) {
+            val linkAddress = ClientContext.restClient.linkDetachedDownload(
+                props.reportState.mainLocation)
 
-                    onClick = {
-                        onSaveToggle()
-                    }
+            styledA {
+                css {
+                    textDecoration = TextDecoration.none
                 }
 
-                child(SaveIcon::class) {
+                attrs {
+                    href = linkAddress
+                }
+
+                child(MaterialButton::class) {
                     attrs {
-                        style = reactStyle {
-                            marginRight = 0.25.em
+                        variant = "outlined"
+                        size = "small"
+//                        style = reactStyle {
+//                            textDecoration = TextDecoration.none
+//                        }
+                    }
+
+                    child(CloudDownloadIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                marginRight = 0.25.em
+                            }
                         }
                     }
-                }
 
-                +"Save"
+                    +"Download"
+                }
+            }
+
+            if (! state.savingOpen) {
+                child(MaterialButton::class) {
+                    attrs {
+                        variant = "outlined"
+                        size = "small"
+
+                        onClick = {
+                            onSaveToggle()
+                        }
+
+                        style = reactStyle {
+                            marginLeft = 1.em
+                        }
+                    }
+
+                    child(SaveIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                marginRight = 0.25.em
+                            }
+                        }
+                    }
+
+                    +"Save"
+                }
             }
         }
     }
