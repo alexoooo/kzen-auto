@@ -331,7 +331,7 @@ class ReportSummary(
     }
 
 
-    private fun handleViewRequest() {
+    fun handleViewRequest() {
         if (! viewRequested) {
             return
         }
@@ -346,7 +346,7 @@ class ReportSummary(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun add(recordItem: RecordItem) {
-        handleViewRequest()
+//        handleViewRequest()
 
         for (columnName in recordItem.columnNames()) {
             val value = recordItem.get(columnName)!!

@@ -182,7 +182,7 @@ class ReportOutput(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun add(row: RecordItem) {
-        handlePreviewRequest()
+//        handlePreviewRequest()
 
         if (indexedCsvTable != null) {
             val values = row.getOrEmptyAll(reportRunSignature.columnNames)
@@ -220,7 +220,6 @@ class ReportOutput(
                     }
             }
 
-            previewRequest = null
             previewResponse = CompletableFuture()
 
             response
@@ -374,13 +373,14 @@ class ReportOutput(
     }
 
 
-    private fun handlePreviewRequest() {
+    fun handlePreviewRequest() {
         val request = previewRequest
             ?: return
 
         val outputInfo = previewInCurrentThread(request.reportRunSpec, request.outputSpec)
 
         previewResponse.complete(outputInfo)
+        previewRequest = null
     }
 
 

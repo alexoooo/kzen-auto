@@ -14,6 +14,9 @@ class H2DigestIndex(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val missingOrdinal = -1L
+
+//        private const val alwaysAdd = true
+        private const val alwaysAdd = false
     }
 
 
@@ -37,8 +40,12 @@ class H2DigestIndex(
         storeB = MVStore.Builder()
             .fileName(dir.resolve("h2-b").toString())
             .open()
-        mapA = storeA.openMap("digest-a")
-        mapB = storeB.openMap("digest-b")
+
+        val mapBuilder = MVMap.Builder<ByteArray, Long>()
+            .singleWriter()
+
+        mapA = storeA.openMap("digest-a", mapBuilder)
+        mapB = storeB.openMap("digest-b", mapBuilder)
 
         nextOrdinal = mapA.sizeAsLong() + mapB.sizeAsLong()
 
@@ -85,17 +92,36 @@ class H2DigestIndex(
                 mapB
             }
 
-        val existing = map.putIfAbsent(bytes, nextOrdinal)
-
         val digestOrdinal =
-            if (existing != null) {
-                DigestOrdinal.ofExisting(existing)
-            }
-            else {
+            if (alwaysAdd) {
+                map.append(bytes, nextOrdinal)
+
                 val ordinal = nextOrdinal
                 nextOrdinal++
                 DigestOrdinal.ofAdded(ordinal)
             }
+            else {
+                val existing = map.putIfAbsent(bytes, nextOrdinal)
+
+                if (existing != null) {
+                    DigestOrdinal.ofExisting(existing)
+                }
+                else {
+                    val ordinal = nextOrdinal
+                    nextOrdinal++
+                    DigestOrdinal.ofAdded(ordinal)
+                }
+            }
+
+//        val digestOrdinal =
+//            if (existing != null) {
+//                DigestOrdinal.ofExisting(existing)
+//            }
+//            else {
+//                val ordinal = nextOrdinal
+//                nextOrdinal++
+//                DigestOrdinal.ofAdded(ordinal)
+//            }
 
         cache[cacheKey] = digestOrdinal.ordinal()
         if (cache.size == cacheSize) {

@@ -39,6 +39,8 @@ const val fastutilVersion = "8.4.2"
 const val bifurcanVersion = "0.2.0-alpha4"
 const val h2Version = "1.4.200"
 const val zeroAllocationHashingVersion = "0.12"
+const val disruptorVersion = "3.4.2"
+const val bloomFilterVersion = "0.9.0"
 
 const val materialUiCoreVersion = "4.11.0"
 const val materialUiIconsVersion = "4.9.1"
