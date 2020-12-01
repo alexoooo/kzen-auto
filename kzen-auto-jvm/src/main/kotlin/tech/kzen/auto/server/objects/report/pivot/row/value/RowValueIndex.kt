@@ -1,12 +1,16 @@
 package tech.kzen.auto.server.objects.report.pivot.row.value
 
 import tech.kzen.auto.server.objects.report.input.model.RecordTextFlyweight
+import tech.kzen.auto.server.objects.report.pivot.row.digest.DigestOrdinal
 
 
 interface RowValueIndex: AutoCloseable
 {
-    fun getOrAddIndex(value: String): Long
-    fun getOrAddIndex(value: RecordTextFlyweight): Long
+    fun size(): Long
 
-    fun getValue(valueIndex: Long): String
+    fun getOrAddIndex(value: String): DigestOrdinal
+    fun getOrAddIndex(value: RecordTextFlyweight): DigestOrdinal
+    fun getOrAddIndexMissing(): DigestOrdinal
+
+    fun getValue(valueIndex: Long): String?
 }

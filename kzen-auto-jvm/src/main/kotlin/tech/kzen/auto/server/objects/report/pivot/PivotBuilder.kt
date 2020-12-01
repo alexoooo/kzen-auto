@@ -110,6 +110,7 @@ class PivotBuilder(
 
 
     private fun rowIndex(recordItem: RecordLineBuffer, header: RecordHeader): Long {
+        var valueAdded = false
         val headerIndices = rowColumnIndex.indices(header)
 
         for (i in headerIndices.indices) {
@@ -117,17 +118,27 @@ class PivotBuilder(
 
             val rowValueIndex =
                 if (index == -1) {
-                    RowIndex.missingRowValueIndex
+                    rowIndex.valueIndexOfMissing()
                 }
                 else {
                     recordItem.selectFlyweight(index)
-                    rowIndex.valueIndexOf(recordItem.flyweight)
+                    val rowOrdinal = rowIndex.valueIndexOf(recordItem.flyweight)
+                    if (rowOrdinal.wasAdded()) {
+                        valueAdded = true
+                    }
+                    rowOrdinal
                 }
 
-            rowValueIndexBuffer[i] = rowValueIndex
+            rowValueIndexBuffer[i] = rowValueIndex.ordinal()
         }
 
-        return rowIndex.indexOf(rowValueIndexBuffer)
+        return when {
+            valueAdded ->
+                rowIndex.add(rowValueIndexBuffer)
+
+            else ->
+                rowIndex.getOrAdd(rowValueIndexBuffer)
+        }
     }
 
 

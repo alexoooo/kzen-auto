@@ -26,7 +26,7 @@ object ReportEffect {
 //        prevState: ProcessState,
         action: SingularReportAction
     ): ReportAction? {
-//        console.log("ProcessEffect action: ", action)
+//        console.log("ReportEffect action: ", action)
 
         if (action == InitiateReportStart ||
                 action == InputsUpdatedRequest
@@ -132,7 +132,8 @@ object ReportEffect {
             is PivotValueTypeRemoveRequest ->
                 submitPivotValueTypeRemove(state, action.columnName, action.valueType)
 
-            is ReportUpdateResult ->
+            is ReportUpdateResult -> {
+//                console.log("%%%% ReportUpdateResult - $action")
                 if (action.errorMessage == null) {
                     CompoundReportAction(
                         SummaryLookupRequest, OutputLookupRequest)
@@ -140,6 +141,7 @@ object ReportEffect {
                 else {
                     null
                 }
+            }
 
             ReportSaveAction ->
                 reportSaveAction(state)

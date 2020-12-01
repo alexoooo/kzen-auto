@@ -10,7 +10,7 @@ class MapRowValueIndexTest {
         val rowValueIndex = MapRowValueIndex()
 
         val ordinal = rowValueIndex.getOrAddIndex("foo")
-        assertEquals(0, ordinal)
+        assertEquals(0, ordinal.ordinal())
 
         val value = rowValueIndex.getValue(0)
         assertEquals("foo", value)

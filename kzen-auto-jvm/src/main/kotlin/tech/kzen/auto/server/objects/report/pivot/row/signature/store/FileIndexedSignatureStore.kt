@@ -41,6 +41,12 @@ class FileIndexedSignatureStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun signatureSize(): Int {
+        return signatureSize
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun get(signatureOrdinal: Long): RowSignature {
         val offset = signatureOrdinal * buffer.size
         seek(offset)

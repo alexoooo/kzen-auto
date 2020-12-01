@@ -11,6 +11,13 @@ import tech.kzen.auto.client.wrap.lodash
 class ReportStore: SessionGlobal.Observer, ReportDispatcher
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        const val debounceMillis = 1_500
+//        const val debounceMillis = 2_500
+//        const val debounceMillis = 5_000
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
     interface Subscriber {
         fun onReportState(reportState: ReportState?)
     }
@@ -27,7 +34,7 @@ class ReportStore: SessionGlobal.Observer, ReportDispatcher
         refreshAction?.let {
             dispatchAsync(it)
         }
-    }, 5_000)
+    }, debounceMillis)
 
 
     //-----------------------------------------------------------------------------------------------------------------

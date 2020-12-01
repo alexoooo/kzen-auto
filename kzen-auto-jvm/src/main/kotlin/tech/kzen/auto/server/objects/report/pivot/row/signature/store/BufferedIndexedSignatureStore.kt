@@ -8,14 +8,22 @@ import tech.kzen.auto.server.objects.report.pivot.row.signature.RowSignature
 class BufferedIndexedSignatureStore(
     private val fileIndexedSignatureStore: FileIndexedSignatureStore,
     private val size: Int = 128
-): IndexedSignatureStore {
-    //------------------------------------m-----------------------------------------------------------------------------
+):
+    IndexedSignatureStore
+{
+    //-----------------------------------------------------------------------------------------------------------------
     private val pending = mutableListOf<RowSignature>()
     private val pendingIndex = Long2ObjectOpenHashMap<RowSignature>()
 
     private val cachedIndex = Long2ObjectLinkedOpenHashMap<RowSignature>()
 
     private var nextOrdinal = 0L
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun signatureSize(): Int {
+        return fileIndexedSignatureStore.signatureSize()
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

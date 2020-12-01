@@ -1,40 +1,63 @@
 package tech.kzen.auto.server.objects.report.pivot.row.digest
 
 import com.sangupta.bloomfilter.AbstractBloomFilter
+import com.sangupta.bloomfilter.BloomFilter
 import com.sangupta.bloomfilter.core.BitArray
-import com.sangupta.bloomfilter.core.FileBackedBitArray
-import java.io.File
+import com.sangupta.bloomfilter.core.MMapFileBackedBitArray
+import java.nio.file.Files
 import java.nio.file.Path
 
 
 class DigestBloomFilter(
-    dir: Path,
-    private val heapSize: Int = 1024 * 1024
-) {
-    init {
-        val numberOfElements = 1000 * 1000
-        val fpp = 0.01
-
-        val filter = object : AbstractBloomFilter<String?>(numberOfElements, fpp) {
-            /**
-             * Used a [FileBackedBitArray] to allow for file persistence.
-             *
-             * @returns a [BitArray] that will take care of storage of bloom filter
-             */
-            override fun createBitArray(numBits: Int): BitArray {
-                return FileBackedBitArray(File("/tmp/test.bloom.filter"), numBits)
-            }
-        }
+    private val dir: Path
+):
+    AutoCloseable
+{
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private const val numberOfElements = 1_000_000_000
+        private const val falsePositiveProbability = 0.001
+        private const val fileName = "bloom.bin"
     }
 
-//    private val filter = AbstractBloomFilter<Long>(1000 * 1000, 0.03) {
-//        override fun createBitArray(numBits: Int): BitArray {
-//            return FileBackedBitArray(File("/tmp/test.bloom.filter"), numBits)
-//        }
-//    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private var filter: BloomFilter<Void>? = null
 
 
-//    fun mightContain(digestHigh: Long, digestLow: Long): Boolean {
-//
-//    }
+    //-----------------------------------------------------------------------------------------------------------------
+    fun add(digestBytes: ByteArray): Boolean {
+        return getOrInit().add(digestBytes)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun mightContain(digestBytes: ByteArray): Boolean {
+        return getOrInit().contains(digestBytes)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun getOrInit(): BloomFilter<Void> {
+        if (filter != null) {
+            return filter!!
+        }
+
+        Files.createDirectories(dir)
+        val file = dir.resolve(fileName).toFile()
+
+        filter = object : AbstractBloomFilter<Void>(numberOfElements, falsePositiveProbability) {
+            override fun createBitArray(numBits: Int): BitArray {
+                return MMapFileBackedBitArray(file, numBits)
+            }
+        }
+
+        return filter!!
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun close() {
+        filter?.close()
+    }
 }

@@ -12,8 +12,16 @@ interface DigestIndex: AutoCloseable {
         return getOrAdd(digestHigh, digestLow)
     }
 
+
     /**
      * NB: Digest.zero is not allowed
      */
     fun getOrAdd(digestHigh: Long, digestLow: Long): DigestOrdinal
+
+
+    fun add(digestHigh: Long, digestLow: Long): DigestOrdinal {
+        val ordinal = getOrAdd(digestHigh, digestLow)
+        check(ordinal.wasAdded())
+        return ordinal
+    }
 }

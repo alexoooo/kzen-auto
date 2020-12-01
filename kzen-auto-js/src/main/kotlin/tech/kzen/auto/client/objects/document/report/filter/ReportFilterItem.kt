@@ -154,6 +154,12 @@ class ReportFilterItem(
     }
 
 
+    private fun onChangedByEdit() {
+        props.dispatcher.dispatchAsync(
+            FilterUpdateResult(null))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun onOpenToggle() {
         setState {
@@ -442,6 +448,10 @@ class ReportFilterItem(
                     ClassNames.kotlinSet,
                     listOf(TypeMetadata(
                         ClassNames.kotlinString, listOf())))
+
+                onChange = {
+                    onChangedByEdit()
+                }
             }
         }
     }

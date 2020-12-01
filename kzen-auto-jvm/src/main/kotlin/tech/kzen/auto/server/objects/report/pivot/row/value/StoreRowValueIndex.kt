@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.report.pivot.row.value
 import net.openhft.hashing.LongTupleHashFunction
 import tech.kzen.auto.server.objects.report.input.model.RecordTextFlyweight
 import tech.kzen.auto.server.objects.report.pivot.row.digest.DigestIndex
+import tech.kzen.auto.server.objects.report.pivot.row.digest.DigestOrdinal
 import tech.kzen.auto.server.objects.report.pivot.row.value.store.IndexedTextStore
 
 
@@ -13,37 +14,63 @@ class StoreRowValueIndex(
     RowValueIndex
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private const val missingValueSentinel = "\u0000"
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private val hashBuffer = LongArray(2)
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun getOrAddIndex(value: String): Long {
-        LongTupleHashFunction.murmur_3().hashChars(value, hashBuffer)
-        val valueOrdinal = digestIndex.getOrAdd(hashBuffer[0], hashBuffer[1])
-
-        if (valueOrdinal.wasAdded()) {
-            indexedTextStore.add(value)
-        }
-
-        return valueOrdinal.ordinal()
-    }
-
-
-    override fun getOrAddIndex(value: RecordTextFlyweight): Long {
-        LongTupleHashFunction.murmur_3().hashChars(value, hashBuffer)
-        val valueOrdinal = digestIndex.getOrAdd(hashBuffer[0], hashBuffer[1])
-
-        if (valueOrdinal.wasAdded()) {
-            indexedTextStore.add(value)
-        }
-
-        return valueOrdinal.ordinal()
+    override fun size(): Long {
+        return digestIndex.size()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun getValue(valueIndex: Long): String {
-        return indexedTextStore.get(valueIndex)
+    override fun getOrAddIndex(value: String): DigestOrdinal {
+        LongTupleHashFunction.murmur_3().hashChars(value, hashBuffer)
+        val valueOrdinal = digestIndex.getOrAdd(hashBuffer[0], hashBuffer[1])
+
+        if (valueOrdinal.wasAdded()) {
+            indexedTextStore.add(value)
+        }
+
+        return valueOrdinal
+    }
+
+
+    override fun getOrAddIndex(value: RecordTextFlyweight): DigestOrdinal {
+        LongTupleHashFunction.murmur_3().hashChars(value, hashBuffer)
+        val valueOrdinal = digestIndex.getOrAdd(hashBuffer[0], hashBuffer[1])
+
+        if (valueOrdinal.wasAdded()) {
+            indexedTextStore.add(value)
+        }
+
+        return valueOrdinal
+    }
+
+
+    override fun getOrAddIndexMissing(): DigestOrdinal {
+        return getOrAddIndex(missingValueSentinel)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun getValue(valueIndex: Long): String? {
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val value = indexedTextStore.get(valueIndex)
+
+        return when (value) {
+            missingValueSentinel ->
+                null
+
+            else ->
+                value
+        }
     }
 
 

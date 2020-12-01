@@ -2,12 +2,14 @@ package tech.kzen.auto.server.objects.report.pivot.row.value
 
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 import tech.kzen.auto.server.objects.report.input.model.RecordTextFlyweight
+import tech.kzen.auto.server.objects.report.pivot.row.digest.DigestOrdinal
 
 
 class MapRowValueIndex: RowValueIndex {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val missingSentinel = -1L
+        private const val missingOrdinalSentinel = -1L
+        private const val missingValueSentinel = "\u0000"
     }
 
 
@@ -16,17 +18,23 @@ class MapRowValueIndex: RowValueIndex {
     private val reverseIndex: MutableList<String> = mutableListOf()
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     init {
-        index.defaultReturnValue(missingSentinel)
+        index.defaultReturnValue(missingOrdinalSentinel)
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun size(): Long {
+        return index.size.toLong()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun getOrAddIndex(value: String): Long {
+    override fun getOrAddIndex(value: String): DigestOrdinal {
         val indexOrDefault = index.getLong(value)
 
-        if (indexOrDefault != missingSentinel) {
-            return indexOrDefault
+        if (indexOrDefault != missingOrdinalSentinel) {
+            return DigestOrdinal.ofExisting(indexOrDefault)
         }
 
         val nextIndex = index.size.toLong()
@@ -34,17 +42,28 @@ class MapRowValueIndex: RowValueIndex {
         index[value] = nextIndex
         reverseIndex.add(value)
 
-        return nextIndex
+        return DigestOrdinal.ofAdded(nextIndex)
     }
 
 
-    override fun getOrAddIndex(value: RecordTextFlyweight): Long {
+    override fun getOrAddIndex(value: RecordTextFlyweight): DigestOrdinal {
         return getOrAddIndex(value.toString())
     }
 
 
-    override fun getValue(valueIndex: Long): String {
-        return reverseIndex[valueIndex.toInt()]
+    override fun getOrAddIndexMissing(): DigestOrdinal {
+        return getOrAddIndex(missingValueSentinel)
+    }
+
+
+    override fun getValue(valueIndex: Long): String? {
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val value = reverseIndex[valueIndex.toInt()]
+
+        return when (value) {
+            missingValueSentinel -> null
+            else -> value
+        }
     }
 
 

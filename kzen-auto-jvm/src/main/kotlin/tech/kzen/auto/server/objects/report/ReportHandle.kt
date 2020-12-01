@@ -5,6 +5,7 @@ import com.lmax.disruptor.ExceptionHandler
 import com.lmax.disruptor.YieldingWaitStrategy
 import com.lmax.disruptor.dsl.Disruptor
 import com.lmax.disruptor.dsl.ProducerType
+import com.lmax.disruptor.util.DaemonThreadFactory
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
@@ -19,7 +20,6 @@ import tech.kzen.auto.server.objects.report.pipeline.ReportOutput
 import tech.kzen.auto.server.objects.report.pipeline.ReportSummary
 import java.io.InputStream
 import java.nio.file.Path
-import java.util.concurrent.Executors
 
 
 /**
@@ -41,7 +41,7 @@ class ReportHandle(
     companion object {
 //        private val logger = LoggerFactory.getLogger(ReportHandle::class.java)
 
-        private const val BUFFER_SIZE = 4 * 1024
+        private const val disruptorBufferSize = 4 * 1024
 
 
         fun passivePreview(reportRunSpec: ReportRunSpec, runDir: Path, outputSpec: OutputSpec): OutputInfo {
@@ -119,8 +119,8 @@ class ReportHandle(
     fun run() {
         val disruptor = Disruptor(
             Event.factory,
-            BUFFER_SIZE,
-            Executors.defaultThreadFactory(),
+            disruptorBufferSize,
+            DaemonThreadFactory.INSTANCE,
             ProducerType.SINGLE,
             YieldingWaitStrategy()
         )

@@ -4,6 +4,8 @@ import tech.kzen.auto.server.objects.report.pivot.row.signature.RowSignature
 
 
 interface IndexedSignatureStore: AutoCloseable {
+    fun signatureSize(): Int
+
     fun add(signature: RowSignature)
     fun add(valueIndexes: LongArray)
 

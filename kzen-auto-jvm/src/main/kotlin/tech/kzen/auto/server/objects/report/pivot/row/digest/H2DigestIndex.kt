@@ -16,7 +16,7 @@ class H2DigestIndex(
         private const val missingOrdinal = -1L
 
 //        private const val alwaysAdd = true
-        private const val alwaysAdd = false
+//        private const val alwaysAdd = false
     }
 
 
@@ -30,15 +30,18 @@ class H2DigestIndex(
     private val mapB: MVMap<ByteArray, Long>
 
     private val cache = Long2LongLinkedOpenHashMap()
+    private val bloom = DigestBloomFilter(dir)
 
+
+    //-----------------------------------------------------------------------------------------------------------------
     init {
         Files.createDirectories(dir)
 
         storeA = MVStore.Builder()
-            .fileName(dir.resolve("h2-a").toString())
+            .fileName(dir.resolve("a.h2").toString())
             .open()
         storeB = MVStore.Builder()
-            .fileName(dir.resolve("h2-b").toString())
+            .fileName(dir.resolve("b.h2").toString())
             .open()
 
         val mapBuilder = MVMap.Builder<ByteArray, Long>()
@@ -59,14 +62,92 @@ class H2DigestIndex(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun add(digestHigh: Long, digestLow: Long): DigestOrdinal {
+        val bytes = digestBytes(digestHigh, digestLow)
+        val map = selectMap(bytes)
+
+        val digestOrdinal = append(bytes, map)
+
+        val cacheKey = cacheKey(digestHigh, digestLow)
+        addToCache(cacheKey, digestOrdinal.ordinal())
+        bloom.add(bytes)
+
+        return digestOrdinal
+    }
+
+
     override fun getOrAdd(digestHigh: Long, digestLow: Long): DigestOrdinal {
-        val cacheKey = digestHigh * 37 xor digestLow
+        val cacheKey = cacheKey(digestHigh, digestLow)
         val cachedOrdinal = cache.getAndMoveToLast(cacheKey)
         if (cachedOrdinal != missingOrdinal) {
             return DigestOrdinal.ofExisting(cachedOrdinal)
         }
 
-        val bytes = byteArrayOf(
+        val bytes = digestBytes(digestHigh, digestLow)
+        val map = selectMap(bytes)
+
+        val mightContain = bloom.mightContain(bytes)
+
+        val digestOrdinal =
+            if (! mightContain) {
+                bloom.add(bytes)
+                append(bytes, map)
+            }
+            else {
+                getOrAdd(bytes, map)
+            }
+
+        addToCache(cacheKey, digestOrdinal.ordinal())
+
+        return digestOrdinal
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun append(bytes: ByteArray, map: MVMap<ByteArray, Long>): DigestOrdinal {
+        map.append(bytes, nextOrdinal)
+
+        val ordinal = nextOrdinal
+        nextOrdinal++
+        return DigestOrdinal.ofAdded(ordinal)
+    }
+
+
+    private fun getOrAdd(bytes: ByteArray, map: MVMap<ByteArray, Long>): DigestOrdinal {
+        val existing = map.putIfAbsent(bytes, nextOrdinal)
+
+        return when {
+            existing != null ->
+                DigestOrdinal.ofExisting(existing)
+
+            else -> {
+                val ordinal = nextOrdinal
+                nextOrdinal++
+                DigestOrdinal.ofAdded(ordinal)
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun cacheKey(digestHigh: Long, digestLow: Long): Long {
+        return digestHigh * 37 xor digestLow
+    }
+
+
+    private fun addToCache(cacheKey: Long, ordinal: Long) {
+        cache[cacheKey] = ordinal
+
+        if (cache.size == cacheSize) {
+            cache.removeFirstLong()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun digestBytes(digestHigh: Long, digestLow: Long): ByteArray {
+        return byteArrayOf(
             digestHigh.toByte(),
             (digestHigh shr 8).toByte(),
             (digestHigh shr 16).toByte(),
@@ -83,62 +164,30 @@ class H2DigestIndex(
             (digestLow shr 40).toByte(),
             (digestLow shr 48).toByte(),
             (digestLow shr 56).toByte())
+    }
 
-        val map =
-            if (binaryPartition(bytes)) {
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun selectMap(bytes: ByteArray): MVMap<ByteArray, Long> {
+        return when {
+            binaryPartition(bytes) ->
                 mapA
-            }
-            else {
+
+            else ->
                 mapB
-            }
-
-        val digestOrdinal =
-            if (alwaysAdd) {
-                map.append(bytes, nextOrdinal)
-
-                val ordinal = nextOrdinal
-                nextOrdinal++
-                DigestOrdinal.ofAdded(ordinal)
-            }
-            else {
-                val existing = map.putIfAbsent(bytes, nextOrdinal)
-
-                if (existing != null) {
-                    DigestOrdinal.ofExisting(existing)
-                }
-                else {
-                    val ordinal = nextOrdinal
-                    nextOrdinal++
-                    DigestOrdinal.ofAdded(ordinal)
-                }
-            }
-
-//        val digestOrdinal =
-//            if (existing != null) {
-//                DigestOrdinal.ofExisting(existing)
-//            }
-//            else {
-//                val ordinal = nextOrdinal
-//                nextOrdinal++
-//                DigestOrdinal.ofAdded(ordinal)
-//            }
-
-        cache[cacheKey] = digestOrdinal.ordinal()
-        if (cache.size == cacheSize) {
-            cache.removeFirstLong()
         }
-
-        return digestOrdinal
     }
 
 
     private fun binaryPartition(bytes: ByteArray): Boolean {
-        return bytes.sum() >= 0
+        return bytes[0] >= 0
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
         storeA.close()
         storeB.close()
+        bloom.close()
     }
 }
