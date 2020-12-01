@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report
 
 import com.lmax.disruptor.EventFactory
-import com.lmax.disruptor.EventTranslatorOneArg
+import com.lmax.disruptor.ExceptionHandler
 import com.lmax.disruptor.YieldingWaitStrategy
 import com.lmax.disruptor.dsl.Disruptor
 import com.lmax.disruptor.dsl.ProducerType
@@ -10,10 +10,11 @@ import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
-import tech.kzen.auto.server.objects.report.model.RecordItem
+import tech.kzen.auto.server.objects.report.input.ReportInput
+import tech.kzen.auto.server.objects.report.input.model.RecordHeaderBuffer
+import tech.kzen.auto.server.objects.report.input.model.RecordLineBuffer
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.ReportFilter
-import tech.kzen.auto.server.objects.report.pipeline.ReportInput
 import tech.kzen.auto.server.objects.report.pipeline.ReportOutput
 import tech.kzen.auto.server.objects.report.pipeline.ReportSummary
 import java.io.InputStream
@@ -21,6 +22,14 @@ import java.nio.file.Path
 import java.util.concurrent.Executors
 
 
+/**
+ * TODO: optimize the following:
+ *  - BufferedIndexedSignatureStore.add(LongArray)
+ *  - ReportOutput.save csv generation
+ *  - BufferedIndexedTextStore.add(RecordTextFlyweight)
+ *  - BufferedIndexedTextStore.add(RecordTextFlyweight)
+ *  - H2DigestIndex mightContain (and addition buffer or append?)
+ */
 class ReportHandle(
     initialReportRunSpec: ReportRunSpec,
     runDir: Path,
@@ -64,16 +73,16 @@ class ReportHandle(
 
     private data class Event(
         var filterAllow: Boolean = false,
-        var recordItem: RecordItem? = null
+        var recordHeader: RecordHeaderBuffer = RecordHeaderBuffer(),
+        var recordItem: RecordLineBuffer = RecordLineBuffer()
     ) {
         companion object {
             val factory = EventFactory { Event() }
 
-            val translator = EventTranslatorOneArg {
-                    event: Event, _: Long, item: RecordItem ->
-                event.filterAllow = false
-                event.recordItem = item
-            }
+//            val translator = EventTranslatorOneArg { event: Event, _: Long, item: RecordItem ->
+//                event.filterAllow = false
+//                event.recordItem = item
+//            }
         }
     }
 
@@ -122,35 +131,81 @@ class ReportHandle(
 //            .handleEventsWith(this::handleFilter)
 //            .then(this::handleSummary, this::handleOutput)
 
+        disruptor.setDefaultExceptionHandler(object : ExceptionHandler<Event?> {
+            override fun handleEventException(ex: Throwable?, sequence: Long, event: Event?) {
+                println("&&^% handleEventException - $ex - ${event?.recordItem}")
+            }
+
+            override fun handleOnStartException(ex: Throwable?) {
+                println("&&^% handleOnStartException - $ex")
+            }
+
+            override fun handleOnShutdownException(ex: Throwable?) {
+                println("&&^% handleOnShutdownException - $ex")
+            }
+        })
+
         disruptor.start()
 
         val ringBuffer = disruptor.ringBuffer
 
         while (true) {
-            val moreRemaining = input.poll { record ->
-                if (filter.test(record)) {
-                    ringBuffer.publishEvent(Event.translator, record)
-                }
-            }
+            val sequence = ringBuffer.next()
+            val event = ringBuffer.get(sequence)
 
-            if (! moreRemaining) {
+            val item = event.recordItem
+            val header = event.recordHeader
+
+            val read = nextFiltered(item, header)
+            if (! read) {
                 break
             }
+
+            ringBuffer.publish(sequence)
         }
 
         disruptor.shutdown()
     }
 
 
-    @Suppress("UNUSED_PARAMETER")
-    private fun handleFilter(event: Event, sequence: Long, endOfBatch: Boolean) {
-        val record = event.recordItem!!
-        event.filterAllow = filter.test(record)
-//        if (filter.test(record)) {
-//            summary.add(record)
-//            output.add(record)
-//        }
+    private fun nextFiltered(
+        recordLineBuffer: RecordLineBuffer,
+        recordHeaderBuffer: RecordHeaderBuffer
+    ): Boolean {
+        recordLineBuffer.clear()
+
+        while (true) {
+            val read = input.poll(recordLineBuffer, recordHeaderBuffer)
+            if (! read) {
+                return false
+            }
+
+            if (recordLineBuffer.isEmpty()) {
+                continue
+            }
+
+//            println("^^%$^^ $recordLineBuffer")
+
+            val pass = filter.test(recordLineBuffer, recordHeaderBuffer.value)
+            if (pass) {
+                return true
+            }
+
+            recordLineBuffer.clear()
+        }
     }
+
+
+
+//    @Suppress("UNUSED_PARAMETER")
+//    private fun handleFilter(event: Event, sequence: Long, endOfBatch: Boolean) {
+//        val record = event.recordItem!!
+//        event.filterAllow = filter.test(record)
+////        if (filter.test(record)) {
+////            summary.add(record)
+////            output.add(record)
+////        }
+//    }
 
 
     @Suppress("UNUSED_PARAMETER")
@@ -163,7 +218,7 @@ class ReportHandle(
             summary.handleViewRequest()
         }
 
-        summary.add(event.recordItem!!)
+        summary.add(event.recordItem, event.recordHeader.value)
     }
 
 
@@ -177,7 +232,7 @@ class ReportHandle(
             output.handlePreviewRequest()
         }
 
-        output.add(event.recordItem!!)
+        output.add(event.recordItem, event.recordHeader.value)
     }
 
 

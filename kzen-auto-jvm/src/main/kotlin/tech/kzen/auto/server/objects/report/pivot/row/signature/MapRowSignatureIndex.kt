@@ -42,6 +42,11 @@ class MapRowSignatureIndex: RowSignatureIndex {
     }
 
 
+    override fun getOrAddIndex(valueIndexes: LongArray): Long {
+        return getOrAddIndex(RowSignature(valueIndexes.clone()))
+    }
+
+
     override fun getSignature(signatureOrdinal: Long): RowSignature {
         return reverseIndices[signatureOrdinal.toInt()]
     }

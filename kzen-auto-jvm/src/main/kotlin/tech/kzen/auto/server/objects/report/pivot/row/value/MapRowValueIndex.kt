@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.pivot.row.value
 
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
+import tech.kzen.auto.server.objects.report.input.model.RecordTextFlyweight
 
 
 class MapRowValueIndex: RowValueIndex {
@@ -34,6 +35,11 @@ class MapRowValueIndex: RowValueIndex {
         reverseIndex.add(value)
 
         return nextIndex
+    }
+
+
+    override fun getOrAddIndex(value: RecordTextFlyweight): Long {
+        return getOrAddIndex(value.toString())
     }
 
 

@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.report.pivot.row.value.store
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
+import tech.kzen.auto.server.objects.report.input.model.RecordTextFlyweight
 
 
 class BufferedIndexedTextStore(
@@ -28,6 +29,11 @@ class BufferedIndexedTextStore(
         if (pending.size >= size) {
             flush()
         }
+    }
+
+
+    override fun add(text: RecordTextFlyweight) {
+        add(text.toString())
     }
 
 

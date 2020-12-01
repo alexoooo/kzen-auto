@@ -10,7 +10,7 @@ import java.nio.file.Path
 
 
 class FileOffsetStore(
-    file: Path
+    private val file: Path
 ):
     OffsetStore
 {
@@ -63,6 +63,8 @@ class FileOffsetStore(
 
         if (index == 0L) {
             previousEnd = 0L
+            check(fileSize > 0) { "Corrupt file? - ${file.toAbsolutePath().normalize()}" }
+
             seek(index * Long.SIZE_BYTES)
             endOffset = handle.readLong()
             previousPosition += Long.SIZE_BYTES

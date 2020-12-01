@@ -1,147 +1,156 @@
 package tech.kzen.auto.server.objects.report.filter
 
-import org.apache.commons.csv.CSVFormat
-import org.apache.commons.csv.CSVParser
-import org.apache.commons.csv.CSVPrinter
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
+import tech.kzen.auto.server.objects.report.input.model.RecordHeader
+import tech.kzen.auto.server.objects.report.input.model.RecordHeaderIndex
+import tech.kzen.auto.server.objects.report.input.model.RecordLineBuffer
+import tech.kzen.auto.server.objects.report.input.parse.FastCsvLineParser
+import tech.kzen.auto.server.objects.report.input.read.RecordLineReader
 import tech.kzen.auto.server.objects.report.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.report.pivot.store.FileOffsetStore
 import tech.kzen.auto.server.objects.report.pivot.store.StoreUtils
 import java.io.OutputStreamWriter
 import java.io.RandomAccessFile
 import java.nio.channels.Channels
+import java.nio.file.Files
 import java.nio.file.Path
-import java.time.Instant
 
 
 class IndexedCsvTable(
     private val header: List<String>,
     dir: Path,
-    private val bufferSize: Int = 128
+    private val bufferSize: Int = 1024 * 1024
 ):
     AutoCloseable
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val tableFile = Path.of("table.csv")
+        val tableFile: Path = Path.of("table.csv")
         private val offsetFile = Path.of("index.bin")
 
-//        private val format = CSVFormat.RFC4180
-        private val format = CSVFormat.DEFAULT
+        private val lineBreak = "\r\n".toCharArray()
+//        private val format = CSVFormat.DEFAULT
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private val headerIndex = header
-//        .withIndex()
-//        .map { it.value to it.index }
-//        .toMap()
+    private val headerIndex = RecordHeaderIndex(header)
 
     private val offsetStore = BufferedOffsetStore(
         FileOffsetStore(dir.resolve(offsetFile)))
 
-
     private val tablePath = dir.resolve(tableFile)
+
+    private var maxPosition =
+        if (Files.exists(tablePath)) {
+            Files.size(tablePath)
+        }
+        else {
+            0
+        }
 
     private val handle: RandomAccessFile =
         RandomAccessFile(tablePath.toFile(), "rw")
 
-    private val pending = mutableListOf<Iterable<String>>()
-
+//    private val pending = mutableListOf<Iterable<String>>()
+    private val pending = OutputStreamBuffer()
     private val buffer = OutputStreamBuffer()
     private val bufferWriter = OutputStreamWriter(buffer, Charsets.UTF_8)
-    private val bufferPrinter = CSVPrinter(bufferWriter, format)
+//    private val bufferPrinter = PrintWriter(bufferWriter)
+//    private val bufferPrinter = CSVPrinter(bufferWriter, format)
 
     private var previousPosition = 0L
-    private var previousModified = Instant.now()
+//    private var previousModified = Instant.now()
 
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
         if (offsetStore.size() == 0L) {
-            bufferPrinter.printRecord(header)
-            bufferPrinter.flush()
+            bufferWriter.write(RecordLineBuffer.toCsv(header))
+            bufferWriter.write(lineBreak)
+            bufferWriter.flush()
 
             val length = buffer.flushTo(handle)
             StoreUtils.flush(handle)
 
             offsetStore.add(length)
+
             previousPosition = length.toLong()
+            maxPosition = previousPosition
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun outputPath(): Path {
-        return tablePath
-    }
-
-    fun modified(): Instant {
-        return previousModified
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    @Synchronized
     fun rowCount(): Long {
         // NB: -1 for header
-        return (offsetStore.size() - 1).coerceAtLeast(0) + pending.size
+//        return (offsetStore.size() - 1).coerceAtLeast(0) + pending.size
+        return (offsetStore.size() - 1).coerceAtLeast(0)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    @Synchronized
-    fun add(row: Iterable<String>) {
-        pending.add(row)
+    fun add(recordItem: RecordLineBuffer, recordHeader: RecordHeader) {
+        val indices = headerIndex.indices(recordHeader)
 
-        if (pending.size == bufferSize) {
+        var first = true
+        for (i in indices) {
+            if (first) {
+                first = false
+            }
+            else {
+                bufferWriter.write(','.toInt())
+            }
+
+            if (i != -1) {
+                recordItem.writeCsvField(i, bufferWriter)
+            }
+        }
+
+        bufferWriter.write(lineBreak)
+        bufferWriter.flush()
+
+        val length = buffer.flushTo(pending)
+        offsetStore.add(length)
+
+        if (pending.size() >= bufferSize) {
             flushPending()
         }
     }
 
 
     private fun flushPending() {
-        if (pending.isEmpty()) {
+        check(buffer.size() == 0)
+
+        if (pending.size() == 0) {
             return
         }
 
-        val startOffset = offsetStore.endOffset()
-
-        check(buffer.size() == 0)
-        var previousSize = buffer.size()
-
-        for (row in pending) {
-            bufferPrinter.printRecord(row)
-            bufferPrinter.flush()
-
-            val length = buffer.size() - previousSize
-            previousSize = buffer.size()
-
-            offsetStore.add(length)
-        }
-        pending.clear()
-
-        seek(startOffset)
-
-        val totalLength = buffer.flushTo(handle)
+        seek(maxPosition)
+        val totalLength = pending.flushTo(handle)
         StoreUtils.flush(handle)
 
         previousPosition += totalLength
-        previousModified = Instant.now()
+        maxPosition = previousPosition
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun corruptPreview(start: Long): OutputPreview {
+        return OutputPreview(header, listOf(), start)
+    }
+
+
     fun preview(start: Long, count: Int): OutputPreview {
         val builder = mutableListOf<List<String>>()
         traverseWithoutHeader(start, count.toLong()) {
-            builder.add(it.toList())
+            builder.add(it)
         }
         return OutputPreview(header, builder, start)
     }
 
 
-    fun traverseWithHeader(visitor: (Iterable<String>) -> Unit) {
+    fun traverseWithHeader(visitor: (List<String>) -> Unit) {
         visitor.invoke(header)
         traverseWithoutHeader(0, rowCount()) {
             visitor.invoke(it)
@@ -149,7 +158,13 @@ class IndexedCsvTable(
     }
 
 
-    private fun traverseWithoutHeader(start: Long, count: Long, visitor: (Iterable<String>) -> Unit) {
+    private fun traverseWithoutHeader(start: Long, count: Long, visitor: (List<String>) -> Unit) {
+        if (count <= 0) {
+            return
+        }
+
+        flushPending()
+
         val adjustedStart = start.coerceAtLeast(0L)
 
         // NB: header is first
@@ -164,51 +179,26 @@ class IndexedCsvTable(
 
             // NB: don't close, because that would also close handle
             val reader = Channels.newReader(handle.channel, Charsets.UTF_8)
-//            val reader = Channels.newReader(handle.channel, Charsets.UTF_8)
+            val parser = RecordLineReader(reader, FastCsvLineParser())
 
-            val headerFormat = format.withHeader(*header.toTypedArray())
-            val parser = CSVParser(reader, headerFormat)
+            var remainingCount = storedEnd - offsetStoreStart + 1
 
-            var remainingCount = count
-            for (row in parser) {
-                visitor.invoke(row)
+            val buffer = RecordLineBuffer()
+            while (true) {
+                buffer.clear()
+                val hasNext = parser.read(buffer)
+                check(! buffer.isEmpty())
+
+                visitor.invoke(buffer.toList())
 
                 remainingCount--
-                if (remainingCount == 0L) {
+                if (! hasNext || remainingCount == 0L) {
                     break
                 }
             }
 
             handle.seek(storedEndSpan.endOffset())
             previousPosition = storedEndSpan.endOffset()
-
-            if (remainingCount > 0) {
-                for (row in pending) {
-                    visitor.invoke(row)
-
-                    remainingCount--
-                    if (remainingCount == 0L) {
-                        break
-                    }
-                }
-            }
-        }
-        else {
-            // TODO: test
-            val pendingStart =
-                if (offsetStore.size() == 0L) {
-                    adjustedStart.toInt()
-                }
-                else {
-                    (offsetStoreStart - offsetStore.size()).toInt()
-                }
-
-            if (pendingStart < pending.size) {
-                val pendingEnd = (pendingStart + count).coerceAtMost(pending.size.toLong()).toInt()
-                for (i in pendingStart until pendingEnd) {
-                    visitor.invoke(pending[i])
-                }
-            }
         }
     }
 
@@ -225,7 +215,6 @@ class IndexedCsvTable(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    @Synchronized
     override fun close() {
         flushPending()
         StoreUtils.flushAndClose(handle)

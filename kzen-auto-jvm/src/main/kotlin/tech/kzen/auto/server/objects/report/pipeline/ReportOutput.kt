@@ -8,7 +8,8 @@ import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.filter.IndexedCsvTable
-import tech.kzen.auto.server.objects.report.model.RecordItem
+import tech.kzen.auto.server.objects.report.input.model.RecordHeader
+import tech.kzen.auto.server.objects.report.input.model.RecordLineBuffer
 import tech.kzen.auto.server.objects.report.model.ReportRunSignature
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pivot.PivotBuilder
@@ -181,15 +182,13 @@ class ReportOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(row: RecordItem) {
-//        handlePreviewRequest()
-
+    fun add(recordItem: RecordLineBuffer, header: RecordHeader) {
         if (indexedCsvTable != null) {
-            val values = row.getOrEmptyAll(reportRunSignature.columnNames)
-            indexedCsvTable.add(values)
+//            val values = row.getOrEmptyAll(reportRunSignature.columnNames)
+            indexedCsvTable.add(recordItem, header)
         }
         else {
-            pivotBuilder!!.add(row)
+            pivotBuilder!!.add(recordItem, header)
         }
     }
 
@@ -233,19 +232,35 @@ class ReportOutput(
         val fileTime = Files.getLastModifiedTime(runDir)
         val formattedTime = formatTime(fileTime.toInstant())
 
-        val rowCount: Long
-        val preview =
+        var rowCount: Long = -1
+        var preview: OutputPreview? = null
+        var statusOverride: OutputStatus? = null
+
+        try {
             if (indexedCsvTable != null) {
                 rowCount = indexedCsvTable.rowCount()
-                indexedCsvTable.preview(
+                preview = indexedCsvTable.preview(
                     zeroBasedPreview, outputSpec.previewCount)
             }
             else {
                 check(pivotBuilder != null)
                 rowCount = pivotBuilder.rowCount()
-                pivotBuilder.preview(
+                preview = pivotBuilder.preview(
                     reportRunSpec.pivot.values, zeroBasedPreview, outputSpec.previewCount)
             }
+        }
+        catch (e: Exception) {
+            if (rowCount == -1L) {
+                rowCount = 0
+            }
+            if (preview == null) {
+                preview =
+                    indexedCsvTable?.corruptPreview(zeroBasedPreview)
+                        ?: pivotBuilder!!.corruptPreview(reportRunSpec.pivot.values, zeroBasedPreview)
+            }
+
+            statusOverride = OutputStatus.Failed
+        }
 
         val saveInfo = saveInfo(runDir, outputSpec)
 
@@ -256,7 +271,7 @@ class ReportOutput(
             formattedTime,
             rowCount,
             preview,
-            status)
+            statusOverride ?: status)
     }
 
 

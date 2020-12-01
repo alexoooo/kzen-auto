@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report.pivot.row
 
+import tech.kzen.auto.server.objects.report.input.model.RecordTextFlyweight
 import tech.kzen.auto.server.objects.report.pivot.row.signature.RowSignature
 import tech.kzen.auto.server.objects.report.pivot.row.signature.RowSignatureIndex
 import tech.kzen.auto.server.objects.report.pivot.row.value.RowValueIndex
@@ -13,7 +14,7 @@ class RowIndex(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val missingRowValueIndex = -1L
+        const val missingRowValueIndex = -1L
     }
 
 
@@ -24,6 +25,16 @@ class RowIndex(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun valueIndexOf(value: RecordTextFlyweight): Long {
+        return rowValueIndex.getOrAddIndex(value)
+    }
+
+
+    fun indexOf(valueIndexes: LongArray): Long {
+        return rowSignatureIndex.getOrAddIndex(valueIndexes)
+    }
+
+
     fun indexOf(rowValues: List<String?>): Long {
         val rowValueIndexList = LongArray(rowValues.size)
 

@@ -1,26 +1,17 @@
-package tech.kzen.auto.server.objects.report.pipeline
+package tech.kzen.auto.server.objects.report.input
 
 import com.google.common.base.Stopwatch
-import com.google.common.io.MoreFiles
-import org.apache.commons.csv.CSVFormat
-import org.apache.commons.io.input.BOMInputStream
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.model.TaskProgress
-import tech.kzen.auto.server.objects.report.model.RecordItem
+import tech.kzen.auto.server.objects.report.input.model.RecordHeaderBuffer
+import tech.kzen.auto.server.objects.report.input.model.RecordLineBuffer
+import tech.kzen.auto.server.objects.report.input.read.ReportStreamReader
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
-import tech.kzen.auto.server.objects.report.stream.CsvRecordStream
-import tech.kzen.auto.server.objects.report.stream.RecordStream
-import tech.kzen.auto.server.objects.report.stream.TsvRecordStream
-import java.io.BufferedReader
-import java.io.InputStream
-import java.io.InputStreamReader
-import java.nio.file.Files
+import tech.kzen.auto.server.objects.report.pipeline.ReportSummary
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
-import java.util.zip.GZIPInputStream
 
 
 class ReportInput(
@@ -34,56 +25,10 @@ class ReportInput(
         private val logger = LoggerFactory.getLogger(ReportInput::class.java)
 
 //        private const val progressItems = 1_000
-        private const val progressItems = 10_000
-//        private const val progressItems = 250_000
-
-
-        fun open(inputPath: Path): RecordStream? {
-            val extension = MoreFiles.getFileExtension(inputPath)
-            val withoutExtension = MoreFiles.getNameWithoutExtension(inputPath)
-
-            var input: InputStream? = null
-            var reader: BufferedReader? = null
-            try {
-                val adjustedExtension: String
-                val rawInput = Files.newInputStream(inputPath)
-
-                input =
-                    if (extension == "gz") {
-                        adjustedExtension = MoreFiles.getFileExtension(Paths.get(withoutExtension))
-                        GZIPInputStream(rawInput)
-                    }
-                    else {
-                        adjustedExtension = extension
-                        rawInput
-                    }
-
-                reader = BufferedReader(InputStreamReader(BOMInputStream(input)))
-
-                return when (adjustedExtension) {
-                    "csv" -> {
-                        CsvRecordStream(
-                            CSVFormat
-                                .DEFAULT
-                                .withFirstRecordAsHeader()
-                                .parse(reader))
-                    }
-
-                    "tsv" -> {
-                        TsvRecordStream(reader)
-                    }
-
-                    else -> {
-                        throw UnsupportedOperationException("Unknown file type: $inputPath")
-                    }
-                }
-            }
-            catch (e: Exception) {
-                reader?.close()
-                input?.close()
-                return null
-            }
-        }
+//        private const val progressItems = 10_000
+//        private const val progressItems = 25_000
+//        private const val progressItems = 100_000
+        private const val progressItems = 250_000
     }
 
 
@@ -94,15 +39,43 @@ class ReportInput(
         reportRunSpec.inputs.map { it.fileName.toString() })
 
     private var currentInput: Path? = null
-    private var currentStream: RecordStream? = null
+    private var currentStream: ReportStreamReader? = null
     private var currentCount = 0L
 
-    val outerStopwatch = Stopwatch.createStarted()
-    val innerStopwatch = Stopwatch.createStarted()
+    private val outerStopwatch = Stopwatch.createStarted()
+    private val innerStopwatch = Stopwatch.createStarted()
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun poll(consumer: (RecordItem) -> Unit): Boolean {
+//    fun poll(consumer: (RecordItem) -> Unit): Boolean {
+//        if (taskHandle!!.cancelRequested()) {
+//            return false
+//        }
+//
+//        val nextStream = nextStream()
+//            ?: return false
+//
+//        if (! nextStream.hasNext()) {
+//            endOfStream()
+//            return true
+//        }
+//
+//        val recordItem = nextStream.next()
+//        consumer.invoke(recordItem)
+//
+//        trackProgress()
+//
+//        return true
+//    }
+
+
+    /**
+     * @return true if read
+     */
+    fun poll(
+        recordLineBuffer: RecordLineBuffer,
+        recordHeaderBuffer: RecordHeaderBuffer
+    ): Boolean {
         if (taskHandle!!.cancelRequested()) {
             return false
         }
@@ -110,21 +83,20 @@ class ReportInput(
         val nextStream = nextStream()
             ?: return false
 
-        if (! nextStream.hasNext()) {
+        recordHeaderBuffer.value = nextStream.header()
+        val hasNext = nextStream.read(recordLineBuffer)
+
+        if (! hasNext) {
             endOfStream()
             return true
         }
 
-        val recordItem = nextStream.next()
-        consumer.invoke(recordItem)
-
         trackProgress()
-
         return true
     }
 
 
-    private fun nextStream(): RecordStream? {
+    private fun nextStream(): ReportStreamReader? {
         val existingStream = currentStream
         if (existingStream != null) {
             return existingStream
@@ -135,7 +107,7 @@ class ReportInput(
         }
 
         val nextInput = remainingInputs.removeFirst()
-        val newStream = open(nextInput)!!
+        val newStream = ReportStreamReader(nextInput)
 
         currentInput = nextInput
         currentStream = newStream
@@ -184,8 +156,11 @@ class ReportInput(
         if (currentCount != 0L && currentCount % progressItems == 0L) {
             val progressMessage =
                 "Processed ${ReportSummary.formatCount(currentCount)}, " +
-                        "at ${ReportSummary.formatCount(
-                            (1000.0 * progressItems / innerStopwatch.elapsed(TimeUnit.MILLISECONDS)).toLong())}/s"
+                        "at ${
+                            ReportSummary.formatCount(
+                                (1000.0 * progressItems / innerStopwatch.elapsed(TimeUnit.MILLISECONDS)).toLong()
+                            )
+                        }/s"
             innerStopwatch.reset().start()
 
             updateProgress(

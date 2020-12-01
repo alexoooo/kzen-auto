@@ -82,6 +82,11 @@ class FileIndexedSignatureStore(
     }
 
 
+    override fun add(valueIndexes: LongArray) {
+        add(RowSignature(valueIndexes.clone()))
+    }
+
+
     fun addAll(signatures: List<RowSignature>) {
         seek(fileSize)
 

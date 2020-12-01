@@ -5,6 +5,8 @@ import tech.kzen.auto.common.objects.document.report.summary.ColumnSummary
 import tech.kzen.auto.common.objects.document.report.summary.NominalValueSummary
 import tech.kzen.auto.common.objects.document.report.summary.OpaqueValueSummary
 import tech.kzen.auto.common.objects.document.report.summary.StatisticValueSummary
+import tech.kzen.auto.server.objects.report.input.model.RecordTextFlyweight
+import kotlin.random.Random
 
 
 class ValueSummaryBuilder {
@@ -14,7 +16,9 @@ class ValueSummaryBuilder {
         private const val maxNominalBuckets = 250
         private const val maxSampleSize = 100
         private const val sampleThreshold = 10_000
+        private const val histogramLengthThreshold = 128
         private const val nominalOther = "<other>"
+        private const val sampleProbability = 0.01
 
 
         fun merge(a: ColumnSummary, b: ColumnSummary): ColumnSummary {
@@ -69,8 +73,9 @@ class ValueSummaryBuilder {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val textHistogram = HashMultiset.create<String>()
+    private val textHistogram = HashMultiset.create<RecordTextFlyweight>()
     private val textSample = mutableListOf<String>()
+    private val random = Random(System.nanoTime())
 
     private var histogramOverflow: Boolean = false
     private var emptyCount: Long = 0
@@ -82,33 +87,35 @@ class ValueSummaryBuilder {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(value: String) {
-        val trimmed = value.trim()
+    fun add(value: RecordTextFlyweight) {
+        value.trim()
 
-        if (trimmed.isEmpty()) {
+        if (value.isEmpty()) {
             emptyCount++
 
             if (! histogramOverflow) {
-                textHistogram.add("")
+                textHistogram.add(RecordTextFlyweight.empty)
             }
             return
         }
 
-        if (isSimpleNumber(trimmed)) {
-            val doubleValue = java.lang.Double.parseDouble(trimmed)
+        val doubleValue = value.toDoubleOrNan()
+        if (! doubleValue.isNaN()) {
+//            val doubleValue = java.lang.Double.parseDouble(trimmed)
+//            val doubleValue = value.toDouble()
 
             numberCount++
             sum += doubleValue
             min = min.coerceAtMost(doubleValue)
             max = max.coerceAtLeast(doubleValue)
 
-            addSample(trimmed)
+            addSample(value)
         }
         else {
             textCount++
 
-            if (! histogramOverflow) {
-                textHistogram.add(trimmed)
+            if (! histogramOverflow && value.length < histogramLengthThreshold) {
+                addTextHistogramFlyweight(value)
 
                 if (textHistogram.elementSet().size > sampleThreshold) {
                     textHistogram.elementSet().forEach(this::addSample)
@@ -117,45 +124,37 @@ class ValueSummaryBuilder {
                 }
             }
             else {
-                addSample(trimmed)
+                addSample(value)
             }
         }
     }
 
 
-    private fun addSample(value: String) {
+    private fun addTextHistogramFlyweight(value: RecordTextFlyweight) {
+        val previousCount = textHistogram.add(value, 1)
+
+        if (previousCount == 0) {
+            textHistogram.remove(value)
+            textHistogram.add(value.detach())
+        }
+
+//        if (textHistogram.contains(value)) {
+//            textHistogram.add(value)
+//        }
+//        else {
+//            textHistogram.add(value.detach())
+//        }
+    }
+
+
+    private fun addSample(value: RecordTextFlyweight) {
         if (textSample.size < sampleThreshold) {
-            textSample.add(value)
+            textSample.add(value.toString())
         }
-        else {
-            val randomIndex = (Math.random() * textSample.size).toInt()
-            textSample[randomIndex] = value
+        else if (random.nextDouble() < sampleProbability) {
+            val randomIndex = random.nextInt(textSample.size)
+            textSample[randomIndex] = value.toString()
         }
-    }
-
-
-    @Suppress("ConvertTwoComparisonsToRangeCheck")
-    private fun isSimpleNumber(text: String): Boolean {
-        var dotCount = 0;
-        var digitCount = 0;
-        var alphaCount = 0;
-
-        var i = 0
-        val length = text.length
-        while (i < length) {
-            val char = text[i++]
-            if (char == '.') {
-                dotCount++
-            }
-            else if ('0' <= char && char <= '9') {
-                digitCount++
-            }
-            else {
-                alphaCount++
-            }
-        }
-
-        return digitCount > 0 && dotCount <= 1 && alphaCount == 0
     }
 
 
@@ -179,7 +178,7 @@ class ValueSummaryBuilder {
         }
 
         if (textHistogram.elementSet().size == 1) {
-            val only = textHistogram.elementSet().first()
+            val only = textHistogram.elementSet().first().toString()
             return NominalValueSummary(
                 mapOf(only to textHistogram.size.toLong()))
         }
@@ -191,7 +190,7 @@ class ValueSummaryBuilder {
         val builder = mutableMapOf<String, Long>()
 
         for (e in textHistogram.entrySet()) {
-            builder[e.element] = e.count.toLong()
+            builder[e.element.toString()] = e.count.toLong()
         }
 
         var otherCount = 0L

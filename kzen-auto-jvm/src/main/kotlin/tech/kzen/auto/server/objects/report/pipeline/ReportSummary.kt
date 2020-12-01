@@ -7,7 +7,9 @@ import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVPrinter
 import tech.kzen.auto.common.objects.document.report.summary.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.server.objects.report.model.RecordItem
+import tech.kzen.auto.server.objects.report.input.model.RecordHeader
+import tech.kzen.auto.server.objects.report.input.model.RecordHeaderIndex
+import tech.kzen.auto.server.objects.report.input.model.RecordLineBuffer
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.model.ValueSummaryBuilder
 import tech.kzen.auto.util.AutoJvmUtils
@@ -76,10 +78,11 @@ class ReportSummary(
     private var viewResponse = CompletableFuture<TableSummary>()
 
 
-    private val builders: Map<String, ValueSummaryBuilder> = initialReportRunSpec
+    private val headerIndex = RecordHeaderIndex(initialReportRunSpec.columnNames)
+
+    private val builders: List<ValueSummaryBuilder> = initialReportRunSpec
         .columnNames
-        .map { it to ValueSummaryBuilder() }
-        .toMap()
+        .map { ValueSummaryBuilder() }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -128,12 +131,11 @@ class ReportSummary(
 
 
     private suspend fun save() {
-        for (columnName in initialReportRunSpec.columnNames) {
+        for (i in initialReportRunSpec.columnNames.indices) {
+            val columnName = initialReportRunSpec.columnNames[i]
             val columnDir = columnDir(columnName)
 
-            val columnBuilder = builders[columnName]
-                ?: error("missing: $columnName")
-
+            val columnBuilder = builders[i]
             val columnSummary = columnBuilder.build()
 
             saveValueSummary(columnSummary, columnDir)
@@ -337,7 +339,12 @@ class ReportSummary(
         }
 
         val tableSummary = TableSummary(
-            builders.mapValues { it.value.build() })
+            initialReportRunSpec
+                .columnNames
+                .withIndex()
+                .map { it.value to builders[it.index].build() }
+                .toMap()
+        )
 
         viewResponse.complete(tableSummary)
         viewRequested = false
@@ -345,16 +352,16 @@ class ReportSummary(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordItem: RecordItem) {
-//        handleViewRequest()
+    fun add(recordItem: RecordLineBuffer, header: RecordHeader) {
+        val indices = headerIndex.indices(header)
+        for (i in builders.indices) {
+            val itemIndex = indices[i]
+            if (itemIndex == -1) {
+                continue
+            }
 
-        for (columnName in recordItem.columnNames()) {
-            val value = recordItem.get(columnName)!!
-
-            val builder = builders[columnName]
-                ?: error("missing: $columnName")
-
-            builder.add(value)
+            recordItem.selectFlyweight(itemIndex)
+            builders[i].add(recordItem.flyweight)
         }
     }
 

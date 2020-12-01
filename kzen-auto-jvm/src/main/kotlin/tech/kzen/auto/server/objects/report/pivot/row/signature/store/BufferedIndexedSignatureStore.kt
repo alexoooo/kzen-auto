@@ -30,6 +30,11 @@ class BufferedIndexedSignatureStore(
     }
 
 
+    override fun add(valueIndexes: LongArray) {
+        add(RowSignature(valueIndexes.clone()))
+    }
+
+
     override fun get(signatureOrdinal: Long): RowSignature {
         val pendingValue = pendingIndex.get(signatureOrdinal)
         if (pendingValue != null) {

@@ -3,7 +3,9 @@ package tech.kzen.auto.server.objects.report.pivot
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
-import tech.kzen.auto.server.objects.report.model.RecordItem
+import tech.kzen.auto.server.objects.report.input.model.RecordHeader
+import tech.kzen.auto.server.objects.report.input.model.RecordHeaderIndex
+import tech.kzen.auto.server.objects.report.input.model.RecordLineBuffer
 import tech.kzen.auto.server.objects.report.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.report.pivot.stats.ValueStatistics
 
@@ -55,8 +57,11 @@ class PivotBuilder(
 
     //-----------------------------------------------------------------------------------------------------------------
     private val rowColumns = rows.toList()
+    private val rowColumnIndex = RecordHeaderIndex(rowColumns)
+    private val rowValueIndexBuffer = LongArray(rowColumns.size)
+
     private val valueColumns = values.toList()
-//    private val buffer = DoubleArray(pivotSpec.valueColumnCount())
+    private val valueColumnIndex = RecordHeaderIndex(valueColumns)
     private val valueBuffer = DoubleArray(valueColumns.size)
 
 
@@ -65,43 +70,74 @@ class PivotBuilder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordItem: RecordItem) {
-//        check(! viewing) { "Can't add while viewing" }
+    fun add(recordItem: RecordLineBuffer, header: RecordHeader) {
+//        println("&&&&&&&&&&&&& add - $recordItem")
+        val headerIndexes = valueColumnIndex.indices(header)
 
         var present = false
-        for (i in valueColumns.indices) {
-            val valueColumnName = valueColumns[i]
-            val valueColumnValue = recordItem.get(valueColumnName)
 
-            if (valueColumnValue.isNullOrEmpty()) {
-                valueBuffer[i] = ValueStatistics.missingValue
-            }
-            else {
-                val asNumber = valueColumnValue.toDoubleOrNull()
-                    ?.let { ValueStatistics.normalize(it) }
-                    ?: Double.NaN
+        for (i in valueBuffer.indices) {
+            val headerIndex = headerIndexes[i]
 
-                valueBuffer[i] = asNumber
-                present = true
-            }
+            valueBuffer[i] =
+                if (headerIndex == -1) {
+                    ValueStatistics.missingValue
+                }
+                else {
+                    recordItem.selectFlyweight(headerIndex)
+
+                    if (recordItem.flyweight.isEmpty()) {
+                        ValueStatistics.missingValue
+                    }
+                    else {
+                        present = true
+
+                        val doubleValue = recordItem.flyweight.toDoubleOrNan()
+                        ValueStatistics.normalize(doubleValue)
+                    }
+                }
         }
 
         // NB: get row index regardless if any values present
-        val rowOrdinal = rowIndex(recordItem)
+        val rowOrdinal = rowIndex(recordItem, header)
 
         if (present) {
             valueStatistics.addOrUpdate(rowOrdinal, valueBuffer)
         }
+
+//        println("&&&&&&&&&&&&& add - done")
     }
 
 
-    private fun rowIndex(recordItem: RecordItem): Long {
-        val rowValues = recordItem.getAll(rowColumns)
-        return rowIndex.indexOf(rowValues)
+    private fun rowIndex(recordItem: RecordLineBuffer, header: RecordHeader): Long {
+        val headerIndices = rowColumnIndex.indices(header)
+
+        for (i in headerIndices.indices) {
+            val index = headerIndices[i]
+
+            val rowValueIndex =
+                if (index == -1) {
+                    RowIndex.missingRowValueIndex
+                }
+                else {
+                    recordItem.selectFlyweight(index)
+                    rowIndex.valueIndexOf(recordItem.flyweight)
+                }
+
+            rowValueIndexBuffer[i] = rowValueIndex
+        }
+
+        return rowIndex.indexOf(rowValueIndexBuffer)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun corruptPreview(values: PivotValueTableSpec, start: Long): OutputPreview {
+        val exportSignature = ExportSignature.of(rowColumns, values)
+        return OutputPreview(exportSignature.header, listOf(), start)
+    }
+
+
     fun preview(values: PivotValueTableSpec, start: Long, count: Int): OutputPreview {
         var header: List<String>? = null
         val builder = mutableListOf<List<String>>()

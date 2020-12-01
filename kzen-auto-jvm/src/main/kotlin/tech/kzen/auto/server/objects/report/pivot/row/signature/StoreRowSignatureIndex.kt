@@ -31,6 +31,18 @@ class StoreRowSignatureIndex(
     }
 
 
+    override fun getOrAddIndex(valueIndexes: LongArray): Long {
+        LongTupleHashFunction.murmur_3().hashLongs(valueIndexes, hashBuffer)
+        val valueOrdinal = digestIndex.getOrAdd(hashBuffer[0], hashBuffer[1])
+
+        if (valueOrdinal.wasAdded()) {
+            indexedSignatureStore.add(valueIndexes)
+        }
+
+        return valueOrdinal.ordinal()
+    }
+
+
     override fun getSignature(signatureOrdinal: Long): RowSignature {
         return indexedSignatureStore.get(signatureOrdinal)
     }

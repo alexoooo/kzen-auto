@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.csv.CSVFormat
-import tech.kzen.auto.server.objects.report.pipeline.ReportInput
+import tech.kzen.auto.server.objects.report.input.read.ReportStreamReader
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -40,9 +40,7 @@ object ColumnListingAction {
             }
         }
 
-        val columnNames = ReportInput.open(inputPath)?.use { stream ->
-            stream.header()
-        } ?: throw IllegalArgumentException("Not found: $inputPath")
+        val columnNames = ReportStreamReader.readHeaderLine(inputPath)
 
         val csvBody = columnNames
             .withIndex()

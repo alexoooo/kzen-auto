@@ -51,6 +51,14 @@ class OutputStreamBuffer: OutputStream() {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun flushTo(out: OutputStream): Int {
+        out.write(buf, 0, count)
+        val wrote = count
+        reset()
+        return wrote
+    }
+
+
     fun flushTo(out: RandomAccessFile): Int {
         out.write(buf, 0, count)
         val wrote = count

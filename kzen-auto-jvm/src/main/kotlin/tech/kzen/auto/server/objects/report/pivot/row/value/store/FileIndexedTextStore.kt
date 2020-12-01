@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.pivot.row.value.store
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
+import tech.kzen.auto.server.objects.report.input.model.RecordTextFlyweight
 import tech.kzen.auto.server.objects.report.pivot.store.OffsetStore
 import tech.kzen.auto.server.objects.report.pivot.store.StoreUtils
 import java.io.ByteArrayOutputStream
@@ -37,6 +38,10 @@ class FileIndexedTextStore(
         seek(offset)
         val length = write(text)
         offsetStore.add(length)
+    }
+
+    override fun add(text: RecordTextFlyweight) {
+        add(text.toString())
     }
 
 
