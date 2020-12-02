@@ -43,7 +43,6 @@ dependencies {
     implementation(group = "com.lmax", name = "disruptor", version = disruptorVersion)
     implementation(group = "com.sangupta", name = "bloomfilter", version = bloomFilterVersion)
 
-
     implementation("org.apache.commons:commons-csv:$commonsCsvVersion")
     implementation("commons-io:commons-io:$commonsIoVersion")
 }
