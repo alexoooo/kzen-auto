@@ -61,6 +61,10 @@ object ReportWorkPool {
     fun readRunStatus(reportRunSignature: ReportRunSignature): OutputStatus {
         val dir = resolveRunDir(reportRunSignature)
         val infoFile = dir.resolve(reportInfoFile)
+        if (! Files.exists(infoFile)) {
+            return OutputStatus.Corrupt
+        }
+
         val infoText = Files.readString(infoFile)
         val infoYaml = YamlParser.parse(infoText) as YamlMap
 

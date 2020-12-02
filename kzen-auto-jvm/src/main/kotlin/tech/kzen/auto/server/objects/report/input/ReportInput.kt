@@ -24,11 +24,12 @@ class ReportInput(
     companion object {
         private val logger = LoggerFactory.getLogger(ReportInput::class.java)
 
-//        private const val progressItems = 1_000
+        private const val progressItems = 1_000
 //        private const val progressItems = 10_000
 //        private const val progressItems = 25_000
+//        private const val progressItems = 50_000
 //        private const val progressItems = 100_000
-        private const val progressItems = 250_000
+//        private const val progressItems = 250_000
     }
 
 
@@ -44,6 +45,7 @@ class ReportInput(
 
     private val outerStopwatch = Stopwatch.createStarted()
     private val innerStopwatch = Stopwatch.createStarted()
+    private var previousInnerProgress = 0L
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -153,22 +155,29 @@ class ReportInput(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun trackProgress() {
-        if (currentCount != 0L && currentCount % progressItems == 0L) {
+        currentCount++
+
+        if (currentCount % progressItems == 0L) {
+            val elapsedMillis =  innerStopwatch.elapsed(TimeUnit.MILLISECONDS)
+            if (elapsedMillis < 1_000) {
+                return
+            }
+
+            val innerProgressItems = currentCount - previousInnerProgress
+            val innerPerSecond = (1000.0 * innerProgressItems / elapsedMillis).toLong()
+
             val progressMessage =
                 "Processed ${ReportSummary.formatCount(currentCount)}, " +
-                        "at ${
-                            ReportSummary.formatCount(
-                                (1000.0 * progressItems / innerStopwatch.elapsed(TimeUnit.MILLISECONDS)).toLong()
-                            )
-                        }/s"
+                        "at ${ReportSummary.formatCount(innerPerSecond)}/s"
+
+            previousInnerProgress = currentCount
+
             innerStopwatch.reset().start()
 
             updateProgress(
                 currentInput!!.fileName.toString(),
                 progressMessage)
         }
-
-        currentCount++
     }
 
 

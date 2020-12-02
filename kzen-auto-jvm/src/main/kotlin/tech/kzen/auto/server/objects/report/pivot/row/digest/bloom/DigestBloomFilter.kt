@@ -1,9 +1,8 @@
-package tech.kzen.auto.server.objects.report.pivot.row.digest
+package tech.kzen.auto.server.objects.report.pivot.row.digest.bloom
 
 import com.sangupta.bloomfilter.AbstractBloomFilter
 import com.sangupta.bloomfilter.BloomFilter
 import com.sangupta.bloomfilter.core.BitArray
-import com.sangupta.bloomfilter.core.MMapFileBackedBitArray
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -37,6 +36,17 @@ class DigestBloomFilter(
     }
 
 
+    fun falsePositiveProbability(size: Long): Double {
+        if (size > Integer.MAX_VALUE) {
+            return 1.0
+        }
+
+        return filter
+            ?.getFalsePositiveProbability(size.toInt())
+            ?: 0.0
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun getOrInit(): BloomFilter<Void> {
         if (filter != null) {
@@ -44,11 +54,12 @@ class DigestBloomFilter(
         }
 
         Files.createDirectories(dir)
-        val file = dir.resolve(fileName).toFile()
+        val file = dir.resolve(fileName)
 
         filter = object : AbstractBloomFilter<Void>(numberOfElements, falsePositiveProbability) {
             override fun createBitArray(numBits: Int): BitArray {
-                return MMapFileBackedBitArray(file, numBits)
+//                return MMapFileBackedBitArray(file.toFile(), numBits)
+                return MmapBitArray(file, numBits)
             }
         }
 

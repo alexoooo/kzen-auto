@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.report.pivot.row.digest
 import it.unimi.dsi.fastutil.longs.Long2LongLinkedOpenHashMap
 import org.h2.mvstore.MVMap
 import org.h2.mvstore.MVStore
+import tech.kzen.auto.server.objects.report.pivot.row.digest.bloom.DigestBloomFilter
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -14,6 +15,7 @@ class H2DigestIndex(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val missingOrdinal = -1L
+        private const val maxFalsePositive = 0.5
 
 //        private const val alwaysAdd = true
 //        private const val alwaysAdd = false
@@ -87,7 +89,9 @@ class H2DigestIndex(
         val bytes = digestBytes(digestHigh, digestLow)
         val map = selectMap(bytes)
 
-        val mightContain = bloom.mightContain(bytes)
+        val mightContain =
+            bloom.falsePositiveProbability(nextOrdinal) >= maxFalsePositive ||
+            bloom.mightContain(bytes)
 
         val digestOrdinal =
             if (! mightContain) {

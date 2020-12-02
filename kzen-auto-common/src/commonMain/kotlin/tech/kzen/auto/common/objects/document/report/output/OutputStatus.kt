@@ -7,7 +7,8 @@ enum class OutputStatus {
     Done,
     Cancelled,
     Failed,
-    Killed;
+    Killed,
+    Corrupt;
 
 
     fun isTerminal(): Boolean {
