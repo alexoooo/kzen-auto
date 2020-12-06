@@ -3,18 +3,15 @@ package tech.kzen.auto.server.objects.report.pipeline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.apache.commons.csv.CSVFormat
-import org.apache.commons.csv.CSVPrinter
 import tech.kzen.auto.common.objects.document.report.summary.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.report.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.input.model.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.input.model.RecordLineBuffer
+import tech.kzen.auto.server.objects.report.input.read.RecordLineReader
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.model.ValueSummaryBuilder
 import tech.kzen.auto.util.AutoJvmUtils
-import java.io.StringReader
-import java.io.StringWriter
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -48,21 +45,14 @@ class ReportSummary(
 
         //-----------------------------------------------------------------------------------------------------------------
         private fun toCsv(csv: List<List<String>>): String {
-            val out = StringWriter()
-            CSVPrinter(out, CSVFormat.DEFAULT).use { csvPrinter ->
-                for (row in csv) {
-                    csvPrinter.printRecord(row)
-                }
-            }
-            return out.toString().trim()
+            return csv.joinToString("\n") { RecordLineBuffer.of(it).toCsv() }
         }
 
 
         private fun fromCsv(csv: String): List<List<String>> {
-            val reader = StringReader(csv)
-            return CSVFormat.DEFAULT.parse(reader).use { parser ->
-                parser.map { record -> record.toList() }
-            }
+            return RecordLineReader
+                .csvLines(csv)
+                .map { it.toList() }
         }
     }
 
@@ -309,9 +299,7 @@ class ReportSummary(
     @Synchronized
     fun view(): TableSummary {
         if (taskHandle == null) {
-            return runBlocking {
-                load() ?: TableSummary.empty
-            }
+            return viewInCurrentThread()
         }
 
         viewRequested = true
@@ -323,13 +311,25 @@ class ReportSummary(
                     viewResponse.get(1, TimeUnit.SECONDS)
                 }
                 catch (e: TimeoutException) {
-                    continue
+                    if (taskHandle.isTerminated()) {
+                        viewInCurrentThread()
+                    }
+                    else {
+                        continue
+                    }
                 }
         }
 
         viewResponse = CompletableFuture()
 
         return response
+    }
+
+
+    private fun viewInCurrentThread(): TableSummary {
+        return runBlocking {
+            load() ?: TableSummary.empty
+        }
     }
 
 

@@ -17,6 +17,7 @@ interface TaskHandle {
 
     fun completeCancelled()
 
+    fun isTerminated(): Boolean
 
     //-----------------------------------------------------------------------------------------------------------------
 //    fun processRequests(processor: (DetachedRequest) -> ExecutionResult)

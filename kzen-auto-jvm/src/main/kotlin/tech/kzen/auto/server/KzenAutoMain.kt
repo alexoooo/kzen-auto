@@ -18,6 +18,14 @@ fun kzenAutoInit() {
 
 
 fun main(args: Array<String>) {
+//    KotlinCompiler().compileModule(
+//        "testCompile",
+//        listOf("C:/Users/ao/IdeaProjects/kzen-auto/build/compile/src/CompileTest.kt"),
+//        File("C:/Users/ao/IdeaProjects/kzen-auto/build/compile/bin"),
+//        listOf(),
+//        object : ClassLoader() {}
+//    )
+
     kzenAutoInit()
     runApplication<KzenAutoMain>(*args)
 }

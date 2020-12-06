@@ -5,8 +5,6 @@ import tech.kzen.auto.server.objects.report.input.model.RecordLineBuffer;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.ArrayList;
-import java.util.List;
 
 
 public class FastCsvLineParser implements RecordLineParser {
@@ -24,42 +22,14 @@ public class FastCsvLineParser implements RecordLineParser {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    public static RecordLineBuffer parseLine(String line) {
-        var parser = new FastCsvLineParser();
-        var buffer = new RecordLineBuffer();
-        char[] chars = line.toCharArray();
-        parser.parseNext(buffer, chars, 0, chars.length);
-        parser.endOfStream(buffer);
-        return buffer;
-    }
-
-
-    public static List<RecordLineBuffer> parseLines(String lines) {
-        var lineBuffers = new ArrayList<RecordLineBuffer>();
-        var chars = lines.toCharArray();
-        var parser = new FastCsvLineParser();
-
-        var buffer = new RecordLineBuffer();
-
-        var startIndex = 0;
-        while (true) {
-            var length = parser.parseNext(buffer, chars, startIndex, chars.length);
-            if (length == -1) {
-                break;
-            }
-
-            lineBuffers.add(buffer);
-            buffer = new RecordLineBuffer();
-            startIndex += length;
-        }
-
-        parser.endOfStream(buffer);
-        if (! buffer.isEmpty()) {
-            lineBuffers.add(buffer);
-        }
-
-        return lineBuffers;
-    }
+//    public static RecordLineBuffer parseLine(String line) {
+//        var parser = new FastCsvLineParser();
+//        var buffer = new RecordLineBuffer();
+//        char[] chars = line.toCharArray();
+//        parser.parseNext(buffer, chars, 0, chars.length);
+//        parser.endOfStream(buffer);
+//        return buffer;
+//    }
 
 
     public static boolean isSpecial(char content) {
@@ -117,10 +87,31 @@ public class FastCsvLineParser implements RecordLineParser {
             int contentOffset,
             int contentEnd
     ) {
-        var recordLength = 0;
+        int recordLength = 0;
         for (int i = contentOffset; i < contentEnd; i++) {
-            var nextChar = contentChars[i];
+            char nextChar = contentChars[i];
             recordLength++;
+
+            if (state == stateInQuoted) {
+                int length = parseInQuoteUntilNextState(
+                        recordLineBuffer, contentChars, i, contentEnd, nextChar);
+                if (length == -1) {
+                    return -1;
+                }
+                i += length;
+                nextChar = contentChars[i];
+                recordLength += length;
+            }
+            else if (state == stateInUnquoted) {
+                int length = parseInUnquotedUntilNextState(
+                        recordLineBuffer, contentChars, i, contentEnd, nextChar);
+                if (length == -1) {
+                    return -1;
+                }
+                i += length;
+                nextChar = contentChars[i];
+                recordLength += length;
+            }
 
             var isEnd = parse(recordLineBuffer, nextChar);
             if (isEnd) {
@@ -131,14 +122,88 @@ public class FastCsvLineParser implements RecordLineParser {
     }
 
 
+    private int parseInQuoteUntilNextState(
+            RecordLineBuffer recordLineBuffer,
+            char[] contentChars,
+            int start,
+            int contentEnd,
+            char startChar
+    ) {
+        int length = 0;
+        boolean reachedNextState = false;
+        int i = start;
+        char nextChar = startChar;
+
+        while (true) {
+            if (nextChar == quotation) {
+                reachedNextState = true;
+                break;
+            }
+            i++;
+            if (i == contentEnd) {
+                break;
+            }
+            nextChar = contentChars[i];
+            length++;
+        }
+
+        if (! reachedNextState) {
+            length++;
+        }
+
+        recordLineBuffer.addToField(contentChars, start, i - start);
+        return reachedNextState ? length : -1;
+    }
+
+
+    private int parseInUnquotedUntilNextState(
+            RecordLineBuffer recordLineBuffer,
+            char[] contentChars,
+            int start,
+            int contentEnd,
+            char startChar
+    ) {
+        int length = 0;
+        boolean reachedNextState = false;
+        int i = start;
+        int nextChar = startChar;
+
+        scan:
+        while (true) {
+            switch (nextChar) {
+                case quotation, delimiter, carriageReturn, lineFeed -> {
+                    reachedNextState = true;
+                    break scan;
+                }
+
+                default -> {
+                    i++;
+                    if (i == contentEnd) {
+                        break scan;
+                    }
+                    nextChar = contentChars[i];
+                    length++;
+                }
+            }
+        }
+
+        if (! reachedNextState) {
+            length++;
+        }
+
+        recordLineBuffer.addToField(contentChars, start, length);
+        return reachedNextState ? length : -1;
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     @Override
     public boolean endOfStream(@NotNull RecordLineBuffer recordLineBuffer) {
         return parse(recordLineBuffer, (char) lineFeed);
     }
 
 
-    @Override
-    public boolean parse(@NotNull RecordLineBuffer recordLineBuffer, char nextChar) {
+    private boolean parse(@NotNull RecordLineBuffer recordLineBuffer, char nextChar) {
         int nextState = handleState(nextChar, recordLineBuffer);
 
         var previousState = state;
@@ -150,25 +215,25 @@ public class FastCsvLineParser implements RecordLineParser {
 
 
     private int handleState(char nextChar, @NotNull RecordLineBuffer recordLineBuffer) {
-        switch (state) {
-            case stateStartOfField:
-                return onStartOfField(nextChar, recordLineBuffer);
+        return switch (state) {
+            case stateStartOfField ->
+                    onStartOfField(nextChar, recordLineBuffer);
 
-            case stateEndOfRecord:
-                return onEndOfRecord(nextChar, recordLineBuffer);
+            case stateEndOfRecord ->
+                    onEndOfRecord(nextChar, recordLineBuffer);
 
-            case stateInUnquoted:
-                return onUnquoted(nextChar, recordLineBuffer);
+            case stateInUnquoted ->
+                    onUnquoted(nextChar, recordLineBuffer);
 
-            case stateInQuoted:
-                return onQuoted(nextChar, recordLineBuffer);
+            case stateInQuoted ->
+                    onQuoted(nextChar, recordLineBuffer);
 
-            case stateInQuotedQuote:
-                return onQuotedQuote(nextChar, recordLineBuffer);
+            case stateInQuotedQuote ->
+                    onQuotedQuote(nextChar, recordLineBuffer);
 
-            default:
-                throw new IllegalStateException("Unknown state: " + state);
-        }
+            default ->
+                    throw new IllegalStateException("Unknown state: " + state);
+        };
     }
 
     private int onStartOfField(char nextChar, @NotNull RecordLineBuffer recordLineBuffer) {
@@ -212,26 +277,30 @@ public class FastCsvLineParser implements RecordLineParser {
 
     private int onUnquoted(char nextChar, @NotNull RecordLineBuffer recordLineBuffer) {
         switch ((int) nextChar) {
-            case delimiter:
+            case delimiter -> {
                 recordLineBuffer.commitField();
                 return stateStartOfField;
+            }
 
-            case carriageReturn, lineFeed:
+            case carriageReturn, lineFeed -> {
                 recordLineBuffer.commitField();
                 return stateEndOfRecord;
+            }
 
-            case quotation:
-                throw new IllegalStateException("Unexpected: '" + nextChar + "' - " + recordLineBuffer.toCsv());
+            case quotation ->
+                    throw new IllegalStateException("Unexpected: '" + nextChar + "' - " + recordLineBuffer.toCsv());
 
-            default:
+            default -> {
                 recordLineBuffer.addToField(nextChar);
                 return stateInUnquoted;
+            }
         }
     }
 
 
     private int onQuoted(char nextChar, @NotNull RecordLineBuffer recordLineBuffer) {
         if (nextChar == quotation) {
+            recordLineBuffer.indicateNonEmpty();
             return stateInQuotedQuote;
         }
 
@@ -242,20 +311,23 @@ public class FastCsvLineParser implements RecordLineParser {
 
     private int onQuotedQuote(char nextChar, @NotNull RecordLineBuffer recordLineBuffer) {
         switch ((int) nextChar) {
-            case quotation:
+            case quotation -> {
                 recordLineBuffer.addToField(nextChar);
                 return stateInQuoted;
+            }
 
-            case delimiter:
+            case delimiter -> {
                 recordLineBuffer.commitField();
                 return stateStartOfField;
+            }
 
-            case carriageReturn, lineFeed:
+            case carriageReturn, lineFeed -> {
                 recordLineBuffer.commitField();
                 return stateEndOfRecord;
+            }
 
-            default:
-                throw new IllegalStateException("unexpected: '" + nextChar + "'");
+            default ->
+                    throw new IllegalStateException("unexpected: '" + nextChar + "'");
         }
     }
 }

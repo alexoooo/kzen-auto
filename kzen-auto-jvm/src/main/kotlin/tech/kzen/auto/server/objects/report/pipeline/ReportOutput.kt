@@ -1,6 +1,5 @@
 package tech.kzen.auto.server.objects.report.pipeline
 
-import org.apache.commons.csv.CSVFormat
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
@@ -215,7 +214,12 @@ class ReportOutput(
                         previewResponse.get(1, TimeUnit.SECONDS)
                     }
                     catch (e: TimeoutException) {
-                        continue
+                        if (taskHandle.isTerminated()) {
+                            previewInCurrentThread(reportRunSpec, outputSpec)
+                        }
+                        else {
+                            continue
+                        }
                     }
             }
 
@@ -300,17 +304,24 @@ class ReportOutput(
         }
 
         Files.newBufferedWriter(path).use { output ->
-            val csvPrinter = CSVFormat.DEFAULT.print(output)
+//            val csvPrinter = CSVFormat.DEFAULT.print(output)
+            val record = RecordLineBuffer()
 
             if (indexedCsvTable != null) {
                 indexedCsvTable.traverseWithHeader { row ->
-                    csvPrinter.printRecord(row)
+                    record.clear()
+                    record.addAll(row)
+                    record.writeCsv(output)
+                    output.write("\r\n")
                 }
             }
             else {
                 check(pivotBuilder != null)
                 pivotBuilder.traverseWithHeader(reportRunSpec.pivot.values) { row ->
-                    csvPrinter.printRecord(row)
+                    record.clear()
+                    record.addAll(row)
+                    record.writeCsv(output)
+                    output.write("\r\n")
                 }
             }
         }

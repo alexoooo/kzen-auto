@@ -13,48 +13,80 @@ class TsvLineParser: RecordLineParser {
         const val delimiter = '\t'
         const val carriageReturn = '\r'
         const val lineFeed = '\n'
-
-
-        fun parseLine(line: String): RecordLineBuffer {
-            val parse = TsvLineParser()
-            val buffer = RecordLineBuffer()
-            parse.parseNext(buffer, line.toCharArray(), 0)
-            parse.endOfStream(buffer)
-            return buffer
-        }
-
-
-        fun parseLines(lines: String): List<RecordLineBuffer> {
-            val lineBuffers = mutableListOf<RecordLineBuffer>()
-            val chars = lines.toCharArray()
-            val parser = TsvLineParser()
-
-            var buffer = RecordLineBuffer()
-
-            var startIndex = 0
-            while (true) {
-                val length = parser.parseNext(buffer, chars, startIndex)
-                if (length == -1) {
-                    break
-                }
-
-                lineBuffers.add(buffer)
-                buffer = RecordLineBuffer()
-                startIndex += length
-            }
-
-            parser.endOfStream(buffer)
-            if (! buffer.isEmpty()) {
-                lineBuffers.add(buffer)
-            }
-
-            return lineBuffers
-        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private var state = stateStartOfField
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun parseNext(
+        recordLineBuffer: RecordLineBuffer,
+        contentChars: CharArray,
+        contentOffset: Int,
+        contentEnd: Int
+    ): Int {
+        var recordLength = 0
+        var i = contentOffset
+        while (i < contentEnd) {
+            var nextChar = contentChars[i]
+            recordLength++
+
+            if (state == stateInField) {
+                val length: Int = parseInFieldUntilNextState(
+                    recordLineBuffer, contentChars, i, contentEnd, nextChar)
+                if (length == -1) {
+                    return -1
+                }
+                i += length
+                nextChar = contentChars[i]
+                recordLength += length
+            }
+
+            val isEnd = parse(recordLineBuffer, nextChar)
+            if (isEnd) {
+                return recordLength
+            }
+
+            i++
+        }
+        return -1
+    }
+
+
+    private fun parseInFieldUntilNextState(
+        recordLineBuffer: RecordLineBuffer,
+        contentChars: CharArray,
+        start: Int,
+        contentEnd: Int,
+        startChar: Char
+    ): Int {
+        var length = 0
+        var reachedNextState = false
+        var i: Int = start
+        var nextChar: Char = startChar
+        while (true) {
+            if (nextChar == delimiter ||
+                    nextChar == carriageReturn ||
+                    nextChar == lineFeed
+            ) {
+                reachedNextState = true
+                break
+            }
+            i++
+            if (i == contentEnd) {
+                break
+            }
+            nextChar = contentChars[i]
+            length++
+        }
+        if (! reachedNextState) {
+            length++
+        }
+        recordLineBuffer.addToField(contentChars, start, i - start)
+        return if (reachedNextState) length else -1
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -68,7 +100,7 @@ class TsvLineParser: RecordLineParser {
     /**
      * @return true if reached end of record
      */
-    override fun parse(
+    private fun parse(
         recordLineBuffer: RecordLineBuffer,
         nextChar: Char
     ): Boolean {

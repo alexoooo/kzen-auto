@@ -242,6 +242,11 @@ class ModelTaskRepository(
         }
 
 
+        override fun isTerminated(): Boolean {
+            return completeLatch.count == 0L
+        }
+
+
         private fun terminate() {
             run?.close()
 

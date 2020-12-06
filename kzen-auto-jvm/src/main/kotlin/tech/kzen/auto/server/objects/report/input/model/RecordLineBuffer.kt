@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.input.model
 
 import tech.kzen.auto.server.objects.report.input.parse.FastCsvLineParser
+import tech.kzen.auto.server.objects.report.input.parse.TsvLineParser
 import java.io.ByteArrayOutputStream
 import java.io.OutputStreamWriter
 import java.io.Writer
@@ -35,6 +36,7 @@ class RecordLineBuffer(
             buffer.fieldCount = 1
             buffer.fieldEnds[0] = length
             buffer.fieldContentLength = length
+            buffer.nonEmpty = true
             return buffer
         }
     }
@@ -45,6 +47,7 @@ class RecordLineBuffer(
     private var fieldEnds = IntArray(expectedFieldCount)
     private var fieldCount = 0
     private var fieldContentLength = 0
+    private var nonEmpty = false
 
     val flyweight = RecordTextFlyweight(this)
 
@@ -69,7 +72,7 @@ class RecordLineBuffer(
 
 
     fun isEmpty(): Boolean {
-        return fieldCount == 0 && fieldContentLength == 0
+        return ! nonEmpty && fieldCount <= 1 && fieldContentLength == 0
     }
 
 
@@ -83,6 +86,7 @@ class RecordLineBuffer(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     fun toCsv(): String {
         val out = ByteArrayOutputStream()
         OutputStreamWriter(out, Charsets.UTF_8).use {
@@ -93,6 +97,11 @@ class RecordLineBuffer(
 
 
     fun writeCsv(out: Writer) {
+        if (fieldCount == 1 && fieldContentLength == 0 && nonEmpty) {
+            out.write("\"\"")
+            return
+        }
+
         for (i in 0 until fieldCount) {
             if (i != 0) {
                 out.write(FastCsvLineParser.delimiter)
@@ -119,6 +128,46 @@ class RecordLineBuffer(
     }
 
 
+    fun toTsv(): String {
+        val out = ByteArrayOutputStream()
+        OutputStreamWriter(out, Charsets.UTF_8).use {
+            writeTsv(it)
+        }
+        return String(out.toByteArray(), Charsets.UTF_8)
+    }
+
+
+    fun writeTsv(out: Writer) {
+        if (fieldCount == 1 && fieldContentLength == 0 && nonEmpty) {
+            throw IllegalStateException("Can't represent non-empty record with single empty column")
+        }
+
+        for (i in 0 until fieldCount) {
+            if (i != 0) {
+                out.write(TsvLineParser.delimiter.toInt())
+            }
+
+            writeTsvField(i, out)
+        }
+    }
+
+
+    fun writeTsvField(index: Int, out: Writer) {
+        val startIndex: Int
+        val endIndex: Int
+        if (index == 0) {
+            startIndex = 0
+            endIndex = fieldEnds[0]
+        }
+        else {
+            startIndex = fieldEnds[index - 1]
+            endIndex = fieldEnds[index]
+        }
+        val length = endIndex - startIndex
+        out.write(fieldContents, startIndex, length)
+    }
+
+
     fun getString(index: Int): String {
         val startIndex: Int
         val endIndex: Int
@@ -137,10 +186,24 @@ class RecordLineBuffer(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun indicateNonEmpty() {
+        nonEmpty = true
+    }
+
+
     fun addToField(nextChar: Char) {
         growFieldContentsIfRequired()
         fieldContents[fieldContentLength] = nextChar
         fieldContentLength++
+    }
+
+
+    fun addToField(chars: CharArray, offset: Int, length: Int) {
+        growFieldContentsIfRequired(fieldContentLength + length)
+        for (i in 0 until length) {
+            fieldContents[fieldContentLength + i] = chars[offset + i]
+        }
+        fieldContentLength += length
     }
 
 
@@ -152,19 +215,29 @@ class RecordLineBuffer(
     }
 
 
+    fun addAll(values: List<String>) {
+        for (value in values) {
+            for (i in value.indices) {
+                addToField(value[i])
+            }
+            commitField()
+        }
+    }
+
     fun clear() {
         fieldCount = 0
         fieldContentLength = 0
+        nonEmpty = false
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun growFieldContentsIfRequired() {
-        if (fieldContents.size > fieldContentLength) {
+    private fun growFieldContentsIfRequired(required: Int = fieldContentLength + 1) {
+        if (fieldContents.size >= required) {
             return
         }
 
-        val nextSize = (fieldContents.size * 1.2).toInt() + 1
+        val nextSize = (fieldContents.size * 1.2).toInt().coerceAtLeast(required)
         fieldContents = fieldContents.copyOf(nextSize)
     }
 
