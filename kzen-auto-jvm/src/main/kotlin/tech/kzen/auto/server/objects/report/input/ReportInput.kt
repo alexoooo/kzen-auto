@@ -45,32 +45,10 @@ class ReportInput(
 
     private val outerStopwatch = Stopwatch.createStarted()
     private val innerStopwatch = Stopwatch.createStarted()
-    private var previousInnerProgress = 0L
+    private var previousInnerCount = 0L
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    fun poll(consumer: (RecordItem) -> Unit): Boolean {
-//        if (taskHandle!!.cancelRequested()) {
-//            return false
-//        }
-//
-//        val nextStream = nextStream()
-//            ?: return false
-//
-//        if (! nextStream.hasNext()) {
-//            endOfStream()
-//            return true
-//        }
-//
-//        val recordItem = nextStream.next()
-//        consumer.invoke(recordItem)
-//
-//        trackProgress()
-//
-//        return true
-//    }
-
-
     /**
      * @return true if read
      */
@@ -131,6 +109,7 @@ class ReportInput(
         currentInput = null
         currentStream = null
         currentCount = 0L
+        previousInnerCount = 0L
 
         val overallPerSecond = (1000.0 * finishedCount / outerStopwatch.elapsed(TimeUnit.MILLISECONDS)).toLong()
 
@@ -163,14 +142,14 @@ class ReportInput(
                 return
             }
 
-            val innerProgressItems = currentCount - previousInnerProgress
+            val innerProgressItems = currentCount - previousInnerCount
             val innerPerSecond = (1000.0 * innerProgressItems / elapsedMillis).toLong()
 
             val progressMessage =
                 "Processed ${ReportSummary.formatCount(currentCount)}, " +
                         "at ${ReportSummary.formatCount(innerPerSecond)}/s"
 
-            previousInnerProgress = currentCount
+            previousInnerCount = currentCount
 
             innerStopwatch.reset().start()
 

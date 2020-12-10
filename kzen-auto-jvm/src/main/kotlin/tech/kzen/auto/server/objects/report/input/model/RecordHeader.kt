@@ -15,6 +15,10 @@ data class RecordHeader(
         val empty = ofLine(RecordLineBuffer())
 
 
+        fun of(headerNames: List<String>): RecordHeader {
+            return ofLine(RecordLineBuffer.of(headerNames))
+        }
+
         fun ofLine(recordLineBuffer: RecordLineBuffer): RecordHeader {
             val headerNames = recordLineBuffer.toList()
 

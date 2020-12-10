@@ -18,11 +18,15 @@ import org.jetbrains.kotlin.config.JvmTarget
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
+import java.nio.file.Path
 import kotlin.script.experimental.jvm.util.KotlinJars
 import kotlin.script.experimental.jvm.util.classpathFromClassloader
 
 
-class EmbeddedKotlinCompiler {
+/**
+ * see: https://stackoverflow.com/questions/58921225/how-to-pass-current-classloader-to-kotlintojvmbytecodecompiler-for-dynamic-runt
+ */
+class EmbeddedKotlinCompiler: KotlinCompiler {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val errorMessageStart = " error: "
@@ -42,18 +46,23 @@ class EmbeddedKotlinCompiler {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun tryCompileModule(
+    override fun tryCompileModule(
         moduleName: String,
-        sourcePaths: List<String>,
-        saveClassesDir: File,
-        classpathLocations: List<File>,
+        sourcePaths: List<Path>,
+        saveClassesDir: Path,
+        classpathLocations: List<Path>,
         classLoader: ClassLoader
     ): String? {
         val errorStreamBytes = ByteArrayOutputStream()
         val errorStream = PrintStream(errorStreamBytes)
 
         val configuration = configureModuleCompiler(
-            moduleName, sourcePaths, saveClassesDir, classpathLocations, classLoader, errorStream)
+            moduleName,
+            sourcePaths.map { it.toAbsolutePath().normalize().toString() },
+            saveClassesDir.toFile(),
+            classpathLocations.map { it.toFile() },
+            classLoader,
+            errorStream)
 
         val env: KotlinCoreEnvironment = createForProduction(
             DummyDisposable(), configuration, EnvironmentConfigFiles.JVM_CONFIG_FILES)

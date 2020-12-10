@@ -42,6 +42,7 @@ class ReportHandle(
 //        private val logger = LoggerFactory.getLogger(ReportHandle::class.java)
 
         private const val disruptorBufferSize = 4 * 1024
+//        private const val disruptorBufferSize = 8 * 1024
 
 
         fun passivePreview(reportRunSpec: ReportRunSpec, runDir: Path, outputSpec: OutputSpec): OutputInfo {
