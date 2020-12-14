@@ -3,10 +3,7 @@ package tech.kzen.auto.client.objects.document.report.state
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
-import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
-import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
-import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
-import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
+import tech.kzen.auto.common.objects.document.report.spec.*
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -93,6 +90,16 @@ object ReportEffect {
 
             is ReportTaskStopResponse ->
                 taskStopped(/*action*/)
+
+
+            is FormulaAddRequest ->
+                submitFormulaAdd(state, action.columnName)
+
+            is FormulaRemoveRequest ->
+                submitFormulaRemove(state, action.columnName)
+
+            is FormulaValueUpdateRequest ->
+                submitFormulaValueUpdate(state, action.columnName, action.formula)
 
 
             is FilterAddRequest ->
@@ -400,6 +407,64 @@ object ReportEffect {
             ReportRefreshSchedule(
                 ReportTaskRefreshRequest(action.taskModel.taskId)),
             OutputLookupRequest)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun submitFormulaAdd(
+        state: ReportState,
+        columnName: String
+    ): ReportAction {
+        val command = FormulaSpec.addCommand(state.mainLocation, columnName)
+
+        val result = ClientContext.mirroredGraphStore
+            .apply(command)
+
+        return when (result) {
+            is MirroredGraphError ->
+                FormulaUpdateResult(
+                    result.error.message ?: "Failed: ${result.remote}")
+
+            is MirroredGraphSuccess ->
+                FormulaUpdateResult(null)
+        }
+    }
+
+
+    private suspend fun submitFormulaRemove(
+        state: ReportState,
+        columnName: String
+    ): ReportAction {
+        val command = FormulaSpec.removeCommand(state.mainLocation, columnName)
+
+        val result = ClientContext.mirroredGraphStore
+            .apply(command)
+
+        return when (result) {
+            is MirroredGraphError ->
+                FormulaUpdateResult(
+                    result.error.message ?: "Failed: ${result.remote}")
+
+            is MirroredGraphSuccess ->
+                FormulaUpdateResult(null)
+        }
+    }
+
+
+    private suspend fun submitFormulaValueUpdate(
+        state: ReportState,
+        columnName: String,
+        formula: String
+    ): ReportAction {
+        val command = FormulaSpec.updateFormulaCommand(
+            state.mainLocation, columnName, formula)
+
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        val errorMessage =
+            (result as? MirroredGraphError)?.error?.message
+
+        return FilterUpdateResult(errorMessage)
     }
 
 

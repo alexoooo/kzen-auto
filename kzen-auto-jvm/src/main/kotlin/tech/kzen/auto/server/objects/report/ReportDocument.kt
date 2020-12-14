@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.report
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
+import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
@@ -25,6 +26,7 @@ import java.nio.file.Path
 @Reflect
 class ReportDocument(
     private val input: String,
+    private val formula: FormulaSpec,
     private val filter: FilterSpec,
     private val pivot: PivotSpec,
     private val output: OutputSpec,
@@ -83,7 +85,7 @@ class ReportDocument(
         val columnNames = ColumnListingAction.columnNamesMerge(inputPaths)
 
         return ReportRunSpec(
-            inputPaths, columnNames, filter, pivot)
+            inputPaths, columnNames, formula, filter, pivot)
     }
 
 

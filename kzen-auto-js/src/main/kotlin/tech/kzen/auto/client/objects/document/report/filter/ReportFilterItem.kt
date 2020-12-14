@@ -173,21 +173,21 @@ class ReportFilterItem(
         val columnCriteria = props.filterSpec.columns[props.columnName]
             ?: return
 
-        val processState = props.reportState
+        val reportState = props.reportState
 
         val missing =
-            if (processState.columnListing == null) {
+            if (reportState.columnListing == null) {
                 false
             }
             else {
-                ! processState.columnListing.contains(props.columnName)
+                ! reportState.columnListing.contains(props.columnName)
             }
 
-        val columnSummary = processState.tableSummary?.columnSummaries?.get(props.columnName)
+        val columnSummary = reportState.tableSummary?.columnSummaries?.get(props.columnName)
 
         val editDisabled =
             props.reportState.initiating ||
-            props.reportState.filterTaskRunning
+            props.reportState.taskRunning
 
         styledDiv {
             css {

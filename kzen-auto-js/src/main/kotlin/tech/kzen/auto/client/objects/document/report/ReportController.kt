@@ -7,6 +7,7 @@ import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.StageController
 import tech.kzen.auto.client.objects.document.report.filter.ReportFilterList
+import tech.kzen.auto.client.objects.document.report.formula.ReportFormulaList
 import tech.kzen.auto.client.objects.document.report.pivot.ReportPivot
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.objects.document.report.state.ReportStore
@@ -102,6 +103,7 @@ class ReportController(
             }
 
             renderInput(processState)
+            renderFormulas(processState)
             renderFilter(processState)
             renderPivot(processState)
             renderOutput(processState)
@@ -138,6 +140,16 @@ class ReportController(
             attrs {
                 this.reportState = reportState
                 dispatcher = store
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderFormulas(reportState: ReportState) {
+        child(ReportFormulaList::class) {
+            attrs {
+                this.reportState = reportState
+                this.dispatcher = store
             }
         }
     }

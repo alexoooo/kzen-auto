@@ -26,6 +26,9 @@ data class ReportState(
     val columnListing: List<String>? = null,
     val columnListingError: String? = null,
 
+    val formulaLoading: Boolean = false,
+    val formulaError: String? = null,
+
     val filterLoading: Boolean = false,
     val filterError: String? = null,
 
@@ -44,7 +47,7 @@ data class ReportState(
     val taskStarting: Boolean = false,
     val taskStopping: Boolean = false,
 //    val indexTaskRunning: Boolean = false,
-    val filterTaskRunning: Boolean = false,
+    val taskRunning: Boolean = false,
     val taskModel: TaskModel? = null,
     val taskProgress: TaskProgress? = null,
     val taskLoadError: String? = null,
@@ -98,7 +101,7 @@ data class ReportState(
     //-----------------------------------------------------------------------------------------------------------------
     fun isTaskRunning(): Boolean {
 //        return indexTaskRunning || filterTaskRunning
-        return filterTaskRunning
+        return taskRunning
     }
 
 

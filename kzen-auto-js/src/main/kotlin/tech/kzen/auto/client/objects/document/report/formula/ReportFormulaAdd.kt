@@ -1,30 +1,28 @@
-package tech.kzen.auto.client.objects.document.report.filter
+package tech.kzen.auto.client.objects.document.report.formula
 
-import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.title
+import org.w3c.dom.HTMLInputElement
 import react.*
 import styled.css
 import styled.styledDiv
-import tech.kzen.auto.client.objects.document.report.state.FilterAddRequest
+import tech.kzen.auto.client.objects.document.report.state.FormulaAddRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
-import kotlin.js.Json
-import kotlin.js.json
+import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 
 
-class ReportFilterAdd(
+class ReportFormulaAdd(
     props: Props
 ):
-    RPureComponent<ReportFilterAdd.Props, ReportFilterAdd.State>(props)
+    RPureComponent<ReportFormulaAdd.Props, ReportFormulaAdd.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var reportState: ReportState,
         var dispatcher: ReportDispatcher,
-        var filterSpec: FilterSpec
+        var formulaSpec: FormulaSpec
     ): RProps
 
 
@@ -58,14 +56,24 @@ class ReportFilterAdd(
     }
 
 
-    private fun onColumnSelected(columnName: String) {
-        setState {
-            selectedColumn = columnName
-            adding = false
-        }
+    private fun onSubmit() {
+        val columnName = state.selectedColumn
+            ?: return
 
         props.dispatcher.dispatchAsync(
-            FilterAddRequest(columnName))
+            FormulaAddRequest(columnName))
+
+        setState {
+            adding = false
+            selectedColumn = null
+        }
+    }
+
+
+    private fun onValueChange(columnName: String) {
+        setState {
+            selectedColumn = columnName
+        }
     }
 
 
@@ -74,12 +82,12 @@ class ReportFilterAdd(
         val columnListing = props.reportState.columnListing
             ?: return
 
-        val unusedOptions = columnListing
-            .filter { it !in props.filterSpec.columns }
-
-        if (unusedOptions.isEmpty()) {
-            return
-        }
+//        val unusedOptions = columnListing
+//            .filter { it !in props.formulaSpec.columns }
+//
+//        if (unusedOptions.isEmpty()) {
+//            return
+//        }
 
         val editDisabled =
             props.reportState.initiating ||
@@ -92,10 +100,10 @@ class ReportFilterAdd(
                 }
             }
 
-            if (! props.reportState.filterLoading) {
-                if (props.reportState.filterError != null) {
+            if (! props.reportState.formulaLoading) {
+                if (props.reportState.formulaError != null) {
                     styledDiv {
-                        +"Error: ${props.reportState.filterError}"
+                        +"Error: ${props.reportState.formulaError}"
                     }
                 }
 
@@ -106,7 +114,7 @@ class ReportFilterAdd(
                             width = 15.em
                         }
 
-                        renderSelect(unusedOptions, editDisabled)
+                        renderName(columnListing, editDisabled)
                     }
 
                     renderCancelButton()
@@ -155,6 +163,16 @@ class ReportFilterAdd(
             child(MaterialIconButton::class) {
                 attrs {
                     onClick = {
+                        onSubmit()
+                    }
+                }
+
+                child(AddIcon::class) {}
+            }
+
+            child(MaterialIconButton::class) {
+                attrs {
+                    onClick = {
                         onCancel()
                     }
                 }
@@ -165,58 +183,21 @@ class ReportFilterAdd(
     }
 
 
-    private fun RBuilder.renderSelect(unusedOptions: List<String>, editDisabled: Boolean) {
-        val selectId = "material-react-select-id"
-
-        child(MaterialInputLabel::class) {
+    private fun RBuilder.renderName(
+        columnListing: List<String>,
+        editDisabled: Boolean
+    ) {
+        child(MaterialTextField::class) {
             attrs {
-                htmlFor = selectId
-
-                style = reactStyle {
-                    fontSize = 0.8.em
-                }
-            }
-
-            +"Column name"
-        }
-
-        val selectOptions = unusedOptions
-            .map { ReactSelectOption(it, it) }
-            .toTypedArray()
-
-        child(ReactSelect::class) {
-            attrs {
-                id = selectId
-
-                value = selectOptions.find { it.value == state.selectedColumn }
-//                value = firstOption
-
-                options = selectOptions
-//                options = optionsArray
+                label = "Calculated column name"
 
                 onChange = {
-//                    console.log("^^^^^ selected: $it")
-
-                    onColumnSelected(it.value)
+                    val target = it.target as HTMLInputElement
+                    onValueChange(target.value)
                 }
 
-                isDisabled = editDisabled
-
-                // https://stackoverflow.com/a/51844542/1941359
-                val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                    val transformed = json()
-                    transformed.add(base)
-                    transformed["background"] = "transparent"
-                    transformed
-                }
-
-                val reactStyles = json()
-                reactStyles["control"] = styleTransformer
-                styles = reactStyles
-
-                // NB: this was causing clipping when used in ConditionalStepDisplay table,
-                //   see: https://react-select.com/advanced#portaling
-                menuPortalTarget = document.body!!
+                disabled = editDisabled
+                error = state.selectedColumn in columnListing
             }
         }
     }

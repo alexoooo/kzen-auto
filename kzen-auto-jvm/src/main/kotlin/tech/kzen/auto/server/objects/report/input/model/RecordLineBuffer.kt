@@ -17,6 +17,10 @@ class RecordLineBuffer(
             return of(values).toCsv()
         }
 
+        fun of(vararg values: String): RecordLineBuffer {
+            return of(listOf(*values))
+        }
+
         fun of(values: List<String>): RecordLineBuffer {
             val buffer = RecordLineBuffer()
 

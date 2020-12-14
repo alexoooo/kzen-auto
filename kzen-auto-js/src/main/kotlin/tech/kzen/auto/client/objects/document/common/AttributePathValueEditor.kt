@@ -54,6 +54,7 @@ class AttributePathValueEditor(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var labelOverride: String?,
+        var multilineOverride: Boolean?,
         var disabled: Boolean,
         var invalid: Boolean,
         var onChange: ((AttributeNotation) -> Unit)?,
@@ -298,9 +299,11 @@ class AttributePathValueEditor(
 
 
     private fun RBuilder.renderString(stateValue: String) {
+        val multilineOverride = props.multilineOverride ?: false
         child(MaterialTextField::class) {
             attrs {
                 fullWidth = true
+                multiline = multilineOverride
 
                 label = formattedLabel()
                 value = stateValue
@@ -311,8 +314,15 @@ class AttributePathValueEditor(
 //                })
 
                 onChange = {
-                    val target = it.target as HTMLInputElement
-                    onValueChange(target.value)
+                    val value =
+                        if (multilineOverride) {
+                            (it.target as HTMLTextAreaElement).value
+                        }
+                        else {
+                            (it.target as HTMLInputElement).value
+                        }
+
+                    onValueChange(value)
                 }
 
                 disabled = props.disabled

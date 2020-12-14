@@ -14,10 +14,7 @@ class CalculatedColumnEvalTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun twoPlusTwoIsFour() {
-        val kotlinCompiler = EmbeddedKotlinCompiler()
-        val workDir = kotlin.io.path.createTempDirectory("CachedKotlinCompiler")
-        val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workDir)
-        val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler)
+        val calculatedColumnEval = calculatedColumnEval()
 
         val columnNames = listOf("bar", "baz")
         val calculatedColumn = calculatedColumnEval.eval(
@@ -26,9 +23,35 @@ class CalculatedColumnEvalTest {
             columnNames)
 
         val value = calculatedColumn.evaluate(
-            RecordLineBuffer.of(listOf("1", "2")),
+            RecordLineBuffer.of("1", "2"),
             RecordHeader.of(columnNames))
 
         assertEquals("4", value)
+    }
+
+
+    @Test
+    fun columnValueSum() {
+        val calculatedColumnEval = calculatedColumnEval()
+
+        val columnNames = listOf("bar", "baz")
+        val calculatedColumn = calculatedColumnEval.eval(
+            "foo",
+            "bar + baz",
+            columnNames)
+
+        val value = calculatedColumn.evaluate(
+            RecordLineBuffer.of("2", "3"),
+            RecordHeader.of(columnNames))
+
+        assertEquals("5", value)
+    }
+
+
+    private fun calculatedColumnEval(): CalculatedColumnEval {
+        val kotlinCompiler = EmbeddedKotlinCompiler()
+        val workDir = kotlin.io.path.createTempDirectory("CachedKotlinCompiler")
+        val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workDir)
+        return CalculatedColumnEval(cachedKotlinCompiler)
     }
 }

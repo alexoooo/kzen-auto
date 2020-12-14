@@ -8,7 +8,7 @@ import org.jetbrains.kotlin.cli.common.messages.PrintingMessageCollector
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment.Companion.createForProduction
-import org.jetbrains.kotlin.cli.jvm.compiler.KotlinToJVMBytecodeCompiler.analyzeAndGenerate
+import org.jetbrains.kotlin.cli.jvm.compiler.KotlinToJVMBytecodeCompiler
 import org.jetbrains.kotlin.cli.jvm.config.JvmClasspathRoot
 import org.jetbrains.kotlin.com.intellij.openapi.Disposable
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
@@ -67,7 +67,7 @@ class EmbeddedKotlinCompiler: KotlinCompiler {
         val env: KotlinCoreEnvironment = createForProduction(
             DummyDisposable(), configuration, EnvironmentConfigFiles.JVM_CONFIG_FILES)
 
-        val result = analyzeAndGenerate(env)
+        val result = KotlinToJVMBytecodeCompiler.analyzeAndGenerate(env)
         errorStream.flush()
         if (result != null) {
             return null

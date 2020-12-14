@@ -331,7 +331,7 @@ class ReportInputView(
                 }
 
                 when {
-                    props.reportState.filterTaskRunning -> {
+                    props.reportState.taskRunning -> {
                         +"Running"
                     }
 

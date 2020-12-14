@@ -88,7 +88,7 @@ class PivotValueAdd(
 
         val editDisabled =
             props.reportState.initiating ||
-            props.reportState.filterTaskRunning ||
+            props.reportState.taskRunning ||
             props.reportState.pivotLoading
 
         styledDiv {

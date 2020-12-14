@@ -149,7 +149,7 @@ class ReportRun(
 //                        props.reportState.indexTaskRunning ->
 //                            "Pause index"
 
-                        props.reportState.filterTaskRunning ->
+                        props.reportState.taskRunning ->
                             "Cancel"
 
                         status.isTerminal() ->

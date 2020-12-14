@@ -14,6 +14,9 @@ object ReportConventions {
     private const val inputKey = "input"
     val inputAttribute = AttributeName(inputKey)
 
+    val formulaAttributeName = AttributeName("formula")
+    val formulaAttributePath = AttributePath.ofName(formulaAttributeName)
+
     val filterAttributeName = AttributeName("filter")
     val filterAttributePath = AttributePath.ofName(filterAttributeName)
 

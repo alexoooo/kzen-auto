@@ -35,6 +35,9 @@ object ReportReducer {
             is OutputLookupAction ->
                 reduceOutputLookup(state, action)
 
+            is FormulaAction ->
+                reduceFormula(state, action)
+
             is FilterAction ->
                 reduceFilter(state, action)
 
@@ -164,7 +167,7 @@ object ReportReducer {
                 taskModel = null,
                 taskProgress = null,
 //                indexTaskRunning = false,
-                filterTaskRunning = false)
+                taskRunning = false)
 
         val result = model.finalOrPartialResult()
 
@@ -187,7 +190,7 @@ object ReportReducer {
                     taskModel = model,
                     taskProgress = tableSummaryProgress,
 //                    indexTaskRunning = isRunning && isIndexing,
-                    filterTaskRunning = isRunning,
+                    taskRunning = isRunning,
                     tableSummary = tableSummary,
                     tableSummaryLoaded = true,
                     tableSummaryLoading = false)
@@ -227,7 +230,7 @@ object ReportReducer {
 //            indexTaskRunning = isRunning && isIndexing,
 //            indexTaskRunning = false,
 //            filterTaskRunning = isRunning && ! isIndexing,
-            filterTaskRunning = isRunning,
+            taskRunning = isRunning,
             taskError = action.taskModel.errorMessage(),
             taskStarting = false)
     }
@@ -243,7 +246,7 @@ object ReportReducer {
                 taskModel = null,
                 taskProgress = null,
 //                indexTaskRunning = false,
-                filterTaskRunning = false/*,
+                taskRunning = false/*,
                 indexTaskFinished = indexTaskFinished*/)
         }
 
@@ -271,7 +274,7 @@ object ReportReducer {
 //            indexTaskRunning = isRunning && isIndexing,
 //            indexTaskRunning = false,
 //            filterTaskRunning = isRunning && ! isIndexing,
-            filterTaskRunning = isRunning,
+            taskRunning = isRunning,
 //            indexTaskFinished = indexTaskFinished,
             taskError = action.taskModel.errorMessage())
     }
@@ -297,7 +300,7 @@ object ReportReducer {
             taskStopping = false,
             tableSummary = tableSummary,
 //            indexTaskRunning = false,
-            filterTaskRunning = false,
+            taskRunning = false,
             taskProgress = null/*,
             indexTaskFinished = false*/)
     }
@@ -343,6 +346,23 @@ object ReportReducer {
                 outputLoading = false,
                 outputInfo = action.outputInfo,
                 outputError = null)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun reduceFormula(
+        state: ReportState,
+        action: FormulaAction
+    ): ReportState {
+        return when (action) {
+            is FormulaUpdateRequest -> state.copy(
+                formulaLoading = true,
+                formulaError = null)
+
+            is FormulaUpdateResult -> state.copy(
+                formulaLoading = false,
+                formulaError = action.errorMessage)
         }
     }
 

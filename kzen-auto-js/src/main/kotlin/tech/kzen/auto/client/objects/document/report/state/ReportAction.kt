@@ -124,6 +124,35 @@ data class ListColumnsError(
 
 
 //---------------------------------------------------------------------------------------------------------------------
+sealed class FormulaAction: SingularReportAction()
+
+
+sealed class FormulaUpdateRequest: FormulaAction()
+
+
+data class FormulaUpdateResult(
+    override val errorMessage: String?
+): FormulaAction(), ReportUpdateResult
+
+
+//--------------------------------------------------------------
+data class FormulaAddRequest(
+    val columnName: String
+): FormulaUpdateRequest()
+
+
+data class FormulaRemoveRequest(
+    val columnName: String
+): FormulaUpdateRequest()
+
+
+data class FormulaValueUpdateRequest(
+    val columnName: String,
+    val formula: String
+): FormulaUpdateRequest()
+
+
+//---------------------------------------------------------------------------------------------------------------------
 sealed class FilterAction: SingularReportAction()
 
 

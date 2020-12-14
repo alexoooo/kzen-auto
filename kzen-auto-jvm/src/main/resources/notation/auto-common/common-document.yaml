@@ -79,6 +79,7 @@ Report:
   title: "Report"
   icon: TableChart
   input: ./
+  formula: {}
   filter: {}
   pivot:
     rows: []
@@ -89,10 +90,22 @@ Report:
     count: 50
   meta:
     input: String
+    formula: FormulaSpec
     filter: FilterSpec
     pivot: PivotSpec
     output: OutputSpec
     selfLocation: SelfLocation
+
+
+FormulaSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+  meta:
+    ref:
+      by: FormulaSpecDefiner
+
+FormulaSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.report.spec.FormulaSpec$Definer
 
 
 FilterSpec:

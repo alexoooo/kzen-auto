@@ -67,15 +67,11 @@ class CalculatedColumnEval(
                 "return ($calculatedColumnFormula)"
             }
 
-        val columnAccessors = columnNames.withIndex().joinToString("\n") { columnName ->
-            """
-    val `${columnName.value}` get(): ColumnValue {
-        val index = indices[${columnName.index}]
-        val text = if (index == -1) { "<missing>"} else { record.getString(index) }
-        return ColumnValue(text)
-    }
-            """.trimIndent()
-
+        val columnAccessors = columnNames.withIndex().joinToString("\n") { columnName -> """
+val `${columnName.value}` get(): ColumnValue {
+    return columnValue(${columnName.index})
+}
+"""
         }
 
         val code = """
@@ -97,6 +93,12 @@ class $mainClassName: CalculatedColumn {
     private var indices = IntArray(0)
     private var record: RecordLineBuffer = RecordLineBuffer()
 
+    private fun columnValue(columnIndex: Int): ColumnValue {
+        val index = indices[columnIndex]
+        val text = if (index == -1) { "<missing>" } else { record.getString(index) }
+        return ColumnValue(text)
+    }
+
 $columnAccessors
 
     override fun evaluate(
@@ -105,8 +107,8 @@ $columnAccessors
     ): String {
         record = recordLineBuffer
         indices = recordHeaderIndex.indices(recordHeader)
-
-        return evaluate()?.toString() ?: "null"
+        val value = evaluate()
+        return ColumnValue.toText(value)
     }
 
 
@@ -114,8 +116,7 @@ $columnAccessors
 $userCode
     }
 }
-        """.trimIndent()
-
+"""
         return KotlinCode(
             packagePath,
             mainClassName,
