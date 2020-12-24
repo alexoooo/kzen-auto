@@ -1,6 +1,8 @@
 package tech.kzen.auto.server.objects.report.input.parse
 
 import org.junit.Test
+import tech.kzen.auto.server.objects.report.calc.ColumnValue
+import tech.kzen.auto.server.objects.report.calc.ColumnValueConversions.plus
 import tech.kzen.auto.server.objects.report.input.read.RecordLineReader
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -155,6 +157,7 @@ class CsvLineParserTest {
         val record = RecordLineReader.csvLines(csv)[0]
         record.selectFlyweight(0)
         assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
+        assertEquals(csv.toDouble(), record.flyweight.toDouble())
     }
 
 
@@ -164,6 +167,20 @@ class CsvLineParserTest {
         val record = RecordLineReader.csvLines(csv)[0]
         record.selectFlyweight(0)
         assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
+        assertEquals(csv.toDouble(), record.flyweight.toDouble())
+    }
+
+
+    @Test
+    fun simpleDecimalDollars() {
+        3.14 + ColumnValue("foo")
+        42 + ColumnValue("foo")
+
+        val csv = "82.88"
+        val record = RecordLineReader.csvLines(csv)[0]
+        record.selectFlyweight(0)
+        assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
+        assertEquals(csv.toDouble(), record.flyweight.toDouble())
     }
 
 
@@ -173,6 +190,7 @@ class CsvLineParserTest {
         val record = RecordLineReader.csvLines(csv)[0]
         record.selectFlyweight(0)
         assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
+        assertEquals(csv.toDouble(), record.flyweight.toDouble())
     }
 
 
@@ -182,6 +200,21 @@ class CsvLineParserTest {
         val record = RecordLineReader.csvLines(csv)[0]
         record.selectFlyweight(0)
         assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
+        assertEquals(csv.toDouble(), record.flyweight.toDouble())
+    }
+
+
+    @Test
+    fun decimalsInRecord() {
+        val csv = """1370847830,11754ME,99,COM,07/11/2014,46,VAN,FORD,P,30620,16400,45210,01/01/20150831 12:00:00 PM,0001,1,0,923774,04.1,0000,0925A,,NY,O,2,SOUTH END AVE,,01/05/0001 12:00:00 PM,408,F6,,BBBBBBB,ALL,ALL,WHT,0,2006,-,0,,,,,,,,,,,,,,2006.00000099,foo2,199,2106.0"""
+        val record = RecordLineReader.csvLines(csv)[0]
+
+        for (i in 0 until record.size()) {
+            record.selectFlyweight(i)
+
+            val value = record.getString(i)
+            assertEquals(value.toDoubleOrNull() ?: Double.NaN, record.flyweight.toDoubleOrNan(), value)
+        }
     }
 
 

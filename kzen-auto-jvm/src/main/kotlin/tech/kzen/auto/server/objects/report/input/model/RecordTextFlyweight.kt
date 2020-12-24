@@ -160,7 +160,7 @@ class RecordTextFlyweight(
             throw NumberFormatException("$offset - $length - $valueOffset - $valueLength - " + toString())
         }
         if (length <= 0) {
-            throw NumberFormatException(toString())
+            throw NumberFormatException("offset = $offset, length = $length: " + toString())
         }
 
         val contents = recordLineBuffer.fieldContents
@@ -238,8 +238,34 @@ class RecordTextFlyweight(
 
         // https://math.stackexchange.com/questions/64042/what-are-the-numbers-before-and-after-the-decimal-point-referred-to-in-mathemati/438718#438718
         val fractionDigits = len - pointIndex - 1
-        val fractionAsLong: Long = toLong(pointIndex + 1, fractionDigits)
-        val factionalPart = fractionAsLong.toDouble() / decimalLongPowers[fractionDigits]
+        var fractionLeadingZeroes = 0
+        for (i in 1 .. fractionDigits) {
+            if (contents[offset + pointIndex + i] != '0') {
+                break
+            }
+            fractionLeadingZeroes++
+        }
+
+        val factionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes
+        val fractionAsLongWithoutLeadingZeroes: Long =
+            if (factionDigitsWithoutLeadingZeroes == 0) {
+                0
+            }
+            else {
+                toLong(pointIndex + fractionLeadingZeroes + 1, factionDigitsWithoutLeadingZeroes)
+            }
+
+        val factionalPartWithoutLeadingZeroes =
+            fractionAsLongWithoutLeadingZeroes.toDouble() / decimalLongPowers[factionDigitsWithoutLeadingZeroes]
+
+        val factionalPart =
+            if (fractionLeadingZeroes == 0) {
+                factionalPartWithoutLeadingZeroes
+            }
+            else {
+                factionalPartWithoutLeadingZeroes / decimalLongPowers[fractionLeadingZeroes]
+            }
+
         return wholePart + factionalPart
     }
 
@@ -294,12 +320,10 @@ class RecordTextFlyweight(
                 toLong(0, pointIndex)
             }
 
-        // https://math.stackexchange.com/questions/64042/what-are-the-numbers-before-and-after-the-decimal-point-referred-to-in-mathemati/438718#438718
         val fractionDigits = len - pointIndex - 1
-
         var fractionLeadingZeroes = 0
         for (i in 1 .. fractionDigits) {
-            if (contents[pointIndex + i] != '0') {
+            if (contents[offset + pointIndex + i] != '0') {
                 break
             }
             fractionLeadingZeroes++
@@ -307,7 +331,13 @@ class RecordTextFlyweight(
 
         val factionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes
         val fractionAsLongWithoutLeadingZeroes: Long =
-            toLong(pointIndex + fractionLeadingZeroes + 1, factionDigitsWithoutLeadingZeroes)
+            if (factionDigitsWithoutLeadingZeroes == 0) {
+                0
+            }
+            else {
+                toLong(pointIndex + fractionLeadingZeroes + 1, factionDigitsWithoutLeadingZeroes)
+            }
+
         val factionalPartWithoutLeadingZeroes =
             fractionAsLongWithoutLeadingZeroes.toDouble() / decimalLongPowers[factionDigitsWithoutLeadingZeroes]
 

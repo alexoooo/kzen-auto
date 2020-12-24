@@ -80,6 +80,9 @@ package $packagePath
 
 import tech.kzen.auto.server.objects.report.calc.CalculatedColumn
 import tech.kzen.auto.server.objects.report.calc.ColumnValue
+${ColumnValueConversions.operators.joinToString("\n") {
+    "import tech.kzen.auto.server.objects.report.calc.ColumnValueConversions.$it"
+}}
 import tech.kzen.auto.server.objects.report.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.input.model.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.input.model.RecordLineBuffer

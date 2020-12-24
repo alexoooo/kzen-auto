@@ -37,7 +37,7 @@ class ReportRunAction(
             .formulas
             .mapValues { formula ->
                 ServerContext.calculatedColumnEval.validate(
-                    formula.value, formula.value, formulaSignature.columnNames)
+                    formula.key, formula.value, formulaSignature.columnNames)
             }
             .filterValues { error -> error != null }
             .mapValues { e -> e.value!! }
