@@ -4,11 +4,9 @@ import kotlinx.css.*
 import react.*
 import styled.css
 import styled.styledDiv
+import styled.styledPre
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
-import tech.kzen.auto.client.objects.document.report.state.FormulaRemoveRequest
-import tech.kzen.auto.client.objects.document.report.state.FormulaUpdateResult
-import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
-import tech.kzen.auto.client.objects.document.report.state.ReportState
+import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.DeleteIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
@@ -79,8 +77,7 @@ class ReportFormulaItem(
 
     private fun onChangedByEdit() {
         props.dispatcher.dispatchAsync(
-            FormulaUpdateResult(null)
-        )
+            FormulaValidationRequest)
     }
 
 
@@ -96,13 +93,14 @@ class ReportFormulaItem(
             reportState.taskRunning ||
             reportState.formulaLoading
 
+        val error: String? =
+            reportState.formulaMessages[props.columnName]
+
         child(MaterialIconButton::class) {
             attrs {
                 style = reactStyle {
-//                    float = Float.right
-//                    marginTop = (-0.6).em
-//                    marginBottom = (-0.6).em
                     marginLeft = 0.25.em
+                    verticalAlign = VerticalAlign.top
                 }
 
                 onClick = {
@@ -125,6 +123,7 @@ class ReportFormulaItem(
                 attrs {
                     disabled = editDisabled
                     multilineOverride = true
+                    invalid = error != null
 
                     clientState = props.reportState.clientState
                     objectLocation = props.reportState.mainLocation
@@ -136,6 +135,12 @@ class ReportFormulaItem(
                     onChange = {
                         onChangedByEdit()
                     }
+                }
+            }
+
+            if (error != null) {
+                styledPre {
+                    +error
                 }
             }
         }

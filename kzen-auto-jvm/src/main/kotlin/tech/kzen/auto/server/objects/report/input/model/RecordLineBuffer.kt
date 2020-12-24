@@ -75,6 +75,11 @@ class RecordLineBuffer(
     }
 
 
+    fun size(): Int {
+        return fieldCount
+    }
+
+
     fun isEmpty(): Boolean {
         return ! nonEmpty && fieldCount <= 1 && fieldContentLength == 0
     }
@@ -219,12 +224,17 @@ class RecordLineBuffer(
     }
 
 
+    fun add(value: String) {
+        for (i in value.indices) {
+            addToField(value[i])
+        }
+        commitField()
+    }
+
+
     fun addAll(values: List<String>) {
         for (value in values) {
-            for (i in value.indices) {
-                addToField(value[i])
-            }
-            commitField()
+            add(value)
         }
     }
 

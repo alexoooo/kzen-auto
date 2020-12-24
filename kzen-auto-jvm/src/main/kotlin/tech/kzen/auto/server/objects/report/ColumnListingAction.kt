@@ -9,9 +9,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 
-object ColumnListingAction {
+class ColumnListingAction(
+    private val filterIndex: FilterIndex
+) {
     //-----------------------------------------------------------------------------------------------------------------
-    private const val columnsCsvFilename = "columns.csv"
+    companion object {
+        private const val columnsCsvFilename = "columns.csv"
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -26,7 +30,7 @@ object ColumnListingAction {
 
 
     suspend fun columnNames(inputPath: Path): List<String> {
-        val inputIndexPath = FilterIndex.inputIndexPath(inputPath)
+        val inputIndexPath = filterIndex.inputIndexPath(inputPath)
         val columnsFile = inputIndexPath.resolve(columnsCsvFilename)
 
         if (Files.exists(columnsFile)) {

@@ -18,6 +18,16 @@ data class ReportRunSignature(
     Digestible
 {
     //-----------------------------------------------------------------------------------------------------------------
+    fun extraColumnNames(): List<String> {
+        return formula.formulas.keys.toList()
+    }
+
+    fun allColumnNames(): List<String> {
+        return columnNames + extraColumnNames()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun hasPivot(): Boolean {
         return pivotRows.isNotEmpty() ||
                 pivotValues.isNotEmpty()

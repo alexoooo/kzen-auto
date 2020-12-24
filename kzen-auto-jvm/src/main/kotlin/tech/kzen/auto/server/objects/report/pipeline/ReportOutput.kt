@@ -60,7 +60,7 @@ class ReportOutput(
                     ).header
 
                 else ->
-                    runSignature.columnNames
+                    runSignature.allColumnNames()
             }
         }
 
@@ -167,7 +167,7 @@ class ReportOutput(
         }
         else {
             if (! reportRunSignature.hasPivot()) {
-                indexedCsvTable = IndexedCsvTable(reportRunSignature.columnNames, runDir)
+                indexedCsvTable = IndexedCsvTable(reportRunSignature.allColumnNames(), runDir)
                 pivotBuilder = null
             }
             else {
@@ -194,13 +194,17 @@ class ReportOutput(
 
     //-----------------------------------------------------------------------------------------------------------------
     @Synchronized
-    fun preview(reportRunSpec: ReportRunSpec, outputSpec: OutputSpec): OutputInfo {
+    fun preview(
+        reportRunSpec: ReportRunSpec,
+        outputSpec: OutputSpec,
+        reportWorkPool: ReportWorkPool
+    ): OutputInfo {
         if (! Files.exists(runDir)) {
             return missingOutputInfo(reportRunSpec, runDir)
         }
 
         return if (taskHandle == null) {
-            previewInCurrentThread(reportRunSpec, outputSpec)
+            previewInCurrentThread(reportRunSpec, outputSpec, reportWorkPool)
         }
         else {
             val requestHandle = PreviewRequest(reportRunSpec, outputSpec)
@@ -216,7 +220,7 @@ class ReportOutput(
                     catch (e: TimeoutException) {
                         if (taskHandle.isTerminated()) {
                             ReportOutput(reportRunSpec, runDir, null)
-                                .previewInCurrentThread(reportRunSpec, outputSpec)
+                                .previewInCurrentThread(reportRunSpec, outputSpec, reportWorkPool)
                         }
                         else {
                             continue
@@ -231,7 +235,11 @@ class ReportOutput(
     }
 
 
-    private fun previewInCurrentThread(reportRunSpec: ReportRunSpec, outputSpec: OutputSpec): OutputInfo {
+    private fun previewInCurrentThread(
+        reportRunSpec: ReportRunSpec,
+        outputSpec: OutputSpec,
+        reportWorkPool: ReportWorkPool
+    ): OutputInfo {
         val zeroBasedPreview = outputSpec.previewStartZeroBased()
 
         val fileTime = Files.getLastModifiedTime(runDir)
@@ -269,7 +277,7 @@ class ReportOutput(
 
         val saveInfo = saveInfo(runDir, outputSpec)
 
-        val status = ReportWorkPool.readRunStatus(reportRunSignature)
+        val status = reportWorkPool.readRunStatus(reportRunSignature)
 
         return OutputInfo(
             saveInfo.message,
@@ -400,11 +408,12 @@ class ReportOutput(
     }
 
 
-    fun handlePreviewRequest() {
+    fun handlePreviewRequest(reportWorkPool: ReportWorkPool) {
         val request = previewRequest
             ?: return
 
-        val outputInfo = previewInCurrentThread(request.reportRunSpec, request.outputSpec)
+        val outputInfo = previewInCurrentThread(
+            request.reportRunSpec, request.outputSpec, reportWorkPool)
 
         previewResponse.complete(outputInfo)
         previewRequest = null

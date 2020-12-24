@@ -6,6 +6,7 @@ import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.model.TaskProgress
+import tech.kzen.auto.server.objects.report.model.ReportFormulaSignature
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.ReportSummary
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
@@ -17,11 +18,43 @@ import java.nio.file.Path
 // TODO: https://stackoverflow.com/questions/3335969/reading-a-gzip-file-from-a-filechannel-java-nio
 // https://javadoc.io/static/com.conversantmedia/disruptor/1.2.9/com/conversantmedia/util/concurrent/PushPullConcurrentQueue.html
 // http://lmax-exchange.github.io/disruptor/user-guide/index.html
-object ReportRunAction
-{
+class ReportRunAction(
+    private val reportWorkPool: ReportWorkPool
+){
     //-----------------------------------------------------------------------------------------------------------------
     private val logger = LoggerFactory.getLogger(ReportRunAction::class.java)
     private val mimeTypeCsv = "text/csv"
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun formulaValidation(
+//        objectLocation: ObjectLocation,
+        formulaSignature: ReportFormulaSignature//,
+//        runDir: Path
+    ): ExecutionResult {
+        val errors: Map<String, String> = formulaSignature
+            .formula
+            .formulas
+            .mapValues { formula ->
+                ServerContext.calculatedColumnEval.validate(
+                    formula.value, formula.value, formulaSignature.columnNames)
+            }
+            .filterValues { error -> error != null }
+            .mapValues { e -> e.value!! }
+
+//        val activeReportHandle = ServerContext
+//            .modelTaskRepository
+//            .lookupActive(objectLocation)
+//            .singleOrNull()
+//            ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ReportHandle }
+//
+//        val tableSummary =
+//            activeReportHandle?.summaryView()
+//                ?: ReportSummary(reportRunSpec, runDir, null).view()
+
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(errors))
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -60,7 +93,7 @@ object ReportRunAction
 
         val outputInfo =
             activeReportHandle?.outputPreview(runSpec, outputSpec)
-                ?: ReportHandle.passivePreview(runSpec, runDir, outputSpec)
+                ?: ReportHandle.passivePreview(runSpec, runDir, outputSpec, reportWorkPool)
 
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(outputInfo.toCollection()))
@@ -74,7 +107,7 @@ object ReportRunAction
         outputSpec: OutputSpec
     ): ExecutionResult {
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val outPath = ReportHandle.passiveSave(runSpec, runDir, outputSpec)
+        val outPath = ReportHandle.passiveSave(runSpec, runDir, outputSpec, reportWorkPool)
 
         return when (outPath) {
             null ->
@@ -92,7 +125,7 @@ object ReportRunAction
         runDir: Path,
         outputSpec: OutputSpec
     ): ExecutionDownloadResult {
-        val inputStream = ReportHandle.passiveDownload(runSpec, runDir, outputSpec)
+        val inputStream = ReportHandle.passiveDownload(runSpec, runDir, outputSpec, reportWorkPool)
         return ExecutionDownloadResult(
             inputStream,
             "report.csv",
@@ -106,7 +139,7 @@ object ReportRunAction
         runDir: Path
     ): ExecutionResult {
         return try {
-            ReportWorkPool.deleteDir(runDir)
+            reportWorkPool.deleteDir(runDir)
             ExecutionSuccess.empty
         }
         catch (e: Exception) {
@@ -133,7 +166,7 @@ object ReportRunAction
             ExecutionValue.of(progress.toCollection())))
 
         val reportHandle = ReportHandle(
-            reportRunSpec, runDir, taskHandle)
+            reportRunSpec, runDir, taskHandle, reportWorkPool)
 
         Thread {
             processSync(
@@ -157,10 +190,10 @@ object ReportRunAction
             reportHandle.run()
 
             if (taskHandle.cancelRequested()) {
-                ReportWorkPool.updateRunStatus(runDir, OutputStatus.Cancelled)
+                reportWorkPool.updateRunStatus(runDir, OutputStatus.Cancelled)
             }
             else {
-                ReportWorkPool.updateRunStatus(runDir, OutputStatus.Done)
+                reportWorkPool.updateRunStatus(runDir, OutputStatus.Done)
             }
 
             taskHandle.complete(
@@ -170,7 +203,7 @@ object ReportRunAction
         catch (e: Exception) {
             logger.warn("Data processing failed", e)
 
-            ReportWorkPool.updateRunStatus(runDir, OutputStatus.Failed)
+            reportWorkPool.updateRunStatus(runDir, OutputStatus.Failed)
 
             taskHandle.complete(
                 ExecutionFailure(

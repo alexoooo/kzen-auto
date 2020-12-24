@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.report.pivot.row.digest
 import tech.kzen.lib.common.util.Digest
 
 
+// TODO: try B-Tree implementation, e.g. https://github.com/myui/btree4j/
 interface DigestIndex: AutoCloseable {
     fun size(): Long
 

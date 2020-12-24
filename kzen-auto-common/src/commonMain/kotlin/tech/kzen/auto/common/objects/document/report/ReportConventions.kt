@@ -48,6 +48,7 @@ object ReportConventions {
     const val actionRunTask = "run"
     const val actionSave = "save"
     const val actionReset = "reset"
+    const val actionValidateFormulas = "formulas"
 
 
     fun isFilter(documentNotation: DocumentNotation): Boolean {

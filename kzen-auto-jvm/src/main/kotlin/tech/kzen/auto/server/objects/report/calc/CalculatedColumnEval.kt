@@ -14,7 +14,7 @@ class CalculatedColumnEval(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun check(
+    fun validate(
         calculatedColumnName: String,
         calculatedColumnFormula: String,
         columnNames: List<String>
@@ -24,7 +24,8 @@ class CalculatedColumnEval(
     }
 
 
-    fun eval(
+    // TODO: return with compilation / creation error?
+    fun create(
         calculatedColumnName: String,
         calculatedColumnFormula: String,
         columnNames: List<String>

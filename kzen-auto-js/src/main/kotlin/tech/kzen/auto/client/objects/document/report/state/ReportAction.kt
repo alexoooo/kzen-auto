@@ -152,6 +152,16 @@ data class FormulaValueUpdateRequest(
 ): FormulaUpdateRequest()
 
 
+//--------------------------------------------------------------
+object FormulaValidationRequest: FormulaAction()
+
+
+data class FormulaValidationResult(
+    val messages: Map<String, String>,
+    val errorMessage: String?
+): FormulaAction()
+
+
 //---------------------------------------------------------------------------------------------------------------------
 sealed class FilterAction: SingularReportAction()
 

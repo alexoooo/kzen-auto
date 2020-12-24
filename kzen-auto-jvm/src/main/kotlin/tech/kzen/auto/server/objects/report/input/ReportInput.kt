@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 
 
 class ReportInput(
-    reportRunSpec: ReportRunSpec,
+    private val reportRunSpec: ReportRunSpec,
     private val taskHandle: TaskHandle?
 ):
     AutoCloseable
@@ -35,6 +35,7 @@ class ReportInput(
 
     //-----------------------------------------------------------------------------------------------------------------
     private val remainingInputs = reportRunSpec.inputs.toMutableList()
+    private val extraColumns = reportRunSpec.formula.formulas.keys.toList()
 
     private var nextProgress = TaskProgress.ofNotStarted(
         reportRunSpec.inputs.map { it.fileName.toString() })
@@ -87,7 +88,7 @@ class ReportInput(
         }
 
         val nextInput = remainingInputs.removeFirst()
-        val newStream = ReportStreamReader(nextInput)
+        val newStream = ReportStreamReader(nextInput, extraColumns)
 
         currentInput = nextInput
         currentStream = newStream

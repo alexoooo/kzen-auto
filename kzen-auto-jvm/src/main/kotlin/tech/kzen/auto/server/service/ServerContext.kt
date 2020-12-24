@@ -9,6 +9,10 @@ import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageIns
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.service.GraphInstanceCreator
+import tech.kzen.auto.server.objects.report.*
+import tech.kzen.auto.server.objects.report.calc.CalculatedColumnEval
+import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
+import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
 import tech.kzen.auto.server.service.exec.EmptyExecutionInitializer
 import tech.kzen.auto.server.service.exec.ModelActionExecutor
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
@@ -16,6 +20,7 @@ import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
 import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
+import tech.kzen.auto.util.WorkUtils
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
@@ -82,6 +87,18 @@ object ServerContext {
 
     val visualDataflowRepository = VisualDataflowRepository(
             activeVisualProvider)
+
+    val workUtils = WorkUtils.sibling
+    val reportWorkPool = ReportWorkPool(workUtils)
+
+    val kotlinCompiler = EmbeddedKotlinCompiler()
+    val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, reportWorkPool, workUtils)
+    val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler)
+
+    val fileListingAction = FileListingAction()
+    val reportRunAction = ReportRunAction(reportWorkPool)
+    val filterIndex = FilterIndex(workUtils)
+    val columnListingAction = ColumnListingAction(filterIndex)
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -23,4 +23,8 @@ data class ReportRunSpec(
             pivot.values.columns.keys
         )
     }
+
+    fun toFormulaSignature(): ReportFormulaSignature {
+        return ReportFormulaSignature(columnNames, formula)
+    }
 }

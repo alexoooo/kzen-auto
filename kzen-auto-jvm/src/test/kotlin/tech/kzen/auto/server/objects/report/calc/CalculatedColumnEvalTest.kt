@@ -1,10 +1,12 @@
 package tech.kzen.auto.server.objects.report.calc
 
 import org.junit.Test
+import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.input.model.RecordLineBuffer
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
+import tech.kzen.auto.util.WorkUtils
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.assertEquals
 
@@ -17,7 +19,7 @@ class CalculatedColumnEvalTest {
         val calculatedColumnEval = calculatedColumnEval()
 
         val columnNames = listOf("bar", "baz")
-        val calculatedColumn = calculatedColumnEval.eval(
+        val calculatedColumn = calculatedColumnEval.create(
             "foo",
         "2 + 2",
             columnNames)
@@ -35,7 +37,7 @@ class CalculatedColumnEvalTest {
         val calculatedColumnEval = calculatedColumnEval()
 
         val columnNames = listOf("bar", "baz")
-        val calculatedColumn = calculatedColumnEval.eval(
+        val calculatedColumn = calculatedColumnEval.create(
             "foo",
             "bar + baz",
             columnNames)
@@ -50,8 +52,9 @@ class CalculatedColumnEvalTest {
 
     private fun calculatedColumnEval(): CalculatedColumnEval {
         val kotlinCompiler = EmbeddedKotlinCompiler()
-        val workDir = kotlin.io.path.createTempDirectory("CachedKotlinCompiler")
-        val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workDir)
+        val workUtils = WorkUtils.temporary("CachedKotlinCompiler")
+        val reportWorkPool = ReportWorkPool(workUtils)
+        val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, reportWorkPool, workUtils)
         return CalculatedColumnEval(cachedKotlinCompiler)
     }
 }

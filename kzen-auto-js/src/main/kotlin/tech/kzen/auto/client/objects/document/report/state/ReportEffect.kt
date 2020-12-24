@@ -38,9 +38,6 @@ object ReportEffect {
                 lookupOutput(state)
 
 
-//            InputsUpdatedRequest ->
-//                ListInputsRequest
-
             ListInputsRequest ->
                 loadFileListing(state)
 
@@ -50,7 +47,6 @@ object ReportEffect {
 
             ListColumnsRequest ->
                 loadColumnListing(state)
-
 
             is ListColumnsResponse ->
                 if (action.columnListing.isNotEmpty()) {
@@ -63,7 +59,6 @@ object ReportEffect {
 
             ReportTaskLookupRequest ->
                 loadTask(state)
-
 
             is ReportTaskLookupResponse ->
                 taskLoaded(action)
@@ -100,6 +95,9 @@ object ReportEffect {
 
             is FormulaValueUpdateRequest ->
                 submitFormulaValueUpdate(state, action.columnName, action.formula)
+
+            is FormulaValidationRequest ->
+                validateFormulasAction(state)
 
 
             is FilterAddRequest ->
@@ -232,7 +230,8 @@ object ReportEffect {
         action: ReportTaskLookupResponse
     ): ReportAction? {
         val taskModel = action.taskModel
-            ?: return SummaryLookupRequest
+            ?: return CompoundReportAction.of(
+                SummaryLookupRequest, FormulaValidationRequest)
 
         val tableSummary =
             (taskModel.finalOrPartialResult() as? ExecutionSuccess)?.let {
@@ -256,7 +255,7 @@ object ReportEffect {
                 null
             }
 
-        return CompoundReportAction.of(firstAction, secondAction)
+        return CompoundReportAction.of(firstAction, FormulaValidationRequest, secondAction)
     }
 
 
@@ -676,6 +675,34 @@ object ReportEffect {
 
             is ExecutionFailure -> {
                 ReportResetResult(result.errorMessage)
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun validateFormulasAction(
+        state: ReportState
+    ): ReportAction {
+//        if (state.fileListing.isNullOrEmpty()) {
+//            return null
+//        }
+
+        val result = ClientContext.restClient.performDetached(
+            state.mainLocation,
+            ReportConventions.actionParameter to ReportConventions.actionValidateFormulas)
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val resultValue = result.value.get() as Map<String, String>
+                FormulaValidationResult(resultValue, null)
+            }
+
+            is ExecutionFailure -> {
+                FormulaValidationResult(
+                    mapOf(),
+                    result.errorMessage)
             }
         }
     }

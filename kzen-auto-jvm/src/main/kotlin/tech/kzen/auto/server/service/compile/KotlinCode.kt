@@ -14,6 +14,6 @@ data class KotlinCode(
     }
 
     fun fullyQualifiedMainClass(): String {
-        return packagePath + "." + mainClassName
+        return "$packagePath.$mainClassName"
     }
 }

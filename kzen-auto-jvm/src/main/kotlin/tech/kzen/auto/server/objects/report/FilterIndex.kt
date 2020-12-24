@@ -7,9 +7,13 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 
-object FilterIndex {
+class FilterIndex(
+    private val workUtils: WorkUtils
+) {
     //-----------------------------------------------------------------------------------------------------------------
-    const val indexDirName = "index"
+    companion object {
+        const val indexDirName = "index"
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -18,7 +22,7 @@ object FilterIndex {
             absoluteInputPath.fileName.toString())
 
         val pathInWork = Paths.get("${indexDirName}/$indexSubPath")
-        val workPath = WorkUtils.resolve(pathInWork)
+        val workPath = workUtils.resolve(pathInWork)
 
         if (! Files.isDirectory(workPath)) {
             Files.createDirectories(workPath)

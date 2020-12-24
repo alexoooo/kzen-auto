@@ -15,7 +15,8 @@ import java.util.zip.GZIPInputStream
 
 
 class ReportStreamReader(
-    inputPath: Path
+    inputPath: Path,
+    extraColumns: List<String> = listOf()
 ):
     AutoCloseable
 {
@@ -83,6 +84,7 @@ class ReportStreamReader(
         val headerLine = RecordLineBuffer()
         recordLineReader.read(headerLine)
 
+        headerLine.addAll(extraColumns)
         recordHeader = RecordHeader.ofLine(headerLine)
     }
 

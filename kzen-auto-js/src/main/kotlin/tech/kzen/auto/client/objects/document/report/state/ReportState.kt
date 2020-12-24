@@ -28,6 +28,7 @@ data class ReportState(
 
     val formulaLoading: Boolean = false,
     val formulaError: String? = null,
+    val formulaMessages: Map<String, String> = mapOf(),
 
     val filterLoading: Boolean = false,
     val filterError: String? = null,

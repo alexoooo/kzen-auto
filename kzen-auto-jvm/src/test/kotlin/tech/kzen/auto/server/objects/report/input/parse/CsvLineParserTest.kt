@@ -149,6 +149,42 @@ class CsvLineParserTest {
     }
 
 
+    @Test
+    fun simpleDecimalNotExact() {
+        val csv = "10.1"
+        val record = RecordLineReader.csvLines(csv)[0]
+        record.selectFlyweight(0)
+        assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
+    }
+
+
+    @Test
+    fun simpleDecimalPiApproximation() {
+        val csv = "3.14"
+        val record = RecordLineReader.csvLines(csv)[0]
+        record.selectFlyweight(0)
+        assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
+    }
+
+
+    @Test
+    fun decimalWithLeadingZeroesAfterPoint() {
+        val csv = "0.0014218039999999998"
+        val record = RecordLineReader.csvLines(csv)[0]
+        record.selectFlyweight(0)
+        assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
+    }
+
+
+    @Test
+    fun decimalWithLeadingZeroesBeforePoint() {
+        val csv = "000000000000000000000000000000000010.1"
+        val record = RecordLineReader.csvLines(csv)[0]
+        record.selectFlyweight(0)
+        assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
+    }
+
+
 //    @Test
 //    fun errLines() {
 //        val csv = """id,url,region,region_url,price,year,manufacturer,model,condition,cylinders,fuel,odometer,title_status,transmission,vin,drive,size,type,paint_color,image_url,description,county,state,lat,long

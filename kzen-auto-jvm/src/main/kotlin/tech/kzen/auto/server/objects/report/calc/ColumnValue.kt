@@ -35,6 +35,19 @@ data class ColumnValue(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    operator fun plus(that: Number): ColumnValue {
+        val thisNumber = text.toDoubleOrNull()
+        val thatNumber = that.toDouble()
+
+        if (thisNumber != null) {
+            val addition = thisNumber + thatNumber
+            return ofNumber(addition)
+        }
+
+        return ColumnValue(text + that.toString())
+    }
+
+
     operator fun plus(that: ColumnValue): ColumnValue {
         val thisNumber = text.toDoubleOrNull()
         val thatNumber = that.text.toDoubleOrNull()

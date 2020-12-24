@@ -13,21 +13,25 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 
-object ReportWorkPool {
-    private val logger = LoggerFactory.getLogger(ReportWorkPool::class.java)
+class ReportWorkPool(
+    private val workUtils: WorkUtils
+) {
+    companion object {
+        private val logger = LoggerFactory.getLogger(ReportWorkPool::class.java)
+        private const val oldDirLimit = 10
 
-    private const val oldDirLimit = 10
-    private val reportDir = Path.of("report")
-    private val reportInfoFile = Path.of("report.yaml")
+        private val reportDir = Path.of("report")
+        private val reportInfoFile = Path.of("report.yaml")
 
-    private val processSignatureKey = "process-signature"
-    private val statusKey = "status"
+        private val processSignatureKey = "process-signature"
+        private val statusKey = "status"
+    }
 
 
     fun resolveRunDir(reportRunSignature: ReportRunSignature): Path {
         val tempName = reportRunSignature.digest().asString()
         val tempPath = reportDir.resolve(tempName)
-        val workDir = WorkUtils.resolve(tempPath)
+        val workDir = workUtils.resolve(tempPath)
         return workDir.toAbsolutePath().normalize()
     }
 

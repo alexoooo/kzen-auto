@@ -363,6 +363,15 @@ object ReportReducer {
             is FormulaUpdateResult -> state.copy(
                 formulaLoading = false,
                 formulaError = action.errorMessage)
+
+            FormulaValidationRequest -> state.copy(
+                formulaLoading = true,
+                formulaError = null)
+
+            is FormulaValidationResult -> state.copy(
+                formulaLoading = false,
+                formulaMessages = action.messages,
+                formulaError = action.errorMessage)
         }
     }
 
