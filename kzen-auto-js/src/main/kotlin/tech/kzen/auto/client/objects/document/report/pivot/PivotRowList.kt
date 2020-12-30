@@ -63,7 +63,7 @@ class PivotRowList(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val columnListing = props.reportState.columnListing
+        val columnListing = props.reportState.inputAndCalculatedColumns()
             ?: return
 
         styledDiv {

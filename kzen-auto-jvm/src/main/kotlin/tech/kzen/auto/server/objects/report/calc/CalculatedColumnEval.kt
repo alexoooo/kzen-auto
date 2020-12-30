@@ -19,6 +19,10 @@ class CalculatedColumnEval(
         calculatedColumnFormula: String,
         columnNames: List<String>
     ): String? {
+        if (calculatedColumnFormula.isEmpty()) {
+            return null
+        }
+
         val code = generate(calculatedColumnName, calculatedColumnFormula, columnNames)
         return cachedKotlinCompiler.tryCompile(code)
     }
@@ -30,6 +34,10 @@ class CalculatedColumnEval(
         calculatedColumnFormula: String,
         columnNames: List<String>
     ): CalculatedColumn {
+        if (calculatedColumnFormula.isEmpty()) {
+            return ConstantCalculatedColumn.empty
+        }
+
         val code = generate(calculatedColumnName, calculatedColumnFormula, columnNames)
 
         val error = cachedKotlinCompiler.tryCompile(code)

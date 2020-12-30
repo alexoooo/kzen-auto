@@ -3,9 +3,14 @@ package tech.kzen.auto.client.objects.document.report.state
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
+import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
+import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.common.paradigm.task.model.TaskProgress
+import tech.kzen.lib.common.model.definition.ObjectDefinition
+import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.service.notation.NotationConventions
 
@@ -125,5 +130,40 @@ data class ReportState(
             ?: taskLoadError
             ?: taskError
             ?: tableSummaryError
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun reportDefinition(): ObjectDefinition {
+        return clientState
+            .graphDefinitionAttempt
+            .successful
+            .objectDefinitions[mainLocation]!!
+    }
+
+
+    fun formulaSpec(): FormulaSpec {
+        val formulaDefinition = reportDefinition().attributeDefinitions[ReportConventions.formulaAttributeName]!!
+        return (formulaDefinition as ValueAttributeDefinition).value as FormulaSpec
+    }
+
+
+    fun filterSpec(): FilterSpec {
+        val filterDefinition = reportDefinition().attributeDefinitions[ReportConventions.filterAttributeName]!!
+        return (filterDefinition as ValueAttributeDefinition).value as FilterSpec
+    }
+
+
+    fun pivotSpec(): PivotSpec {
+        val pivotDefinition = reportDefinition().attributeDefinitions[ReportConventions.pivotAttributeName]!!
+        return (pivotDefinition as ValueAttributeDefinition).value as PivotSpec
+    }
+
+
+    fun inputAndCalculatedColumns(): List<String>? {
+        if (columnListing == null) {
+            return null
+        }
+        return columnListing + formulaSpec().formulas.keys
     }
 }

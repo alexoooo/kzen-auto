@@ -18,6 +18,11 @@ import tech.kzen.lib.common.service.store.MirroredGraphSuccess
 
 object ReportEffect {
     //-----------------------------------------------------------------------------------------------------------------
+    val refreshView = CompoundReportAction(
+        SummaryLookupRequest, OutputLookupRequest)
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     suspend fun effect(
         state: ReportState,
 //        prevState: ProcessState,
@@ -93,8 +98,8 @@ object ReportEffect {
             is FormulaRemoveRequest ->
                 submitFormulaRemove(state, action.columnName)
 
-            is FormulaValueUpdateRequest ->
-                submitFormulaValueUpdate(state, action.columnName, action.formula)
+//            is FormulaValueUpdateRequest ->
+//                submitFormulaValueUpdate(state, action.columnName, action.formula)
 
             is FormulaValidationRequest ->
                 validateFormulasAction(state)
@@ -140,8 +145,7 @@ object ReportEffect {
             is ReportUpdateResult -> {
 //                console.log("%%%% ReportUpdateResult - $action")
                 if (action.errorMessage == null) {
-                    CompoundReportAction(
-                        SummaryLookupRequest, OutputLookupRequest)
+                    refreshView
                 }
                 else {
                     null
@@ -450,21 +454,21 @@ object ReportEffect {
     }
 
 
-    private suspend fun submitFormulaValueUpdate(
-        state: ReportState,
-        columnName: String,
-        formula: String
-    ): ReportAction {
-        val command = FormulaSpec.updateFormulaCommand(
-            state.mainLocation, columnName, formula)
-
-        val result = ClientContext.mirroredGraphStore.apply(command)
-
-        val errorMessage =
-            (result as? MirroredGraphError)?.error?.message
-
-        return FilterUpdateResult(errorMessage)
-    }
+//    private suspend fun submitFormulaValueUpdate(
+//        state: ReportState,
+//        columnName: String,
+//        formula: String
+//    ): ReportAction {
+//        val command = FormulaSpec.updateFormulaCommand(
+//            state.mainLocation, columnName, formula)
+//
+//        val result = ClientContext.mirroredGraphStore.apply(command)
+//
+//        val errorMessage =
+//            (result as? MirroredGraphError)?.error?.message
+//
+//        return FilterUpdateResult(errorMessage)
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

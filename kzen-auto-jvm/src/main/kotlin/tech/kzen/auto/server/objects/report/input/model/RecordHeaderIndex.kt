@@ -1,13 +1,15 @@
 package tech.kzen.auto.server.objects.report.input.model
 
 
-class RecordHeaderIndex(
-    private val columnHeaders: List<String>
+data class RecordHeaderIndex(
+    val columnHeaders: List<String>
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
     private var cachedIndices = IntArray(0)
     private var cachedRecordHeader = RecordHeader.empty
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     fun indices(recordHeader: RecordHeader): IntArray {
         if (recordHeader === cachedRecordHeader) {
             return cachedIndices

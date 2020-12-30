@@ -27,4 +27,8 @@ data class ReportRunSpec(
     fun toFormulaSignature(): ReportFormulaSignature {
         return ReportFormulaSignature(columnNames, formula)
     }
+
+    fun inputAndFormulaColumns(): List<String> {
+        return columnNames + formula.formulas.keys
+    }
 }

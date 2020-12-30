@@ -76,7 +76,7 @@ class PivotValueAdd(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val columnListing = props.reportState.columnListing
+        val columnListing = props.reportState.inputAndCalculatedColumns()
             ?: return
 
         val unusedOptions = columnListing

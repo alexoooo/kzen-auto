@@ -111,7 +111,7 @@ class ReportStore: SessionGlobal.Observer, ReportDispatcher
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun dispatch(action: ReportAction): List<SingularReportAction> {
-        val transitiveActions =  action
+        val transitiveActions = action
             .flatten()
             .flatMap { dispatchSingular(it) }
 

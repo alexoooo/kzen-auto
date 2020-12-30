@@ -174,13 +174,14 @@ class ReportFilterItem(
             ?: return
 
         val reportState = props.reportState
+        val inputAndCalculatedColumns = reportState.inputAndCalculatedColumns()
 
         val missing =
-            if (reportState.columnListing == null) {
+            if (inputAndCalculatedColumns == null) {
                 false
             }
             else {
-                ! reportState.columnListing.contains(props.columnName)
+                ! inputAndCalculatedColumns.contains(props.columnName)
             }
 
         val columnSummary = reportState.tableSummary?.columnSummaries?.get(props.columnName)

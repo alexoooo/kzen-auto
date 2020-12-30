@@ -17,9 +17,6 @@ import tech.kzen.auto.client.wrap.FilterListIcon
 import tech.kzen.auto.client.wrap.MaterialButton
 import tech.kzen.auto.client.wrap.RefreshIcon
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
-import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 
 
 class ReportFilterList(
@@ -155,23 +152,15 @@ class ReportFilterList(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderFilters() {
-        val filterDefinition = props
-            .reportState
-            .clientState
-            .graphDefinitionAttempt
-            .successful
-            .objectDefinitions[props.reportState.mainLocation]!!
-            .attributeDefinitions[ReportConventions.filterAttributeName]!!
-        val filterSpec = (filterDefinition as ValueAttributeDefinition).value as FilterSpec
-
         styledDiv {
-            renderFilterList(filterSpec)
-            renderFilterAdd(filterSpec)
+            renderFilterList()
+            renderFilterAdd()
         }
     }
 
 
-    private fun RBuilder.renderFilterList(filterSpec: FilterSpec) {
+    private fun RBuilder.renderFilterList() {
+        val filterSpec = props.reportState.filterSpec()
         styledDiv {
             for ((index, columnName) in filterSpec.columns.keys.withIndex()) {
                 styledDiv {
@@ -197,12 +186,11 @@ class ReportFilterList(
     }
 
 
-    private fun RBuilder.renderFilterAdd(filterSpec: FilterSpec) {
+    private fun RBuilder.renderFilterAdd() {
         child(ReportFilterAdd::class) {
             attrs {
                 reportState = props.reportState
                 dispatcher = props.dispatcher
-                this.filterSpec = filterSpec
             }
         }
     }

@@ -14,9 +14,7 @@ import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.TableChartIcon
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
-import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 
 
 class ReportPivot(
@@ -76,15 +74,7 @@ class ReportPivot(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderContent() {
-        val pivotDefinition = props
-            .reportState
-            .clientState
-            .graphDefinitionAttempt
-            .successful
-            .objectDefinitions[props.reportState.mainLocation]!!
-            .attributeDefinitions[ReportConventions.pivotAttributeName]!!
-
-        val pivotSpec = (pivotDefinition as ValueAttributeDefinition).value as PivotSpec
+        val pivotSpec = props.reportState.pivotSpec()
 
         renderHeader()
 

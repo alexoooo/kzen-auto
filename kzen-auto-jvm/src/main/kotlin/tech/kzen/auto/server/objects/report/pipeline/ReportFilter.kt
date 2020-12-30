@@ -12,7 +12,8 @@ class ReportFilter(
     reportRunSpec: ReportRunSpec
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    private val filterColumnNames = reportRunSpec.columnNames
+    private val filterColumnNames = reportRunSpec
+        .inputAndFormulaColumns()
         .intersect(reportRunSpec.filter.columns.keys)
         .toList()
 

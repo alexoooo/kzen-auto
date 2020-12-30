@@ -68,11 +68,11 @@ class ReportSummary(
     private var viewResponse = CompletableFuture<TableSummary>()
 
 
-    private val headerIndex = RecordHeaderIndex(initialReportRunSpec.columnNames)
+    private val headerIndex = RecordHeaderIndex(
+        initialReportRunSpec.inputAndFormulaColumns())
 
-    private val builders: List<ValueSummaryBuilder> = initialReportRunSpec
-        .columnNames
-        .map { ValueSummaryBuilder() }
+    private val builders: List<ValueSummaryBuilder> =
+        headerIndex.columnHeaders.map { ValueSummaryBuilder() }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ class ReportSummary(
 
         val builder = mutableMapOf<String, ColumnSummary>()
 
-        for (columnName in initialReportRunSpec.columnNames) {
+        for (columnName in headerIndex.columnHeaders) {
             val columnDir = columnDir(columnName)
 
             if (! Files.exists(columnDir)) {
@@ -121,8 +121,8 @@ class ReportSummary(
 
 
     private suspend fun save() {
-        for (i in initialReportRunSpec.columnNames.indices) {
-            val columnName = initialReportRunSpec.columnNames[i]
+        for (i in headerIndex.columnHeaders.indices) {
+            val columnName = headerIndex.columnHeaders[i]
             val columnDir = columnDir(columnName)
 
             val columnBuilder = builders[i]
@@ -339,12 +339,11 @@ class ReportSummary(
         }
 
         val tableSummary = TableSummary(
-            initialReportRunSpec
-                .columnNames
+            headerIndex
+                .columnHeaders
                 .withIndex()
                 .map { it.value to builders[it.index].build() }
-                .toMap()
-        )
+                .toMap())
 
         viewResponse.complete(tableSummary)
         viewRequested = false

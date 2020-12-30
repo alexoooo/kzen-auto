@@ -77,7 +77,9 @@ class ReportFormulaItem(
 
     private fun onChangedByEdit() {
         props.dispatcher.dispatchAsync(
-            FormulaValidationRequest)
+            CompoundReportAction(
+                FormulaValidationRequest,
+                ReportEffect.refreshView))
     }
 
 
@@ -124,6 +126,7 @@ class ReportFormulaItem(
                     disabled = editDisabled
                     multilineOverride = true
                     invalid = error != null
+                    labelOverride = props.columnName
 
                     clientState = props.reportState.clientState
                     objectLocation = props.reportState.mainLocation

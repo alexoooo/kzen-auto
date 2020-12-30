@@ -10,7 +10,6 @@ import tech.kzen.auto.client.objects.document.report.state.FilterAddRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
 import kotlin.js.Json
 import kotlin.js.json
 
@@ -23,8 +22,7 @@ class ReportFilterAdd(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var reportState: ReportState,
-        var dispatcher: ReportDispatcher,
-        var filterSpec: FilterSpec
+        var dispatcher: ReportDispatcher
     ): RProps
 
 
@@ -71,11 +69,12 @@ class ReportFilterAdd(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val columnListing = props.reportState.columnListing
+        val availableColumns = props.reportState.inputAndCalculatedColumns()
             ?: return
 
-        val unusedOptions = columnListing
-            .filter { it !in props.filterSpec.columns }
+        val filterSpec = props.reportState.filterSpec()
+        val unusedOptions = availableColumns
+            .filter { it !in filterSpec.columns }
 
         if (unusedOptions.isEmpty()) {
             return

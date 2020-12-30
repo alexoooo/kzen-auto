@@ -257,7 +257,7 @@ class AttributePathValueEditor(
 
         val upperCamelCase = defaultLabel.capitalize()
 
-        val results = Regex("[A-Z][a-z]*").findAll(upperCamelCase)
+        val results = Regex("\\w+").findAll(upperCamelCase)
         val words = results.map { it.groups[0]!!.value }
 
         return words.joinToString(" ")
