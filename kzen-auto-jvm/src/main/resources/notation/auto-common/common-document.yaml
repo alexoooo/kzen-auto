@@ -85,6 +85,7 @@ Report:
     rows: []
     values: {}
   output:
+    work: "report" # NB: referenced in OutputSpec
     save: ""
     start: 1
     count: 50

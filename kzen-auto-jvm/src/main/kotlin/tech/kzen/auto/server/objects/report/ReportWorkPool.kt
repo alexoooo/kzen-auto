@@ -20,7 +20,7 @@ class ReportWorkPool(
         private val logger = LoggerFactory.getLogger(ReportWorkPool::class.java)
         private const val oldDirLimit = 10
 
-        private val reportDir = Path.of("report")
+        val defaultReportDir = Path.of("report")
         private val reportInfoFile = Path.of("report.yaml")
 
         private val processSignatureKey = "process-signature"
@@ -28,20 +28,27 @@ class ReportWorkPool(
     }
 
 
-    fun resolveRunDir(reportRunSignature: ReportRunSignature): Path {
-        val tempName = reportRunSignature.digest().asString()
-        val tempPath = reportDir.resolve(tempName)
-        val workDir = workUtils.resolve(tempPath)
-        return workDir.toAbsolutePath().normalize()
-    }
+//    fun resolveRunDir(reportRunSignature: ReportRunSignature): Path {
+//        val workDir = workUtils.resolve(defaultReportDir)
+//        return resolveRunDir(reportRunSignature, workDir)
+//    }
 
 
-    fun getOrPrepareRunDir(reportRunSignature: ReportRunSignature): Path {
-        val dir = resolveRunDir(reportRunSignature)
-        if (! Files.exists(dir)) {
-            prepareRunDir(dir)
-        }
-        return dir
+    fun resolveRunDir(
+        reportRunSignature: ReportRunSignature,
+        reportDir: Path = defaultReportDir
+    ): Path {
+        val workDir =
+            if (reportDir.isAbsolute) {
+                reportDir.normalize()
+            }
+            else {
+                workUtils.resolve(reportDir)
+            }
+
+        val tempName = WorkUtils.filenameEncodeDigest(reportRunSignature.digest())
+        val tempPath = workDir.resolve(tempName)
+        return tempPath.toAbsolutePath().normalize()
     }
 
 
@@ -95,7 +102,8 @@ class ReportWorkPool(
     }
 
 
-    private fun prepareRunDir(dir: Path) {
+    fun prepareRunDir(dir: Path) {
+        check(! Files.exists(dir)) { "Already exists: $dir" }
         Files.createDirectories(dir)
 
         val initialInfoYaml = """

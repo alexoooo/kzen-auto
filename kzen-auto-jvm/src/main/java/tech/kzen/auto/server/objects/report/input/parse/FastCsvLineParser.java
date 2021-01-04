@@ -236,6 +236,7 @@ public class FastCsvLineParser implements RecordLineParser {
         };
     }
 
+
     private int onStartOfField(char nextChar, @NotNull RecordLineBuffer recordLineBuffer) {
         switch ((int) nextChar) {
             case quotation:

@@ -26,6 +26,9 @@ object ReportConventions {
     val outputAttributeName = AttributeName("output")
     val outputAttributePath = AttributePath.ofName(outputAttributeName)
 
+    const val workDirKey = "work"
+    val workDirPath = outputAttributePath.nest(AttributeSegment.ofKey(workDirKey))
+
     const val previewStartKey = "start"
     val previewStartPath = outputAttributePath.nest(AttributeSegment.ofKey(previewStartKey))
 

@@ -15,7 +15,8 @@ interface RecordLineParser {
                     FastCsvLineParser()
 
                 "tsv" ->
-                    TsvLineParser()
+                    FastTsvLineParser()
+//                    TsvLineParser()
 
                 else ->
                     error("Unknown: $extension")
@@ -38,9 +39,9 @@ interface RecordLineParser {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    /**
-     * @return true if reached end of record
-     */
+//    /**
+//     * @return true if reached end of record
+//     */
 //    fun parse(
 //        recordLineBuffer: RecordLineBuffer,
 //        nextChar: Char

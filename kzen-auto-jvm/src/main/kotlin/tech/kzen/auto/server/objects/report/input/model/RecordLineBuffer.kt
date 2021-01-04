@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.input.model
 
 import tech.kzen.auto.server.objects.report.input.parse.FastCsvLineParser
-import tech.kzen.auto.server.objects.report.input.parse.TsvLineParser
+import tech.kzen.auto.server.objects.report.input.parse.FastTsvLineParser
 import java.io.ByteArrayOutputStream
 import java.io.OutputStreamWriter
 import java.io.Writer
@@ -146,14 +146,14 @@ class RecordLineBuffer(
     }
 
 
-    fun writeTsv(out: Writer) {
+    private fun writeTsv(out: Writer) {
         if (fieldCount == 1 && fieldContentLength == 0 && nonEmpty) {
             throw IllegalStateException("Can't represent non-empty record with single empty column")
         }
 
         for (i in 0 until fieldCount) {
             if (i != 0) {
-                out.write(TsvLineParser.delimiter.toInt())
+                out.write(FastTsvLineParser.delimiterInt)
             }
 
             writeTsvField(i, out)
@@ -161,7 +161,7 @@ class RecordLineBuffer(
     }
 
 
-    fun writeTsvField(index: Int, out: Writer) {
+    private fun writeTsvField(index: Int, out: Writer) {
         val startIndex: Int
         val endIndex: Int
         if (index == 0) {

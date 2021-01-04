@@ -2,6 +2,7 @@ package tech.kzen.auto.common.objects.document.report.output
 
 
 data class OutputInfo(
+    val runDir: String,
     val saveMessage: String,
     val modifiedTime: String?,
     val rowCount: Long,
@@ -10,7 +11,7 @@ data class OutputInfo(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        private const val pathKey = "path"
+        private const val runDirKey = "work"
         private const val saveMessageKey = "message"
         private const val modifiedTimeKey = "modified"
         private const val previewKey = "preview"
@@ -33,6 +34,7 @@ data class OutputInfo(
                 collection[statusKey] as String)
 
             return OutputInfo(
+                collection[runDirKey] as String,
                 collection[saveMessageKey] as String,
                 collection[modifiedTimeKey] as String?,
                 (collection[countKey] as String).toLong(),
@@ -45,7 +47,7 @@ data class OutputInfo(
     //-----------------------------------------------------------------------------------------------------------------
     fun toCollection(): Map<String, Any?> {
         return mapOf(
-//            pathKey to absolutePath,
+            runDirKey to runDir,
             saveMessageKey to saveMessage,
             modifiedTimeKey to modifiedTime,
             countKey to rowCount.toString(),

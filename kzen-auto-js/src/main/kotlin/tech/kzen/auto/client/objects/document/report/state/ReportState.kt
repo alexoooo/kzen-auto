@@ -5,6 +5,7 @@ import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
@@ -157,6 +158,12 @@ data class ReportState(
     fun pivotSpec(): PivotSpec {
         val pivotDefinition = reportDefinition().attributeDefinitions[ReportConventions.pivotAttributeName]!!
         return (pivotDefinition as ValueAttributeDefinition).value as PivotSpec
+    }
+
+
+    fun outputSpec(): OutputSpec {
+        val pivotDefinition = reportDefinition().attributeDefinitions[ReportConventions.outputAttributeName]!!
+        return (pivotDefinition as ValueAttributeDefinition).value as OutputSpec
     }
 
 

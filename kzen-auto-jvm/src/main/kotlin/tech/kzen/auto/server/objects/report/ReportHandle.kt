@@ -35,7 +35,7 @@ class ReportHandle(
     initialReportRunSpec: ReportRunSpec,
     runDir: Path,
     taskHandle: TaskHandle?,
-    reportWorkPool: ReportWorkPool
+    private val reportWorkPool: ReportWorkPool
 ):
     TaskRun, AutoCloseable
 {
@@ -123,7 +123,7 @@ class ReportHandle(
         reportRunSpec: ReportRunSpec,
         outputSpec: OutputSpec
     ): OutputInfo {
-        return output.preview(reportRunSpec, outputSpec, ServerContext.reportWorkPool)
+        return output.preview(reportRunSpec, outputSpec, reportWorkPool)
     }
 
 
@@ -275,7 +275,7 @@ class ReportHandle(
         }
 
         if (endOfBatch) {
-            output.handlePreviewRequest(ServerContext.reportWorkPool)
+            output.handlePreviewRequest(reportWorkPool)
         }
 
         output.add(event.recordItem, event.recordHeader.value)

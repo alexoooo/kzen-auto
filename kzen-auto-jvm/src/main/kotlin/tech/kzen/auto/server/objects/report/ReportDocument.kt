@@ -21,7 +21,9 @@ import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import java.awt.geom.IllegalPathStateException
 import java.nio.file.Path
+import java.nio.file.Paths
 
 
 @Reflect
@@ -93,6 +95,20 @@ class ReportDocument(
     }
 
 
+    private fun runDir(runSpec: ReportRunSpec): Path {
+        val reportDir =
+            try {
+                Paths.get(output.workPath)
+            }
+            catch (e: IllegalPathStateException) {
+                ReportWorkPool.defaultReportDir
+            }
+
+        val runSignature = runSpec.toSignature()
+        return ServerContext.reportWorkPool.resolveRunDir(runSignature, reportDir)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun actionListFiles(): ExecutionResult {
         val inputPaths = inputPaths()
@@ -117,8 +133,7 @@ class ReportDocument(
         val runSpec = runSpec()
             ?: return ExecutionFailure("Missing run")
 
-        val runSignature = runSpec.toSignature()
-        val runDir = ServerContext.reportWorkPool.resolveRunDir(runSignature)
+        val runDir = runDir(runSpec)
 
         return ServerContext.reportRunAction.summaryView(
             selfLocation, runSpec, runDir)
@@ -138,8 +153,7 @@ class ReportDocument(
         val runSpec = runSpec()
             ?: return ExecutionFailure("Missing run")
 
-        val runSignature = runSpec.toSignature()
-        val runDir = ServerContext.reportWorkPool.resolveRunDir(runSignature)
+        val runDir = runDir(runSpec)
 
         return ServerContext.reportRunAction.outputPreview(
             selfLocation, runSpec, runDir, output)
@@ -150,8 +164,7 @@ class ReportDocument(
         val runSpec = runSpec()
             ?: return ExecutionFailure("Missing run")
 
-        val runSignature = runSpec.toSignature()
-        val runDir = ServerContext.reportWorkPool.resolveRunDir(runSignature)
+        val runDir = runDir(runSpec)
 
         return ServerContext.reportRunAction.outputSave(
             runSpec, runDir, output)
@@ -162,8 +175,7 @@ class ReportDocument(
         val runSpec = runSpec()
             ?: return ExecutionFailure("Missing run")
 
-        val runSignature = runSpec.toSignature()
-        val runDir = ServerContext.reportWorkPool.resolveRunDir(runSignature)
+        val runDir = runDir(runSpec)
 
         return ServerContext.reportRunAction.delete(runDir)
     }
@@ -173,8 +185,7 @@ class ReportDocument(
         val runSpec = runSpec()
             ?: error("Missing run")
 
-        val runSignature = runSpec.toSignature()
-        val runDir = ServerContext.reportWorkPool.resolveRunDir(runSignature)
+        val runDir = runDir(runSpec)
 
         return ServerContext.reportRunAction.outputDownload(
             runSpec, runDir, output)
@@ -221,8 +232,9 @@ class ReportDocument(
         runSpec: ReportRunSpec,
         handle: TaskHandle
     ): TaskRun {
-        val runSignature = runSpec.toSignature()
-        val runDir = ServerContext.reportWorkPool.getOrPrepareRunDir(runSignature)
+        val runDir = runDir(runSpec)
+
+        ServerContext.reportWorkPool.prepareRunDir(runDir)
 
         return ServerContext.reportRunAction.startReport(
             runSpec, runDir, handle)

@@ -7,8 +7,9 @@ import kotlin.test.assertTrue
 
 
 class TsvLineParserTest {
+    //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val tsvUtf8Line = "7088746062\t" +
+        private const val tsvUtf8Line = "7088746062\t" +
                 "https://greensboro.craigslist.org/ctd/d/cary-2012-acura-tl-base-4dr-sedan/7088746062.html\t" +
                 "greensboro\thttps://greensboro.craigslist.org\t10299\t2012\tacura\ttl\t\t\tgas\t90186\tclean\t" +
                 "automatic\t19UUA8F22CA003926\t\t\tother\tblue\t" +
@@ -28,6 +29,7 @@ class TsvLineParserTest {
                 "rates may apply.       2012 Acura TL Base 4dr Sedan   30b9c4702111452eb57503c99e795660\t" +
                 "\tnc\t35.7636\t-78.7443"
     }
+
 
     //-----------------------------------------------------------------------------------------------------------------
     @Test

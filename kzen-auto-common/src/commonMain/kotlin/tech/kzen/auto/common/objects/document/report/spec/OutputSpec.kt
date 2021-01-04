@@ -1,8 +1,6 @@
 package tech.kzen.auto.common.objects.document.report.spec
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
-import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.definition.AttributeDefinitionAttempt
@@ -16,19 +14,22 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 data class OutputSpec(
+    val workPath: String,
     val savePath: String,
     val previewStart: Long,
     val previewCount: Int
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-//    companion object {
+    companion object {
+        private const val defaultWorkPath = "report"
+
 //        fun ofPreviewRequest(request: DetachedRequest): OutputSpec {
 //            val savePath = request.getSingle(ReportConventions.saveFileKey)!!
 //            val startRow = request.getLong(ReportConventions.previewStartKey)!!
 //            val rowCount = request.getInt(ReportConventions.previewRowCountKey)!!
 //            return OutputSpec(savePath, startRow, rowCount)
 //        }
-//    }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -49,6 +50,10 @@ data class OutputSpec(
                 .graphNotation
                 .mergeAttribute(objectLocation, ReportConventions.outputAttributeName)
                     as MapAttributeNotation
+
+            val workPath = outputNotation
+                .get(ReportConventions.workDirKey)
+                ?.asString()!!
 
             val savePath = outputNotation
                 .get(ReportConventions.saveFileKey)
@@ -72,7 +77,7 @@ data class OutputSpec(
                     "'${ReportConventions.previewRowCountKey}' attribute notation not found:" +
                             " $objectLocation - $attributeName")
 
-            val spec = OutputSpec(savePath, previewStart, previewCount)
+            val spec = OutputSpec(workPath, savePath, previewStart, previewCount)
 
             return AttributeDefinitionAttempt.success(
                 ValueAttributeDefinition(spec))
@@ -86,13 +91,19 @@ data class OutputSpec(
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    fun toPreviewRequest(): DetachedRequest {
-        return DetachedRequest(
-            RequestParams.of(
-                ReportConventions.saveFileKey to savePath,
-                ReportConventions.previewStartKey to previewStart.toString(),
-                ReportConventions.previewRowCountKey to previewCount.toString()
-            ), null)
+    fun isDefaultWorkPath(): Boolean {
+        return workPath == defaultWorkPath
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+//    fun toPreviewRequest(): DetachedRequest {
+//        return DetachedRequest(
+//            RequestParams.of(
+//                ReportConventions.workDirKey to workPath,
+//                ReportConventions.saveFileKey to savePath,
+//                ReportConventions.previewStartKey to previewStart.toString(),
+//                ReportConventions.previewRowCountKey to previewCount.toString()
+//            ), null)
+//    }
 }

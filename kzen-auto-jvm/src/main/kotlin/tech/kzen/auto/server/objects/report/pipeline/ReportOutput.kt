@@ -69,6 +69,7 @@ class ReportOutput(
             val header = headerNames(reportRunSpec)
 
             return OutputInfo(
+                runDir.toAbsolutePath().normalize().toString(),
                 "Missing, will be created: $runDir",
                 null,
                 0L,
@@ -280,6 +281,7 @@ class ReportOutput(
         val status = reportWorkPool.readRunStatus(reportRunSignature)
 
         return OutputInfo(
+            runDir.toAbsolutePath().normalize().toString(),
             saveInfo.message,
             formattedTime,
             rowCount,

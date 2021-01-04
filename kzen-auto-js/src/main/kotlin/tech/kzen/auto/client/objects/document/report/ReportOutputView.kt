@@ -37,6 +37,7 @@ class ReportOutputView(
 
 
     interface State: RState {
+        var settingsOpen: Boolean
         var savingOpen: Boolean
         var savingLoading: Boolean
     }
@@ -44,6 +45,7 @@ class ReportOutputView(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
+        settingsOpen = ! props.reportState.outputSpec().isDefaultWorkPath()
         savingOpen = false
         savingLoading = false
     }
@@ -69,6 +71,14 @@ class ReportOutputView(
         return rowNumber
             .toString()
             .replace(Regex("\\B(?=(\\d{3})+(?!\\d))"), ",")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onSettingsToggle() {
+        setState {
+            settingsOpen = ! settingsOpen
+        }
     }
 
 
@@ -248,7 +258,7 @@ class ReportOutputView(
                 }
             }
 
-            if (! state.savingOpen) {
+//            if (! state.savingOpen) {
                 child(MaterialButton::class) {
                     attrs {
                         variant = "outlined"
@@ -260,6 +270,10 @@ class ReportOutputView(
 
                         style = reactStyle {
                             marginLeft = 1.em
+
+                            if (state.savingOpen) {
+                                backgroundColor = Color.darkGray
+                            }
                         }
                     }
 
@@ -272,6 +286,34 @@ class ReportOutputView(
                     }
 
                     +"Save"
+                }
+//            }
+        }
+
+        child(MaterialButton::class) {
+            attrs {
+                title = "Settings"
+                variant = "outlined"
+                size = "small"
+
+                onClick = {
+                    onSettingsToggle()
+                }
+
+                style = reactStyle {
+                    marginLeft = 1.em
+
+                    if (state.settingsOpen) {
+                        backgroundColor = Color.darkGray
+                    }
+                }
+            }
+
+            child(SettingsIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        marginRight = 0.25.em
+                    }
                 }
             }
         }
@@ -286,6 +328,7 @@ class ReportOutputView(
 
         styledDiv {
             renderInfo(error, outputInfo)
+            renderSettings(outputInfo)
             renderSave(outputInfo)
 
             if (outputPreview != null) {
@@ -298,14 +341,61 @@ class ReportOutputView(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderInfo(error: String?, outputInfo: OutputInfo?) {
         if (error != null) {
-            +"Error: $error"
+            styledDiv {
+                css {
+                    marginBottom = 1.em
+                    width = 100.pct
+                    paddingBottom = 1.em
+                    borderBottomWidth = 1.px
+                    borderBottomStyle = BorderStyle.solid
+                    borderBottomColor = Color.lightGray
+                }
+                +"Error: $error"
+            }
+        }
+        else {
+            styledDiv {
+                if (outputInfo == null) {
+                    +"..."
+                }
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderSettings(outputInfo: OutputInfo?) {
+        if (! state.settingsOpen || outputInfo == null) {
             return
         }
 
         styledDiv {
-            if (outputInfo == null) {
-                +"..."
+            css {
+                marginBottom = 1.em
+                width = 100.pct
+                paddingBottom = 1.em
+                borderBottomWidth = 1.px
+                borderBottomStyle = BorderStyle.solid
+                borderBottomColor = Color.lightGray
             }
+
+            child(AttributePathValueEditor::class) {
+                attrs {
+                    labelOverride = "Report Work Folder"
+
+                    clientState = props.reportState.clientState
+                    objectLocation = props.reportState.mainLocation
+                    attributePath = ReportConventions.workDirPath
+
+                    valueType = TypeMetadata.string
+
+                    onChange = {
+                        onPreviewRefresh()
+                    }
+                }
+            }
+
+            +"Absolute path: ${outputInfo.runDir}"
         }
     }
 
@@ -320,6 +410,11 @@ class ReportOutputView(
             css {
                 marginBottom = 1.em
                 width = 100.pct
+
+                paddingBottom = 1.em
+                borderBottomWidth = 1.px
+                borderBottomStyle = BorderStyle.solid
+                borderBottomColor = Color.lightGray
             }
 
             styledDiv {
@@ -379,29 +474,6 @@ class ReportOutputView(
                     }
 
                     +"Write"
-                }
-
-                child(MaterialButton::class) {
-                    attrs {
-                        title = "Cancel"
-
-                        variant = "outlined"
-                        size = "small"
-
-                        onClick = {
-                            onSaveToggle()
-                        }
-                    }
-
-                    child(CancelIcon::class) {
-                        attrs {
-                            style = reactStyle {
-                                marginRight = 0.25.em
-                            }
-                        }
-                    }
-
-//                    +"Cancel"
                 }
             }
         }

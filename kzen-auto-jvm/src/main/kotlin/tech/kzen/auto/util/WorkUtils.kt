@@ -1,5 +1,7 @@
 package tech.kzen.auto.util
 
+import com.google.common.io.BaseEncoding
+import tech.kzen.lib.common.util.Digest
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.LocalDateTime
@@ -20,6 +22,12 @@ class WorkUtils(
         @ExperimentalPathApi
         fun temporary(name: String): WorkUtils {
             return WorkUtils(kotlin.io.path.createTempDirectory(name))
+        }
+
+        private val digestEncoding = BaseEncoding.base32().omitPadding().lowerCase()
+
+        fun filenameEncodeDigest(digest: Digest): String {
+            return digestEncoding.encode(digest.toByteArray())
         }
     }
 

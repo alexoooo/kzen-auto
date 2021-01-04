@@ -448,3 +448,9 @@ external class CloudDownloadIcon: Component<IconProps, RState> {
 external class FunctionsIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("Settings")
+external class SettingsIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
