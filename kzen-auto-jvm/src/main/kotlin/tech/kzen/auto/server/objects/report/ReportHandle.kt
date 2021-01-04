@@ -250,12 +250,12 @@ class ReportHandle(
 
     @Suppress("UNUSED_PARAMETER")
     private fun handleSummary(event: Event, sequence: Long, endOfBatch: Boolean) {
-        if (! event.filterAllow) {
-            return
-        }
-
         if (endOfBatch) {
             summary.handleViewRequest()
+        }
+
+        if (! event.filterAllow) {
+            return
         }
 
         summary.add(event.recordItem, event.recordHeader.value)
@@ -268,12 +268,13 @@ class ReportHandle(
         sequence: Long,
         endOfBatch: Boolean
     ) {
-        if (! event.filterAllow) {
-            return
+        if (endOfBatch) {
+            // NB: must be done regardless of filterAllow to avoid lock due to starvation
+            output.handlePreviewRequest(reportWorkPool)
         }
 
-        if (endOfBatch) {
-            output.handlePreviewRequest(reportWorkPool)
+        if (! event.filterAllow) {
+            return
         }
 
         output.add(event.recordItem, event.recordHeader.value)

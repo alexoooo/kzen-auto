@@ -145,7 +145,7 @@ class ReportOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val reportRunSignature: ReportRunSignature
+    private val reportRunSignature: ReportRunSignature = initialReportRunSpec.toSignature()
 
     private val indexedCsvTable: IndexedCsvTable?
     private val pivotBuilder: PivotBuilder?
@@ -160,8 +160,6 @@ class ReportOutput(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        reportRunSignature = initialReportRunSpec.toSignature()
-
         if (! Files.exists(runDir)) {
             pivotBuilder = null
             indexedCsvTable = null
