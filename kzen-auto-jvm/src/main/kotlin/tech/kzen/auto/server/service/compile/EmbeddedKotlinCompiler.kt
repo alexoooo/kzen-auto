@@ -32,6 +32,20 @@ class EmbeddedKotlinCompiler: KotlinCompiler {
         private const val errorMessageStart = " error: "
         private const val warningMessageStart = " warning: "
 
+//        private var initialized = false
+//
+//        private fun initIfRequired() {
+//            if (initialized) {
+//                return
+//            }
+//            else {
+//                initialized = true
+//            }
+//
+//            // NB: avoid IntelliJ error
+//            setIdeaIoUseFallback()
+//        }
+
         init {
             // NB: avoid IntelliJ error
             setIdeaIoUseFallback()
@@ -53,6 +67,8 @@ class EmbeddedKotlinCompiler: KotlinCompiler {
         classpathLocations: List<Path>,
         classLoader: ClassLoader
     ): String? {
+//        initIfRequired()
+
         val errorStreamBytes = ByteArrayOutputStream()
         val errorStream = PrintStream(errorStreamBytes)
 

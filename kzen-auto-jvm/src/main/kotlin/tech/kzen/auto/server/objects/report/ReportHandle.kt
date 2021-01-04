@@ -6,6 +6,7 @@ import com.lmax.disruptor.YieldingWaitStrategy
 import com.lmax.disruptor.dsl.Disruptor
 import com.lmax.disruptor.dsl.ProducerType
 import com.lmax.disruptor.util.DaemonThreadFactory
+import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
@@ -41,7 +42,7 @@ class ReportHandle(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        private val logger = LoggerFactory.getLogger(ReportHandle::class.java)
+        private val logger = LoggerFactory.getLogger(ReportHandle::class.java)
 
         private const val disruptorBufferSize = 4 * 1024
 //        private const val disruptorBufferSize = 8 * 1024
@@ -162,18 +163,15 @@ class ReportHandle(
 
         disruptor.setDefaultExceptionHandler(object : ExceptionHandler<Event?> {
             override fun handleEventException(ex: Throwable?, sequence: Long, event: Event?) {
-                println("&&^% handleEventException - $ex - ${event?.recordItem}")
-                ex?.printStackTrace()
+                logger.error("Event - {}", event?.recordItem, ex)
             }
 
             override fun handleOnStartException(ex: Throwable?) {
-                println("&&^% handleOnStartException - $ex")
-                ex?.printStackTrace()
+                logger.error("Start", ex)
             }
 
             override fun handleOnShutdownException(ex: Throwable?) {
-                println("&&^% handleOnShutdownException - $ex")
-                ex?.printStackTrace()
+                logger.error("Shutdown", ex)
             }
         })
 

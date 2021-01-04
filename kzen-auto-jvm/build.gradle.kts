@@ -1,7 +1,7 @@
 
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 
 plugins {
@@ -10,6 +10,7 @@ plugins {
     kotlin("jvm")
     kotlin("plugin.spring") version kotlinVersion
     `maven-publish`
+    id("com.github.johnrengelman.shadow") version "6.1.0"
 }
 
 
@@ -76,27 +77,32 @@ tasks.getByName<Jar>("jar") {
     enabled = true
 }
 
-
-tasks.getByName<BootJar>("bootJar") {
-    archiveClassifier.set("boot")
+// https://discuss.kotlinlang.org/t/kotlin-compiler-embeddable-exception-on-kotlin-script-evaluation/6547/7
+// https://shareablecode.com/snippets/example-build-gradle-kt-to-build-a-shadow-jar-for-java-and-kotlin-application-ko-TYWV-i5yf
+tasks.named<ShadowJar>("shadowJar") {
+    archiveBaseName.set("kzen-auto")
+    isZip64 = true
+    mergeServiceFiles()
+    manifest {
+        // For: MyApp.kt
+        attributes(mapOf("Main-Class" to "tech.kzen.auto.server.KzenAutoMainKt"))
+    }
 }
+
+//tasks.getByName<BootJar>("bootJar") {
+//    archiveClassifier.set("boot")
+//
+//    // https://discuss.kotlinlang.org/t/kotlin-compiler-embeddable-exception-on-kotlin-script-evaluation/6547/6
+//    // https://github.com/sdeleuze/kotlin-script-templating
+////    requiresUnpack("**/kotlin-compiler-*.jar")
+//    requiresUnpack("**/*.jar")
+//}
 
 
 val sourcesJar by tasks.registering(Jar::class) {
     archiveClassifier.set("sources")
     from(sourceSets.main.get().allSource)
 }
-//tasks {
-//    val sourcesJar by creating(Jar::class) {
-//        archiveClassifier.set("sources")
-//        from(sourceSets.getByName("main").allSource)
-//    }
-//
-//    artifacts {
-//        archives(sourcesJar)
-//        archives(jar)
-//    }
-//}
 
 publishing {
     repositories {
