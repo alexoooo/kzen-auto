@@ -26,6 +26,10 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 
+// TODO: consider charting support
+//  https://github.com/JetBrains/lets-plot-kotlin
+//  https://github.com/JetBrains/lets-plot-kotlin/issues/46
+//  https://github.com/JetBrains/lets-plot-kotlin/issues/5
 @Reflect
 class ReportDocument(
     private val input: String,

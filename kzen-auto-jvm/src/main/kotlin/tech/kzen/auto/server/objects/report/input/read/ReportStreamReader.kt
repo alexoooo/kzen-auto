@@ -14,6 +14,9 @@ import java.nio.file.Paths
 import java.util.zip.GZIPInputStream
 
 
+// TODO: consider support for https://github.com/linkedin/migz
+// TODO: consider using https://stackoverflow.com/questions/3335969/reading-a-gzip-file-from-a-filechannel-java-nio
+// see: https://stackoverflow.com/questions/32550227/how-to-improve-gzip-performance
 class ReportStreamReader(
     inputPath: Path,
     extraColumns: List<String> = listOf()
@@ -22,6 +25,9 @@ class ReportStreamReader(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        private const val gzipBufferSize = 128 * 1024
+
+
         fun readHeaderLine(inputPath: Path): List<String> {
             return ReportStreamReader(inputPath).use {
                 it.header().headerNames
@@ -52,7 +58,7 @@ class ReportStreamReader(
 
             val input =
                 if (outerExtension == "gz") {
-                    GZIPInputStream(rawInput)
+                    GZIPInputStream(rawInput, gzipBufferSize)
                 }
                 else {
                     rawInput

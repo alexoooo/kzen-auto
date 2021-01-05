@@ -12,7 +12,7 @@ class RecordTextFlyweight(
     companion object {
         val empty = standalone("")
 
-        private val decimalLongPowers = longArrayOf(
+        val decimalLongPowers = longArrayOf(
             1,
             10,
             100,

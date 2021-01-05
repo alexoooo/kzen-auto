@@ -5,10 +5,7 @@ package tech.kzen.auto.server.objects.report.calc
 @Suppress("unused")
 data class ColumnValue(
     val text: String
-)//:
-//    CharSequence,
-//    Number()
-{
+) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         fun toText(value: Any?): String {
@@ -39,10 +36,12 @@ data class ColumnValue(
 
     //-----------------------------------------------------------------------------------------------------------------
     operator fun plus(that: Number): ColumnValue {
-        val thisNumber = text.toDoubleOrNull()
+//        val thisNumber = text.toDoubleOrNull()
+        val thisNumber = ColumnValueUtils.toDoubleOrNan(text)
         val thatNumber = that.toDouble()
 
-        if (thisNumber != null) {
+//        if (thisNumber != null) {
+        if (! thisNumber.isNaN()) {
             val addition = thisNumber + thatNumber
             return ofNumber(addition)
         }
@@ -52,10 +51,13 @@ data class ColumnValue(
 
 
     operator fun plus(that: ColumnValue): ColumnValue {
-        val thisNumber = text.toDoubleOrNull()
-        val thatNumber = that.text.toDoubleOrNull()
+//        val thisNumber = text.toDoubleOrNull()
+        val thisNumber = ColumnValueUtils.toDoubleOrNan(text)
+//        val thatNumber = that.text.toDoubleOrNull()
+        val thatNumber = ColumnValueUtils.toDoubleOrNan(that.text)
 
-        if (thisNumber != null && thatNumber != null) {
+//        if (thisNumber != null && thatNumber != null) {
+        if (! thisNumber.isNaN() && ! thatNumber.isNaN()) {
             val addition = thisNumber + thatNumber
             return ofNumber(addition)
         }
@@ -65,60 +67,20 @@ data class ColumnValue(
 
 
     operator fun plus(that: Any?): ColumnValue {
-        val thisNumber = text.toDoubleOrNull()
+//        val thisNumber = text.toDoubleOrNull()
+        val thisNumber = ColumnValueUtils.toDoubleOrNan(text)
         val thatText = that.toString()
-        val thatNumber = thatText.toDoubleOrNull()
+//        val thatNumber = thatText.toDoubleOrNull()
+        val thatNumber = ColumnValueUtils.toDoubleOrNan(thatText)
 
-        if (thisNumber != null && thatNumber != null) {
+//        if (thisNumber != null && thatNumber != null) {
+        if (! thisNumber.isNaN() && ! thatNumber.isNaN()) {
             val addition = thisNumber + thatNumber
             return ofNumber(addition)
         }
 
         return ColumnValue(text + thatText)
     }
-
-
-//    //-----------------------------------------------------------------------------------------------------------------
-//    override val length: Int
-//        get() = text.length
-//
-//    override fun get(index: Int): Char {
-//        return text[index]
-//    }
-//
-//    override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
-//        return text.subSequence(startIndex, endIndex)
-//    }
-//
-//
-//    //-----------------------------------------------------------------------------------------------------------------
-//    override fun toByte(): Byte {
-//        return text.toByteOrNull() ?: 0
-//    }
-//
-//    override fun toChar(): Char {
-//        return if (text.isEmpty()) { ' ' } else { text[0] }
-//    }
-//
-//    override fun toDouble(): Double {
-//        return text.toDoubleOrNull() ?: 0.0
-//    }
-//
-//    override fun toFloat(): Float {
-//        return text.toFloatOrNull() ?: 0.0f
-//    }
-//
-//    override fun toInt(): Int {
-//        return text.toIntOrNull() ?: 0
-//    }
-//
-//    override fun toLong(): Long {
-//        return text.toLongOrNull() ?: 0
-//    }
-//
-//    override fun toShort(): Short {
-//        return text.toShortOrNull() ?: 0
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

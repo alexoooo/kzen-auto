@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 
 
 class ReportInput(
-    private val reportRunSpec: ReportRunSpec,
+    reportRunSpec: ReportRunSpec,
     private val taskHandle: TaskHandle?
 ):
     AutoCloseable
@@ -112,13 +112,15 @@ class ReportInput(
         currentCount = 0L
         previousInnerCount = 0L
 
-        val overallPerSecond = (1000.0 * finishedCount / outerStopwatch.elapsed(TimeUnit.MILLISECONDS)).toLong()
+        val overallElapsed = outerStopwatch.elapsed()
+        val overallElapsedMillis = overallElapsed.toMillis()
+        val overallPerSecond = (1000.0 * finishedCount / overallElapsedMillis).toLong()
 
         innerStopwatch.reset().start()
         outerStopwatch.reset().start()
 
-        val speedMessage =
-            "at ${ReportSummary.formatCount(overallPerSecond)}/s overall"
+        val speedMessage = "at ${ReportSummary.formatCount(overallPerSecond)}/s overall, " +
+                "took ${overallElapsedMillis.toString().substring(2)}"
 
         if (taskHandle!!.cancelRequested()) {
             val message =

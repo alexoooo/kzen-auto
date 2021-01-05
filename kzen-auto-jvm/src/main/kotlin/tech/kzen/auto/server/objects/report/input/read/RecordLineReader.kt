@@ -6,6 +6,7 @@ import java.io.Reader
 import java.io.StringReader
 
 
+// TODO: decouple reading from parsing (for performance)
 class RecordLineReader(
     private val reader: Reader,
     private val recordLineParser: RecordLineParser,
