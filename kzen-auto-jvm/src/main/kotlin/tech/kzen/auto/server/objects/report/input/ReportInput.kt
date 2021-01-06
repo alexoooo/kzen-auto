@@ -119,8 +119,8 @@ class ReportInput(
         innerStopwatch.reset().start()
         outerStopwatch.reset().start()
 
-        val speedMessage = "at ${ReportSummary.formatCount(overallPerSecond)}/s overall, " +
-                "took ${overallElapsedMillis.toString().substring(2)}"
+        val speedMessage = "took ${overallElapsed.toString().substring(2)} " +
+                "at ${ReportSummary.formatCount(overallPerSecond)}/s"
 
         if (taskHandle!!.cancelRequested()) {
             val message =

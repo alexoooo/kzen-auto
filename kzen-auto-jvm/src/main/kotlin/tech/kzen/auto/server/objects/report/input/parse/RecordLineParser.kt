@@ -16,7 +16,6 @@ interface RecordLineParser {
 
                 "tsv" ->
                     FastTsvLineParser()
-//                    TsvLineParser()
 
                 else ->
                     error("Unknown: $extension")

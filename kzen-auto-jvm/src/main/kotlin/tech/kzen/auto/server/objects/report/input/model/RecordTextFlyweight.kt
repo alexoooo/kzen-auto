@@ -30,9 +30,10 @@ class RecordTextFlyweight(
             100_000_000_000_000,
             1_000_000_000_000_000,
             10_000_000_000_000_000,
-            100_000_000_000_000_000,
-            1_000_000_000_000_000_000
+            100_000_000_000_000_000
         )
+
+        const val maxLongDecimalLength = 999999999999999999L.toString().length
 
         fun standalone(value: String): RecordTextFlyweight {
             val chars = value.toCharArray()
@@ -306,19 +307,28 @@ class RecordTextFlyweight(
         }
 
         if (pointIndex == -1) {
+            if (valueLength > maxLongDecimalLength) {
+                return Double.NaN
+            }
             return toLong().toDouble()
         }
         else if (pointIndex == len - 1) {
+            if (valueLength - 1 > maxLongDecimalLength) {
+                return Double.NaN
+            }
             return toLong(0, len - 1).toDouble()
         }
 
-        val wholePart =
-            if (pointIndex == 0) {
+        val wholePart = when {
+            pointIndex == 0 ->
                 0
-            }
-            else {
+
+            pointIndex > maxLongDecimalLength ->
+                return Double.NaN
+
+            else ->
                 toLong(0, pointIndex)
-            }
+        }
 
         val fractionDigits = len - pointIndex - 1
         var fractionLeadingZeroes = 0
@@ -330,13 +340,16 @@ class RecordTextFlyweight(
         }
 
         val factionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes
-        val fractionAsLongWithoutLeadingZeroes: Long =
-            if (factionDigitsWithoutLeadingZeroes == 0) {
+        val fractionAsLongWithoutLeadingZeroes: Long = when {
+            factionDigitsWithoutLeadingZeroes == 0 ->
                 0
-            }
-            else {
+
+            factionDigitsWithoutLeadingZeroes > maxLongDecimalLength ->
+                return Double.NaN
+
+            else ->
                 toLong(pointIndex + fractionLeadingZeroes + 1, factionDigitsWithoutLeadingZeroes)
-            }
+        }
 
         val factionalPartWithoutLeadingZeroes =
             fractionAsLongWithoutLeadingZeroes.toDouble() / decimalLongPowers[factionDigitsWithoutLeadingZeroes]

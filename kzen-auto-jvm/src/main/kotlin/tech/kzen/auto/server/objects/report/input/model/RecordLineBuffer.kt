@@ -238,10 +238,24 @@ class RecordLineBuffer(
         }
     }
 
+
     fun clear() {
         fieldCount = 0
         fieldContentLength = 0
         nonEmpty = false
+    }
+
+
+    fun copy(that: RecordLineBuffer) {
+        fieldCount = that.fieldCount
+        fieldContentLength = that.fieldContentLength
+        nonEmpty = that.nonEmpty
+
+        growFieldContentsIfRequired(fieldContentLength)
+        growFieldEndsIfRequired()
+
+        that.fieldContents.copyInto(fieldContents, endIndex = fieldContentLength)
+        that.fieldEnds.copyInto(fieldEnds, endIndex = fieldCount)
     }
 
 
@@ -261,7 +275,7 @@ class RecordLineBuffer(
             return
         }
 
-        val nextSize = (fieldEnds.size * 1.2).toInt() + 1
+        val nextSize = (fieldEnds.size * 1.2 + 1).toInt().coerceAtLeast(fieldCount)
         fieldEnds = fieldEnds.copyOf(nextSize)
     }
 

@@ -51,6 +51,11 @@ data class RecordHeader(
     }
 
 
+    fun isEmpty(): Boolean {
+        return headerNames.isEmpty()
+    }
+
+
 //    //-----------------------------------------------------------------------------------------------------------------
 //    fun set(recordHeaderBuffer: RecordHeader) {
 //        if (headerNames == recordHeaderBuffer.headerNames) {

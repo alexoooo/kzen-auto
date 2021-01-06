@@ -13,12 +13,15 @@ import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.server.objects.report.calc.ReportFormulas
-import tech.kzen.auto.server.objects.report.input.ReportInput
+import tech.kzen.auto.server.objects.report.input.ReportDataInput
+import tech.kzen.auto.server.objects.report.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.input.model.RecordHeaderBuffer
 import tech.kzen.auto.server.objects.report.input.model.RecordLineBuffer
+import tech.kzen.auto.server.objects.report.input.model.ReportDataBuffer
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.ReportFilter
 import tech.kzen.auto.server.objects.report.pipeline.ReportOutput
+import tech.kzen.auto.server.objects.report.pipeline.ReportParser
 import tech.kzen.auto.server.objects.report.pipeline.ReportSummary
 import tech.kzen.auto.server.service.ServerContext
 import java.io.InputStream
@@ -26,6 +29,8 @@ import java.nio.file.Path
 
 
 /**
+ * TODO: error handling
+ *
  * TODO: optimize the following:
  *  - BufferedIndexedSignatureStore.add(LongArray)
  *  - ReportOutput.save csv generation
@@ -94,24 +99,82 @@ class ReportHandle(
     }
 
 
-    private data class Event(
+    //-----------------------------------------------------------------------------------------------------------------
+    data class Event(
         var filterAllow: Boolean = false,
         val recordHeader: RecordHeaderBuffer = RecordHeaderBuffer(),
         val recordItem: RecordLineBuffer = RecordLineBuffer()
+    )
+
+
+    @Suppress("ArrayInDataClass")
+    data class BatchEvent(
+        val data: ReportDataBuffer = ReportDataBuffer.ofEmpty(),
+        var events: Array<Event> = emptyArray(),
+        var length: Int = 0,
+        var next: Int = 0
     ) {
         companion object {
-            val factory = EventFactory { Event() }
+            val factory = EventFactory { BatchEvent() }
+        }
 
-//            val translator = EventTranslatorOneArg { event: Event, _: Long, item: RecordItem ->
-//                event.filterAllow = false
-//                event.recordItem = item
-//            }
+        fun clearEvents() {
+            for (i in 0 until length) {
+                events[i].recordHeader.value = RecordHeader.empty
+                events[i].recordItem.clear()
+            }
+            length = 0
+            next = 0
+        }
+
+        fun rewind() {
+            next = 0
+        }
+
+        fun current(): Event {
+            return events[next - 1]
+        }
+
+        fun next(): Event? {
+            if (length <= next) {
+                return null
+            }
+            val event = events[next]
+            next++
+            return event
+        }
+
+        fun addNext(): Event {
+            val event = add(next)
+            next++
+            return event
+        }
+
+        fun removeLast() {
+            length--
+            next--
+        }
+
+        private fun add(index: Int): Event {
+            if (events.size <= index) {
+                val copy = events.copyOf(index + 1)
+                for (i in length .. index) {
+                    copy[i] = Event()
+                }
+                @Suppress("UNCHECKED_CAST")
+                events = copy as Array<Event>
+            }
+            length = index + 1
+            return events[index]
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val input = ReportInput(initialReportRunSpec, taskHandle)
+//    private val input = ReportInput(initialReportRunSpec, taskHandle)
+    private val dataInput = ReportDataInput(initialReportRunSpec, taskHandle)
+
+    private val parser = ReportParser(initialReportRunSpec, taskHandle)
     private val filter = ReportFilter(initialReportRunSpec)
     private val formulas = ReportFormulas(
         initialReportRunSpec.toFormulaSignature(), ServerContext.calculatedColumnEval)
@@ -146,7 +209,7 @@ class ReportHandle(
     //-----------------------------------------------------------------------------------------------------------------
     fun run() {
         val disruptor = Disruptor(
-            Event.factory,
+            BatchEvent.factory,
             disruptorBufferSize,
             DaemonThreadFactory.INSTANCE,
             ProducerType.SINGLE,
@@ -154,16 +217,15 @@ class ReportHandle(
         )
 
         disruptor
-            .handleEventsWith(this::handleFormulas)
-            .handleEventsWith(this::handleFilter)
-            .handleEventsWith(this::handleSummaryAndOutput)
-//            .handleEventsWith(this::handleSummary, this::handleOutput)
-//            .handleEventsWith(this::handleFilter)
+            .handleEventsWith(this::handleParse)
+            .then(this::handleFormulas)
+            .then(this::handleFilter)
+            .then(this::handleSummaryAndOutput)
 //            .then(this::handleSummary, this::handleOutput)
 
-        disruptor.setDefaultExceptionHandler(object : ExceptionHandler<Event?> {
-            override fun handleEventException(ex: Throwable?, sequence: Long, event: Event?) {
-                logger.error("Event - {}", event?.recordItem, ex)
+        disruptor.setDefaultExceptionHandler(object : ExceptionHandler<BatchEvent?> {
+            override fun handleEventException(ex: Throwable?, sequence: Long, event: BatchEvent?) {
+                logger.error("Event - {}", event?.current()?.recordItem, ex)
             }
 
             override fun handleOnStartException(ex: Throwable?) {
@@ -181,12 +243,9 @@ class ReportHandle(
 
         while (true) {
             val sequence = ringBuffer.next()
-            val event = ringBuffer.get(sequence)
+            val batchEvent = ringBuffer.get(sequence)
 
-            val item = event.recordItem
-            val header = event.recordHeader
-
-            val read = nextRecord(item, header)
+            val read = dataInput.poll(batchEvent.data)
             if (! read) {
                 break
             }
@@ -198,73 +257,67 @@ class ReportHandle(
     }
 
 
-    private fun nextRecord(
-        recordLineBuffer: RecordLineBuffer,
-        recordHeaderBuffer: RecordHeaderBuffer
-    ): Boolean {
-        recordLineBuffer.clear()
-
+    @Suppress("UNUSED_PARAMETER")
+    private fun handleFilter(batchEvent: BatchEvent, sequence: Long, endOfBatch: Boolean) {
+        batchEvent.rewind()
+        var event: Event?
         while (true) {
-            val read = input.poll(recordLineBuffer, recordHeaderBuffer)
-            if (! read) {
-                return false
+            event = batchEvent.next()
+            if (event == null) {
+                break
             }
 
-            if (recordLineBuffer.isEmpty()) {
-                continue
-            }
-
-            return true
-
-//            println("^^%$^^ $recordLineBuffer")
-
-//            val pass = filter.test(recordLineBuffer, recordHeaderBuffer.value)
-//            if (pass) {
-//                return true
-//            }
-//
-//            recordLineBuffer.clear()
+            event.filterAllow = filter.test(event.recordItem, event.recordHeader.value)
         }
     }
 
 
-
     @Suppress("UNUSED_PARAMETER")
-    private fun handleFilter(event: Event, sequence: Long, endOfBatch: Boolean) {
-        event.filterAllow = filter.test(event.recordItem, event.recordHeader.value)
+    private fun handleParse(batchEvent: BatchEvent, sequence: Long, endOfBatch: Boolean) {
+        parser.parse(batchEvent)
     }
 
 
     @Suppress("UNUSED_PARAMETER")
-    private fun handleFormulas(event: Event, sequence: Long, endOfBatch: Boolean) {
-        formulas.evaluate(event.recordItem, event.recordHeader.value)
-//        event.recordItem
+    private fun handleFormulas(batchEvent: BatchEvent, sequence: Long, endOfBatch: Boolean) {
+        batchEvent.rewind()
+        var event: Event?
+        while (true) {
+            event = batchEvent.next()
+            if (event == null) {
+                break
+            }
 
-//        if (endOfBatch) {
-//            summary.handleViewRequest()
-//        }
-//
-//        summary.add(event.recordItem, event.recordHeader.value)
+            formulas.evaluate(event.recordItem, event.recordHeader.value)
+        }
     }
 
 
     @Suppress("UNUSED_PARAMETER")
-    private fun handleSummary(event: Event, sequence: Long, endOfBatch: Boolean) {
+    private fun handleSummary(batchEvent: BatchEvent, sequence: Long, endOfBatch: Boolean) {
         if (endOfBatch) {
             summary.handleViewRequest()
         }
 
-        if (! event.filterAllow) {
-            return
-        }
+        batchEvent.rewind()
+        var event: Event?
+        while (true) {
+            event = batchEvent.next()
+            if (event == null) {
+                break
+            }
 
-        summary.add(event.recordItem, event.recordHeader.value)
+            if (! event.filterAllow) {
+                continue
+            }
+            summary.add(event.recordItem, event.recordHeader.value)
+        }
     }
 
 
     @Suppress("UNUSED_PARAMETER")
     private fun handleOutput(
-        event: Event,
+        batchEvent: BatchEvent,
         sequence: Long,
         endOfBatch: Boolean
     ) {
@@ -273,27 +326,36 @@ class ReportHandle(
             output.handlePreviewRequest(reportWorkPool)
         }
 
-        if (! event.filterAllow) {
-            return
-        }
+        batchEvent.rewind()
+        var event: Event?
+        while (true) {
+            event = batchEvent.next()
+            if (event == null) {
+                break
+            }
 
-        output.add(event.recordItem, event.recordHeader.value)
+            if (! event.filterAllow) {
+                continue
+            }
+            output.add(event.recordItem, event.recordHeader.value)
+        }
     }
 
 
     private fun handleSummaryAndOutput(
-        event: Event,
+        batchEvent: BatchEvent,
         sequence: Long,
         endOfBatch: Boolean
     ) {
-        handleSummary(event, sequence, endOfBatch)
-        handleOutput(event, sequence, endOfBatch)
+        handleSummary(batchEvent, sequence, endOfBatch)
+        handleOutput(batchEvent, sequence, endOfBatch)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        input.close()
+//        input.close()
+        dataInput.close()
         summary.close()
         output.close()
     }

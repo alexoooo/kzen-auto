@@ -15,6 +15,8 @@ class ReportFormulas(
 
     fun formulas(header: RecordHeader): Map<String, CalculatedColumn> {
         if (previousHeader == header) {
+            // NB: optimization for reference equality
+            previousHeader = header
             return previousFormulas
         }
         previousHeader = header
