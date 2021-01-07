@@ -18,17 +18,18 @@ data class ColumnValue(
             }
         }
 
+
         fun ofNumber(number: Double): ColumnValue {
-            val asString = number.toString()
-
-            val value =
-                if (asString.endsWith(".0")) {
-                    asString.substring(0, asString.length - 2)
-                }
-                else {
-                    asString
-                }
-
+//            val asString = number.toString()
+//
+//            val value =
+//                if (asString.endsWith(".0")) {
+//                    asString.substring(0, asString.length - 2)
+//                }
+//                else {
+//                    asString
+//                }
+            val value = ColumnValueUtils.formatDecimal(number)
             return ColumnValue(value)
         }
     }

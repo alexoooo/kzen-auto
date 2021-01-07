@@ -221,7 +221,7 @@ class ReportHandle(
             .then(this::handleFormulas)
             .then(this::handleFilter)
             .then(this::handleSummaryAndOutput)
-//            .then(this::handleSummary, this::handleOutput)
+//            .handleEventsWith(this::handleSummary, this::handleOutput)
 
         disruptor.setDefaultExceptionHandler(object : ExceptionHandler<BatchEvent?> {
             override fun handleEventException(ex: Throwable?, sequence: Long, event: BatchEvent?) {
@@ -288,7 +288,7 @@ class ReportHandle(
                 break
             }
 
-            formulas.evaluate(event.recordItem, event.recordHeader.value)
+            formulas.evaluate(event.recordItem, event.recordHeader)
         }
     }
 

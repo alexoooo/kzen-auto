@@ -280,6 +280,7 @@ class RecordTextFlyweight(
         val contents = recordLineBuffer.fieldContents
         val offset = valueOffset
 
+        var leadingZeroes = 0
         var pointIndex = -1
         for (i in 0 until len) {
             val nextChar = contents[offset + i]
@@ -304,16 +305,19 @@ class RecordTextFlyweight(
             else if (nextChar !in '0'..'9') {
                 return Double.NaN
             }
+            else if (nextChar == '0' && leadingZeroes == i) {
+                leadingZeroes++
+            }
         }
 
         if (pointIndex == -1) {
-            if (valueLength > maxLongDecimalLength) {
+            if (valueLength - leadingZeroes > maxLongDecimalLength) {
                 return Double.NaN
             }
             return toLong().toDouble()
         }
         else if (pointIndex == len - 1) {
-            if (valueLength - 1 > maxLongDecimalLength) {
+            if (valueLength - leadingZeroes - 1 > maxLongDecimalLength) {
                 return Double.NaN
             }
             return toLong(0, len - 1).toDouble()
@@ -323,7 +327,7 @@ class RecordTextFlyweight(
             pointIndex == 0 ->
                 0
 
-            pointIndex > maxLongDecimalLength ->
+            pointIndex - leadingZeroes > maxLongDecimalLength ->
                 return Double.NaN
 
             else ->
