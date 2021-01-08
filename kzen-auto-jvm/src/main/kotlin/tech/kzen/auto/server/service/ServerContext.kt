@@ -10,7 +10,7 @@ import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepo
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.service.GraphInstanceCreator
 import tech.kzen.auto.server.objects.report.*
-import tech.kzen.auto.server.objects.report.calc.CalculatedColumnEval
+import tech.kzen.auto.server.objects.report.pipeline.calc.CalculatedColumnEval
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
 import tech.kzen.auto.server.service.exec.EmptyExecutionInitializer

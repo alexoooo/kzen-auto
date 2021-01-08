@@ -1,11 +1,11 @@
 package tech.kzen.auto.server.objects.report.pipeline
 
 import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
-import tech.kzen.auto.server.objects.report.input.model.RecordHeader
-import tech.kzen.auto.server.objects.report.input.model.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.input.model.RecordLineBuffer
-import tech.kzen.auto.server.objects.report.input.model.RecordTextFlyweight
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTextFlyweight
 
 
 class ReportFilter(
@@ -48,7 +48,7 @@ class ReportFilter(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun test(item: RecordLineBuffer, header: RecordHeader): Boolean {
+    fun test(item: RecordItemBuffer, header: RecordHeader): Boolean {
         val itemIndices = recordHeaderIndex.indices(header)
 
         for (i in nonEmptyFilterColumnNames.indices) {
