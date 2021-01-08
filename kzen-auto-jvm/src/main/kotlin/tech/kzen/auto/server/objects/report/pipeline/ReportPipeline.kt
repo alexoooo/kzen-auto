@@ -46,7 +46,7 @@ class ReportPipeline(
         private val logger = LoggerFactory.getLogger(ReportPipeline::class.java)
 
         private const val binaryDisruptorBufferSize = 256
-        private const val eventDisruptorBufferSize = 4 * 1024
+        private const val recordDisruptorBufferSize = 4 * 1024
 
 
         fun passivePreview(
@@ -152,8 +152,9 @@ class ReportPipeline(
 
 
     data class RecordEvent(
+        var noop: Boolean = false,
         var filterAllow: Boolean = false,
-        var record: RecordBuffer = RecordBuffer()
+        val record: RecordBuffer = RecordBuffer()
     ) {
         companion object {
             val factory = EventFactory { RecordEvent() }
@@ -230,7 +231,7 @@ class ReportPipeline(
     private fun setupRecordDisruptor(): Disruptor<RecordEvent> {
         val recordDisruptor = Disruptor(
             RecordEvent.factory,
-            eventDisruptorBufferSize,
+            recordDisruptorBufferSize,
             DaemonThreadFactory.INSTANCE,
             ProducerType.SINGLE,
             YieldingWaitStrategy()
@@ -298,7 +299,7 @@ class ReportPipeline(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    var first = true
+//    var first = true
 
     @Suppress("UNUSED_PARAMETER")
     private fun handleParse(
@@ -309,40 +310,48 @@ class ReportPipeline(
 //        writer.write("^^^^^ ${binaryEvent.data.length }^^^^^^^")
 //        writer.write(binaryEvent.data.contents, 0, binaryEvent.data.length)
 
-        parser.parse(binaryEvent)
+        parser.parse(binaryEvent.data, recordRingBuffer)
 
-        binaryEvent.rewindRecords()
-
-        while (true) {
-            val recordBuffer = binaryEvent.nextRecord()
-                ?: break
-
-            val sequence = recordRingBuffer.next()
-            val recordEvent = recordRingBuffer.get(sequence)
-
-            recordEvent.record = recordBuffer
-
-//            if (first) {
-//                writer.write(RecordItemBuffer.of(recordBuffer.header.value.headerNames).toTsv() + "\r\n")
-//                first = false
-//            }
-//            writer.write(recordBuffer.item.toTsv() + "\r\n")
-
-            recordRingBuffer.publish(sequence)
-        }
+//        binaryEvent.rewindRecords()
+//
+//        while (true) {
+//            val recordBuffer = binaryEvent.nextRecord()
+//                ?: break
+//
+//            val sequence = recordRingBuffer.next()
+//            val recordEvent = recordRingBuffer.get(sequence)
+//
+//            recordEvent.record = recordBuffer
+//
+////            if (first) {
+////                writer.write(RecordItemBuffer.of(recordBuffer.header.value.headerNames).toTsv() + "\r\n")
+////                first = false
+////            }
+////            writer.write(recordBuffer.item.toTsv() + "\r\n")
+//
+//            recordRingBuffer.publish(sequence)
+//        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Suppress("UNUSED_PARAMETER")
-    private fun handleFilter(event: RecordEvent, sequence: Long, endOfBatch: Boolean) {
-        event.filterAllow = filter.test(event.record.item, event.record.header.value)
+    private fun handleFormulas(event: RecordEvent, sequence: Long, endOfBatch: Boolean) {
+        if (event.noop) {
+            return
+        }
+
+        formulas.evaluate(event.record.item, event.record.header)
     }
 
 
     @Suppress("UNUSED_PARAMETER")
-    private fun handleFormulas(event: RecordEvent, sequence: Long, endOfBatch: Boolean) {
-        formulas.evaluate(event.record.item, event.record.header)
+    private fun handleFilter(event: RecordEvent, sequence: Long, endOfBatch: Boolean) {
+        if (event.noop) {
+            return
+        }
+
+        event.filterAllow = filter.test(event.record.item, event.record.header.value)
     }
 
 
@@ -352,7 +361,7 @@ class ReportPipeline(
             summary.handleViewRequest()
         }
 
-        if (! event.filterAllow) {
+        if (! event.filterAllow || event.noop) {
             return
         }
 
@@ -371,7 +380,7 @@ class ReportPipeline(
             output.handlePreviewRequest(reportWorkPool)
         }
 
-        if (! event.filterAllow) {
+        if (! event.filterAllow || event.noop) {
             return
         }
 

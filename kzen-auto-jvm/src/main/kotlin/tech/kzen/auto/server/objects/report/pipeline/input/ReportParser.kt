@@ -1,12 +1,14 @@
 package tech.kzen.auto.server.objects.report.pipeline.input
 
 import com.google.common.base.Stopwatch
+import com.lmax.disruptor.RingBuffer
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.model.TaskProgress
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.ReportPipeline
+import tech.kzen.auto.server.objects.report.pipeline.input.model.BinaryDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordItemParser
@@ -42,19 +44,17 @@ class ReportParser(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun parse(binaryEvent: ReportPipeline.BinaryEvent) {
-        binaryEvent.clearRecords()
-
+    fun parse(data: BinaryDataBuffer, recordRingBuffer: RingBuffer<ReportPipeline.RecordEvent>) {
         if (location == null) {
-            location = binaryEvent.data.location!!
-            parser = RecordItemParser.forExtension(binaryEvent.data.innerExtension!!)
+            location = data.location!!
+            parser = RecordItemParser.forExtension(data.innerExtension!!)
             trackProgressStart()
         }
 
         var offset = 0
         if (previousRecordHeader.isEmpty()) {
             val recordLength = parser!!.parseNext(
-                leftoverRecordLineBuffer, binaryEvent.data.contents, offset, binaryEvent.data.length)
+                leftoverRecordLineBuffer, data.contents, offset, data.length)
 
             if (recordLength != -1) {
                 previousRecordHeader = RecordHeader.ofLine(leftoverRecordLineBuffer)
@@ -67,12 +67,17 @@ class ReportParser(
         }
         else if (! leftoverRecordLineBuffer.isEmpty()) {
             val recordLength = parser!!.parseNext(
-                leftoverRecordLineBuffer, binaryEvent.data.contents, offset, binaryEvent.data.length)
+                leftoverRecordLineBuffer, data.contents, offset, data.length)
 
             if (recordLength != -1) {
-                val nextEvent = binaryEvent.addNextRecord()
-                nextEvent.header.value = previousRecordHeader
-                nextEvent.item.copy(leftoverRecordLineBuffer)
+                val sequence = recordRingBuffer.next()
+                val event = recordRingBuffer.get(sequence)
+                val record = event.record
+                event.noop = false
+                record.header.value = previousRecordHeader
+                record.item.copy(leftoverRecordLineBuffer)
+                recordRingBuffer.publish(sequence)
+
                 leftoverRecordLineBuffer.clear()
                 offset += recordLength
                 trackProgressNext()
@@ -84,29 +89,45 @@ class ReportParser(
 
         if (offset != -1) {
             while (true) {
-                val nextEvent = binaryEvent.addNextRecord()
+                val sequence = recordRingBuffer.next()
+                val event = recordRingBuffer.get(sequence)
+                val record = event.record
+                record.clear()
+
                 val recordLength = parser!!.parseNext(
-                    nextEvent.item, binaryEvent.data.contents, offset, binaryEvent.data.length)
+                    record.item, data.contents, offset, data.length)
 
                 if (recordLength != -1) {
-                    nextEvent.header.value = previousRecordHeader
+                    event.noop = false
+                    record.header.value = previousRecordHeader
+                    recordRingBuffer.publish(sequence)
+
                     offset += recordLength
                     trackProgressNext()
                 }
                 else {
-                    leftoverRecordLineBuffer.copy(nextEvent.item)
-                    binaryEvent.removeLastRecord()
+                    leftoverRecordLineBuffer.copy(record.item)
+
+                    event.noop = true
+                    recordRingBuffer.publish(sequence)
                     break
                 }
             }
         }
 
-        if (binaryEvent.data.endOfStream) {
+        if (data.endOfStream) {
             if (! leftoverRecordLineBuffer.isEmpty()) {
                 parser!!.endOfStream(leftoverRecordLineBuffer)
-                val lastEvent = binaryEvent.addNextRecord()
-                lastEvent.header.value = previousRecordHeader
-                lastEvent.item.copy(leftoverRecordLineBuffer)
+
+                val sequence = recordRingBuffer.next()
+                val event = recordRingBuffer.get(sequence)
+                val record = event.record
+                record.clear()
+                event.noop = false
+                record.header.value = previousRecordHeader
+                record.item.copy(leftoverRecordLineBuffer)
+                recordRingBuffer.publish(sequence)
+
                 leftoverRecordLineBuffer.clear()
                 trackProgressNext()
             }
