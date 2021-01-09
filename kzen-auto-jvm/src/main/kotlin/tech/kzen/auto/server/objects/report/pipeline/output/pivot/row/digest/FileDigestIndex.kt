@@ -60,7 +60,7 @@ class FileDigestIndex(
             if (size < fileCacheSize) {
                 return false
             }
-            StoreUtils.flushAndClose(eldest.value)
+            StoreUtils.flushAndClose(eldest.value, dir.toString())
             return true
         }
     }

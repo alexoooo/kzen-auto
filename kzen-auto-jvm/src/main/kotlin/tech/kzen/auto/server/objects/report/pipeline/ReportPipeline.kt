@@ -45,7 +45,9 @@ class ReportPipeline(
     companion object {
         private val logger = LoggerFactory.getLogger(ReportPipeline::class.java)
 
+//        private const val binaryDisruptorBufferSize = 128
         private const val binaryDisruptorBufferSize = 256
+//        private const val binaryDisruptorBufferSize = 512
         private const val recordDisruptorBufferSize = 32 * 1024
 
 

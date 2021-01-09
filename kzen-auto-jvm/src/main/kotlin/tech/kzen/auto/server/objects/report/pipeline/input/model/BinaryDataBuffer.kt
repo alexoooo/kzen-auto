@@ -24,6 +24,7 @@ data class BinaryDataBuffer(
 //        private const val defaultBufferSize = 11
 //        private const val defaultBufferSize = 8 * 1024
         private const val defaultBufferSize = 64 * 1024
+//        private const val defaultBufferSize = 128 * 1024
 
         fun ofEmpty(bufferSize: Int = defaultBufferSize): BinaryDataBuffer {
             return BinaryDataBuffer(

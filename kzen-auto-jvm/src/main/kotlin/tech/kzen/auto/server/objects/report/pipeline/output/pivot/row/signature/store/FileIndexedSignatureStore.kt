@@ -10,7 +10,7 @@ import java.nio.file.Path
 
 
 class FileIndexedSignatureStore(
-    file: Path,
+    private val file: Path,
     private var signatureSize: Int
 ): IndexedSignatureStore {
     //-----------------------------------------------------------------------------------------------------------------
@@ -130,6 +130,6 @@ class FileIndexedSignatureStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        StoreUtils.flushAndClose(handle)
+        StoreUtils.flushAndClose(handle, file.toString())
     }
 }

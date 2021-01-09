@@ -12,7 +12,7 @@ import java.nio.file.Path
 
 
 class FileIndexedTextStore(
-    file: Path,
+    private val file: Path,
     private val offsetStore: OffsetStore
 ): IndexedTextStore {
     //-----------------------------------------------------------------------------------------------------------------
@@ -105,7 +105,7 @@ class FileIndexedTextStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        StoreUtils.flushAndClose(handle)
+        StoreUtils.flushAndClose(handle, file.toString())
         offsetStore.close()
     }
 }

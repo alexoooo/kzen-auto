@@ -8,10 +8,12 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 
+@ExperimentalPathApi
 class FileDigestIndexTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
@@ -113,7 +115,7 @@ class FileDigestIndexTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun use(consumer: (FileDigestIndex) -> Unit) {
-        val dir = createTempDir("FileDigestIndex","").toPath()
+        val dir = kotlin.io.path.createTempDirectory("FileDigestIndex")
 
         try {
             FileDigestIndex(dir).use {

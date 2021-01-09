@@ -16,7 +16,7 @@ import java.nio.file.Path
 
 
 class FileValueStatisticsStore(
-    file: Path,
+    private val file: Path,
     valueColumnCount: Int
 ):
     ValueStatistics,
@@ -287,6 +287,6 @@ class FileValueStatisticsStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        StoreUtils.flushAndClose(handle)
+        StoreUtils.flushAndClose(handle, file.toString())
     }
 }

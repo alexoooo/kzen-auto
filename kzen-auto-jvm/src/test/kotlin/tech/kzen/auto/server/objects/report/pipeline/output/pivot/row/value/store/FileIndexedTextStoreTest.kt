@@ -1,11 +1,15 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.value.store
 
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.FileOffsetStore
+import java.io.File
 import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 
+@ExperimentalPathApi
 class FileIndexedTextStoreTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
@@ -44,8 +48,9 @@ class FileIndexedTextStoreTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun use(consumer: (FileIndexedTextStore) -> Unit) {
-        val offsetFile = createTempFile("FileIndexedTextStoreTest-offset").toPath()
-        val valueFile = createTempFile("FileIndexedTextStoreTest-value").toPath()
+        val workUtils = kotlin.io.path.createTempDirectory("FileIndexedTextStoreTest")
+        val offsetFile = workUtils.resolve("offset")
+        val valueFile = workUtils.resolve("value")
 
         try {
             FileOffsetStore(
@@ -60,8 +65,10 @@ class FileIndexedTextStoreTest {
             }
         }
         finally {
-            Files.delete(valueFile)
-            Files.delete(offsetFile)
+            Files.walk(workUtils)
+                .sorted(Comparator.reverseOrder())
+                .map(Path::toFile)
+                .forEach(File::delete)
         }
     }
 }

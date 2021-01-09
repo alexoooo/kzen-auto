@@ -26,6 +26,7 @@ class FileOffsetStore(
 
     private val handle: RandomAccessFile =
         RandomAccessFile(file.toFile(), "rw")
+    private var closed: Boolean = false
 
     private var endOffset =
         if (fileSize == 0L) {
@@ -132,6 +133,9 @@ class FileOffsetStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        StoreUtils.flushAndClose(handle)
+        if (! closed) {
+            StoreUtils.flushAndClose(handle, file.toString())
+            closed = true
+        }
     }
 }

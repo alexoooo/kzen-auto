@@ -7,10 +7,12 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 
+@ExperimentalPathApi
 class H2DigestIndexTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
@@ -89,7 +91,7 @@ class H2DigestIndexTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun use(consumer: (H2DigestIndex) -> Unit) {
-        val dir = createTempDir("H2DigestIndex","").toPath()
+        val dir = kotlin.io.path.createTempDirectory("H2DigestIndex")
 
         try {
             H2DigestIndex(dir).use {

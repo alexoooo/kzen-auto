@@ -2,10 +2,12 @@ package tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.signature
 
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.signature.RowSignature
 import java.nio.file.Files
+import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 
+@ExperimentalPathApi
 class FileIndexedSignatureStoreTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
@@ -60,7 +62,7 @@ class FileIndexedSignatureStoreTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun use(signatureSize: Int, consumer: (FileIndexedSignatureStore) -> Unit) {
-        val file = createTempFile("FileIndexedSignatureStore").toPath()
+        val file = kotlin.io.path.createTempFile("FileIndexedSignatureStore")
 
         try {
             FileIndexedSignatureStore(

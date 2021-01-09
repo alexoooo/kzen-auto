@@ -71,7 +71,7 @@ class IndexedCsvTable(
             bufferWriter.flush()
 
             val length = buffer.flushTo(handle)
-            StoreUtils.flush(handle)
+            StoreUtils.flush(handle, tablePath.toString())
 
             offsetStore.add(length)
 
@@ -128,7 +128,7 @@ class IndexedCsvTable(
 
         seek(maxPosition)
         val totalLength = pending.flushTo(handle)
-        StoreUtils.flush(handle)
+        StoreUtils.flush(handle, tablePath.toString())
 
         previousPosition += totalLength
         maxPosition = previousPosition
@@ -219,7 +219,7 @@ class IndexedCsvTable(
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
         flushPending()
-        StoreUtils.flushAndClose(handle)
+        StoreUtils.flushAndClose(handle, tablePath.toString())
         offsetStore.close()
     }
 }
