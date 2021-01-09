@@ -3,20 +3,19 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 
 
-interface RecordItemParser {
+interface RecordParser {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         const val csvExtension = "csv"
         const val tsvExtension = "tsv"
 
-        fun forExtension(extension: String): RecordItemParser {
+        fun forExtension(extension: String): RecordParser {
             return when (extension) {
                 "csv" ->
-                    FastCsvRecordParser()
+                    CsvRecordParser()
 
                 "tsv" ->
-//                    FastTsvRecordParser()
-                    FastTsvRecordParser2()
+                    TsvRecordParser()
 
                 else ->
                     error("Unknown: $extension")

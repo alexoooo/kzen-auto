@@ -13,11 +13,13 @@ import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.calc.ReportFormulas
-import tech.kzen.auto.server.objects.report.pipeline.input.ReportDataInput
-import tech.kzen.auto.server.objects.report.pipeline.input.ReportParser
+import tech.kzen.auto.server.objects.report.pipeline.filter.ReportFilter
+import tech.kzen.auto.server.objects.report.pipeline.input.ReportDataFeeder
+import tech.kzen.auto.server.objects.report.pipeline.input.ReportParserFeeder
 import tech.kzen.auto.server.objects.report.pipeline.input.model.BinaryDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordBuffer
 import tech.kzen.auto.server.objects.report.pipeline.output.ReportOutput
+import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgress
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.service.ServerContext
 import java.io.InputStream
@@ -36,7 +38,7 @@ import java.nio.file.Path
 class ReportPipeline(
     initialReportRunSpec: ReportRunSpec,
     runDir: Path,
-    taskHandle: TaskHandle?,
+    private val taskHandle: TaskHandle?,
     private val reportWorkPool: ReportWorkPool
 ):
     TaskRun, AutoCloseable
@@ -100,6 +102,7 @@ class ReportPipeline(
     //-----------------------------------------------------------------------------------------------------------------
     @Suppress("ArrayInDataClass")
     data class BinaryEvent(
+        var noop: Boolean = false,
         val data: BinaryDataBuffer = BinaryDataBuffer.ofEmpty(),
         var records: Array<RecordBuffer> = emptyArray(),
         var recordCount: Int = 0,
@@ -123,9 +126,11 @@ class ReportPipeline(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val dataInput = ReportDataInput(initialReportRunSpec, taskHandle)
+    private val dataInput = ReportDataFeeder(
+        initialReportRunSpec.inputs,
+        ReportProgress(initialReportRunSpec, taskHandle))
 
-    private val parser = ReportParser(initialReportRunSpec, taskHandle)
+    private val parser = ReportParserFeeder()
     private val filter = ReportFilter(initialReportRunSpec)
     private val formulas = ReportFormulas(
         initialReportRunSpec.toFormulaSignature(), ServerContext.calculatedColumnEval)
@@ -168,12 +173,14 @@ class ReportPipeline(
 
         val binaryRingBuffer = binaryDisruptor.ringBuffer
 
-        while (true) {
+        while (! taskHandle!!.cancelRequested()) {
             val sequence = binaryRingBuffer.next()
             val binaryEvent = binaryRingBuffer.get(sequence)
 
             val read = dataInput.poll(binaryEvent.data)
             if (! read) {
+                binaryEvent.noop = true
+                binaryRingBuffer.publish(sequence)
                 break
             }
 
@@ -266,6 +273,9 @@ class ReportPipeline(
         recordRingBuffer: RingBuffer<RecordEvent>/*,
         writer: FileWriter*/
     ) {
+        if (binaryEvent.noop) {
+            return
+        }
 //        writer.write("^^^^^ ${binaryEvent.data.length }^^^^^^^")
 //        writer.write(binaryEvent.data.contents, 0, binaryEvent.data.length)
 

@@ -5,11 +5,11 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import tech.kzen.auto.common.objects.document.report.summary.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
+import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.ReportParserHelper
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.read.RecordLineReader
-import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.summary.model.ValueSummaryBuilder
 import tech.kzen.auto.util.AutoJvmUtils
 import java.nio.file.Files
@@ -20,7 +20,7 @@ import java.util.concurrent.TimeoutException
 
 
 class ReportSummary(
-    private val initialReportRunSpec: ReportRunSpec,
+    initialReportRunSpec: ReportRunSpec,
     runDir: Path,
     private val taskHandle: TaskHandle?
 ):
@@ -28,7 +28,7 @@ class ReportSummary(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        //-----------------------------------------------------------------------------------------------------------------
+        //-------------------------------------------------------------------------------------------------------------
         const val summaryDirName = "summary"
 
         private const val summaryCsvFilename = "summary.csv"
@@ -37,21 +37,15 @@ class ReportSummary(
         private const val opaqueCsvFilename = "opaque.csv"
 
 
-        //-----------------------------------------------------------------------------------------------------------------
-        fun formatCount(count: Long): String {
-            return String.format("%,d", count)
-        }
-
-
-        //-----------------------------------------------------------------------------------------------------------------
+        //-------------------------------------------------------------------------------------------------------------
         private fun toCsv(csv: List<List<String>>): String {
             return csv.joinToString("\n") { RecordItemBuffer.of(it).toCsv() }
         }
 
 
         private fun fromCsv(csv: String): List<List<String>> {
-            return RecordLineReader
-                .csvLines(csv)
+            return ReportParserHelper
+                .csvRecords(csv)
                 .map { it.toList() }
         }
     }

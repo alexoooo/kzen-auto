@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.report.pipeline.input.read.RecordLineReader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -35,25 +35,25 @@ class TsvLineParserTest {
     @Test
     fun emptyValue() {
         val tsvLines = ""
-        assertTrue(RecordLineReader.tsvLines(tsvLines).isEmpty())
+        assertTrue(read(tsvLines).isEmpty())
     }
 
 
     @Test
     fun emptyLines() {
         val tsvLines = "\r\n\r\n\n\n\n\r\n"
-        assertTrue(RecordLineReader.tsvLines(tsvLines).isEmpty())
-        assertTrue(RecordLineReader.tsvLines(tsvLines, 1).isEmpty())
-        assertTrue(RecordLineReader.tsvLines(tsvLines, 2).isEmpty())
-        assertTrue(RecordLineReader.tsvLines(tsvLines, 3).isEmpty())
+        assertTrue(read(tsvLines).isEmpty())
+        assertTrue(read(tsvLines, 1).isEmpty())
+        assertTrue(read(tsvLines, 2).isEmpty())
+        assertTrue(read(tsvLines, 3).isEmpty())
     }
 
 
     @Test
     fun tsvEmptyValues() {
         val tsvLines = "\t"
-        assertEquals(listOf("", ""), RecordLineReader.tsvLines(tsvLines)[0].toList())
-        assertEquals(tsvLines, RecordLineReader.tsvLines(tsvLines)[0].toTsv())
+        assertEquals(listOf("", ""), read(tsvLines)[0].toList())
+        assertEquals(tsvLines, read(tsvLines)[0].toTsv())
     }
 
 
@@ -61,36 +61,36 @@ class TsvLineParserTest {
     fun mannyEmptyValues() {
         val csvLines = "\t\t\t\t\t\t\t\t\t"
         val values = listOf("", "", "", "", "", "", "", "", "", "")
-        assertEquals(values, RecordLineReader.tsvLines(csvLines)[0].toList())
-        assertEquals(values, RecordLineReader.tsvLines(csvLines, 1)[0].toList())
-        assertEquals(values, RecordLineReader.tsvLines(csvLines, 2)[0].toList())
-        assertEquals(values, RecordLineReader.tsvLines(csvLines, 3)[0].toList())
-        assertEquals(values, RecordLineReader.tsvLines(csvLines, 4)[0].toList())
+        assertEquals(values, read(csvLines)[0].toList())
+        assertEquals(values, read(csvLines, 1)[0].toList())
+        assertEquals(values, read(csvLines, 2)[0].toList())
+        assertEquals(values, read(csvLines, 3)[0].toList())
+        assertEquals(values, read(csvLines, 4)[0].toList())
     }
 
 
     @Test
     fun singleCharacterValue() {
         val csvLine = "a"
-        assertEquals(listOf("a"), RecordLineReader.tsvLines(csvLine)[0].toList())
+        assertEquals(listOf("a"), read(csvLine)[0].toList())
     }
 
 
     @Test
     fun fewCharacterValue() {
         val csvLine = "abc"
-        assertEquals(listOf("abc"), RecordLineReader.tsvLines(csvLine)[0].toList())
-        assertEquals(listOf("abc"), RecordLineReader.tsvLines(csvLine, 1)[0].toList())
-        assertEquals(listOf("abc"), RecordLineReader.tsvLines(csvLine, 2)[0].toList())
+        assertEquals(listOf("abc"), read(csvLine)[0].toList())
+        assertEquals(listOf("abc"), read(csvLine, 1)[0].toList())
+        assertEquals(listOf("abc"), read(csvLine, 2)[0].toList())
     }
 
 
     @Test
     fun twoSingleCharacterValues() {
         val csvLine = "a\tb"
-        assertEquals(listOf("a", "b"), RecordLineReader.tsvLines(csvLine)[0].toList())
-        assertEquals(listOf("a", "b"), RecordLineReader.tsvLines(csvLine, 1)[0].toList())
-        assertEquals(listOf("a", "b"), RecordLineReader.tsvLines(csvLine, 2)[0].toList())
+        assertEquals(listOf("a", "b"), read(csvLine)[0].toList())
+        assertEquals(listOf("a", "b"), read(csvLine, 1)[0].toList())
+        assertEquals(listOf("a", "b"), read(csvLine, 2)[0].toList())
     }
 
 
@@ -102,21 +102,21 @@ class TsvLineParserTest {
 
         val cells = tsvLine.split("\t")
 
-        assertEquals(cells, RecordLineReader.tsvLines(tsvLine)[0].toList())
+        assertEquals(cells, read(tsvLine)[0].toList())
         for (i in 1 .. 16) {
-            assertEquals(cells, RecordLineReader.tsvLines(tsvLine, i)[0].toList())
+            assertEquals(cells, read(tsvLine, i)[0].toList())
         }
     }
 
 
     @Test
     fun utf8Line() {
-        val line = RecordLineReader.tsvLines(tsvUtf8Line)[0]
+        val line = read(tsvUtf8Line)[0]
         assertEquals(25, line.toList().size)
         assertEquals(tsvUtf8Line, line.toTsv())
 
         for (i in 1 .. 16) {
-            assertEquals(tsvUtf8Line, RecordLineReader.tsvLines(tsvUtf8Line, i)[0].toTsv())
+            assertEquals(tsvUtf8Line, read(tsvUtf8Line, i)[0].toTsv())
         }
     }
 
@@ -127,16 +127,22 @@ class TsvLineParserTest {
         val tsvLineB = tsvUtf8Line
         val lines = "$tsvLineA\r\n$tsvLineB\r\n"
 
-        val parsed = RecordLineReader.tsvLines(lines)
+        val parsed = read(lines)
         assertEquals(2, parsed.size)
         assertEquals(tsvLineA, parsed[0].toTsv())
         assertEquals(tsvLineB, parsed[1].toTsv())
 
         for (i in 1 .. 128) {
-            val parsedBuffered = RecordLineReader.tsvLines(lines, i)
+            val parsedBuffered = read(lines, i)
             assertEquals(2, parsedBuffered.size)
             assertEquals(tsvLineA, parsedBuffered[0].toTsv())
             assertEquals(tsvLineB, parsedBuffered[1].toTsv())
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun read(text: String, bufferSize: Int = text.length): List<RecordItemBuffer> {
+        return ReportParserHelper.tsvRecords(text, bufferSize)
     }
 }

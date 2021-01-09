@@ -4,8 +4,8 @@ import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.FastCsvRecordParser
-import tech.kzen.auto.server.objects.report.pipeline.input.read.RecordLineReader
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.CsvRecordParser
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordReader
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.FileOffsetStore
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.StoreUtils
@@ -179,8 +179,8 @@ class IndexedCsvTable(
 
             // NB: don't close, because that would also close handle
             val reader = Channels.newReader(handle.channel, Charsets.UTF_8)
-            val parser = RecordLineReader(reader,
-                FastCsvRecordParser()
+            val parser = RecordReader(reader,
+                CsvRecordParser()
             )
 
             var remainingCount = storedEnd - offsetStoreStart + 1

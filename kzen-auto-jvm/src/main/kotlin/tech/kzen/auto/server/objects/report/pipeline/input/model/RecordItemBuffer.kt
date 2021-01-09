@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.model
 
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.FastCsvRecordParser
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.FastTsvRecordParser
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.CsvRecordParser
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.TsvRecordParser
 import java.io.ByteArrayOutputStream
 import java.io.OutputStreamWriter
 import java.io.Writer
@@ -113,7 +113,7 @@ class RecordItemBuffer(
 
         for (i in 0 until fieldCount) {
             if (i != 0) {
-                out.write(FastCsvRecordParser.delimiter)
+                out.write(CsvRecordParser.delimiter)
             }
 
             writeCsvField(i, out)
@@ -133,7 +133,7 @@ class RecordItemBuffer(
             endIndex = fieldEnds[index]
         }
 
-        FastCsvRecordParser.writeCsv(fieldContents, startIndex, endIndex, out);
+        CsvRecordParser.writeCsv(fieldContents, startIndex, endIndex, out);
     }
 
 
@@ -153,7 +153,7 @@ class RecordItemBuffer(
 
         for (i in 0 until fieldCount) {
             if (i != 0) {
-                out.write(FastTsvRecordParser.delimiterInt)
+                out.write(TsvRecordParser.delimiterInt)
             }
 
             writeTsvField(i, out)
@@ -275,6 +275,13 @@ class RecordItemBuffer(
 
         that.fieldContents.copyInto(fieldContents, endIndex = fieldContentLength)
         that.fieldEnds.copyInto(fieldEnds, endIndex = fieldCount)
+    }
+
+
+    fun prototype(): RecordItemBuffer {
+        val prototype = RecordItemBuffer()
+        prototype.copy(this)
+        return prototype
     }
 
 

@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.report.pipeline
+package tech.kzen.auto.server.objects.report.pipeline.filter
 
 import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec

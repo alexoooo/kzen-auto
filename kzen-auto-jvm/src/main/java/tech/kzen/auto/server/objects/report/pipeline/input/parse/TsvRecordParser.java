@@ -5,8 +5,12 @@ import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer;
 
 
-public class FastTsvRecordParser2 implements RecordItemParser
+public class TsvRecordParser implements RecordParser
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    public static final int delimiterInt = '\t';
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private boolean stateAtEnd = false;
 
@@ -36,14 +40,18 @@ public class FastTsvRecordParser2 implements RecordItemParser
                 switch (nextChar) {
                     // lineFeed
                     case 10 -> {
-                        recordItemBuffer.addToFieldAndCommit(contentChars, i - fieldChars, fieldChars);
+                        if (fieldChars > 0 || ! recordItemBuffer.isEmpty()) {
+                            recordItemBuffer.addToFieldAndCommit(contentChars, i - fieldChars, fieldChars);
+                        }
                         stateAtEnd = true;
                         return i - contentOffset + 1;
                     }
 
                     // carriageReturn
                     case 13 -> {
-                        recordItemBuffer.addToFieldAndCommit(contentChars, i - fieldChars, fieldChars);
+                        if (fieldChars > 0 || ! recordItemBuffer.isEmpty()) {
+                            recordItemBuffer.addToFieldAndCommit(contentChars, i - fieldChars, fieldChars);
+                        }
                         stateAtEnd = true;
                         int endChars =
                                 i + 1 < contentEnd &&

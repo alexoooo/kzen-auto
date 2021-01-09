@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.io.Writer;
 
 
-public class FastCsvRecordParser implements RecordItemParser {
+public class CsvRecordParser implements RecordParser {
     //-----------------------------------------------------------------------------------------------------------------
     private static final int stateStartOfField = 0;
     private static final int stateInQuoted = 1;
@@ -22,16 +22,6 @@ public class FastCsvRecordParser implements RecordItemParser {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    public static RecordLineBuffer parseLine(String line) {
-//        var parser = new FastCsvLineParser();
-//        var buffer = new RecordLineBuffer();
-//        char[] chars = line.toCharArray();
-//        parser.parseNext(buffer, chars, 0, chars.length);
-//        parser.endOfStream(buffer);
-//        return buffer;
-//    }
-
-
     public static boolean isSpecial(char content) {
         return content == quotation ||
                 content == delimiter ||

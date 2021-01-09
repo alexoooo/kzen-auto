@@ -2,9 +2,8 @@ package tech.kzen.auto.server.objects.report.pipeline.input
 
 import com.google.common.io.MoreFiles
 import org.apache.commons.io.input.BOMInputStream
-import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.input.model.BinaryDataBuffer
+import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgress
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.Reader
@@ -14,9 +13,13 @@ import java.nio.file.Paths
 import java.util.zip.GZIPInputStream
 
 
-class ReportDataInput(
-    reportRunSpec: ReportRunSpec,
-    private val taskHandle: TaskHandle?
+
+// TODO: consider support for https://github.com/linkedin/migz
+// TODO: consider using https://stackoverflow.com/questions/3335969/reading-a-gzip-file-from-a-filechannel-java-nio
+// see: https://stackoverflow.com/questions/32550227/how-to-improve-gzip-performance
+class ReportDataFeeder(
+    inputs: List<Path>,
+    private val progress: ReportProgress?
 ):
     AutoCloseable
 {
@@ -41,12 +44,16 @@ class ReportDataInput(
                     outerExtension
             }
         }
+
+
+        fun single(input: Path): ReportDataFeeder {
+            return ReportDataFeeder(listOf(input), null)
+        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val remainingInputs = reportRunSpec.inputs.toMutableList()
-//    private val extraColumns = reportRunSpec.formula.formulas.keys.toList()
+    private val remainingInputs = inputs.toMutableList()
 
     private var currentInput: Path? = null
     private var currentInnerExtension: String? = null
@@ -58,15 +65,8 @@ class ReportDataInput(
      * @return true if more data could be remaining
      */
     fun poll(buffer: BinaryDataBuffer): Boolean {
-        if (taskHandle!!.cancelRequested()) {
-            return false
-        }
-
         val nextStream = nextStream()
-        if (nextStream == null) {
-            //buffer.clear()
-            return false
-        }
+            ?: return false
 
         buffer.location = currentInput!!
         buffer.innerExtension = currentInnerExtension!!
@@ -75,12 +75,14 @@ class ReportDataInput(
         if (read == -1) {
             buffer.length = 0
             buffer.endOfStream = true
-            currentStream!!.close()
-            currentStream = null
+            closeCurrent()
         }
         else {
             buffer.length = read
             buffer.endOfStream = false
+
+            // TODO: handle compression
+            progress?.next(currentInput!!, read.toLong(), read.toLong())
         }
 
         return true
@@ -124,6 +126,19 @@ class ReportDataInput(
         currentInput = nextInput
         currentInnerExtension = innerExtension
         currentStream = BufferedReader(inputStreamReader)
+
+        progress?.start(nextInput, Files.size(nextInput))
+    }
+
+
+    private fun closeCurrent() {
+        currentStream!!.close()
+        currentStream = null
+
+        progress?.end(currentInput!!)
+
+        currentInput = null
+        currentInnerExtension = null
     }
 
 
