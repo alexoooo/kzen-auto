@@ -24,7 +24,7 @@ public class FastTsvRecordParser implements RecordItemParser
     //-----------------------------------------------------------------------------------------------------------------
     @Override
     public int parseNext(
-            @NotNull RecordItemBuffer recordLineBuffer,
+            @NotNull RecordItemBuffer recordItemBuffer,
             @NotNull char[] contentChars,
             int contentOffset,
             int contentEnd
@@ -41,7 +41,7 @@ public class FastTsvRecordParser implements RecordItemParser
 
             if (! stateAtEnd) {
                 int length = parseInFieldUntilNext(
-                        recordLineBuffer, contentChars, i, contentEnd, nextChar);
+                        recordItemBuffer, contentChars, i, contentEnd, nextChar);
                 if (length == -1) {
                     return -1;
                 }
@@ -50,7 +50,7 @@ public class FastTsvRecordParser implements RecordItemParser
                 nextChar = contentChars[i];
             }
 
-            boolean isEnd = parse(recordLineBuffer, nextChar);
+            boolean isEnd = parse(recordItemBuffer, nextChar);
             if (isEnd) {
 //                String str = buff.toString();
 //                if (! recordLineBuffer.toTsv().equals(str.trim())) {
@@ -67,10 +67,10 @@ public class FastTsvRecordParser implements RecordItemParser
 
 
     @Override
-    public boolean endOfStream(
-            @NotNull RecordItemBuffer recordLineBuffer
+    public void endOfStream(
+            @NotNull RecordItemBuffer recordItemBuffer
     ) {
-        return parse(recordLineBuffer, lineFeed);
+        parse(recordItemBuffer, lineFeed);
     }
 
 

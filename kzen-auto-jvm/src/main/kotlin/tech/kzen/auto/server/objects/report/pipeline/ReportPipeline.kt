@@ -46,7 +46,7 @@ class ReportPipeline(
         private val logger = LoggerFactory.getLogger(ReportPipeline::class.java)
 
         private const val binaryDisruptorBufferSize = 256
-        private const val recordDisruptorBufferSize = 4 * 1024
+        private const val recordDisruptorBufferSize = 32 * 1024
 
 
         fun passivePreview(
@@ -106,48 +106,6 @@ class ReportPipeline(
         companion object {
             val factory = EventFactory { BinaryEvent() }
         }
-
-        fun clearRecords() {
-            for (i in 0 until recordCount) {
-                records[i].clear()
-            }
-            recordCount = 0
-            nextRecord = 0
-        }
-
-        fun rewindRecords() {
-            nextRecord = 0
-        }
-
-        fun nextRecord(): RecordBuffer? {
-            if (recordCount <= nextRecord) {
-                return null
-            }
-            val event = records[nextRecord]
-            nextRecord++
-            return event
-        }
-
-        fun addNextRecord(): RecordBuffer {
-            if (records.size <= nextRecord) {
-                val copy = records.copyOf(nextRecord + 1)
-                for (i in recordCount .. nextRecord) {
-                    copy[i] = RecordBuffer()
-                }
-                @Suppress("UNCHECKED_CAST")
-                records = copy as Array<RecordBuffer>
-            }
-            recordCount = nextRecord + 1
-            val record = records[nextRecord]
-            nextRecord++
-            return record
-        }
-
-        fun removeLastRecord() {
-            recordCount--
-            nextRecord--
-            records[recordCount].clear()
-        }
     }
 
 
@@ -163,7 +121,6 @@ class ReportPipeline(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private val input = ReportInput(initialReportRunSpec, taskHandle)
     private val dataInput = ReportDataInput(initialReportRunSpec, taskHandle)
 
     private val parser = ReportParser(initialReportRunSpec, taskHandle)
@@ -311,26 +268,6 @@ class ReportPipeline(
 //        writer.write(binaryEvent.data.contents, 0, binaryEvent.data.length)
 
         parser.parse(binaryEvent.data, recordRingBuffer)
-
-//        binaryEvent.rewindRecords()
-//
-//        while (true) {
-//            val recordBuffer = binaryEvent.nextRecord()
-//                ?: break
-//
-//            val sequence = recordRingBuffer.next()
-//            val recordEvent = recordRingBuffer.get(sequence)
-//
-//            recordEvent.record = recordBuffer
-//
-////            if (first) {
-////                writer.write(RecordItemBuffer.of(recordBuffer.header.value.headerNames).toTsv() + "\r\n")
-////                first = false
-////            }
-////            writer.write(recordBuffer.item.toTsv() + "\r\n")
-//
-//            recordRingBuffer.publish(sequence)
-//        }
     }
 
 
@@ -400,7 +337,6 @@ class ReportPipeline(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-//        input.close()
         dataInput.close()
         summary.close()
         output.close()

@@ -15,7 +15,8 @@ interface RecordItemParser {
                     FastCsvRecordParser()
 
                 "tsv" ->
-                    FastTsvRecordParser()
+//                    FastTsvRecordParser()
+                    FastTsvRecordParser2()
 
                 else ->
                     error("Unknown: $extension")
@@ -30,7 +31,7 @@ interface RecordItemParser {
      *      without reaching end of record
      */
     fun parseNext(
-        recordLineBuffer: RecordItemBuffer,
+        recordItemBuffer: RecordItemBuffer,
         contentChars: CharArray,
         contentOffset: Int = 0,
         contentEnd: Int = contentChars.size
@@ -51,6 +52,6 @@ interface RecordItemParser {
      * @return true if reached end of record
      */
     fun endOfStream(
-        recordLineBuffer: RecordItemBuffer
-    ): Boolean
+        recordItemBuffer: RecordItemBuffer
+    )
 }

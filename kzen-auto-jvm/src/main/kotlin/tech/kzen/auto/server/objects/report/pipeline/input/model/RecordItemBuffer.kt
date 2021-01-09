@@ -208,17 +208,36 @@ class RecordItemBuffer(
 
 
     fun addToField(chars: CharArray, offset: Int, length: Int) {
-        growFieldContentsIfRequired(fieldContentLength + length)
-        for (i in 0 until length) {
-            fieldContents[fieldContentLength + i] = chars[offset + i]
+        if (length != 0) {
+            growFieldContentsIfRequired(fieldContentLength + length)
+            System.arraycopy(chars, offset, fieldContents, fieldContentLength, length)
+            fieldContentLength += length
         }
-        fieldContentLength += length
     }
 
 
     fun commitField() {
         growFieldEndsIfRequired()
 
+        fieldEnds[fieldCount] = fieldContentLength
+        fieldCount++
+    }
+
+
+    fun addToFieldAndCommit(chars: CharArray, offset: Int, length: Int) {
+        if (length != 0) {
+            if (fieldContents.size < fieldContentLength + length) {
+                val nextSize = (fieldContents.size * 1.2).toInt().coerceAtLeast(fieldContentLength + length)
+                fieldContents = fieldContents.copyOf(nextSize)
+            }
+            System.arraycopy(chars, offset, fieldContents, fieldContentLength, length)
+            fieldContentLength += length
+        }
+
+        if (fieldEnds.size <= fieldCount) {
+            val nextSize = (fieldEnds.size * 1.2 + 1).toInt().coerceAtLeast(fieldCount)
+            fieldEnds = fieldEnds.copyOf(nextSize)
+        }
         fieldEnds[fieldCount] = fieldContentLength
         fieldCount++
     }
@@ -261,22 +280,18 @@ class RecordItemBuffer(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun growFieldContentsIfRequired(required: Int = fieldContentLength + 1) {
-        if (fieldContents.size >= required) {
-            return
+        if (fieldContents.size < required) {
+            val nextSize = (fieldContents.size * 1.2).toInt().coerceAtLeast(required)
+            fieldContents = fieldContents.copyOf(nextSize)
         }
-
-        val nextSize = (fieldContents.size * 1.2).toInt().coerceAtLeast(required)
-        fieldContents = fieldContents.copyOf(nextSize)
     }
 
 
     private fun growFieldEndsIfRequired() {
-        if (fieldEnds.size > fieldCount) {
-            return
+        if (fieldEnds.size <= fieldCount) {
+            val nextSize = (fieldEnds.size * 1.2 + 1).toInt().coerceAtLeast(fieldCount)
+            fieldEnds = fieldEnds.copyOf(nextSize)
         }
-
-        val nextSize = (fieldEnds.size * 1.2 + 1).toInt().coerceAtLeast(fieldCount)
-        fieldEnds = fieldEnds.copyOf(nextSize)
     }
 
 
