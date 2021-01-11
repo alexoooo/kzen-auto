@@ -17,21 +17,26 @@ public class TsvLexerParser implements RecordLexerParser
     ) {
         recordItemBuffer.growTo(recordLength, fieldCount);
 
-        int fieldLength = 0;
+        char[] fieldContents = recordItemBuffer.fieldContentsUnsafe();
+        int[] fieldEnds = recordItemBuffer.fieldEndsUnsafe();
+
+        int nextFieldCount = recordItemBuffer.fieldCount();
+        int nextFieldContentLength = recordItemBuffer.fieldContentLength();
+
         int endIndex = recordOffset + recordLength;
         for (int i = recordOffset; i < endIndex; i++) {
             char nextChar = contentChars[i];
 
             if (nextChar == '\t') {
-                recordItemBuffer.addToFieldAndCommitUnsafe(contentChars, i - fieldLength, fieldLength);
-                fieldLength = 0;
+                fieldEnds[nextFieldCount++] = nextFieldContentLength;
             }
             else {
-                fieldLength++;
+                fieldContents[nextFieldContentLength++] = nextChar;
             }
         }
 
-        recordItemBuffer.addToFieldAndCommitUnsafe(contentChars, endIndex - fieldLength, fieldLength);
+        fieldEnds[nextFieldCount++] = nextFieldContentLength;
+        recordItemBuffer.setCountAndLengthUnsafe(nextFieldCount, nextFieldContentLength);
     }
 
 

@@ -37,12 +37,12 @@ class RecordDataBuffer(
 //        private const val defaultBufferSize = 128 * 1024
 
 
-        // https://stijndewitt.com/2014/08/09/max-bytes-in-a-utf-8-char/
-        private const val maxUnicodeSize = 4
+        // maxUnicodeSize https://stijndewitt.com/2014/08/09/max-bytes-in-a-utf-8-char/
+        const val minBufferSize = 4
 
         fun ofBufferSize(bufferSize: Int = defaultBufferSize): RecordDataBuffer {
-            check(bufferSize >= maxUnicodeSize) {
-                "Size must be at least $maxUnicodeSize = $bufferSize"
+            check(bufferSize >= minBufferSize) {
+                "Size must be at least $minBufferSize = $bufferSize"
             }
 
             return RecordDataBuffer(
@@ -52,7 +52,7 @@ class RecordDataBuffer(
                 ByteArray(bufferSize),
                 0,
 
-                CharArray(bufferSize + maxUnicodeSize),
+                CharArray(bufferSize + minBufferSize),
 //                CharArray(bufferSize),
                 0,
 

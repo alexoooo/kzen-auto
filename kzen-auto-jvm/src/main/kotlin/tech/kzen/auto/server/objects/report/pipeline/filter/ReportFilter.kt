@@ -2,10 +2,10 @@ package tech.kzen.auto.server.objects.report.pipeline.filter
 
 import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTextFlyweight
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
 
 
 class ReportFilter(
@@ -46,6 +46,9 @@ class ReportFilter(
             }
     }
 
+    private val flyweight =
+        RecordTextFlyweight()
+
 
     //-----------------------------------------------------------------------------------------------------------------
     fun test(item: RecordItemBuffer, header: RecordHeader): Boolean {
@@ -62,8 +65,8 @@ class ReportFilter(
                 }
             }
             else {
-                item.selectFlyweight(indexInItem)
-                val present = columnCriteriaSpecValues.contains(item.flyweight)
+                flyweight.selectHostField(item, indexInItem)
+                val present = columnCriteriaSpecValues.contains(flyweight)
 
                 when (columnCriteriaType) {
                     ColumnFilterType.RequireAny ->

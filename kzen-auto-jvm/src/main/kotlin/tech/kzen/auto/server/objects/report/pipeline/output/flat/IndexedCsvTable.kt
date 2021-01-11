@@ -1,9 +1,9 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.flat
 
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.CsvRecordParser
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordReader
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.BufferedOffsetStore
@@ -66,7 +66,7 @@ class IndexedCsvTable(
     //-----------------------------------------------------------------------------------------------------------------
     init {
         if (offsetStore.size() == 0L) {
-            bufferWriter.write(RecordItemBuffer.toCsv(header))
+            bufferWriter.write(RecordItemBuffer.of(header).toCsv())
             bufferWriter.write(lineBreak)
             bufferWriter.flush()
 
@@ -185,11 +185,12 @@ class IndexedCsvTable(
 
             var remainingCount = storedEnd - offsetStoreStart + 1
 
-            val buffer = RecordItemBuffer()
+            val buffer =
+                RecordItemBuffer(0, 0)
             while (true) {
                 buffer.clear()
                 val hasNext = parser.read(buffer)
-                check(! buffer.isEmpty())
+                check(! buffer.isEmpty)
 
                 visitor.invoke(buffer.toList())
 

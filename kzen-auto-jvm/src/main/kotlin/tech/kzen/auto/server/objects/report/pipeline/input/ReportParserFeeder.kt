@@ -2,9 +2,9 @@ package tech.kzen.auto.server.objects.report.pipeline.input
 
 import com.lmax.disruptor.RingBuffer
 import tech.kzen.auto.server.objects.report.pipeline.ReportPipeline
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordParser
 import java.nio.file.Path
 
@@ -14,7 +14,8 @@ class ReportParserFeeder {
     private var location: Path? = null
     private var parser: RecordParser? = null
     private var previousRecordHeader: RecordHeader = RecordHeader.empty
-    private val leftoverRecordLineBuffer = RecordItemBuffer()
+    private val leftoverRecordLineBuffer =
+        RecordItemBuffer()
 
 
     //-----------------------------------------------------------------------------------------------------------------

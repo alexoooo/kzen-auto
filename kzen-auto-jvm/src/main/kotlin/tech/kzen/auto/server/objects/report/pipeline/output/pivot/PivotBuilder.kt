@@ -3,9 +3,10 @@ package tech.kzen.auto.server.objects.report.pipeline.output.pivot
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTextFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.ValueStatistics
 
@@ -64,6 +65,9 @@ class PivotBuilder(
     private val valueColumnIndex = RecordHeaderIndex(valueColumns)
     private val valueBuffer = DoubleArray(valueColumns.size)
 
+    private val flyweight =
+        RecordTextFlyweight()
+
 
     //----------------------------------------------------------
 //    private var viewing = false
@@ -84,15 +88,15 @@ class PivotBuilder(
                     ValueStatistics.missingValue
                 }
                 else {
-                    recordItem.selectFlyweight(headerIndex)
+                    flyweight.selectHostField(recordItem, headerIndex)
 
-                    if (recordItem.flyweight.isEmpty()) {
+                    if (flyweight.isEmpty()) {
                         ValueStatistics.missingValue
                     }
                     else {
                         present = true
 
-                        val doubleValue = recordItem.flyweight.toDoubleOrNan()
+                        val doubleValue = flyweight.toDoubleOrNan()
                         ValueStatistics.normalize(doubleValue)
                     }
                 }
@@ -121,8 +125,9 @@ class PivotBuilder(
                     rowIndex.valueIndexOfMissing()
                 }
                 else {
-                    recordItem.selectFlyweight(index)
-                    val rowOrdinal = rowIndex.valueIndexOf(recordItem.flyweight)
+                    flyweight.selectHostField(recordItem, index)
+
+                    val rowOrdinal = rowIndex.valueIndexOf(flyweight)
                     if (rowOrdinal.wasAdded()) {
                         valueAdded = true
                     }

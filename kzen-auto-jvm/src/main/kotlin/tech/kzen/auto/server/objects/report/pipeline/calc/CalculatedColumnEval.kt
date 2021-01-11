@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.report.pipeline.calc
 
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.KotlinCode
 
@@ -99,31 +99,31 @@ import ${ RecordHeaderIndex::class.java.name }
 import ${ RecordItemBuffer::class.java.name }
 
 
-class $mainClassName: CalculatedColumn {
+class $mainClassName: ${ CalculatedColumn::class.java.simpleName } {
     companion object {
         private val columnNames: List<String> = listOf($columnNameStringList)
-        private val recordHeaderIndex = RecordHeaderIndex(columnNames)
+        private val recordHeaderIndex = ${ RecordHeaderIndex::class.java.simpleName }(columnNames)
     }
 
     private var indices = IntArray(0)
-    private var record: RecordItemBuffer = RecordItemBuffer()
+    private var record: ${ RecordItemBuffer::class.java.simpleName } = ${ RecordItemBuffer::class.java.simpleName }()
 
-    private fun columnValue(columnIndex: Int): ColumnValue {
+    private fun columnValue(columnIndex: Int): ${ ColumnValue::class.java.simpleName } {
         val index = indices[columnIndex]
         val text = if (index == -1) { "<missing>" } else { record.getString(index) }
-        return ColumnValue(text)
+        return ${ ColumnValue::class.java.simpleName }.ofText(text)
     }
 
 $columnAccessors
 
     override fun evaluate(
-        recordItemBuffer: RecordItemBuffer,
-        recordHeader: RecordHeader
+        recordItemBuffer: ${ RecordItemBuffer::class.java.simpleName },
+        recordHeader: ${ RecordHeader::class.java.simpleName }
     ): String {
         record = recordItemBuffer
         indices = recordHeaderIndex.indices(recordHeader)
         val value = evaluate()
-        return ColumnValue.toText(value)
+        return ${ ColumnValue::class.java.simpleName }.toText(value)
     }
 
 

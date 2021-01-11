@@ -8,31 +8,19 @@ object ColumnValueConversions {
 
 
     operator fun Int.plus(value: ColumnValue): ColumnValue {
-        val valueNumber = value.text.toIntOrNull()
-
-        val additionText =
-            if (valueNumber == null) {
-                toString() + value
-            }
-            else {
-                (this + valueNumber).toString()
-            }
-
-        return ColumnValue(additionText)
+        val numberValue = value.toDoubleOrNan()
+        if (numberValue.isNaN()) {
+            return ColumnValue.ofTextNan(this.toString() + value.toString())
+        }
+        return ColumnValue.ofNumber(this + numberValue)
     }
 
 
     operator fun Double.plus(value: ColumnValue): ColumnValue {
-        val valueNumber = value.text.toDoubleOrNull()
-
-        val additionText =
-            if (valueNumber == null) {
-                toString() + value
-            }
-            else {
-                (this + valueNumber).toString()
-            }
-
-        return ColumnValue(additionText)
+        val numberValue = value.toDoubleOrNan()
+        if (numberValue.isNaN()) {
+            return ColumnValue.ofTextNan(this.toString() + value.toString())
+        }
+        return ColumnValue.ofNumber(this + numberValue)
     }
 }

@@ -48,7 +48,8 @@ class ReportInputDecoderTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun decode(encoded: ByteArray, bufferSize: Int = encoded.size): String {
-        val buffer = RecordDataBuffer.ofBufferSize(bufferSize)
+        val buffer = RecordDataBuffer.ofBufferSize(
+            bufferSize.coerceAtLeast(RecordDataBuffer.minBufferSize))
         val decoder = ReportInputDecoder()
         val builder = StringBuilder()
 

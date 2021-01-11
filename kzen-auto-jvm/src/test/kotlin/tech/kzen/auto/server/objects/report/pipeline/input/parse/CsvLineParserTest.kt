@@ -1,9 +1,8 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.report.pipeline.calc.ColumnValue
-import tech.kzen.auto.server.objects.report.pipeline.calc.ColumnValueConversions.plus
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTextFlyweight
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -159,6 +158,11 @@ class CsvLineParserTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private val flyweight =
+        RecordTextFlyweight()
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun emptyValue() {
         val csvLines = ""
@@ -302,9 +306,9 @@ class CsvLineParserTest {
     fun simpleDecimalNotExact() {
         val csv = "10.1"
         val record = read(csv)[0]
-        record.selectFlyweight(0)
-        assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
-        assertEquals(csv.toDouble(), record.flyweight.toDouble())
+        flyweight.selectHostField(record, 0)
+        assertEquals(csv.toDouble(), flyweight.toDoubleOrNan())
+        assertEquals(csv.toDouble(), flyweight.toDouble())
     }
 
 
@@ -312,22 +316,19 @@ class CsvLineParserTest {
     fun simpleDecimalPiApproximation() {
         val csv = "3.14"
         val record = read(csv)[0]
-        record.selectFlyweight(0)
-        assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
-        assertEquals(csv.toDouble(), record.flyweight.toDouble())
+        flyweight.selectHostField(record, 0)
+        assertEquals(csv.toDouble(), flyweight.toDoubleOrNan())
+        assertEquals(csv.toDouble(), flyweight.toDouble())
     }
 
 
     @Test
     fun simpleDecimalDollars() {
-        3.14 + ColumnValue("foo")
-        42 + ColumnValue("foo")
-
         val csv = "82.88"
         val record = read(csv)[0]
-        record.selectFlyweight(0)
-        assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
-        assertEquals(csv.toDouble(), record.flyweight.toDouble())
+        flyweight.selectHostField(record, 0)
+        assertEquals(csv.toDouble(), flyweight.toDoubleOrNan())
+        assertEquals(csv.toDouble(), flyweight.toDouble())
     }
 
 
@@ -335,9 +336,9 @@ class CsvLineParserTest {
     fun decimalWithLeadingZeroesAfterPoint() {
         val csv = "0.0014218039999999998"
         val record = read(csv)[0]
-        record.selectFlyweight(0)
-        assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
-        assertEquals(csv.toDouble(), record.flyweight.toDouble())
+        flyweight.selectHostField(record, 0)
+        assertEquals(csv.toDouble(), flyweight.toDoubleOrNan())
+        assertEquals(csv.toDouble(), flyweight.toDouble())
     }
 
 
@@ -345,9 +346,9 @@ class CsvLineParserTest {
     fun decimalWithLeadingZeroesBeforePoint() {
         val csv = "000000000000000000000000000000000010.1"
         val record = read(csv)[0]
-        record.selectFlyweight(0)
-        assertEquals(csv.toDouble(), record.flyweight.toDoubleOrNan())
-        assertEquals(csv.toDouble(), record.flyweight.toDouble())
+        flyweight.selectHostField(record, 0)
+        assertEquals(csv.toDouble(), flyweight.toDoubleOrNan())
+        assertEquals(csv.toDouble(), flyweight.toDouble())
     }
 
 
@@ -357,12 +358,13 @@ class CsvLineParserTest {
                 "0001,1,0,923774,04.1,0000,0925A,,NY,O,2,SOUTH END AVE,,01/05/0001 12:00:00 PM,408,F6,,BBBBBBB,ALL," +
                 "ALL,WHT,0,2006,-,0,,,,,,,,,,,,,,2006.00000099,foo2,199,2106.0"
         val record = read(csv)[0]
+        flyweight.selectHost(record);
 
-        for (i in 0 until record.size()) {
-            record.selectFlyweight(i)
+        for (i in 0 until record.fieldCount()) {
+            flyweight.selectField(i);
 
             val value = record.getString(i)
-            assertEquals(value.toDoubleOrNull() ?: Double.NaN, record.flyweight.toDoubleOrNan(), value)
+            assertEquals(value.toDoubleOrNull() ?: Double.NaN, flyweight.toDoubleOrNan(), value)
         }
     }
 

@@ -217,8 +217,8 @@ class ReportPipeline(
 //            .then(this::handleFormulas)
             .handleEventsWith(this::handleFormulas)
             .then(this::handleFilter)
-            .then(this::handleSummaryAndOutput)
-//            .handleEventsWith(this::handleSummary, this::handleOutput)
+//            .then(this::handleSummaryAndOutput)
+            .handleEventsWith(this::handleSummary, this::handleOutput)
 
         recordDisruptor.setDefaultExceptionHandler(object : ExceptionHandler<RecordEvent?> {
             override fun handleEventException(ex: Throwable?, sequence: Long, event: RecordEvent?) {

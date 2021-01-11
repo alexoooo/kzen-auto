@@ -2,8 +2,8 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputDecoder
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputReader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import java.nio.file.Path
 
 
@@ -12,7 +12,8 @@ object ReportParserHelper {
     //-----------------------------------------------------------------------------------------------------------------
     fun readHeaderLine(inputPath: Path): List<String> {
         val dataBuffer = RecordDataBuffer.ofBufferSize()
-        val headerBuffer = RecordItemBuffer()
+        val headerBuffer =
+            RecordItemBuffer(0, 0)
         val decoder = ReportInputDecoder()
 
         return ReportInputReader.single(inputPath).use { reader ->
@@ -58,7 +59,8 @@ object ReportParserHelper {
         val recordLines = mutableListOf<RecordItemBuffer>()
 
         var contentOffset = 0
-        val recordBuffer = RecordItemBuffer()
+        val recordBuffer =
+            RecordItemBuffer(0, 0)
         while (contentOffset < contentChars.size) {
             val end = (contentOffset + bufferSize).coerceAtMost(contentChars.size)
             val length = parser.parseNext(
