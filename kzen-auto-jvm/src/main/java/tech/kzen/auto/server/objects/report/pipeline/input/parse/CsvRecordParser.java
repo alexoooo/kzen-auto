@@ -7,7 +7,8 @@ import java.io.IOException;
 import java.io.Writer;
 
 
-public class CsvRecordParser implements RecordParser {
+public class CsvRecordParser implements RecordParser
+{
     //-----------------------------------------------------------------------------------------------------------------
     private static final int stateStartOfField = 0;
     private static final int stateInQuoted = 1;

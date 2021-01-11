@@ -8,7 +8,8 @@ data class BinaryDataBuffer(
     var innerExtension: String?,
     var contents: CharArray,
     var length: Int,
-    var endOfStream: Boolean
+    var endOfStream: Boolean,
+    val recordTokenBuffer: RecordTokenBuffer
 ) {
     companion object {
 //        private const val defaultBufferSize = 1
@@ -32,7 +33,8 @@ data class BinaryDataBuffer(
                 null,
                 CharArray(bufferSize),
                 0,
-            false)
+            false,
+                RecordTokenBuffer())
         }
     }
 

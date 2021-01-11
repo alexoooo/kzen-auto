@@ -265,6 +265,35 @@ class RecordItemBuffer(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    fun addToFieldUnsafe(nextChar: Char) {
+        fieldContents[fieldContentLength] = nextChar
+        fieldContentLength++
+    }
+
+
+    fun addToFieldUnsafe(chars: CharArray, offset: Int, length: Int) {
+        System.arraycopy(chars, offset, fieldContents, fieldContentLength, length)
+        fieldContentLength += length
+    }
+
+
+    fun commitFieldUnsafe() {
+        fieldEnds[fieldCount] = fieldContentLength
+        fieldCount++
+    }
+
+
+    fun addToFieldAndCommitUnsafe(chars: CharArray, offset: Int, length: Int) {
+        System.arraycopy(chars, offset, fieldContents, fieldContentLength, length)
+        fieldContentLength += length
+
+        fieldEnds[fieldCount] = fieldContentLength
+        fieldCount++
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun copy(that: RecordItemBuffer) {
         fieldCount = that.fieldCount
         fieldContentLength = that.fieldContentLength
@@ -286,6 +315,18 @@ class RecordItemBuffer(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun growTo(requiredLength: Int, requiredFieldCount: Int) {
+        growFieldContentsIfRequired(requiredLength)
+        growFieldEndsIfRequired(requiredFieldCount)
+    }
+
+
+    fun growBy(additionalLength: Int, additionalFieldCount: Int) {
+        growFieldContentsIfRequired(fieldContentLength + additionalLength)
+        growFieldEndsIfRequired(fieldCount + additionalFieldCount)
+    }
+
+
     private fun growFieldContentsIfRequired(required: Int = fieldContentLength + 1) {
         if (fieldContents.size < required) {
             val nextSize = (fieldContents.size * 1.2).toInt().coerceAtLeast(required)
@@ -294,9 +335,9 @@ class RecordItemBuffer(
     }
 
 
-    private fun growFieldEndsIfRequired() {
-        if (fieldEnds.size <= fieldCount) {
-            val nextSize = (fieldEnds.size * 1.2 + 1).toInt().coerceAtLeast(fieldCount)
+    private fun growFieldEndsIfRequired(required: Int = fieldCount) {
+        if (fieldEnds.size <= required) {
+            val nextSize = (fieldEnds.size * 1.2 + 1).toInt().coerceAtLeast(required)
             fieldEnds = fieldEnds.copyOf(nextSize)
         }
     }

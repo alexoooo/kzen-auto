@@ -145,4 +145,53 @@ class TsvLineParserTest {
     private fun read(text: String, bufferSize: Int = text.length): List<RecordItemBuffer> {
         return ReportParserHelper.tsvRecords(text, bufferSize)
     }
+
+
+
+
+//    private fun read2(
+//        text: String,
+//        bufferSize: Int = text.length
+//    ): List<RecordItemBuffer> {
+//        val contentChars = text.toCharArray()
+//
+//        val lexer = TsvRecordLexer()
+//        val lexerParser = TsvLexerParser()
+//        val recordTokenBuffer = RecordTokenBuffer()
+//        val recordLines = mutableListOf<RecordItemBuffer>()
+//
+//        var contentOffset = 0
+//        while (contentOffset < contentChars.size) {
+//            val end = (contentOffset + bufferSize).coerceAtMost(contentChars.size)
+//
+//            lexer.tokenize(recordTokenBuffer, contentChars, contentOffset, end)
+//
+//            for
+//
+//            recordTokenBuffer.clear()
+//
+//            contentOffset = end
+//        }
+//
+//
+//        for ()
+//
+//
+//        contentOffset = 0
+//        while (contentOffset < contentChars.size) {
+//            val end = (contentOffset + bufferSize).coerceAtMost(contentChars.size)
+//            lexer.tokenize(recordTokenBuffer, contentChars, contentOffset, end)
+//            contentOffset = end
+//        }
+//
+//        val recordBuffer = RecordItemBuffer()
+//
+//        parser.endOfStream(recordBuffer)
+//
+//        if (! recordBuffer.isEmpty()) {
+//            recordLines.add(recordBuffer)
+//        }
+//
+//        return recordLines
+//    }
 }

@@ -15,6 +15,8 @@ import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.calc.ReportFormulas
 import tech.kzen.auto.server.objects.report.pipeline.filter.ReportFilter
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportDataFeeder
+import tech.kzen.auto.server.objects.report.pipeline.input.ReportLexerFeeder
+import tech.kzen.auto.server.objects.report.pipeline.input.ReportLexerParserFeeder
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportParserFeeder
 import tech.kzen.auto.server.objects.report.pipeline.input.model.BinaryDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordBuffer
@@ -131,11 +133,19 @@ class ReportPipeline(
         ReportProgress(initialReportRunSpec, taskHandle))
 
     private val parser = ReportParserFeeder()
+    private val lexer = ReportLexerFeeder()
+    private val lexerParser = ReportLexerParserFeeder()
+
+
     private val filter = ReportFilter(initialReportRunSpec)
     private val formulas = ReportFormulas(
         initialReportRunSpec.toFormulaSignature(), ServerContext.calculatedColumnEval)
     private val summary = ReportSummary(initialReportRunSpec, runDir, taskHandle)
     private val output = ReportOutput(initialReportRunSpec, runDir, taskHandle)
+
+    // NB: debug
+//    private var writer: FileWriter? = null
+//    private var first = true
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -164,9 +174,10 @@ class ReportPipeline(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun run() {
-//        val writer = FileWriter("out-x.tsv", Charsets.UTF_8)
+//        writer = FileWriter("out-x.tsv", Charsets.UTF_8)
+
         val recordDisruptor = setupRecordDisruptor()
-        val binaryDisruptor = setupBinaryDisruptor(recordDisruptor.ringBuffer/*, writer*/)
+        val binaryDisruptor = setupBinaryDisruptor(recordDisruptor.ringBuffer)
 
         recordDisruptor.start()
         binaryDisruptor.start()
@@ -189,7 +200,7 @@ class ReportPipeline(
 
         binaryDisruptor.shutdown()
         recordDisruptor.shutdown()
-//        writer.close()
+//        writer?.close()
     }
 
 
@@ -231,8 +242,7 @@ class ReportPipeline(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun setupBinaryDisruptor(
-        recordRingBuffer: RingBuffer<RecordEvent>/*,
-        writer: FileWriter*/
+        recordRingBuffer: RingBuffer<RecordEvent>
     ): Disruptor<BinaryEvent> {
         val binaryDisruptor = Disruptor(
             BinaryEvent.factory,
@@ -242,9 +252,16 @@ class ReportPipeline(
             YieldingWaitStrategy()
         )
 
-        binaryDisruptor.handleEventsWith(EventHandler { binaryEvent, _, _ ->
-            handleParse(binaryEvent, recordRingBuffer/*, writer*/)
-        })
+        binaryDisruptor
+            .handleEventsWith(this::handleLex)
+            .handleEventsWith(EventHandler { binaryEvent, _, _ ->
+                handleLexParse(binaryEvent, recordRingBuffer)
+            })
+
+//        binaryDisruptor
+//            .handleEventsWith(EventHandler { binaryEvent, _, _ ->
+//                handleParse(binaryEvent, recordRingBuffer)
+//            })
 
         binaryDisruptor.setDefaultExceptionHandler(object : ExceptionHandler<BinaryEvent?> {
             override fun handleEventException(ex: Throwable?, sequence: Long, event: BinaryEvent?) {
@@ -265,13 +282,38 @@ class ReportPipeline(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    var first = true
+    @Suppress("UNUSED_PARAMETER")
+    private fun handleLex(
+        event: BinaryEvent, sequence: Long, endOfBatch: Boolean
+    ) {
+        if (event.noop) {
+            return
+        }
+
+        lexer.tokenize(event.data)
+    }
+
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun handleLexParse(
+        event: BinaryEvent,
+        recordRingBuffer: RingBuffer<RecordEvent>
+    ) {
+        if (event.noop) {
+            return
+        }
+
+//        writer!!.write("^^^^^^^^^")
+
+        lexerParser.parse(event.data, recordRingBuffer)
+    }
+
+
 
     @Suppress("UNUSED_PARAMETER")
     private fun handleParse(
         binaryEvent: BinaryEvent,
-        recordRingBuffer: RingBuffer<RecordEvent>/*,
-        writer: FileWriter*/
+        recordRingBuffer: RingBuffer<RecordEvent>
     ) {
         if (binaryEvent.noop) {
             return
@@ -289,6 +331,14 @@ class ReportPipeline(
         if (event.noop) {
             return
         }
+
+//        if (first) {
+//            first = false
+//            writer!!.write(RecordItemBuffer.of(event.record.header.value.headerNames).toTsv())
+//            writer!!.write("\n")
+//        }
+//        writer!!.write(event.record.item.toTsv())
+//        writer!!.write("\n")
 
         formulas.evaluate(event.record.item, event.record.header)
     }
