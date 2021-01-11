@@ -27,7 +27,13 @@ public class TsvRecordLexer implements RecordLexer
         for (int i = contentOffset; i < contentEnd; i++) {
             char nextChar = contentChars[i];
 
-            if (nextChar == '\t') {
+            if (nextChar > 13) { // NB: max of (delimiter, lineFeed, carriageReturn)
+                if (fieldCount == 0) {
+                    fieldCount = 1;
+                }
+                partial = true;
+            }
+            else if (nextChar == '\t') {
                 fieldCount++;
                 partial = true;
             }
@@ -40,6 +46,7 @@ public class TsvRecordLexer implements RecordLexer
                 partial = false;
             }
             else {
+                // NB: unusual field content
                 if (fieldCount == 0) {
                     fieldCount = 1;
                 }

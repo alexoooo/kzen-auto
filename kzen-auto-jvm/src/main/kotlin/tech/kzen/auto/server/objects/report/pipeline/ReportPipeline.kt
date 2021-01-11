@@ -14,12 +14,12 @@ import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.calc.ReportFormulas
 import tech.kzen.auto.server.objects.report.pipeline.filter.ReportFilter
-import tech.kzen.auto.server.objects.report.pipeline.input.ReportDataFeeder
-import tech.kzen.auto.server.objects.report.pipeline.input.ReportLexerFeeder
-import tech.kzen.auto.server.objects.report.pipeline.input.ReportLexerParserFeeder
-import tech.kzen.auto.server.objects.report.pipeline.input.ReportParserFeeder
-import tech.kzen.auto.server.objects.report.pipeline.input.model.BinaryDataBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputDecoder
+import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputLexer
+import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputParser
+import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputReader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordMapBuffer
 import tech.kzen.auto.server.objects.report.pipeline.output.ReportOutput
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgress
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
@@ -105,10 +105,7 @@ class ReportPipeline(
     @Suppress("ArrayInDataClass")
     data class BinaryEvent(
         var noop: Boolean = false,
-        val data: BinaryDataBuffer = BinaryDataBuffer.ofEmpty(),
-        var records: Array<RecordBuffer> = emptyArray(),
-        var recordCount: Int = 0,
-        var nextRecord: Int = 0
+        val data: RecordDataBuffer = RecordDataBuffer.ofBufferSize()
     ) {
         companion object {
             val factory = EventFactory { BinaryEvent() }
@@ -119,7 +116,7 @@ class ReportPipeline(
     data class RecordEvent(
         var noop: Boolean = false,
         var filterAllow: Boolean = false,
-        val record: RecordBuffer = RecordBuffer()
+        val record: RecordMapBuffer = RecordMapBuffer()
     ) {
         companion object {
             val factory = EventFactory { RecordEvent() }
@@ -128,13 +125,14 @@ class ReportPipeline(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val dataInput = ReportDataFeeder(
+    private val dataInput = ReportInputReader(
         initialReportRunSpec.inputs,
         ReportProgress(initialReportRunSpec, taskHandle))
 
-    private val parser = ReportParserFeeder()
-    private val lexer = ReportLexerFeeder()
-    private val lexerParser = ReportLexerParserFeeder()
+    private val decoder = ReportInputDecoder()
+//    private val parser = ReportParserFeeder()
+    private val lexer = ReportInputLexer()
+    private val lexerParser = ReportInputParser()
 
 
     private val filter = ReportFilter(initialReportRunSpec)
@@ -253,6 +251,7 @@ class ReportPipeline(
         )
 
         binaryDisruptor
+            .handleEventsWith(this::handleDecode)
             .handleEventsWith(this::handleLex)
             .handleEventsWith(EventHandler { binaryEvent, _, _ ->
                 handleLexParse(binaryEvent, recordRingBuffer)
@@ -283,6 +282,18 @@ class ReportPipeline(
 
     //-----------------------------------------------------------------------------------------------------------------
     @Suppress("UNUSED_PARAMETER")
+    private fun handleDecode(
+        event: BinaryEvent, sequence: Long, endOfBatch: Boolean
+    ) {
+        if (event.noop) {
+            return
+        }
+
+        decoder.decode(event.data)
+    }
+
+
+    @Suppress("UNUSED_PARAMETER")
     private fun handleLex(
         event: BinaryEvent, sequence: Long, endOfBatch: Boolean
     ) {
@@ -310,19 +321,19 @@ class ReportPipeline(
 
 
 
-    @Suppress("UNUSED_PARAMETER")
-    private fun handleParse(
-        binaryEvent: BinaryEvent,
-        recordRingBuffer: RingBuffer<RecordEvent>
-    ) {
-        if (binaryEvent.noop) {
-            return
-        }
-//        writer.write("^^^^^ ${binaryEvent.data.length }^^^^^^^")
-//        writer.write(binaryEvent.data.contents, 0, binaryEvent.data.length)
-
-        parser.parse(binaryEvent.data, recordRingBuffer)
-    }
+//    @Suppress("UNUSED_PARAMETER")
+//    private fun handleParse(
+//        binaryEvent: BinaryEvent,
+//        recordRingBuffer: RingBuffer<RecordEvent>
+//    ) {
+//        if (binaryEvent.noop) {
+//            return
+//        }
+////        writer.write("^^^^^ ${binaryEvent.data.length }^^^^^^^")
+////        writer.write(binaryEvent.data.contents, 0, binaryEvent.data.length)
+//
+//        parser.parse(binaryEvent.data, recordRingBuffer)
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

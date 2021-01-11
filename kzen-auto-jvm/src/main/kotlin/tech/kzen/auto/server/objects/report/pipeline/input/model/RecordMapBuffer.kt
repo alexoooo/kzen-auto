@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.model
 
 
-data class RecordBuffer(
+data class RecordMapBuffer(
     val header: RecordHeaderBuffer = RecordHeaderBuffer(),
     val item: RecordItemBuffer = RecordItemBuffer()
 ) {

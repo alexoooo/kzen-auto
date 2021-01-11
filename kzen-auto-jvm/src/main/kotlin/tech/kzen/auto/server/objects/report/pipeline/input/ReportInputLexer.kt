@@ -1,11 +1,11 @@
 package tech.kzen.auto.server.objects.report.pipeline.input
 
-import tech.kzen.auto.server.objects.report.pipeline.input.model.BinaryDataBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordLexer
 import java.nio.file.Path
 
 
-class ReportLexerFeeder {
+class ReportInputLexer {
     //-----------------------------------------------------------------------------------------------------------------
     private var location: Path? = null
     private var lexer: RecordLexer? = null
@@ -14,7 +14,7 @@ class ReportLexerFeeder {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun tokenize(data: BinaryDataBuffer) {
+    fun tokenize(data: RecordDataBuffer) {
         if (location == null) {
             location = data.location!!
 
@@ -27,7 +27,7 @@ class ReportLexerFeeder {
 //            println("foo")
 //        }
 
-        lexer!!.tokenize(data.recordTokenBuffer, data.contents, 0, data.length)
+        lexer!!.tokenize(data.recordTokenBuffer, data.chars, 0, data.charsLength)
 
         if (data.endOfStream) {
             lexer!!.endOfStream(data.recordTokenBuffer)

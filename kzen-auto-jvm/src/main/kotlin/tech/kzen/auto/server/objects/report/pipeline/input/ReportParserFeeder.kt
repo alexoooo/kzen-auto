@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input
 
 import com.lmax.disruptor.RingBuffer
 import tech.kzen.auto.server.objects.report.pipeline.ReportPipeline
-import tech.kzen.auto.server.objects.report.pipeline.input.model.BinaryDataBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordParser
@@ -18,7 +18,7 @@ class ReportParserFeeder {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun parse(data: BinaryDataBuffer, recordRingBuffer: RingBuffer<ReportPipeline.RecordEvent>) {
+    fun parse(data: RecordDataBuffer, recordRingBuffer: RingBuffer<ReportPipeline.RecordEvent>) {
         if (location == null) {
             location = data.location!!
             parser = RecordParser.forExtension(data.innerExtension!!)
@@ -27,7 +27,7 @@ class ReportParserFeeder {
         var offset = 0
         if (previousRecordHeader.isEmpty()) {
             val recordLength = parser!!.parseNext(
-                leftoverRecordLineBuffer, data.contents, offset, data.length)
+                leftoverRecordLineBuffer, data.chars, offset, data.charsLength)
 
             if (recordLength != -1) {
                 previousRecordHeader = RecordHeader.ofLine(leftoverRecordLineBuffer)
@@ -40,7 +40,7 @@ class ReportParserFeeder {
         }
         else if (! leftoverRecordLineBuffer.isEmpty()) {
             val recordLength = parser!!.parseNext(
-                leftoverRecordLineBuffer, data.contents, offset, data.length)
+                leftoverRecordLineBuffer, data.chars, offset, data.charsLength)
 
             if (recordLength != -1) {
                 val sequence = recordRingBuffer.next()
@@ -67,7 +67,7 @@ class ReportParserFeeder {
                 record.clear()
 
                 val recordLength = parser!!.parseNext(
-                    record.item, data.contents, offset, data.length)
+                    record.item, data.chars, offset, data.charsLength)
 
                 if (recordLength != -1) {
                     event.noop = false

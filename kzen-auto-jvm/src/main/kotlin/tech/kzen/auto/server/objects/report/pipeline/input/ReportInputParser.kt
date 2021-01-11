@@ -2,14 +2,14 @@ package tech.kzen.auto.server.objects.report.pipeline.input
 
 import com.lmax.disruptor.RingBuffer
 import tech.kzen.auto.server.objects.report.pipeline.ReportPipeline
-import tech.kzen.auto.server.objects.report.pipeline.input.model.BinaryDataBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordLexerParser
 import java.nio.file.Path
 
 
-class ReportLexerParserFeeder {
+class ReportInputParser {
     //-----------------------------------------------------------------------------------------------------------------
     private var location: Path? = null
     private var lexerParser: RecordLexerParser? = null
@@ -18,7 +18,7 @@ class ReportLexerParserFeeder {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun parse(data: BinaryDataBuffer, recordRingBuffer: RingBuffer<ReportPipeline.RecordEvent>) {
+    fun parse(data: RecordDataBuffer, recordRingBuffer: RingBuffer<ReportPipeline.RecordEvent>) {
 //        check(data.recordTokenBuffer.count != 0) {
 //            "foo"
 //        }
@@ -65,7 +65,7 @@ class ReportLexerParserFeeder {
 
             lexerParser!!.parseFull(
                 record.item,
-                data.contents,
+                data.chars,
                 data.recordTokenBuffer.offset(i),
                 data.recordTokenBuffer.length(i),
                 data.recordTokenBuffer.fieldCount(i))
@@ -77,7 +77,7 @@ class ReportLexerParserFeeder {
             val lastIndex = data.recordTokenBuffer.count - 1
             lexerParser!!.parsePartial(
                 leftoverRecordLineBuffer,
-                data.contents,
+                data.chars,
                 data.recordTokenBuffer.offset(lastIndex),
                 data.recordTokenBuffer.length(lastIndex),
                 data.recordTokenBuffer.fieldCount(lastIndex),
@@ -92,11 +92,11 @@ class ReportLexerParserFeeder {
     }
 
 
-    private fun parseHeader(data: BinaryDataBuffer): Boolean {
+    private fun parseHeader(data: RecordDataBuffer): Boolean {
         if (data.recordTokenBuffer.hasFull()) {
             lexerParser!!.parseFull(
                 leftoverRecordLineBuffer,
-                data.contents,
+                data.chars,
                 data.recordTokenBuffer.offset(0),
                 data.recordTokenBuffer.length(0),
                 data.recordTokenBuffer.fieldCount(0))
@@ -109,7 +109,7 @@ class ReportLexerParserFeeder {
         else {
             lexerParser!!.parsePartial(
                 leftoverRecordLineBuffer,
-                data.contents,
+                data.chars,
                 data.recordTokenBuffer.offset(0),
                 data.recordTokenBuffer.length(0),
                 data.recordTokenBuffer.fieldCount(0),
@@ -121,13 +121,13 @@ class ReportLexerParserFeeder {
 
 
     private fun continuePartial(
-        data: BinaryDataBuffer,
+        data: RecordDataBuffer,
         recordRingBuffer: RingBuffer<ReportPipeline.RecordEvent>
     ): Boolean {
         if (data.recordTokenBuffer.hasFull()) {
             lexerParser!!.parsePartial(
                 leftoverRecordLineBuffer,
-                data.contents,
+                data.chars,
                 data.recordTokenBuffer.offset(0),
                 data.recordTokenBuffer.length(0),
                 data.recordTokenBuffer.fieldCount(0),
@@ -147,7 +147,7 @@ class ReportLexerParserFeeder {
         else {
             lexerParser!!.parsePartial(
                 leftoverRecordLineBuffer,
-                data.contents,
+                data.chars,
                 data.recordTokenBuffer.offset(0),
                 data.recordTokenBuffer.length(0),
                 data.recordTokenBuffer.fieldCount(0),

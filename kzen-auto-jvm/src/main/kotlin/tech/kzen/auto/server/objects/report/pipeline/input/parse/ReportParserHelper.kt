@@ -1,7 +1,8 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
-import tech.kzen.auto.server.objects.report.pipeline.input.ReportDataFeeder
-import tech.kzen.auto.server.objects.report.pipeline.input.model.BinaryDataBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputDecoder
+import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputReader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import java.nio.file.Path
 
@@ -10,17 +11,20 @@ import java.nio.file.Path
 object ReportParserHelper {
     //-----------------------------------------------------------------------------------------------------------------
     fun readHeaderLine(inputPath: Path): List<String> {
-        val dataBuffer = BinaryDataBuffer.ofEmpty()
+        val dataBuffer = RecordDataBuffer.ofBufferSize()
         val headerBuffer = RecordItemBuffer()
+        val decoder = ReportInputDecoder()
 
-        return ReportDataFeeder.single(inputPath).use { feeder ->
-            feeder.poll(dataBuffer)
+        return ReportInputReader.single(inputPath).use { reader ->
+            reader.poll(dataBuffer)
+            decoder.decode(dataBuffer)
             val parser = RecordParser.forExtension(dataBuffer.innerExtension!!)
-            var length = parser.parseNext(headerBuffer, dataBuffer.contents, 0, dataBuffer.length)
+            var length = parser.parseNext(headerBuffer, dataBuffer.chars, 0, dataBuffer.charsLength)
 
-            while (length == -1 && feeder.poll(dataBuffer)) {
+            while (length == -1 && reader.poll(dataBuffer)) {
+                decoder.decode(dataBuffer)
                 length = parser.parseNext(
-                    headerBuffer, dataBuffer.contents, 0, dataBuffer.length)
+                    headerBuffer, dataBuffer.chars, 0, dataBuffer.charsLength)
             }
 
             headerBuffer.toList()
