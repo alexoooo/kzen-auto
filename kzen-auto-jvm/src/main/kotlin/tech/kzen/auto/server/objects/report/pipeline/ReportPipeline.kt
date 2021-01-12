@@ -114,7 +114,7 @@ class ReportPipeline(
 
 
     data class RecordEvent(
-        var noop: Boolean = false,
+//        var noop: Boolean = false,
         var filterAllow: Boolean = false,
         val record: RecordMapBuffer = RecordMapBuffer()
     ) {
@@ -339,9 +339,9 @@ class ReportPipeline(
     //-----------------------------------------------------------------------------------------------------------------
     @Suppress("UNUSED_PARAMETER")
     private fun handleFormulas(event: RecordEvent, sequence: Long, endOfBatch: Boolean) {
-        if (event.noop) {
-            return
-        }
+//        if (event.noop) {
+//            return
+//        }
 
 //        if (first) {
 //            first = false
@@ -357,9 +357,9 @@ class ReportPipeline(
 
     @Suppress("UNUSED_PARAMETER")
     private fun handleFilter(event: RecordEvent, sequence: Long, endOfBatch: Boolean) {
-        if (event.noop) {
-            return
-        }
+//        if (event.noop) {
+//            return
+//        }
 
         event.filterAllow = filter.test(event.record.item, event.record.header.value)
     }
@@ -371,7 +371,7 @@ class ReportPipeline(
             summary.handleViewRequest()
         }
 
-        if (! event.filterAllow || event.noop) {
+        if (! event.filterAllow /*|| event.noop*/) {
             return
         }
 
@@ -390,7 +390,7 @@ class ReportPipeline(
             output.handlePreviewRequest(reportWorkPool)
         }
 
-        if (! event.filterAllow || event.noop) {
+        if (! event.filterAllow /*|| event.noop*/) {
             return
         }
 
