@@ -3,19 +3,19 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 
 
-interface RecordLexerParser {
+interface RecordParserOld {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         const val csvExtension = "csv"
         const val tsvExtension = "tsv"
 
-        fun forExtension(extension: String): RecordLexerParser {
+        fun forExtension(extension: String): RecordParserOld {
             return when (extension) {
-                csvExtension ->
-                    CsvLexerParser()
+                "csv" ->
+                    CsvRecordParser()
 
-                tsvExtension ->
-                    TsvLexerParser()
+                "tsv" ->
+                    TsvRecordParser()
 
                 else ->
                     error("Unknown: $extension")
@@ -25,21 +25,19 @@ interface RecordLexerParser {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun parseFull(
+    /**
+     * @return amount of content chars that were consumed to complete the record, or -1 if all were consumed
+     *      without reaching end of record
+     */
+    fun parseNext(
         recordItemBuffer: RecordItemBuffer,
         contentChars: CharArray,
-        recordOffset: Int,
-        recordLength: Int,
-        fieldCount: Int
-    )
+        contentOffset: Int = 0,
+        contentEnd: Int = contentChars.size
+    ): Int
 
 
-    fun parsePartial(
-        recordItemBuffer: RecordItemBuffer,
-        contentChars: CharArray,
-        recordOffset: Int,
-        recordLength: Int,
-        fieldCount: Int,
-        endPartial: Boolean
+    fun endOfStream(
+        recordItemBuffer: RecordItemBuffer
     )
 }

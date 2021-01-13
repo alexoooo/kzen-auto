@@ -44,9 +44,7 @@ object ColumnValueUtils {
             if (nextChar == '.') {
                 if (pointIndex != -1 ||
                     len == 1 ||
-                    len == 2 && (
-                            text[offset] == '+' ||
-                                    text[offset] == '-')
+                    len == 2 && (text[offset] == '+' || text[offset] == '-')
                 ) {
                     return Double.NaN
                 }
@@ -81,7 +79,7 @@ object ColumnValueUtils {
         }
 
         val wholePart = when {
-            pointIndex == 0 ->
+            pointIndex == 0 || pointIndex == 1 && (text[offset] == '+' || text[offset] == '-') ->
                 0
 
             pointIndex - leadingZeroes > RecordTextFlyweight.maxLongDecimalLength ->
@@ -100,20 +98,20 @@ object ColumnValueUtils {
             fractionLeadingZeroes++
         }
 
-        val factionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes
+        val fractionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes
         val fractionAsLongWithoutLeadingZeroes: Long = when {
-            factionDigitsWithoutLeadingZeroes == 0 ->
+            fractionDigitsWithoutLeadingZeroes == 0 ->
                 0
 
-            factionDigitsWithoutLeadingZeroes > RecordTextFlyweight.maxLongDecimalLength ->
+            fractionDigitsWithoutLeadingZeroes > RecordTextFlyweight.maxLongDecimalLength ->
                 return Double.NaN
 
             else ->
-                toLong(text, pointIndex + fractionLeadingZeroes + 1, factionDigitsWithoutLeadingZeroes)
+                toLong(text, pointIndex + fractionLeadingZeroes + 1, fractionDigitsWithoutLeadingZeroes)
         }
 
         val factionalPartWithoutLeadingZeroes = fractionAsLongWithoutLeadingZeroes.toDouble() /
-                RecordTextFlyweight.decimalLongPowers[factionDigitsWithoutLeadingZeroes]
+                RecordTextFlyweight.decimalLongPowers[fractionDigitsWithoutLeadingZeroes]
 
         val factionalPart =
             if (fractionLeadingZeroes == 0) {
@@ -123,7 +121,8 @@ object ColumnValueUtils {
                 factionalPartWithoutLeadingZeroes / RecordTextFlyweight.decimalLongPowers[fractionLeadingZeroes]
             }
 
-        return wholePart + factionalPart
+        val value = wholePart + factionalPart
+        return if (text[offset] == '-') { -value } else { value }
     }
 
 

@@ -4,7 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer;
 
 
-public class TsvLexerParser implements RecordLexerParser
+public class TsvLexerParser implements RecordParser
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Override
@@ -71,6 +71,10 @@ public class TsvLexerParser implements RecordLexerParser
         }
         else {
             recordItemBuffer.addToFieldAndCommitUnsafe(contentChars, endIndex - fieldLength, fieldLength);
+        }
+
+        if (fieldCount > 1) {
+            recordItemBuffer.indicateNonEmpty();
         }
     }
 }

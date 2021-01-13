@@ -2,8 +2,8 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputDecoder
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputReader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import java.nio.file.Path
 
 
@@ -16,10 +16,10 @@ object ReportParserHelper {
             RecordItemBuffer(0, 0)
         val decoder = ReportInputDecoder()
 
-        return ReportInputReader.single(inputPath).use { reader ->
+        return ReportInputReader.file(inputPath).use { reader ->
             reader.poll(dataBuffer)
             decoder.decode(dataBuffer)
-            val parser = RecordParser.forExtension(dataBuffer.innerExtension!!)
+            val parser = RecordParserOld.forExtension(dataBuffer.innerExtension!!)
             var length = parser.parseNext(headerBuffer, dataBuffer.chars, 0, dataBuffer.charsLength)
 
             while (length == -1 && reader.poll(dataBuffer)) {
@@ -37,22 +37,14 @@ object ReportParserHelper {
     fun csvRecords(text: String, bufferSize: Int = text.length): List<RecordItemBuffer> {
         return readRecords(
             text,
-            RecordParser.forExtension(RecordParser.csvExtension),
-            bufferSize)
-    }
-
-
-    fun tsvRecords(text: String, bufferSize: Int = text.length): List<RecordItemBuffer> {
-        return readRecords(
-            text,
-            RecordParser.forExtension(RecordParser.tsvExtension),
+            RecordParserOld.forExtension(RecordParserOld.csvExtension),
             bufferSize)
     }
 
 
     private fun readRecords(
         text: String,
-        parser: RecordParser,
+        parser: RecordParserOld,
         bufferSize: Int = text.length
     ): List<RecordItemBuffer> {
         val contentChars = text.toCharArray()
@@ -74,7 +66,7 @@ object ReportParserHelper {
                     end
                 }
 
-            if (length != -1 && ! recordBuffer.isEmpty()) {
+            if (length != -1 && ! recordBuffer.isEmpty) {
                 recordLines.add(recordBuffer.prototype())
                 recordBuffer.clear()
             }
@@ -82,7 +74,7 @@ object ReportParserHelper {
 
         parser.endOfStream(recordBuffer)
 
-        if (! recordBuffer.isEmpty()) {
+        if (! recordBuffer.isEmpty) {
             recordLines.add(recordBuffer)
         }
 

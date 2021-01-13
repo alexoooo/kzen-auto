@@ -1,8 +1,10 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import org.junit.Test
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTextFlyweight
+import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -158,8 +160,7 @@ class CsvLineParserTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val flyweight =
-        RecordTextFlyweight()
+    private val flyweight = RecordTextFlyweight()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -173,12 +174,9 @@ class CsvLineParserTest {
     @Test
     fun emptyQuotedValue() {
         val csvLines = "\"\""
-
-        for (i in 1 .. 2) {
-            val parsed = read(csvLines, i)
-            assertEquals(listOf(""), parsed[0].toList())
-            assertEquals(csvLines, parsed[0].toCsv())
-        }
+        val parsed = read(csvLines)
+        assertEquals(listOf(""), parsed[0].toList())
+        assertEquals(csvLines, parsed[0].toCsv())
     }
 
 
@@ -186,9 +184,12 @@ class CsvLineParserTest {
     fun emptyLines() {
         val csvLines = "\r\n\r\n\n\n\n\r\n"
         assertTrue(read(csvLines).isEmpty())
-        assertTrue(read(csvLines, 1).isEmpty())
-        assertTrue(read(csvLines, 2).isEmpty())
         assertTrue(read(csvLines, 3).isEmpty())
+        assertTrue(read(csvLines, 4).isEmpty())
+        assertTrue(read(csvLines, 5).isEmpty())
+        assertTrue(read(csvLines, 6).isEmpty())
+        assertTrue(read(csvLines, 7).isEmpty())
+        assertTrue(read(csvLines, 9).isEmpty())
     }
 
 
@@ -205,10 +206,9 @@ class CsvLineParserTest {
         val csvLines = ",,,,,,,,,"
         val values = listOf("", "", "", "", "", "", "", "", "", "")
         assertEquals(values, read(csvLines)[0].toList())
-        assertEquals(values, read(csvLines, 1)[0].toList())
-        assertEquals(values, read(csvLines, 2)[0].toList())
-        assertEquals(values, read(csvLines, 3)[0].toList())
-        assertEquals(values, read(csvLines, 4)[0].toList())
+        for (i in 3 .. 8) {
+            assertEquals(values, read(csvLines, i)[0].toList())
+        }
     }
 
 
@@ -221,10 +221,10 @@ class CsvLineParserTest {
 
     @Test
     fun fewCharacterValue() {
-        val csvLine = "abc"
-        assertEquals(listOf("abc"), read(csvLine)[0].toList())
-        assertEquals(listOf("abc"), read(csvLine, 1)[0].toList())
-        assertEquals(listOf("abc"), read(csvLine, 2)[0].toList())
+        val csvLine = "abcde"
+        assertEquals(listOf("abcde"), read(csvLine)[0].toList())
+        assertEquals(listOf("abcde"), read(csvLine, 3)[0].toList())
+        assertEquals(listOf("abcde"), read(csvLine, 4)[0].toList())
     }
 
 
@@ -232,8 +232,16 @@ class CsvLineParserTest {
     fun twoSingleCharacterValues() {
         val csvLine = "a,b"
         assertEquals(listOf("a", "b"), read(csvLine)[0].toList())
-        assertEquals(listOf("a", "b"), read(csvLine, 1)[0].toList())
-        assertEquals(listOf("a", "b"), read(csvLine, 2)[0].toList())
+    }
+
+
+    @Test
+    fun fiveSingleCharacterValues() {
+        val csvLine = "a,b,c,d,e"
+        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine)[0].toList())
+        for (i in 3 .. 8) {
+            assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, i)[0].toList())
+        }
     }
 
 
@@ -246,9 +254,16 @@ class CsvLineParserTest {
         val cells = csvLine.split(",")
 
         assertEquals(cells, read(csvLine)[0].toList())
-        for (i in 1 .. 16) {
+        for (i in 3 .. 16) {
             assertEquals(cells, read(csvLine, i)[0].toList())
         }
+    }
+
+
+    @Test
+    fun worldCitiesPopLine() {
+        val csvLine = "ad,aixas,Aixàs,06,,42.4833333,1.4666667"
+        assertEquals(listOf("ad", "aixas", "Aixàs", "06", "", "42.4833333", "1.4666667"), read(csvLine)[0].toList())
     }
 
 
@@ -260,8 +275,26 @@ class CsvLineParserTest {
         assertEquals(25, line.toList().size)
         assertEquals(csvLine, line.toCsv())
 
-        for (i in 1 .. 16) {
+        for (i in 3 .. 16) {
             assertEquals(csvLine, read(csvLine, i)[0].toCsv())
+        }
+    }
+
+
+    @Test
+    fun utf8LineWithBlank() {
+        val csvLine = csvA
+        val csvLineWithBlank = "$csvLine\r\n"
+
+        val lines = read(csvLineWithBlank)
+        assertEquals(1, lines.size)
+
+        val line = lines[0]
+        assertEquals(25, line.toList().size)
+        assertEquals(csvLine, line.toCsv())
+
+        for (i in 3 .. 16) {
+            assertEquals(csvLine, read(csvLineWithBlank, i)[0].toCsv())
         }
     }
 
@@ -277,7 +310,7 @@ class CsvLineParserTest {
         assertEquals(csvLineA, parsed[0].toCsv())
         assertEquals(csvLineB, parsed[1].toCsv())
 
-        for (i in 1 .. 128) {
+        for (i in 3 .. 128) {
             val parsedBuffered = read(lines, i)
             assertEquals(2, parsedBuffered.size)
             assertEquals(csvLineA, parsedBuffered[0].toCsv())
@@ -294,61 +327,11 @@ class CsvLineParserTest {
         assertEquals(1, parsed.size)
         assertEquals(csvRecord, parsed[0].toCsv())
 
-        for (i in 1 .. 128) {
+        for (i in 3 .. 128) {
             val parsedBuffered = read(csvRecord, i)
             assertEquals(1, parsedBuffered.size)
             assertEquals(csvRecord, parsedBuffered[0].toCsv())
         }
-    }
-
-
-    @Test
-    fun simpleDecimalNotExact() {
-        val csv = "10.1"
-        val record = read(csv)[0]
-        flyweight.selectHostField(record, 0)
-        assertEquals(csv.toDouble(), flyweight.toDoubleOrNan())
-        assertEquals(csv.toDouble(), flyweight.toDouble())
-    }
-
-
-    @Test
-    fun simpleDecimalPiApproximation() {
-        val csv = "3.14"
-        val record = read(csv)[0]
-        flyweight.selectHostField(record, 0)
-        assertEquals(csv.toDouble(), flyweight.toDoubleOrNan())
-        assertEquals(csv.toDouble(), flyweight.toDouble())
-    }
-
-
-    @Test
-    fun simpleDecimalDollars() {
-        val csv = "82.88"
-        val record = read(csv)[0]
-        flyweight.selectHostField(record, 0)
-        assertEquals(csv.toDouble(), flyweight.toDoubleOrNan())
-        assertEquals(csv.toDouble(), flyweight.toDouble())
-    }
-
-
-    @Test
-    fun decimalWithLeadingZeroesAfterPoint() {
-        val csv = "0.0014218039999999998"
-        val record = read(csv)[0]
-        flyweight.selectHostField(record, 0)
-        assertEquals(csv.toDouble(), flyweight.toDoubleOrNan())
-        assertEquals(csv.toDouble(), flyweight.toDouble())
-    }
-
-
-    @Test
-    fun decimalWithLeadingZeroesBeforePoint() {
-        val csv = "000000000000000000000000000000000010.1"
-        val record = read(csv)[0]
-        flyweight.selectHostField(record, 0)
-        assertEquals(csv.toDouble(), flyweight.toDoubleOrNan())
-        assertEquals(csv.toDouble(), flyweight.toDouble())
     }
 
 
@@ -369,8 +352,26 @@ class CsvLineParserTest {
     }
 
 
+//    @OptIn(ExperimentalPathApi::class)
+//    @Test
+//    fun readWoldCitiesPop() {
+//        val inFile = Paths.get("C:/~/data/worldcitiespop.csv")
+//        val outFile = Paths.get("C:/~/data/worldcitiespop-std.csv")
+//        outFile.bufferedWriter(Charsets.UTF_8).use { out ->
+//            inFile.forEachLine(Charsets.ISO_8859_1) { line ->
+//                val encoded = RecordItemBuffer.of(line.split(',')).toCsv()
+//                out.appendLine(encoded)
+//            }
+//        }
+//    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
-    private fun read(text: String, bufferSize: Int = text.length): List<RecordItemBuffer> {
-        return ReportParserHelper.csvRecords(text, bufferSize)
+    private fun read(
+        text: String,
+        bufferSize: Int = text.encodeToByteArray().size.coerceAtLeast(RecordDataBuffer.minBufferSize)
+    ): List<RecordItemBuffer> {
+//        return ReportParserHelper.csvRecords(text, bufferSize)
+        return ReportInputChain.allCsv(text, bufferSize)
     }
 }

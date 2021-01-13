@@ -47,7 +47,10 @@ public class TsvRecordLexer implements RecordLexer
 
                     case 10, 13 -> {
                         if (fieldCount > 0 || nextPartial) {
-                            recordTokenBuffer.add(startOffset, i - startOffset, fieldCount);
+                            int length = i - startOffset;
+                            if (length > 0 || fieldCount > 1 || nextPartial) {
+                                recordTokenBuffer.add(startOffset, i - startOffset, fieldCount);
+                            }
                             if (i + 1 < contentEnd) {
                                 char nextNextChar = contentChars[i + 1];
                                 fieldCount =

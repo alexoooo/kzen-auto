@@ -6,7 +6,7 @@ import java.io.Reader
 
 class RecordReader(
     private val reader: Reader,
-    private val recordParser: RecordParser,
+    private val recordParser: RecordParserOld,
     bufferSize: Int = 64 * 1024
 ):
     AutoCloseable

@@ -7,10 +7,13 @@ import java.nio.ByteBuffer
 // https://stackoverflow.com/questions/29559842/what-is-charsetdecoder-decodebytebuffer-charbuffer-endofinput
 // https://stackoverflow.com/questions/14792654/decoding-multibyte-utf8-symbols-with-charset-decoder-in-byte-by-byte-manner
 // https://stackoverflow.com/questions/45437358/streamdecoder-vs-inputstreamreader-when-reading-malformed-files
+// https://stackoverflow.com/questions/499010/java-how-to-determine-the-correct-charset-encoding-of-a-stream
 class ReportInputDecoder {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        // TODO: expose to user
         private val charset = Charsets.UTF_8
+//        private val charset = Charsets.ISO_8859_1
     }
 
 

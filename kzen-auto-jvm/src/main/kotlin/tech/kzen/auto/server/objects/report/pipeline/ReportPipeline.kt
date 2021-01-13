@@ -1,6 +1,9 @@
 package tech.kzen.auto.server.objects.report.pipeline
 
-import com.lmax.disruptor.*
+import com.lmax.disruptor.EventHandler
+import com.lmax.disruptor.ExceptionHandler
+import com.lmax.disruptor.RingBuffer
+import com.lmax.disruptor.YieldingWaitStrategy
 import com.lmax.disruptor.dsl.Disruptor
 import com.lmax.disruptor.dsl.ProducerType
 import com.lmax.disruptor.util.DaemonThreadFactory
@@ -13,13 +16,16 @@ import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.calc.ReportFormulas
+import tech.kzen.auto.server.objects.report.pipeline.event.ReportBinaryEvent
+import tech.kzen.auto.server.objects.report.pipeline.event.ReportRecordEvent
+import tech.kzen.auto.server.objects.report.pipeline.event.handoff.DisruptorRecordHandoff
+import tech.kzen.auto.server.objects.report.pipeline.event.handoff.RecordHandoff
 import tech.kzen.auto.server.objects.report.pipeline.filter.ReportFilter
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputDecoder
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputLexer
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputParser
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputReader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordMapBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.connect.FileFlatData
 import tech.kzen.auto.server.objects.report.pipeline.output.ReportOutput
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgress
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
@@ -102,31 +108,8 @@ class ReportPipeline(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Suppress("ArrayInDataClass")
-    data class BinaryEvent(
-        var noop: Boolean = false,
-        val data: RecordDataBuffer = RecordDataBuffer.ofBufferSize()
-    ) {
-        companion object {
-            val factory = EventFactory { BinaryEvent() }
-        }
-    }
-
-
-    data class RecordEvent(
-//        var noop: Boolean = false,
-        var filterAllow: Boolean = false,
-        val record: RecordMapBuffer = RecordMapBuffer()
-    ) {
-        companion object {
-            val factory = EventFactory { RecordEvent() }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private val dataInput = ReportInputReader(
-        initialReportRunSpec.inputs,
+        initialReportRunSpec.inputs.map { FileFlatData(it) },
         ReportProgress(initialReportRunSpec, taskHandle))
 
     private val decoder = ReportInputDecoder()
@@ -203,9 +186,9 @@ class ReportPipeline(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun setupRecordDisruptor(): Disruptor<RecordEvent> {
+    private fun setupRecordDisruptor(): Disruptor<ReportRecordEvent> {
         val recordDisruptor = Disruptor(
-            RecordEvent.factory,
+            ReportRecordEvent.factory,
             recordDisruptorBufferSize,
             DaemonThreadFactory.INSTANCE,
             ProducerType.SINGLE,
@@ -220,8 +203,8 @@ class ReportPipeline(
 //            .then(this::handleSummaryAndOutput)
             .handleEventsWith(this::handleSummary, this::handleOutput)
 
-        recordDisruptor.setDefaultExceptionHandler(object : ExceptionHandler<RecordEvent?> {
-            override fun handleEventException(ex: Throwable?, sequence: Long, event: RecordEvent?) {
+        recordDisruptor.setDefaultExceptionHandler(object : ExceptionHandler<ReportRecordEvent?> {
+            override fun handleEventException(ex: Throwable?, sequence: Long, event: ReportRecordEvent?) {
                 logger.error("Record event - {}", event?.record, ex)
             }
 
@@ -240,21 +223,23 @@ class ReportPipeline(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun setupBinaryDisruptor(
-        recordRingBuffer: RingBuffer<RecordEvent>
-    ): Disruptor<BinaryEvent> {
+        recordRingBuffer: RingBuffer<ReportRecordEvent>
+    ): Disruptor<ReportBinaryEvent> {
         val binaryDisruptor = Disruptor(
-            BinaryEvent.factory,
+            ReportBinaryEvent.factory,
             binaryDisruptorBufferSize,
             DaemonThreadFactory.INSTANCE,
             ProducerType.SINGLE,
             YieldingWaitStrategy()
         )
 
+        val disruptorRecordHandoff = DisruptorRecordHandoff(recordRingBuffer)
+
         binaryDisruptor
             .handleEventsWith(this::handleDecode)
             .handleEventsWith(this::handleLex)
             .handleEventsWith(EventHandler { binaryEvent, _, _ ->
-                handleLexParse(binaryEvent, recordRingBuffer)
+                handleLexParse(binaryEvent, disruptorRecordHandoff)
             })
 
 //        binaryDisruptor
@@ -262,8 +247,8 @@ class ReportPipeline(
 //                handleParse(binaryEvent, recordRingBuffer)
 //            })
 
-        binaryDisruptor.setDefaultExceptionHandler(object : ExceptionHandler<BinaryEvent?> {
-            override fun handleEventException(ex: Throwable?, sequence: Long, event: BinaryEvent?) {
+        binaryDisruptor.setDefaultExceptionHandler(object : ExceptionHandler<ReportBinaryEvent?> {
+            override fun handleEventException(ex: Throwable?, sequence: Long, event: ReportBinaryEvent?) {
                 logger.error("Binary event - {}", event?.data, ex)
             }
 
@@ -283,7 +268,7 @@ class ReportPipeline(
     //-----------------------------------------------------------------------------------------------------------------
     @Suppress("UNUSED_PARAMETER")
     private fun handleDecode(
-        event: BinaryEvent, sequence: Long, endOfBatch: Boolean
+        event: ReportBinaryEvent, sequence: Long, endOfBatch: Boolean
     ) {
         if (event.noop) {
             return
@@ -295,7 +280,7 @@ class ReportPipeline(
 
     @Suppress("UNUSED_PARAMETER")
     private fun handleLex(
-        event: BinaryEvent, sequence: Long, endOfBatch: Boolean
+        event: ReportBinaryEvent, sequence: Long, endOfBatch: Boolean
     ) {
         if (event.noop) {
             return
@@ -307,8 +292,8 @@ class ReportPipeline(
 
     @Suppress("UNUSED_PARAMETER")
     private fun handleLexParse(
-        event: BinaryEvent,
-        recordRingBuffer: RingBuffer<RecordEvent>
+        event: ReportBinaryEvent,
+        recordHandoff: RecordHandoff
     ) {
         if (event.noop) {
             return
@@ -316,7 +301,7 @@ class ReportPipeline(
 
 //        writer!!.write("^^^^^^^^^")
 
-        lexerParser.parse(event.data, recordRingBuffer)
+        lexerParser.parse(event.data, recordHandoff)
     }
 
 
@@ -338,7 +323,7 @@ class ReportPipeline(
 
     //-----------------------------------------------------------------------------------------------------------------
     @Suppress("UNUSED_PARAMETER")
-    private fun handleFormulas(event: RecordEvent, sequence: Long, endOfBatch: Boolean) {
+    private fun handleFormulas(event: ReportRecordEvent, sequence: Long, endOfBatch: Boolean) {
 //        if (event.noop) {
 //            return
 //        }
@@ -356,7 +341,7 @@ class ReportPipeline(
 
 
     @Suppress("UNUSED_PARAMETER")
-    private fun handleFilter(event: RecordEvent, sequence: Long, endOfBatch: Boolean) {
+    private fun handleFilter(event: ReportRecordEvent, sequence: Long, endOfBatch: Boolean) {
 //        if (event.noop) {
 //            return
 //        }
@@ -366,7 +351,7 @@ class ReportPipeline(
 
 
     @Suppress("UNUSED_PARAMETER")
-    private fun handleSummary(event: RecordEvent, sequence: Long, endOfBatch: Boolean) {
+    private fun handleSummary(event: ReportRecordEvent, sequence: Long, endOfBatch: Boolean) {
         if (endOfBatch) {
             summary.handleViewRequest()
         }
@@ -381,7 +366,7 @@ class ReportPipeline(
 
     @Suppress("UNUSED_PARAMETER")
     private fun handleOutput(
-        event: RecordEvent,
+        event: ReportRecordEvent,
         sequence: Long,
         endOfBatch: Boolean
     ) {
@@ -399,7 +384,7 @@ class ReportPipeline(
 
 
     private fun handleSummaryAndOutput(
-        event: RecordEvent,
+        event: ReportRecordEvent,
         sequence: Long,
         endOfBatch: Boolean
     ) {

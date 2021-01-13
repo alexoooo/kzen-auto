@@ -1,7 +1,9 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import org.junit.Test
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -43,8 +45,6 @@ class TsvLineParserTest {
     fun emptyLines() {
         val tsvLines = "\r\n\r\n\n\n\n\r\n"
         assertTrue(read(tsvLines).isEmpty())
-        assertTrue(read(tsvLines, 1).isEmpty())
-        assertTrue(read(tsvLines, 2).isEmpty())
         assertTrue(read(tsvLines, 3).isEmpty())
     }
 
@@ -62,8 +62,6 @@ class TsvLineParserTest {
         val csvLines = "\t\t\t\t\t\t\t\t\t"
         val values = listOf("", "", "", "", "", "", "", "", "", "")
         assertEquals(values, read(csvLines)[0].toList())
-        assertEquals(values, read(csvLines, 1)[0].toList())
-        assertEquals(values, read(csvLines, 2)[0].toList())
         assertEquals(values, read(csvLines, 3)[0].toList())
         assertEquals(values, read(csvLines, 4)[0].toList())
     }
@@ -78,10 +76,10 @@ class TsvLineParserTest {
 
     @Test
     fun fewCharacterValue() {
-        val csvLine = "abc"
-        assertEquals(listOf("abc"), read(csvLine)[0].toList())
-        assertEquals(listOf("abc"), read(csvLine, 1)[0].toList())
-        assertEquals(listOf("abc"), read(csvLine, 2)[0].toList())
+        val csvLine = "abcde"
+        assertEquals(listOf("abcde"), read(csvLine)[0].toList())
+        assertEquals(listOf("abcde"), read(csvLine, 3)[0].toList())
+        assertEquals(listOf("abcde"), read(csvLine, 4)[0].toList())
     }
 
 
@@ -89,8 +87,19 @@ class TsvLineParserTest {
     fun twoSingleCharacterValues() {
         val csvLine = "a\tb"
         assertEquals(listOf("a", "b"), read(csvLine)[0].toList())
-        assertEquals(listOf("a", "b"), read(csvLine, 1)[0].toList())
-        assertEquals(listOf("a", "b"), read(csvLine, 2)[0].toList())
+    }
+
+
+    @Test
+    fun fiveSingleCharacterValues() {
+        val csvLine = "a\tb\tc\td\te"
+        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine)[0].toList())
+        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, 3)[0].toList())
+        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, 4)[0].toList())
+        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, 5)[0].toList())
+        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, 6)[0].toList())
+        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, 7)[0].toList())
+        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, 8)[0].toList())
     }
 
 
@@ -103,7 +112,7 @@ class TsvLineParserTest {
         val cells = tsvLine.split("\t")
 
         assertEquals(cells, read(tsvLine)[0].toList())
-        for (i in 1 .. 16) {
+        for (i in 3 .. 16) {
             assertEquals(cells, read(tsvLine, i)[0].toList())
         }
     }
@@ -115,7 +124,7 @@ class TsvLineParserTest {
         assertEquals(25, line.toList().size)
         assertEquals(tsvUtf8Line, line.toTsv())
 
-        for (i in 1 .. 16) {
+        for (i in 3 .. 16) {
             assertEquals(tsvUtf8Line, read(tsvUtf8Line, i)[0].toTsv())
         }
     }
@@ -125,6 +134,26 @@ class TsvLineParserTest {
     fun utf8Lines() {
         val tsvLineA = tsvUtf8Line
         val tsvLineB = tsvUtf8Line
+        val lines = "$tsvLineA\r\n$tsvLineB"
+
+        val parsed = read(lines)
+        assertEquals(2, parsed.size)
+        assertEquals(tsvLineA, parsed[0].toTsv())
+        assertEquals(tsvLineB, parsed[1].toTsv())
+
+        for (i in 3 .. 128) {
+            val parsedBuffered = read(lines, i)
+            assertEquals(2, parsedBuffered.size)
+            assertEquals(tsvLineA, parsedBuffered[0].toTsv())
+            assertEquals(tsvLineB, parsedBuffered[1].toTsv())
+        }
+    }
+
+
+    @Test
+    fun utf8LinesFollowedByEmpty() {
+        val tsvLineA = tsvUtf8Line
+        val tsvLineB = tsvUtf8Line
         val lines = "$tsvLineA\r\n$tsvLineB\r\n"
 
         val parsed = read(lines)
@@ -132,7 +161,7 @@ class TsvLineParserTest {
         assertEquals(tsvLineA, parsed[0].toTsv())
         assertEquals(tsvLineB, parsed[1].toTsv())
 
-        for (i in 1 .. 128) {
+        for (i in 3 .. 128) {
             val parsedBuffered = read(lines, i)
             assertEquals(2, parsedBuffered.size)
             assertEquals(tsvLineA, parsedBuffered[0].toTsv())
@@ -142,54 +171,10 @@ class TsvLineParserTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun read(text: String, bufferSize: Int = text.length): List<RecordItemBuffer> {
-        return ReportParserHelper.tsvRecords(text, bufferSize)
+    private fun read(
+        text: String,
+        bufferSize: Int = text.length.coerceAtLeast(RecordDataBuffer.minBufferSize)
+    ): List<RecordItemBuffer> {
+        return ReportInputChain.allTsv(text, bufferSize)
     }
-
-
-//    private fun read2(
-//        text: String,
-//        bufferSize: Int = text.length
-//    ): List<RecordItemBuffer> {
-//        val contentChars = text.toCharArray()
-//
-//        val lexer = TsvRecordLexer()
-//        val lexerParser = TsvLexerParser()
-//        val recordTokenBuffer = RecordTokenBuffer()
-//        val recordLines = mutableListOf<RecordItemBuffer>()
-//
-//        var contentOffset = 0
-//        while (contentOffset < contentChars.size) {
-//            val end = (contentOffset + bufferSize).coerceAtMost(contentChars.size)
-//
-//            lexer.tokenize(recordTokenBuffer, contentChars, contentOffset, end)
-//
-//            for
-//
-//            recordTokenBuffer.clear()
-//
-//            contentOffset = end
-//        }
-//
-//
-//        for ()
-//
-//
-//        contentOffset = 0
-//        while (contentOffset < contentChars.size) {
-//            val end = (contentOffset + bufferSize).coerceAtMost(contentChars.size)
-//            lexer.tokenize(recordTokenBuffer, contentChars, contentOffset, end)
-//            contentOffset = end
-//        }
-//
-//        val recordBuffer = RecordItemBuffer()
-//
-//        parser.endOfStream(recordBuffer)
-//
-//        if (! recordBuffer.isEmpty()) {
-//            recordLines.add(recordBuffer)
-//        }
-//
-//        return recordLines
-//    }
 }

@@ -11,11 +11,11 @@ interface RecordParser {
 
         fun forExtension(extension: String): RecordParser {
             return when (extension) {
-                "csv" ->
-                    CsvRecordParser()
+                csvExtension ->
+                    CsvLexerParser()
 
-                "tsv" ->
-                    TsvRecordParser()
+                tsvExtension ->
+                    TsvLexerParser()
 
                 else ->
                     error("Unknown: $extension")
@@ -25,19 +25,21 @@ interface RecordParser {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    /**
-     * @return amount of content chars that were consumed to complete the record, or -1 if all were consumed
-     *      without reaching end of record
-     */
-    fun parseNext(
+    fun parseFull(
         recordItemBuffer: RecordItemBuffer,
         contentChars: CharArray,
-        contentOffset: Int = 0,
-        contentEnd: Int = contentChars.size
-    ): Int
+        recordOffset: Int,
+        recordLength: Int,
+        fieldCount: Int
+    )
 
 
-    fun endOfStream(
-        recordItemBuffer: RecordItemBuffer
+    fun parsePartial(
+        recordItemBuffer: RecordItemBuffer,
+        contentChars: CharArray,
+        recordOffset: Int,
+        recordLength: Int,
+        fieldCount: Int,
+        endPartial: Boolean
     )
 }

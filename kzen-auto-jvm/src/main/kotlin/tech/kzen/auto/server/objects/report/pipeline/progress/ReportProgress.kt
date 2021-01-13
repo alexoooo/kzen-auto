@@ -6,7 +6,6 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.model.TaskProgress
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
-import java.nio.file.Path
 import java.text.DecimalFormat
 import java.util.concurrent.TimeUnit
 import kotlin.math.log10
@@ -54,22 +53,22 @@ class ReportProgress(
     private var currentBytes = 0L
     private var previousProgressBytes = 0L
 
-    private var currentLocation: Path? = null
+    private var currentLocation: String? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun start(location: Path, rawSize: Long) {
+    fun start(locationKey: String, rawSize: Long) {
         check(currentLocation == null)
-        currentLocation = location
+        currentLocation = locationKey
 
         updateProgress(
-            location.fileName.toString(),
+            locationKey,
             "Started processing: ${readableFileSize(rawSize)}")
     }
 
 
-    fun next(location: Path, rawBytes: Long, extractedBytes: Long) {
-        check(location == currentLocation)
+    fun next(locationKey: String, rawBytes: Long, extractedBytes: Long) {
+        check(locationKey == currentLocation)
 
         currentBytes += rawBytes
 
@@ -91,13 +90,13 @@ class ReportProgress(
             innerStopwatch.reset().start()
 
             updateProgress(
-                location.fileName.toString(),
+                locationKey,
                 progressMessage)
         }
     }
 
 
-    fun end(location: Path) {
+    fun end(locationKey: String) {
         val finishedCount = currentBytes
         currentBytes = 0L
         previousProgressBytes = 0L
@@ -112,7 +111,7 @@ class ReportProgress(
         innerStopwatch.reset().start()
         outerStopwatch.reset().start()
 
-        updateProgress(location.fileName.toString(), message)
+        updateProgress(locationKey, message)
 
         currentLocation = null
     }

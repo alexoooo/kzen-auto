@@ -2,11 +2,10 @@ package tech.kzen.auto.server.objects.report.pipeline.input.model
 
 import java.nio.ByteBuffer
 import java.nio.CharBuffer
-import java.nio.file.Path
 
 
 class RecordDataBuffer(
-    var location: Path?,
+    var location: String?,
     var innerExtension: String?,
 
     val bytes: ByteArray,
@@ -33,12 +32,12 @@ class RecordDataBuffer(
 //        private const val defaultBufferSize = 10
 //        private const val defaultBufferSize = 11
 //        private const val defaultBufferSize = 8 * 1024
-        private const val defaultBufferSize = 64 * 1024
+        const val defaultBufferSize = 64 * 1024
 //        private const val defaultBufferSize = 128 * 1024
 
 
-        // maxUnicodeSize https://stijndewitt.com/2014/08/09/max-bytes-in-a-utf-8-char/
-        const val minBufferSize = 4
+        // maxUnicodeSize - 3 https://stijndewitt.com/2014/08/09/max-bytes-in-a-utf-8-char/
+        const val minBufferSize = 3
 
         fun ofBufferSize(bufferSize: Int = defaultBufferSize): RecordDataBuffer {
             check(bufferSize >= minBufferSize) {

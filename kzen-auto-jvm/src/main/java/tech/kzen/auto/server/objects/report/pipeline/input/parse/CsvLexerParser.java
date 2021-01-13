@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer;
 
 
-public class CsvLexerParser implements RecordLexerParser
+public class CsvLexerParser implements RecordParser
 {
     //-----------------------------------------------------------------------------------------------------------------
     private static final int stateStartOfField = 0;
@@ -84,8 +84,8 @@ public class CsvLexerParser implements RecordLexerParser
                     }
                     else {
                         recordItemBuffer.addToFieldAndCommitUnsafe(
-                                contentChars, segmentStart, i - segmentStart - 1);
-                        return i - fieldOffset;
+                                contentChars, segmentStart, i - segmentStart);
+                        return i - fieldOffset + 1;
                     }
                 }
             }
@@ -116,6 +116,8 @@ public class CsvLexerParser implements RecordLexerParser
             int fieldCount,
             boolean endPartial
     ) {
+        recordItemBuffer.growBy(recordLength, fieldCount);
+
         int end = recordOffset + recordLength;
         for (int i = recordOffset; i < end; i++) {
             partialState = nextPartial(contentChars[i], recordItemBuffer);
@@ -123,6 +125,10 @@ public class CsvLexerParser implements RecordLexerParser
 
         if (! endPartial) {
             recordItemBuffer.commitFieldUnsafe();
+        }
+
+        if (fieldCount > 1) {
+            recordItemBuffer.indicateNonEmpty();
         }
     }
 

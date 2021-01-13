@@ -2,12 +2,11 @@ package tech.kzen.auto.server.objects.report.pipeline.input
 
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordLexer
-import java.nio.file.Path
 
 
 class ReportInputLexer {
     //-----------------------------------------------------------------------------------------------------------------
-    private var location: Path? = null
+    private var location: String? = null
     private var lexer: RecordLexer? = null
 
 //    private var count = 0

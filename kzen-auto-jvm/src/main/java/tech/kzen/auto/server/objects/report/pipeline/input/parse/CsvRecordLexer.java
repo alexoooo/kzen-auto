@@ -46,9 +46,9 @@ public class CsvRecordLexer implements RecordLexer
             }
         }
 
-        int fieldCount = (partial ? 0 : 1);
-//        int fieldCount = 0;
-        int startOffset = 0;
+        char firstChar = contentChars[contentStart];
+        int fieldCount = (partial ? 0 : (firstChar == '\r' || firstChar == '\n' ? 0 : 1));
+        int startOffset = contentStart - contentOffset;
 
         for (int i = contentStart; i < contentEnd; i++) {
             char nextChar = contentChars[i];

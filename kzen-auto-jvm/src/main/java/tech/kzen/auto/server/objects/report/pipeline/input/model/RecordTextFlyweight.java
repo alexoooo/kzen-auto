@@ -266,7 +266,10 @@ public class RecordTextFlyweight
             return (double) toLong(0, len - 1);
         }
 
-        long wholePart = pointIndex == 0 ? 0 : toLong(0, pointIndex);
+        long wholePart =
+                pointIndex == 0  || pointIndex == 1 && (contents[offset] == '+' || contents[offset] == '-')
+                ? 0
+                : Math.abs(toLong(0, pointIndex));
 
         // https://math.stackexchange.com/questions/64042/what-are-the-numbers-before-and-after-the-decimal-point-referred-to-in-mathemati/438718#438718
         int fractionDigits = len - pointIndex - 1;
@@ -278,21 +281,22 @@ public class RecordTextFlyweight
             fractionLeadingZeroes++;
         }
 
-        int factionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes;
+        int fractionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes;
         long fractionAsLongWithoutLeadingZeroes =
-                factionDigitsWithoutLeadingZeroes == 0
+                fractionDigitsWithoutLeadingZeroes == 0
                 ? 0
-                : toLong(pointIndex + fractionLeadingZeroes + 1, factionDigitsWithoutLeadingZeroes);
+                : toLong(pointIndex + fractionLeadingZeroes + 1, fractionDigitsWithoutLeadingZeroes);
 
-        double factionalPartWithoutLeadingZeroes =
-                (double) fractionAsLongWithoutLeadingZeroes / decimalLongPowers[factionDigitsWithoutLeadingZeroes];
+        double fractionalPartWithoutLeadingZeroes =
+                (double) fractionAsLongWithoutLeadingZeroes / decimalLongPowers[fractionDigitsWithoutLeadingZeroes];
 
-        double factionalPart =
+        double fractionalPart =
                 fractionLeadingZeroes == 0
-                ? factionalPartWithoutLeadingZeroes
-                : factionalPartWithoutLeadingZeroes / decimalLongPowers[fractionLeadingZeroes];
+                ? fractionalPartWithoutLeadingZeroes
+                : fractionalPartWithoutLeadingZeroes / decimalLongPowers[fractionLeadingZeroes];
 
-        return wholePart + factionalPart;
+        double value = wholePart + fractionalPart;
+        return contents[offset] == '-' ? -value : value;
     }
 
 
@@ -302,7 +306,7 @@ public class RecordTextFlyweight
             return Double.NaN;
         }
 
-        char[]  contents = host.fieldContents;
+        char[] contents = host.fieldContents;
         int offset = valueOffset;
 
         int leadingZeroes = 0;
@@ -347,14 +351,14 @@ public class RecordTextFlyweight
         }
 
         long wholePart;
-        if (pointIndex == 0) {
+        if (pointIndex == 0 || pointIndex == 1 && (contents[offset] == '+' || contents[offset] == '-')) {
             wholePart = 0;
         }
         else if (pointIndex - leadingZeroes > maxLongDecimalLength) {
             return Double.NaN;
         }
         else {
-            wholePart = toLong(0, pointIndex);
+            wholePart = Math.abs(toLong(0, pointIndex));
         }
 
         int fractionDigits = len - pointIndex - 1;
@@ -366,28 +370,29 @@ public class RecordTextFlyweight
             fractionLeadingZeroes++;
         }
 
-        int factionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes;
+        int fractionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes;
         long fractionAsLongWithoutLeadingZeroes;
-        if (factionDigitsWithoutLeadingZeroes == 0) {
+        if (fractionDigitsWithoutLeadingZeroes == 0) {
             fractionAsLongWithoutLeadingZeroes = 0;
         }
-        else if (factionDigitsWithoutLeadingZeroes > maxLongDecimalLength) {
+        else if (fractionDigitsWithoutLeadingZeroes > maxLongDecimalLength) {
             return Double.NaN;
         }
         else {
             fractionAsLongWithoutLeadingZeroes = toLong(
-                    pointIndex + fractionLeadingZeroes + 1, factionDigitsWithoutLeadingZeroes);
+                    pointIndex + fractionLeadingZeroes + 1, fractionDigitsWithoutLeadingZeroes);
         }
 
-        double factionalPartWithoutLeadingZeroes =
-                (double) fractionAsLongWithoutLeadingZeroes / decimalLongPowers[factionDigitsWithoutLeadingZeroes];
+        double fractionalPartWithoutLeadingZeroes =
+                (double) fractionAsLongWithoutLeadingZeroes / decimalLongPowers[fractionDigitsWithoutLeadingZeroes];
 
-        double factionalPart =
+        double fractionalPart =
                 fractionLeadingZeroes == 0
-                ? factionalPartWithoutLeadingZeroes
-                : factionalPartWithoutLeadingZeroes / decimalLongPowers[fractionLeadingZeroes];
+                ? fractionalPartWithoutLeadingZeroes
+                : fractionalPartWithoutLeadingZeroes / decimalLongPowers[fractionLeadingZeroes];
 
-        return wholePart + factionalPart;
+        double value = wholePart + fractionalPart;
+        return contents[offset] == '-' ? -value : value;
     }
 
 

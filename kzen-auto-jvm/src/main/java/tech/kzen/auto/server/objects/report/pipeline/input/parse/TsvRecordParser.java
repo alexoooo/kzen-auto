@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer;
 
 
-public class TsvRecordParser implements RecordParser
+public class TsvRecordParser implements RecordParserOld
 {
     //-----------------------------------------------------------------------------------------------------------------
     public static final int delimiterInt = '\t';
