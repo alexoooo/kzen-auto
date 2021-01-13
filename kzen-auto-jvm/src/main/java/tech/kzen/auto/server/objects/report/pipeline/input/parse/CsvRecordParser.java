@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse;
 
+
 import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer;
 
@@ -7,7 +8,7 @@ import java.io.IOException;
 import java.io.Writer;
 
 
-public class CsvRecordParser implements RecordParserOld
+public class CsvRecordParser implements RecordParser
 {
     //-----------------------------------------------------------------------------------------------------------------
     private static final int stateStartOfField = 0;
@@ -16,10 +17,12 @@ public class CsvRecordParser implements RecordParserOld
     private static final int stateInUnquoted = 3;
     private static final int stateEndOfRecord = 4;
 
-    public static final int quotation = '"';
-    public static final int delimiter = ',';
-    public static final int carriageReturn = '\r';
-    public static final int lineFeed = '\n';
+    private static final char quotation = '"';
+    private static final char delimiter = ',';
+    private static final char carriageReturn = '\r';
+    private static final char lineFeed = '\n';
+
+    public static final int delimiterInt = ',';
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -67,146 +70,120 @@ public class CsvRecordParser implements RecordParserOld
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private int state = stateStartOfField;
+    private int partialState = stateStartOfField;
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Override
-    public int parseNext(
+    public void parseFull(
             @NotNull RecordItemBuffer recordItemBuffer,
             @NotNull char[] contentChars,
-            int contentOffset,
-            int contentEnd
+            int recordOffset,
+            int recordLength,
+            int fieldCount
     ) {
-        int recordLength = 0;
-        for (int i = contentOffset; i < contentEnd; i++) {
-            char nextChar = contentChars[i];
-            recordLength++;
+        recordItemBuffer.growTo(recordLength, fieldCount);
+        partialState = stateStartOfField;
 
-            if (state == stateInQuoted) {
-                int length = parseInQuoteUntilNextState(
-                        recordItemBuffer, contentChars, i, contentEnd, nextChar);
-                if (length == -1) {
-                    return -1;
-                }
-                i += length;
-                nextChar = contentChars[i];
-                recordLength += length;
-            }
-            else if (state == stateInUnquoted) {
-                int length = parseInUnquotedUntilNextState(
-                        recordItemBuffer, contentChars, i, contentEnd, nextChar);
-                if (length == -1) {
-                    return -1;
-                }
-                i += length;
-                nextChar = contentChars[i];
-                recordLength += length;
-            }
+        int endIndex = recordOffset + recordLength;
+        int fieldOffset = recordOffset;
 
-            var isEnd = parse(recordItemBuffer, nextChar);
-            if (isEnd) {
-                return recordLength;
+        for (int i = 0; i < fieldCount; i++) {
+            int length = parseField(recordItemBuffer, contentChars, fieldOffset, endIndex);
+
+            fieldOffset += length;
+            if (i != fieldCount - 1) {
+                // NB: comma
+                fieldOffset++;
             }
         }
-        return -1;
     }
 
 
-    private int parseInQuoteUntilNextState(
-            RecordItemBuffer recordLineBuffer,
-            char[] contentChars,
-            int start,
-            int contentEnd,
-            char startChar
+    private int parseField(
+            @NotNull RecordItemBuffer recordItemBuffer,
+            @NotNull char[] contentChars,
+            int fieldOffset,
+            int endIndex
     ) {
-        int length = 0;
-        boolean reachedNextState = false;
-        int i = start;
-        char nextChar = startChar;
-
-        while (true) {
-            if (nextChar == quotation) {
-                reachedNextState = true;
-                break;
-            }
-            i++;
-            if (i == contentEnd) {
-                break;
-            }
-            nextChar = contentChars[i];
-            length++;
+        if (fieldOffset == endIndex) {
+            recordItemBuffer.commitFieldUnsafe();
+            return 0;
         }
 
-        if (! reachedNextState) {
-            length++;
+        char first = contentChars[fieldOffset];
+        if (first == ',') {
+            recordItemBuffer.commitFieldUnsafe();
+            return 0;
         }
-
-        recordLineBuffer.addToField(contentChars, start, i - start);
-        return reachedNextState ? length : -1;
-    }
-
-
-    private int parseInUnquotedUntilNextState(
-            RecordItemBuffer recordLineBuffer,
-            char[] contentChars,
-            int start,
-            int contentEnd,
-            char startChar
-    ) {
-        int length = 0;
-        boolean reachedNextState = false;
-        int i = start;
-        int nextChar = startChar;
-
-        scan:
-        while (true) {
-            switch (nextChar) {
-                case quotation, delimiter, carriageReturn, lineFeed -> {
-                    reachedNextState = true;
-                    break scan;
-                }
-
-                default -> {
-                    i++;
-                    if (i == contentEnd) {
-                        break scan;
+        else if (first == '"') {
+            int segmentStart = fieldOffset + 1;
+            for (int i = fieldOffset + 1; i < endIndex; i++) {
+                char nextChar = contentChars[i];
+                if (nextChar == '"') {
+                    if (i == endIndex - 1) {
+                        recordItemBuffer.addToFieldAndCommitUnsafe(
+                                contentChars, segmentStart, i - segmentStart - 1);
+                        return i - fieldOffset;
                     }
-                    nextChar = contentChars[i];
-                    length++;
+                    else if (contentChars[i + 1] == '"') {
+                        recordItemBuffer.addToFieldUnsafe(contentChars, segmentStart, i - segmentStart);
+                        i++; // skip quoted quote
+                        segmentStart = i;
+                    }
+                    else {
+                        recordItemBuffer.addToFieldAndCommitUnsafe(
+                                contentChars, segmentStart, i - segmentStart);
+                        return i - fieldOffset + 1;
+                    }
                 }
             }
+            throw new IllegalStateException();
         }
-
-        if (! reachedNextState) {
-            length++;
+        else {
+            for (int i = fieldOffset; i < endIndex; i++) {
+                char nextChar = contentChars[i];
+                if (nextChar == ',') {
+                    int length = i - fieldOffset;
+                    recordItemBuffer.addToFieldAndCommitUnsafe(contentChars, fieldOffset, length);
+                    return length;
+                }
+            }
+            recordItemBuffer.addToFieldAndCommitUnsafe(contentChars, fieldOffset, endIndex - fieldOffset);
+            return endIndex - fieldOffset;
         }
-
-        recordLineBuffer.addToField(contentChars, start, length);
-        return reachedNextState ? length : -1;
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Override
-    public void endOfStream(@NotNull RecordItemBuffer recordItemBuffer) {
-        parse(recordItemBuffer, (char) lineFeed);
+    public void parsePartial(
+            @NotNull RecordItemBuffer recordItemBuffer,
+            @NotNull char[] contentChars,
+            int recordOffset,
+            int recordLength,
+            int fieldCount,
+            boolean endPartial
+    ) {
+        recordItemBuffer.growBy(recordLength, fieldCount);
+
+        int end = recordOffset + recordLength;
+        for (int i = recordOffset; i < end; i++) {
+            partialState = nextPartial(contentChars[i], recordItemBuffer);
+        }
+
+        if (! endPartial) {
+            recordItemBuffer.commitFieldUnsafe();
+        }
+
+        if (fieldCount > 1) {
+            recordItemBuffer.indicateNonEmpty();
+        }
     }
 
 
-    private boolean parse(@NotNull RecordItemBuffer recordLineBuffer, char nextChar) {
-        int nextState = handleState(nextChar, recordLineBuffer);
-
-        var previousState = state;
-        state = nextState;
-
-        return state == stateEndOfRecord &&
-                previousState != stateEndOfRecord;
-    }
-
-
-    private int handleState(char nextChar, @NotNull RecordItemBuffer recordLineBuffer) {
-        return switch (state) {
+    private int nextPartial(char nextChar, @NotNull RecordItemBuffer recordLineBuffer) {
+        return switch (partialState) {
             case stateStartOfField ->
                     onStartOfField(nextChar, recordLineBuffer);
 
@@ -223,59 +200,59 @@ public class CsvRecordParser implements RecordParserOld
                     onQuotedQuote(nextChar, recordLineBuffer);
 
             default ->
-                    throw new IllegalStateException("Unknown state: " + state);
+                    throw new IllegalStateException("Unknown state: " + partialState);
         };
     }
 
 
     private int onStartOfField(char nextChar, @NotNull RecordItemBuffer recordLineBuffer) {
-        switch ((int) nextChar) {
+        switch (nextChar) {
             case quotation:
                 return stateInQuoted;
 
             case delimiter:
-                recordLineBuffer.commitField();
+                recordLineBuffer.commitFieldUnsafe();
                 return stateStartOfField;
 
             case carriageReturn, lineFeed:
-                recordLineBuffer.commitField();
+                recordLineBuffer.commitFieldUnsafe();
                 return stateEndOfRecord;
 
             default:
-                recordLineBuffer.addToField(nextChar);
+                recordLineBuffer.addToFieldUnsafe(nextChar);
                 return stateInUnquoted;
         }
     }
 
 
     private int onEndOfRecord(char nextChar, @NotNull RecordItemBuffer recordLineBuffer) {
-        switch ((int) nextChar) {
+        switch (nextChar) {
             case quotation:
                 return stateInQuoted;
 
             case delimiter:
-                recordLineBuffer.commitField();
+                recordLineBuffer.commitFieldUnsafe();
                 return stateStartOfField;
 
             case carriageReturn, lineFeed:
                 return stateEndOfRecord;
 
             default:
-                recordLineBuffer.addToField(nextChar);
+                recordLineBuffer.addToFieldUnsafe(nextChar);
                 return stateInUnquoted;
         }
     }
 
 
     private int onUnquoted(char nextChar, @NotNull RecordItemBuffer recordLineBuffer) {
-        switch ((int) nextChar) {
+        switch (nextChar) {
             case delimiter -> {
-                recordLineBuffer.commitField();
+                recordLineBuffer.commitFieldUnsafe();
                 return stateStartOfField;
             }
 
             case carriageReturn, lineFeed -> {
-                recordLineBuffer.commitField();
+                recordLineBuffer.commitFieldUnsafe();
                 return stateEndOfRecord;
             }
 
@@ -283,7 +260,7 @@ public class CsvRecordParser implements RecordParserOld
                     throw new IllegalStateException("Unexpected: '" + nextChar + "' - " + recordLineBuffer.toCsv());
 
             default -> {
-                recordLineBuffer.addToField(nextChar);
+                recordLineBuffer.addToFieldUnsafe(nextChar);
                 return stateInUnquoted;
             }
         }
@@ -296,25 +273,25 @@ public class CsvRecordParser implements RecordParserOld
             return stateInQuotedQuote;
         }
 
-        recordLineBuffer.addToField(nextChar);
+        recordLineBuffer.addToFieldUnsafe(nextChar);
         return stateInQuoted;
     }
 
 
     private int onQuotedQuote(char nextChar, @NotNull RecordItemBuffer recordLineBuffer) {
-        switch ((int) nextChar) {
+        switch (nextChar) {
             case quotation -> {
-                recordLineBuffer.addToField(nextChar);
+                recordLineBuffer.addToFieldUnsafe(nextChar);
                 return stateInQuoted;
             }
 
             case delimiter -> {
-                recordLineBuffer.commitField();
+                recordLineBuffer.commitFieldUnsafe();
                 return stateStartOfField;
             }
 
             case carriageReturn, lineFeed -> {
-                recordLineBuffer.commitField();
+                recordLineBuffer.commitFieldUnsafe();
                 return stateEndOfRecord;
             }
 

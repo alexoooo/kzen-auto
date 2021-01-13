@@ -17,7 +17,9 @@ data class NominalValueSummary(
         fun fromCsv(csv: List<List<String>>): NominalValueSummary {
             val afterHeader = csv.subList(1, csv.size)
             val histogram = afterHeader
-                .map { it[0] to it[1].toLong() }
+                .map {
+                    it[0] to it[1].toLong()
+                }
                 .toMap()
             return NominalValueSummary(histogram)
         }

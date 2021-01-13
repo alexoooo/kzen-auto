@@ -12,10 +12,10 @@ interface RecordParser {
         fun forExtension(extension: String): RecordParser {
             return when (extension) {
                 csvExtension ->
-                    CsvLexerParser()
+                    CsvRecordParser()
 
                 tsvExtension ->
-                    TsvLexerParser()
+                    TsvRecordParser()
 
                 else ->
                     error("Unknown: $extension")

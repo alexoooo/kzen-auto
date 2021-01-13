@@ -115,7 +115,7 @@ public class RecordItemBuffer
 
         for (int i = 0; i < fieldCount; i++) {
             if (i != 0) {
-                out.write(CsvRecordParser.delimiter);
+                out.write(CsvRecordParser.delimiterInt);
             }
 
             writeCsvField(i, out);

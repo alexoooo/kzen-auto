@@ -172,6 +172,46 @@ class CsvLineParserTest {
 
 
     @Test
+    fun literalItemBufferEmptySuffix() {
+        val csvLines = "400,"
+        val literal = RecordItemBuffer.of("400", "")
+        val parsed = read(csvLines)[0]
+        assertEquals(listOf("400", ""), literal.toList())
+        assertEquals(csvLines, literal.toCsv())
+        assertEquals(listOf("400", ""), parsed.toList())
+        assertEquals(csvLines, parsed.toCsv())
+    }
+
+
+    @Test
+    fun literalItemBufferEmptyPrefix() {
+        val csvLines = ",400"
+        val literal = RecordItemBuffer.of("", "400")
+        val parsed = read(csvLines)[0]
+        assertEquals(listOf("", "400"), literal.toList())
+        assertEquals(csvLines, literal.toCsv())
+        assertEquals(listOf("", "400"), parsed.toList())
+        assertEquals(csvLines, parsed.toCsv())
+    }
+
+
+    @Test
+    fun emptyPrefixLines() {
+        val csvLines = "a,b\n,400\nx,z"
+        val parsed = read(csvLines)[1]
+        assertEquals(listOf("", "400"), parsed.toList())
+    }
+
+
+    @Test
+    fun emptyPrefixWindowsLines() {
+        val csvLines = "a,b\r\n,400\r\nx,z"
+        val parsed = read(csvLines)[1]
+        assertEquals(listOf("", "400"), parsed.toList())
+    }
+
+
+    @Test
     fun emptyQuotedValue() {
         val csvLines = "\"\""
         val parsed = read(csvLines)

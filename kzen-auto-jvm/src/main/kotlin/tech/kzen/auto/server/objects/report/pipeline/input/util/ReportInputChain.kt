@@ -5,10 +5,12 @@ import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputDecoder
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputLexer
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputParser
 import tech.kzen.auto.server.objects.report.pipeline.input.ReportInputReader
+import tech.kzen.auto.server.objects.report.pipeline.input.connect.FileFlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.LiteralFlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import java.nio.file.Path
 
 
 class ReportInputChain(
@@ -36,13 +38,36 @@ class ReportInputChain(
         }
 
 
-        fun allCsv(text: String, bufferSize: Int): List<RecordItemBuffer> {
+        fun allCsv(text: String, bufferSize: Int = RecordDataBuffer.defaultBufferSize): List<RecordItemBuffer> {
             return all(LiteralFlatData.ofCsv(text), bufferSize)
         }
 
 
-        fun allTsv(text: String, bufferSize: Int): List<RecordItemBuffer> {
+        fun allTsv(text: String, bufferSize: Int = RecordDataBuffer.defaultBufferSize): List<RecordItemBuffer> {
             return all(LiteralFlatData.ofTsv(text), bufferSize)
+        }
+
+
+        fun head(file: Path, numberOfRecords: Int = 1): List<RecordItemBuffer> {
+            val instance = ReportInputChain(FileFlatData(file))
+            val records = mutableListOf<RecordItemBuffer>()
+
+            while (true) {
+                val hasNext = instance.poll {
+                    records.add(it.prototype())
+                }
+                if (! hasNext || records.size >= numberOfRecords) {
+                    break
+                }
+            }
+
+            return when {
+                records.size <= numberOfRecords ->
+                    records
+
+                else ->
+                    records.subList(0, numberOfRecords)
+            }
         }
     }
 
@@ -58,6 +83,9 @@ class ReportInputChain(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    /**
+     * @return true if has next
+     */
     fun poll(visitor: (RecordItemBuffer) -> Unit): Boolean {
         val remaining = reader.poll(dataBuffer)
 

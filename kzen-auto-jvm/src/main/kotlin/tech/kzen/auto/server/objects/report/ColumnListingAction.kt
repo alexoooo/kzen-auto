@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.ReportParserHelper
+import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -37,14 +37,15 @@ class ColumnListingAction(
                 Files.readString(columnsFile, Charsets.UTF_8)
             }
 
-            return ReportParserHelper
-                .csvRecords(text)
+            return ReportInputChain
+                .allCsv(text)
                 .drop(1)
                 .map { it.getString(1) }
         }
 
 //        val columnNames = ReportStreamReader.readHeaderLine(inputPath)
-        val columnNames = ReportParserHelper.readHeaderLine(inputPath)
+//        val columnNames = ReportParserHelper.readHeaderLine(inputPath)
+        val columnNames = ReportInputChain.head(inputPath).single().toList()
 
         val csvBody = columnNames
             .withIndex()

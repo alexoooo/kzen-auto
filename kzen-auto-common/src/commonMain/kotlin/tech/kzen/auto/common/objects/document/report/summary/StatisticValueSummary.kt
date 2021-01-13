@@ -61,6 +61,8 @@ data class StatisticValueSummary(
 
         builder.add(listOf("Statistic", "Value"))
         builder.add(listOf(countKey, count.toString()))
+
+        // TODO: figure out decimal formatting ala ColumnValueUtils.formatDecimal
         builder.add(listOf(sumKey, sum.toString()))
         builder.add(listOf(minKey, min.toString()))
         builder.add(listOf(maxKey, max.toString()))

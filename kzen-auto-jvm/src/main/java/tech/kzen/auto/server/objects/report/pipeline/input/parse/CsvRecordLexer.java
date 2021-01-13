@@ -56,6 +56,9 @@ public class CsvRecordLexer implements RecordLexer
             int nextState = nextState(nextChar);
 
             if (nextState == stateStartOfField) {
+                if (fieldCount == 0 && contentChars[i] == ',') {
+                    fieldCount++;
+                }
                 fieldCount++;
                 partial = true;
             }

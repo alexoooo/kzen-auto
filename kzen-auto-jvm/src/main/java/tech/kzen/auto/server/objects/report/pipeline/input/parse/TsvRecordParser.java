@@ -1,84 +1,84 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse;
 
-
 import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer;
 
 
-public class TsvRecordParser implements RecordParserOld
+public class TsvRecordParser implements RecordParser
 {
     //-----------------------------------------------------------------------------------------------------------------
     public static final int delimiterInt = '\t';
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private boolean stateAtEnd = false;
+    @Override
+    public void parseFull(
+            @NotNull RecordItemBuffer recordItemBuffer,
+            @NotNull char[] contentChars,
+            int recordOffset,
+            int recordLength,
+            int fieldCount
+    ) {
+        recordItemBuffer.growTo(recordLength, fieldCount);
+
+        char[] fieldContents = recordItemBuffer.fieldContentsUnsafe();
+        int[] fieldEnds = recordItemBuffer.fieldEndsUnsafe();
+
+        int nextFieldCount = recordItemBuffer.fieldCount();
+        int nextFieldContentLength = recordItemBuffer.fieldContentLength();
+
+        int endIndex = recordOffset + recordLength;
+        for (int i = recordOffset; i < endIndex; i++) {
+            char nextChar = contentChars[i];
+
+            if (nextChar == '\t') {
+                fieldEnds[nextFieldCount++] = nextFieldContentLength;
+            }
+            else {
+                fieldContents[nextFieldContentLength++] = nextChar;
+            }
+        }
+
+        fieldEnds[nextFieldCount++] = nextFieldContentLength;
+        recordItemBuffer.setCountAndLengthUnsafe(nextFieldCount, nextFieldContentLength);
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Override
-    public int parseNext(
+    public void parsePartial(
             @NotNull RecordItemBuffer recordItemBuffer,
             @NotNull char[] contentChars,
-            int contentOffset,
-            int contentEnd
+            int recordOffset,
+            int recordLength,
+            int fieldCount,
+            boolean endPartial
     ) {
-        stateAtEnd = false;
+        recordItemBuffer.growBy(recordLength, fieldCount);
 
-        int fieldChars = 0;
-        for (int i = contentOffset; i < contentEnd; i++) {
+        int fieldLength = 0;
+        int endIndex = recordOffset + recordLength;
+        for (int i = recordOffset; i < endIndex; i++) {
             char nextChar = contentChars[i];
 
-            if (nextChar > 13) { // NB: max of (delimiter, lineFeed, carriageReturn)
-                fieldChars++;
-            }
-            else if (nextChar == 9) { // delimiter
-                recordItemBuffer.addToFieldAndCommit(contentChars, i - fieldChars, fieldChars);
-                fieldChars = 0;
+            if (nextChar == '\t') {
+                recordItemBuffer.addToFieldAndCommitUnsafe(contentChars, i - fieldLength, fieldLength);
+                fieldLength = 0;
             }
             else {
-                switch (nextChar) {
-                    // lineFeed
-                    case 10 -> {
-                        if (fieldChars > 0 || ! recordItemBuffer.isEmpty()) {
-                            recordItemBuffer.addToFieldAndCommit(contentChars, i - fieldChars, fieldChars);
-                        }
-                        stateAtEnd = true;
-                        return i - contentOffset + 1;
-                    }
-
-                    // carriageReturn
-                    case 13 -> {
-                        if (fieldChars > 0 || ! recordItemBuffer.isEmpty()) {
-                            recordItemBuffer.addToFieldAndCommit(contentChars, i - fieldChars, fieldChars);
-                        }
-                        stateAtEnd = true;
-                        int endChars =
-                                i + 1 < contentEnd &&
-                                contentChars[i + 1] == 10 /* lineFeed */ ? 2 : 1;
-                        return i - contentOffset + endChars;
-                    }
-
-                    default ->
-                        fieldChars++;
-                }
+                fieldLength++;
             }
         }
 
-        if (fieldChars > 0) {
-            recordItemBuffer.addToField(contentChars, contentEnd - fieldChars, fieldChars);
+        if (endPartial) {
+            recordItemBuffer.addToFieldUnsafe(contentChars, endIndex - fieldLength, fieldLength);
+        }
+        else {
+            recordItemBuffer.addToFieldAndCommitUnsafe(contentChars, endIndex - fieldLength, fieldLength);
         }
 
-        return -1;
-    }
-
-
-    @Override
-    public void endOfStream(
-            @NotNull RecordItemBuffer recordItemBuffer
-    ) {
-        if (! stateAtEnd) {
-            recordItemBuffer.commitField();
+        if (fieldCount > 1) {
+            recordItemBuffer.indicateNonEmpty();
         }
     }
 }

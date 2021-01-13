@@ -9,6 +9,10 @@ interface FlatData {
     fun outerExtension(): String
     fun innerExtension(): String
 
+    /**
+     * @return estimate number of bytes remaining, or -1 if unknown
+     */
     fun size(): Long
+
     fun open(): InputStream
 }
