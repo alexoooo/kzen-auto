@@ -186,12 +186,15 @@ class ScriptController:
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val clientState = state.clientState
-                ?: return
+            ?: return
 
         val documentPath = clientState.navigationRoute.documentPath
-                ?: return
+            ?: return
 
-        if (! ScriptDocument.isScript(clientState.graphStructure().graphNotation.documents[documentPath]!!)) {
+        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
+            ?: return
+
+        if (! ScriptDocument.isScript(documentNotation)) {
             return
         }
 

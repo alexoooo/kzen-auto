@@ -60,6 +60,7 @@ ReferenceAction:
   class: tech.kzen.auto.common.objects.document.script.action.ReferenceAction
   icon: Input
   title: "Previous value"
+  value: ""
   meta:
     value:
       is: ObjectLocation

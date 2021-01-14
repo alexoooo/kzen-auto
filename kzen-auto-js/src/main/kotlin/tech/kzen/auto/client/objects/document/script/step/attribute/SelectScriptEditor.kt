@@ -68,13 +68,17 @@ class SelectScriptEditor(
 
         val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 
-        if (attributeNotation is ScalarAttributeNotation) {
-            val reference = ObjectReference.parse(attributeNotation.value)
-            val objectLocation = props.clientState
-                .graphStructure().graphNotation.coalesce.locate(reference, objectReferenceHost)
+        value =
+            if (attributeNotation is ScalarAttributeNotation && attributeNotation.value.isNotEmpty()) {
+                val reference = ObjectReference.parse(attributeNotation.value)
+                val objectLocation = props.clientState
+                    .graphStructure().graphNotation.coalesce.locateOptional(reference, objectReferenceHost)
 
-            value = objectLocation
-        }
+                objectLocation
+            }
+            else {
+                null
+            }
 
         renaming = false
     }

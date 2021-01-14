@@ -20,6 +20,7 @@ LogicalNot:
   class: tech.kzen.auto.server.objects.script.logic.LogicalNot
   icon: Flip
   title: "Logical NOT"
+  negate: ""
   meta:
     negate:
       is: ObjectLocation
@@ -33,6 +34,8 @@ LogicalAnd:
   class: tech.kzen.auto.server.objects.script.logic.LogicalAnd
   icon: AddBox
   title: "Logical AND"
+  condition: ""
+  and: ""
   meta:
     condition:
       is: ObjectLocation
@@ -50,6 +53,7 @@ DivisibleCheck:
   class: tech.kzen.auto.server.objects.script.logic.DivisibleCheck
   icon: FilterList
   title: "Is divisible by"
+  number: ""
   divisor: 1
   meta:
     number:
@@ -70,6 +74,7 @@ ConditionalExpression:
   title: "If"
   description: "Do one thing or another based on condition"
   display: ConditionalStepDisplay
+  condition: ""
   then: []
   else: []
   meta:
@@ -111,6 +116,7 @@ ListMapping:
   title: "Mapping"
   description: "Transform each item in a list"
   display: MappingStepDisplay
+  items: ""
   steps: []
   meta:
     selfLocation: SelfLocation
@@ -134,6 +140,7 @@ InvokeCall:
   icon: TransitEnterexit
   title: "Invoke"
   description: "Run a sub-script"
+  script: ""
   meta:
     selfLocation: SelfLocation
     script:
@@ -183,6 +190,7 @@ DisplayValue:
   class: tech.kzen.auto.server.objects.script.DisplayValue
   icon: Print
   title: "Display"
+  text: ""
   meta:
     text:
       is: ObjectLocation
