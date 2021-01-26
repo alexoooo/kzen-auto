@@ -100,7 +100,7 @@ class ReportRun(
 
     private fun RBuilder.renderInner() {
         val readyToRun =
-            ! props.reportState.initiating &&
+            ! props.reportState.isInitiating() &&
             ! props.reportState.isLoadingError() &&
             (props.reportState.columnListing?.isNotEmpty() ?: false)
 
@@ -140,7 +140,7 @@ class ReportRun(
 
                 title =
                     when {
-                        props.reportState.initiating ->
+                        props.reportState.isInitiating() ->
                             "Loading"
 
                         props.reportState.isLoadingError() || ! readyToRun ->
@@ -162,7 +162,7 @@ class ReportRun(
             }
 
             when {
-                props.reportState.initiating -> {
+                props.reportState.isInitiating() -> {
                     child(MaterialCircularProgress::class) {}
                 }
 

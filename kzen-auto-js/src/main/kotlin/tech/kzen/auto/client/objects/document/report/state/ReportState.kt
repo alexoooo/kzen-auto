@@ -2,11 +2,9 @@ package tech.kzen.auto.client.objects.document.report.state
 
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.FileInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
-import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
-import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
-import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
-import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
+import tech.kzen.auto.common.objects.document.report.spec.*
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.common.paradigm.task.model.TaskProgress
@@ -20,12 +18,12 @@ data class ReportState(
     val clientState: SessionState,
     val mainLocation: ObjectLocation,
 
-    val initiating: Boolean = false,
-
-    val fileListingLoaded: Boolean = false,
-    val fileListingLoading: Boolean = false,
-    val fileListing: List<String>? = null,
-    val fileListingError: String? = null,
+    val inputLoaded: Boolean = false,
+    val inputLoading: Boolean = false,
+    val inputSelected: List<FileInfo>? = null,
+    val inputBrowser: List<FileInfo>? = null,
+    val inputBrowseDir: String? = null,
+    val inputError: String? = null,
 
     val columnListingLoaded: Boolean = false,
     val columnListingLoading: Boolean = false,
@@ -46,8 +44,6 @@ data class ReportState(
     val outputLoading: Boolean = false,
     val outputInfo: OutputInfo? = null,
     val outputError: String? = null,
-//    val outputPreviewStart: Long = 0,
-//    val outputPreviewCount: Int = OutputPreview.defaultRowCount,
 
     val taskLoaded: Boolean = false,
     val taskLoading: Boolean = false,
@@ -106,6 +102,12 @@ data class ReportState(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun isInitiating(): Boolean {
+        return false
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun isTaskRunning(): Boolean {
 //        return indexTaskRunning || filterTaskRunning
         return taskRunning
@@ -119,7 +121,7 @@ data class ReportState(
 
     fun isLoadingError(): Boolean {
         return columnListingError != null ||
-                fileListingError != null ||
+                inputError != null ||
                 taskLoadError != null ||
                 tableSummaryError != null
     }
@@ -127,7 +129,7 @@ data class ReportState(
 
     fun nextErrorMessage(): String? {
         return columnListingError
-            ?: fileListingError
+            ?: inputError
             ?: taskLoadError
             ?: taskError
             ?: tableSummaryError
@@ -140,6 +142,12 @@ data class ReportState(
             .graphDefinitionAttempt
             .successful
             .objectDefinitions[mainLocation]!!
+    }
+
+
+    fun inputSpec(): InputSpec {
+        val formulaDefinition = reportDefinition().attributeDefinitions[ReportConventions.inputAttributeName]!!
+        return (formulaDefinition as ValueAttributeDefinition).value as InputSpec
     }
 
 

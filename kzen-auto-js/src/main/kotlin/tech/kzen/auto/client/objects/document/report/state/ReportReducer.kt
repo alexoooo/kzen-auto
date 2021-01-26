@@ -14,8 +14,9 @@ object ReportReducer {
     ): ReportState {
         return when (action) {
             //--------------------------------------------------
-            is InitiateReportAction ->
-                reduceInitiate(state, action)
+            is InitiateReport ->
+//                reduceInitiate(state, action)
+                state
 
             is ReportRefreshAction -> state
 
@@ -56,18 +57,19 @@ object ReportReducer {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun reduceInitiate(
-        state: ReportState,
-        action: InitiateReportAction
-    ): ReportState {
-        return when (action) {
-            InitiateReportStart -> state.copy(
-                initiating = true)
-
-            InitiateReportDone -> state.copy(
-                initiating = false)
-        }
-    }
+//    private fun reduceInitiate(
+//        state: ReportState,
+//        action: InitiateReport
+//    ): ReportState {
+////        console.log("#@##!#! reduceInitiate - ${action::class.simpleName}")
+//        return when (action) {
+//            InitiateReport -> state.copy(
+//                initiating = true)
+//
+////            InitiateReportDone -> state.copy(
+////                initiating = false)
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -76,24 +78,33 @@ object ReportReducer {
         action: InputReportAction
     ): ReportState {
         return when (action) {
-            InputsUpdatedRequest -> state
+            InputsUpdatedRequest,
+            ListInputsBrowserRequest,
+            ListInputsSelectedRequest,
+            is ListInputsBrowserNavigate -> state.copy(
+                inputLoading = true,
+                inputError = null)
 
-            ListInputsRequest -> state.copy(
-                fileListingLoading = true,
-                fileListing = null,
-                fileListingError = null)
+            is ListInputsSelectedResult -> state.copy(
+                inputSelected = action.inputInfo.files,
+                inputBrowseDir = action.inputInfo.browseDir,
+                inputLoaded = true,
+                inputLoading = false,
+                columnListing = null,
+                columnListingError = null)
 
-            is ListInputsResult -> state.copy(
-                fileListing = action.fileListing,
-                fileListingLoaded = true,
-                fileListingLoading = false,
+            is ListInputsBrowserResult -> state.copy(
+                inputBrowser = action.inputInfo.files,
+                inputBrowseDir = action.inputInfo.browseDir,
+                inputLoaded = true,
+                inputLoading = false,
                 columnListing = null,
                 columnListingError = null)
 
             is ListInputsError -> state.copy(
-                fileListingError = action.message,
-                fileListingLoaded = true,
-                fileListingLoading = false)
+                inputError = action.message,
+                inputLoaded = true,
+                inputLoading = false)
         }
     }
 

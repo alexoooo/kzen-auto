@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.report.state
 
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.InputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.*
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
@@ -30,11 +31,11 @@ object ReportEffect {
     ): ReportAction? {
 //        console.log("ReportEffect action: ", action)
 
-        if (action == InitiateReportStart ||
+        if (action == InitiateReport ||
                 action == InputsUpdatedRequest
         ) {
             return CompoundReportAction(
-                ListInputsRequest,
+                ListInputsSelectedRequest,
                 OutputLookupRequest)
         }
 
@@ -43,11 +44,17 @@ object ReportEffect {
                 lookupOutput(state)
 
 
-            ListInputsRequest ->
-                loadFileListing(state)
+            ListInputsSelectedRequest ->
+                loadInputInfo(state)
 
-            is ListInputsResponse ->
-                ListColumnsRequest
+            ListInputsBrowserRequest ->
+                loadBrowserFiles(state)
+
+            is ListInputsBrowserNavigate ->
+                navigateBrowserFiles(state, action.newDirectory)
+
+//            is ListInputsResponse ->
+//                ListColumnsRequest
 
 
             ListColumnsRequest ->
@@ -164,19 +171,20 @@ object ReportEffect {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun loadFileListing(
+    private suspend fun loadInputInfo(
         state: ReportState
     ): ReportAction {
         val result = ClientContext.restClient.performDetached(
             state.mainLocation,
-            ReportConventions.actionParameter to ReportConventions.actionListFiles)
+            ReportConventions.actionParameter to ReportConventions.actionInputInfo)
 
         return when (result) {
             is ExecutionSuccess -> {
                 @Suppress("UNCHECKED_CAST")
-                val resultValue = result.value.get() as List<String>
+                val resultValue = result.value.get() as Map<String, Any>
 
-                ListInputsResult(resultValue)
+                ListInputsSelectedResult(
+                    InputInfo.fromCollection(resultValue))
             }
 
             is ExecutionFailure -> {
@@ -186,11 +194,55 @@ object ReportEffect {
     }
 
 
+    private suspend fun loadBrowserFiles(
+        state: ReportState
+    ): ReportAction {
+        val result = ClientContext.restClient.performDetached(
+            state.mainLocation,
+            ReportConventions.actionParameter to ReportConventions.actionBrowseFiles)
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val resultValue = result.value.get() as Map<String, Any>
+
+                ListInputsBrowserResult(
+                    InputInfo.fromCollection(resultValue))
+            }
+
+            is ExecutionFailure -> {
+                ListInputsError(result.errorMessage)
+            }
+        }
+    }
+
+
+    private suspend fun navigateBrowserFiles(
+        state: ReportState,
+        newDirectory: String
+    ): ReportAction {
+        val command = InputSpec.browseCommand(state.mainLocation, newDirectory)
+
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        return when (result) {
+            is MirroredGraphSuccess -> {
+                ListInputsBrowserRequest
+            }
+
+            is MirroredGraphError ->
+                ListInputsError(result.error.message ?: "error")
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun loadColumnListing(
         state: ReportState
     ): ReportAction? {
-        if (state.fileListing.isNullOrEmpty()) {
+        if (state.inputSelected == null ||
+                state.inputSelected.isEmpty()) {
             return null
         }
 
@@ -420,8 +472,8 @@ object ReportEffect {
     ): ReportAction {
         val command = FormulaSpec.addCommand(state.mainLocation, columnName)
 
-        val result = ClientContext.mirroredGraphStore
-            .apply(command)
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = ClientContext.mirroredGraphStore.apply(command)
 
         return when (result) {
             is MirroredGraphError ->
@@ -440,8 +492,8 @@ object ReportEffect {
     ): ReportAction {
         val command = FormulaSpec.removeCommand(state.mainLocation, columnName)
 
-        val result = ClientContext.mirroredGraphStore
-            .apply(command)
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = ClientContext.mirroredGraphStore.apply(command)
 
         return when (result) {
             is MirroredGraphError ->
@@ -478,8 +530,8 @@ object ReportEffect {
     ): ReportAction {
         val command = FilterSpec.addCommand(state.mainLocation, columnName)
 
-        val result = ClientContext.mirroredGraphStore
-            .apply(command)
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = ClientContext.mirroredGraphStore.apply(command)
 
         return when (result) {
             is MirroredGraphError ->
@@ -498,8 +550,8 @@ object ReportEffect {
     ): ReportAction {
         val command = FilterSpec.removeCommand(state.mainLocation, columnName)
 
-        val result = ClientContext.mirroredGraphStore
-            .apply(command)
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = ClientContext.mirroredGraphStore.apply(command)
 
         return when (result) {
             is MirroredGraphError ->

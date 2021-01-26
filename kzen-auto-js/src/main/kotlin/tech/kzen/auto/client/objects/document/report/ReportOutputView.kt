@@ -21,6 +21,7 @@ import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
+import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
 
@@ -64,13 +65,6 @@ class ReportOutputView(
 
 //        console.log("^^^^ abbreviating: $value")
         return value.substring(0, 47) + "..."
-    }
-
-
-    private fun formatRow(rowNumber: Long): String {
-        return rowNumber
-            .toString()
-            .replace(Regex("\\B(?=(\\d{3})+(?!\\d))"), ",")
     }
 
 
@@ -556,7 +550,7 @@ class ReportOutputView(
                         display = Display.inlineBlock
                         marginLeft = 1.em
                     }
-                    +"Total rows: ${formatRow(outputInfo.rowCount)}"
+                    +"Total rows: ${FormatUtils.decimalSeparator(outputInfo.rowCount)}"
                 }
             }
         }
@@ -632,7 +626,7 @@ class ReportOutputView(
                                     boxShadow(Color.lightGray, 2.px, 2.px, 2.px, 0.px)
                                 }
                                 val rowNumber = row.index + outputPreview.startRow.coerceAtLeast(0)
-                                val rowFormat = formatRow(rowNumber + 1)
+                                val rowFormat = FormatUtils.decimalSeparator(rowNumber + 1)
                                 +rowFormat
                             }
 

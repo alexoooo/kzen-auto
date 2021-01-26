@@ -124,7 +124,7 @@ class PivotRowList(
                     isDisabled =
                         props.reportState.pivotLoading ||
                         props.reportState.taskRunning ||
-                        props.reportState.initiating
+                        props.reportState.isInitiating()
                 }
             }
         }

@@ -8,6 +8,7 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.StageController
 import tech.kzen.auto.client.objects.document.report.filter.ReportFilterList
 import tech.kzen.auto.client.objects.document.report.formula.ReportFormulaList
+import tech.kzen.auto.client.objects.document.report.input.ReportInputView
 import tech.kzen.auto.client.objects.document.report.pivot.ReportPivot
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.objects.document.report.state.ReportStore
@@ -84,23 +85,24 @@ class ReportController(
         val processState = state.reportState
             ?: return
 
-        renderInitialLoading(processState)
+        renderHeader(processState)
 
         styledDiv {
             css {
                 padding(3.em, 3.em, 7.em, 3.em)
+//                padding(0.em, 0.em, 7.em, 0.em)
             }
 
-            if (processState.nextErrorMessage() != null) {
-                styledDiv {
-                    css {
-                        margin(1.em)
-                        color =  Color.crimson
-                        fontWeight = FontWeight.bold
-                    }
-                    +"Error: ${processState.nextErrorMessage()}"
-                }
-            }
+//            if (processState.nextErrorMessage() != null) {
+//                styledDiv {
+//                    css {
+//                        margin(1.em)
+//                        color =  Color.crimson
+//                        fontWeight = FontWeight.bold
+//                    }
+//                    +"Error: ${processState.nextErrorMessage()}"
+//                }
+//            }
 
             renderInput(processState)
             renderFormulas(processState)
@@ -114,8 +116,11 @@ class ReportController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderInitialLoading(reportState: ReportState) {
-        if (! reportState.initiating) {
+    private fun RBuilder.renderHeader(reportState: ReportState) {
+        val isInitiating = reportState.isInitiating()
+        val errorMessage = reportState.nextErrorMessage()
+
+        if (! isInitiating && errorMessage == null) {
             return
         }
 
@@ -129,12 +134,19 @@ class ReportController(
                     zIndex = 99
                 }
 
-                child(MaterialLinearProgress::class) {}
+                if (isInitiating) {
+                    child(MaterialLinearProgress::class) {}
+                }
+
+                if (errorMessage != null) {
+                    +"Error: $errorMessage"
+                }
             }
         }
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderInput(reportState: ReportState) {
         child(ReportInputView::class) {
             attrs {

@@ -81,7 +81,7 @@ class ReportFilterAdd(
         }
 
         val editDisabled =
-            props.reportState.initiating ||
+            props.reportState.isInitiating() ||
             props.reportState.taskRunning
 
         styledDiv {

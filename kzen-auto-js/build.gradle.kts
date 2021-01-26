@@ -21,9 +21,7 @@ kotlin {
 
 
 dependencies {
-//    implementation("org.jetbrains.kotlin:kotlin-stdlib-js")
-
-//    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$coroutinesVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
 
     implementation(project(":kzen-auto-common"))
 

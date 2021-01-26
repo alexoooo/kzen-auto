@@ -104,7 +104,7 @@ class PivotValueItem(
                     }
 
                     disabled =
-                        props.reportState.initiating ||
+                        props.reportState.isInitiating() ||
                         props.reportState.taskRunning ||
                         props.reportState.pivotLoading
                 }

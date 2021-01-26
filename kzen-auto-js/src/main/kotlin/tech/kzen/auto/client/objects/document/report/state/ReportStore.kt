@@ -101,10 +101,11 @@ class ReportStore: SessionGlobal.Observer, ReportDispatcher
 
         if (initial) {
             clearRefresh()
-            async {
-                dispatch(InitiateReportStart)
-                dispatch(InitiateReportDone)
-            }
+            dispatchAsync(InitiateReport)
+//            async {
+//                dispatch(InitiateReportStart)
+//                dispatch(InitiateReportDone)
+//            }
         }
     }
 

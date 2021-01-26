@@ -187,7 +187,7 @@ class ReportFilterItem(
         val columnSummary = reportState.tableSummary?.columnSummaries?.get(props.columnName)
 
         val editDisabled =
-            props.reportState.initiating ||
+            props.reportState.isInitiating() ||
             props.reportState.taskRunning
 
         styledDiv {
@@ -210,7 +210,7 @@ class ReportFilterItem(
                         if (editDisabled) {
                             attrs {
                                 title =
-                                    if (props.reportState.initiating) {
+                                    if (props.reportState.isInitiating()) {
                                         "Disabled while loading"
                                     }
                                     else {

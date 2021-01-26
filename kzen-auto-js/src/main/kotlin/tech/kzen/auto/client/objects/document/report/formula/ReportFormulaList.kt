@@ -14,9 +14,7 @@ import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.FunctionsIcon
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
-import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 
 
 class ReportFormulaList(
@@ -114,14 +112,15 @@ class ReportFormulaList(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderCalculatedColumns() {
-        val formulaDefinition = props
-            .reportState
-            .clientState
-            .graphDefinitionAttempt
-            .successful
-            .objectDefinitions[props.reportState.mainLocation]!!
-            .attributeDefinitions[ReportConventions.formulaAttributeName]!!
-        val formulaSpec = (formulaDefinition as ValueAttributeDefinition).value as FormulaSpec
+//        val formulaDefinition = props
+//            .reportState
+//            .clientState
+//            .graphDefinitionAttempt
+//            .successful
+//            .objectDefinitions[props.reportState.mainLocation]!!
+//            .attributeDefinitions[ReportConventions.formulaAttributeName]!!
+//        val formulaSpec = (formulaDefinition as ValueAttributeDefinition).value as FormulaSpec
+        val formulaSpec = props.reportState.formulaSpec()
 
         styledDiv {
             renderFormulaList(formulaSpec)

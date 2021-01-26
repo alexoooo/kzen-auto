@@ -78,7 +78,9 @@ Report:
   class: tech.kzen.auto.server.objects.report.ReportDocument
   title: "Report"
   icon: TableChart
-  input: ./
+  input:
+    directory: ./
+    selected: []
   formula: {}
   filter: {}
   pivot:
@@ -90,12 +92,23 @@ Report:
     start: 1
     count: 50
   meta:
-    input: String
+    input: InputSpec
     formula: FormulaSpec
     filter: FilterSpec
     pivot: PivotSpec
     output: OutputSpec
     selfLocation: SelfLocation
+
+
+InputSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.report.spec.InputSpec
+  meta:
+    ref:
+      by: InputSpecDefiner
+
+InputSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.report.spec.InputSpec$Definer
 
 
 FormulaSpec:

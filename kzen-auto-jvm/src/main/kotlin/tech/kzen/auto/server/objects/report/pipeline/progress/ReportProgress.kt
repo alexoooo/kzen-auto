@@ -5,11 +5,9 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.model.TaskProgress
+import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
-import java.text.DecimalFormat
 import java.util.concurrent.TimeUnit
-import kotlin.math.log10
-import kotlin.math.pow
 
 
 class ReportProgress(
@@ -29,17 +27,17 @@ class ReportProgress(
 //        }
 
 
-        // https://stackoverflow.com/a/5599842
-        private val units = arrayOf("B", "kB", "MB", "GB", "TB")
-
-        private fun readableFileSize(size: Long): String {
-            if (size <= 0) {
-                return "0"
-            }
-            val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
-            val value = DecimalFormat("#,##0.#").format(size / 1024.0.pow(digitGroups.toDouble()))
-            return value + " " + units[digitGroups]
-        }
+//        // https://stackoverflow.com/a/5599842
+//        private val units = arrayOf("B", "kB", "MB", "GB", "TB")
+//
+//        private fun readableFileSize(size: Long): String {
+//            if (size <= 0) {
+//                return "0"
+//            }
+//            val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
+//            val value = DecimalFormat("#,##0.#").format(size / 1024.0.pow(digitGroups.toDouble()))
+//            return value + " " + units[digitGroups]
+//        }
     }
 
 
@@ -63,7 +61,7 @@ class ReportProgress(
 
         updateProgress(
             locationKey,
-            "Started processing: ${readableFileSize(rawSize)}")
+            "Started processing: ${FormatUtils.readableFileSize(rawSize)}")
     }
 
 
@@ -84,8 +82,8 @@ class ReportProgress(
             val innerPerSecond = (1000.0 * innerProgressBytes / elapsedMillis).toLong()
 
             val progressMessage =
-                "Processed ${readableFileSize(currentBytes)}, " +
-                        "at ${readableFileSize(innerPerSecond)}/s"
+                "Processed ${FormatUtils.readableFileSize(currentBytes)}, " +
+                        "at ${FormatUtils.readableFileSize(innerPerSecond)}/s"
 
             innerStopwatch.reset().start()
 
@@ -104,9 +102,9 @@ class ReportProgress(
         val overallElapsedMillis = outerStopwatch.elapsed(TimeUnit.MILLISECONDS)
         val overallPerSecond = (1000.0 * finishedCount / overallElapsedMillis).toLong()
 
-        val message = "Done: ${readableFileSize(finishedCount)} " +
+        val message = "Done: ${FormatUtils.readableFileSize(finishedCount)} " +
                 "took $outerStopwatch " +
-                "at ${readableFileSize(overallPerSecond)}/s"
+                "at ${FormatUtils.readableFileSize(overallPerSecond)}/s"
 
         innerStopwatch.reset().start()
         outerStopwatch.reset().start()

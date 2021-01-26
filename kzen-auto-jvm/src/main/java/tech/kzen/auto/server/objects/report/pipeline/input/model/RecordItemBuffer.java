@@ -41,15 +41,12 @@ public class RecordItemBuffer
     }
 
 
-
     //-----------------------------------------------------------------------------------------------------------------
     char[] fieldContents;
     int[] fieldEnds;
     private int fieldCount = 0;
     private int fieldContentLength = 0;
     private boolean nonEmpty = false;
-
-//    val flyweight = RecordTextFlyweight(this)
 
 
     //-----------------------------------------------------------------------------------------------------------------

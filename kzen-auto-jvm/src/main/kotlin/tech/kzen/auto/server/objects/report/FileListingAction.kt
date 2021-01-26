@@ -2,6 +2,8 @@ package tech.kzen.auto.server.objects.report
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Instant
+import tech.kzen.auto.common.objects.document.report.listing.FileInfo
 import tech.kzen.auto.util.AutoJvmUtils
 import java.nio.file.Files
 import java.nio.file.Path
@@ -53,6 +55,41 @@ class FileListingAction {
         return withContext(Dispatchers.IO) {
             Files.newDirectoryStream(dir, glob)
                     .use { it.toList() }
+        }
+    }
+
+
+    suspend fun listInfo(pattern: String): List<FileInfo> {
+        val files = list(pattern)
+            ?: return listOf()
+
+        return files.map {
+            toFileInfo(it)
+        }
+    }
+
+
+    fun listInfo(paths: List<String>): List<FileInfo> {
+        val files = paths.map { Paths.get(it) }
+
+        return files.map {
+            toFileInfo(it)
+        }
+    }
+
+
+    private fun toFileInfo(path: Path): FileInfo {
+        val absolutePath = path.toAbsolutePath().normalize().toString()
+        val filename = path.fileName.toString()
+        val modified = Instant.fromEpochMilliseconds(
+            Files.getLastModifiedTime(path).toMillis())
+
+        return when {
+            Files.isDirectory(path) ->
+                FileInfo.ofDirectory(absolutePath, filename, modified)
+
+            else ->
+                FileInfo.ofFile(absolutePath, filename, Files.size(path), modified)
         }
     }
 }

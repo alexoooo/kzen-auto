@@ -2,10 +2,8 @@ package tech.kzen.auto.server.objects.report
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
-import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
-import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
-import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
+import tech.kzen.auto.common.objects.document.report.listing.InputInfo
+import tech.kzen.auto.common.objects.document.report.spec.*
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -19,6 +17,7 @@ import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
+import tech.kzen.auto.util.AutoJvmUtils
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import java.awt.geom.IllegalPathStateException
@@ -32,7 +31,7 @@ import java.nio.file.Paths
 //  https://github.com/JetBrains/lets-plot-kotlin/issues/5
 @Reflect
 class ReportDocument(
-    private val input: String,
+    private val input: InputSpec,
     private val formula: FormulaSpec,
     private val filter: FilterSpec,
     private val pivot: PivotSpec,
@@ -50,8 +49,11 @@ class ReportDocument(
             ?: return ExecutionFailure("'${ReportConventions.actionParameter}' expected")
 
         return when (action) {
-            ReportConventions.actionListFiles ->
-                actionListFiles()
+            ReportConventions.actionBrowseFiles ->
+                actionBrowseFiles()
+
+            ReportConventions.actionInputInfo ->
+                actionInputInfo()
 
             ReportConventions.actionListColumns ->
                 actionColumnListing()
@@ -84,7 +86,7 @@ class ReportDocument(
 
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun inputPaths(): List<Path>? {
-        return ServerContext.fileListingAction.list(input)
+        return ServerContext.fileListingAction.list(input.directory)
     }
 
 
@@ -114,12 +116,37 @@ class ReportDocument(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun actionListFiles(): ExecutionResult {
-        val inputPaths = inputPaths()
-            ?: return ExecutionFailure("Please provide a valid input path")
+    private suspend fun actionBrowseFiles(): ExecutionResult {
+        val absoluteDir = browseDir()
+        val inputPaths = ServerContext.fileListingAction.listInfo(input.directory)
+
+        val inputInfo = InputInfo(
+            absoluteDir, inputPaths)
 
         return ExecutionSuccess.ofValue(ExecutionValue.of(
-            inputPaths.map { it.toString() }))
+            inputInfo.toCollection()))
+    }
+
+
+    private fun actionInputInfo(): ExecutionResult {
+        val absoluteDir = browseDir()
+        val selectedPaths = ServerContext.fileListingAction.listInfo(input.selected)
+
+        val inputInfo = InputInfo(
+            absoluteDir, selectedPaths)
+
+        return ExecutionSuccess.ofValue(ExecutionValue.of(
+            inputInfo.toCollection()))
+    }
+
+
+    private fun browseDir(): String {
+        return AutoJvmUtils
+            .parsePath(input.directory)
+            ?.toAbsolutePath()
+            ?.normalize()
+            ?.toString()
+            ?: input.directory
     }
 
 

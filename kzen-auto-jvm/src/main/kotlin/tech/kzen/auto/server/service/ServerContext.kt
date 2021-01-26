@@ -1,7 +1,6 @@
 package tech.kzen.auto.server.service
 
 import kotlinx.coroutines.runBlocking
-import tech.kzen.auto.client.codegen.KzenAutoJvmModule
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveDataflowRepository
 import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveVisualProvider
@@ -9,6 +8,7 @@ import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageIns
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.service.GraphInstanceCreator
+import tech.kzen.auto.server.codegen.KzenAutoJvmModule
 import tech.kzen.auto.server.objects.report.*
 import tech.kzen.auto.server.objects.report.pipeline.calc.CalculatedColumnEval
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler

@@ -6,10 +6,12 @@ import java.nio.file.Paths
 
 
 object KzenAutoCommonCodegen {
+    val commonSourceDir = Paths.get("kzen-auto-common/src/commonMain/kotlin")
+
     @JvmStatic
     fun main(args: Array<String>) {
         ModuleReflectionGenerator.generate(
-                Paths.get("kzen-auto-common/src/commonMain/kotlin"),
-                ClassName("tech.kzen.auto.common.codegen.KzenAutoCommonModule"))
+            commonSourceDir,
+            ClassName("tech.kzen.auto.common.codegen.KzenAutoCommonModule"))
     }
 }

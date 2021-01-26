@@ -84,7 +84,7 @@ class PivotValueTypes(
                         value = valueType.name
 
                         disabled =
-                            props.reportState.initiating ||
+                            props.reportState.isInitiating() ||
 //                            props.reportState.filterTaskRunning ||
                             props.reportState.pivotLoading
                     }

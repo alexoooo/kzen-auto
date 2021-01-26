@@ -12,7 +12,8 @@ object ReportConventions {
     private val reportObjectName = ObjectName("Report")
 
     private const val inputKey = "input"
-    val inputAttribute = AttributeName(inputKey)
+    val inputAttributeName = AttributeName(inputKey)
+    val inputAttributePath = AttributePath.ofName(inputAttributeName)
 
     val formulaAttributeName = AttributeName("formula")
     val formulaAttributePath = AttributePath.ofName(formulaAttributeName)
@@ -42,12 +43,11 @@ object ReportConventions {
 
 
     const val actionParameter = "action"
-    const val actionListFiles = "files"
+    const val actionBrowseFiles = "browse"
+    const val actionInputInfo = "files"
     const val actionListColumns = "columns"
     const val actionLookupOutput = "output"
     const val actionSummaryLookup = "summary-lookup"
-//    const val actionSummaryTask = "summary-run"
-//    const val actionFilterTask = "filter"
     const val actionRunTask = "run"
     const val actionSave = "save"
     const val actionReset = "reset"

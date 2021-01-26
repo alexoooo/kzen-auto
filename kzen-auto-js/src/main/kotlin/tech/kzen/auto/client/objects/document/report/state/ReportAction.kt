@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.state
 
+import tech.kzen.auto.common.objects.document.report.listing.InputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
@@ -71,13 +72,14 @@ data class CompoundReportAction(
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class InitiateReportAction: SingularReportAction()
+//sealed class InitiateReportAction: SingularReportAction()
 
 
-object InitiateReportStart: InitiateReportAction()
+//object InitiateReportStart: InitiateReportAction()
+object InitiateReport: SingularReportAction()
 
 
-object InitiateReportDone: InitiateReportAction()
+//object InitiateReportDone: InitiateReportAction()
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -90,14 +92,27 @@ object InputsUpdatedRequest: InputReportAction()
 sealed class ListInputsAction: InputReportAction()
 
 
-object ListInputsRequest: ListInputsAction()
+object ListInputsSelectedRequest: ListInputsAction()
+
+
+object ListInputsBrowserRequest: ListInputsAction()
+
+
+data class ListInputsBrowserNavigate(
+    val newDirectory: String
+): ListInputsResponse()
 
 
 sealed class ListInputsResponse: ListInputsAction()
 
 
-data class ListInputsResult(
-    val fileListing: List<String>
+data class ListInputsSelectedResult(
+    val inputInfo: InputInfo
+): ListInputsResponse()
+
+
+data class ListInputsBrowserResult(
+    val inputInfo: InputInfo
 ): ListInputsResponse()
 
 

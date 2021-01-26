@@ -91,7 +91,7 @@ class ReportFormulaItem(
         val reportState = props.reportState
 
         val editDisabled =
-            reportState.initiating ||
+            reportState.isInitiating() ||
             reportState.taskRunning ||
             reportState.formulaLoading
 

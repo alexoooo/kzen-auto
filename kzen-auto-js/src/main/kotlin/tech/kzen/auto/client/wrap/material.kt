@@ -326,11 +326,15 @@ external interface CheckboxProps: RProps {
 
 
 @JsName("CircularProgress")
-external class MaterialCircularProgress: Component<RProps, RState> {
+external class MaterialCircularProgress: Component<ProgressProps, RState> {
     override fun render(): ReactElement?
 }
 
 @JsName("LinearProgress")
-external class MaterialLinearProgress: Component<RProps, RState> {
+external class MaterialLinearProgress: Component<ProgressProps, RState> {
     override fun render(): ReactElement?
+}
+
+external interface ProgressProps: RProps {
+    var style: Json
 }
