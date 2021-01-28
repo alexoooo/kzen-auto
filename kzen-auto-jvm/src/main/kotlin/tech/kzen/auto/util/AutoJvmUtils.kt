@@ -14,28 +14,45 @@ object AutoJvmUtils
 
 
     fun parsePath(asString: String): Path? {
-        try {
-            return Paths.get(asString)
-        }
-        catch (ignored: InvalidPathException) {}
+        tryParsePath(asString)
+            ?.let { return it }
 
         val trimmed = asString.trim()
-        try {
-            return Paths.get(trimmed)
-        }
-        catch (ignored: InvalidPathException) {}
+        tryParsePath(trimmed)
+            ?.let { return it }
 
         if (trimmed.startsWith("\"") &&
                 trimmed.endsWith("\"") &&
                 trimmed.length > 2)
         {
             val unQuoted = trimmed.substring(1, trimmed.length - 1)
-            try {
-                return Paths.get(unQuoted)
-            }
-            catch (ignored: InvalidPathException) {}
+            tryParsePath(unQuoted)
+                ?.let { return it }
         }
 
         return null
+    }
+
+
+    private fun tryParsePath(path: String): Path? {
+        val adjusted = adjustPath(path)
+
+        try {
+            return Paths.get(adjusted)
+        }
+        catch (ignored: InvalidPathException) {}
+
+        return null
+    }
+
+    private fun adjustPath(path: String): String {
+        if (path.contains('/') ||
+                path.contains('\\') ||
+                ! path.endsWith(":")
+        ) {
+            return path
+        }
+
+        return "$path/"
     }
 }

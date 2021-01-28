@@ -5,6 +5,7 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.html.js.onClickFunction
+import kotlinx.html.title
 import react.*
 import react.dom.td
 import react.dom.thead
@@ -51,6 +52,7 @@ class InputBrowser(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
+//        console.log("^^^^ State.init")
         browserOpen = false
     }
 
@@ -61,6 +63,7 @@ class InputBrowser(
         snapshot: Any
     ) {
         if (props.reportState.isInitiating()) {
+//            console.log("^^^ INIT")
             return
         }
 
@@ -68,6 +71,7 @@ class InputBrowser(
                 props.reportState.inputSelected!!.isEmpty() &&
                 ! state.browserOpen
         ) {
+//            console.log("^^^^ setting browserOpen")
             setState {
                 browserOpen = true
             }
@@ -83,11 +87,13 @@ class InputBrowser(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onBrowseRefresh() {
+//        console.log("&&& onBrowseRefresh")
         props.dispatcher.dispatchAsync(ListInputsBrowserRequest)
     }
 
 
     private fun onToggleBrowser() {
+//        console.log("&&& onToggleBrowser")
         setState {
             browserOpen = ! browserOpen
         }
@@ -104,6 +110,7 @@ class InputBrowser(
         val listingSelected = props.reportState.inputSelected
         val browserListing = props.reportState.inputBrowser
         val browserDir = props.reportState.inputBrowseDir
+        val inputError = props.reportState.inputError
 
         val forceOpen =
             listingSelected != null && listingSelected.isEmpty()
@@ -150,8 +157,16 @@ class InputBrowser(
                 }
             }
 
+//            +"state.browserOpen - ${state.browserOpen}"
+
             if (state.browserOpen) {
-                if (browserListing == null || browserDir == null) {
+                if (listingSelected == null && inputError != null) {
+                    +"Error"
+                }
+                else if (listingSelected != null && inputError != null) {
+                    renderPathEditError(props.reportState.inputSpec().directory)
+                }
+                else if (browserListing == null || browserDir == null) {
                     styledDiv {
                         if (browserDir != null) {
                             +browserDir
@@ -169,22 +184,6 @@ class InputBrowser(
             else {
                 renderSummary(props.reportState.inputBrowseDir)
             }
-
-//            child(DefaultAttributeEditor::class) {
-//                attrs {
-//                    clientState = props.reportState.clientState
-//                    objectLocation = props.reportState.mainLocation
-//                    attributeName = ReportConventions.inputAttributeName
-//                    labelOverride = "File Path"
-//
-//                    disabled = editDisabled
-//                    invalid = hasError
-//
-//                    onChange = {
-//                        onAttributeChanged()
-//                    }
-//                }
-//            }
         }
     }
 
@@ -200,6 +199,10 @@ class InputBrowser(
         }
 
         styledDiv {
+            css {
+                marginTop = 0.5.em
+                marginBottom = 0.5.em
+            }
             renderPathEdit(browserDir)
         }
 
@@ -223,10 +226,31 @@ class InputBrowser(
                             css {
                                 position = Position.sticky
                                 top = 0.px
-                                backgroundColor = Color("rgba(255, 255, 255, 0.9)")
+                                backgroundColor = Color("rgba(255, 255, 255, 0.95)")
                                 zIndex = 999
+                                width = 2.em
                             }
-                            +"[x]"
+
+                            attrs {
+                                title = "Select / un-select all"
+                            }
+
+                            child(MaterialCheckbox::class) {
+                                attrs {
+                                    style = reactStyle {
+                                        marginTop = (-0.5).em
+                                        marginBottom = (-0.25).em
+                                        marginLeft = (-0.25).em
+                                        marginRight = (-0.25).em
+                                    }
+//                                    this.checked = checked
+//                                    disabled = editDisabled
+
+//                                    onChange = {
+//                                        onCriteriaChange(e.key, ! checked)
+//                                    }
+                                }
+                            }
                         }
                         styledTh {
                             css {
@@ -235,6 +259,10 @@ class InputBrowser(
                                 backgroundColor = Color("rgba(255, 255, 255, 0.9)")
                                 zIndex = 999
                                 width = 100.pct
+                                textAlign = TextAlign.left
+//                                verticalAlign = VerticalAlign.middle
+//                                fontSize = 1.25.em
+                                paddingBottom = 0.25.em
                             }
                             +"Name"
                         }
@@ -244,6 +272,9 @@ class InputBrowser(
                                 top = 0.px
                                 backgroundColor = Color("rgba(255, 255, 255, 0.9)")
                                 zIndex = 999
+                                textAlign = TextAlign.left
+                                paddingBottom = 0.25.em
+                                paddingLeft = 0.5.em
                             }
                             +"Modified"
                         }
@@ -253,6 +284,8 @@ class InputBrowser(
                                 top = 0.px
                                 backgroundColor = Color("rgba(255, 255, 255, 0.9)")
                                 zIndex = 999
+                                textAlign = TextAlign.left
+                                paddingBottom = 0.25.em
                             }
                             +"Size"
                         }
@@ -282,6 +315,8 @@ class InputBrowser(
                                         style = reactStyle {
                                             marginTop = (-0.25).em
                                             marginBottom = (-0.25).em
+                                            marginLeft = 0.15.em
+                                            marginRight = 0.15.em
                                         }
                                     }
                                 }
@@ -313,7 +348,24 @@ class InputBrowser(
                             }
 
                             td {
-                                +"[ ]"
+                                child(MaterialCheckbox::class) {
+                                    attrs {
+                                        style = reactStyle {
+//                                            marginTop = (-0.25).em
+//                                            marginBottom = (-0.25).em
+                                            marginTop = (-0.5).em
+                                            marginBottom = (-0.5).em
+                                            marginLeft = (-0.25).em
+                                            marginRight = (-0.25).em
+                                        }
+//                                    this.checked = checked
+//                                    disabled = editDisabled
+
+//                                    onChange = {
+//                                        onCriteriaChange(e.key, ! checked)
+//                                    }
+                                    }
+                                }
                             }
                             td {
                                 +fileInfo.name
@@ -341,8 +393,29 @@ class InputBrowser(
     }
 
 
+    private fun RBuilder.renderPathEditError(browseDir: String) {
+        child(InputBrowserDir::class) {
+            attrs {
+                reportState = props.reportState
+                dispatcher = props.dispatcher
+                editDisabled = props.editDisabled
+                this.browseDir = browseDir
+                errorMode = true
+            }
+        }
+    }
+
+
     private fun RBuilder.renderPathEdit(browseDir: String) {
-        +"[Path: $browseDir]"
+        child(InputBrowserDir::class) {
+            attrs {
+                reportState = props.reportState
+                dispatcher = props.dispatcher
+                editDisabled = props.editDisabled
+                this.browseDir = browseDir
+                errorMode = false
+            }
+        }
     }
 
 

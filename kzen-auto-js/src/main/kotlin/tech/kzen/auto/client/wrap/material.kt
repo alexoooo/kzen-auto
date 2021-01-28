@@ -314,7 +314,7 @@ external class MaterialCheckbox: Component<CheckboxProps, RState> {
 }
 
 external interface CheckboxProps: RProps {
-//    var style: Json
+    var style: Json
 
     var id: String
 

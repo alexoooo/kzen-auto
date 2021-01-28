@@ -45,15 +45,16 @@ class StageController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
+    interface Props: RProps {
         var documentControllers: List<DocumentController>
-    ): RProps
+    }
 
 
-    class State(
-        var structure: GraphStructure?,
+    interface State: RState {
+        var structure: GraphStructure?
         var documentPath: DocumentPath?
-    ): RState
+        var transition: Boolean
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -74,6 +75,35 @@ class StageController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: Props) {
+        structure = null
+        documentPath = null
+        transition = false
+    }
+
+
+    override fun componentDidUpdate(
+        prevProps: Props,
+        prevState: State,
+        snapshot: Any
+    ) {
+        if (state.documentPath != prevState.documentPath &&
+                state.documentPath != null &&
+                prevState.documentPath != null
+        ) {
+            setState {
+                transition = true
+            }
+        }
+
+        if (state.transition) {
+            setState {
+                transition = false
+            }
+        }
+    }
+
+
     override fun componentDidMount() {
         async {
             ClientContext.mirroredGraphStore.observe(this)
@@ -88,6 +118,7 @@ class StageController(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         setState {
             structure = graphDefinition.successful.graphStructure
@@ -129,6 +160,11 @@ class StageController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        if (state.transition) {
+//            console.log("^^^ TRANSITION")
+            return
+        }
+
         val archetypeName = documentArchetypeName()
 
         if (archetypeName == null) {

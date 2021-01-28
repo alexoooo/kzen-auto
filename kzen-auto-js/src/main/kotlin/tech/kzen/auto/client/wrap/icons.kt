@@ -108,6 +108,12 @@ external class ArrowForwardIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("ArrowForwardIos")
+external class ArrowForwardIosIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("ArrowBack")
 external class ArrowBackIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?

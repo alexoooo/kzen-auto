@@ -39,6 +39,32 @@ data class FileInfo(
                 map[directoryKey]!!.toBoolean()
             )
         }
+
+
+        fun split(path: String): List<Pair<String, String>> {
+            val parts = path.split(Regex("[/\\\\]"))
+
+            var cumulative = ""
+            val builder = mutableListOf<Pair<String, String>>()
+            var first = true
+
+            for (part in parts) {
+                cumulative =
+                    if (first) {
+                        first = false
+                        part
+                    }
+                    else {
+                        cumulative + path.substring(cumulative.length, cumulative.length + 1) + part
+                    }
+
+                if (part.isNotEmpty()) {
+                    builder.add(cumulative to part)
+                }
+            }
+
+            return builder
+        }
     }
 
 

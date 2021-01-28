@@ -56,6 +56,33 @@ sealed class ExecutionResult
 data class ExecutionFailure(
         val errorMessage: String
 ): ExecutionResult() {
+    companion object {
+        fun ofException(throwable: Throwable): ExecutionFailure {
+            val errorName = throwable::class
+                .simpleName
+                ?.removeSuffix("Exception")
+                ?.replace(Regex("([A-Z])"), " $1")
+                ?.trim()
+
+            val message = throwable.message
+
+            val fullMessage =
+                if (errorName != null) {
+                    if (message != null) {
+                        "$errorName: $message"
+                    }
+                    else {
+                        errorName
+                    }
+                }
+                else {
+                    message ?: "exception"
+                }
+
+            return ExecutionFailure(fullMessage)
+        }
+    }
+
     override fun toJsonCollection(): Map<String, Any?> {
         return mapOf(
                 errorKey to errorMessage

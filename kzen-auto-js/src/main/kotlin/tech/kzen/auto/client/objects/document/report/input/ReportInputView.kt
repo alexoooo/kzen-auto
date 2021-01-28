@@ -51,7 +51,6 @@ class ReportInputView(
 
                 styledDiv {
                     css {
-//                        padding(0.5.em)
                         padding(1.em)
                     }
 

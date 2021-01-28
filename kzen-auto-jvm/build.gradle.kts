@@ -21,6 +21,7 @@ dependencies {
 
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("org.jetbrains:kotlin-css-jvm:1.0.0-$wrapperKotlinVersion")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
 
     implementation(project(":kzen-auto-common"))
 

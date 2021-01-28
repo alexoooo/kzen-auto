@@ -120,26 +120,38 @@ class ReportController(
         val isInitiating = reportState.isInitiating()
         val errorMessage = reportState.nextErrorMessage()
 
-        if (! isInitiating && errorMessage == null) {
-            return
-        }
+        // NB: placing condition here causes some InputBrowser state to be re-initialized?
+        // if (! isInitiating && errorMessage == null) {
+        //     return
+        // }
 
         StageController.StageContext.Consumer { context ->
-            styledDiv {
-                css {
-                    position = Position.fixed
-                    top = context.stageTop
-                    left = context.stageLeft
-                    width = 100.pct
-                    zIndex = 99
-                }
+            if (isInitiating || errorMessage != null) {
+                styledDiv {
+                    css {
+                        position = Position.fixed
+                        top = context.stageTop
+                        left = context.stageLeft
+                        width = 100.pct.minus(context.stageLeft)
+                        zIndex = 99
+                    }
 
-                if (isInitiating) {
-                    child(MaterialLinearProgress::class) {}
-                }
+                    if (isInitiating) {
+                        child(MaterialLinearProgress::class) {}
+                    }
 
-                if (errorMessage != null) {
-                    +"Error: $errorMessage"
+                    if (errorMessage != null) {
+                        styledDiv {
+                            css {
+                                backgroundColor = Color.red.lighten(50).withAlpha(0.85)
+                                margin(1.em)
+                                padding(0.25.em)
+                                borderRadius = 3.px
+                                fontWeight = FontWeight.bold
+                            }
+                            +"Error: $errorMessage"
+                        }
+                    }
                 }
             }
         }

@@ -21,7 +21,7 @@ class ClientRestActionExecutor(
             restClient.performAction(host, actionLocation).executionResult!!
         }
         catch (e: Exception) {
-            ExecutionFailure(e.message ?: "Error")
+            ExecutionFailure.ofException(e)
         }
     }
 
