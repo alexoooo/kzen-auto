@@ -1,5 +1,7 @@
 package tech.kzen.auto.client.wrap
 
+import react.RProps
+import react.ReactElement
 import kotlin.js.Json
 
 //fun RBuilder.materialButton(handler: RHandler<MaterialButtonProps>) = child(MaterialButton::class) {
@@ -10,6 +12,11 @@ import kotlin.js.Json
 //    handler()
 //}
 
+
+interface NestedInputProps: RProps {
+//        val startAdornment: MaterialInputAdornment
+        val startAdornment: ReactElement
+}
 
 class NestedInputLabelProps(
         val style: Json

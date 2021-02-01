@@ -76,6 +76,10 @@ class InputBrowserDir(
         }
 
         props.dispatcher.dispatchAsync(ListInputsBrowserNavigate(dir))
+
+        setState {
+            editDir = dir
+        }
     }
 
 
@@ -162,7 +166,7 @@ class InputBrowserDir(
 //                            height = 0.px
 //                            overflow = Overflow.visible
 
-                            marginTop = (-0.5).em
+                            marginTop = (-0.55).em
                             zIndex = 1000
 //                            float = Float.left
                         }

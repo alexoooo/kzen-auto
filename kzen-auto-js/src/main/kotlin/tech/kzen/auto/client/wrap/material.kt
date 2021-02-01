@@ -13,7 +13,8 @@ import react.ReactElement
 import kotlin.js.Json
 
 
-// also see: https://github.com/rivasdiaz/kotlin-rmwc
+// see: https://github.com/rivasdiaz/kotlin-rmwc
+// see: https://github.com/cfnz/muirwik
 
 @JsName("Button")
 external class MaterialButton: Component<MaterialButtonProps, RState> {
@@ -196,17 +197,36 @@ external interface TextFieldProps: RProps {
     var autoFocus: Boolean
     var inputRef: (e: HTMLInputElement?) -> Unit
 
+//    var InputProps: NestedInputProps
+    var InputProps: RProps
     var InputLabelProps: NestedInputLabelProps
 
     var id: String
     var value: String
     var label: String
+    var size: String
     var rows: Int
     var multiline: Boolean
     var fullWidth: Boolean
     var margin: String
     var disabled: Boolean
     var error: Boolean
+}
+
+
+//external class NestedInputProps : Component<MaterialInputLabelProps, RState> {
+//    override fun render(): ReactElement?
+//}
+
+
+@JsName("InputAdornment")
+external class MaterialInputAdornment : Component<MaterialInputAdornmentProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+external interface MaterialInputAdornmentProps : RProps {
+    var position: String
 }
 
 
@@ -317,11 +337,14 @@ external interface CheckboxProps: RProps {
     var style: Json
 
     var id: String
+    var value: String
 
     var checked: Boolean
+    var indeterminate: Boolean
     var onChange: (e: Event) -> Unit
 
     var disabled: Boolean
+    var disableRipple: Boolean
 }
 
 

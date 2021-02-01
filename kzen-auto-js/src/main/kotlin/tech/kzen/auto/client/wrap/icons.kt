@@ -306,6 +306,12 @@ external class AddIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("Remove")
+external class RemoveIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("CompareArrows")
 external class CompareArrowsIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?

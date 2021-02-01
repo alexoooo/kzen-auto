@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.service.exec
 
+import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
@@ -20,6 +21,11 @@ class ModelDetachedExecutor(
 ):
     DetachedExecutor, DetachedDownloadExecutor
 {
+    companion object {
+        private val logger = LoggerFactory.getLogger(ModelDetachedExecutor::class.java)
+    }
+
+
     override suspend fun execute(
             actionLocation: ObjectLocation,
             request: DetachedRequest
@@ -42,8 +48,7 @@ class ModelDetachedExecutor(
             action.execute(request)
         }
         catch (t: Throwable) {
-            t.printStackTrace()
-
+            logger.warn("{} - {}", actionLocation, request, t)
             ExecutionFailure.ofException(t)
         }
     }

@@ -21,6 +21,7 @@ class ClientRestActionExecutor(
             restClient.performAction(host, actionLocation).executionResult!!
         }
         catch (e: Exception) {
+            e.printStackTrace()
             ExecutionFailure.ofException(e)
         }
     }
