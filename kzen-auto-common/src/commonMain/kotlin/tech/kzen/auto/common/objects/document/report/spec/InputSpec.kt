@@ -12,29 +12,68 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.InsertAllListItemsInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveAllListItemsInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 
 
 data class InputSpec(
-    val directory: String,
+    val browser: InputBrowserSpec,
     val selected: List<String>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val directoryKey = AttributeSegment.ofKey("directory")
-        val directoryAttributePath = ReportConventions.inputAttributePath.nest(directoryKey)
+        private val browserKey = AttributeSegment.ofKey("browser")
+        val browserAttributePath = ReportConventions.inputAttributePath.nest(browserKey)
+
+//        private val directoryKey = AttributeSegment.ofKey("directory")
+//        val directoryAttributePath = ReportConventions.inputAttributePath.nest(directoryKey)
 
         private val selectedKey = AttributeSegment.ofKey("selected")
-//        val selectedAttributePath = ReportConventions.inputAttributePath.nest(selectedKey)
+        private val selectedAttributePath = ReportConventions.inputAttributePath.nest(selectedKey)
 
 
-        fun browseCommand(mainLocation: ObjectLocation, directory: String): UpdateInAttributeCommand{
+        fun browseCommand(mainLocation: ObjectLocation, directory: String): UpdateInAttributeCommand {
             return UpdateInAttributeCommand(
                 mainLocation,
-                directoryAttributePath,
-                ScalarAttributeNotation(directory)
+                InputBrowserSpec.directoryAttributePath,
+                ScalarAttributeNotation(directory))
+        }
+
+
+        fun filterCommand(mainLocation: ObjectLocation, filter: String): UpdateInAttributeCommand {
+            return UpdateInAttributeCommand(
+                mainLocation,
+                InputBrowserSpec.filterAttributePath,
+                ScalarAttributeNotation(filter))
+        }
+
+
+        fun addSelectedCommand(
+            mainLocation: ObjectLocation,
+            paths: List<String>
+        ): InsertAllListItemsInAttributeCommand {
+            return InsertAllListItemsInAttributeCommand(
+                mainLocation,
+                selectedAttributePath,
+                PositionRelation.afterLast,
+                paths.map { ScalarAttributeNotation(it) }
+            )
+        }
+
+
+        fun removeSelectedCommand(
+            mainLocation: ObjectLocation,
+            paths: List<String>
+        ): RemoveAllListItemsInAttributeCommand {
+            return RemoveAllListItemsInAttributeCommand(
+                mainLocation,
+                selectedAttributePath,
+                paths.map { ScalarAttributeNotation(it) },
+                false
             )
         }
     }
@@ -61,10 +100,10 @@ data class InputSpec(
                     "'${ReportConventions.inputAttributeName}' attribute notation not found:" +
                             " $objectLocation - $attributeName")
 
-            val directory = attributeNotation.get(directoryKey)?.asString()!!
+            val browser = InputBrowserSpec.ofNotation(attributeNotation.get(browserKey) as MapAttributeNotation)
             val selected = (attributeNotation.get(selectedKey) as ListAttributeNotation).values.map { it.asString()!! }
 
-            val inputSpec = InputSpec(directory, selected)
+            val inputSpec = InputSpec(browser, selected)
 
             return AttributeDefinitionAttempt.success(
                 ValueAttributeDefinition(inputSpec))

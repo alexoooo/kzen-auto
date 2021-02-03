@@ -102,6 +102,10 @@ data class ReportState(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var selectedPathSet: Set<String>? = null
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun isInitiating(): Boolean {
         return false
     }
@@ -180,5 +184,13 @@ data class ReportState(
             return null
         }
         return columnListing + formulaSpec().formulas.keys
+    }
+
+
+    fun selectedPathSet(): Set<String> {
+        if (selectedPathSet == null) {
+            selectedPathSet = inputSpec().selected.toSet()
+        }
+        return selectedPathSet!!
     }
 }

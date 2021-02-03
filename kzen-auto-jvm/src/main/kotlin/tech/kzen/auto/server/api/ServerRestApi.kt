@@ -30,9 +30,11 @@ class ServerRestApi(
         GET(CommonRestApi.commandAttributeUpsert, counterHandler::upsertAttribute)
         GET(CommonRestApi.commandAttributeUpdateIn, counterHandler::updateInAttribute)
         GET(CommonRestApi.commandAttributeInsertItemIn, counterHandler::insertListItemInAttribute)
+        GET(CommonRestApi.commandAttributeInsertAllItemsIn, counterHandler::insertAllListItemsInAttribute)
         GET(CommonRestApi.commandAttributeInsertEntryIn, counterHandler::insertMapEntryInAttribute)
         GET(CommonRestApi.commandAttributeRemoveIn, counterHandler::removeInAttribute)
         GET(CommonRestApi.commandAttributeRemoveItemIn, counterHandler::removeListItemInAttribute)
+        GET(CommonRestApi.commandAttributeRemoveAllItemsIn, counterHandler::removeAllListItemsInAttribute)
         GET(CommonRestApi.commandAttributeShiftIn, counterHandler::shiftInAttribute)
 
         GET(CommonRestApi.commandRefactorObjectRename, counterHandler::refactorObjectName)

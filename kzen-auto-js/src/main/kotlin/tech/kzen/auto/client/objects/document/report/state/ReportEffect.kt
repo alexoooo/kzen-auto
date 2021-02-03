@@ -53,6 +53,15 @@ object ReportEffect {
             is ListInputsBrowserNavigate ->
                 navigateBrowserFiles(state, action.newDirectory)
 
+            is InputsSelectionAddRequest ->
+                selectBrowserFiles(state, action.paths)
+
+            is InputsSelectionRemoveRequest ->
+                unselectBrowserFiles(state, action.paths)
+
+            is InputsSelectionFilterRequest ->
+                updateBrowserFilter(state, action.filter)
+
 //            is ListInputsResponse ->
 //                ListColumnsRequest
 
@@ -222,6 +231,66 @@ object ReportEffect {
         newDirectory: String
     ): ReportAction {
         val command = InputSpec.browseCommand(state.mainLocation, newDirectory)
+
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        return when (result) {
+            is MirroredGraphSuccess -> {
+                ListInputsBrowserRequest
+            }
+
+            is MirroredGraphError ->
+                ListInputsError(result.error.message ?: "error")
+        }
+    }
+
+
+    private suspend fun selectBrowserFiles(
+        state: ReportState,
+        paths: List<String>
+    ): ReportAction {
+        val command = InputSpec.addSelectedCommand(state.mainLocation, paths)
+
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        return when (result) {
+            is MirroredGraphSuccess -> {
+                ListInputsSelectedRequest
+            }
+
+            is MirroredGraphError ->
+                ListInputsError(result.error.message ?: "error")
+        }
+    }
+
+
+    private suspend fun unselectBrowserFiles(
+        state: ReportState,
+        paths: List<String>
+    ): ReportAction {
+        val command = InputSpec.removeSelectedCommand(state.mainLocation, paths)
+
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        return when (result) {
+            is MirroredGraphSuccess -> {
+                ListInputsSelectedRequest
+            }
+
+            is MirroredGraphError ->
+                ListInputsError(result.error.message ?: "error")
+        }
+    }
+
+
+    private suspend fun updateBrowserFilter(
+        state: ReportState,
+        filter: String
+    ): ReportAction {
+        val command = InputSpec.filterCommand(state.mainLocation, filter)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
         val result = ClientContext.mirroredGraphStore.apply(command)

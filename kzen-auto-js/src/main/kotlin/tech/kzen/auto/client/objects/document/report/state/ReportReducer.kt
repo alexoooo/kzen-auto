@@ -81,7 +81,10 @@ object ReportReducer {
             InputsUpdatedRequest,
             ListInputsBrowserRequest,
             ListInputsSelectedRequest,
-            is ListInputsBrowserNavigate -> state.copy(
+            is ListInputsBrowserNavigate,
+            is InputsSelectionAddRequest,
+            is InputsSelectionRemoveRequest,
+            is InputsSelectionFilterRequest -> state.copy(
                 inputLoading = true,
                 inputError = null)
 

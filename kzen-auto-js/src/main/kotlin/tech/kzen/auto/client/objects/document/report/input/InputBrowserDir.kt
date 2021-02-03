@@ -151,9 +151,6 @@ class InputBrowserDir(
 
             styledSpan {
                 css {
-//                    marginTop = (-0.35).em
-//                    marginTop = (-0.5).em
-//                    float = Float.right
                     position = Position.absolute
                     top = 0.px
                     right = 0.px
@@ -162,14 +159,11 @@ class InputBrowserDir(
                 child(MaterialIconButton::class) {
                     attrs {
                         style = reactStyle {
-                            // see: https://stackoverflow.com/a/9909274/1941359
-//                            height = 0.px
-//                            overflow = Overflow.visible
-
-                            marginTop = (-0.55).em
+                            marginTop = (-0.6).em
                             zIndex = 1000
-//                            float = Float.left
                         }
+
+                        title = "Edit path"
 
                         onClick = {
                             onEditToggle()
@@ -217,10 +211,10 @@ class InputBrowserDir(
                     style = reactStyle {
 //                        marginTop = 1.em
                     }
-
                     onClick = {
                         onEditToggle()
                     }
+                    title = "Cancel"
                 }
 
                 child(CancelIcon::class) {
@@ -237,10 +231,10 @@ class InputBrowserDir(
                     style = reactStyle {
 //                        marginTop = 1.em
                     }
-
                     onClick = {
                         onEditSubmit()
                     }
+                    title = "Save"
                 }
 
                 child(SaveIcon::class) {

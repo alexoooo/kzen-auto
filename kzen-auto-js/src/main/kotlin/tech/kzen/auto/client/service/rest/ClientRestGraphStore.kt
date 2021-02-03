@@ -85,6 +85,13 @@ class ClientRestGraphStore(
             }
 
 
+            is InsertAllListItemsInAttributeCommand -> {
+                val unparsed = command.items.map { notationParser.unparseAttribute(it) }
+                restClient.insertAllListItemsInAttribute(
+                        command.objectLocation, command.containingList, command.indexInList, unparsed)
+            }
+
+
             is InsertMapEntryInAttributeCommand -> {
                 val unparsed = notationParser.unparseAttribute(command.value)
                 restClient.insertMapEntryInAttribute(
@@ -105,6 +112,13 @@ class ClientRestGraphStore(
             is RemoveListItemInAttributeCommand ->{
                 val unparsed = notationParser.unparseAttribute(command.item)
                 restClient.removeListItemInAttributeCommand(
+                    command.objectLocation, command.containingList, unparsed, command.removeContainerIfEmpty)
+            }
+
+
+            is RemoveAllListItemsInAttributeCommand ->{
+                val unparsed = command.items.map { notationParser.unparseAttribute(it) }
+                restClient.removeAllListItemsInAttributeCommand(
                     command.objectLocation, command.containingList, unparsed, command.removeContainerIfEmpty)
             }
 

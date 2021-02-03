@@ -103,6 +103,21 @@ data class ListInputsBrowserNavigate(
 ): ListInputsResponse()
 
 
+data class InputsSelectionAddRequest(
+    val paths: List<String>
+): ListInputsResponse()
+
+
+data class InputsSelectionRemoveRequest(
+    val paths: List<String>
+): ListInputsResponse()
+
+
+data class InputsSelectionFilterRequest(
+    val filter: String
+): ListInputsResponse()
+
+
 sealed class ListInputsResponse: ListInputsAction()
 
 

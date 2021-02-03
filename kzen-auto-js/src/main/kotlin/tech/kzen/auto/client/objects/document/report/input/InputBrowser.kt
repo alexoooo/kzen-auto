@@ -8,14 +8,10 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
-import org.w3c.dom.HTMLInputElement
 import react.*
 import react.dom.td
 import styled.*
-import tech.kzen.auto.client.objects.document.report.state.ListInputsBrowserNavigate
-import tech.kzen.auto.client.objects.document.report.state.ListInputsBrowserRequest
-import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
-import tech.kzen.auto.client.objects.document.report.state.ReportState
+import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.report.listing.FileInfo
 import tech.kzen.auto.common.util.FormatUtils
@@ -130,7 +126,7 @@ class InputBrowser(
 
 
     private fun onFileSelectedAllToggle(allSelected: Boolean) {
-            setState {
+        setState {
             selected =
                 if (allSelected) {
                     persistentSetOf()
@@ -144,6 +140,39 @@ class InputBrowser(
                         .toPersistentSet()
                 }
         }
+    }
+
+
+    private fun onAddToSelection() {
+        val addedPaths = newSelectedPaths()
+        props.dispatcher.dispatchAsync(InputsSelectionAddRequest(addedPaths))
+    }
+
+
+    private fun onRemoveFromSelection() {
+        val removedPaths = existingSelectedPaths()
+        props.dispatcher.dispatchAsync(InputsSelectionRemoveRequest(removedPaths))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun newSelectedPaths(): List<String> {
+        if (state.selected.isEmpty()) {
+            return listOf()
+        }
+
+        val selectedSet = props.reportState.selectedPathSet()
+        return state.selected.filter { it !in selectedSet }
+    }
+
+
+    private fun existingSelectedPaths(): List<String> {
+        if (state.selected.isEmpty()) {
+            return listOf()
+        }
+
+        val selectedSet = props.reportState.selectedPathSet()
+        return state.selected.filter { it in selectedSet }
     }
 
 
@@ -176,24 +205,26 @@ class InputBrowser(
                     +"Browser"
                 }
 
-                if (! forceOpen) {
-                    styledSpan {
-                        css {
-                            float = Float.right
+                styledSpan {
+                    css {
+                        float = Float.right
+                        height = 0.px
+                        overflow = Overflow.visible
+                    }
+
+                    child(MaterialIconButton::class) {
+                        attrs {
+                            onClick = {
+                                onToggleBrowser()
+                            }
+
+                            disabled = forceOpen
                         }
 
-                        child(MaterialIconButton::class) {
-                            attrs {
-                                onClick = {
-                                    onToggleBrowser()
-                                }
-                            }
-
-                            if (state.browserOpen) {
-                                child(ExpandLessIcon::class) {}
-                            } else {
-                                child(ExpandMoreIcon::class) {}
-                            }
+                        if (state.browserOpen) {
+                            child(ExpandLessIcon::class) {}
+                        } else {
+                            child(ExpandMoreIcon::class) {}
                         }
                     }
                 }
@@ -211,7 +242,7 @@ class InputBrowser(
                         +"Error"
                     }
                     else if (listingSelected != null && inputError != null) {
-                        renderPathEditError(props.reportState.inputSpec().directory)
+                        renderPathEditError(props.reportState.inputSpec().browser.directory)
                     }
                     else if (browserListing == null || browserDir == null) {
                         styledDiv {
@@ -219,7 +250,7 @@ class InputBrowser(
                                 +browserDir
                             }
                             else {
-                                +props.reportState.inputSpec().directory
+                                +props.reportState.inputSpec().browser.directory
                             }
                         }
                         +"Loading..."
@@ -252,6 +283,9 @@ class InputBrowser(
 
 
     private fun RBuilder.renderControls(/*browserListing: List<FileInfo>*/) {
+        val selectedAddCount = newSelectedPaths().size
+        val selectedRemoveCount = existingSelectedPaths().size
+
         styledDiv {
             child(MaterialButton::class) {
                 attrs {
@@ -263,12 +297,18 @@ class InputBrowser(
                     }
 
                     onClick = {
-//                        onSummaryRefresh()
+                        onAddToSelection()
                     }
 
-                    if (state.selected.isEmpty()) {
+                    if (selectedAddCount == 0) {
                         disabled = true
-                        title = "No files selected"
+                        title =
+                            if (state.selected.isEmpty()) {
+                                "No files selected"
+                            }
+                            else {
+                                "No new files selected"
+                            }
                     }
                 }
 
@@ -280,11 +320,11 @@ class InputBrowser(
                     }
                 }
 
-                if (state.selected.isEmpty()) {
+                if (selectedAddCount == 0) {
                     +"Add"
                 }
                 else {
-                    +"Add (${state.selected.size} files)"
+                    +"Add ($selectedAddCount files)"
                 }
             }
 
@@ -294,12 +334,18 @@ class InputBrowser(
                     size = "small"
 
                     onClick = {
-//                        onSummaryRefresh()
+                        onRemoveFromSelection()
                     }
 
-                    if (state.selected.isEmpty()) {
+                    if (selectedRemoveCount == 0) {
                         disabled = true
-                        title = "No files selected"
+                        title =
+                            if (state.selected.isEmpty()) {
+                                "No files selected"
+                            }
+                            else {
+                                "No existing files selected"
+                            }
                     }
                 }
 
@@ -311,38 +357,24 @@ class InputBrowser(
                     }
                 }
 
-                if (state.selected.isEmpty()) {
+                if (selectedRemoveCount == 0) {
                     +"Remove"
                 }
                 else {
-                    +"Remove (${state.selected.size} files)"
+                    +"Remove ($selectedRemoveCount files)"
                 }
             }
 
-            child(MaterialTextField::class) {
-                attrs {
-                    style = reactStyle {
-                        float = Float.right
+            styledSpan {
+                css {
+                    float = Float.right
+                }
+                child(InputBrowserFilter::class) {
+                    attrs {
+                        reportState = props.reportState
+                        dispatcher = props.dispatcher
+                        editDisabled = props.editDisabled
                     }
-
-                    size = "small"
-
-                    InputProps = object : RProps {
-                        @Suppress("unused")
-                        var startAdornment = child(MaterialInputAdornment::class) {
-                            attrs {
-                                position = "start"
-                            }
-                            child(SearchIcon::class) {}
-                        }
-                    }
-
-                    onChange = {
-                        val target = it.target as HTMLInputElement
-//                        onValueChange(target.value)
-                    }
-
-                    disabled = props.editDisabled
                 }
             }
         }
@@ -357,11 +389,14 @@ class InputBrowser(
 //                    fontWeight = FontWeight.bold
 //                    marginLeft = 0.5.em
                 }
-                +"Empty (please select different folder above)"
+                val hasFilter = props.reportState.inputSpec().browser.filter.isNotBlank()
+                val filterSuffix = if (hasFilter) { " or adjust filter" } else { "" }
+                +"Empty (please select different folder$filterSuffix above)"
             }
             return
         }
 
+        val selectedPathSet = props.reportState.selectedPathSet()
         val (folders, files) = browserListing.partition { it.directory }
 
         // see: https://stackoverflow.com/questions/1122381/how-to-force-child-div-to-be-100-of-parent-divs-height-without-specifying-pare
@@ -394,53 +429,45 @@ class InputBrowser(
                             }
 
                             var allSelected = false
-//                            styledDiv {
-//                                css {
-//                                    position = Position.relative
-//                                }
-                                child(MaterialCheckbox::class) {
-                                    attrs {
-                                        style = reactStyle {
-//                                            position = Position.absolute
-//                                            top = (-0.5).em
-//                                            left = (-0.25).em
-                                            marginTop = (-0.5).em
-                                            marginBottom = (-0.5).em
-                                            marginLeft = (-0.25).em
-                                            marginRight = (-0.25).em
-                                            backgroundColor = Color.transparent
-                                            height = 0.px
-                                            overflow = Overflow.visible
-                                        }
-                                        disableRipple = true
+                            child(MaterialCheckbox::class) {
+                                attrs {
+                                    style = reactStyle {
+                                        marginTop = (-0.5).em
+                                        marginBottom = (-0.5).em
+                                        marginLeft = (-0.25).em
+                                        marginRight = (-0.25).em
+                                        backgroundColor = Color.transparent
+                                        height = 0.px
+                                        overflow = Overflow.visible
+                                    }
+                                    disableRipple = true
 
-                                        if (files.isEmpty()) {
-                                            disabled = true
-                                            checked = false
-                                            indeterminate = false
-                                        }
-                                        else {
-                                            disabled = props.editDisabled
-                                            if (state.selected.isNotEmpty()) {
-                                                if (state.selected.size == files.size) {
-                                                    checked = true
-                                                    indeterminate = false
-                                                    allSelected = true
-                                                }
-                                                else {
-                                                    checked = false
-                                                    indeterminate = true
-                                                }
+                                    if (files.isEmpty()) {
+                                        disabled = true
+                                        checked = false
+                                        indeterminate = false
+                                    }
+                                    else {
+                                        disabled = props.editDisabled
+                                        if (state.selected.isNotEmpty()) {
+                                            if (state.selected.size == files.size) {
+                                                checked = true
+                                                indeterminate = false
+                                                allSelected = true
                                             }
                                             else {
                                                 checked = false
-                                                indeterminate = false
+                                                indeterminate = true
                                             }
                                         }
-                                        onChange = { onFileSelectedAllToggle(allSelected) }
+                                        else {
+                                            checked = false
+                                            indeterminate = false
+                                        }
                                     }
+                                    onChange = { onFileSelectedAllToggle(allSelected) }
                                 }
-//                            }
+                            }
 
                             attrs {
                                 title = when {
@@ -461,6 +488,19 @@ class InputBrowser(
                                 boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
                             }
                             +"Name"
+                        }
+                        styledTh {
+                            css {
+                                position = Position.sticky
+                                top = 0.px
+                                backgroundColor = Color.white
+                                zIndex = 999
+                                height = 2.em
+                                textAlign = TextAlign.left
+                                paddingLeft = 0.5.em
+                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                            }
+                            +"Selected"
                         }
                         styledTh {
                             css {
@@ -528,6 +568,7 @@ class InputBrowser(
                             td {
                                 +folderInfo.name
                             }
+                            styledTd {}
                             styledTd {
                                 css {
                                     paddingLeft = 0.5.em
@@ -541,7 +582,8 @@ class InputBrowser(
                     }
 
                     for (fileInfo in files) {
-                        val checked = state.selected.contains(fileInfo.path)
+                        val checked = fileInfo.path in state.selected
+                        val selected = fileInfo.path in selectedPathSet
                         styledTr {
                             key = fileInfo.path
 
@@ -579,8 +621,29 @@ class InputBrowser(
                                     attrs["onChange"] = {}
                                 }
                             }
-                            td {
+                            styledTd {
+                                css {
+                                    if (selected) {
+                                        fontWeight = FontWeight.bold
+                                    }
+                                }
                                 +fileInfo.name
+                            }
+                            styledTd {
+                                css {
+                                    paddingLeft = 0.5.em
+                                    whiteSpace = WhiteSpace.nowrap
+                                }
+                                if (selected) {
+                                    child(CheckIcon::class) {
+                                        attrs {
+                                            style = reactStyle {
+                                                marginTop = (-0.2).em
+                                                marginBottom = (-0.2).em
+                                            }
+                                        }
+                                    }
+                                }
                             }
                             styledTd {
                                 css {
@@ -636,7 +699,7 @@ class InputBrowser(
             +browseDir
         }
         else {
-            +props.reportState.inputSpec().directory
+            +props.reportState.inputSpec().browser.directory
         }
     }
 }

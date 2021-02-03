@@ -8,14 +8,14 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 
 
 data class SessionState(
-        val graphDefinitionAttempt: GraphDefinitionAttempt,
+    val graphDefinitionAttempt: GraphDefinitionAttempt,
 
-        val navigationRoute: NavigationRoute,
+    val navigationRoute: NavigationRoute,
 
-        val imperativeModel: ImperativeModel?,
+    val imperativeModel: ImperativeModel?,
 
-        val activeHost: DocumentPath?,
-        val runningHosts: Set<DocumentPath>
+    val activeHost: DocumentPath?,
+    val runningHosts: Set<DocumentPath>
 ) {
 //    fun activeHost(): DocumentPath? {
 //        return imperativeModel?.frames?.get(0)?.path

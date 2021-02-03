@@ -79,7 +79,9 @@ Report:
   title: "Report"
   icon: TableChart
   input:
-    directory: ./
+    browser:
+      directory: ./
+      filter: ""
     selected: []
   formula: {}
   filter: {}

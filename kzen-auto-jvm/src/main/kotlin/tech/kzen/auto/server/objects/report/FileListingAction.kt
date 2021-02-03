@@ -11,56 +11,88 @@ import java.nio.file.Paths
 
 
 class FileListingAction {
-    suspend fun list(pattern: String): List<Path>? {
+//    suspend fun scan(pattern: String): List<Path>? {
+//        val parsed = AutoJvmUtils.parsePath(pattern)
+//
+//        if (parsed != null) {
+//            if (Files.isRegularFile(parsed)) {
+//                return listOf(parsed)
+//            }
+//
+//            if (Files.isDirectory(parsed)) {
+//                return withContext(Dispatchers.IO) {
+//                    Files.newDirectoryStream(parsed)
+//                            .use { it.toList() }
+//                }
+//            }
+//
+//            return null
+//        }
+//
+//        val trimmed = pattern.trim()
+//
+//        val unQuoted =
+//                if (trimmed.startsWith("\"") &&
+//                        trimmed.endsWith("\"") &&
+//                        trimmed.length > 2)
+//                {
+//                     trimmed.substring(1, trimmed.length - 1)
+//                }
+//                else {
+//                    trimmed
+//                }
+//
+//        val normalized = unQuoted.replace("\\", "/")
+//        val lastDirDelimiterIndex = normalized.lastIndexOf('/')
+//        if (lastDirDelimiterIndex == -1) {
+//            return null
+//        }
+//
+//        val parent = normalized.substring(0, lastDirDelimiterIndex)
+//        val dir = Paths.get(parent)
+//        val glob = normalized.substring(lastDirDelimiterIndex + 1)
+//
+//        return withContext(Dispatchers.IO) {
+//            Files.newDirectoryStream(dir, glob)
+//                    .use { it.toList() }
+//        }
+//    }
+
+    
+    suspend fun scan(pattern: String, filter: String): List<Path>? {
         val parsed = AutoJvmUtils.parsePath(pattern)
+            ?: return null
 
-        if (parsed != null) {
-            if (Files.isRegularFile(parsed)) {
-                return listOf(parsed)
-            }
+        if (Files.isRegularFile(parsed)) {
+            return listOf(parsed)
+        }
 
-            if (Files.isDirectory(parsed)) {
-                return withContext(Dispatchers.IO) {
-                    Files.newDirectoryStream(parsed)
-                            .use { it.toList() }
-                }
-            }
-
+        if (! Files.isDirectory(parsed)) {
             return null
         }
 
-        val trimmed = pattern.trim()
-
-        val unQuoted =
-                if (trimmed.startsWith("\"") &&
-                        trimmed.endsWith("\"") &&
-                        trimmed.length > 2)
-                {
-                     trimmed.substring(1, trimmed.length - 1)
+        val trimmedFilter = filter.trim()
+        val containsFunction =
+            if (trimmedFilter.isEmpty()) {
+                { true }
+            }
+            else {
+                val filterParts: List<String> = trimmedFilter.toLowerCase().split(Regex("\\s+"));
+                { path: Path? ->
+                    val normalizedPath = path!!.fileName.toString().toLowerCase()
+                    filterParts.all { normalizedPath.contains(it) }
                 }
-                else {
-                    trimmed
-                }
-
-        val normalized = unQuoted.replace("\\", "/")
-        val lastDirDelimiterIndex = normalized.lastIndexOf('/')
-        if (lastDirDelimiterIndex == -1) {
-            return null
-        }
-
-        val parent = normalized.substring(0, lastDirDelimiterIndex)
-        val dir = Paths.get(parent)
-        val glob = normalized.substring(lastDirDelimiterIndex + 1)
+            }
 
         return withContext(Dispatchers.IO) {
-            Files.newDirectoryStream(dir, glob)
-                    .use { it.toList() }
+            Files.newDirectoryStream(parsed, containsFunction)
+                .use { it.toList() }
         }
     }
 
 
-    suspend fun listInfo(pattern: String): List<FileInfo> {
-        val files = list(pattern)
+    suspend fun scanInfo(pattern: String, filter: String): List<FileInfo> {
+        val files = scan(pattern, filter)
             ?: return listOf()
 
         return files.map {

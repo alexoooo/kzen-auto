@@ -243,6 +243,22 @@ class ClientRestApi(
     }
 
 
+    suspend fun insertAllListItemsInAttribute(
+        objectLocation: ObjectLocation,
+        containingList: AttributePath,
+        indexInList: PositionRelation,
+        unparsedItemNotations: List<String>
+    ): Digest {
+        return getDigest(
+            CommonRestApi.commandAttributeInsertAllItemsIn,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributePath to containingList.asString(),
+            CommonRestApi.paramPositionIndex to indexInList.asString(),
+            * unparsedItemNotations.map { CommonRestApi.paramAttributeNotation to it }.toTypedArray())
+    }
+
+
     suspend fun insertMapEntryInAttribute(
         objectLocation: ObjectLocation,
         containingMap: AttributePath,
@@ -289,6 +305,22 @@ class ClientRestApi(
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
             CommonRestApi.paramAttributePath to attributePath.asString(),
             CommonRestApi.paramAttributeNotation to unparsedItemNotation,
+            CommonRestApi.paramAttributeCleanupContainer to removeContainerIfEmpty.toString())
+    }
+
+
+    suspend fun removeAllListItemsInAttributeCommand(
+        objectLocation: ObjectLocation,
+        attributePath: AttributePath,
+        unparsedItemNotations: List<String>,
+        removeContainerIfEmpty: Boolean
+    ): Digest {
+        return getDigest(
+            CommonRestApi.commandAttributeRemoveAllItemsIn,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributePath to attributePath.asString(),
+            * unparsedItemNotations.map { CommonRestApi.paramAttributeNotation to it }.toTypedArray(),
             CommonRestApi.paramAttributeCleanupContainer to removeContainerIfEmpty.toString())
     }
 

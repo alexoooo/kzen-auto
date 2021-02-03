@@ -466,3 +466,9 @@ external class FunctionsIcon: Component<IconProps, RState> {
 external class SettingsIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("Check")
+external class CheckIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

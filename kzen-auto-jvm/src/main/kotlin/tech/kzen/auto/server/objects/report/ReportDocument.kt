@@ -86,7 +86,9 @@ class ReportDocument(
 
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun inputPaths(): List<Path>? {
-        return ServerContext.fileListingAction.list(input.directory)
+//        return ServerContext.fileListingAction.list(input.browser.directory)
+        return ServerContext.fileListingAction.scan(
+            input.browser.directory, input.browser.filter)
     }
 
 
@@ -118,7 +120,7 @@ class ReportDocument(
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun actionBrowseFiles(): ExecutionResult {
         val absoluteDir = browseDir()
-        val inputPaths = ServerContext.fileListingAction.listInfo(input.directory)
+        val inputPaths = ServerContext.fileListingAction.scanInfo(input.browser.directory, input.browser.filter)
 
         val inputInfo = InputInfo(
             absoluteDir, inputPaths)
@@ -142,11 +144,11 @@ class ReportDocument(
 
     private fun browseDir(): String {
         return AutoJvmUtils
-            .parsePath(input.directory)
+            .parsePath(input.browser.directory)
             ?.toAbsolutePath()
             ?.normalize()
             ?.toString()
-            ?: input.directory
+            ?: input.browser.directory
     }
 
 
