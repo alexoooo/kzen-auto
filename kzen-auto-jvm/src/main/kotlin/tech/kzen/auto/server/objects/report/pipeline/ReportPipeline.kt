@@ -115,7 +115,7 @@ class ReportPipeline(
     private val decoder = ReportInputDecoder()
 //    private val parser = ReportParserFeeder()
     private val lexer = ReportInputLexer()
-    private val lexerParser = ReportInputParser()
+    private val parser = ReportInputParser()
 
 
     private val filter = ReportFilter(initialReportRunSpec)
@@ -171,7 +171,7 @@ class ReportPipeline(
 
             val read = dataInput.poll(binaryEvent.data)
             if (! read) {
-                binaryEvent.noop = true
+                binaryEvent.noop = ! binaryEvent.data.endOfStream
                 binaryRingBuffer.publish(sequence)
                 break
             }
@@ -239,7 +239,7 @@ class ReportPipeline(
             .handleEventsWith(this::handleDecode)
             .handleEventsWith(this::handleLex)
             .handleEventsWith(EventHandler { binaryEvent, _, _ ->
-                handleLexParse(binaryEvent, disruptorRecordHandoff)
+                handleParse(binaryEvent, disruptorRecordHandoff)
             })
 
 //        binaryDisruptor
@@ -291,7 +291,7 @@ class ReportPipeline(
 
 
     @Suppress("UNUSED_PARAMETER")
-    private fun handleLexParse(
+    private fun handleParse(
         event: ReportBinaryEvent,
         recordHandoff: RecordHandoff
     ) {
@@ -301,9 +301,8 @@ class ReportPipeline(
 
 //        writer!!.write("^^^^^^^^^")
 
-        lexerParser.parse(event.data, recordHandoff)
+        parser.parse(event.data, recordHandoff)
     }
-
 
 
 //    @Suppress("UNUSED_PARAMETER")
@@ -383,14 +382,14 @@ class ReportPipeline(
     }
 
 
-    private fun handleSummaryAndOutput(
-        event: ReportRecordEvent,
-        sequence: Long,
-        endOfBatch: Boolean
-    ) {
-        handleSummary(event, sequence, endOfBatch)
-        handleOutput(event, sequence, endOfBatch)
-    }
+//    private fun handleSummaryAndOutput(
+//        event: ReportRecordEvent,
+//        sequence: Long,
+//        endOfBatch: Boolean
+//    ) {
+//        handleSummary(event, sequence, endOfBatch)
+//        handleOutput(event, sequence, endOfBatch)
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

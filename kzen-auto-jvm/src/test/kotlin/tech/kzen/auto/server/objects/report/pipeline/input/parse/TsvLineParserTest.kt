@@ -59,47 +59,44 @@ class TsvLineParserTest {
 
     @Test
     fun mannyEmptyValues() {
-        val csvLines = "\t\t\t\t\t\t\t\t\t"
+        val tsvLines = "\t\t\t\t\t\t\t\t\t"
         val values = listOf("", "", "", "", "", "", "", "", "", "")
-        assertEquals(values, read(csvLines)[0].toList())
-        assertEquals(values, read(csvLines, 3)[0].toList())
-        assertEquals(values, read(csvLines, 4)[0].toList())
+        assertEquals(values, read(tsvLines)[0].toList())
+        assertEquals(values, read(tsvLines, 3)[0].toList())
+        assertEquals(values, read(tsvLines, 4)[0].toList())
     }
 
 
     @Test
     fun singleCharacterValue() {
-        val csvLine = "a"
-        assertEquals(listOf("a"), read(csvLine)[0].toList())
+        val tsvLine = "a"
+        assertEquals(listOf("a"), read(tsvLine)[0].toList())
     }
 
 
     @Test
     fun fewCharacterValue() {
-        val csvLine = "abcde"
-        assertEquals(listOf("abcde"), read(csvLine)[0].toList())
-        assertEquals(listOf("abcde"), read(csvLine, 3)[0].toList())
-        assertEquals(listOf("abcde"), read(csvLine, 4)[0].toList())
+        val tsvLine = "abcde"
+        assertEquals(listOf("abcde"), read(tsvLine)[0].toList())
+        assertEquals(listOf("abcde"), read(tsvLine, 3)[0].toList())
+        assertEquals(listOf("abcde"), read(tsvLine, 4)[0].toList())
     }
 
 
     @Test
     fun twoSingleCharacterValues() {
-        val csvLine = "a\tb"
-        assertEquals(listOf("a", "b"), read(csvLine)[0].toList())
+        val tsvLine = "a\tb"
+        assertEquals(listOf("a", "b"), read(tsvLine)[0].toList())
     }
 
 
     @Test
     fun fiveSingleCharacterValues() {
-        val csvLine = "a\tb\tc\td\te"
-        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine)[0].toList())
-        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, 3)[0].toList())
-        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, 4)[0].toList())
-        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, 5)[0].toList())
-        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, 6)[0].toList())
-        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, 7)[0].toList())
-        assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, 8)[0].toList())
+        val tsvLine = "a\tb\tc\td\te"
+        assertEquals(listOf("a", "b", "c", "d", "e"), read(tsvLine)[0].toList())
+        for (i in 3 .. 8) {
+            assertEquals(listOf("a", "b", "c", "d", "e"), read(tsvLine, i)[0].toList())
+        }
     }
 
 
@@ -114,6 +111,30 @@ class TsvLineParserTest {
         assertEquals(cells, read(tsvLine)[0].toList())
         for (i in 3 .. 16) {
             assertEquals(cells, read(tsvLine, i)[0].toList())
+        }
+    }
+
+
+    @Test
+    fun simpleTwoLineWithTrailer() {
+        val tsvLines = "foo\tbar\r\nhello\t1\r\n"
+        val parsed = read(tsvLines)
+        assertEquals(listOf("foo", "bar"), parsed[0].toList())
+        assertEquals(listOf("hello", "1"), parsed[1].toList())
+        for (i in 3 .. 18) {
+            val bufferParsed = read(tsvLines, i)
+            assertEquals(listOf("foo", "bar"), bufferParsed[0].toList())
+            assertEquals(listOf("hello", "1"), bufferParsed[1].toList())
+        }
+    }
+
+
+    @Test
+    fun simpleFourLineWithoutTrailer() {
+        val tsvLines = "foo\tbar\r\nhello\t1\r\nworld\t42\r\nworld\t420"
+        assertEquals(4, read(tsvLines).size)
+        for (i in 3 .. 38) {
+            assertEquals(4, read(tsvLines).size)
         }
     }
 

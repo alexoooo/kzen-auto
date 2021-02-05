@@ -67,9 +67,10 @@ tasks.withType<ProcessResources> {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
+        useIR = true
         freeCompilerArgs = listOf("-Xjsr305=strict")
-        jvmTarget = "14"
-//        jvmTarget = "15"
+//        jvmTarget = "14"
+        jvmTarget = "15"
     }
 }
 

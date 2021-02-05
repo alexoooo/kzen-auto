@@ -25,6 +25,13 @@ class ReportController(
     ReportStore.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        val separatorWidth = 2.px
+        val separatorColor = Color("#c3c3c3")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     class State(
         var reportState: ReportState?
     ): RState

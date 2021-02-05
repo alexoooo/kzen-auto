@@ -9,6 +9,7 @@ import react.RState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.wrap.ReactSelectMulti
 import tech.kzen.auto.client.wrap.ReactSelectOption
@@ -68,9 +69,9 @@ class PivotRowList(
 
         styledDiv {
             css {
-                borderTopWidth = 1.px
+                borderTopWidth = ReportController.separatorWidth
+                borderTopColor = ReportController.separatorColor
                 borderTopStyle = BorderStyle.solid
-                borderTopColor = Color.lightGray
                 paddingTop = 0.5.em
             }
 

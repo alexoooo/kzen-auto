@@ -9,6 +9,7 @@ import react.dom.td
 import react.dom.tr
 import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
+import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
@@ -192,9 +193,9 @@ class ReportFilterItem(
 
         styledDiv {
             css {
-                borderTopWidth = 1.px
+                borderTopWidth = ReportController.separatorWidth
+                borderTopColor = ReportController.separatorColor
                 borderTopStyle = BorderStyle.solid
-                borderTopColor = Color.lightGray
             }
 
             renderHeader(columnSummary, missing, editDisabled)

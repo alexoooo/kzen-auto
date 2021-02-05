@@ -2,15 +2,13 @@ package tech.kzen.auto.client.objects.document.report.input
 
 import kotlinx.css.*
 import kotlinx.css.properties.boxShadowInset
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import react.*
 import react.dom.td
 import styled.*
+import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.report.listing.FileInfo
@@ -27,17 +25,9 @@ class InputBrowser(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private fun formatModified(time: Instant): String {
-            val modifiedLocal = time.toLocalDateTime(TimeZone.currentSystemDefault())
-            val hours = modifiedLocal.hour.toString().padStart(2, '0')
-            val minutes = modifiedLocal.minute.toString().padStart(2, '0')
-            val seconds = modifiedLocal.second.toString().padStart(2, '0')
-            return "${modifiedLocal.date} $hours:$minutes:$seconds"
-        }
-
-        private val hoverRow = Color("rgb(200, 200, 200)")
-        private val selectedRow = Color("rgb(200, 200, 255)")
-        private val selectedHoverRow = Color("rgb(175, 175, 227)")
+        val hoverRow = Color("rgb(220, 220, 220)")
+        private val selectedRow = Color("rgb(220, 220, 255)")
+        private val selectedHoverRow = Color("rgb(190, 190, 240)")
     }
 
 
@@ -188,9 +178,9 @@ class InputBrowser(
 
         styledDiv {
             css {
-                borderTopWidth = 1.px
+                borderTopWidth = ReportController.separatorWidth
+                borderTopColor = ReportController.separatorColor
                 borderTopStyle = BorderStyle.solid
-                borderTopColor = Color.lightGray
             }
 
             styledDiv {
@@ -312,7 +302,7 @@ class InputBrowser(
                     }
                 }
 
-                child(AddIcon::class) {
+                child(AddCircleOutlineIcon::class) {
                     attrs {
                         style = reactStyle {
                             marginRight = 0.25.em
@@ -349,7 +339,7 @@ class InputBrowser(
                     }
                 }
 
-                child(RemoveIcon::class) {
+                child(RemoveCircleOutlineIcon::class) {
                     attrs {
                         style = reactStyle {
                             marginRight = 0.25.em
@@ -495,7 +485,6 @@ class InputBrowser(
                                 top = 0.px
                                 backgroundColor = Color.white
                                 zIndex = 999
-                                height = 2.em
                                 textAlign = TextAlign.left
                                 paddingLeft = 0.5.em
                                 boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
@@ -508,7 +497,6 @@ class InputBrowser(
                                 top = 0.px
                                 backgroundColor = Color.white
                                 zIndex = 999
-                                height = 2.em
                                 textAlign = TextAlign.left
                                 paddingLeft = 0.5.em
                                 paddingRight = 0.5.em
@@ -575,7 +563,7 @@ class InputBrowser(
                                     paddingRight = 0.5.em
                                     whiteSpace = WhiteSpace.nowrap
                                 }
-                                +formatModified(folderInfo.modified)
+                                +FormatUtils.formatLocalDateTime(folderInfo.modified)
                             }
                             styledTd {}
                         }
@@ -651,7 +639,7 @@ class InputBrowser(
                                     paddingRight = 0.5.em
                                     whiteSpace = WhiteSpace.nowrap
                                 }
-                                +formatModified(fileInfo.modified)
+                                +FormatUtils.formatLocalDateTime(fileInfo.modified)
                             }
                             styledTd {
                                 css {
@@ -695,11 +683,17 @@ class InputBrowser(
 
 
     private fun RBuilder.renderSummary(browseDir: String?) {
-        if (browseDir != null) {
-            +browseDir
+        styledDiv {
+            css {
+                height = 1.px
+                marginTop = (-4).px
+            }
         }
-        else {
-            +props.reportState.inputSpec().browser.directory
-        }
+//        if (browseDir != null) {
+//            +browseDir
+//        }
+//        else {
+//            +props.reportState.inputSpec().browser.directory
+//        }
     }
 }

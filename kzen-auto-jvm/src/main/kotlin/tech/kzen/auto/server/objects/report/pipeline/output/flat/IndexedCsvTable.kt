@@ -186,7 +186,7 @@ class IndexedCsvTable(
 
             while (true) {
                 val hasNext = inputChain.poll { recordItem ->
-                    if (--remainingCount > 0) {
+                    if (remainingCount-- > 0) {
                         visitor.invoke(recordItem.toList())
                     }
                 }

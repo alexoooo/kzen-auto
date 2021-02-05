@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.digest
 
-
+//@JvmInline
+//value class DigestOrdinal(
 inline class DigestOrdinal(
     private val value: Long
 ) {

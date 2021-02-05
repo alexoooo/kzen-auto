@@ -4,7 +4,7 @@ import kotlinx.css.em
 import kotlinx.css.width
 import org.w3c.dom.HTMLInputElement
 import react.*
-import tech.kzen.auto.client.objects.document.report.state.InputsSelectionFilterRequest
+import tech.kzen.auto.client.objects.document.report.state.InputsBrowserFilterRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.util.async
@@ -59,7 +59,7 @@ class InputBrowserFilter(
             return
         }
 
-        props.dispatcher.dispatchAsync(InputsSelectionFilterRequest(state.filterText))
+        props.dispatcher.dispatchAsync(InputsBrowserFilterRequest(state.filterText))
     }
 
 

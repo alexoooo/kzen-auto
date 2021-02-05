@@ -1,5 +1,8 @@
 package tech.kzen.auto.common.util
 
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.math.log10
 import kotlin.math.pow
 
@@ -33,5 +36,14 @@ object FormatUtils {
                 wholeFormat + "." + (unitFraction * 10).toLong()
             }
         return unitFormat + " " + units[digitGroups]
+    }
+
+
+    fun formatLocalDateTime(time: Instant): String {
+        val modifiedLocal = time.toLocalDateTime(TimeZone.currentSystemDefault())
+        val hours = modifiedLocal.hour.toString().padStart(2, '0')
+        val minutes = modifiedLocal.minute.toString().padStart(2, '0')
+        val seconds = modifiedLocal.second.toString().padStart(2, '0')
+        return "${modifiedLocal.date} $hours:$minutes:$seconds"
     }
 }

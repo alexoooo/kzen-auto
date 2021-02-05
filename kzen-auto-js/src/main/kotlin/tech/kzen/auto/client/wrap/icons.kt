@@ -24,12 +24,6 @@ external interface IconProps: RProps {
 }
 
 
-@JsName("AddCircleOutline")
-external class AddCircleOutlineIcon: Component<IconProps, RState> {
-    override fun render(): ReactElement?
-}
-
-
 @JsName("Delete")
 external class DeleteIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
@@ -86,6 +80,11 @@ external class CancelPresentationIcon: Component<IconProps, RState> {
 
 @JsName("Close")
 external class CloseIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+@JsName("Clear")
+external class ClearIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 
@@ -306,8 +305,26 @@ external class AddIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("AddCircleOutline")
+external class AddCircleOutlineIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("Remove")
 external class RemoveIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("RemoveCircle")
+external class RemoveCircleIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("RemoveCircleOutline")
+external class RemoveCircleOutlineIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
 

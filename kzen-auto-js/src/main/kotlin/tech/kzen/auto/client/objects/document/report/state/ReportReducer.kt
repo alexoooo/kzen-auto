@@ -78,13 +78,13 @@ object ReportReducer {
         action: InputReportAction
     ): ReportState {
         return when (action) {
-            InputsUpdatedRequest,
+//            InputsUpdatedRequest,
             ListInputsBrowserRequest,
             ListInputsSelectedRequest,
             is ListInputsBrowserNavigate,
             is InputsSelectionAddRequest,
             is InputsSelectionRemoveRequest,
-            is InputsSelectionFilterRequest -> state.copy(
+            is InputsBrowserFilterRequest -> state.copy(
                 inputLoading = true,
                 inputError = null)
 

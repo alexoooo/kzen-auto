@@ -86,7 +86,7 @@ object InitiateReport: SingularReportAction()
 sealed class InputReportAction: SingularReportAction()
 
 
-object InputsUpdatedRequest: InputReportAction()
+//object InputsUpdatedRequest: InputReportAction()
 
 
 sealed class ListInputsAction: InputReportAction()
@@ -103,6 +103,11 @@ data class ListInputsBrowserNavigate(
 ): ListInputsResponse()
 
 
+data class InputsBrowserFilterRequest(
+    val filter: String
+): ListInputsResponse()
+
+
 data class InputsSelectionAddRequest(
     val paths: List<String>
 ): ListInputsResponse()
@@ -110,11 +115,6 @@ data class InputsSelectionAddRequest(
 
 data class InputsSelectionRemoveRequest(
     val paths: List<String>
-): ListInputsResponse()
-
-
-data class InputsSelectionFilterRequest(
-    val filter: String
 ): ListInputsResponse()
 
 

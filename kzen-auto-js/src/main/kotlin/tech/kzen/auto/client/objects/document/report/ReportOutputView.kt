@@ -9,7 +9,6 @@ import react.dom.thead
 import react.dom.tr
 import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
-import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
 import tech.kzen.auto.client.objects.document.report.state.OutputLookupRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportSaveAction
@@ -116,12 +115,12 @@ class ReportOutputView(
                 marginTop = 5.px
             }
 
-            child(TopIngress::class) {
-                attrs {
-                    ingressColor = Color.white
-                    parentWidth = 100.pct
-                }
-            }
+//            child(TopIngress::class) {
+//                attrs {
+//                    ingressColor = Color.white
+//                    parentWidth = 100.pct
+//                }
+//            }
 
             styledDiv {
                 css {

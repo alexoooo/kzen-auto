@@ -8,8 +8,7 @@ import react.RState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
-import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
-import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
+import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.TableChartIcon
@@ -39,12 +38,12 @@ class ReportPivot(
                 marginTop = 5.px
             }
 
-            child(TopIngress::class) {
-                attrs {
-                    ingressColor = Color.white
-                    parentWidth = 100.pct
-                }
-            }
+//            child(TopIngress::class) {
+//                attrs {
+//                    ingressColor = Color.white
+//                    parentWidth = 100.pct
+//                }
+//            }
 
             styledDiv {
                 css {
@@ -62,7 +61,7 @@ class ReportPivot(
                 }
             }
 
-            child(BottomEgress::class) {
+            child(ReportBottomEgress::class) {
                 attrs {
                     this.egressColor = Color.white
                     parentWidth = 100.pct

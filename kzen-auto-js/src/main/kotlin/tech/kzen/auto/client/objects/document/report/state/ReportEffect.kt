@@ -31,15 +31,26 @@ object ReportEffect {
     ): ReportAction? {
 //        console.log("ReportEffect action: ", action)
 
-        if (action == InitiateReport ||
-                action == InputsUpdatedRequest
-        ) {
-            return CompoundReportAction(
-                ListInputsSelectedRequest,
-                OutputLookupRequest)
-        }
+//        if (action == InitiateReport /*||
+//                action is ListInputsSelectedResult*/
+//        ) {
+//            return ListInputsSelectedRequest
+////            return CompoundReportAction(
+////                ListInputsSelectedRequest,
+////                OutputLookupRequest)
+//        }
+//        else if () {
+//
+//        }
 
         return when (action) {
+            InitiateReport ->
+                ListInputsSelectedRequest
+
+            is ListInputsSelectedResult ->
+                ListColumnsRequest
+
+
             is OutputLookupRequest ->
                 lookupOutput(state)
 
@@ -59,7 +70,7 @@ object ReportEffect {
             is InputsSelectionRemoveRequest ->
                 unselectBrowserFiles(state, action.paths)
 
-            is InputsSelectionFilterRequest ->
+            is InputsBrowserFilterRequest ->
                 updateBrowserFilter(state, action.filter)
 
 //            is ListInputsResponse ->
@@ -71,7 +82,9 @@ object ReportEffect {
 
             is ListColumnsResponse ->
                 if (action.columnListing.isNotEmpty()) {
-                    ReportTaskLookupRequest
+                    CompoundReportAction(
+                        ReportTaskLookupRequest,
+                        OutputLookupRequest)
                 }
                 else {
                     null

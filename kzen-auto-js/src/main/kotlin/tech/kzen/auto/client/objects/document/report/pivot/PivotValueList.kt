@@ -6,6 +6,7 @@ import react.RProps
 import react.RPureComponent
 import react.RState
 import styled.*
+import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
@@ -28,9 +29,9 @@ class PivotValueList(
     override fun RBuilder.render() {
         styledDiv {
             css {
-                borderTopWidth = 1.px
+                borderTopWidth = ReportController.separatorWidth
+                borderTopColor = ReportController.separatorColor
                 borderTopStyle = BorderStyle.solid
-                borderTopColor = Color.lightGray
                 paddingTop = 0.5.em
             }
 

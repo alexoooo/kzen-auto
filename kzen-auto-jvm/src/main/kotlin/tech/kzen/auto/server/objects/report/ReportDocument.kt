@@ -85,16 +85,17 @@ class ReportDocument(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun inputPaths(): List<Path>? {
+    private fun inputPaths(): List<Path> {
 //        return ServerContext.fileListingAction.list(input.browser.directory)
-        return ServerContext.fileListingAction.scan(
-            input.browser.directory, input.browser.filter)
+//        return ServerContext.fileListingAction.scan(
+//            input.browser.directory, input.browser.filter)
+        return input.selected.map { Paths.get(it) }
     }
 
 
     private suspend fun runSpec(): ReportRunSpec? {
         val inputPaths = inputPaths()
-            ?: return null
+//            ?: return null
 
         val columnNames = ServerContext.columnListingAction.columnNamesMerge(inputPaths)
 
@@ -120,7 +121,8 @@ class ReportDocument(
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun actionBrowseFiles(): ExecutionResult {
         val absoluteDir = browseDir()
-        val inputPaths = ServerContext.fileListingAction.scanInfo(input.browser.directory, input.browser.filter)
+        val inputPaths = ServerContext.fileListingAction.scanInfo(
+            input.browser.directory, input.browser.filter)
 
         val inputInfo = InputInfo(
             absoluteDir, inputPaths)
@@ -154,7 +156,7 @@ class ReportDocument(
 
     private suspend fun actionColumnListing(): ExecutionResult {
         val inputPaths = inputPaths()
-            ?: return ExecutionFailure("Please provide a valid input path")
+//            ?: return ExecutionFailure("Please provide a valid input path")
 
         val columnNames = ServerContext.columnListingAction.columnNamesMerge(inputPaths)
         return ExecutionSuccess.ofValue(

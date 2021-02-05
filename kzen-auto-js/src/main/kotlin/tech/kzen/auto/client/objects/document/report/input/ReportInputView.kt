@@ -10,7 +10,7 @@ import react.dom.div
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
-import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
+import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.InputIcon
@@ -58,7 +58,7 @@ class ReportInputView(
                 }
             }
 
-            child(BottomEgress::class) {
+            child(ReportBottomEgress::class) {
                 attrs {
                     this.egressColor = Color.white
                     parentWidth = 100.pct
