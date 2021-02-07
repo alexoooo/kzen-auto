@@ -12,7 +12,7 @@ import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.report.listing.FileInfo
-import tech.kzen.auto.common.paradigm.task.model.TaskProgress
+import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.util.FormatUtils
 
 
@@ -427,7 +427,7 @@ class InputSelected(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderProgress(taskProgress: TaskProgress) {
+    private fun RBuilder.renderProgress(taskProgress: ReportProgress) {
         if (! props.reportState.isTaskRunning()) {
             return
         }
@@ -487,7 +487,7 @@ class InputSelected(
                         }
                     }
                     tbody {
-                        for (e in taskProgress.remainingFiles.entries) {
+                        for (e in taskProgress.inputs.entries) {
                             tr {
                                 key = e.key
 
@@ -495,7 +495,7 @@ class InputSelected(
                                     +e.key
                                 }
                                 td {
-                                    +e.value
+                                    +e.value.toString()
                                 }
                             }
                         }
@@ -504,7 +504,6 @@ class InputSelected(
             }
         }
     }
-
 
 
 //    private fun RBuilder.renderColumnListing() {

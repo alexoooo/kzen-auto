@@ -76,7 +76,7 @@ class ReportInputChain(
     private val reader = ReportInputReader.single(flatData)
     private val decoder = ReportInputDecoder()
     private val lexer = ReportInputLexer()
-    private val parser = ReportInputParser(false)
+    private val parser = ReportInputParser(false, null)
 
     private val dataBuffer = RecordDataBuffer.ofBufferSize(bufferSize)
     private val recordHandoff = ListRecordHandoff()

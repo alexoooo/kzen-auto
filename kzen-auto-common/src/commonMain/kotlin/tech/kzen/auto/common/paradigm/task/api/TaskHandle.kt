@@ -6,6 +6,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 
 interface TaskHandle {
     //-----------------------------------------------------------------------------------------------------------------
+    fun completeWithPartialResult()
     fun complete(result: ExecutionResult)
 
     fun update(partialResult: ExecutionSuccess)

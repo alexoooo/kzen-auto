@@ -15,7 +15,7 @@ class ReportInputLexer {
     //-----------------------------------------------------------------------------------------------------------------
     fun tokenize(data: RecordDataBuffer) {
         if (location == null) {
-            location = data.location!!
+            location = data.inputKey!!
 
             lexer = RecordLexer.forExtension(data.innerExtension!!)
 //            lexer = TsvRecordLexer()

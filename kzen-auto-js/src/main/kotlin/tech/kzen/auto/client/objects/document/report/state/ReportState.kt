@@ -4,10 +4,10 @@ import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.FileInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
+import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.objects.document.report.spec.*
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
-import tech.kzen.auto.common.paradigm.task.model.TaskProgress
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -44,37 +44,28 @@ data class ReportState(
     val outputLoading: Boolean = false,
     val outputInfo: OutputInfo? = null,
     val outputError: String? = null,
+    val outputCount: Long? = null,
 
     val taskLoaded: Boolean = false,
     val taskLoading: Boolean = false,
     val taskStarting: Boolean = false,
     val taskStopping: Boolean = false,
-//    val indexTaskRunning: Boolean = false,
     val taskRunning: Boolean = false,
     val taskModel: TaskModel? = null,
-    val taskProgress: TaskProgress? = null,
+    val taskProgress: ReportProgress? = null,
     val taskLoadError: String? = null,
     val taskError: String? = null,
 
     val tableSummaryLoaded: Boolean = false,
     val tableSummaryLoading: Boolean = false,
     val tableSummary: TableSummary? = null,
-    val tableSummaryError: String? = null/*,
-    val indexTaskFinished: Boolean = false*/
+    val tableSummaryError: String? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        val empty = ProcessState(
-//            clientState = null,
-//            tableSummaryTaskRunning = false,
-//            filterTaskRunning = false
-//        )
-
         fun tryCreate(clientState: SessionState): ReportState? {
-//            console.log("^^^ tryCreate: $clientState")
             val mainLocation = tryMainLocation(clientState)
                 ?: return null
-//            console.log("^^^ tryCreate - got mainLocation: $mainLocation")
 
             return ReportState(clientState, mainLocation)
         }
@@ -107,7 +98,25 @@ data class ReportState(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun isInitiating(): Boolean {
-        return false
+        if (inputSpec().selected.isEmpty()) {
+            return false
+        }
+
+        if (! inputLoaded) {
+            return true
+        }
+
+        if (! columnListingLoaded) {
+            return true
+        }
+
+        if (columnListing.isNullOrEmpty()) {
+            return false
+        }
+
+        return ! taskLoaded ||
+                ! outputLoaded ||
+                ! tableSummaryLoaded
     }
 
 

@@ -72,10 +72,10 @@ data class TaskModel(
             ?: return null
 
         @Suppress("UNCHECKED_CAST")
-        val resultDetail = result.detail.get() as? Map<String, String>
+        val resultDetail = result.detail.get()
             ?: return null
 
-        return TaskProgress.fromCollection(resultDetail)
+        return TaskProgress(resultDetail)
     }
 
 

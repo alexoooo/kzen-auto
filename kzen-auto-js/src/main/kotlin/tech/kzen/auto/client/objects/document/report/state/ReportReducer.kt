@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.state
 
+import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -149,8 +150,7 @@ object ReportReducer {
                 reduceTaskLookupResponse(state, action)
 
             is ReportTaskRunRequest -> state.copy(
-                taskStarting = true/*,
-                indexTaskFinished = false*/)
+                taskStarting = true)
 
             is ReportTaskRunResponse ->
                 reduceTaskRunResponse(state, action)
@@ -165,7 +165,7 @@ object ReportReducer {
                 taskStopping = true)
 
             is ReportTaskStopResponse ->
-                reduceTaskStopResponse(state, action)
+                reduceTaskStopResponse(state)
         }
     }
 
@@ -180,14 +180,9 @@ object ReportReducer {
                 taskLoaded = true,
                 taskModel = null,
                 taskProgress = null,
-//                indexTaskRunning = false,
                 taskRunning = false)
 
         val result = model.finalOrPartialResult()
-
-//        val requestAction = model.requestAction()
-//        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
-//        val isIndexing = false
         val isRunning = model.state == TaskState.Running
 
         return when (result) {
@@ -196,18 +191,19 @@ object ReportReducer {
                     TableSummary.fromExecutionSuccess(result)
                     ?: state.tableSummary
 
-                val tableSummaryProgress = model.taskProgress()!!
+                val taskProgress = ReportProgress.fromTaskProgress(
+                    model.taskProgress()!!)
 
                 state.copy(
                     taskLoading = false,
                     taskLoaded = true,
                     taskModel = model,
-                    taskProgress = tableSummaryProgress,
-//                    indexTaskRunning = isRunning && isIndexing,
+                    taskProgress = taskProgress,
                     taskRunning = isRunning,
                     tableSummary = tableSummary,
                     tableSummaryLoaded = true,
-                    tableSummaryLoading = false)
+                    tableSummaryLoading = false,
+                    outputCount = taskProgress.outputCount.coerceAtLeast(state.outputCount ?: 0))
             }
 
             is ExecutionFailure -> {
@@ -226,27 +222,21 @@ object ReportReducer {
         action: ReportTaskRunResponse
     ): ReportState {
         val isRunning = action.taskModel.state == TaskState.Running
-//        val requestAction = action.taskModel.requestAction()
-//        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
 
-        val tableSummary =
-//            if (isIndexing) {
-//                TableSummary.fromTaskModel(action.taskModel)
-//            }
-//            else {
-                state.tableSummary
-//            }
+        val tableSummary = state.tableSummary
+
+        val taskProgress = action.taskModel.taskProgress()
+            ?.let { ReportProgress.fromTaskProgress(it) }
 
         return state.copy(
             taskModel = action.taskModel,
             tableSummary = tableSummary,
-            taskProgress = action.taskModel.taskProgress(),
-//            indexTaskRunning = isRunning && isIndexing,
-//            indexTaskRunning = false,
-//            filterTaskRunning = isRunning && ! isIndexing,
+            taskProgress = taskProgress,
             taskRunning = isRunning,
             taskError = action.taskModel.errorMessage(),
-            taskStarting = false)
+            taskStarting = false,
+            outputCount = (taskProgress?.outputCount ?: 0).coerceAtLeast(state.outputCount ?: 0)
+        )
     }
 
 
@@ -255,68 +245,41 @@ object ReportReducer {
         action: ReportTaskRefreshResponse
     ): ReportState {
         if (action.taskModel == null) {
-//            val indexTaskFinished = state.indexTaskRunning
             return state.copy(
                 taskModel = null,
                 taskProgress = null,
-//                indexTaskRunning = false,
-                taskRunning = false/*,
-                indexTaskFinished = indexTaskFinished*/)
+                taskRunning = false)
         }
 
         val isRunning = action.taskModel.state == TaskState.Running
-//        val requestAction = action.taskModel.requestAction()
-//        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
-        val isIndexing = false
+        val tableSummary = state.tableSummary
 
-        val tableSummary =
-//            if (isIndexing) {
-//                TableSummary.fromTaskModel(action.taskModel)
-//            }
-//            else {
-                state.tableSummary
-//            }
+        val taskProgress = action.taskModel.taskProgress()
+            ?.let { ReportProgress.fromTaskProgress(it) }
 
-        val taskProcess = action.taskModel.taskProgress()
-        val indexTaskFinished =
-            isIndexing && action.taskModel.state == TaskState.FinishedOrFailed && taskProcess == null
+//        console.log("^^^^ taskProgress?.outputCount - ${taskProgress?.outputCount}")
 
         return state.copy(
             taskModel = action.taskModel,
             tableSummary = tableSummary,
-            taskProgress = taskProcess,
-//            indexTaskRunning = isRunning && isIndexing,
-//            indexTaskRunning = false,
-//            filterTaskRunning = isRunning && ! isIndexing,
+            taskProgress = taskProgress,
             taskRunning = isRunning,
-//            indexTaskFinished = indexTaskFinished,
-            taskError = action.taskModel.errorMessage())
+            taskError = action.taskModel.errorMessage(),
+            outputCount = (taskProgress?.outputCount ?: 0).coerceAtLeast(state.outputCount ?: 0)
+        )
     }
 
 
     private fun reduceTaskStopResponse(
-        state: ReportState,
-        action: ReportTaskStopResponse
+        state: ReportState
     ): ReportState {
-//        val requestAction = action.taskModel.requestAction()
-//        val isIndexing = requestAction == ProcessConventions.actionSummaryTask
-        val isIndexing = false
-
-        val tableSummary =
-//            if (isIndexing) {
-//                TableSummary.fromTaskModel(action.taskModel)
-//            }
-//            else {
-                state.tableSummary
-//            }
+        val tableSummary = state.tableSummary
 
         return state.copy(
             taskStopping = false,
             tableSummary = tableSummary,
-//            indexTaskRunning = false,
             taskRunning = false,
-            taskProgress = null/*,
-            indexTaskFinished = false*/)
+            taskProgress = null)
     }
 
 
@@ -337,8 +300,7 @@ object ReportReducer {
                     tableSummaryLoading = false,
                     tableSummaryLoaded = true,
                     tableSummaryError = null,
-                    tableSummary = action.tableSummary/*,
-                    taskProgress = action.taskProgress*/)
+                    tableSummary = action.tableSummary)
         }
     }
 
@@ -353,12 +315,15 @@ object ReportReducer {
                 outputLoading = true)
 
             is OutputLookupError -> state.copy(
+                outputLoaded = true,
                 outputLoading = false,
                 outputError = action.errorMessage)
 
             is OutputLookupResult -> state.copy(
+                outputLoaded = true,
                 outputLoading = false,
                 outputInfo = action.outputInfo,
+                outputCount = (state.outputCount ?: 0).coerceAtLeast(action.outputInfo.rowCount),
                 outputError = null)
         }
     }

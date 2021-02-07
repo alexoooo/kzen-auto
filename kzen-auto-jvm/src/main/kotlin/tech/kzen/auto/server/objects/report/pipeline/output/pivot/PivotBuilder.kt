@@ -66,8 +66,9 @@ class PivotBuilder(
     private val valueColumnIndex = RecordHeaderIndex(valueColumns)
     private val valueBuffer = DoubleArray(valueColumns.size)
 
-    private val flyweight =
-        RecordTextFlyweight()
+    private val flyweight = RecordTextFlyweight()
+
+    private var maxOrdinal: Long = -1
 
 
     //----------------------------------------------------------
@@ -75,8 +76,10 @@ class PivotBuilder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordItem: RecordItemBuffer, header: RecordHeader) {
-//        println("&&&&&&&&&&&&& add - $recordItem")
+    /**
+     * @return true if new row was created
+     */
+    fun add(recordItem: RecordItemBuffer, header: RecordHeader): Boolean {
         val headerIndexes = valueColumnIndex.indices(header)
 
         var present = false
@@ -110,7 +113,11 @@ class PivotBuilder(
             valueStatistics.addOrUpdate(rowOrdinal, valueBuffer)
         }
 
-//        println("&&&&&&&&&&&&& add - done")
+        if (maxOrdinal < rowOrdinal) {
+            maxOrdinal = rowOrdinal
+            return true
+        }
+        return false
     }
 
 

@@ -549,7 +549,8 @@ class ReportOutputView(
                         display = Display.inlineBlock
                         marginLeft = 1.em
                     }
-                    +"Total rows: ${FormatUtils.decimalSeparator(outputInfo.rowCount)}"
+
+                    +"Total rows: ${FormatUtils.decimalSeparator(props.reportState.outputCount ?: 0)}"
                 }
             }
         }

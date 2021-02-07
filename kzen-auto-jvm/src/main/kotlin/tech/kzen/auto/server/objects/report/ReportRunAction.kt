@@ -5,7 +5,6 @@ import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.common.paradigm.task.model.TaskProgress
 import tech.kzen.auto.server.objects.report.model.ReportFormulaSignature
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.ReportPipeline
@@ -158,19 +157,14 @@ class ReportRunAction(
 
         val outputValue = ExecutionValue.of(runDir.toString())
 
-        val progress = TaskProgress.ofNotStarted(
-            reportRunSpec.inputs.map { it.fileName.toString() })
-
-        taskHandle.update(ExecutionSuccess(
-            outputValue,
-            ExecutionValue.of(progress.toCollection())))
+        taskHandle.update(ExecutionSuccess.ofValue(outputValue))
 
         val reportHandle = ReportPipeline(
             reportRunSpec, runDir, taskHandle, reportWorkPool)
 
         Thread {
             processSync(
-                taskHandle, outputValue, reportHandle, runDir)
+                taskHandle, reportHandle, runDir)
         }.start()
 
         logger.info("Done: {} | {}", runDir, reportRunSpec)
@@ -182,7 +176,6 @@ class ReportRunAction(
     //-----------------------------------------------------------------------------------------------------------------
     private fun processSync(
         taskHandle: TaskHandle,
-        outputValue: ExecutionValue,
         reportHandle: ReportPipeline,
         runDir: Path
     ) {
@@ -196,9 +189,7 @@ class ReportRunAction(
                 reportWorkPool.updateRunStatus(runDir, OutputStatus.Done)
             }
 
-            taskHandle.complete(
-                ExecutionSuccess.ofValue(
-                    outputValue))
+            taskHandle.completeWithPartialResult()
         }
         catch (e: Exception) {
             logger.warn("Data processing failed", e)

@@ -4,6 +4,7 @@ import java.io.InputStream
 
 
 interface FlatData {
+    // TODO: switch to URI
     fun key(): String
 
     fun outerExtension(): String

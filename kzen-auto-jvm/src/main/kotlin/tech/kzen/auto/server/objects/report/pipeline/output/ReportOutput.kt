@@ -8,8 +8,8 @@ import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.model.ReportRunSignature
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.PivotBuilder
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.RowIndex
@@ -24,6 +24,7 @@ import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.Buffered
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.store.FileValueStatisticsStore
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.FileOffsetStore
+import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.InvalidPathException
@@ -40,7 +41,8 @@ import java.util.concurrent.TimeoutException
 class ReportOutput(
     initialReportRunSpec: ReportRunSpec,
     private val runDir: Path,
-    private val taskHandle: TaskHandle?
+    private val taskHandle: TaskHandle?,
+    private val progress: ReportProgressTracker?
 ):
     AutoCloseable
 {
@@ -184,9 +186,13 @@ class ReportOutput(
         if (indexedCsvTable != null) {
 //            val values = row.getOrEmptyAll(reportRunSignature.columnNames)
             indexedCsvTable.add(recordItem, header)
+            progress?.nextOutput(1L)
         }
         else {
-            pivotBuilder!!.add(recordItem, header)
+            val newRow = pivotBuilder!!.add(recordItem, header)
+            if (newRow) {
+                progress?.nextOutput(1L)
+            }
         }
     }
 
@@ -218,7 +224,7 @@ class ReportOutput(
                     }
                     catch (e: TimeoutException) {
                         if (taskHandle.isTerminated()) {
-                            ReportOutput(reportRunSpec, runDir, null)
+                            ReportOutput(reportRunSpec, runDir, null, null)
                                 .previewInCurrentThread(reportRunSpec, outputSpec, reportWorkPool)
                         }
                         else {

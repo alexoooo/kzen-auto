@@ -1,22 +1,23 @@
 package tech.kzen.auto.server.objects.report.pipeline.input
 
+import com.google.common.io.CountingInputStream
 import org.apache.commons.io.input.BOMInputStream
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.FileFlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
-import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgress
+import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
 import java.io.InputStream
 import java.nio.file.Path
 import java.util.zip.GZIPInputStream
 
 
-
 // TODO: consider support for https://github.com/linkedin/migz
 // TODO: consider using https://stackoverflow.com/questions/3335969/reading-a-gzip-file-from-a-filechannel-java-nio
 // see: https://stackoverflow.com/questions/32550227/how-to-improve-gzip-performance
+@Suppress("UnstableApiUsage")
 class ReportInputReader(
     inputs: List<FlatData>,
-    private val progress: ReportProgress?
+    private val progress: ReportProgressTracker?
 ):
     AutoCloseable
 {
@@ -56,10 +57,12 @@ class ReportInputReader(
     //-----------------------------------------------------------------------------------------------------------------
     private val remainingInputs = inputs.toMutableList()
 
-    private var currentInput: String? = null
+    private var currentInputKey: String? = null
     private var currentInnerExtension: String? = null
-//    private var currentStream: Reader? = null
+    private var currentRawInput: CountingInputStream? = null
     private var currentStream: InputStream? = null
+    private var currentProgress: ReportProgressTracker.Buffer? = null
+    private var previousReadBytes: Long = 0L
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -70,7 +73,7 @@ class ReportInputReader(
         val nextStream = nextStream()
             ?: return false
 
-        buffer.location = currentInput!!
+        buffer.inputKey = currentInputKey!!
         buffer.innerExtension = currentInnerExtension!!
 
         val read = nextStream.read(buffer.bytes)
@@ -84,8 +87,11 @@ class ReportInputReader(
         buffer.bytesLength = read
         buffer.endOfStream = false
 
-        // TODO: handle compression
-        progress?.next(currentInput!!, read.toLong(), read.toLong())
+        val rawBytes = currentRawInput!!.count
+        val nextReadBytes: Long = rawBytes - previousReadBytes
+        previousReadBytes = rawBytes
+        currentProgress?.nextRead(nextReadBytes, read.toLong())
+
         return true
     }
 
@@ -111,25 +117,24 @@ class ReportInputReader(
         val outerExtension = nextInput.outerExtension()
         val innerExtension = nextInput.innerExtension()
 
-        val rawInput = nextInput.open()
+        currentRawInput = CountingInputStream(nextInput.open())
 
         val input =
             if (outerExtension == "gz") {
-                GZIPInputStream(rawInput, gzipBufferSize)
+                GZIPInputStream(currentRawInput, gzipBufferSize)
             }
             else {
-                rawInput
+                currentRawInput
             }
 
         val bomInputStream = BOMInputStream(input)
-//        val inputStreamReader = InputStreamReader(bomInputStream, Charsets.UTF_8)
 
-        currentInput = nextInput.key()
+        currentInputKey = nextInput.key()
         currentInnerExtension = innerExtension
-//        currentStream = BufferedReader(inputStreamReader)
         currentStream = bomInputStream
 
-        progress?.start(currentInput!!, nextInput.size())
+        currentProgress = progress?.getInitial(currentInputKey!!, nextInput.size())
+        currentProgress?.startReading()
     }
 
 
@@ -137,9 +142,10 @@ class ReportInputReader(
         currentStream!!.close()
         currentStream = null
 
-        progress?.end(currentInput!!)
+        currentRawInput = null
+        previousReadBytes = 0
 
-        currentInput = null
+        currentInputKey = null
         currentInnerExtension = null
     }
 

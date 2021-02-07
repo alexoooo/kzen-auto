@@ -11,7 +11,7 @@ data class FileFlatData(
     val path: Path
 ): FlatData {
     override fun key(): String {
-        return path.fileName.toString()
+        return path.toString()
     }
 
 

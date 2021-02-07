@@ -23,6 +23,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 
 class ModelTaskRepository(
@@ -75,11 +76,11 @@ class ModelTaskRepository(
         }
 
         val activeDeletedModel =
-            active.values.find { it.model.taskLocation.documentPath == event.documentPath }
+            active.values.find { it.model().taskLocation.documentPath == event.documentPath }
         if (activeDeletedModel != null) {
             activeDeletedModel.requestCancel()
             activeDeletedModel.awaitTerminal()
-            terminated.remove(activeDeletedModel.model.taskId)
+            terminated.remove(activeDeletedModel.model().taskId)
         }
     }
 
@@ -98,12 +99,14 @@ class ModelTaskRepository(
         }
 
         val activeRenamedModel =
-            active.values.find { it.model.taskLocation.documentPath == event.documentPath }
+            active.values.find { it.model().taskLocation.documentPath == event.documentPath }
         if (activeRenamedModel != null) {
-            val newTaskLocation = activeRenamedModel.model.taskLocation.copy(
+            val newTaskLocation = activeRenamedModel.model().taskLocation.copy(
                 documentPath = event.createdWithNewName.destination)
 
-            activeRenamedModel.model = activeRenamedModel.model.copy(taskLocation = newTaskLocation)
+            activeRenamedModel.updateModel { model ->
+                model.copy(taskLocation = newTaskLocation)
+            }
         }
     }
 
@@ -127,27 +130,27 @@ class ModelTaskRepository(
         val taskId = TaskId(Instant.now().toString())
 
         val handle = ActiveHandle(
-            TaskModel(
+            AtomicReference(TaskModel(
                 taskId,
                 taskLocation,
                 request,
                 TaskState.Running,
                 null,
                 null
-            ))
+            )))
 
         active[taskId] = handle
 
         val run = task.start(request, handle)
 
         if (run == null) {
-            check(handle.model.state != TaskState.Running)
+            check(handle.model().state != TaskState.Running)
         }
         else {
             handle.run = run
         }
 
-        return handle.model
+        return handle.model()
     }
 
 
@@ -158,14 +161,14 @@ class ModelTaskRepository(
         handle.requestCancel()
         handle.awaitTerminal()
 
-        return handle.model
+        return handle.model()
     }
 
 
     override suspend fun lookupActive(taskLocation: ObjectLocation): Set<TaskId> {
         return active
             .values
-            .map { it.model }
+            .map { it.model() }
             .filter { it.taskLocation == taskLocation }
             .map { it.taskId }
             .toSet()
@@ -173,7 +176,7 @@ class ModelTaskRepository(
 
 
     override suspend fun query(taskId: TaskId): TaskModel? {
-        return active[taskId]?.model
+        return active[taskId]?.model()
             ?: terminated[taskId]
     }
 
@@ -196,7 +199,9 @@ class ModelTaskRepository(
 
     //-----------------------------------------------------------------------------------------------------------------
     private inner class ActiveHandle(
-        var model: TaskModel,
+        val model: AtomicReference<TaskModel>,
+
+        @Volatile
         var run: TaskRun? = null
     ): TaskHandle {
         private var cancelRequested = AtomicBoolean(false)
@@ -204,36 +209,67 @@ class ModelTaskRepository(
 
 //        private val requestQueue = LinkedTransferQueue<RequestHandle>()
 
+        fun model(): TaskModel {
+            return model.get()
+        }
+
+        fun updateModel(updater: (TaskModel) -> TaskModel) {
+            while (true) {
+                val value = model.get()
+                val updated = updater(value)
+                val success = model.compareAndSet(value, updated)
+
+                if (success) {
+                    break
+                }
+            }
+        }
+
+
+        override fun completeWithPartialResult() {
+            val result = model().partialResult
+                ?: error("partial result missing")
+
+            complete(result)
+        }
+
 
         override fun complete(result: ExecutionResult) {
-            model = model.copy(
-                partialResult = null,
-                finalResult = result,
-                state = TaskState.FinishedOrFailed)
+            updateModel { snapshot ->
+                snapshot.copy(
+                    partialResult = null,
+                    finalResult = result,
+                    state = TaskState.FinishedOrFailed)
+            }
 
             terminate()
         }
 
 
         override fun completeCancelled() {
-            model = model.copy(
-                state = TaskState.Cancelled)
+            updateModel { snapshot ->
+                snapshot.copy(
+                    state = TaskState.Cancelled)
+            }
 
             terminate()
         }
 
 
         override fun update(partialResult: ExecutionSuccess) {
-            model = model.copy(
-                partialResult = partialResult)
+            updateModel { snapshot ->
+                snapshot.copy(
+                    partialResult = partialResult)
+            }
         }
 
 
         override fun update(updater: (ExecutionSuccess?) -> ExecutionSuccess) {
-            val nextPartialResult = updater(model.partialResult)
-
-            model = model.copy(
-                partialResult = nextPartialResult)
+            updateModel { snapshot ->
+                val nextPartialResult = updater(snapshot.partialResult)
+                snapshot.copy(
+                    partialResult = nextPartialResult)
+            }
         }
 
 
@@ -250,8 +286,9 @@ class ModelTaskRepository(
         private fun terminate() {
             run?.close()
 
-            active.remove(model.taskId)
-            addTerminated(model)
+            val snapshot = model()
+            active.remove(snapshot.taskId)
+            addTerminated(snapshot)
 
             completeLatch.countDown()
             Thread.currentThread().interrupt()

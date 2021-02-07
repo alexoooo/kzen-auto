@@ -5,7 +5,7 @@ import java.nio.CharBuffer
 
 
 class RecordDataBuffer(
-    var location: String?,
+    var inputKey: String?,
     var innerExtension: String?,
 
     val bytes: ByteArray,

@@ -21,6 +21,7 @@ sealed class ExecutionValue
         private const val binaryType = "binary"
         private const val listType = "list"
         private const val mapType = "map"
+        private const val jsonPrimitiveType = "json"
 
 
         fun of(value: Any?): ExecutionValue {
@@ -126,8 +127,36 @@ sealed class ExecutionValue
                         }.toMap()
                     )
 
+                jsonPrimitiveType ->
+                    fromJsonPrimitiveCollection(asCollection[valueKey] as Any)
+
                 else ->
                     TODO("Not supported (yet): $asCollection")
+            }
+        }
+
+
+        private fun fromJsonPrimitiveCollection(primitiveCollection: Any): ExecutionValue {
+            return when (primitiveCollection) {
+                is String ->
+                    TextExecutionValue(primitiveCollection)
+
+                is Boolean ->
+                    BooleanExecutionValue(primitiveCollection)
+
+                is Double ->
+                    NumberExecutionValue(primitiveCollection)
+
+                is List<*> ->
+                    ListExecutionValue(primitiveCollection.map { fromJsonPrimitiveCollection(it as Any) })
+
+                is Map<*, *> ->
+                    MapExecutionValue(primitiveCollection
+                        .map { it.key as String to fromJsonPrimitiveCollection(it.value as Any) }
+                        .toMap())
+
+                else ->
+                    throw IllegalArgumentException("string JSON expected: $primitiveCollection")
             }
         }
     }
@@ -163,15 +192,28 @@ sealed class ExecutionValue
 
 
     fun toJsonCollection(): Map<String, Any> {
+        if (isJsonPrimitive()) {
+            return when (this) {
+                is TextExecutionValue ->
+                    typedValue(textType, value)
+
+                is BooleanExecutionValue ->
+                    typedValue(booleanType, value)
+
+                is NumberExecutionValue ->
+                    typedValue(numberType, value)
+
+                else -> error("primitive expected: $this")
+            }
+        }
+
+        if (isJsonPrimitiveCollection()) {
+            return typedValue(jsonPrimitiveType, toJsonPrimitiveCollection())
+        }
+
         return when (this) {
             NullExecutionValue -> mapOf(
                     typeKey to nullType)
-
-            is TextExecutionValue ->
-                typedValue(textType, value)
-
-            is BooleanExecutionValue ->
-                typedValue(booleanType, value)
 
             is NumberExecutionValue ->
                 typedValue(numberType, value)
@@ -187,6 +229,36 @@ sealed class ExecutionValue
 
             is MapExecutionValue ->
                 typedValue(mapType, values.mapValues { it.value.toJsonCollection() })
+
+            is BooleanExecutionValue,
+            is TextExecutionValue ->
+                error("unexpected primitive: $this")
+        }
+    }
+
+
+    private fun isJsonPrimitive(): Boolean {
+        return this is TextExecutionValue ||
+                this is BooleanExecutionValue ||
+                this is NumberExecutionValue && value.isFinite()
+    }
+
+
+    private fun isJsonPrimitiveCollection(): Boolean {
+        return isJsonPrimitive() ||
+                this is ListExecutionValue && values.all { it.isJsonPrimitiveCollection() } ||
+                this is MapExecutionValue && values.all { it.value.isJsonPrimitiveCollection() }
+    }
+
+
+    private fun toJsonPrimitiveCollection(): Any {
+        return when (this) {
+            is TextExecutionValue -> value
+            is BooleanExecutionValue -> value
+            is NumberExecutionValue -> value
+            is ListExecutionValue -> values.map { it.toJsonPrimitiveCollection() }
+            is MapExecutionValue -> values.mapValues { it.value.toJsonPrimitiveCollection() }
+            else -> error("primitive expected: $this")
         }
     }
 

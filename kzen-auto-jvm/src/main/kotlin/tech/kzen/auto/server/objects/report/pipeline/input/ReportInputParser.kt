@@ -5,40 +5,35 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffe
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordParser
+import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
 
 
 class ReportInputParser(
-    private val firstRowHeader: Boolean = true
+    private val firstRowHeader: Boolean = true,
+    private val progress: ReportProgressTracker?
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    private var location: String? = null
-    private var lexerParser: RecordParser? = null
+    private var currentInputKey: String? = null
+    private var currentParser: RecordParser? = null
     private var previousRecordHeader: RecordHeader = RecordHeader.empty
     private val leftoverRecordLineBuffer = RecordItemBuffer()
+    private var currentProgress: ReportProgressTracker.Buffer? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun parse(data: RecordDataBuffer, recordHandoff: RecordHandoff) {
-//        check(data.recordTokenBuffer.count != 0) {
-//            "foo"
-//        }
-
-        if (location == null) {
-            location = data.location!!
-            lexerParser = RecordParser.forExtension(data.innerExtension!!)
-//            lexerParser = TsvLexerParser()
-        }
+        val parser = getOrCreateParser(data)
 
         val startIndex: Int
         if (firstRowHeader && previousRecordHeader.isEmpty()) {
-            val headerDone = parseHeader(data)
+            val headerDone = parseHeader(data, parser)
             if (! headerDone) {
                 return
             }
             startIndex = 1
         }
         else if (! leftoverRecordLineBuffer.isEmpty) {
-            val partialDone = continuePartial(data, recordHandoff)
+            val partialDone = continuePartial(data, recordHandoff, parser)
             if (! partialDone) {
                 return
             }
@@ -48,51 +43,57 @@ class ReportInputParser(
             startIndex = 0
         }
 
+        val chars = data.chars
+        val recordTokenBuffer = data.recordTokenBuffer
+
         val lastFullIndex =
-            if (data.recordTokenBuffer.partialLast) {
-                data.recordTokenBuffer.count - 2
+            if (recordTokenBuffer.partialLast) {
+                recordTokenBuffer.count - 2
             }
             else {
-                data.recordTokenBuffer.count - 1
+                recordTokenBuffer.count - 1
             }
 
         for (i in startIndex .. lastFullIndex) {
             val record = recordHandoff.next()
             record.header.value = previousRecordHeader
-            record.item.clear()
 
-            lexerParser!!.parseFull(
-                record.item,
-                data.chars,
-                data.recordTokenBuffer.offset(i),
-                data.recordTokenBuffer.length(i),
-                data.recordTokenBuffer.fieldCount(i))
+            val recordItem = record.item
+            recordItem.clear()
+
+            parser.parseFull(
+                recordItem,
+                chars,
+                recordTokenBuffer.offset(i),
+                recordTokenBuffer.length(i),
+                recordTokenBuffer.fieldCount(i))
 
             recordHandoff.commit()
         }
 
-        if (data.recordTokenBuffer.partialLast) {
-            val lastIndex = data.recordTokenBuffer.count - 1
-            lexerParser!!.parsePartial(
+        val fullParsedCount = lastFullIndex - startIndex + 1
+        currentProgress?.nextParsed(fullParsedCount)
+
+        if (recordTokenBuffer.partialLast) {
+            val lastIndex = recordTokenBuffer.count - 1
+            parser.parsePartial(
                 leftoverRecordLineBuffer,
-                data.chars,
-                data.recordTokenBuffer.offset(lastIndex),
-                data.recordTokenBuffer.length(lastIndex),
-                data.recordTokenBuffer.fieldCount(lastIndex),
+                chars,
+                recordTokenBuffer.offset(lastIndex),
+                recordTokenBuffer.length(lastIndex),
+                recordTokenBuffer.fieldCount(lastIndex),
                 true)
         }
 
         if (data.endOfStream) {
-            previousRecordHeader = RecordHeader.empty
-            location = null
-            lexerParser = null
+            onEndOfStream()
         }
     }
 
 
-    private fun parseHeader(data: RecordDataBuffer): Boolean {
+    private fun parseHeader(data: RecordDataBuffer, parser: RecordParser): Boolean {
         if (data.recordTokenBuffer.hasFull()) {
-            lexerParser!!.parseFull(
+            parser.parseFull(
                 leftoverRecordLineBuffer,
                 data.chars,
                 data.recordTokenBuffer.offset(0),
@@ -105,7 +106,7 @@ class ReportInputParser(
             return true
         }
         else {
-            lexerParser!!.parsePartial(
+            parser.parsePartial(
                 leftoverRecordLineBuffer,
                 data.chars,
                 data.recordTokenBuffer.offset(0),
@@ -120,10 +121,11 @@ class ReportInputParser(
 
     private fun continuePartial(
         data: RecordDataBuffer,
-        recordHandoff: RecordHandoff
+        recordHandoff: RecordHandoff,
+        parser: RecordParser
     ): Boolean {
         if (data.recordTokenBuffer.hasFull()) {
-            lexerParser!!.parsePartial(
+            parser.parsePartial(
                 leftoverRecordLineBuffer,
                 data.chars,
                 data.recordTokenBuffer.offset(0),
@@ -141,7 +143,7 @@ class ReportInputParser(
             return true
         }
         else {
-            lexerParser!!.parsePartial(
+            parser.parsePartial(
                 leftoverRecordLineBuffer,
                 data.chars,
                 data.recordTokenBuffer.offset(0),
@@ -151,5 +153,28 @@ class ReportInputParser(
 
             return false
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun getOrCreateParser(data: RecordDataBuffer): RecordParser {
+        if (currentInputKey == null) {
+            check(currentParser == null)
+
+            currentInputKey = data.inputKey!!
+            currentParser = RecordParser.forExtension(data.innerExtension!!)
+            currentProgress = progress?.getRunning(currentInputKey!!)
+        }
+        return currentParser!!
+    }
+
+
+    private fun onEndOfStream() {
+        previousRecordHeader = RecordHeader.empty
+        currentInputKey = null
+        currentParser = null
+
+        currentProgress?.finishParsing()
+        currentProgress = null
     }
 }

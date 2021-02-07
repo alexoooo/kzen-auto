@@ -43,8 +43,6 @@ class ColumnListingAction(
                 .map { it.getString(1) }
         }
 
-//        val columnNames = ReportStreamReader.readHeaderLine(inputPath)
-//        val columnNames = ReportParserHelper.readHeaderLine(inputPath)
         val columnNames = ReportInputChain.head(inputPath).single().toList()
 
         val csvBody = columnNames

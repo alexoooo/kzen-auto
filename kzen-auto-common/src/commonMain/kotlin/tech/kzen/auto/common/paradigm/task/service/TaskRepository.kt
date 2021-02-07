@@ -28,12 +28,6 @@ interface TaskRepository {
     ): TaskModel?
 
 
-//    suspend fun request(
-//        taskId: TaskId,
-//        request: DetachedRequest
-//    ): ExecutionResult?
-
-
     suspend fun lookupActive(
         taskLocation: ObjectLocation
     ): Set<TaskId>
