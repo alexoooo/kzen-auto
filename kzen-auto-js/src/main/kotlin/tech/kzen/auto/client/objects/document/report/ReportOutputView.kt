@@ -145,6 +145,7 @@ class ReportOutputView(
     private fun RBuilder.renderContent() {
         renderHeader()
 
+//        +"props.reportState.columnListing: ${props.reportState.columnListing}"
         if (! props.reportState.columnListing.isNullOrEmpty()) {
             renderOutput()
         }
@@ -177,7 +178,12 @@ class ReportOutputView(
                 }
 
                 val status = props.reportState.outputInfo?.status ?: OutputStatus.Missing
-                +status.name
+                if (status == OutputStatus.Missing) {
+                    +"Run using play button (bottom right)"
+                }
+                else {
+                    +status.name
+                }
             }
 
 
@@ -320,6 +326,8 @@ class ReportOutputView(
         val outputPreview = outputInfo?.preview
 
         styledDiv {
+//            +"outputPreview $outputPreview"
+
             renderInfo(error, outputInfo)
             renderSettings(outputInfo)
             renderSave(outputInfo)
@@ -563,6 +571,9 @@ class ReportOutputView(
                 maxHeight = 25.em
                 overflowY = Overflow.auto
                 marginTop = 1.em
+                borderWidth = 1.px
+                borderStyle = BorderStyle.solid
+                borderColor = Color.lightGray
             }
 
             styledTable {

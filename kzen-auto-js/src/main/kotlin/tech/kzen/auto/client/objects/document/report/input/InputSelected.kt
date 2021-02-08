@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.report.input
 
 import kotlinx.css.*
 import kotlinx.css.properties.boxShadowInset
+import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import react.*
 import react.dom.*
@@ -43,7 +44,24 @@ class InputSelected(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun summaryText(selected: List<FileInfo>): String {
+        val folderCount = selected.map { it.path.substring(0, it.path.length - it.name.length) }.toSet().size
+        val totalSize = selected.map { it.size }.sum()
+
+        val filesPlural = if (selected.size == 1) { "file" } else { "files" }
+        val foldersText = if (folderCount == 1) { "" } else { "from $folderCount folders " }
+        val totalPrefix = if (selected.size == 1) { "" } else { "total " }
+
+        return "${selected.size} $filesPlural ${foldersText}($totalPrefix${FormatUtils.readableFileSize(totalSize)})"
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun onRemoveAll() {
+        if (props.editDisabled) {
+            return
+        }
+
         val inputSelected = props.reportState.inputSelected
             ?: return
 
@@ -54,6 +72,10 @@ class InputSelected(
 
 
     private fun onRemove(path: String) {
+        if (props.editDisabled) {
+            return
+        }
+
         props.dispatcher.dispatchAsync(
             InputsSelectionRemoveRequest(
                 listOf(path)))
@@ -161,6 +183,8 @@ class InputSelected(
                 }
             }
 
+            val reportProgress = props.reportState.reportProgress
+
             styledDiv {
                 when {
                     fileListing == null -> {
@@ -172,84 +196,132 @@ class InputSelected(
                     }
 
                     state.selectedOpen -> {
-                        renderDetail(fileListing)
+                        renderDetail(fileListing, reportProgress)
                     }
 
                     else -> {
-                        renderSummary(fileListing)
+                        renderSummary(fileListing, reportProgress)
                     }
                 }
             }
         }
 
-        val taskProgress = props.reportState.taskProgress
-        if (taskProgress != null) {
-            renderProgress(taskProgress)
-        }
+//        val taskProgress = props.reportState.taskProgress
+//        if (taskProgress != null) {
+//            renderProgress(taskProgress)
+//        }
     }
-
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderSummary(selected: List<FileInfo>) {
-        when (selected.size) {
-            1 -> {
-                styledSpan {
-                    css {
-                        fontFamily = "monospace"
+    private fun RBuilder.renderSummary(selected: List<FileInfo>, reportProgress: ReportProgress?) {
+        val runningFile = reportProgress?.inputs?.filter { it.value.running }?.keys?.singleOrNull()
+
+        styledDiv {
+            +"${summaryText(selected)}:"
+        }
+
+        if (selected.size == 1) {
+            styledSpan {
+                css {
+                    if (runningFile != null) {
+                        fontWeight = FontWeight.bold
                     }
-                    +selected.single().name
+                }
+                +selected.single().name
+            }
+            if (runningFile != null) {
+                div {
+                    +reportProgress.inputs[runningFile]!!.toMessage(
+                        selected.single().size)
+                }
+            }
+        }
+        else {
+            table {
+                tbody {
+                    tr {
+                        td {
+                            +"1."
+                        }
+                        styledTd {
+                            +selected[0].name
+                        }
+                    }
+
+                    if (selected.size == 3) {
+                        tr {
+                            td {
+                                +"2."
+                            }
+                            styledTd {
+                                +selected[1].name
+                            }
+                        }
+                    }
+                    else if (selected.size > 3) {
+                        tr {
+                            styledTd {
+                                css {
+                                    paddingTop = 0.25.em
+                                    paddingBottom = 0.25.em
+                                }
+
+                                attrs {
+                                    colSpan = "2"
+                                }
+
+                                styledSpan {
+                                    css {
+                                        cursor = Cursor.pointer
+                                    }
+
+                                    attrs {
+                                        onClickFunction = {
+                                            onToggleSelected()
+                                        }
+                                    }
+
+                                    +"... ${selected.size - 1} more files, expand to view all ..."
+                                }
+                            }
+                        }
+                    }
+
+                    tr {
+                        td {
+                            +"${selected.size}."
+                        }
+                        styledTd {
+                            +selected.last().name
+                        }
+                    }
                 }
             }
 
-            2 -> {
-                styledSpan {
+            if (runningFile != null) {
+                val selectedRunning = selected.first { it.path == runningFile }
+                styledDiv {
                     css {
-                        whiteSpace = WhiteSpace.nowrap
-                        fontFamily = "monospace"
+                        marginTop = 0.25.em
+                        fontWeight = FontWeight.bold
                     }
-                    +selected[0].name
+                    +"Running: ${selectedRunning.name}"
                 }
-                +", "
-                styledSpan {
-                    css {
-                        whiteSpace = WhiteSpace.nowrap
-                        fontFamily = "monospace"
-                    }
-                    +selected[1].name
-                }
-            }
-
-            else -> {
-                +"${selected.size} files: "
-                styledSpan {
-                    css {
-                        whiteSpace = WhiteSpace.nowrap
-                        fontFamily = "monospace"
-                    }
-                    +selected[0].name
-                }
-                +", ..., "
-                styledSpan {
-                    css {
-                        whiteSpace = WhiteSpace.nowrap
-                        fontFamily = "monospace"
-                    }
-                    +selected[1].name
+                div {
+                    +reportProgress.inputs[runningFile]!!.toMessage(
+                        selectedRunning.size)
                 }
             }
         }
     }
 
 
-    private fun RBuilder.renderDetail(selected: List<FileInfo>) {
+    private fun RBuilder.renderDetail(selected: List<FileInfo>, reportProgress: ReportProgress?) {
         styledDiv {
             css {
-//                marginTop = 0.1.em
                 marginBottom = 0.25.em
             }
-            val folderCount = selected.map { it.path.substring(0, it.path.length - it.name.length) }.toSet().size
-            val totalSize = selected.map { it.size }.sum()
-            +"${selected.size} files from $folderCount folders totalling ${FormatUtils.readableFileSize(totalSize)}"
+            +summaryText(selected)
         }
 
         styledDiv {
@@ -280,12 +352,23 @@ class InputSelected(
                                 boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
                             }
                             attrs {
-                                title = "Remove all"
+                                title =
+                                    if (props.editDisabled) {
+                                        "Can't remove while running"
+                                    }
+                                    else {
+                                        "Remove all"
+                                    }
                             }
                             child(RemoveCircleOutlineIcon::class) {
                                 attrs {
                                     style = reactStyle {
-                                        cursor = Cursor.pointer
+                                        if (props.editDisabled) {
+                                            color = Color.lightGray
+                                        }
+                                        else {
+                                            cursor = Cursor.pointer
+                                        }
                                     }
 
                                     onClick = {
@@ -354,71 +437,7 @@ class InputSelected(
                     }
 
                     for (fileInfo in selected) {
-                        styledTr {
-                            key = fileInfo.path
-
-                            css {
-                                hover {
-                                    backgroundColor = InputBrowser.hoverRow
-                                }
-                            }
-
-                            styledTd {
-                                styledDiv {
-                                    css {
-                                        height = 1.em
-                                        overflow = Overflow.hidden
-                                    }
-                                    attrs {
-                                        title = "Remove"
-                                    }
-                                    child(RemoveCircleOutlineIcon::class) {
-                                        attrs {
-                                            style = reactStyle {
-                                                marginLeft = 0.2.em
-                                                fontSize = 1.em
-                                                cursor = Cursor.pointer
-                                            }
-
-                                            onClick = {
-                                                onRemove(fileInfo.path)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            td {
-                                +fileInfo.name
-                            }
-
-                            styledTd {
-                                css {
-                                    paddingLeft = 0.5.em
-                                    paddingRight = 0.5.em
-                                    whiteSpace = WhiteSpace.nowrap
-                                }
-                                +FormatUtils.formatLocalDateTime(fileInfo.modified)
-                            }
-
-                            styledTd {
-                                css {
-                                    paddingRight = 0.5.em
-                                    textAlign = TextAlign.right
-                                    whiteSpace = WhiteSpace.nowrap
-                                }
-                                +FormatUtils.readableFileSize(fileInfo.size)
-                            }
-
-                            if (state.showFolders) {
-                                styledTd {
-                                    css {
-                                        paddingRight = 0.5.em
-                                    }
-                                    +fileInfo.path.substring(0, fileInfo.path.length - fileInfo.name.length)
-                                }
-                            }
-                        }
+                        renderDetailRow(fileInfo, reportProgress)
                     }
                 }
             }
@@ -426,80 +445,104 @@ class InputSelected(
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderProgress(taskProgress: ReportProgress) {
-        if (! props.reportState.isTaskRunning()) {
-            return
-        }
+    private fun RBuilder.renderDetailRow(fileInfo: FileInfo, reportProgress: ReportProgress?) {
+        val fileProgress = reportProgress?.inputs?.get(fileInfo.path)
 
-        styledDiv {
+        styledTr {
+            key = fileInfo.path
+
             css {
-                marginTop = 0.5.em
-            }
-
-            styledDiv {
-                css {
-                    color = Color("rgba(0, 0, 0, 0.54)")
-                    fontFamily = "Roboto, Helvetica, Arial, sans-serif"
-                    fontWeight = FontWeight.w400
-                    fontSize = 13.px
-                }
-
-                when {
-                    props.reportState.taskRunning -> {
-                        +"Running"
-                    }
-
-//                    props.reportState.indexTaskRunning -> {
-//                        +"Indexing"
-//                    }
+                hover {
+                    backgroundColor = InputBrowser.hoverRow
                 }
             }
 
-            styledDiv {
-                css {
-                    maxHeight = 20.em
-                    overflowY = Overflow.auto
+            styledTd {
+                styledDiv {
+                    css {
+                        height = 1.em
+                        overflow = Overflow.hidden
+                    }
+                    attrs {
+                        title =
+                            if (props.editDisabled) {
+                                "Can't remove while running"
+                            }
+                            else {
+                                "Remove"
+                            }
+                    }
+                    child(RemoveCircleOutlineIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                marginLeft = 0.2.em
+                                fontSize = 1.em
+                                if (props.editDisabled) {
+                                    color = Color.lightGray
+                                }
+                                else {
+                                    cursor = Cursor.pointer
+                                }
+                            }
+
+                            onClick = {
+                                onRemove(fileInfo.path)
+                            }
+                        }
+                    }
                 }
+            }
 
-                table {
-                    thead {
-                        tr {
-                            styledTh {
-                                css {
-                                    position = Position.sticky
-                                    top = 0.px
-                                    backgroundColor = Color("rgba(255, 255, 255, 0.9)")
-                                    zIndex = 999
-                                }
-                                +"File"
+            td {
+                if (fileProgress == null) {
+                    +fileInfo.name
+                }
+                else {
+                    styledDiv {
+                        css {
+                            if (fileProgress.running) {
+                                fontWeight = FontWeight.bold
                             }
-
-                            styledTh {
-                                css {
-                                    position = Position.sticky
-                                    top = 0.px
-                                    backgroundColor = Color("rgba(255, 255, 255, 0.9)")
-                                    zIndex = 999
-                                }
-                                +"Progress"
+                            else if (fileProgress.finished) {
+                                color = Color.darkGreen
                             }
                         }
+                        +fileInfo.name
                     }
-                    tbody {
-                        for (e in taskProgress.inputs.entries) {
-                            tr {
-                                key = e.key
-
-                                td {
-                                    +e.key
-                                }
-                                td {
-                                    +e.value.toString()
-                                }
-                            }
+                    styledDiv {
+                        css {
+                            fontStyle = FontStyle.italic
+                            marginBottom = 0.25.em
                         }
+                        +fileProgress.toMessage(fileInfo.size)
                     }
+                }
+            }
+
+            styledTd {
+                css {
+                    paddingLeft = 0.5.em
+                    paddingRight = 0.5.em
+                    whiteSpace = WhiteSpace.nowrap
+                }
+                +FormatUtils.formatLocalDateTime(fileInfo.modified)
+            }
+
+            styledTd {
+                css {
+                    paddingRight = 0.5.em
+                    textAlign = TextAlign.right
+                    whiteSpace = WhiteSpace.nowrap
+                }
+                +FormatUtils.readableFileSize(fileInfo.size)
+            }
+
+            if (state.showFolders) {
+                styledTd {
+                    css {
+                        paddingRight = 0.5.em
+                    }
+                    +fileInfo.path.substring(0, fileInfo.path.length - fileInfo.name.length)
                 }
             }
         }

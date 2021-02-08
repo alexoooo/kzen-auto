@@ -162,7 +162,13 @@ class ReportProgressTracker(
 
     fun finish() {
         publishUpdate()
-        logger.info("Finished all")
+
+        val finishedFiles = buffers.filter { it.value.finished }.map { it.key }
+        val runningFiles = buffers.filter { it.value.running }.map { it.key }
+        val notStartedFiles = buffers.filter { ! it.value.finished && ! it.value.running }.map { it.key }
+
+        logger.info("Finished all: finished {} - running {} - not started {}",
+            finishedFiles, runningFiles, notStartedFiles)
     }
 
 

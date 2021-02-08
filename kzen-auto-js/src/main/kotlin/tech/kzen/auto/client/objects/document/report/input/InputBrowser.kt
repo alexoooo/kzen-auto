@@ -300,6 +300,10 @@ class InputBrowser(
                                 "No new files selected"
                             }
                     }
+                    else if (props.editDisabled) {
+                        disabled = true
+                        title = "Disabled while running"
+                    }
                 }
 
                 child(AddCircleOutlineIcon::class) {
@@ -336,6 +340,10 @@ class InputBrowser(
                             else {
                                 "No existing files selected"
                             }
+                    }
+                    else if (props.editDisabled) {
+                        disabled = true
+                        title = "Disabled while running"
                     }
                 }
 
@@ -438,7 +446,8 @@ class InputBrowser(
                                         indeterminate = false
                                     }
                                     else {
-                                        disabled = props.editDisabled
+//                                        disabled = props.editDisabled
+                                        disabled = false
                                         if (state.selected.isNotEmpty()) {
                                             if (state.selected.size == files.size) {
                                                 checked = true

@@ -52,7 +52,7 @@ data class ReportState(
     val taskStopping: Boolean = false,
     val taskRunning: Boolean = false,
     val taskModel: TaskModel? = null,
-    val taskProgress: ReportProgress? = null,
+    val reportProgress: ReportProgress? = null,
     val taskLoadError: String? = null,
     val taskError: String? = null,
 

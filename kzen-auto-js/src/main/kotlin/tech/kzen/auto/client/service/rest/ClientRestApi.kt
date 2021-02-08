@@ -584,10 +584,11 @@ class ClientRestApi(
 
     suspend fun taskQuery(
         taskId: TaskId
-    ): TaskModel {
-        val responseJson = getJson(
+    ): TaskModel? {
+        val responseJson = getJsonOrNull(
             CommonRestApi.taskQuery,
             CommonRestApi.paramTaskId to taskId.identifier)
+            ?: return null
 
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
@@ -597,10 +598,11 @@ class ClientRestApi(
 
     suspend fun taskCancel(
         taskId: TaskId
-    ): TaskModel {
-        val responseJson = getJson(
+    ): TaskModel? {
+        val responseJson = getJsonOrNull(
             CommonRestApi.taskCancel,
             CommonRestApi.paramTaskId to taskId.identifier)
+            ?: return null
 
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
@@ -693,6 +695,18 @@ class ClientRestApi(
     ): Json {
         val response = get(commandPath, *parameters)
         return JSON.parse(response)
+    }
+
+
+    private suspend fun getJsonOrNull(
+            commandPath: String,
+            vararg parameters: Pair<String, String>
+    ): Json? {
+        val response = get(commandPath, *parameters)
+        return when {
+            response.isEmpty() -> null
+            else -> JSON.parse(response)
+        }
     }
 
 

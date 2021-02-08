@@ -78,13 +78,12 @@ class ReportInputView(
         div {
             attrs {
                 if (editDisabled) {
-                    title =
-                        if (props.reportState.isInitiating()) {
-                            "Disabled while loading"
-                        }
-                        else {
-                            "Disabled while task running"
-                        }
+                    if (props.reportState.isInitiating()) {
+                        title = "Disabled while loading"
+                    }
+//                        else {
+//                            "Disabled while task running"
+//                        }
                 }
             }
 

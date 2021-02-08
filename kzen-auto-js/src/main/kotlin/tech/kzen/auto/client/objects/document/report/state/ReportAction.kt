@@ -324,6 +324,9 @@ data class ReportTaskStopResponse(
 ): ReportTaskAction()
 
 
+object ReportProgressReset: ReportTaskAction()
+
+
 //---------------------------------------------------------------------------------------------------------------------
 sealed class SummaryLookupAction: SingularReportAction()
 
@@ -332,8 +335,7 @@ object SummaryLookupRequest: SummaryLookupAction()
 
 
 data class SummaryLookupResult(
-    val tableSummary: TableSummary/*,
-    val taskProgress: TaskProgress*/
+    val tableSummary: TableSummary
 ): SummaryLookupAction()
 
 

@@ -48,7 +48,9 @@ object ReportReducer {
 
             ReportSaveAction -> state
             ReportResetAction -> state
-            is ReportResetResult -> state
+            is ReportResetResult -> state.copy(
+                reportProgress = null
+            )
 
             //--------------------------------------------------
 //            else ->
@@ -101,9 +103,7 @@ object ReportReducer {
                 inputBrowser = action.inputInfo.files,
                 inputBrowseDir = action.inputInfo.browseDir,
                 inputLoaded = true,
-                inputLoading = false,
-                columnListing = null,
-                columnListingError = null)
+                inputLoading = false)
 
             is ListInputsError -> state.copy(
                 inputError = action.message,
@@ -166,6 +166,9 @@ object ReportReducer {
 
             is ReportTaskStopResponse ->
                 reduceTaskStopResponse(state)
+
+            ReportProgressReset -> state.copy(
+                reportProgress =  null)
         }
     }
 
@@ -179,7 +182,7 @@ object ReportReducer {
                 taskLoading = false,
                 taskLoaded = true,
                 taskModel = null,
-                taskProgress = null,
+                reportProgress = null,
                 taskRunning = false)
 
         val result = model.finalOrPartialResult()
@@ -198,7 +201,7 @@ object ReportReducer {
                     taskLoading = false,
                     taskLoaded = true,
                     taskModel = model,
-                    taskProgress = taskProgress,
+                    reportProgress = taskProgress,
                     taskRunning = isRunning,
                     tableSummary = tableSummary,
                     tableSummaryLoaded = true,
@@ -231,7 +234,7 @@ object ReportReducer {
         return state.copy(
             taskModel = action.taskModel,
             tableSummary = tableSummary,
-            taskProgress = taskProgress,
+            reportProgress = taskProgress,
             taskRunning = isRunning,
             taskError = action.taskModel.errorMessage(),
             taskStarting = false,
@@ -247,7 +250,7 @@ object ReportReducer {
         if (action.taskModel == null) {
             return state.copy(
                 taskModel = null,
-                taskProgress = null,
+                reportProgress = null,
                 taskRunning = false)
         }
 
@@ -262,7 +265,7 @@ object ReportReducer {
         return state.copy(
             taskModel = action.taskModel,
             tableSummary = tableSummary,
-            taskProgress = taskProgress,
+            reportProgress = taskProgress,
             taskRunning = isRunning,
             taskError = action.taskModel.errorMessage(),
             outputCount = (taskProgress?.outputCount ?: 0).coerceAtLeast(state.outputCount ?: 0)
@@ -279,7 +282,7 @@ object ReportReducer {
             taskStopping = false,
             tableSummary = tableSummary,
             taskRunning = false,
-            taskProgress = null)
+            reportProgress = null)
     }
 
 

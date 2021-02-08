@@ -58,7 +58,7 @@ data class ReportFileProgress(
 
         val readFormat =
             if (readBytes != uncompressedBytes) {
-                "/ " + FormatUtils.readableFileSize(uncompressedBytes) + " "
+                " (" + FormatUtils.readableFileSize(uncompressedBytes) + " uncompressed) "
             }
             else {
                 ""
@@ -68,13 +68,14 @@ data class ReportFileProgress(
 
         return when {
             finished -> {
-                "$recordsFormat ${readFormat}/ ${durationSeconds}s"
+                val speed = FormatUtils.readableFileSize(1000L * uncompressedBytes / durationMillis)
+                "Done: $recordsFormat records ${readFormat}took ${durationSeconds}s at $speed/s"
             }
 
             else -> {
                 val percent = ((readBytes.toDouble() / totalSize) * 100).toInt()
                 val speed = FormatUtils.readableFileSize(recentBytesPerSecond)
-                "$percent% at $speed/s - $recordsFormat ${readFormat}/ ${durationSeconds}s"
+                "($percent%): $recordsFormat records ${readFormat}for ${durationSeconds}s at $speed/s"
             }
         }
     }

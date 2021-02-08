@@ -20,7 +20,7 @@ import tech.kzen.lib.common.service.store.MirroredGraphSuccess
 object ReportEffect {
     //-----------------------------------------------------------------------------------------------------------------
     val refreshView = CompoundReportAction(
-        SummaryLookupRequest, OutputLookupRequest)
+        ReportProgressReset, SummaryLookupRequest, OutputLookupRequest)
 
 
     //-----------------------------------------------------------------------------------------------------------------
