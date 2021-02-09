@@ -10,7 +10,10 @@ import styled.styledDiv
 import tech.kzen.auto.client.objects.document.report.state.FormulaAddRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
+import tech.kzen.auto.client.wrap.CancelIcon
+import tech.kzen.auto.client.wrap.MaterialIconButton
+import tech.kzen.auto.client.wrap.MaterialTextField
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 
 
@@ -158,26 +161,25 @@ class ReportFormulaAdd(
 
     private fun RBuilder.renderCancelAndSubmit() {
         styledDiv {
-            attrs {
-                title = "Cancel adding column filter"
-            }
-
             css {
                 display = Display.inlineBlock
+                marginTop = 0.5.em
             }
 
             child(MaterialIconButton::class) {
                 attrs {
+                    title = "Add new calculated column"
                     onClick = {
                         onSubmit()
                     }
                 }
 
-                child(AddIcon::class) {}
+                child(AddCircleOutlineIcon::class) {}
             }
 
             child(MaterialIconButton::class) {
                 attrs {
+                    title = "Cancel adding calculated column"
                     onClick = {
                         onCancel()
                     }
@@ -197,6 +199,7 @@ class ReportFormulaAdd(
         child(MaterialTextField::class) {
             attrs {
                 label = "Calculated column name"
+                fullWidth = true
 
                 onChange = {
                     val target = it.target as HTMLInputElement

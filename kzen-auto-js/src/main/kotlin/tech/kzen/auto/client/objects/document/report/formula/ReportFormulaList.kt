@@ -79,13 +79,22 @@ class ReportFormulaList(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderHeader() {
         styledDiv {
-            child(FunctionsIcon::class) {
-                attrs {
-                    style = reactStyle {
-                        fontSize = 2.25.em
-                        marginRight = 0.25.em
-//                        marginTop = (-0.25).em
-                        marginTop = 0.em
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+                    height = 2.em
+                    width = 2.em
+                    position = Position.relative
+                    marginRight = 0.25.em
+                }
+                child(FunctionsIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            position = Position.absolute
+                            top = 0.px
+                            left = 0.px
+                            fontSize = 2.25.em
+                        }
                     }
                 }
             }
