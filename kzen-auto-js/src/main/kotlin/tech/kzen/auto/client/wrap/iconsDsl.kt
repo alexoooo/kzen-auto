@@ -135,6 +135,9 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "PlayForWork" ->
             PlayForWorkIcon::class
 
+        "CallReceived" ->
+            CallReceivedIcon::class
+
         else ->
             TextureIcon::class
     }

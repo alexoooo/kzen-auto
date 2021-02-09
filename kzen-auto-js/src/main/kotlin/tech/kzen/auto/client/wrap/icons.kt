@@ -489,3 +489,9 @@ external class SettingsIcon: Component<IconProps, RState> {
 external class CheckIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("CallReceived")
+external class CallReceivedIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

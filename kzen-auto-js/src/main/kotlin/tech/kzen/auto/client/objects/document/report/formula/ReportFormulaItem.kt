@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.formula
 import kotlinx.css.*
 import org.w3c.dom.HTMLTextAreaElement
 import react.*
+import react.dom.div
 import styled.css
 import styled.styledDiv
 import styled.styledPre
@@ -17,6 +18,34 @@ class ReportFormulaItem(
 ):
     RPureComponent<ReportFormulaItem.Props, ReportFormulaItem.State>(props)
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        // https://stackoverflow.com/a/44149580/1941359
+        private val reservedWords = setOf(
+            "package", "as", "typealias", "class", "this", "super", "val", "var", "fun", "for",
+            "null", "true", "false", "is", "in", "throw", "return", "break", "continue", "object",
+            "if", "try", "else", "while", "do", "when", "interface", "typeof")
+
+        private val simpleVariablePattern = Regex("[a-zA-Z][a-zA-Z0-9_]+")
+
+        private fun escapeColumnName(columnName: String): String {
+            if (columnName in reservedWords) {
+                return backticksQuote(columnName)
+            }
+
+            if (simpleVariablePattern.matches(columnName)) {
+                return columnName
+            }
+
+            return backticksQuote(columnName)
+        }
+
+        private fun backticksQuote(identifier: String): String {
+            return "`$identifier`"
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: RProps {
         var reportState: ReportState
@@ -60,8 +89,13 @@ class ReportFormulaItem(
             return
         }
 
+        submitValue(state.value)
+    }
+
+
+    private fun submitValue(newValue: String) {
         val updateRequest = FormulaValueUpdateRequest(
-            props.columnName, state.value)
+            props.columnName, newValue)
 
         props.dispatcher.dispatchAsync(
             CompoundReportAction(
@@ -76,6 +110,30 @@ class ReportFormulaItem(
             value = newValue
         }
         submitDebounce.apply()
+    }
+
+
+    private fun onInsertColumn(columnName: String) {
+        val escaped = escapeColumnName(columnName)
+        console.log("$#@$#@ columnName - $escaped")
+
+        val escapePrefix =
+            if (state.value.isEmpty() || state.value.endsWith(" ")) {
+                ""
+            }
+            else {
+                " "
+            }
+
+        val valueSuffix = escapePrefix + escaped
+        val newValue = state.value + valueSuffix
+
+        setState {
+            value += valueSuffix
+        }
+
+        submitDebounce.cancel()
+        submitValue(newValue)
     }
 
 
@@ -132,15 +190,18 @@ class ReportFormulaItem(
 
         styledDiv {
             css {
-                width = 40.em
+                width = 100.pct.minus(4.em)
                 display = Display.inlineBlock
+//                backgroundColor = Color.green
             }
 
             renderEditor(editDisabled, error != null)
 
             if (error != null) {
-                styledPre {
-                    +error
+                div {
+                    styledPre {
+                        +error
+                    }
                 }
             }
         }
@@ -151,21 +212,52 @@ class ReportFormulaItem(
         editDisabled: Boolean,
         hasError: Boolean
     ) {
-        child(MaterialTextField::class) {
-            attrs {
-                fullWidth = true
-                multiline = true
+        styledDiv {
+            css {
+                display = Display.inlineBlock
+                width = 40.em
+                verticalAlign = VerticalAlign.top
+            }
 
-                label = props.columnName
-                value = state.value
+            child(MaterialTextField::class) {
+                attrs {
+                    fullWidth = true
+                    multiline = true
 
-                onChange = {
-                    val value = (it.target as HTMLTextAreaElement).value
-                    onValueChange(value)
+                    label = props.columnName
+                    value = state.value
+
+                    onChange = {
+                        val value = (it.target as HTMLTextAreaElement).value
+                        onValueChange(value)
+                    }
+
+                    disabled = editDisabled
+                    error = hasError
+
+                    InputLabelProps = NestedInputLabelProps(shrink = true)
                 }
+            }
+        }
 
-                disabled = editDisabled
-                error = hasError
+        styledDiv {
+            css {
+                display = Display.inlineBlock
+                verticalAlign = VerticalAlign.top
+            }
+
+            child(FormulaColumnReference::class) {
+                attrs {
+                    this.columnNames = props.reportState.columnListing ?: listOf()
+                    this.editDisabled = editDisabled
+
+                    addLabel = "Column reference"
+                    addIcon = "CallReceived"
+
+                    onAdded = { columnName ->
+                        onInsertColumn(columnName)
+                    }
+                }
             }
         }
     }

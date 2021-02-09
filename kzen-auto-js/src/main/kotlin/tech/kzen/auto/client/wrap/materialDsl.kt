@@ -19,7 +19,8 @@ interface NestedInputProps: RProps {
 }
 
 class NestedInputLabelProps(
-        val style: Json
+        val style: Json? = null,
+        val shrink: Boolean? = null
 )
 
 //class ButtonStyle(val backgroundColor: String, val color: String)
