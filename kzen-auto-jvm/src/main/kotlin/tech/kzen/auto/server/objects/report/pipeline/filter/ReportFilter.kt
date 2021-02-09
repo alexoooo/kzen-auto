@@ -2,10 +2,10 @@ package tech.kzen.auto.server.objects.report.pipeline.filter
 
 import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTextFlyweight
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 
 
 class ReportFilter(
@@ -29,7 +29,7 @@ class ReportFilter(
     private val recordHeaderIndex = RecordHeaderIndex(nonEmptyFilterColumnNames)
 
     private val columnFilterSpecTypes: List<ColumnFilterType>
-    private val columnFilterSpecValues: List<Set<RecordTextFlyweight>>
+    private val columnFilterSpecValues: List<Set<RecordFieldFlyweight>>
 
     init {
         val columnFilterSpecs = nonEmptyFilterColumnNames
@@ -41,13 +41,12 @@ class ReportFilter(
             .map { columnFilterSpec ->
                 columnFilterSpec
                     .values
-                    .map { RecordTextFlyweight.standalone(it) }
+                    .map { RecordFieldFlyweight.standalone(it) }
                     .toSet()
             }
     }
 
-    private val flyweight =
-        RecordTextFlyweight()
+    private val flyweight = RecordFieldFlyweight()
 
 
     //-----------------------------------------------------------------------------------------------------------------

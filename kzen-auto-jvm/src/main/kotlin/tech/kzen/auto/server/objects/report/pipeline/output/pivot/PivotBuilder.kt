@@ -4,10 +4,10 @@ import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
 import tech.kzen.auto.server.objects.report.pipeline.calc.ColumnValueUtils
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTextFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.ValueStatistics
 
@@ -66,7 +66,8 @@ class PivotBuilder(
     private val valueColumnIndex = RecordHeaderIndex(valueColumns)
     private val valueBuffer = DoubleArray(valueColumns.size)
 
-    private val flyweight = RecordTextFlyweight()
+    private val flyweight =
+        RecordFieldFlyweight()
 
     private var maxOrdinal: Long = -1
 
@@ -100,8 +101,9 @@ class PivotBuilder(
                     else {
                         present = true
 
-                        val doubleValue = flyweight.toDoubleOrNan()
-                        ValueStatistics.normalize(doubleValue)
+//                        val doubleValue = flyweight.toDoubleOrNan()
+//                        ValueStatistics.normalize(doubleValue)
+                        flyweight.toDoubleOrNan()
                     }
                 }
         }

@@ -1,7 +1,9 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.model;
 
 
+import net.openhft.hashing.LongHashFunction;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.CsvRecordParser;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.TsvRecordParser;
 
 import java.io.*;
@@ -14,6 +16,14 @@ import java.util.List;
 public class RecordItemBuffer
 {
     //-----------------------------------------------------------------------------------------------------------------
+    private static final double doubleCacheMissing = -0.0;
+    private static final long missingNumberBits = Double.doubleToRawLongBits(doubleCacheMissing);
+
+    private static boolean isDoubleCacheMissing(double value) {
+        return Double.doubleToRawLongBits(value) == missingNumberBits;
+    }
+
+
     public static RecordItemBuffer of(String... values) {
         return of(Arrays.asList(values));
     }
@@ -21,11 +31,8 @@ public class RecordItemBuffer
 
     public static RecordItemBuffer of(List<String> values) {
         RecordItemBuffer buffer = new RecordItemBuffer(0, 0);
-
-        for (String value : values) {
-            buffer.add(value);
-        }
-
+        buffer.addAll(values);
+        buffer.populateCaches();
         return buffer;
     }
 
@@ -37,6 +44,7 @@ public class RecordItemBuffer
         buffer.fieldEnds[0] = length;
         buffer.fieldContentLength = length;
         buffer.nonEmpty = true;
+        buffer.populateCaches();
         return buffer;
     }
 
@@ -44,6 +52,8 @@ public class RecordItemBuffer
     //-----------------------------------------------------------------------------------------------------------------
     char[] fieldContents;
     int[] fieldEnds;
+    double[] doublesCache;
+    long[] hashesCache;
     private int fieldCount = 0;
     private int fieldContentLength = 0;
     private boolean nonEmpty = false;
@@ -81,6 +91,14 @@ public class RecordItemBuffer
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    public String getString(int fieldIndex) {
+        int startIndex = start(fieldIndex);
+        int length = fieldEnds[fieldIndex] - startIndex;
+        return new String(fieldContents, startIndex, length);
+    }
+
+
     public List<String> toList() {
         List<String> list = new ArrayList<>();
         for (int i = 0; i < fieldCount; i++) {
@@ -88,6 +106,80 @@ public class RecordItemBuffer
             list.add(item);
         }
         return list;
+    }
+
+
+//    /**
+//     * NB: must call parseDoubles ahead of time
+//     * @param fieldIndex field index
+//     * @return double value of field contents or NaN
+//     */
+//    public double cachedDoubleOrNan(int fieldIndex) {
+//        return doublesCache[fieldIndex];
+//    }
+
+
+    public void populateCaches() {
+        growCachesIfRequired(fieldCount);
+
+        for (int i = 0; i < fieldCount; i++) {
+            populateCache(i);
+        }
+    }
+
+
+    private void growCachesIfRequired(int size) {
+        if (doublesCache == null) {
+            doublesCache = new double[fieldCount];
+            Arrays.fill(doublesCache, doubleCacheMissing);
+
+            hashesCache = new long[fieldCount];
+        }
+        else if (doublesCache.length < size) {
+            int oldLength = doublesCache.length;
+            doublesCache = Arrays.copyOf(doublesCache, size);
+            Arrays.fill(doublesCache, oldLength, size, doubleCacheMissing);
+
+            hashesCache = Arrays.copyOf(hashesCache, size);
+        }
+    }
+
+
+    private void populateCache(int fieldIndex) {
+        int start = start(fieldIndex);
+        int length = fieldEnds[fieldIndex] - start;
+
+        cacheDouble(fieldIndex, start, length);
+        cacheHash(fieldIndex, start, length);
+    }
+
+
+    private void cacheDouble(int fieldIndex, int start, int length) {
+        int startCursor = start;
+        int lengthCursor = length;
+        for (int i = 0; i < lengthCursor; i++) {
+            if (fieldContents[startCursor] != ' ') {
+                break;
+            }
+            startCursor++;
+            lengthCursor--;
+        }
+
+        for (int i = (lengthCursor - 1); i >= 0; i--) {
+            if (fieldContents[startCursor + i] != ' ') {
+                break;
+            }
+            lengthCursor--;
+        }
+
+        double value = NumberParseUtils.toDoubleOrNan(fieldContents, startCursor, lengthCursor);
+        doublesCache[fieldIndex] = value;
+    }
+
+
+    private void cacheHash(int fieldIndex, int start, int length) {
+        long value = LongHashFunction.murmur_3().hashChars(fieldContents, start, length);
+        hashesCache[fieldIndex] = value;
     }
 
 
@@ -120,18 +212,9 @@ public class RecordItemBuffer
     }
 
 
-    public void writeCsvField(int index, Writer out) throws IOException {
-        int startIndex;
-        int endIndex;
-        if (index == 0) {
-            startIndex = 0;
-            endIndex = fieldEnds[0];
-        }
-        else {
-            startIndex = fieldEnds[index - 1];
-            endIndex = fieldEnds[index];
-        }
-
+    public void writeCsvField(int fieldIndex, Writer out) throws IOException {
+        int startIndex = start(fieldIndex);
+        int endIndex = fieldEnds[fieldIndex];
         CsvRecordParser.writeCsv(fieldContents, startIndex, endIndex, out);
     }
 
@@ -163,36 +246,10 @@ public class RecordItemBuffer
     }
 
 
-    private void writeTsvField(int index, Writer out) throws IOException {
-        int startIndex;
-        int endIndex;
-        if (index == 0) {
-            startIndex = 0;
-            endIndex = fieldEnds[0];
-        }
-        else {
-            startIndex = fieldEnds[index - 1];
-            endIndex = fieldEnds[index];
-        }
-        int length = endIndex - startIndex;
+    private void writeTsvField(int fieldIndex, Writer out) throws IOException {
+        int startIndex = start(fieldIndex);
+        int length = fieldEnds[fieldIndex] - startIndex;
         out.write(fieldContents, startIndex, length);
-    }
-
-
-    public String getString(int index) {
-        int startIndex;
-        int endIndex;
-        if (index == 0) {
-            startIndex = 0;
-            endIndex = fieldEnds[0];
-        }
-        else {
-            startIndex = fieldEnds[index - 1];
-            endIndex = fieldEnds[index];
-        }
-        int length = endIndex - startIndex;
-
-        return new String(fieldContents, startIndex, length);
     }
 
 
@@ -246,9 +303,13 @@ public class RecordItemBuffer
 
 
     public void add(String value) {
+        growFieldContentsIfRequired(fieldContentLength + value.length());
+
+        // see: https://stackoverflow.com/questions/8894258/fastest-way-to-iterate-over-all-the-chars-in-a-string
         for (int i = 0; i < value.length(); i++) {
-            addToField(value.charAt(i));
+            fieldContents[fieldContentLength++] = value.charAt(i);
         }
+
         commitField();
     }
 
@@ -256,6 +317,16 @@ public class RecordItemBuffer
     public void addAll(List<String> values) {
         for (String value : values) {
             add(value);
+        }
+    }
+
+
+    public void addAllAndPopulateCaches(String[] values) {
+        growCachesIfRequired(fieldCount + values.length);
+
+        for (String value : values) {
+            add(value);
+            populateCache(fieldCount - 1);
         }
     }
 
@@ -322,6 +393,15 @@ public class RecordItemBuffer
 
         System.arraycopy(that.fieldContents, 0, fieldContents, 0, fieldContentLength);
         System.arraycopy(that.fieldEnds, 0, fieldEnds, 0, fieldCount);
+
+        if (that.doublesCache != null) {
+            if (doublesCache == null || doublesCache.length < fieldCount) {
+                doublesCache = new double[fieldCount];
+                hashesCache = new long[fieldCount];
+            }
+            System.arraycopy(that.doublesCache, 0, doublesCache, 0, fieldCount);
+            System.arraycopy(that.hashesCache, 0, hashesCache, 0, fieldCount);
+        }
     }
 
 
@@ -358,6 +438,11 @@ public class RecordItemBuffer
             int nextSize = Math.max((int) (fieldEnds.length * 1.2 + 1), required);
             fieldEnds = Arrays.copyOf(fieldEnds, nextSize);
         }
+    }
+
+
+    int start(int fieldIndex) {
+        return fieldIndex == 0 ? 0 : fieldEnds[fieldIndex - 1];
     }
 
 

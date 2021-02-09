@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.pivot.row
 
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTextFlyweight
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.digest.DigestOrdinal
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.signature.RowSignatureIndex
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.value.RowValueIndex
@@ -39,7 +39,7 @@ class RowIndex(
     }
 
 
-    fun valueIndexOf(value: RecordTextFlyweight): DigestOrdinal {
+    fun valueIndexOf(value: RecordFieldFlyweight): DigestOrdinal {
         return rowValueIndex.getOrAddIndex(value)
     }
 

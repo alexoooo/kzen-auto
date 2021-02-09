@@ -1,9 +1,9 @@
 package tech.kzen.auto.server.objects.report.pipeline.calc
 
 import tech.kzen.auto.server.objects.report.model.ReportFormulaSignature
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 
 
 class ReportFormulas(
@@ -12,10 +12,13 @@ class ReportFormulas(
 ) {
     private var previousHeader: RecordHeader? = null
     private var augmentedHeader: RecordHeader? = null
-    private var formulas: Map<String, CalculatedColumn> = mapOf()
+
+    private val formulaCount = reportFormulaSignature.formula.formulas.size
+    private val formulas = Array<CalculatedColumn>(formulaCount) { ConstantCalculatedColumn.empty }
+    private val formulaValues = Array(formulaCount) { "" }
 
 
-    fun getFormulasAndAugmentHeader(header: RecordHeader) {
+    private fun getFormulasAndAugmentHeader(header: RecordHeader) {
         if (previousHeader == header) {
             // NB: optimization for reference equality
             previousHeader = header
@@ -23,7 +26,7 @@ class ReportFormulas(
         }
         previousHeader = header
 
-        val formulas = mutableMapOf<String, CalculatedColumn>()
+        var nextIndex = 0
         for (formula in reportFormulaSignature.formula.formulas) {
             val errorMessage = calculatedColumnEval.validate(
                 formula.key, formula.value, header.headerNames)
@@ -37,9 +40,8 @@ class ReportFormulas(
                     ConstantCalculatedColumn.error
                 }
 
-            formulas[formula.key] = calculatedColumn
+            formulas[nextIndex++] = calculatedColumn
         }
-        this.formulas = formulas
         augmentedHeader = RecordHeader.of(
             header.headerNames + reportFormulaSignature.formula.formulas.keys)
     }
@@ -50,10 +52,9 @@ class ReportFormulas(
         getFormulasAndAugmentHeader(header)
         headerBuffer.value = augmentedHeader!!
 
-        for (formula in reportFormulaSignature.formula.formulas) {
-            val calculatedColumn = formulas[formula.key]!!
-            val calculatedValue = calculatedColumn.evaluate(item, header)
-            item.add(calculatedValue)
+        for (i in 0 until formulaCount) {
+            formulaValues[i] = formulas[i].evaluate(item, header)
         }
+        item.addAllAndPopulateCaches(formulaValues)
     }
 }

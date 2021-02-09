@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.value.sto
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTextFlyweight
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 
 
 class BufferedIndexedTextStore(
@@ -32,8 +32,8 @@ class BufferedIndexedTextStore(
     }
 
 
-    override fun add(text: RecordTextFlyweight) {
-        add(text.toString())
+    override fun add(field: RecordFieldFlyweight) {
+        add(field.toString())
     }
 
 

@@ -319,7 +319,6 @@ class ReportOutput(
         }
 
         Files.newBufferedWriter(path).use { output ->
-//            val csvPrinter = CSVFormat.DEFAULT.print(output)
             val record = RecordItemBuffer()
 
             if (indexedCsvTable != null) {

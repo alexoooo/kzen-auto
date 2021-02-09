@@ -93,7 +93,10 @@ class ReportInputChain(
         lexer.tokenize(dataBuffer)
         parser.parse(dataBuffer, recordHandoff)
 
-        recordHandoff.flush { visitor.invoke(it.item) }
+        recordHandoff.flush { recordMap ->
+            recordMap.item.populateCaches()
+            visitor.invoke(recordMap.item)
+        }
 
         return remaining
     }

@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.calc
 
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils
+
 
 // NB: used from expressions, e.g. CalculatedColumnEvalTest
 @Suppress("unused")
@@ -66,7 +68,7 @@ data class ColumnValue(
     operator fun plus(that: Any?): ColumnValue {
         val thisNumber = toDoubleOrNan()
         val thatText = that.toString()
-        val thatNumber = ColumnValueUtils.toDoubleOrNan(thatText)
+        val thatNumber = NumberParseUtils.toDoubleOrNan(thatText)
 
         if (! thisNumber.isNaN() && ! thatNumber.isNaN()) {
             val addition = thisNumber + thatNumber
@@ -82,7 +84,7 @@ data class ColumnValue(
         if (number != null) {
             return number!!
         }
-        number = ColumnValueUtils.toDoubleOrNan(text!!)
+        number = NumberParseUtils.toDoubleOrNan(text!!)
         return number!!
     }
 

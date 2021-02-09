@@ -4,9 +4,13 @@ import kotlinx.css.*
 import org.w3c.dom.HTMLTextAreaElement
 import react.*
 import react.dom.div
+import react.dom.tbody
+import react.dom.td
+import react.dom.tr
 import styled.css
-import styled.styledDiv
 import styled.styledPre
+import styled.styledTable
+import styled.styledTd
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
@@ -115,7 +119,6 @@ class ReportFormulaItem(
 
     private fun onInsertColumn(columnName: String) {
         val escaped = escapeColumnName(columnName)
-        console.log("$#@$#@ columnName - $escaped")
 
         val escapePrefix =
             if (state.value.isEmpty() || state.value.endsWith(" ")) {
@@ -171,91 +174,77 @@ class ReportFormulaItem(
         val error: String? =
             props.reportState.formulaMessages[props.columnName]
 
-        child(MaterialIconButton::class) {
-            attrs {
-                style = reactStyle {
-                    marginLeft = 0.25.em
-                    verticalAlign = VerticalAlign.top
-                }
-
-                onClick = {
-                    onDelete()
-                }
-
-                disabled = editDisabled
-            }
-
-            child(DeleteIcon::class) {}
-        }
-
-        styledDiv {
+        styledTable {
             css {
-                width = 100.pct.minus(4.em)
-                display = Display.inlineBlock
-//                backgroundColor = Color.green
+                marginLeft = 0.25.em
             }
+            tbody {
+                tr {
+                    td {
+                        child(MaterialIconButton::class) {
+                            attrs {
+                                style = reactStyle {
+                                    verticalAlign = VerticalAlign.top
+                                }
 
-            renderEditor(editDisabled, error != null)
+                                onClick = {
+                                    onDelete()
+                                }
 
-            if (error != null) {
-                div {
-                    styledPre {
-                        +error
-                    }
-                }
-            }
-        }
-    }
+                                disabled = editDisabled
+                            }
 
-
-    private fun RBuilder.renderEditor(
-        editDisabled: Boolean,
-        hasError: Boolean
-    ) {
-        styledDiv {
-            css {
-                display = Display.inlineBlock
-                width = 40.em
-                verticalAlign = VerticalAlign.top
-            }
-
-            child(MaterialTextField::class) {
-                attrs {
-                    fullWidth = true
-                    multiline = true
-
-                    label = props.columnName
-                    value = state.value
-
-                    onChange = {
-                        val value = (it.target as HTMLTextAreaElement).value
-                        onValueChange(value)
+                            child(DeleteIcon::class) {}
+                        }
                     }
 
-                    disabled = editDisabled
-                    error = hasError
+                    styledTd {
+                        css {
+                            width = 40.em
+                        }
+                        child(MaterialTextField::class) {
+                            attrs {
+                                fullWidth = true
+                                multiline = true
 
-                    InputLabelProps = NestedInputLabelProps(shrink = true)
-                }
-            }
-        }
+                                label = props.columnName
+                                value = state.value
 
-        styledDiv {
-            css {
-                display = Display.inlineBlock
-                verticalAlign = VerticalAlign.top
-            }
+                                onChange = {
+                                    val value = (it.target as HTMLTextAreaElement).value
+                                    onValueChange(value)
+                                }
 
-            child(FormulaColumnReference::class) {
-                attrs {
-                    this.columnNames = props.reportState.columnListing ?: listOf()
-                    this.editDisabled = editDisabled
+                                disabled = editDisabled
+                                this.error = error != null
 
-                    addLabel = "Column reference"
-                    addIcon = "CallReceived"
+                                InputLabelProps = NestedInputLabelProps(shrink = true)
+                            }
+                        }
 
-                    onAdded = { columnName ->
-                        onInsertColumn(columnName)
+                        if (error != null) {
+                            div {
+                                styledPre {
+                                    +error
+                                }
+                            }
+                        }
+                    }
+
+                    td {
+                        child(FormulaColumnReference::class) {
+                            attrs {
+                                this.columnNames = props.reportState.columnListing ?: listOf()
+                                this.editDisabled = editDisabled
+
+                                addLabel = "Column reference"
+                                addIcon = "CallReceived"
+
+                                onAdded = { columnName ->
+                                    onInsertColumn(columnName)
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -76,6 +76,8 @@ class FormulaColumnReference(
                     marginBottom = -(1).em
                     marginLeft = 0.5.em
                 }
+
+                whiteSpace = WhiteSpace.nowrap
             }
 
             if (state.adding) {
@@ -88,7 +90,7 @@ class FormulaColumnReference(
                     renderSelect()
                 }
 
-                renderCancelAndSubmit()
+                renderCancel()
             }
             else {
                 renderAddButton()
@@ -120,7 +122,7 @@ class FormulaColumnReference(
     }
 
 
-    private fun RBuilder.renderCancelAndSubmit() {
+    private fun RBuilder.renderCancel() {
         styledDiv {
             css {
                 display = Display.inlineBlock

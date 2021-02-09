@@ -1,24 +1,36 @@
 package tech.kzen.auto.server.objects.report.pipeline.summary.model
 
-import com.google.common.collect.HashMultiset
+import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap
+import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap
 import tech.kzen.auto.common.objects.document.report.summary.ColumnSummary
 import tech.kzen.auto.common.objects.document.report.summary.NominalValueSummary
 import tech.kzen.auto.common.objects.document.report.summary.OpaqueValueSummary
 import tech.kzen.auto.common.objects.document.report.summary.StatisticValueSummary
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTextFlyweight
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import kotlin.random.Random
 
 
 class ValueSummaryBuilder {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        private const val maxNumericBuckets = 100
-        private const val maxNominalBuckets = 250
+//        private const val maxNominalBuckets = 100
+
+        private const val maxNominalBuckets = 100
+//        private const val maxNominalBuckets = 250
+
         private const val maxSampleSize = 100
-        private const val sampleThreshold = 10_000
+
+//        private const val sampleThreshold = 250
+        private const val sampleThreshold = 1_000
+//        private const val sampleThreshold = 10_000
+
+//        private const val histogramLengthThreshold = 64
         private const val histogramLengthThreshold = 128
+
         private const val nominalOther = "<other>"
-        private const val sampleProbability = 0.01
+
+        private const val sampleFrequency = 25
+        private const val sampleSubProbability = 0.25
 
 
         fun merge(a: ColumnSummary, b: ColumnSummary): ColumnSummary {
@@ -73,11 +85,14 @@ class ValueSummaryBuilder {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val textHistogram = HashMultiset.create<RecordTextFlyweight>()
+    private val textHistogram = Long2LongOpenHashMap()
+    private val histogramValues = Long2ObjectLinkedOpenHashMap<String>()
+
     private val textSample = mutableListOf<String>()
     private val random = Random(System.nanoTime())
 
     private var histogramOverflow: Boolean = false
+    private var valueCount: Long = 0
     private var emptyCount: Long = 0
     private var textCount: Long = 0
     private var numberCount: Long = 0
@@ -87,23 +102,20 @@ class ValueSummaryBuilder {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(value: RecordTextFlyweight) {
-        value.trim()
+    fun add(value: RecordFieldFlyweight) {
+        valueCount++
 
         if (value.isEmpty()) {
             emptyCount++
 
             if (! histogramOverflow) {
-                textHistogram.add(RecordTextFlyweight.empty)
+                addTextHistogramFlyweight(RecordFieldFlyweight.empty)
             }
             return
         }
 
         val doubleValue = value.toDoubleOrNan()
         if (! doubleValue.isNaN()) {
-//            val doubleValue = java.lang.Double.parseDouble(trimmed)
-//            val doubleValue = value.toDouble()
-
             numberCount++
             sum += doubleValue
             min = min.coerceAtMost(doubleValue)
@@ -117,9 +129,10 @@ class ValueSummaryBuilder {
             if (! histogramOverflow && value.length < histogramLengthThreshold) {
                 addTextHistogramFlyweight(value)
 
-                if (textHistogram.elementSet().size > sampleThreshold) {
-                    textHistogram.elementSet().forEach(this::addSample)
+                if (histogramValues.size > sampleThreshold) {
+                    histogramValues.values.forEach(this::addSample)
                     textHistogram.clear()
+                    histogramValues.clear()
                     histogramOverflow = true
                 }
             }
@@ -130,30 +143,34 @@ class ValueSummaryBuilder {
     }
 
 
-    private fun addTextHistogramFlyweight(value: RecordTextFlyweight) {
-        val previousCount = textHistogram.add(value, 1)
+    private fun addTextHistogramFlyweight(value: RecordFieldFlyweight) {
+        val signature = value.goodCache()
+        val previousCount = textHistogram.addTo(signature, 1)
 
-        if (previousCount == 0) {
-            textHistogram.remove(value)
-            textHistogram.add(value.detach())
+        if (previousCount == 0L) {
+            histogramValues[signature] = value.toString()
         }
-
-//        if (textHistogram.contains(value)) {
-//            textHistogram.add(value)
-//        }
-//        else {
-//            textHistogram.add(value.detach())
-//        }
     }
 
 
-    private fun addSample(value: RecordTextFlyweight) {
+    private fun addSample(value: RecordFieldFlyweight) {
         if (textSample.size < sampleThreshold) {
             textSample.add(value.toString())
         }
-        else if (random.nextDouble() < sampleProbability) {
+        else if (valueCount % sampleFrequency == 0L && random.nextFloat() < sampleSubProbability) {
             val randomIndex = random.nextInt(textSample.size)
             textSample[randomIndex] = value.toString()
+        }
+    }
+
+
+    private fun addSample(value: String) {
+        if (textSample.size < sampleThreshold) {
+            textSample.add(value)
+        }
+        else if (valueCount % sampleFrequency == 0L && random.nextFloat() < sampleSubProbability) {
+            val randomIndex = random.nextInt(textSample.size)
+            textSample[randomIndex] = value
         }
     }
 
@@ -177,20 +194,17 @@ class ValueSummaryBuilder {
             return NominalValueSummary.empty
         }
 
-        if (textHistogram.elementSet().size == 1) {
-            val only = textHistogram.elementSet().first().toString()
+        if (histogramValues.size == 1) {
+            val only = histogramValues.values.first()
             return NominalValueSummary(
                 mapOf(only to textHistogram.size.toLong()))
         }
 
-        if (textHistogram.size == textHistogram.elementSet().size) {
-            return NominalValueSummary.empty
-        }
-
         val builder = mutableMapOf<String, Long>()
 
-        for (e in textHistogram.entrySet()) {
-            builder[e.element.toString()] = e.count.toLong()
+        for (e in textHistogram.long2LongEntrySet()) {
+            val key = histogramValues[e.longKey]
+            builder[key] = e.longValue
         }
 
         var otherCount = 0L

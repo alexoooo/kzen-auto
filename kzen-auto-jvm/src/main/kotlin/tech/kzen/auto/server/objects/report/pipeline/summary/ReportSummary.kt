@@ -6,10 +6,10 @@ import kotlinx.coroutines.withContext
 import tech.kzen.auto.common.objects.document.report.summary.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTextFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
 import tech.kzen.auto.server.objects.report.pipeline.summary.model.ValueSummaryBuilder
 import tech.kzen.auto.util.AutoJvmUtils
@@ -71,7 +71,7 @@ class ReportSummary(
 
 
     private val flyweight =
-        RecordTextFlyweight()
+        RecordFieldFlyweight()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -351,6 +351,8 @@ class ReportSummary(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun add(recordItem: RecordItemBuffer, header: RecordHeader) {
+        flyweight.selectHost(recordItem);
+
         val indices = headerIndex.indices(header)
         for (i in builders.indices) {
             val itemIndex = indices[i]
@@ -358,7 +360,7 @@ class ReportSummary(
                 continue
             }
 
-            flyweight.selectHostField(recordItem, itemIndex)
+            flyweight.selectField(itemIndex)
             builders[i].add(flyweight)
         }
     }

@@ -2,8 +2,8 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import org.junit.Test
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTextFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -160,7 +160,8 @@ class CsvLineParserTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val flyweight = RecordTextFlyweight()
+    private val flyweight =
+        RecordFieldFlyweight()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -411,7 +412,6 @@ class CsvLineParserTest {
         text: String,
         bufferSize: Int = text.encodeToByteArray().size.coerceAtLeast(RecordDataBuffer.minBufferSize)
     ): List<RecordItemBuffer> {
-//        return ReportParserHelper.csvRecords(text, bufferSize)
         return ReportInputChain.allCsv(text, bufferSize)
     }
 }

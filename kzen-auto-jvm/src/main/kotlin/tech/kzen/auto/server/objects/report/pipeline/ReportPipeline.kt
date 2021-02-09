@@ -15,6 +15,7 @@ import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import tech.kzen.auto.server.objects.report.pipeline.cache.ReportPreCache
 import tech.kzen.auto.server.objects.report.pipeline.calc.ReportFormulas
 import tech.kzen.auto.server.objects.report.pipeline.event.ReportBinaryEvent
 import tech.kzen.auto.server.objects.report.pipeline.event.ReportRecordEvent
@@ -58,6 +59,11 @@ class ReportPipeline(
         private const val binaryDisruptorBufferSize = 256
 //        private const val binaryDisruptorBufferSize = 512
         private const val recordDisruptorBufferSize = 32 * 1024
+
+//        private const val preCachePartitionCount = 1
+//        private const val preCachePartitionCount = 2
+//        private const val preCachePartitionCount = 3
+        private const val preCachePartitionCount = 4
 
 
         fun passivePreview(
@@ -118,9 +124,11 @@ class ReportPipeline(
     private val parser = ReportInputParser(progress = progressTracker)
 
 
-    private val filter = ReportFilter(initialReportRunSpec)
+    private val preCachePartitions = ReportPreCache.partitions(preCachePartitionCount)
+
     private val formulas = ReportFormulas(
         initialReportRunSpec.toFormulaSignature(), ServerContext.calculatedColumnEval)
+    private val filter = ReportFilter(initialReportRunSpec)
     private val summary = ReportSummary(initialReportRunSpec, runDir, taskHandle)
     private val output = ReportOutput(initialReportRunSpec, runDir, taskHandle, progressTracker)
 
@@ -198,9 +206,10 @@ class ReportPipeline(
         )
 
         recordDisruptor
-            .handleEventsWith(this::handleFormulas)
+            .handleEventsWith(*preCachePartitions)
+            .then(this::handleFormulas)
             .then(this::handleFilter)
-            .handleEventsWith(this::handleSummary, this::handleOutput)
+            .then(this::handleSummary, this::handleOutput)
 
         recordDisruptor.setDefaultExceptionHandler(object : ExceptionHandler<ReportRecordEvent?> {
             override fun handleEventException(ex: Throwable?, sequence: Long, event: ReportRecordEvent?) {
@@ -298,6 +307,12 @@ class ReportPipeline(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+//    @Suppress("UNUSED_PARAMETER")
+//    private fun handlePreCache(event: ReportRecordEvent, sequence: Long, endOfBatch: Boolean) {
+//        preCache.preCache(event.record.item, sequence)
+//    }
+
+
     @Suppress("UNUSED_PARAMETER")
     private fun handleFormulas(event: ReportRecordEvent, sequence: Long, endOfBatch: Boolean) {
         formulas.evaluate(event.record.item, event.record.header)
