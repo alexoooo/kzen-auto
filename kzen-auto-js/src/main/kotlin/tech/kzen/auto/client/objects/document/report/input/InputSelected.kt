@@ -281,7 +281,7 @@ class InputSelected(
                                         }
                                     }
 
-                                    +"... ${selected.size - 1} more files, expand to view all ..."
+                                    +"... ${selected.size - 2} more files, expand to view all ..."
                                 }
                             }
                         }

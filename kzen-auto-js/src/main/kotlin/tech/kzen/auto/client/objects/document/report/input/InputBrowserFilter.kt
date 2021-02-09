@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.input
 import kotlinx.css.em
 import kotlinx.css.width
 import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.events.KeyboardEvent
 import react.*
 import tech.kzen.auto.client.objects.document.report.state.InputsBrowserFilterRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
@@ -63,6 +64,17 @@ class InputBrowserFilter(
     }
 
 
+    private fun handleEnter(event: KeyboardEvent) {
+        if (event.key != "Enter") {
+            return
+        }
+
+        submitDebounce.cancel()
+        submitEdit()
+        event.preventDefault()
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         child(MaterialTextField::class) {
@@ -91,6 +103,8 @@ class InputBrowserFilter(
 
                 value = state.filterText
                 disabled = props.editDisabled
+
+                onKeyDown = ::handleEnter
             }
         }
     }

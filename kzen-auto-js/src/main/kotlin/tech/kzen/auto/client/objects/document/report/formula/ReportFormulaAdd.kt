@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.formula
 import kotlinx.css.*
 import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.events.KeyboardEvent
 import react.*
 import styled.css
 import styled.styledDiv
@@ -77,17 +78,22 @@ class ReportFormulaAdd(
     }
 
 
+    private fun handleEnterAndEscape(event: KeyboardEvent) {
+//        console.log("event.key: ${event.key}", event)
+
+        when (event.key) {
+            "Enter" -> onSubmit()
+            "Escape" -> onCancel()
+            else -> return
+        }
+
+        event.preventDefault()
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val columnListing = props.reportState.columnListing
-            ?: return
-
-//        val unusedOptions = columnListing
-//            .filter { it !in props.formulaSpec.columns }
-//
-//        if (unusedOptions.isEmpty()) {
-//            return
-//        }
 
         val editDisabled =
             props.reportState.isInitiating() ||
@@ -100,28 +106,28 @@ class ReportFormulaAdd(
                 }
             }
 
-            if (! props.reportState.formulaLoading) {
-                if (props.reportState.formulaError != null) {
-                    styledDiv {
-                        +"Error: ${props.reportState.formulaError}"
-                    }
+            if (! props.reportState.formulaLoading &&
+                    props.reportState.formulaError != null
+            ) {
+                styledDiv {
+                    +"Error: ${props.reportState.formulaError}"
                 }
+            }
 
-                if (state.adding) {
-                    styledDiv {
-                        css {
-                            display = Display.inlineBlock
-                            width = 15.em
-                        }
-
-                        renderName(columnListing, editDisabled)
+            if (state.adding) {
+                styledDiv {
+                    css {
+                        display = Display.inlineBlock
+                        width = 15.em
                     }
 
-                    renderCancelButton()
+                    renderName(columnListing, editDisabled)
                 }
-                else {
-                    renderAddButton()
-                }
+
+                renderCancelAndSubmit()
+            }
+            else {
+                renderAddButton()
             }
         }
     }
@@ -150,7 +156,7 @@ class ReportFormulaAdd(
     }
 
 
-    private fun RBuilder.renderCancelButton() {
+    private fun RBuilder.renderCancelAndSubmit() {
         styledDiv {
             attrs {
                 title = "Cancel adding column filter"
@@ -175,6 +181,7 @@ class ReportFormulaAdd(
                     onClick = {
                         onCancel()
                     }
+//                    disabled = props.reportState.formulaLoading
                 }
 
                 child(CancelIcon::class) {}
@@ -184,7 +191,7 @@ class ReportFormulaAdd(
 
 
     private fun RBuilder.renderName(
-        columnListing: List<String>,
+        columnListing: List<String>?,
         editDisabled: Boolean
     ) {
         child(MaterialTextField::class) {
@@ -197,7 +204,9 @@ class ReportFormulaAdd(
                 }
 
                 disabled = editDisabled
-                error = state.selectedColumn in columnListing
+                error = ! (columnListing?.contains(state.selectedColumn) ?: false)
+
+                onKeyDown = ::handleEnterAndEscape
             }
         }
     }

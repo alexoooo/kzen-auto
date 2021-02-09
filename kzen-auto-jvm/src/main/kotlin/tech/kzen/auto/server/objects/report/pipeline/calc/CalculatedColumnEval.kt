@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.report.pipeline.calc
 
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.KotlinCode
 
@@ -27,7 +27,16 @@ class CalculatedColumnEval(
         }
 
         val code = generate(calculatedColumnName, calculatedColumnFormula, columnNames)
-        return cachedKotlinCompiler.tryCompile(code)
+        val errorMessage = cachedKotlinCompiler.tryCompile(code)
+        return errorMessage?.let { cleanupErrorMessage(it) }
+    }
+
+
+    private fun cleanupErrorMessage(errorMessage: String): String {
+        return errorMessage
+            .replaceFirst("return (", "")
+            .replaceFirst(")\n", "\n")
+            .replaceFirst("        ^", "^")
     }
 
 

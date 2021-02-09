@@ -127,8 +127,8 @@ object ReportEffect {
             is FormulaRemoveRequest ->
                 submitFormulaRemove(state, action.columnName)
 
-//            is FormulaValueUpdateRequest ->
-//                submitFormulaValueUpdate(state, action.columnName, action.formula)
+            is FormulaValueUpdateRequest ->
+                submitFormulaValueUpdate(state, action.columnName, action.formula)
 
             is FormulaValidationRequest ->
                 validateFormulasAction(state)
@@ -588,21 +588,21 @@ object ReportEffect {
     }
 
 
-//    private suspend fun submitFormulaValueUpdate(
-//        state: ReportState,
-//        columnName: String,
-//        formula: String
-//    ): ReportAction {
-//        val command = FormulaSpec.updateFormulaCommand(
-//            state.mainLocation, columnName, formula)
-//
-//        val result = ClientContext.mirroredGraphStore.apply(command)
-//
-//        val errorMessage =
-//            (result as? MirroredGraphError)?.error?.message
-//
-//        return FilterUpdateResult(errorMessage)
-//    }
+    private suspend fun submitFormulaValueUpdate(
+        state: ReportState,
+        columnName: String,
+        formula: String
+    ): ReportAction {
+        val command = FormulaSpec.updateFormulaCommand(
+            state.mainLocation, columnName, formula)
+
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        val errorMessage =
+            (result as? MirroredGraphError)?.error?.message
+
+        return FilterUpdateResult(errorMessage)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -186,7 +186,6 @@ class ReportOutputView(
                 }
             }
 
-
             styledSpan {
                 css {
                     float = Float.right

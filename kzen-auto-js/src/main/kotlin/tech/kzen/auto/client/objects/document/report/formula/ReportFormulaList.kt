@@ -12,6 +12,7 @@ import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.FunctionsIcon
+import tech.kzen.auto.client.wrap.MaterialCircularProgress
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 
@@ -42,13 +43,6 @@ class ReportFormulaList(
                 height = 100.pct
                 marginTop = 5.px
             }
-
-//            child(TopIngress::class) {
-//                attrs {
-//                    ingressColor = Color.white
-//                    parentWidth = 100.pct
-//                }
-//            }
 
             styledDiv {
                 css {
@@ -88,8 +82,6 @@ class ReportFormulaList(
             child(FunctionsIcon::class) {
                 attrs {
                     style = reactStyle {
-//                        fontSize = 1.75.em
-//                        fontSize = 2.em
                         fontSize = 2.25.em
                         marginRight = 0.25.em
 //                        marginTop = (-0.25).em
@@ -105,20 +97,22 @@ class ReportFormulaList(
 
                 +"Calculated Columns"
             }
+
+            styledSpan {
+                css {
+                    float = Float.right
+                }
+
+                if (props.reportState.formulaLoading) {
+                    child(MaterialCircularProgress::class) {}
+                }
+            }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderCalculatedColumns() {
-//        val formulaDefinition = props
-//            .reportState
-//            .clientState
-//            .graphDefinitionAttempt
-//            .successful
-//            .objectDefinitions[props.reportState.mainLocation]!!
-//            .attributeDefinitions[ReportConventions.formulaAttributeName]!!
-//        val formulaSpec = (formulaDefinition as ValueAttributeDefinition).value as FormulaSpec
         val formulaSpec = props.reportState.formulaSpec()
 
         styledDiv {

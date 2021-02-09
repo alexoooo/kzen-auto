@@ -67,8 +67,6 @@ class EmbeddedKotlinCompiler: KotlinCompiler {
         classpathLocations: List<Path>,
         classLoader: ClassLoader
     ): String? {
-//        initIfRequired()
-
         val errorStreamBytes = ByteArrayOutputStream()
         val errorStream = PrintStream(errorStreamBytes)
 

@@ -1,18 +1,15 @@
 package tech.kzen.auto.client.objects.document.report.formula
 
 import kotlinx.css.*
+import org.w3c.dom.HTMLTextAreaElement
 import react.*
 import styled.css
 import styled.styledDiv
 import styled.styledPre
-import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.DeleteIcon
-import tech.kzen.auto.client.wrap.MaterialIconButton
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
-import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
 
 class ReportFormulaItem(
@@ -21,30 +18,67 @@ class ReportFormulaItem(
     RPureComponent<ReportFormulaItem.Props, ReportFormulaItem.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-        var reportState: ReportState,
-        var dispatcher: ReportDispatcher,
-        var formulaSpec: FormulaSpec,
+    interface Props: RProps {
+        var reportState: ReportState
+        var dispatcher: ReportDispatcher
+        var formulaSpec: FormulaSpec
         var columnName: String
-    ): RProps
+    }
 
 
-    class State(
-        var open: Boolean,
-        var removeError: String?,
+    interface State: RState {
+//        var open: Boolean
+        var removeError: String?
         var updateError: String?
-    ): RState
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-        open = false
-        removeError = null
-        updateError = null
+        var value: String
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var submitDebounce: FunctionWithDebounce = lodash.debounce({
+        async {
+            onSubmitEdit()
+        }
+    }, 1000)
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: Props) {
+//        open = false
+        removeError = null
+        updateError = null
+        value = props.formulaSpec.formulas[props.columnName]!!
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onSubmitEdit() {
+        val formula = props.formulaSpec.formulas[props.columnName]
+            ?: return
+
+        if (state.value == formula) {
+            return
+        }
+
+        val updateRequest = FormulaValueUpdateRequest(
+            props.columnName, state.value)
+
+        props.dispatcher.dispatchAsync(
+            CompoundReportAction(
+                updateRequest,
+                FormulaValidationRequest,
+                ReportEffect.refreshView))
+    }
+
+
+    private fun onValueChange(newValue: String) {
+        setState {
+            value = newValue
+        }
+        submitDebounce.apply()
+    }
+
+
     private fun onDelete() {
         if (state.removeError != null) {
             setState {
@@ -68,35 +102,16 @@ class ReportFormulaItem(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onOpenToggle() {
-        setState {
-            open = ! open
-        }
-    }
-
-
-    private fun onChangedByEdit() {
-        props.dispatcher.dispatchAsync(
-            CompoundReportAction(
-                FormulaValidationRequest,
-                ReportEffect.refreshView))
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
 //        val columnCriteria = props.formulaSpec.columns[props.columnName]
 //            ?: return
 
-        val reportState = props.reportState
-
         val editDisabled =
-            reportState.isInitiating() ||
-            reportState.taskRunning ||
-            reportState.formulaLoading
+            props.reportState.isInitiating() ||
+            props.reportState.taskRunning
 
         val error: String? =
-            reportState.formulaMessages[props.columnName]
+            props.reportState.formulaMessages[props.columnName]
 
         child(MaterialIconButton::class) {
             attrs {
@@ -121,30 +136,36 @@ class ReportFormulaItem(
                 display = Display.inlineBlock
             }
 
-            child(AttributePathValueEditor::class) {
-                attrs {
-                    disabled = editDisabled
-                    multilineOverride = true
-                    invalid = error != null
-                    labelOverride = props.columnName
-
-                    clientState = props.reportState.clientState
-                    objectLocation = props.reportState.mainLocation
-
-                    attributePath = FormulaSpec.formulaAttributePath(props.columnName)
-
-                    valueType = TypeMetadata.string
-
-                    onChange = {
-                        onChangedByEdit()
-                    }
-                }
-            }
+            renderEditor(editDisabled, error != null)
 
             if (error != null) {
                 styledPre {
                     +error
                 }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderEditor(
+        editDisabled: Boolean,
+        hasError: Boolean
+    ) {
+        child(MaterialTextField::class) {
+            attrs {
+                fullWidth = true
+                multiline = true
+
+                label = props.columnName
+                value = state.value
+
+                onChange = {
+                    val value = (it.target as HTMLTextAreaElement).value
+                    onValueChange(value)
+                }
+
+                disabled = editDisabled
+                error = hasError
             }
         }
     }

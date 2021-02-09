@@ -176,10 +176,10 @@ data class FormulaRemoveRequest(
 ): FormulaUpdateRequest()
 
 
-//data class FormulaValueUpdateRequest(
-//    val columnName: String,
-//    val formula: String
-//): FormulaUpdateRequest()
+data class FormulaValueUpdateRequest(
+    val columnName: String,
+    val formula: String
+): FormulaUpdateRequest()
 
 
 //--------------------------------------------------------------

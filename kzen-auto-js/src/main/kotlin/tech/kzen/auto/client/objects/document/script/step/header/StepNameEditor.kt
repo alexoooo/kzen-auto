@@ -142,9 +142,9 @@ class StepNameEditor(
     private fun handleEnterAndEscape(event: KeyboardEvent) {
 //        console.log("event.key: ${event.key}", event)
 
-        when {
-            event.key == "Enter" -> onRename()
-            event.key == "Escape" -> onCancel()
+        when (event.key) {
+            "Enter" -> onRename()
+            "Escape" -> onCancel()
             else -> return
         }
 

@@ -17,6 +17,7 @@ import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertMapEntryInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
@@ -47,16 +48,16 @@ data class FormulaSpec(
         }
 
 
-//        fun updateFormulaCommand(
-//            mainLocation: ObjectLocation,
-//            columnName: String,
-//            formula: String
-//        ): NotationCommand {
-//            return UpdateInAttributeCommand(
-//                mainLocation,
-//                formulaAttributePath(columnName),
-//                ScalarAttributeNotation(formula))
-//        }
+        fun updateFormulaCommand(
+            mainLocation: ObjectLocation,
+            columnName: String,
+            formula: String
+        ): NotationCommand {
+            return UpdateInAttributeCommand(
+                mainLocation,
+                formulaAttributePath(columnName),
+                ScalarAttributeNotation(formula))
+        }
 
 
         fun formulaAttributePath(columnName: String): AttributePath {
