@@ -1,9 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline
 
-import com.lmax.disruptor.EventHandler
-import com.lmax.disruptor.ExceptionHandler
-import com.lmax.disruptor.RingBuffer
-import com.lmax.disruptor.YieldingWaitStrategy
+import com.lmax.disruptor.*
 import com.lmax.disruptor.dsl.Disruptor
 import com.lmax.disruptor.dsl.ProducerType
 import com.lmax.disruptor.util.DaemonThreadFactory
@@ -59,11 +56,21 @@ class ReportPipeline(
         private const val binaryDisruptorBufferSize = 256
 //        private const val binaryDisruptorBufferSize = 512
         private const val recordDisruptorBufferSize = 32 * 1024
+//        private const val recordDisruptorBufferSize = 64 * 1024
+
+        private fun newWaitStrategy(): WaitStrategy {
+//            return BusySpinWaitStrategy()
+            return YieldingWaitStrategy()
+//            return LiteBlockingWaitStrategy()
+        }
 
 //        private const val preCachePartitionCount = 1
-//        private const val preCachePartitionCount = 2
+        private const val preCachePartitionCount = 2
 //        private const val preCachePartitionCount = 3
-        private const val preCachePartitionCount = 4
+//        private const val preCachePartitionCount = 4
+//        private const val preCachePartitionCount = 5
+//        private const val preCachePartitionCount = 6
+//        private const val preCachePartitionCount = 8
 
 
         fun passivePreview(
@@ -200,7 +207,7 @@ class ReportPipeline(
             recordDisruptorBufferSize,
             DaemonThreadFactory.INSTANCE,
             ProducerType.SINGLE,
-            YieldingWaitStrategy()
+            newWaitStrategy()
         )
 
 //        recordDisruptor
@@ -241,7 +248,7 @@ class ReportPipeline(
             binaryDisruptorBufferSize,
             DaemonThreadFactory.INSTANCE,
             ProducerType.SINGLE,
-            YieldingWaitStrategy()
+            newWaitStrategy()
         )
 
         val disruptorRecordHandoff = DisruptorRecordHandoff(recordRingBuffer)
