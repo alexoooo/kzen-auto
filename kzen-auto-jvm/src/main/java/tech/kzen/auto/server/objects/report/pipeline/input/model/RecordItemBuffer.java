@@ -52,8 +52,11 @@ public class RecordItemBuffer
     //-----------------------------------------------------------------------------------------------------------------
     char[] fieldContents;
     int[] fieldEnds;
-    double[] doublesCache;
-    long[] hashesCache;
+
+    private boolean hasCache;
+    private double[] doublesCache;
+    private long[] hashesCache;
+
     private int fieldCount = 0;
     private int fieldContentLength = 0;
     private boolean nonEmpty = false;
@@ -70,6 +73,9 @@ public class RecordItemBuffer
     {
         fieldContents = new char[expectedContentLength];
         fieldEnds = new int[expectedFieldCount];
+
+        doublesCache = new double[expectedFieldCount];
+        hashesCache = new long[expectedFieldCount];
     }
 
 
@@ -109,39 +115,62 @@ public class RecordItemBuffer
     }
 
 
-//    /**
-//     * NB: must call parseDoubles ahead of time
-//     * @param fieldIndex field index
-//     * @return double value of field contents or NaN
-//     */
-//    public double cachedDoubleOrNan(int fieldIndex) {
-//        return doublesCache[fieldIndex];
-//    }
+    /**
+     * @param fieldIndex field index
+     * @return double value of field contents or NaN
+     */
+    public double cachedDoubleOrNan(int fieldIndex) {
+        double cached = doublesCache[fieldIndex];
+        if (isDoubleCacheMissing(cached)) {
+            populateCache(fieldIndex);
+            return doublesCache[fieldIndex];
+        }
+        return cached;
+    }
+
+
+    public long cachedHash(int fieldIndex) {
+        populateCacheIfRequired(fieldIndex);
+        return hashesCache[fieldIndex];
+    }
 
 
     public void populateCaches() {
-        growCachesIfRequired(fieldCount);
+//        growCachesIfRequired(fieldCount);
 
         for (int i = 0; i < fieldCount; i++) {
-            populateCache(i);
+            populateCacheIfRequired(i);
         }
     }
 
 
-    private void growCachesIfRequired(int size) {
-        if (doublesCache == null) {
-            doublesCache = new double[fieldCount];
-            Arrays.fill(doublesCache, doubleCacheMissing);
+//    private void growCachesIfRequired(int size) {
+//        if (doublesCache == null) {
+//            doublesCache = new double[size];
+//            Arrays.fill(doublesCache, doubleCacheMissing);
+//
+//            hashesCache = new long[size];
+//        }
+//        else if (doublesCache.length < size) {
+//            int oldLength = doublesCache.length;
+//            doublesCache = Arrays.copyOf(doublesCache, size);
+//            Arrays.fill(doublesCache, oldLength, size, doubleCacheMissing);
+//
+//            hashesCache = Arrays.copyOf(hashesCache, size);
+//        }
+//    }
 
-            hashesCache = new long[fieldCount];
-        }
-        else if (doublesCache.length < size) {
-            int oldLength = doublesCache.length;
-            doublesCache = Arrays.copyOf(doublesCache, size);
-            Arrays.fill(doublesCache, oldLength, size, doubleCacheMissing);
 
-            hashesCache = Arrays.copyOf(hashesCache, size);
+    private void populateCacheIfRequired(int fieldIndex) {
+        if (! isDoubleCacheMissing(doublesCache[fieldIndex])) {
+            return;
         }
+
+        int start = start(fieldIndex);
+        int length = fieldEnds[fieldIndex] - start;
+
+        cacheDouble(fieldIndex, start, length);
+        cacheHash(fieldIndex, start, length);
     }
 
 
@@ -151,6 +180,7 @@ public class RecordItemBuffer
 
         cacheDouble(fieldIndex, start, length);
         cacheHash(fieldIndex, start, length);
+        hasCache = true;
     }
 
 
@@ -283,23 +313,23 @@ public class RecordItemBuffer
     }
 
 
-    public void addToFieldAndCommit(char[] chars, int offset, int length) {
-        if (length != 0) {
-            if (fieldContents.length < fieldContentLength + length) {
-                int nextSize = Math.max((int) (fieldContents.length * 1.2), fieldContentLength + length);
-                fieldContents = Arrays.copyOf(fieldContents, nextSize);
-            }
-            System.arraycopy(chars, offset, fieldContents, fieldContentLength, length);
-            fieldContentLength += length;
-        }
-
-        if (fieldEnds.length <= fieldCount) {
-            int nextSize = Math.max((int) (fieldEnds.length * 1.2 + 1), fieldCount);
-            fieldEnds = Arrays.copyOf(fieldEnds, nextSize);
-        }
-        fieldEnds[fieldCount] = fieldContentLength;
-        fieldCount++;
-    }
+//    public void addToFieldAndCommit(char[] chars, int offset, int length) {
+//        if (length != 0) {
+//            if (fieldContents.length < fieldContentLength + length) {
+//                int nextSize = Math.max((int) (fieldContents.length * 1.2), fieldContentLength + length);
+//                fieldContents = Arrays.copyOf(fieldContents, nextSize);
+//            }
+//            System.arraycopy(chars, offset, fieldContents, fieldContentLength, length);
+//            fieldContentLength += length;
+//        }
+//
+//        if (fieldEnds.length <= fieldCount) {
+//            int nextSize = Math.max((int) (fieldEnds.length * 1.2 + 1), fieldCount);
+//            fieldEnds = Arrays.copyOf(fieldEnds, nextSize);
+//        }
+//        fieldEnds[fieldCount] = fieldContentLength;
+//        fieldCount++;
+//    }
 
 
     public void add(String value) {
@@ -321,8 +351,15 @@ public class RecordItemBuffer
     }
 
 
+    public void addAll(String[] values) {
+        for (String value : values) {
+            add(value);
+        }
+    }
+
+
     public void addAllAndPopulateCaches(String[] values) {
-        growCachesIfRequired(fieldCount + values.length);
+//        growCachesIfRequired(fieldCount + values.length);
 
         for (String value : values) {
             add(value);
@@ -332,6 +369,18 @@ public class RecordItemBuffer
 
 
     public void clear() {
+        if (hasCache) {
+            Arrays.fill(doublesCache, 0, fieldCount, doubleCacheMissing);
+            hasCache = false;
+        }
+
+        fieldCount = 0;
+        fieldContentLength = 0;
+        nonEmpty = false;
+    }
+
+
+    public void clearWithoutCache() {
         fieldCount = 0;
         fieldContentLength = 0;
         nonEmpty = false;
@@ -394,13 +443,14 @@ public class RecordItemBuffer
         System.arraycopy(that.fieldContents, 0, fieldContents, 0, fieldContentLength);
         System.arraycopy(that.fieldEnds, 0, fieldEnds, 0, fieldCount);
 
-        if (that.doublesCache != null) {
-            if (doublesCache == null || doublesCache.length < fieldCount) {
-                doublesCache = new double[fieldCount];
-                hashesCache = new long[fieldCount];
-            }
+        if (that.hasCache) {
             System.arraycopy(that.doublesCache, 0, doublesCache, 0, fieldCount);
             System.arraycopy(that.hashesCache, 0, hashesCache, 0, fieldCount);
+            hasCache = true;
+        }
+        else if (hasCache) {
+            Arrays.fill(doublesCache, 0, fieldCount, missingNumberBits);
+            hasCache = false;
         }
     }
 
@@ -435,8 +485,13 @@ public class RecordItemBuffer
 
     private void growFieldEndsIfRequired(int required) {
         if (fieldEnds.length <= required) {
-            int nextSize = Math.max((int) (fieldEnds.length * 1.2 + 1), required);
+            int size = fieldEnds.length;
+            int nextSize = Math.max((int) (size * 1.2 + 1), required);
             fieldEnds = Arrays.copyOf(fieldEnds, nextSize);
+
+            doublesCache = Arrays.copyOf(doublesCache, nextSize);
+            hashesCache = Arrays.copyOf(hashesCache, nextSize);
+            Arrays.fill(doublesCache, size, nextSize, doubleCacheMissing);
         }
     }
 

@@ -144,7 +144,7 @@ class ValueSummaryBuilder {
 
 
     private fun addTextHistogramFlyweight(value: RecordFieldFlyweight) {
-        val signature = value.goodCache()
+        val signature = value.goodHash()
         val previousCount = textHistogram.addTo(signature, 1)
 
         if (previousCount == 0L) {

@@ -55,6 +55,8 @@ class ReportFormulas(
         for (i in 0 until formulaCount) {
             formulaValues[i] = formulas[i].evaluate(item, header)
         }
-        item.addAllAndPopulateCaches(formulaValues)
+
+//        item.addAllAndPopulateCaches(formulaValues)
+        item.addAll(formulaValues)
     }
 }

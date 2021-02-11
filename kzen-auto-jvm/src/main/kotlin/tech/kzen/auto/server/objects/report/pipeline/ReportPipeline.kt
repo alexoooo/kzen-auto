@@ -123,12 +123,10 @@ class ReportPipeline(
     private val lexer = ReportInputLexer()
     private val parser = ReportInputParser(progress = progressTracker)
 
-
-    private val preCachePartitions = ReportPreCache.partitions(preCachePartitionCount)
-
     private val formulas = ReportFormulas(
         initialReportRunSpec.toFormulaSignature(), ServerContext.calculatedColumnEval)
     private val filter = ReportFilter(initialReportRunSpec)
+    private val preCachePartitions = ReportPreCache.partitions(preCachePartitionCount)
     private val summary = ReportSummary(initialReportRunSpec, runDir, taskHandle)
     private val output = ReportOutput(initialReportRunSpec, runDir, taskHandle, progressTracker)
 
@@ -205,10 +203,15 @@ class ReportPipeline(
             YieldingWaitStrategy()
         )
 
+//        recordDisruptor
+//            .handleEventsWith(*preCachePartitions)
+//            .then(this::handleFormulas)
+//            .then(this::handleFilter)
+//            .then(this::handleSummary, this::handleOutput)
         recordDisruptor
-            .handleEventsWith(*preCachePartitions)
-            .then(this::handleFormulas)
+            .handleEventsWith(this::handleFormulas)
             .then(this::handleFilter)
+            .then(*preCachePartitions)
             .then(this::handleSummary, this::handleOutput)
 
         recordDisruptor.setDefaultExceptionHandler(object : ExceptionHandler<ReportRecordEvent?> {

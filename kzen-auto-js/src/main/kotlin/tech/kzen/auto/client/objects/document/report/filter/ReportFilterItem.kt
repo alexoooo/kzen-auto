@@ -198,7 +198,8 @@ class ReportFilterItem(
                 borderTopStyle = BorderStyle.solid
             }
 
-            renderHeader(columnSummary, missing, editDisabled)
+            val deleteDisabled = editDisabled && columnCriteria.values.isNotEmpty()
+            renderHeader(columnSummary, missing, deleteDisabled)
 
             if (state.open || columnCriteria.values.isNotEmpty()) {
                 styledDiv {
@@ -234,7 +235,7 @@ class ReportFilterItem(
     private fun RBuilder.renderHeader(
         columnSummary: ColumnSummary?,
         missing: Boolean,
-        editDisabled: Boolean
+        deleteDisabled: Boolean
     ) {
         styledTable {
             css {
@@ -294,7 +295,7 @@ class ReportFilterItem(
                                         onDelete()
                                     }
 
-                                    disabled = editDisabled
+                                    disabled = deleteDisabled
                                 }
 
                                 child(DeleteIcon::class) {}

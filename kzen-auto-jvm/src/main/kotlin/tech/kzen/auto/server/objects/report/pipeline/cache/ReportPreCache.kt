@@ -21,6 +21,10 @@ class ReportPreCache(
 
 
     override fun onEvent(event: ReportRecordEvent, sequence: Long, endOfBatch: Boolean) {
+        if (! event.filterAllow) {
+            return
+        }
+
         val partition = sequence % partitionCount
 
         if (partitionNumber != partition) {

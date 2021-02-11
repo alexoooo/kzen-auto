@@ -323,7 +323,7 @@ class ReportOutput(
 
             if (indexedCsvTable != null) {
                 indexedCsvTable.traverseWithHeader { row ->
-                    record.clear()
+                    record.clearWithoutCache()
                     record.addAll(row)
                     record.writeCsv(output)
                     output.write("\r\n")
@@ -332,7 +332,7 @@ class ReportOutput(
             else {
                 check(pivotBuilder != null)
                 pivotBuilder.traverseWithHeader(reportRunSpec.pivot.values) { row ->
-                    record.clear()
+                    record.clearWithoutCache()
                     record.addAll(row)
                     record.writeCsv(output)
                     output.write("\r\n")

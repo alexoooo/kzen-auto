@@ -75,7 +75,7 @@ data class ReportFileProgress(
             else -> {
                 val percent = ((readBytes.toDouble() / totalSize) * 100).toInt()
                 val speed = FormatUtils.readableFileSize(recentBytesPerSecond)
-                "($percent%): $recordsFormat records ${readFormat}for ${durationSeconds}s at $speed/s"
+                "$percent%: $recordsFormat records ${readFormat}for ${durationSeconds}s at $speed/s"
             }
         }
     }

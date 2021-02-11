@@ -123,12 +123,14 @@ public class RecordFieldFlyweight
 
 
     public double toDoubleOrNan() {
-        return host.doublesCache[fieldIndex];
+//        return host.doublesCache[fieldIndex];
+        return host.cachedDoubleOrNan(fieldIndex);
     }
 
 
-    public long goodCache() {
-        return host.hashesCache[fieldIndex];
+    public long goodHash() {
+//        return host.hashesCache[fieldIndex];
+        return host.cachedHash(fieldIndex);
     }
 
 
@@ -142,7 +144,7 @@ public class RecordFieldFlyweight
 
     @Override
     public int hashCode() {
-        return (int) goodCache();
+        return (int) goodHash();
     }
 
 
@@ -163,7 +165,7 @@ public class RecordFieldFlyweight
             return false;
         }
 
-        if (goodCache() != that.goodCache()) {
+        if (goodHash() != that.goodHash()) {
             return false;
         }
 
