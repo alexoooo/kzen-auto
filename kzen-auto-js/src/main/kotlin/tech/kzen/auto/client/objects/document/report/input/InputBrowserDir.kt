@@ -4,6 +4,7 @@ import kotlinx.css.*
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.events.KeyboardEvent
 import react.*
 import styled.css
 import styled.styledDiv
@@ -11,6 +12,7 @@ import styled.styledSpan
 import tech.kzen.auto.client.objects.document.report.state.ListInputsBrowserNavigate
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
+import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.report.listing.FileInfo
 
@@ -80,6 +82,12 @@ class InputBrowserDir(
         setState {
             editDir = dir
         }
+    }
+
+
+    private fun handleEnterAndEscape(event: KeyboardEvent) {
+        ClientInputUtils.handleEnterAndEscape(
+            event, ::onEditSubmit, ::onEditToggle)
     }
 
 
@@ -203,6 +211,8 @@ class InputBrowserDir(
                     style = reactStyle {
                         width = 100.pct.minus(6.em)
                     }
+
+                    onKeyDown = ::handleEnterAndEscape
                 }
             }
 

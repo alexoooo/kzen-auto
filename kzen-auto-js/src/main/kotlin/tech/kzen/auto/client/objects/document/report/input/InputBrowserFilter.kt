@@ -8,6 +8,7 @@ import react.*
 import tech.kzen.auto.client.objects.document.report.state.InputsBrowserFilterRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
+import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 
@@ -65,13 +66,10 @@ class InputBrowserFilter(
 
 
     private fun handleEnter(event: KeyboardEvent) {
-        if (event.key != "Enter") {
-            return
+        ClientInputUtils.handleEnter(event) {
+            submitDebounce.cancel()
+            submitEdit()
         }
-
-        submitDebounce.cancel()
-        submitEdit()
-        event.preventDefault()
     }
 
 

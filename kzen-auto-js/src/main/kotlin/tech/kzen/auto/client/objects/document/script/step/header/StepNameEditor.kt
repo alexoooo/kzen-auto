@@ -13,6 +13,7 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.util.AutoConventions
@@ -140,15 +141,8 @@ class StepNameEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun handleEnterAndEscape(event: KeyboardEvent) {
-//        console.log("event.key: ${event.key}", event)
-
-        when (event.key) {
-            "Enter" -> onRename()
-            "Escape" -> onCancel()
-            else -> return
-        }
-
-        event.preventDefault()
+        ClientInputUtils.handleEnterAndEscape(
+            event, ::onRename, ::onCancel)
     }
 
 

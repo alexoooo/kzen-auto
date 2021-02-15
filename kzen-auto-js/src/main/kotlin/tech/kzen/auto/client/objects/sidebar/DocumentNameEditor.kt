@@ -8,6 +8,7 @@ import react.*
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.model.document.DocumentName
@@ -102,16 +103,10 @@ class DocumentNameEditor(
         }
     }
 
+
     private fun handleEnterAndEscape(event: KeyboardEvent) {
-//        console.log("event.key: ${event.key}", event)
-
-        when {
-            event.key == "Enter" -> onRename()
-            event.key == "Escape" -> onCancel()
-            else -> return
-        }
-
-        event.preventDefault()
+        ClientInputUtils.handleEnterAndEscape(
+            event, ::onRename, ::onCancel)
     }
 
 

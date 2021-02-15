@@ -10,6 +10,7 @@ import styled.styledDiv
 import tech.kzen.auto.client.objects.document.report.state.FormulaAddRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
+import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.CancelIcon
 import tech.kzen.auto.client.wrap.MaterialIconButton
@@ -82,15 +83,8 @@ class ReportFormulaAdd(
 
 
     private fun handleEnterAndEscape(event: KeyboardEvent) {
-//        console.log("event.key: ${event.key}", event)
-
-        when (event.key) {
-            "Enter" -> onSubmit()
-            "Escape" -> onCancel()
-            else -> return
-        }
-
-        event.preventDefault()
+        ClientInputUtils.handleEnterAndEscape(
+            event, ::onSubmit, ::onCancel)
     }
 
 
