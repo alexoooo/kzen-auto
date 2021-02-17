@@ -78,6 +78,15 @@ class InputBrowser(
         ) {
             onBrowseRefresh()
         }
+
+        if (props.reportState.inputBrowser != prevProps.reportState.inputBrowser &&
+                ! state.selected.isEmpty()
+        ) {
+            val available = props.reportState.inputBrowser?.map { it.path }?.toSet() ?: setOf()
+            setState {
+                selected = selected.filter { it in available }.toPersistentSet()
+            }
+        }
     }
 
 

@@ -210,11 +210,7 @@ class InputSelected(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderSummary(selected: List<FileInfo>, reportProgress: ReportProgress?) {
-        val runningFile = reportProgress?.inputs?.filter { it.value.running }?.keys?.singleOrNull()
-
-//        styledDiv {
-//            +"${summaryText(selected)}:"
-//        }
+        val runningFile = reportProgress?.inputs?.filter { it.value.running }?.keys?.lastOrNull()
 
         if (selected.size == 1) {
             styledSpan {

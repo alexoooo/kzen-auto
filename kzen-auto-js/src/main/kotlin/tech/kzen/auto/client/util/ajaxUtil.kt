@@ -34,6 +34,33 @@ suspend fun httpGet(url: String): String = suspendCoroutine { c ->
 }
 
 
+suspend fun httpPutForm(url: String, vararg parameters: Pair<String, String>): String = suspendCoroutine { c ->
+    val xhr = XMLHttpRequest()
+
+    xhr.onreadystatechange = {
+        if (xhr.readyState == XMLHttpRequest.DONE) {
+            if (xhr.status / 100 == 2) {
+                c.resume(xhr.response as String)
+            }
+            else {
+                c.resumeWithException(RuntimeException("HTTP error: ${xhr.status}"))
+            }
+        }
+        null
+    }
+
+    xhr.open("PUT", url)
+
+    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded")
+
+    val body = parameters.joinToString("&") {
+        it.first + "=" + encodeURIComponent(it.second)
+    }
+
+    xhr.send(body)
+}
+
+
 suspend fun httpGetBytes(url: String): ByteArray = suspendCoroutine { c ->
     val xhr = XMLHttpRequest()
     xhr.responseType = XMLHttpRequestResponseType.ARRAYBUFFER

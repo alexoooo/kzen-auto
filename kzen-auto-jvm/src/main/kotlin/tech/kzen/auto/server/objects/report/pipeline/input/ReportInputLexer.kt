@@ -6,32 +6,38 @@ import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordLexer
 
 class ReportInputLexer {
     //-----------------------------------------------------------------------------------------------------------------
-    private var location: String? = null
-    private var lexer: RecordLexer? = null
-
-//    private var count = 0
+    private var previousLocation: String? = null
+    private var previousLexer: RecordLexer? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun tokenize(data: RecordDataBuffer) {
-        if (location == null) {
-            location = data.inputKey!!
+        val lexer = openLexerIfRequired(data)
 
-            lexer = RecordLexer.forExtension(data.innerExtension!!)
-//            lexer = TsvRecordLexer()
-        }
-
-//        if (count >= 2152) {
-//        if (String(data.contents).contains("2020-09-01\t2020-09-14\t10:00:55.144828341")) {
-//            println("foo")
-//        }
-
-        lexer!!.tokenize(data.recordTokenBuffer, data.chars, 0, data.charsLength)
+        lexer.tokenize(
+            data.recordTokenBuffer,
+            data.chars,
+            0,
+            data.charsLength)
 
         if (data.endOfStream) {
-            lexer!!.endOfStream(data.recordTokenBuffer)
+            closeLexer(data)
         }
+    }
 
-//        count++
+
+    private fun openLexerIfRequired(data: RecordDataBuffer): RecordLexer {
+        if (previousLocation == null) {
+            previousLocation = data.inputKey!!
+            previousLexer = RecordLexer.forExtension(data.innerExtension!!)
+        }
+        return previousLexer!!
+    }
+
+
+    private fun closeLexer(data: RecordDataBuffer) {
+        previousLexer!!.endOfStream(data.recordTokenBuffer)
+        previousLexer = null
+        previousLocation = null
     }
 }

@@ -29,16 +29,23 @@ import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.platform.collect.toPersistentMap
 import kotlin.js.Json
+import kotlin.js.json
 
 
 class ClientRestApi(
         private val baseUrl: String
 ) {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private const val getSizeLimit = 1024
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     suspend fun scanNotation(): NotationScan {
-        val scanText = get(
-                CommonRestApi.scan,
-                CommonRestApi.paramFresh to true.toString())
+        val scanText = getOrPut(
+            CommonRestApi.scan,
+            CommonRestApi.paramFresh to true.toString())
 
         val scanJson = JSON.parse<Json>(scanText)
         val scanMap = ClientJsonUtils.toMap(scanJson)
@@ -71,7 +78,7 @@ class ClientRestApi(
 
     suspend fun readNotation(location: DocumentPath): String {
         @Suppress("UNUSED_VARIABLE")
-        val response = get(CommonRestApi.notationPrefix + location.asRelativeFile())
+        val response = getOrPut(CommonRestApi.notationPrefix + location.asRelativeFile())
 
         return response
     }
@@ -386,8 +393,8 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun runningHosts(): List<DocumentPath> {
-        val responseText = get(
-                CommonRestApi.actionList)
+        val responseText = getOrPut(
+            CommonRestApi.actionList)
 
         val responseJson = JSON.parse<Array<String>>(responseText)
 
@@ -400,9 +407,9 @@ class ClientRestApi(
 
 
     suspend fun executionModel(host: DocumentPath): ImperativeModel {
-        val responseText = get(
-                CommonRestApi.actionModel,
-                CommonRestApi.paramDocumentPath to host.asString())
+        val responseText = getOrPut(
+            CommonRestApi.actionModel,
+            CommonRestApi.paramDocumentPath to host.asString())
 
         val responseJson = JSON.parse<Json>(responseText)
         val responseCollection = ClientJsonUtils.toMap(responseJson)
@@ -424,7 +431,7 @@ class ClientRestApi(
     suspend fun resetExecution(
             host: DocumentPath
     ) {
-        get(CommonRestApi.actionReset,
+        getOrPut(CommonRestApi.actionReset,
             CommonRestApi.paramDocumentPath to host.asString())
     }
 
@@ -449,8 +456,8 @@ class ClientRestApi(
     suspend fun returnFrame(
             host: DocumentPath
     ) {
-        get(CommonRestApi.actionReturn,
-                CommonRestApi.paramHostDocumentPath to host.asString())
+        getOrPut(CommonRestApi.actionReturn,
+            CommonRestApi.paramHostDocumentPath to host.asString())
     }
 
 
@@ -647,7 +654,7 @@ class ClientRestApi(
     suspend fun taskLookup(
         objectLocation: ObjectLocation
     ): Set<TaskId> {
-        val responseJson = get(
+        val responseJson = getOrPut(
             CommonRestApi.taskLookup,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
@@ -664,7 +671,7 @@ class ClientRestApi(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): Digest {
-        val response = get(commandPath, *parameters)
+        val response = getOrPut(commandPath, *parameters)
         return Digest.parse(response)
     }
 
@@ -693,7 +700,7 @@ class ClientRestApi(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): Json {
-        val response = get(commandPath, *parameters)
+        val response = getOrPut(commandPath, *parameters)
         return JSON.parse(response)
     }
 
@@ -702,7 +709,7 @@ class ClientRestApi(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): Json? {
-        val response = get(commandPath, *parameters)
+        val response = getOrPut(commandPath, *parameters)
         return when {
             response.isEmpty() -> null
             else -> JSON.parse(response)
@@ -710,12 +717,19 @@ class ClientRestApi(
     }
 
 
-    private suspend fun get(
+    private suspend fun getOrPut(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): String {
-        return httpGet(
-            url(commandPath, *parameters))
+        val getUrl = url(commandPath, *parameters)
+
+        return when {
+            getUrl.length <= getSizeLimit ->
+                httpGet(getUrl)
+
+            else ->
+                httpPutForm(commandPath, *parameters)
+        }
     }
 
 
@@ -767,5 +781,18 @@ class ClientRestApi(
                 it.first + "=" + encodeURIComponent(it.second)
             }
         }
+    }
+
+
+    private fun paramJsonMultimap(vararg parameters: Pair<String, String>): Json {
+        val builder = mutableMapOf<String, MutableList<String>>()
+        for (param in parameters) {
+            val values = builder.getOrPut(param.first) { mutableListOf() }
+            values.add(param.second)
+        }
+        return json(*builder
+            .entries
+            .map { it.key to it.value.toTypedArray() }
+            .toTypedArray())
     }
 }

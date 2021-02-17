@@ -64,6 +64,7 @@ class ReportPipeline(
 //            return LiteBlockingWaitStrategy()
         }
 
+//        private const val preCachePartitionCount = 0
 //        private const val preCachePartitionCount = 1
         private const val preCachePartitionCount = 2
 //        private const val preCachePartitionCount = 3

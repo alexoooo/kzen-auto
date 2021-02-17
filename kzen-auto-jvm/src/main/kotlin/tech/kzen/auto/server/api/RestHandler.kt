@@ -8,6 +8,7 @@ import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
+import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
@@ -50,6 +51,7 @@ import java.util.*
 import java.util.stream.Collectors
 
 
+// TODO: refactor
 @Component
 class RestHandler {
     //-----------------------------------------------------------------------------------------------------------------
@@ -400,20 +402,32 @@ class RestHandler {
     }
 
 
-    fun insertAllListItemsInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val documentPath: DocumentPath = serverRequest.getParam(
+    fun insertAllListItemsInAttributeGet(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return insertAllListItemsInAttributeImpl(serverRequest.queryParams())
+    }
+
+
+    fun insertAllListItemsInAttributePut(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return serverRequest.formData().flatMap { body ->
+            insertAllListItemsInAttributeImpl(body)
+        }
+    }
+
+
+    private fun insertAllListItemsInAttributeImpl(params: MultiValueMap<String, String>): Mono<ServerResponse> {
+        val documentPath: DocumentPath = params.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
-        val objectPath: ObjectPath = serverRequest.getParam(
+        val objectPath: ObjectPath = params.getParam(
             CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
 
-        val containingList: AttributePath = serverRequest.getParam(
+        val containingList: AttributePath = params.getParam(
             CommonRestApi.paramAttributePath, AttributePath.Companion::parse)
 
-        val indexInList: PositionRelation = serverRequest.getParam(
+        val indexInList: PositionRelation = params.getParam(
             CommonRestApi.paramPositionIndex, PositionRelation.Companion::parse)
 
-        val itemNotations: List<AttributeNotation> = serverRequest.getParamList(
+        val itemNotations: List<AttributeNotation> = params.getParamList(
             CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
 
         return applyAndDigest(
@@ -509,20 +523,32 @@ class RestHandler {
     }
 
 
-    fun removeAllListItemsInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val documentPath: DocumentPath = serverRequest.getParam(
+    fun removeAllListItemsInAttributeGet(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return removeAllListItemsInAttributeImpl(serverRequest.queryParams())
+    }
+
+
+    fun removeAllListItemsInAttributePut(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return serverRequest.formData().flatMap { body ->
+            removeAllListItemsInAttributeImpl(body)
+        }
+    }
+
+
+    private fun removeAllListItemsInAttributeImpl(params: MultiValueMap<String, String>): Mono<ServerResponse> {
+        val documentPath: DocumentPath = params.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath.Companion::parse)
 
-        val objectPath: ObjectPath = serverRequest.getParam(
+        val objectPath: ObjectPath = params.getParam(
             CommonRestApi.paramObjectPath, ObjectPath.Companion::parse)
 
-        val attributePath: AttributePath = serverRequest.getParam(
+        val attributePath: AttributePath = params.getParam(
             CommonRestApi.paramAttributePath, AttributePath.Companion::parse)
 
-        val itemNotations: List<AttributeNotation> = serverRequest.getParamList(
+        val itemNotations: List<AttributeNotation> = params.getParamList(
             CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
 
-        val removeContainerIfEmpty: Boolean = serverRequest
+        val removeContainerIfEmpty: Boolean = params
             .tryGetParam(CommonRestApi.paramAttributeCleanupContainer) { i -> i == "true"}
             ?: false
 
@@ -531,9 +557,7 @@ class RestHandler {
                 ObjectLocation(documentPath, objectPath),
                 attributePath,
                 itemNotations,
-                removeContainerIfEmpty
-            )
-        )
+                removeContainerIfEmpty))
     }
 
 
@@ -1187,18 +1211,40 @@ class RestHandler {
         parameterName: String,
         parser: (String) -> T
     ): T {
-        return queryParam(parameterName)
-                .map { parser(it) }
-                .orElseThrow { IllegalArgumentException("'$parameterName' required") }
+//        return queryParam(parameterName)
+//                .map { parser(it) }
+//                .orElseThrow { IllegalArgumentException("'$parameterName' required") }
+        return queryParams().getParam(parameterName, parser)
     }
+
+
+    private fun <T> MultiValueMap<String, String>.getParam(
+        parameterName: String,
+        parser: (String) -> T
+    ): T {
+        val queryParamValues: List<String>? = get(parameterName)
+        require(! queryParamValues.isNullOrEmpty()) { "'$parameterName' required" }
+        return parser(queryParamValues.first())
+    }
+
 
     private fun <T> ServerRequest.getParamList(
         parameterName: String,
         parser: (String) -> T
     ): List<T> {
-        val itemNotations = queryParams()[parameterName]
-            ?: throw IllegalArgumentException("'$parameterName' required")
-        return itemNotations.map { i -> parser(i) }
+//        val itemNotations = queryParams()[parameterName]
+//            ?: throw IllegalArgumentException("'$parameterName' required")
+//        return itemNotations.map { i -> parser(i) }
+        return queryParams().getParamList(parameterName, parser)
+    }
+
+
+    private fun <T> MultiValueMap<String, String>.getParamList(
+        parameterName: String,
+        parser: (String) -> T
+    ): List<T> {
+        val queryParamValues: List<String> = get(parameterName) ?: listOf()
+        return queryParamValues.map(parser)
     }
 
 
@@ -1206,8 +1252,17 @@ class RestHandler {
         parameterName: String,
         parser: (String) -> T
     ): T? {
-        return queryParam(parameterName)
-                .map { parser(it) }
-                .orElse(null)
+//        return queryParam(parameterName)
+//                .map { parser(it) }
+//                .orElse(null)
+        return queryParams().tryGetParam(parameterName, parser)
+    }
+
+
+    private fun <T> MultiValueMap<String, String>.tryGetParam(
+        parameterName: String,
+        parser: (String) -> T
+    ): T? {
+        return get(parameterName)?.singleOrNull()?.let { parser(it) }
     }
 }

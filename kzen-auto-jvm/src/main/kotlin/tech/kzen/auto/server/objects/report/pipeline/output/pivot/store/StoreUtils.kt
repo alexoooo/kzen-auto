@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 object StoreUtils {
     private val logger = LoggerFactory.getLogger(StoreUtils::class.java)
 
-    private const val releaseRetryAttempts = 64
+    private const val releaseRetryAttempts = 16
 
 
     fun flush(handle: RandomAccessFile, location: String) {

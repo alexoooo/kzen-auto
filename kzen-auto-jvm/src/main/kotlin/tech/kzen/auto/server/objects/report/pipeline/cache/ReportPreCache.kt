@@ -12,7 +12,7 @@ class ReportPreCache(
 {
     companion object {
         fun partitions(partitionCount: Int): Array<EventHandler<ReportRecordEvent>> {
-            check(partitionCount > 0)
+//            check(partitionCount > 0)
             return Array(partitionCount) { partitionNumber ->
                 ReportPreCache(partitionNumber.toLong(), partitionCount.toLong())
             }
