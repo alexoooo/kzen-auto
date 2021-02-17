@@ -5,26 +5,6 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffe
 
 interface RecordParser {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        const val csvExtension = "csv"
-        const val tsvExtension = "tsv"
-
-        fun forExtension(extension: String): RecordParser {
-            return when (extension) {
-                csvExtension ->
-                    CsvRecordParser()
-
-                tsvExtension ->
-                    TsvRecordParser()
-
-                else ->
-                    error("Unknown: $extension")
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     fun parseFull(
         recordItemBuffer: RecordItemBuffer,
         contentChars: CharArray,

@@ -1,8 +1,9 @@
-package tech.kzen.auto.server.objects.report.pipeline.input.parse;
+package tech.kzen.auto.server.objects.report.pipeline.input.parse.csv;
 
 
 import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordParser;
 
 import java.io.IOException;
 import java.io.Writer;

@@ -1,8 +1,9 @@
-package tech.kzen.auto.server.objects.report.pipeline.input.parse;
+package tech.kzen.auto.server.objects.report.pipeline.input.parse.csv;
 
 
 import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordTokenBuffer;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordLexer;
 
 
 public class CsvRecordLexer implements RecordLexer
@@ -90,6 +91,9 @@ public class CsvRecordLexer implements RecordLexer
     @Override
     public void endOfStream(@NotNull RecordTokenBuffer recordTokenBuffer) {
         recordTokenBuffer.clearPartialLast();
+
+        partial = false;
+        state = stateStartOfField;
     }
 
 

@@ -1,7 +1,8 @@
-package tech.kzen.auto.server.objects.report.pipeline.input.parse;
+package tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv;
 
 import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordParser;
 
 
 public class TsvRecordParser implements RecordParser

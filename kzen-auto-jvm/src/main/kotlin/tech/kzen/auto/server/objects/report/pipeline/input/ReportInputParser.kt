@@ -4,18 +4,20 @@ import tech.kzen.auto.server.objects.report.pipeline.event.handoff.RecordHandoff
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordFormat
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordParser
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
 
 
 class ReportInputParser(
-    private val firstRowHeader: Boolean = true,
-    private val progress: ReportProgressTracker?
+    private val progress: ReportProgressTracker?,
+    private val fixedFormat: RecordFormat? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     private var currentInputKey: String? = null
     private var currentParser: RecordParser? = null
     private var previousRecordHeader: RecordHeader = RecordHeader.empty
+    private var firstRowHeader: Boolean = false
     private val leftoverRecordLineBuffer = RecordItemBuffer()
     private var currentProgress: ReportProgressTracker.Buffer? = null
 
@@ -162,8 +164,21 @@ class ReportInputParser(
             check(currentParser == null)
 
             currentInputKey = data.inputKey!!
-            currentParser = RecordParser.forExtension(data.innerExtension!!)
+
             currentProgress = progress?.getRunning(currentInputKey!!)
+
+            val format = fixedFormat
+                ?: RecordFormat.forExtension(data.innerExtension!!)
+
+            currentParser = format.parser
+
+            if (format.fixedHeader != null) {
+                previousRecordHeader = format.fixedHeader
+                firstRowHeader = false
+            }
+            else {
+                firstRowHeader = true
+            }
         }
         return currentParser!!
     }

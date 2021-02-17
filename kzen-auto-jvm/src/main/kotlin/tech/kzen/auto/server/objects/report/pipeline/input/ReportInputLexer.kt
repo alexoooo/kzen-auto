@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input
 
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordFormat
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordLexer
 
 
@@ -29,7 +30,7 @@ class ReportInputLexer {
     private fun openLexerIfRequired(data: RecordDataBuffer): RecordLexer {
         if (previousLocation == null) {
             previousLocation = data.inputKey!!
-            previousLexer = RecordLexer.forExtension(data.innerExtension!!)
+            previousLexer = RecordFormat.forExtension(data.innerExtension!!).lexer
         }
         return previousLexer!!
     }

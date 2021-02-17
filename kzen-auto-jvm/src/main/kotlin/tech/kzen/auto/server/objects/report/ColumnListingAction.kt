@@ -43,7 +43,7 @@ class ColumnListingAction(
                 .map { it.getString(1) }
         }
 
-        val columnNames = ReportInputChain.head(inputPath).single().toList()
+        val columnNames = ReportInputChain.header(inputPath).headerNames
 
         val csvBody = columnNames
             .withIndex()

@@ -20,6 +20,10 @@ data class LiteralFlatData(
         fun ofTsv(utf8: String): LiteralFlatData {
             return LiteralFlatData(utf8.encodeToByteArray(), "tsv")
         }
+
+        fun ofText(utf8: String): LiteralFlatData {
+            return LiteralFlatData(utf8.encodeToByteArray(), "txt")
+        }
     }
 
 
@@ -62,6 +66,7 @@ data class LiteralFlatData(
 
         return true
     }
+
 
     override fun hashCode(): Int {
         var result = bytes.contentHashCode()

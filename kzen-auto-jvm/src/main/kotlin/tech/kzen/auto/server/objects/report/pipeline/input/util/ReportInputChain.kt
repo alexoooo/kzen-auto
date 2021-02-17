@@ -9,7 +9,9 @@ import tech.kzen.auto.server.objects.report.pipeline.input.connect.FileFlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.LiteralFlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordFormat
 import java.nio.file.Path
 
 
@@ -48,26 +50,25 @@ class ReportInputChain(
         }
 
 
-        fun head(file: Path, numberOfRecords: Int = 1): List<RecordItemBuffer> {
+        fun allText(text: String, bufferSize: Int = RecordDataBuffer.defaultBufferSize): List<RecordItemBuffer> {
+            return all(LiteralFlatData.ofText(text), bufferSize)
+        }
+
+
+        fun header(file: Path): RecordHeader {
             val instance = ReportInputChain(FileFlatData(file))
-            val records = mutableListOf<RecordItemBuffer>()
+            var header: RecordHeader? = null
 
             while (true) {
-                val hasNext = instance.poll {
-                    records.add(it.prototype())
+                val hasNext = instance.pollHeader {
+                    header = it
                 }
-                if (! hasNext || records.size >= numberOfRecords) {
+                if (! hasNext || header != null) {
                     break
                 }
             }
 
-            return when {
-                records.size <= numberOfRecords ->
-                    records
-
-                else ->
-                    records.subList(0, numberOfRecords)
-            }
+            return header ?: RecordHeader.empty
         }
     }
 
@@ -76,7 +77,13 @@ class ReportInputChain(
     private val reader = ReportInputReader.single(flatData)
     private val decoder = ReportInputDecoder()
     private val lexer = ReportInputLexer()
-    private val parser = ReportInputParser(false, null)
+
+    private val parser = ReportInputParser(
+        null,
+        RecordFormat
+            .forExtension(flatData.innerExtension())
+            .withDefaultHeader(RecordHeader.empty)
+    )
 
     private val dataBuffer = RecordDataBuffer.ofBufferSize(bufferSize)
     private val recordHandoff = ListRecordHandoff()
@@ -94,8 +101,23 @@ class ReportInputChain(
         parser.parse(dataBuffer, recordHandoff)
 
         recordHandoff.flush { recordMap ->
-            recordMap.item.populateCaches()
+//            recordMap.item.populateCaches()
             visitor.invoke(recordMap.item)
+        }
+
+        return remaining
+    }
+
+
+    fun pollHeader(visitor: (RecordHeader) -> Unit): Boolean {
+        val remaining = reader.poll(dataBuffer)
+
+        decoder.decode(dataBuffer)
+        lexer.tokenize(dataBuffer)
+        parser.parse(dataBuffer, recordHandoff)
+
+        recordHandoff.flush { recordMap ->
+            visitor.invoke(recordMap.header.value)
         }
 
         return remaining

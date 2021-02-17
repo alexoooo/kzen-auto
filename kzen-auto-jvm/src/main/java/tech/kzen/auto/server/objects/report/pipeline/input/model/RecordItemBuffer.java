@@ -2,9 +2,9 @@ package tech.kzen.auto.server.objects.report.pipeline.input.model;
 
 
 import net.openhft.hashing.LongHashFunction;
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.CsvRecordParser;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvRecordParser;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils;
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.TsvRecordParser;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvRecordParser;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
