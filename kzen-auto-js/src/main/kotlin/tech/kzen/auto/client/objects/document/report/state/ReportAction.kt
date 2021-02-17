@@ -18,6 +18,11 @@ sealed class ReportAction {
 sealed class SingularReportAction: ReportAction() {
     override fun flatten(): List<SingularReportAction> =
         listOf(this)
+
+    override fun toString(): String {
+        // NB: used by object (singleton) actions
+        return this::class.simpleName!!
+    }
 }
 
 
@@ -84,9 +89,6 @@ object InitiateReport: SingularReportAction()
 
 //---------------------------------------------------------------------------------------------------------------------
 sealed class InputReportAction: SingularReportAction()
-
-
-//object InputsUpdatedRequest: InputReportAction()
 
 
 sealed class ListInputsAction: InputReportAction()

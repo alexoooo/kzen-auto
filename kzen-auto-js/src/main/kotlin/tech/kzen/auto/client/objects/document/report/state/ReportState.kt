@@ -44,7 +44,6 @@ data class ReportState(
     val outputLoading: Boolean = false,
     val outputInfo: OutputInfo? = null,
     val outputError: String? = null,
-    val outputCount: Long? = null,
 
     val taskLoaded: Boolean = false,
     val taskLoading: Boolean = false,
@@ -201,5 +200,12 @@ data class ReportState(
             selectedPathSet = inputSpec().selected.toSet()
         }
         return selectedPathSet!!
+    }
+
+
+    fun outputCount(): Long {
+        val progressOutputCount = reportProgress?.outputCount ?: 0
+        val infoOutputCount = outputInfo?.rowCount ?: 0
+        return progressOutputCount.coerceAtLeast(infoOutputCount)
     }
 }

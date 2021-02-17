@@ -126,7 +126,7 @@ class ReportFilterItem(
             val actions = props.dispatcher.dispatch(request)
 //            console.log("^^ - $request - $actions")
 
-            val effect = actions.single() as FilterUpdateResult
+            val effect = actions.filterIsInstance<FilterUpdateResult>().single()
 
             if (effect.errorMessage != null) {
                 setState {

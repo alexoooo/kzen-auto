@@ -249,43 +249,43 @@ class CalculatedColumnEvalTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun emptyFalse() {
-        testEval("false", "a.yes", "")
+        testEval("false", "a.truthy", "")
     }
 
 
     @Test
     fun trueTrue() {
-        testEval("true", "a.yes", "true")
+        testEval("true", "a.isTrue", "true")
     }
 
 
     @Test
     fun yLowerTrue() {
-        testEval("true", "a.yes", "y")
+        testEval("true", "a.truthy", "y")
     }
 
 
     @Test
     fun yUpperTrue() {
-        testEval("true", "a.yes", "Y")
+        testEval("true", "a.truthy", "Y")
     }
 
 
     @Test
     fun oneTrue() {
-        testEval("true", "a.yes", "1")
+        testEval("true", "a.truthy", "1")
     }
 
 
     @Test
     fun zeroFalse() {
-        testEval("false", "a.yes", "0")
+        testEval("false", "a.truthy", "0")
     }
 
 
     @Test
     fun fooFalse() {
-        testEval("false", "a.yes", "foo")
+        testEval("false", "a.truthy", "foo")
     }
 
 
@@ -304,6 +304,72 @@ class CalculatedColumnEvalTest {
     @Test
     fun unaryNotMalformed() {
         testEval("<error>", "!a", "foo")
+    }
+
+
+    @Test
+    fun ifElse() {
+        testEval("1", "If(a, 1, 2)", "true")
+        testEval("2", "a.If(1, 2)")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun compareLiteralNumbers() {
+        testEval("true", "2 < 3")
+        testEval("false", "2 >= 3")
+    }
+
+
+    @Test
+    fun compareLiteralText() {
+        testEval("true", """ "2021-02-17" < "2021-02-18" """)
+        testEval("false", """ "2021-02-17" >= "2021-02-18" """)
+    }
+
+
+    @Test
+    fun compareColumnToColumnNumbers() {
+        testEval("true", "a < b", "2", "3")
+        testEval("false", "a >= b", "2", "3")
+    }
+
+
+    @Test
+    fun compareColumnToColumnText() {
+        testEval("true", "a < b", "2021-02-17", "2021-02-18")
+        testEval("false", "a >= b", "2021-02-17", "2021-02-18")
+    }
+
+
+    @Test
+    fun compareColumnToLiteralNumbers() {
+        testEval("true", "a < 3", "2")
+        testEval("false", "a >= 3", "2")
+    }
+
+
+    @Test
+    fun compareColumnToLiteralText() {
+        testEval("true", """a < "2021-02-18" """, "2021-02-17")
+        testEval("false", """a >= "2021-02-18" """, "2021-02-17")
+    }
+
+
+    @Test
+    fun compareLiteralToColumnNumbers() {
+        testEval("true", "2 < a", "3")
+        testEval("true", "2.0 < a", "3")
+        testEval("false", "2 >= a", "3")
+        testEval("false", "2.0 >= a", "3")
+    }
+
+
+    @Test
+    fun compareLiteralToColumnText() {
+        testEval("true", """ "2021-02-17" < a""", "2021-02-18")
+        testEval("false", """ "2021-02-17" >= a""", "2021-02-18")
     }
 
 

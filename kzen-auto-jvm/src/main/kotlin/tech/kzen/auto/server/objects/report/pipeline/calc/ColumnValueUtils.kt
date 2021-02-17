@@ -21,6 +21,10 @@ object ColumnValueUtils {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun formatDecimal(value: Double): String {
+        if (! value.isFinite()) {
+            return value.toString()
+        }
+
         return decimalFormat.get().format(value)
     }
 }

@@ -557,7 +557,7 @@ class ReportOutputView(
                         marginLeft = 1.em
                     }
 
-                    +"Total rows: ${FormatUtils.decimalSeparator(props.reportState.outputCount ?: 0)}"
+                    +"Total rows: ${FormatUtils.decimalSeparator(props.reportState.outputCount())}"
                 }
             }
         }

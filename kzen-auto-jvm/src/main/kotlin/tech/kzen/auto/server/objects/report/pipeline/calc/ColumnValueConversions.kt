@@ -3,11 +3,8 @@ package tech.kzen.auto.server.objects.report.pipeline.calc
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 object ColumnValueConversions {
-    const val epsilon = 0.000_000_1
-
     val operators = listOf(
-        "plus", "minus", "times", "div",
-        "eq", "ne")
+        "plus", "minus", "times", "div", "compareTo", "eq", "ne", "If")
 
 
     operator fun Int.plus(value: ColumnValue): ColumnValue {
@@ -83,18 +80,12 @@ object ColumnValueConversions {
 
 
     infix fun Int.eq(value: ColumnValue): Boolean {
-        val number = value.number
-        val asInt = number.toInt()
-        val remainder = number - asInt
-        if (remainder > epsilon) {
-            return false
-        }
-        return this == asInt
+        return value eq this
     }
 
 
     infix fun Double.eq(value: ColumnValue): Boolean {
-        return (this - value.number) < epsilon
+        return value eq this
     }
 
 
@@ -110,5 +101,48 @@ object ColumnValueConversions {
 
     infix fun Double.ne(value: ColumnValue): Boolean {
         return ! eq(value)
+    }
+
+
+    operator fun Int.compareTo(columnValue: ColumnValue): Int {
+        return -columnValue.compareTo(this)
+    }
+
+
+    operator fun Double.compareTo(columnValue: ColumnValue): Int {
+        return -columnValue.compareTo(this)
+    }
+
+
+    operator fun String.compareTo(columnValue: ColumnValue): Int {
+        return -columnValue.compareTo(this)
+    }
+
+
+    @Suppress("FunctionName")
+    fun If(condition: Any?, trueValue: Any?, falseValue: Any?): ColumnValue {
+        val value =
+            if (ColumnValue.ofScalar(condition).truthy) {
+                trueValue
+            }
+            else {
+                falseValue
+            }
+
+        return ColumnValue.ofScalar(value)
+    }
+
+
+    @Suppress("FunctionName")
+    fun ColumnValue.If(trueValue: Any?, falseValue: Any?): ColumnValue {
+        val value =
+            if (truthy) {
+                trueValue
+            }
+            else {
+                falseValue
+            }
+
+        return ColumnValue.ofScalar(value)
     }
 }

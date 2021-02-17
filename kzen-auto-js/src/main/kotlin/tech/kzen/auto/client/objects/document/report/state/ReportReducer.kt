@@ -205,8 +205,7 @@ object ReportReducer {
                     taskRunning = isRunning,
                     tableSummary = tableSummary,
                     tableSummaryLoaded = true,
-                    tableSummaryLoading = false,
-                    outputCount = taskProgress.outputCount.coerceAtLeast(state.outputCount ?: 0))
+                    tableSummaryLoading = false)
             }
 
             is ExecutionFailure -> {
@@ -237,8 +236,7 @@ object ReportReducer {
             reportProgress = taskProgress,
             taskRunning = isRunning,
             taskError = action.taskModel.errorMessage(),
-            taskStarting = false,
-            outputCount = (taskProgress?.outputCount ?: 0).coerceAtLeast(state.outputCount ?: 0)
+            taskStarting = false
         )
     }
 
@@ -267,8 +265,7 @@ object ReportReducer {
             tableSummary = tableSummary,
             reportProgress = taskProgress,
             taskRunning = isRunning,
-            taskError = action.taskModel.errorMessage(),
-            outputCount = (taskProgress?.outputCount ?: 0).coerceAtLeast(state.outputCount ?: 0)
+            taskError = action.taskModel.errorMessage()
         )
     }
 
@@ -326,7 +323,6 @@ object ReportReducer {
                 outputLoaded = true,
                 outputLoading = false,
                 outputInfo = action.outputInfo,
-                outputCount = (state.outputCount ?: 0).coerceAtLeast(action.outputInfo.rowCount),
                 outputError = null)
         }
     }

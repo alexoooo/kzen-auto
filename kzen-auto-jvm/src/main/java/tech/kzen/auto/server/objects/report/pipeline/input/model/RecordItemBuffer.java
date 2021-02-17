@@ -76,6 +76,7 @@ public class RecordItemBuffer
 
         doublesCache = new double[expectedFieldCount];
         hashesCache = new long[expectedFieldCount];
+        Arrays.fill(doublesCache, 0, expectedFieldCount, doubleCacheMissing);
     }
 
 
@@ -112,6 +113,11 @@ public class RecordItemBuffer
             list.add(item);
         }
         return list;
+    }
+
+
+    public boolean isCached(int fieldIndex) {
+        return ! isDoubleCacheMissing(doublesCache[fieldIndex]);
     }
 
 
@@ -171,6 +177,7 @@ public class RecordItemBuffer
 
         cacheDouble(fieldIndex, start, length);
         cacheHash(fieldIndex, start, length);
+        hasCache = true;
     }
 
 

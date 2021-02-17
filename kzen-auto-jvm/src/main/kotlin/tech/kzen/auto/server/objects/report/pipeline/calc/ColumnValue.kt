@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.calc
 
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils
+import kotlin.math.abs
 
 
 // NB: used from expressions, e.g. CalculatedColumnEvalTest
@@ -9,20 +10,26 @@ class ColumnValue(
     private var asText: String?,
     private var asNumber: Double?
 ):
-    CharSequence
+    CharSequence, Comparable<Any>
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         const val errorText = "<error>"
         val errorValue = ColumnValue(errorText, Double.NaN)
 
+        private const val epsilon = 0.000_000_000_1
+
         private const val maxTimeTextLength = 1024
 
         private val emptyValue = ColumnValue("", Double.NaN)
+        private val nullValue = ColumnValue("null", Double.NaN)
         private val zeroValue = ColumnValue("0", 0.0)
         private val oneValue = ColumnValue("1", 1.0)
+        private val nanValue = ColumnValue("NaN", Double.NaN)
         private val trueValue = ColumnValue("true", Double.NaN)
+        private val trueUpperValue = ColumnValue("TRUE", Double.NaN)
         private val falseValue = ColumnValue("false", Double.NaN)
+        private val falseUpperValue = ColumnValue("FALSE", Double.NaN)
         private val yLowerValue = ColumnValue("y", Double.NaN)
         private val yUpperValue = ColumnValue("y", Double.NaN)
         private val yesValue = ColumnValue("yes", Double.NaN)
@@ -42,17 +49,33 @@ class ColumnValue(
         }
 
 
+        fun ofScalar(value: Any?): ColumnValue {
+            return when (value) {
+                null -> nullValue
+                is ColumnValue -> value
+                is Number -> ofNumber(value.toDouble())
+                else -> ofText(value.toString())
+            }
+        }
+
+
         fun ofText(text: String): ColumnValue {
             when (text) {
                 "" -> return emptyValue
                 "0" -> return zeroValue
                 "1" -> return oneValue
+                "NaN" -> return nanValue
+                "true" -> return trueValue
+                "TRUE" -> return trueUpperValue
                 "y" -> return yLowerValue
                 "Y" -> return yUpperValue
                 "yes" -> return yesValue
+                "false" -> return falseValue
+                "FALSE" -> return falseUpperValue
                 "n" -> return nLowerValue
                 "N" -> return nUpperValue
                 "no" -> return noValue
+                "null" -> return nullValue
                 errorText -> return errorValue
             }
 
@@ -63,12 +86,18 @@ class ColumnValue(
         fun ofTextNan(text: String): ColumnValue {
             when (text) {
                 "" -> return emptyValue
+                "NaN" -> return nanValue
+                "true" -> return trueValue
+                "TRUE" -> return trueUpperValue
                 "y" -> return yLowerValue
                 "Y" -> return yUpperValue
                 "yes" -> return yesValue
+                "false" -> return falseValue
+                "FALSE" -> return falseUpperValue
                 "n" -> return nLowerValue
                 "N" -> return nUpperValue
                 "no" -> return noValue
+                "null" -> return nullValue
                 errorText -> return errorValue
             }
 
@@ -77,6 +106,10 @@ class ColumnValue(
 
 
         fun ofNumber(number: Double): ColumnValue {
+            if (number.isNaN()) {
+                return nanValue
+            }
+
             // NB: + 0 for negative zero normalization
             val normalized = number + 0
             when (normalized) {
@@ -86,7 +119,43 @@ class ColumnValue(
 
             return ColumnValue(null, normalized)
         }
+
+
+        private fun compareNumbersWithEpsilon(a: Double, b: Double): Int {
+            return when {
+                abs(a - b) < epsilon ->
+                    0
+
+                else ->
+                    a.compareTo(b)
+            }
+        }
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    val text: String
+        get() = toString()
+
+
+    val number: Double
+        get() = toDoubleOrNan()
+
+
+    val isNumber: Boolean
+        get() = ! number.isNaN()
+
+
+    val isTrue: Boolean
+        get() = text.equals("true", true)
+
+
+    val isNull: Boolean
+        get() = text == "null"
+
+
+    val isNaN: Boolean
+        get() = text == "NaN"
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -289,66 +358,45 @@ class ColumnValue(
 
     operator fun not(): ColumnValue {
         return when {
-            isTruthy() -> falseValue
-            isFalsy() -> trueValue
+            truthy -> falseValue
+            falsy -> trueValue
             else -> errorValue
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    val yes: Boolean
-        get() = isTruthy()
-
-
-    fun isTruthy(): Boolean {
-        if (asNumber != null && ! asNumber!!.isNaN()) {
+    val truthy: Boolean get() {
+        if (! number.isNaN()) {
             return asNumber == 1.0
         }
 
         val asString = asText!!
-
-        if (asString.length == 4) {
-            return asString == "true" || asString.toLowerCase() == "true"
+        return when (asString.length) {
+            1 -> asString == "y" || asString == "Y"
+            3 -> asString.equals("yes", true)
+            4 -> asString.equals("true", true)
+            else -> false
         }
-
-        if (asString.length == 1) {
-            return asString == "y" || asString == "Y" || asString == "1"
-        }
-
-        if (asString.length == 3) {
-            return asString == "yes" || asString.toLowerCase() == "yes"
-        }
-
-        return false
     }
 
 
     @Suppress("SpellCheckingInspection")
-    fun isFalsy(): Boolean {
-        if (asNumber != null && ! asNumber!!.isNaN()) {
+    val falsy: Boolean get() {
+        if (! number.isNaN()) {
             return asNumber == 0.0
         }
 
         val asString = asText!!
-
-        if (asString.isEmpty()) {
-            return true
+        return when (asString.length) {
+            0 -> true
+            1 -> asString == "n" || asString == "N"
+            2 -> asString.equals("no", true)
+            3 -> asString == "NaN"
+            4 -> asString == "null"
+            5 -> asString.equals("false", true)
+            else -> false
         }
-
-        if (asString.length == 5) {
-            return asString == "false" || asString.toLowerCase() == "false"
-        }
-
-        if (asString.length == 1) {
-            return asString == "n" || asString == "N" || asString == "0"
-        }
-
-        if (asString.length == 2) {
-            return asString == "no" || asString.toLowerCase() == "no"
-        }
-
-        return false
     }
 
 
@@ -368,14 +416,58 @@ class ColumnValue(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    val number: Double
-        get() = toDoubleOrNan()
+    override fun compareTo(other: Any): Int {
+        if (eq(other)) {
+            return 0
+        }
+
+        return when (other) {
+            is ColumnValue -> {
+                val thisNumber = number
+                val otherNumber = other.number
+
+                if (! thisNumber.isNaN()) {
+                    if (! otherNumber.isNaN()) {
+                        compareNumbersWithEpsilon(thisNumber, otherNumber)
+                    }
+                    else {
+                        -1
+                    }
+                }
+                else {
+                    if (! otherNumber.isNaN()) {
+                        1
+                    }
+                    else {
+                        text.compareTo(other.text)
+                    }
+                }
+            }
+
+            is Number -> {
+                val thisNumber = number
+                val otherNumber = other.toDouble()
+
+                if (! thisNumber.isNaN()) {
+                    if (! otherNumber.isNaN()) {
+                        compareNumbersWithEpsilon(thisNumber, otherNumber)
+                    }
+                    else {
+                        -1
+                    }
+                }
+                else {
+                    1
+                }
+            }
+
+            else ->
+                text.compareTo(other.toString())
+        }
+    }
 
 
-    val text: String
-        get() = toString()
-
-
+    //-----------------------------------------------------------------------------------------------------------------
     private fun toDoubleOrNan(): Double {
         if (asNumber != null) {
             return asNumber!!
@@ -393,14 +485,28 @@ class ColumnValue(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     infix fun eq(other: Any?): Boolean {
-        if (other is ColumnValue) {
-            return toString() == other.toString()
+        return when (other) {
+            is Number -> {
+                val thisNumber = number
+                if (thisNumber.isNaN()) {
+                    other.toDouble().isNaN() && text == "NaN"
+                }
+                else {
+                    val otherNumber = other.toDouble()
+                    if (otherNumber.isNaN()) {
+                        false
+                    }
+                    else {
+                        compareNumbersWithEpsilon(thisNumber, otherNumber) == 0
+                    }
+                }
+            }
+
+            else ->
+                toString() == other.toString()
         }
-        if (other is Number) {
-            return toDoubleOrNan() == other.toDouble()
-        }
-        return toString() == other.toString()
     }
 
 
@@ -411,10 +517,7 @@ class ColumnValue(
 
     // https://discuss.kotlinlang.org/t/overloading-with-different-types-of-operands/4059/23
     override fun equals(other: Any?): Boolean {
-        if (other is ColumnValue) {
-            return toString() == other.toString()
-        }
-        return toString() == other.toString()
+        return this eq other
     }
 
 

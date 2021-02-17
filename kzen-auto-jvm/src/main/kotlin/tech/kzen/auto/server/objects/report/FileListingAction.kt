@@ -99,8 +99,6 @@ class FileListingAction {
 
 
     suspend fun scanInfo(pattern: String, filter: String): List<FileInfo> {
-//        val stopwatch = Stopwatch.createStarted()
-
         val parsed = AutoJvmUtils.parsePath(pattern)
             ?: return listOf()
 
@@ -130,9 +128,6 @@ class FileListingAction {
                 })
             builder
         }
-
-//        println("infos : $stopwatch")
-//        return infos
     }
 
 
