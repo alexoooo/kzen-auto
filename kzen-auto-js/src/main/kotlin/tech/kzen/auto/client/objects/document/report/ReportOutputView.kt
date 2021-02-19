@@ -2,7 +2,7 @@ package tech.kzen.auto.client.objects.document.report
 
 import kotlinx.css.*
 import kotlinx.css.properties.TextDecoration
-import kotlinx.css.properties.boxShadow
+import kotlinx.css.properties.boxShadowInset
 import react.*
 import react.dom.tbody
 import react.dom.thead
@@ -58,6 +58,11 @@ class ReportOutputView(
 
 
     private fun abbreviate(value: String): String {
+//        if (value.isEmpty()) {
+//            // NB: get cell to show
+//            return "."
+//        }
+
         if (value.length < 50) {
             return value
         }
@@ -346,7 +351,7 @@ class ReportOutputView(
                     marginBottom = 1.em
                     width = 100.pct
                     paddingBottom = 1.em
-                    borderBottomWidth = 1.px
+                    borderBottomWidth = 2.px
                     borderBottomStyle = BorderStyle.solid
                     borderBottomColor = Color.lightGray
                 }
@@ -374,7 +379,7 @@ class ReportOutputView(
                 marginBottom = 1.em
                 width = 100.pct
                 paddingBottom = 1.em
-                borderBottomWidth = 1.px
+                borderBottomWidth = 2.px
                 borderBottomStyle = BorderStyle.solid
                 borderBottomColor = Color.lightGray
             }
@@ -402,7 +407,7 @@ class ReportOutputView(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderSave(outputInfo: OutputInfo?) {
-        if (! state.savingOpen || outputInfo == null) {
+        if (! state.savingOpen || outputInfo?.modifiedTime == null) {
             return
         }
 
@@ -412,7 +417,7 @@ class ReportOutputView(
                 width = 100.pct
 
                 paddingBottom = 1.em
-                borderBottomWidth = 1.px
+                borderBottomWidth = 2.px
                 borderBottomStyle = BorderStyle.solid
                 borderBottomColor = Color.lightGray
             }
@@ -578,6 +583,7 @@ class ReportOutputView(
             styledTable {
                 css {
                     borderCollapse = BorderCollapse.collapse
+                    minWidth = 100.pct
                 }
 
                 thead {
@@ -587,10 +593,14 @@ class ReportOutputView(
                                 position = Position.sticky
                                 left = 0.px
                                 top = 0.px
-//                                backgroundColor = Color("rgba(255, 255, 255, 0.9)")
                                 backgroundColor = Color.white
                                 zIndex = 1000
-                                boxShadow(Color.lightGray, 2.px, 2.px, 2.px, 0.px)
+                                width = 2.em
+                                height = 2.em
+                                textAlign = TextAlign.left
+                                boxShadowInset(Color.lightGray, (-2).px, (-2).px, 0.px, 0.px)
+//                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+//                                boxShadow(Color.lightGray, 2.px, 2.px, 2.px, 0.px)
                                 paddingLeft = 0.5.em
                                 paddingRight = 0.5.em
                             }
@@ -605,9 +615,11 @@ class ReportOutputView(
 //                                    backgroundColor = Color("rgba(255, 255, 255, 0.9)")
                                     backgroundColor = Color.white
                                     zIndex = 999
-                                    boxShadow(Color.lightGray, 0.px, 2.px, 2.px, 0.px)
+//                                    boxShadow(Color.lightGray, 0.px, 2.px, 2.px, 0.px)
                                     paddingLeft = 0.5.em
                                     paddingRight = 0.5.em
+                                    textAlign = TextAlign.left
+                                    boxShadowInset(Color.lightGray, 0.px, (-2).px, 0.px, 0.px)
                                 }
                                 key = header
                                 +header
@@ -621,6 +633,13 @@ class ReportOutputView(
                         styledTr {
                             key = row.index.toString()
 
+                            css {
+//                                backgroundColor = Color.white
+                                hover {
+                                    backgroundColor = Color.lightGrey
+                                }
+                            }
+
                             styledTd {
                                 css {
                                     position = Position.sticky
@@ -629,11 +648,18 @@ class ReportOutputView(
                                     backgroundColor = Color.white
                                     zIndex = 999
 
-                                    borderTopStyle = BorderStyle.solid
-                                    borderTopColor = Color.lightGray
+//                                    borderTopStyle = BorderStyle.solid
+//                                    borderTopColor = Color.lightGray
                                     paddingLeft = 0.5.em
                                     paddingRight = 0.5.em
-                                    boxShadow(Color.lightGray, 2.px, 2.px, 2.px, 0.px)
+                                    boxShadowInset(Color.lightGray, (-2).px, 0.px, 0.px, 0.px)
+//                                    boxShadow(Color.lightGray, 2.px, 2.px, 2.px, 0.px)
+
+                                    if (row.index != 0) {
+                                        borderTopWidth = 1.px
+                                        borderTopStyle = BorderStyle.solid
+                                        borderTopColor = Color.lightGray
+                                    }
                                 }
                                 val rowNumber = row.index + outputPreview.startRow.coerceAtLeast(0)
                                 val rowFormat = FormatUtils.decimalSeparator(rowNumber + 1)
@@ -643,10 +669,16 @@ class ReportOutputView(
                             for (value in row.value.withIndex()) {
                                 styledTd {
                                     css {
-                                        borderTopStyle = BorderStyle.solid
-                                        borderTopColor = Color.lightGray
+//                                        borderTopStyle = BorderStyle.solid
+//                                        borderTopColor = Color.lightGray
                                         paddingLeft = 0.5.em
                                         paddingRight = 0.5.em
+
+                                        if (row.index != 0) {
+                                            borderTopWidth = 1.px
+                                            borderTopStyle = BorderStyle.solid
+                                            borderTopColor = Color.lightGray
+                                        }
                                     }
 
                                     key = value.index.toString()

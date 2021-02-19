@@ -17,14 +17,31 @@ import java.nio.file.Path
 
 class ReportInputChain(
     flatData: FlatData,
+    defaultFixedHeader: RecordHeader? = null,
     bufferSize: Int = RecordDataBuffer.defaultBufferSize
 ):
     AutoCloseable
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        fun withoutReadingHeader(
+            flatData: FlatData,
+            bufferSize: Int = RecordDataBuffer.defaultBufferSize
+        ): ReportInputChain {
+            return ReportInputChain(flatData, RecordHeader.empty, bufferSize)
+        }
+
+
+        fun withReadingHeader(
+            flatData: FlatData,
+            bufferSize: Int = RecordDataBuffer.defaultBufferSize
+        ): ReportInputChain {
+            return ReportInputChain(flatData, null, bufferSize)
+        }
+
+
         fun all(flatData: FlatData, bufferSize: Int): List<RecordItemBuffer> {
-            val instance = ReportInputChain(flatData, bufferSize)
+            val instance = withoutReadingHeader(flatData, bufferSize)
             val records = mutableListOf<RecordItemBuffer>()
 
             while (true) {
@@ -56,7 +73,7 @@ class ReportInputChain(
 
 
         fun header(file: Path): RecordHeader {
-            val instance = ReportInputChain(FileFlatData(file))
+            val instance = withReadingHeader(FileFlatData(file))
             var header: RecordHeader? = null
 
             while (true) {
@@ -74,7 +91,7 @@ class ReportInputChain(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val reader = ReportInputReader.single(flatData)
+    private val reader = ReportInputReader.singleWithoutClose(flatData)
     private val decoder = ReportInputDecoder()
     private val lexer = ReportInputLexer()
 
@@ -82,7 +99,7 @@ class ReportInputChain(
         null,
         RecordFormat
             .forExtension(flatData.innerExtension())
-            .withDefaultHeader(RecordHeader.empty)
+            .withDefaultFixedHeader(defaultFixedHeader)
     )
 
     private val dataBuffer = RecordDataBuffer.ofBufferSize(bufferSize)

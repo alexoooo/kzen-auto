@@ -55,10 +55,10 @@ data class RecordFormat(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun withDefaultHeader(defaultHeader: RecordHeader): RecordFormat {
+    fun withDefaultFixedHeader(defaultFixedHeader: RecordHeader?): RecordFormat {
         return when {
             fixedHeader != null -> this
-            else -> copy(fixedHeader = defaultHeader)
+            else -> copy(fixedHeader = defaultFixedHeader)
         }
     }
 }

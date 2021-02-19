@@ -2,12 +2,10 @@ package tech.kzen.auto.server.objects.report.pipeline.input
 
 import com.google.common.io.CountingInputStream
 import org.apache.commons.io.input.BOMInputStream
-import tech.kzen.auto.server.objects.report.pipeline.input.connect.FileFlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
 import java.io.InputStream
-import java.nio.file.Path
 import java.util.zip.GZIPInputStream
 
 
@@ -17,7 +15,8 @@ import java.util.zip.GZIPInputStream
 @Suppress("UnstableApiUsage")
 class ReportInputReader(
     inputs: List<FlatData>,
-    private val progress: ReportProgressTracker?
+    private val progress: ReportProgressTracker?,
+    private val closeAtEndOfStream: Boolean = true
 ):
     AutoCloseable
 {
@@ -25,31 +24,8 @@ class ReportInputReader(
     companion object {
         private const val gzipBufferSize = 128 * 1024
 
-
-//        private fun outerExtension(inputPath: Path): String {
-//            return MoreFiles.getFileExtension(inputPath)
-//        }
-//
-//
-//        private fun innerExtension(inputPath: Path, outerExtension: String): String {
-//            return when (outerExtension) {
-//                "gz" -> {
-//                    val withoutExtension = MoreFiles.getNameWithoutExtension(inputPath)
-//                    MoreFiles.getFileExtension(Paths.get(withoutExtension))
-//                }
-//
-//                else ->
-//                    outerExtension
-//            }
-//        }
-
-
-        fun file(input: Path): ReportInputReader {
-            return single(FileFlatData(input))
-        }
-
-        fun single(input: FlatData): ReportInputReader {
-            return ReportInputReader(listOf(input), null)
+        fun singleWithoutClose(input: FlatData): ReportInputReader {
+            return ReportInputReader(listOf(input), null, false)
         }
     }
 
@@ -80,7 +56,9 @@ class ReportInputReader(
         if (read == -1) {
             buffer.bytesLength = 0
             buffer.endOfStream = true
-            closeCurrent()
+            if (closeAtEndOfStream) {
+                closeCurrent()
+            }
             return remainingInputs.isNotEmpty()
         }
 

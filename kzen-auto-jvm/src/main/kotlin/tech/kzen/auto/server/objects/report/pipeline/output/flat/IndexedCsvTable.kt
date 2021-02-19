@@ -172,17 +172,18 @@ class IndexedCsvTable(
 
         if (offsetStoreStart < offsetStore.size()) {
             val storedStartSpan = offsetStore.get(offsetStoreStart)
-            val storedEnd = (offsetStoreStart + count).coerceAtMost(offsetStore.size() - 1)
+            val storedEnd = (offsetStoreStart + count - 1).coerceAtMost(offsetStore.size() - 1)
             val storedEndSpan = offsetStore.get(storedEnd)
 
             seek(storedStartSpan.offset)
 
             // NB: don't close, because that would also close handle
-            val inputChain = ReportInputChain(
+            val inputChain = ReportInputChain.withoutReadingHeader(
                 InputStreamFlatData.ofCsv(
                     Channels.newInputStream(handle.channel)))
 
             var remainingCount = storedEnd - offsetStoreStart + 1
+//            var remainingCount = storedEnd - offsetStoreStart
 
             while (true) {
                 val hasNext = inputChain.poll { recordItem ->
@@ -215,7 +216,7 @@ class IndexedCsvTable(
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
         flushPending()
-        StoreUtils.flushAndClose(handle, tablePath.toString())
+        handle.close()
         offsetStore.close()
     }
 }

@@ -6,6 +6,7 @@ import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
 import tech.kzen.lib.platform.collect.PersistentList
+import tech.kzen.lib.platform.collect.persistentListOf
 import tech.kzen.lib.platform.collect.toPersistentList
 
 
@@ -19,6 +20,9 @@ data class ImperativeModel(
     companion object {
         private const val runningKey = "running"
         private const val framesKey = "frames"
+
+
+        val empty = ImperativeModel(null, persistentListOf())
 
 
         fun toCollection(model: ImperativeModel): Map<String, Any?> {

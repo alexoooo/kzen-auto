@@ -23,6 +23,7 @@ public class CsvRecordLexer implements RecordLexer
 
     //-----------------------------------------------------------------------------------------------------------------
     private boolean partial = false;
+    private boolean midDelimiter = false;
     private int state = stateStartOfField;
 
 
@@ -37,54 +38,59 @@ public class CsvRecordLexer implements RecordLexer
         recordTokenBuffer.clear();
 
         int contentStart = contentOffset;
-        if (state == stateEndOfRecord) {
-            while (contentStart < contentEnd) {
-                char nextChar = contentChars[contentStart];
-                if (! (nextChar == '\r' || nextChar == '\n')) {
-                    break;
-                }
-                contentStart++;
-            }
+        if (midDelimiter) {
+            contentStart++;
+            midDelimiter = false;
         }
 
+        boolean nextPartial = partial;
+        int nextState = state;
+
         char firstChar = contentChars[contentStart];
-        int fieldCount = (partial ? 0 : (firstChar == '\r' || firstChar == '\n' ? 0 : 1));
+        int fieldCount = (nextPartial ? 0 : (firstChar == '\r' || firstChar == '\n' ? 0 : 1));
         int startOffset = contentStart - contentOffset;
 
         for (int i = contentStart; i < contentEnd; i++) {
             char nextChar = contentChars[i];
 
-            int nextState = nextState(nextChar);
+            nextState = nextState(nextState, nextChar);
 
             if (nextState == stateStartOfField) {
                 if (fieldCount == 0 && contentChars[i] == ',') {
                     fieldCount++;
                 }
                 fieldCount++;
-                partial = true;
+                nextPartial = true;
             }
             else if (nextState == stateEndOfRecord) {
-                if (fieldCount > 0 || partial) {
-                    recordTokenBuffer.add(startOffset, i - startOffset, fieldCount);
-                    fieldCount = 0;
+                recordTokenBuffer.add(startOffset, i - startOffset, Math.max(1, fieldCount));
+                fieldCount = 0;
+
+                if (nextChar == '\r') {
+                    i++;
+                    if (i == contentEnd) {
+                        midDelimiter = true;
+                    }
                 }
+
                 startOffset = i + 1;
-                partial = false;
+                nextPartial = false;
             }
             else {
                 if (fieldCount == 0) {
                     fieldCount = 1;
                 }
-                partial = true;
+                nextPartial = true;
             }
-
-            state = nextState;
         }
 
-        if (partial) {
+        if (nextPartial) {
             recordTokenBuffer.add(startOffset, contentEnd - startOffset, fieldCount);
             recordTokenBuffer.setPartialLast();
         }
+
+        state = nextState;
+        partial = nextPartial;
     }
 
 
@@ -93,13 +99,14 @@ public class CsvRecordLexer implements RecordLexer
         recordTokenBuffer.clearPartialLast();
 
         partial = false;
+        midDelimiter = false;
         state = stateStartOfField;
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private int nextState(char nextChar) {
-        return switch (state) {
+    private int nextState(int currentState, char nextChar) {
+        return switch (currentState) {
             case stateStartOfField, stateEndOfRecord ->
                     onBetweenFields(nextChar);
 
@@ -113,7 +120,7 @@ public class CsvRecordLexer implements RecordLexer
                     onQuotedQuote(nextChar);
 
             default ->
-                    throw new IllegalStateException("Unknown state: " + state);
+                    throw new IllegalStateException("Unknown state: " + currentState);
         };
     }
 

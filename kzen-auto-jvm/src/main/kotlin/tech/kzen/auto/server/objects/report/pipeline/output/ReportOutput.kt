@@ -318,6 +318,7 @@ class ReportOutput(
             return
         }
 
+        // TODO: optimize to be GC-free
         Files.newBufferedWriter(path).use { output ->
             val record = RecordItemBuffer()
 

@@ -173,6 +173,66 @@ class CsvLineParserTest {
 
 
     @Test
+    fun blankLinesLinux() {
+        val csv = "foo\n" +
+                "\n" +
+                "\n" +
+                "bar\n" +
+                "baz\n" +
+                "\n" +
+                "\n"
+
+        val parsed = read(csv)
+        assertEquals(listOf("foo"), parsed[0].toList())
+        assertEquals(listOf(""), parsed[1].toList())
+        assertEquals(listOf(""), parsed[2].toList())
+        assertEquals(listOf("bar"), parsed[3].toList())
+        assertEquals(listOf("baz"), parsed[4].toList())
+        assertEquals(listOf(""), parsed[5].toList())
+        assertEquals(listOf(""), parsed[6].toList())
+
+        for (i in 3 .. csv.length) {
+            val parsedBuffered = read(csv, i)
+            assertEquals(7, parsedBuffered.size)
+        }
+    }
+
+
+    @Test
+    fun blankLinesWindows() {
+        val csv = "foo\r\n" +
+                "\r\n" +
+                "\r\n" +
+                "bar\r\n" +
+                "baz\r\n" +
+                "\r\n" +
+                "\r\n"
+
+        for (i in 3 .. csv.length) {
+            val parsedBuffered = read(csv, i)
+            assertEquals(7, parsedBuffered.size)
+        }
+    }
+
+
+    @Test
+    fun blankLinesMixed() {
+        val csv = "foo\n" +
+                "\r\n" +
+                "\n" +
+                "bar\r\n" +
+                "baz\r\n" +
+                "\n" +
+                "\r\n"
+
+        for (i in 3 .. csv.length) {
+            val parsedBuffered = read(csv, i)
+            assertEquals(7, parsedBuffered.size)
+        }
+    }
+
+
+    @Test
     fun literalItemBufferEmptySuffix() {
         val csvLines = "400,"
         val literal = RecordItemBuffer.of("400", "")
@@ -224,13 +284,9 @@ class CsvLineParserTest {
     @Test
     fun emptyLines() {
         val csvLines = "\r\n\r\n\n\n\n\r\n"
-        assertTrue(read(csvLines).isEmpty())
-        assertTrue(read(csvLines, 3).isEmpty())
-        assertTrue(read(csvLines, 4).isEmpty())
-        assertTrue(read(csvLines, 5).isEmpty())
-        assertTrue(read(csvLines, 6).isEmpty())
-        assertTrue(read(csvLines, 7).isEmpty())
-        assertTrue(read(csvLines, 9).isEmpty())
+        for (i in 3 .. csvLines.length) {
+            assertEquals(6, read(csvLines, i).size)
+        }
     }
 
 

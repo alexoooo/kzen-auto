@@ -49,6 +49,10 @@ class ExecutionRepository(
             return existing
         }
 
+        if (host !in graphStructure.graphNotation.documents) {
+            return ImperativeModel.empty
+        }
+
         val initial = executionInitializer.initialExecutionModel(host)
 
         models = models.put(host, initial)

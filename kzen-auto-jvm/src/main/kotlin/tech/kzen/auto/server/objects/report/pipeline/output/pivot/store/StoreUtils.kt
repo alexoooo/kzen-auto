@@ -15,14 +15,20 @@ object StoreUtils {
 
     fun flush(handle: RandomAccessFile, location: String) {
         for (tryCount in 0 until releaseRetryAttempts) {
+            var exception: SyncFailedException?
+
             try {
                 handle.fd.sync()
                 break
             }
             catch (e: SyncFailedException) {
-                logger.info("Failed to sync (retry ${tryCount + 1}): $location - ${e.message}")
+                exception = e
+                logger.info("Failed to sync (retry {}): {} - {}",
+                    tryCount + 1, location, e.message)
                 Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS)
             }
+
+            logger.warn("Giving up sync ({}): {}", handle.channel.isOpen, location, exception)
         }
     }
 

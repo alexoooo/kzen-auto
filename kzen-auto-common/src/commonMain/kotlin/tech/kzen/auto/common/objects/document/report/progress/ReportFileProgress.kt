@@ -64,16 +64,17 @@ data class ReportFileProgress(
                 ""
             }
 
-        val durationSeconds = durationMillis / 1000
+        val adjustedDurationMillis = durationMillis.coerceAtLeast(1)
+        val durationSeconds = adjustedDurationMillis / 1000
 
         return when {
             finished -> {
-                val speed = FormatUtils.readableFileSize(1000L * uncompressedBytes / durationMillis)
+                val speed = FormatUtils.readableFileSize(1000L * uncompressedBytes / adjustedDurationMillis)
                 "Done: $recordsFormat records ${readFormat}took ${durationSeconds}s at $speed/s"
             }
 
             else -> {
-                val percent = ((readBytes.toDouble() / totalSize) * 100).toInt()
+                val percent = ((readBytes.toDouble() / totalSize.coerceAtLeast(1)) * 100).toInt()
                 val speed = FormatUtils.readableFileSize(recentBytesPerSecond)
                 "$percent%: $recordsFormat records ${readFormat}for ${durationSeconds}s at $speed/s"
             }

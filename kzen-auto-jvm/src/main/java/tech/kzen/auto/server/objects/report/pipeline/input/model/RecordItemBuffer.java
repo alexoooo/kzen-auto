@@ -107,12 +107,12 @@ public class RecordItemBuffer
 
 
     public List<String> toList() {
-        List<String> list = new ArrayList<>();
+        List<String> builder = new ArrayList<>(fieldCount);
         for (int i = 0; i < fieldCount; i++) {
             String item = getString(i);
-            list.add(item);
+            builder.add(item);
         }
-        return list;
+        return builder;
     }
 
 
@@ -313,7 +313,7 @@ public class RecordItemBuffer
 
 
     public void commitField() {
-        growFieldEndsIfRequired(fieldCount);
+        growFieldEndsIfRequired(fieldCount + 1);
 
         fieldEnds[fieldCount] = fieldContentLength;
         fieldCount++;
@@ -478,7 +478,7 @@ public class RecordItemBuffer
 
     public void growBy(int additionalLength, int additionalFieldCount) {
         growFieldContentsIfRequired(fieldContentLength + additionalLength);
-        growFieldEndsIfRequired(fieldCount + additionalFieldCount);
+        growFieldEndsIfRequired(fieldCount + additionalFieldCount + 1);
     }
 
 
@@ -491,7 +491,7 @@ public class RecordItemBuffer
 
 
     private void growFieldEndsIfRequired(int required) {
-        if (fieldEnds.length <= required) {
+        if (fieldEnds.length < required) {
             int size = fieldEnds.length;
             int nextSize = Math.max((int) (size * 1.2 + 1), required);
             fieldEnds = Arrays.copyOf(fieldEnds, nextSize);
