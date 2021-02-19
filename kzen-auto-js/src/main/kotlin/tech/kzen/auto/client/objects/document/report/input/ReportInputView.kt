@@ -112,7 +112,9 @@ class ReportInputView(
                 +"Input"
             }
 
-            if (props.reportState.inputLoading) {
+            if (props.reportState.inputLoading ||
+                    props.reportState.columnListingLoading
+            ) {
                 styledSpan {
                     css {
                         float = Float.right

@@ -201,7 +201,7 @@ class ReportFormulaAdd(
                 }
 
                 disabled = editDisabled
-                error = ! (columnListing?.contains(state.selectedColumn) ?: false)
+                error = (columnListing?.contains(state.selectedColumn) ?: false)
 
                 onKeyDown = ::handleEnterAndEscape
             }

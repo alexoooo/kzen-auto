@@ -93,18 +93,9 @@ class PivotBuilder(
                     ValueStatistics.missingValue
                 }
                 else {
+                    present = true
                     flyweight.selectHostField(recordItem, headerIndex)
-
-                    if (flyweight.isEmpty()) {
-                        ValueStatistics.missingValue
-                    }
-                    else {
-                        present = true
-
-//                        val doubleValue = flyweight.toDoubleOrNan()
-//                        ValueStatistics.normalize(doubleValue)
-                        flyweight.toDoubleOrNan()
-                    }
+                    flyweight.toDoubleOrNan()
                 }
         }
 

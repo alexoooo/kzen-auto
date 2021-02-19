@@ -73,9 +73,6 @@ object ReportEffect {
             is InputsBrowserFilterRequest ->
                 updateBrowserFilter(state, action.filter)
 
-//            is ListInputsResponse ->
-//                ListColumnsRequest
-
 
             ListColumnsRequest ->
                 loadColumnListing(state)
@@ -322,10 +319,10 @@ object ReportEffect {
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun loadColumnListing(
         state: ReportState
-    ): ReportAction? {
+    ): ReportAction {
         if (state.inputSelected == null ||
                 state.inputSelected.isEmpty()) {
-            return null
+            return EmptyInputSelection
         }
 
         val result = ClientContext.restClient.performDetached(

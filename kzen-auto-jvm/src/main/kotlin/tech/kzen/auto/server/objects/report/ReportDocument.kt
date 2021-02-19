@@ -223,7 +223,7 @@ class ReportDocument(
         val runDir = runDir(runSpec)
 
         return ServerContext.reportRunAction.outputDownload(
-            runSpec, runDir, output)
+            runSpec, runDir, output, selfLocation)
     }
 
 

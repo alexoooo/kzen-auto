@@ -11,7 +11,9 @@ import tech.kzen.auto.server.objects.report.pipeline.ReportPipeline
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
+import tech.kzen.auto.util.AutoJvmUtils
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.platform.DateTimeUtils
 import java.nio.file.Path
 
 
@@ -122,12 +124,17 @@ class ReportRunAction(
     fun outputDownload(
         runSpec: ReportRunSpec,
         runDir: Path,
-        outputSpec: OutputSpec
+        outputSpec: OutputSpec,
+        mainLocation: ObjectLocation
     ): ExecutionDownloadResult {
+        val filenamePrefix = AutoJvmUtils.sanitizeFilename(mainLocation.documentPath.name.value)
+        val filenameSuffix = DateTimeUtils.filenameTimestamp()
+        val filename = filenamePrefix + "_" + filenameSuffix + ".csv"
+
         val inputStream = ReportPipeline.passiveDownload(runSpec, runDir, outputSpec, reportWorkPool)
         return ExecutionDownloadResult(
             inputStream,
-            "report.csv",
+            filename,
             mimeTypeCsv
         )
     }

@@ -81,7 +81,6 @@ object ReportReducer {
         action: InputReportAction
     ): ReportState {
         return when (action) {
-//            InputsUpdatedRequest,
             ListInputsBrowserRequest,
             ListInputsSelectedRequest,
             is ListInputsBrowserNavigate,
@@ -109,6 +108,11 @@ object ReportReducer {
                 inputError = action.message,
                 inputLoaded = true,
                 inputLoading = false)
+
+            EmptyInputSelection -> state.copy(
+                columnListingLoading = false,
+                formulaMessages = mapOf(),
+                outputInfo = null)
         }
     }
 

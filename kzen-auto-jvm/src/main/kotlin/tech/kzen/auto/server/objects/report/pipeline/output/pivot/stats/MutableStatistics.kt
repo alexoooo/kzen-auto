@@ -23,7 +23,6 @@ data class MutableStatistics(
     //-----------------------------------------------------------------------------------------------------------------
     fun accept(value: Double) {
         ++count
-//        simpleSum += value
         sumWithCompensation(value)
         min = min.coerceAtMost(value)
         max = max.coerceAtLeast(value)

@@ -184,7 +184,12 @@ class ReportOutputView(
 
                 val status = props.reportState.outputInfo?.status ?: OutputStatus.Missing
                 if (status == OutputStatus.Missing) {
-                    +"Run using play button (bottom right)"
+                    if (props.reportState.columnListing.isNullOrEmpty()) {
+                        +"Please select valid input (top of page)"
+                    }
+                    else {
+                        +"Run using play button (bottom right)"
+                    }
                 }
                 else {
                     +status.name

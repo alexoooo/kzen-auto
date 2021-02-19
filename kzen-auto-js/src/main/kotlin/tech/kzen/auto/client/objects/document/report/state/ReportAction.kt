@@ -84,11 +84,11 @@ data class CompoundReportAction(
 object InitiateReport: SingularReportAction()
 
 
-//object InitiateReportDone: InitiateReportAction()
-
-
 //---------------------------------------------------------------------------------------------------------------------
 sealed class InputReportAction: SingularReportAction()
+
+
+object EmptyInputSelection: InputReportAction()
 
 
 sealed class ListInputsAction: InputReportAction()
