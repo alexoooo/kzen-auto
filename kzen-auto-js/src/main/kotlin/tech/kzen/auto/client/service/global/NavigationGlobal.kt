@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.service.global
 
+import kotlinx.browser.window
 import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
@@ -9,7 +10,6 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
-import kotlinx.browser.window
 
 
 class NavigationGlobal(
@@ -202,7 +202,14 @@ class NavigationGlobal(
                     RequestParams.parse(paramSuffix)
                 }
 
-        documentPath = DocumentPath.parse(path)
+        documentPath =
+            if (path.isEmpty()) {
+                null
+            }
+            else {
+                DocumentPath.parse(path)
+            }
+
         parameters = params
     }
 }

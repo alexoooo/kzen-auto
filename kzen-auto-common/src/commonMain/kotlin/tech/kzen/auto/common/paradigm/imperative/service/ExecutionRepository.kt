@@ -116,7 +116,12 @@ class ExecutionRepository(
 
             if (models != newModels) {
 //                println("^^^^ onCommandSuccess - $host - $event")
-                controlTrees[host] = ControlTree.readSteps(graphStructure, host)
+                if (host in graphStructure.graphNotation.documents) {
+                    controlTrees[host] = ControlTree.readSteps(graphStructure, host)
+                }
+                else {
+                    controlTrees.remove(host)
+                }
 
                 models = newModels
                 if (host in models) {
