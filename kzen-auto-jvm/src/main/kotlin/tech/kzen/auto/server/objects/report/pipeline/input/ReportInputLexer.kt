@@ -3,11 +3,12 @@ package tech.kzen.auto.server.objects.report.pipeline.input
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordFormat
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordLexer
+import java.net.URI
 
 
 class ReportInputLexer {
     //-----------------------------------------------------------------------------------------------------------------
-    private var previousLocation: String? = null
+    private var previousLocation: URI? = null
     private var previousLexer: RecordLexer? = null
 
 

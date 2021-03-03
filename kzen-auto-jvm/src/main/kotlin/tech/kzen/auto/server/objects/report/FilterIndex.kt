@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report
 
-import tech.kzen.auto.util.AutoJvmUtils
-import tech.kzen.auto.util.WorkUtils
+import tech.kzen.auto.server.util.AutoJvmUtils
+import tech.kzen.auto.server.util.WorkUtils
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths

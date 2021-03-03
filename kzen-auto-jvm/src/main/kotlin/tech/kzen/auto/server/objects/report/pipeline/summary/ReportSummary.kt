@@ -12,7 +12,7 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderInd
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
 import tech.kzen.auto.server.objects.report.pipeline.summary.model.ValueSummaryBuilder
-import tech.kzen.auto.util.AutoJvmUtils
+import tech.kzen.auto.server.util.AutoJvmUtils
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture

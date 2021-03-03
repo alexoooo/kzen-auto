@@ -11,7 +11,7 @@ import tech.kzen.auto.server.objects.report.pipeline.ReportPipeline
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
-import tech.kzen.auto.util.AutoJvmUtils
+import tech.kzen.auto.server.util.AutoJvmUtils
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.platform.DateTimeUtils
 import java.nio.file.Path

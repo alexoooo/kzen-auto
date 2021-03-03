@@ -10,6 +10,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import java.net.URI
 import java.util.concurrent.TimeUnit
 import kotlin.time.ExperimentalTime
 
@@ -128,14 +129,14 @@ class ReportProgressTracker(
     //-----------------------------------------------------------------------------------------------------------------
     private val buffers = reportRunSpec
         .inputs
-        .map { it.toString() to Buffer(it.toString()) }
+        .map { it.toUri() to Buffer(it.toString()) }
         .toMap()
 
     @Volatile private var currentOutputCount = 0L
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun getInitial(locationKey: String, totalSize: Long): Buffer {
+    fun getInitial(locationKey: URI, totalSize: Long): Buffer {
         val buffer = buffers[locationKey]
             ?: throw IllegalArgumentException("Unknown: $locationKey")
 
@@ -146,7 +147,7 @@ class ReportProgressTracker(
     }
 
 
-    fun getRunning(locationKey: String): Buffer {
+    fun getRunning(locationKey: URI): Buffer {
         val buffer = buffers[locationKey]
             ?: throw IllegalArgumentException("Unknown: $locationKey")
         check(buffer.running)
@@ -174,8 +175,12 @@ class ReportProgressTracker(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun current(): ReportProgress {
+        val snapshot = buffers
+            .map { it.key.toString() to it.value.snapshot() }
+            .toMap()
+
         return ReportProgress(
-            currentOutputCount, buffers.mapValues { it.value.snapshot() })
+            currentOutputCount, snapshot)
     }
 
 

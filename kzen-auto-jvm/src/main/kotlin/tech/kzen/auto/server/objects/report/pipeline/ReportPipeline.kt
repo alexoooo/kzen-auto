@@ -183,8 +183,8 @@ class ReportPipeline(
             val sequence = binaryRingBuffer.next()
             val binaryEvent = binaryRingBuffer.get(sequence)
 
-            val read = dataInput.poll(binaryEvent.data)
-            if (! read) {
+            val hasNext = dataInput.poll(binaryEvent.data)
+            if (! hasNext) {
                 binaryEvent.noop = ! binaryEvent.data.endOfStream
                 binaryRingBuffer.publish(sequence)
                 break

@@ -17,7 +17,7 @@ import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
-import tech.kzen.auto.util.AutoJvmUtils
+import tech.kzen.auto.server.util.AutoJvmUtils
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import java.awt.geom.IllegalPathStateException

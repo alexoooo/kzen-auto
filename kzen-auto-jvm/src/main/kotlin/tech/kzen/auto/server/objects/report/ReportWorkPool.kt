@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.server.objects.report.model.ReportRunSignature
-import tech.kzen.auto.util.WorkUtils
+import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.util.yaml.YamlMap
 import tech.kzen.lib.common.util.yaml.YamlNode
 import tech.kzen.lib.common.util.yaml.YamlParser

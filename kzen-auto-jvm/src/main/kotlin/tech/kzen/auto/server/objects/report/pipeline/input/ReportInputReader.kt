@@ -6,6 +6,7 @@ import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
 import java.io.InputStream
+import java.net.URI
 import java.util.zip.GZIPInputStream
 
 
@@ -33,7 +34,7 @@ class ReportInputReader(
     //-----------------------------------------------------------------------------------------------------------------
     private val remainingInputs = inputs.toMutableList()
 
-    private var currentInputKey: String? = null
+    private var currentInputKey: URI? = null
     private var currentInnerExtension: String? = null
     private var currentRawInput: CountingInputStream? = null
     private var currentStream: InputStream? = null
@@ -43,7 +44,7 @@ class ReportInputReader(
 
     //-----------------------------------------------------------------------------------------------------------------
     /**
-     * @return true if more data could be remaining
+     * @return true if did not reach end
      */
     fun poll(buffer: RecordDataBuffer): Boolean {
         val nextStream = nextStream()

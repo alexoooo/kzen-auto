@@ -1,19 +1,20 @@
 const val kotlinVersion = "1.4.21"
-//const val kotlinVersion = "1.4.30" // fastutil NoSuchMethod?
+//const val kotlinVersion = "1.4.31" // fastutil NoSuchMethod?"
+const val jvmTargetVersion = "15"
 
-const val springBootVersion = "2.4.2"
-const val dependencyManagementVersion = "1.0.9.RELEASE"
+const val springBootVersion = "2.4.3"
+const val dependencyManagementVersion = "1.0.11.RELEASE"
+const val shadowVersion = "6.1.0"
 const val jacksonModuleKotlin = "2.12.1"
 
 const val coroutinesVersion = "1.4.2"
 
 //const val serializationVersion = "0.20.0"
 
-//const val wrapperKotlinVersion = "pre.134-kotlin-1.4.21"
 const val wrapperKotlinVersion = "pre.144-kotlin-1.4.21"
 
-//const val kzenLibVersion = "0.22.0-SNAPSHOT"
-const val kzenLibVersion = "0.21.0"
+const val kzenLibVersion = "0.22.0-SNAPSHOT"
+//const val kzenLibVersion = "0.21.0"
 
 const val immutaleJsVersion = "3.8.2"
 const val dexxVersion = "0.7"

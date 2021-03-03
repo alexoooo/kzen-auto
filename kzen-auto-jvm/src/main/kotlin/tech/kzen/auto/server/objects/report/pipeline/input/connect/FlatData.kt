@@ -1,11 +1,11 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.connect
 
 import java.io.InputStream
+import java.net.URI
 
 
 interface FlatData {
-    // TODO: switch to URI
-    fun key(): String
+    fun key(): URI
 
     fun outerExtension(): String
     fun innerExtension(): String

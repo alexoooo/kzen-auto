@@ -1,4 +1,4 @@
-package tech.kzen.auto.util
+package tech.kzen.auto.server.util
 
 import org.junit.Test
 import java.nio.file.Path

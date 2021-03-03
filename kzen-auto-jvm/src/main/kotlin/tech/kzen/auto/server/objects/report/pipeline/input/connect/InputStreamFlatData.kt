@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.connect
 
 import java.io.InputStream
+import java.net.URI
 
 
 class InputStreamFlatData(
@@ -20,8 +21,8 @@ class InputStreamFlatData(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun key(): String {
-        return key
+    override fun key(): URI {
+        return URI.create(key)
     }
 
 

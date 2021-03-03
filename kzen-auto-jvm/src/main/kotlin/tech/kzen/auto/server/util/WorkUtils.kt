@@ -1,4 +1,4 @@
-package tech.kzen.auto.util
+package tech.kzen.auto.server.util
 
 import com.google.common.io.BaseEncoding
 import tech.kzen.lib.common.util.Digest

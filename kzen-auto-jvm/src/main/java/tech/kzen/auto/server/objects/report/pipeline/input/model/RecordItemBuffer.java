@@ -2,8 +2,10 @@ package tech.kzen.auto.server.objects.report.pipeline.input.model;
 
 
 import net.openhft.hashing.LongHashFunction;
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvRecordParser;
+import org.jetbrains.annotations.NotNull;
+import tech.kzen.auto.plugin.model.FlatRecordBuilder;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvRecordParser;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvRecordParser;
 
 import java.io.*;
@@ -14,6 +16,7 @@ import java.util.List;
 
 
 public class RecordItemBuffer
+        implements FlatRecordBuilder
 {
     //-----------------------------------------------------------------------------------------------------------------
     private static final double doubleCacheMissing = -0.0;
@@ -59,6 +62,8 @@ public class RecordItemBuffer
 
     private int fieldCount = 0;
     private int fieldContentLength = 0;
+
+    // TODO: is this necessary?
     private boolean nonEmpty = false;
 
 
@@ -81,11 +86,13 @@ public class RecordItemBuffer
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @Override
     public int fieldCount() {
         return fieldCount;
     }
 
 
+    @Override
     public int fieldContentLength() {
         return fieldContentLength;
     }
@@ -339,6 +346,7 @@ public class RecordItemBuffer
 //    }
 
 
+    @Override
     public void add(String value) {
         growFieldContentsIfRequired(fieldContentLength + value.length());
 
@@ -351,6 +359,7 @@ public class RecordItemBuffer
     }
 
 
+    @Override
     public void addAll(List<String> values) {
         for (String value : values) {
             add(value);
@@ -466,6 +475,13 @@ public class RecordItemBuffer
         RecordItemBuffer prototype = new RecordItemBuffer(0, 0);
         prototype.copy(this);
         return prototype;
+    }
+
+
+    @Override
+    public void write(@NotNull char[] fieldContents, @NotNull int[] fieldEnds) {
+        System.arraycopy(this.fieldContents, 0, fieldContents, 0, fieldContentLength);
+        System.arraycopy(this.fieldEnds, 0, fieldEnds, 0, fieldCount);
     }
 
 

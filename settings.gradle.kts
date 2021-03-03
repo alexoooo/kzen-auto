@@ -8,3 +8,4 @@ pluginManagement {
 }
 
 include("kzen-auto-common", "kzen-auto-js", "kzen-auto-jvm")
+include("kzen-auto-plugin")

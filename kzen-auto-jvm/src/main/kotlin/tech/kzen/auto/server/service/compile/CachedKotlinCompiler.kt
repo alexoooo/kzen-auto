@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.service.compile
 
 import tech.kzen.auto.server.objects.report.ReportWorkPool
-import tech.kzen.auto.util.WorkUtils
+import tech.kzen.auto.server.util.WorkUtils
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path

@@ -6,7 +6,7 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
-import tech.kzen.auto.util.WorkUtils
+import tech.kzen.auto.server.util.WorkUtils
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.assertEquals
 

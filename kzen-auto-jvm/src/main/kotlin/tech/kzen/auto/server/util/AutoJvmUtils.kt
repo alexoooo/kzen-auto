@@ -1,4 +1,4 @@
-package tech.kzen.auto.util
+package tech.kzen.auto.server.util
 
 import java.nio.file.InvalidPathException
 import java.nio.file.Path

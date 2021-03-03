@@ -4,7 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Instant
 import tech.kzen.auto.common.objects.document.report.listing.FileInfo
-import tech.kzen.auto.util.AutoJvmUtils
+import tech.kzen.auto.server.util.AutoJvmUtils
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.*

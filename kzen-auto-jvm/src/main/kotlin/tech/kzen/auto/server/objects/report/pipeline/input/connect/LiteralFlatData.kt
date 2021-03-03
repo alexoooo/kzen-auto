@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.connect
 import tech.kzen.lib.common.util.Digest
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import java.net.URI
 
 
 data class LiteralFlatData(
@@ -28,8 +29,8 @@ data class LiteralFlatData(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun key(): String {
-        return location
+    override fun key(): URI {
+        return URI.create(location)
     }
 
 

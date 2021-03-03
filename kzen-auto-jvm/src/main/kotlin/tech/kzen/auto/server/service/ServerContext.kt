@@ -20,7 +20,7 @@ import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
 import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
-import tech.kzen.auto.util.WorkUtils
+import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner

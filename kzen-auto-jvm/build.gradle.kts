@@ -5,12 +5,12 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 
 plugins {
+    kotlin("jvm")
     id("org.springframework.boot") version springBootVersion
     id("io.spring.dependency-management") version dependencyManagementVersion
-    kotlin("jvm")
+    id("com.github.johnrengelman.shadow") version shadowVersion
     kotlin("plugin.spring") version kotlinVersion
     `maven-publish`
-    id("com.github.johnrengelman.shadow") version "6.1.0"
 }
 
 
@@ -24,6 +24,7 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
 
     implementation(project(":kzen-auto-common"))
+    implementation(project(":kzen-auto-plugin"))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
 
@@ -69,8 +70,7 @@ tasks.withType<KotlinCompile> {
     kotlinOptions {
         useIR = true
         freeCompilerArgs = listOf("-Xjsr305=strict")
-//        jvmTarget = "14"
-        jvmTarget = "15"
+        jvmTarget = jvmTargetVersion
     }
 }
 

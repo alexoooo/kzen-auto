@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.service.compile
 
-import tech.kzen.auto.util.WorkUtils
+import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.util.Digest
 
 

@@ -7,6 +7,7 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffe
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordFormat
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordParser
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
+import java.net.URI
 
 
 class ReportInputParser(
@@ -14,7 +15,7 @@ class ReportInputParser(
     private val fixedFormat: RecordFormat? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    private var currentInputKey: String? = null
+    private var currentInputKey: URI? = null
     private var currentParser: RecordParser? = null
     private var previousRecordHeader: RecordHeader = RecordHeader.empty
     private var firstRowHeader: Boolean = false
