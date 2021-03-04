@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import org.junit.Test
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import kotlin.test.assertEquals
 
 
@@ -84,7 +84,7 @@ class RecordFieldFlyweightTest {
 
 
     private fun checkToDouble(value: String, expected: Double) {
-        val record = RecordItemBuffer.of(value)
+        val record = RecordRowBuffer.of(value)
         flyweight.selectHostField(record, 0)
         assertEquals(expected, flyweight.toDoubleOrNan())
     }

@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.calc
 import tech.kzen.auto.server.objects.report.model.ReportFormulaSignature
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 
 
 class ReportFormulas(
@@ -47,16 +47,16 @@ class ReportFormulas(
     }
 
 
-    fun evaluate(item: RecordItemBuffer, headerBuffer: RecordHeaderBuffer) {
+    fun evaluate(row: RecordRowBuffer, headerBuffer: RecordHeaderBuffer) {
         val header = headerBuffer.value
         getFormulasAndAugmentHeader(header)
         headerBuffer.value = augmentedHeader!!
 
         for (i in 0 until formulaCount) {
-            formulaValues[i] = formulas[i].evaluate(item, header)
+            formulaValues[i] = formulas[i].evaluate(row, header)
         }
 
 //        item.addAllAndPopulateCaches(formulaValues)
-        item.addAll(formulaValues)
+        row.addAll(formulaValues)
     }
 }

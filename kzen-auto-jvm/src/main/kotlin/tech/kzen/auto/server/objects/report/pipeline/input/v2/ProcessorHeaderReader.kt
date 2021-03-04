@@ -5,10 +5,14 @@ import tech.kzen.auto.plugin.api.HeaderExtractor
 import tech.kzen.auto.plugin.api.managed.TraversableProcessorOutput
 import tech.kzen.auto.plugin.definition.ProcessorDataDefinition
 import tech.kzen.auto.plugin.model.DataBlockBuffer
+import tech.kzen.auto.plugin.model.DataInputEvent
 import tech.kzen.auto.plugin.model.ModelOutputEvent
 import tech.kzen.auto.plugin.spec.DataEncodingSpec
+import tech.kzen.auto.server.objects.report.pipeline.event.v2.ListPipelineOutput
+import tech.kzen.auto.server.objects.report.pipeline.event.v2.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.FileFlatDataReader
 import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.FlatDataReader
+import java.nio.charset.Charset
 import java.util.function.Consumer
 import kotlin.io.path.ExperimentalPathApi
 
@@ -17,12 +21,12 @@ class ProcessorHeaderReader<T>(
     private val processorData: ProcessorDataDefinition<T>,
     private val headerExtractor: HeaderExtractor<T>,
     private val readerFactory: () -> FlatDataReader,
-    private val dataIsText: Boolean,
+    private val textCharset: Charset?,
     private val dataBufferSize: Int = DataBlockBuffer.defaultBytesSize
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        @ExperimentalPathApi
+        @OptIn(ExperimentalPathApi::class)
         fun <T> ofFile(
             processorData: ProcessorDataDefinition<T>,
             headerExtractor: HeaderExtractor<T>,
@@ -37,7 +41,7 @@ class ProcessorHeaderReader<T>(
                 processorData,
                 headerExtractor,
                 dataReaderFactory,
-                dataEncoding.textEncoding != null)
+                dataEncoding.textEncoding?.getOrDefault())
 
             return processorReader.extract()
         }
@@ -69,62 +73,61 @@ class ProcessorHeaderReader<T>(
     private inner class TraversableProcessorFeeder(
         val dataReader: FlatDataReader
     ) {
-        val dataFramer = processorData.dataFramerFactory()
+        val dataBlockBuffer = DataBlockBuffer.ofTextOrBinary(textCharset != null, dataBufferSize)
+        val dataRecordBuffer = ListPipelineOutput(processorData::newInputEvent)
+        val modelOutputBuffer = ListPipelineOutput { ProcessorOutputEvent<T>() }
+
         val inputReader = ProcessorInputReader(dataReader)
-//        private val outputFactory = processorData.outputFactory
-//        private val dataBuffer = ByteArray(1024)
-        val buffer = DataBlockBuffer.ofTextOrBinary(dataIsText, dataBufferSize)
-        val partialInput = processorData.newInputEvent()
-//        private var reachedEnd = false
+        val decoder = textCharset?.let { ProcessorInputDecoder(it) }
+        val dataFramer = processorData.dataFramerFactory()
+        val feeder = ProcessorFrameFeeder(dataRecordBuffer)
+
+        val segments = processorData.segments.map { ProcessorSegmentInstance(it) }
+
+        private var reachedEnd = false
 
 
         fun poll(visitor: Consumer<ModelOutputEvent<T>>): Boolean {
-//            if (reachedEnd) {
-//                return
-//            }
-
-//            val result = dataReader.read(dataBuffer)
-//
-//            if (result.isEndOfData()) {
-//                reachedEnd = true
-//            }
-
-            val hasNext = inputReader.poll(buffer)
-
-            dataFramer.frame(buffer)
-            if (! hasNext) {
-                dataFramer.endOfStream(buffer)
+            if (reachedEnd) {
+                return false
             }
 
-            val continuePartial = partialInput.data.length() > 0
+            val hasNext = inputReader.poll(dataBlockBuffer)
 
-            if (continuePartial) {
-                partialInput.data.addFrame(buffer, 0)
-            }
+            decoder?.decode(dataBlockBuffer)
 
-            if (buffer.frames.partialLast && buffer.frames.count == 1) {
-                check(hasNext)
-                return true
-            }
-            else if (continuePartial) {
-                TODO()
-            }
+            dataFramer.frame(dataBlockBuffer)
 
-            val firstComplete = if (continuePartial) { 1 } else { 0 }
-            val lastPartialCount = if (buffer.frames.partialLast) { 1 } else { 0 }
-            val lastComplete = buffer.frames.count - lastPartialCount - 1
+            feeder.feed(dataBlockBuffer)
 
-            for (i in firstComplete .. lastComplete) {
-                val offset = buffer.frames.offsets[i]
-                val length = buffer.frames.lengths[i]
-                TODO()
-            }
-
-            if (buffer.frames.partialLast) {
-                partialInput.data.addFrame(buffer, buffer.frames.count - 1)
+            dataRecordBuffer.flush { dataInputEvent ->
+                processSegments(dataInputEvent, visitor)
             }
 
             return hasNext
+        }
+
+
+        private fun processSegments(
+                dataInputEvent: DataInputEvent,
+                visitor: Consumer<ModelOutputEvent<T>>
+        ) {
+            if (segments.size > 1) {
+                TODO()
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            val firstSegment = segments[0] as ProcessorSegmentInstance<DataInputEvent, ProcessorOutputEvent<T>>
+
+            for (intermediateStage in firstSegment.intermediateStages) {
+                intermediateStage.process(dataInputEvent)
+            }
+
+            firstSegment.finalStage.process(dataInputEvent, modelOutputBuffer)
+
+            modelOutputBuffer.flush {
+                visitor.accept(it)
+            }
         }
     }
 }

@@ -326,13 +326,13 @@ class ReportPipeline(
 
     @Suppress("UNUSED_PARAMETER")
     private fun handleFormulas(event: ReportRecordEvent, sequence: Long, endOfBatch: Boolean) {
-        formulas.evaluate(event.record.item, event.record.header)
+        formulas.evaluate(event.record.row, event.record.header)
     }
 
 
     @Suppress("UNUSED_PARAMETER")
     private fun handleFilter(event: ReportRecordEvent, sequence: Long, endOfBatch: Boolean) {
-        event.filterAllow = filter.test(event.record.item, event.record.header.value)
+        event.filterAllow = filter.test(event.record.row, event.record.header.value)
     }
 
 
@@ -346,7 +346,7 @@ class ReportPipeline(
             return
         }
 
-        summary.add(event.record.item, event.record.header.value)
+        summary.add(event.record.row, event.record.header.value)
     }
 
 
@@ -365,7 +365,7 @@ class ReportPipeline(
             return
         }
 
-        output.add(event.record.item, event.record.header.value)
+        output.add(event.record.row, event.record.header.value)
     }
 
 

@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
 
-class PipelineInputDecoder(
+class ProcessorInputDecoder(
     val charset: Charset
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ class PipelineInputDecoder(
         }
 
         if (cr.isMalformed) {
-            check(! data.endOfStream)
+            check(! data.endOfData)
             leftover.clear()
             for (i in cr.length() downTo 1) {
                 leftover.put(data.bytes[data.bytesLength - i])

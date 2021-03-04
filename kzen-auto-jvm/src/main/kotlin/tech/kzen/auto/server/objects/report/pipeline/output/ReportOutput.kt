@@ -9,7 +9,7 @@ import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.model.ReportRunSignature
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.PivotBuilder
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.RowIndex
@@ -182,14 +182,14 @@ class ReportOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordItem: RecordItemBuffer, header: RecordHeader) {
+    fun add(recordRow: RecordRowBuffer, header: RecordHeader) {
         if (indexedCsvTable != null) {
 //            val values = row.getOrEmptyAll(reportRunSignature.columnNames)
-            indexedCsvTable.add(recordItem, header)
+            indexedCsvTable.add(recordRow, header)
             progress?.nextOutput(1L)
         }
         else {
-            val newRow = pivotBuilder!!.add(recordItem, header)
+            val newRow = pivotBuilder!!.add(recordRow, header)
             if (newRow) {
                 progress?.nextOutput(1L)
             }
@@ -320,7 +320,7 @@ class ReportOutput(
 
         // TODO: optimize to be GC-free
         Files.newBufferedWriter(path).use { output ->
-            val record = RecordItemBuffer()
+            val record = RecordRowBuffer()
 
             if (indexedCsvTable != null) {
                 indexedCsvTable.traverseWithHeader { row ->

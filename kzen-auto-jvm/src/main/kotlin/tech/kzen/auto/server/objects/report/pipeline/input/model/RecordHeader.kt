@@ -12,14 +12,14 @@ data class RecordHeader(
     companion object {
         const val missingIndex = -1
 
-        val empty = ofLine(RecordItemBuffer())
+        val empty = ofLine(RecordRowBuffer())
 
 
         fun of(headerNames: List<String>): RecordHeader {
-            return ofLine(RecordItemBuffer.of(headerNames))
+            return ofLine(RecordRowBuffer.of(headerNames))
         }
 
-        fun ofLine(recordLineBuffer: RecordItemBuffer): RecordHeader {
+        fun ofLine(recordLineBuffer: RecordRowBuffer): RecordHeader {
             val headerNames = recordLineBuffer.toList()
 
             val headerIndex = Object2IntLinkedOpenHashMap<String>(headerNames.size)

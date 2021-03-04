@@ -1,35 +1,32 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse.common;
 
 
-import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.plugin.model.DataInputEvent;
-import tech.kzen.auto.plugin.model.ModelOutputEvent;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer;
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer;
 
 
 public class FlatProcessorEvent
         extends DataInputEvent
-        implements ModelOutputEvent<RecordItemBuffer>
 {
-    public final RecordItemBuffer model = new RecordItemBuffer();
+    public final RecordRowBuffer model = new RecordRowBuffer();
     public boolean skip = false;
 
 
-    @NotNull
-    @Override
-    public Class<RecordItemBuffer> getType() {
-        return RecordItemBuffer.class;
-    }
-
-
-    @Override
-    public RecordItemBuffer getModel() {
-        return model;
-    }
-
-
-    @Override
-    public boolean getSkip() {
-        return skip;
-    }
+//    @NotNull
+//    @Override
+//    public Class<RecordRowBuffer> getType() {
+//        return RecordRowBuffer.class;
+//    }
+//
+//
+//    @Override
+//    public RecordRowBuffer getModel() {
+//        return model;
+//    }
+//
+//
+//    @Override
+//    public boolean getSkip() {
+//        return skip;
+//    }
 }

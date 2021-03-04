@@ -5,7 +5,7 @@ import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 
 
 class ReportFilter(
@@ -50,7 +50,7 @@ class ReportFilter(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun test(item: RecordItemBuffer, header: RecordHeader): Boolean {
+    fun test(row: RecordRowBuffer, header: RecordHeader): Boolean {
         val itemIndices = recordHeaderIndex.indices(header)
 
         for (i in nonEmptyFilterColumnNames.indices) {
@@ -64,7 +64,7 @@ class ReportFilter(
                 }
             }
             else {
-                flyweight.selectHostField(item, indexInItem)
+                flyweight.selectHostField(row, indexInItem)
                 val present = columnCriteriaSpecValues.contains(flyweight)
 
                 when (columnCriteriaType) {

@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse.csv;
 
 
 import org.jetbrains.annotations.NotNull;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer;
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordParser;
 
 import java.io.IOException;
@@ -77,20 +77,20 @@ public class CsvRecordParser implements RecordParser
     //-----------------------------------------------------------------------------------------------------------------
     @Override
     public void parseFull(
-            @NotNull RecordItemBuffer recordItemBuffer,
+            @NotNull RecordRowBuffer recordRowBuffer,
             @NotNull char[] contentChars,
             int recordOffset,
             int recordLength,
             int fieldCount
     ) {
-        recordItemBuffer.growTo(recordLength, fieldCount);
+        recordRowBuffer.growTo(recordLength, fieldCount);
         partialState = stateStartOfField;
 
         int endIndex = recordOffset + recordLength;
         int fieldOffset = recordOffset;
 
         for (int i = 0; i < fieldCount; i++) {
-            int length = parseField(recordItemBuffer, contentChars, fieldOffset, endIndex);
+            int length = parseField(recordRowBuffer, contentChars, fieldOffset, endIndex);
 
             fieldOffset += length;
             if (i != fieldCount - 1) {
@@ -102,19 +102,19 @@ public class CsvRecordParser implements RecordParser
 
 
     private int parseField(
-            @NotNull RecordItemBuffer recordItemBuffer,
+            @NotNull RecordRowBuffer recordRowBuffer,
             @NotNull char[] contentChars,
             int fieldOffset,
             int endIndex
     ) {
         if (fieldOffset == endIndex) {
-            recordItemBuffer.commitFieldUnsafe();
+            recordRowBuffer.commitFieldUnsafe();
             return 0;
         }
 
         char first = contentChars[fieldOffset];
         if (first == ',') {
-            recordItemBuffer.commitFieldUnsafe();
+            recordRowBuffer.commitFieldUnsafe();
             return 0;
         }
         else if (first == '"') {
@@ -123,17 +123,17 @@ public class CsvRecordParser implements RecordParser
                 char nextChar = contentChars[i];
                 if (nextChar == '"') {
                     if (i == endIndex - 1) {
-                        recordItemBuffer.addToFieldAndCommitUnsafe(
+                        recordRowBuffer.addToFieldAndCommitUnsafe(
                                 contentChars, segmentStart, i - segmentStart - 1);
                         return i - fieldOffset;
                     }
                     else if (contentChars[i + 1] == '"') {
-                        recordItemBuffer.addToFieldUnsafe(contentChars, segmentStart, i - segmentStart);
+                        recordRowBuffer.addToFieldUnsafe(contentChars, segmentStart, i - segmentStart);
                         i++; // skip quoted quote
                         segmentStart = i;
                     }
                     else {
-                        recordItemBuffer.addToFieldAndCommitUnsafe(
+                        recordRowBuffer.addToFieldAndCommitUnsafe(
                                 contentChars, segmentStart, i - segmentStart);
                         return i - fieldOffset + 1;
                     }
@@ -146,11 +146,11 @@ public class CsvRecordParser implements RecordParser
                 char nextChar = contentChars[i];
                 if (nextChar == ',') {
                     int length = i - fieldOffset;
-                    recordItemBuffer.addToFieldAndCommitUnsafe(contentChars, fieldOffset, length);
+                    recordRowBuffer.addToFieldAndCommitUnsafe(contentChars, fieldOffset, length);
                     return length;
                 }
             }
-            recordItemBuffer.addToFieldAndCommitUnsafe(contentChars, fieldOffset, endIndex - fieldOffset);
+            recordRowBuffer.addToFieldAndCommitUnsafe(contentChars, fieldOffset, endIndex - fieldOffset);
             return endIndex - fieldOffset;
         }
     }
@@ -159,31 +159,31 @@ public class CsvRecordParser implements RecordParser
     //-----------------------------------------------------------------------------------------------------------------
     @Override
     public void parsePartial(
-            @NotNull RecordItemBuffer recordItemBuffer,
+            @NotNull RecordRowBuffer recordRowBuffer,
             @NotNull char[] contentChars,
             int recordOffset,
             int recordLength,
             int fieldCount,
             boolean endPartial
     ) {
-        recordItemBuffer.growBy(recordLength, fieldCount);
+        recordRowBuffer.growBy(recordLength, fieldCount);
 
         int end = recordOffset + recordLength;
         for (int i = recordOffset; i < end; i++) {
-            partialState = nextPartial(contentChars[i], recordItemBuffer);
+            partialState = nextPartial(contentChars[i], recordRowBuffer);
         }
 
         if (! endPartial) {
-            recordItemBuffer.commitFieldUnsafe();
+            recordRowBuffer.commitFieldUnsafe();
         }
 
         if (fieldCount > 1) {
-            recordItemBuffer.indicateNonEmpty();
+            recordRowBuffer.indicateNonEmpty();
         }
     }
 
 
-    private int nextPartial(char nextChar, @NotNull RecordItemBuffer recordLineBuffer) {
+    private int nextPartial(char nextChar, @NotNull RecordRowBuffer recordLineBuffer) {
         return switch (partialState) {
             case stateStartOfField ->
                     onStartOfField(nextChar, recordLineBuffer);
@@ -206,7 +206,7 @@ public class CsvRecordParser implements RecordParser
     }
 
 
-    private int onStartOfField(char nextChar, @NotNull RecordItemBuffer recordLineBuffer) {
+    private int onStartOfField(char nextChar, @NotNull RecordRowBuffer recordLineBuffer) {
         switch (nextChar) {
             case quotation:
                 return stateInQuoted;
@@ -226,7 +226,7 @@ public class CsvRecordParser implements RecordParser
     }
 
 
-    private int onEndOfRecord(char nextChar, @NotNull RecordItemBuffer recordLineBuffer) {
+    private int onEndOfRecord(char nextChar, @NotNull RecordRowBuffer recordLineBuffer) {
         switch (nextChar) {
             case quotation:
                 return stateInQuoted;
@@ -245,7 +245,7 @@ public class CsvRecordParser implements RecordParser
     }
 
 
-    private int onUnquoted(char nextChar, @NotNull RecordItemBuffer recordLineBuffer) {
+    private int onUnquoted(char nextChar, @NotNull RecordRowBuffer recordLineBuffer) {
         switch (nextChar) {
             case delimiter -> {
                 recordLineBuffer.commitFieldUnsafe();
@@ -268,7 +268,7 @@ public class CsvRecordParser implements RecordParser
     }
 
 
-    private int onQuoted(char nextChar, @NotNull RecordItemBuffer recordLineBuffer) {
+    private int onQuoted(char nextChar, @NotNull RecordRowBuffer recordLineBuffer) {
         if (nextChar == quotation) {
             recordLineBuffer.indicateNonEmpty();
             return stateInQuotedQuote;
@@ -279,7 +279,7 @@ public class CsvRecordParser implements RecordParser
     }
 
 
-    private int onQuotedQuote(char nextChar, @NotNull RecordItemBuffer recordLineBuffer) {
+    private int onQuotedQuote(char nextChar, @NotNull RecordRowBuffer recordLineBuffer) {
         switch (nextChar) {
             case quotation -> {
                 recordLineBuffer.addToFieldUnsafe(nextChar);

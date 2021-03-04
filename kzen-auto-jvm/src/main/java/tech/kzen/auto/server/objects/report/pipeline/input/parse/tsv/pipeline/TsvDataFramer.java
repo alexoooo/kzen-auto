@@ -60,14 +60,10 @@ public class TsvDataFramer
             frames.setPartialLast();
         }
         partial = nextPartial;
-    }
 
-
-    @Override
-    public void endOfStream(
-            @NotNull DataBlockBuffer dataBlockBuffer
-    ) {
-        dataBlockBuffer.frames.clearPartialLast();
-        partial = false;
+        if (dataBlockBuffer.endOfData) {
+            dataBlockBuffer.frames.clearPartialLast();
+            partial = false;
+        }
     }
 }

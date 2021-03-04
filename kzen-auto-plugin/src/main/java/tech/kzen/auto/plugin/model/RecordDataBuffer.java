@@ -4,7 +4,7 @@ package tech.kzen.auto.plugin.model;
 import java.util.Arrays;
 
 
-public class DataRecordBuffer {
+public class RecordDataBuffer {
     //-----------------------------------------------------------------------------------------------------------------
     private static final byte[] emptyBytes = new byte[0];
     private static final char[] emptyChars = new char[0];
@@ -77,7 +77,7 @@ public class DataRecordBuffer {
     }
 
 
-    public void copy(DataRecordBuffer source) {
+    public void copy(RecordDataBuffer source) {
         if (source.bytesLength != 0) {
             if (bytes.length < source.bytesLength) {
                 bytes = Arrays.copyOf(source.bytes, source.bytesLength);

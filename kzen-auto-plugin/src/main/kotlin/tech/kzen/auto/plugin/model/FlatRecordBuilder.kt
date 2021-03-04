@@ -6,9 +6,9 @@ interface FlatRecordBuilder {
     fun addAll(values: List<String>)
 
 
-    fun fieldCount(): Int
-    fun fieldContentLength(): Int
-
-
-    fun write(fieldContents: CharArray, fieldEnds: IntArray)
+//    fun fieldCount(): Int
+//    fun fieldContentLength(): Int
+//
+//
+//    fun write(fieldContents: CharArray, fieldEnds: IntArray)
 }

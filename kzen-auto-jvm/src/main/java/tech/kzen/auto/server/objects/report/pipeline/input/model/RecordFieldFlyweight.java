@@ -15,7 +15,7 @@ public class RecordFieldFlyweight
 
     public static RecordFieldFlyweight standalone(String value) {
         char[] chars = value.toCharArray();
-        RecordItemBuffer buffer = RecordItemBuffer.ofSingle(chars, 0, chars.length);
+        RecordRowBuffer buffer = RecordRowBuffer.ofSingle(chars, 0, chars.length);
         RecordFieldFlyweight flyweight = new RecordFieldFlyweight();
         flyweight.selectHostValue(buffer,0, 0, chars.length);
         return flyweight;
@@ -23,7 +23,7 @@ public class RecordFieldFlyweight
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private RecordItemBuffer host;
+    private RecordRowBuffer host;
 
     // NB: not part of equality or hash code, used for accessing doubleOrNan cache in host
     private int fieldIndex = -1;
@@ -33,7 +33,7 @@ public class RecordFieldFlyweight
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    public void selectHost(RecordItemBuffer host) {
+    public void selectHost(RecordRowBuffer host) {
         this.host = host;
         fieldIndex = -1;
         valueOffset = -1;
@@ -41,13 +41,13 @@ public class RecordFieldFlyweight
     }
 
 
-    public void selectHostValue(RecordItemBuffer host, int fieldIndex, int valueOffset, int valueLength) {
+    public void selectHostValue(RecordRowBuffer host, int fieldIndex, int valueOffset, int valueLength) {
         this.host = host;
         selectField(fieldIndex, valueOffset, valueLength);
     }
 
 
-    public void selectHostField(RecordItemBuffer host, int fieldIndex) {
+    public void selectHostField(RecordRowBuffer host, int fieldIndex) {
         this.host = host;
         selectField(fieldIndex);
     }
@@ -90,7 +90,7 @@ public class RecordFieldFlyweight
 
     //-----------------------------------------------------------------------------------------------------------------
     public RecordFieldFlyweight detach() {
-        RecordItemBuffer buffer = RecordItemBuffer.ofSingle(host.fieldContents, valueOffset, valueLength);
+        RecordRowBuffer buffer = RecordRowBuffer.ofSingle(host.fieldContents, valueOffset, valueLength);
         RecordFieldFlyweight detached = new RecordFieldFlyweight();
         detached.host = buffer;
         detached.valueOffset = 0;

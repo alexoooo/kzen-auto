@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input
 import tech.kzen.auto.server.objects.report.pipeline.event.handoff.RecordHandoff
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordFormat
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordParser
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
@@ -19,7 +19,7 @@ class ReportInputParser(
     private var currentParser: RecordParser? = null
     private var previousRecordHeader: RecordHeader = RecordHeader.empty
     private var firstRowHeader: Boolean = false
-    private val leftoverRecordLineBuffer = RecordItemBuffer()
+    private val leftoverRecordLineBuffer = RecordRowBuffer()
     private var currentProgress: ReportProgressTracker.Buffer? = null
 
 
@@ -61,7 +61,7 @@ class ReportInputParser(
             val record = recordHandoff.next()
             record.header.value = previousRecordHeader
 
-            val recordItem = record.item
+            val recordItem = record.row
             recordItem.clear()
 
             parser.parseFull(
@@ -138,7 +138,7 @@ class ReportInputParser(
 
             val record = recordHandoff.next()
             record.header.value = previousRecordHeader
-            record.item.copy(leftoverRecordLineBuffer)
+            record.row.copy(leftoverRecordLineBuffer)
             recordHandoff.commit()
 
             leftoverRecordLineBuffer.clear()

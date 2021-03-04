@@ -22,14 +22,12 @@ class ProcessorInputReader(
      * @return true if has next
      */
     fun poll(buffer: DataBlockBuffer): Boolean {
-        if (doneOrClosed) {
-            return false
-        }
+        check(! doneOrClosed)
 
         val result = input.read(buffer.bytes)
 
         if (result.isEndOfData()) {
-            buffer.endStream()
+            buffer.setEndOfStream()
 
             if (closeAtEndOfStream) {
                 close()

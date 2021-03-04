@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv;
 
 import org.jetbrains.annotations.NotNull;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer;
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordParser;
 
 
@@ -14,19 +14,19 @@ public class TsvRecordParser implements RecordParser
     //-----------------------------------------------------------------------------------------------------------------
     @Override
     public void parseFull(
-            @NotNull RecordItemBuffer recordItemBuffer,
+            @NotNull RecordRowBuffer recordRowBuffer,
             @NotNull char[] contentChars,
             int recordOffset,
             int recordLength,
             int fieldCount
     ) {
-        recordItemBuffer.growTo(recordLength, fieldCount);
+        recordRowBuffer.growTo(recordLength, fieldCount);
 
-        char[] fieldContents = recordItemBuffer.fieldContentsUnsafe();
-        int[] fieldEnds = recordItemBuffer.fieldEndsUnsafe();
+        char[] fieldContents = recordRowBuffer.fieldContentsUnsafe();
+        int[] fieldEnds = recordRowBuffer.fieldEndsUnsafe();
 
-        int nextFieldCount = recordItemBuffer.fieldCount();
-        int nextFieldContentLength = recordItemBuffer.fieldContentLength();
+        int nextFieldCount = recordRowBuffer.fieldCount();
+        int nextFieldContentLength = recordRowBuffer.fieldContentLength();
 
         int endIndex = recordOffset + recordLength;
         for (int i = recordOffset; i < endIndex; i++) {
@@ -41,21 +41,21 @@ public class TsvRecordParser implements RecordParser
         }
 
         fieldEnds[nextFieldCount++] = nextFieldContentLength;
-        recordItemBuffer.setCountAndLengthUnsafe(nextFieldCount, nextFieldContentLength);
+        recordRowBuffer.setCountAndLengthUnsafe(nextFieldCount, nextFieldContentLength);
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Override
     public void parsePartial(
-            @NotNull RecordItemBuffer recordItemBuffer,
+            @NotNull RecordRowBuffer recordRowBuffer,
             @NotNull char[] contentChars,
             int recordOffset,
             int recordLength,
             int fieldCount,
             boolean endPartial
     ) {
-        recordItemBuffer.growBy(recordLength, fieldCount);
+        recordRowBuffer.growBy(recordLength, fieldCount);
 
         int fieldLength = 0;
         int endIndex = recordOffset + recordLength;
@@ -63,7 +63,7 @@ public class TsvRecordParser implements RecordParser
             char nextChar = contentChars[i];
 
             if (nextChar == '\t') {
-                recordItemBuffer.addToFieldAndCommitUnsafe(contentChars, i - fieldLength, fieldLength);
+                recordRowBuffer.addToFieldAndCommitUnsafe(contentChars, i - fieldLength, fieldLength);
                 fieldLength = 0;
             }
             else {
@@ -72,14 +72,14 @@ public class TsvRecordParser implements RecordParser
         }
 
         if (endPartial) {
-            recordItemBuffer.addToFieldUnsafe(contentChars, endIndex - fieldLength, fieldLength);
+            recordRowBuffer.addToFieldUnsafe(contentChars, endIndex - fieldLength, fieldLength);
         }
         else {
-            recordItemBuffer.addToFieldAndCommitUnsafe(contentChars, endIndex - fieldLength, fieldLength);
+            recordRowBuffer.addToFieldAndCommitUnsafe(contentChars, endIndex - fieldLength, fieldLength);
         }
 
         if (fieldCount > 1) {
-            recordItemBuffer.indicateNonEmpty();
+            recordRowBuffer.indicateNonEmpty();
         }
     }
 }

@@ -31,6 +31,6 @@ class ReportPreCache(
             return
         }
 
-        event.record.item.populateCaches()
+        event.record.row.populateCaches()
     }
 }

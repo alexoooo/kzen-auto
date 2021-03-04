@@ -10,7 +10,7 @@ import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.LiteralFlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordFormat
 import java.nio.file.Path
 
@@ -40,9 +40,9 @@ class ReportInputChain(
         }
 
 
-        fun all(flatData: FlatData, bufferSize: Int): List<RecordItemBuffer> {
+        fun all(flatData: FlatData, bufferSize: Int): List<RecordRowBuffer> {
             val instance = withoutReadingHeader(flatData, bufferSize)
-            val records = mutableListOf<RecordItemBuffer>()
+            val records = mutableListOf<RecordRowBuffer>()
 
             while (true) {
                 val hasNext = instance.poll {
@@ -57,17 +57,17 @@ class ReportInputChain(
         }
 
 
-        fun allCsv(text: String, bufferSize: Int = RecordDataBuffer.defaultBufferSize): List<RecordItemBuffer> {
+        fun allCsv(text: String, bufferSize: Int = RecordDataBuffer.defaultBufferSize): List<RecordRowBuffer> {
             return all(LiteralFlatData.ofCsv(text), bufferSize)
         }
 
 
-        fun allTsv(text: String, bufferSize: Int = RecordDataBuffer.defaultBufferSize): List<RecordItemBuffer> {
+        fun allTsv(text: String, bufferSize: Int = RecordDataBuffer.defaultBufferSize): List<RecordRowBuffer> {
             return all(LiteralFlatData.ofTsv(text), bufferSize)
         }
 
 
-        fun allText(text: String, bufferSize: Int = RecordDataBuffer.defaultBufferSize): List<RecordItemBuffer> {
+        fun allText(text: String, bufferSize: Int = RecordDataBuffer.defaultBufferSize): List<RecordRowBuffer> {
             return all(LiteralFlatData.ofText(text), bufferSize)
         }
 
@@ -110,7 +110,7 @@ class ReportInputChain(
     /**
      * @return true if has next
      */
-    fun poll(visitor: (RecordItemBuffer) -> Unit): Boolean {
+    fun poll(visitor: (RecordRowBuffer) -> Unit): Boolean {
         val remaining = reader.poll(dataBuffer)
 
         decoder.decode(dataBuffer)
@@ -119,7 +119,7 @@ class ReportInputChain(
 
         recordHandoff.flush { recordMap ->
 //            recordMap.item.populateCaches()
-            visitor.invoke(recordMap.item)
+            visitor.invoke(recordMap.row)
         }
 
         return remaining

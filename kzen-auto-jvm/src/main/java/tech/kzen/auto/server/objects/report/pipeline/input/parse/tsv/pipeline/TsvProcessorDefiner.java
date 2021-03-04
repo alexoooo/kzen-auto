@@ -2,21 +2,20 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.pipeline;
 
 
 import org.jetbrains.annotations.NotNull;
-import tech.kzen.auto.plugin.definition.ProcessorDefiner;
-import tech.kzen.auto.plugin.definition.ProcessorDefinition;
-import tech.kzen.auto.plugin.definition.ProcessorDefinitionInfo;
-import tech.kzen.auto.plugin.definition.ProcessorSegmentDefinition;
+import tech.kzen.auto.plugin.definition.*;
+import tech.kzen.auto.plugin.model.ModelOutputEvent;
 import tech.kzen.auto.plugin.spec.DataEncodingSpec;
 import tech.kzen.auto.plugin.spec.TextEncodingSpec;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer;
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FirstRecordItemHeaderExtractor;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProcessorEvent;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.PassthroughFlatRecordExtractor;
 
 import java.util.List;
 
 
 public class TsvProcessorDefiner
-        implements ProcessorDefiner<RecordItemBuffer>
+        implements ProcessorDefiner<RecordRowBuffer>
 {
     //-----------------------------------------------------------------------------------------------------------------
     private static final DataEncodingSpec dataEncoding = new DataEncodingSpec(
@@ -26,6 +25,9 @@ public class TsvProcessorDefiner
             "TSV",
             List.of("tsv"),
             dataEncoding);
+
+
+    public static final ProcessorDefiner<RecordRowBuffer> instance = new TsvProcessorDefiner();
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -39,21 +41,22 @@ public class TsvProcessorDefiner
     //-----------------------------------------------------------------------------------------------------------------
     @NotNull
     @Override
-    public ProcessorDefinition<RecordItemBuffer> define() {
+    public ProcessorDefinition<RecordRowBuffer> define() {
         return new ProcessorDefinition<>(
-                TsvDataFramer::new,
-                FlatProcessorEvent::new,
+                new ProcessorDataDefinition<>(
+                        TsvDataFramer::new,
+                        RecordRowBuffer.class,
+                        List.of(defineSegment())
+                ),
                 FirstRecordItemHeaderExtractor::new,
-                null,
-                List.of(defineSegment()));
+                () -> PassthroughFlatRecordExtractor.instance);
     }
 
 
-    private ProcessorSegmentDefinition<FlatProcessorEvent, RecordItemBuffer> defineSegment() {
+    private ProcessorSegmentDefinition<FlatProcessorEvent, ModelOutputEvent<RecordRowBuffer>> defineSegment() {
         return new ProcessorSegmentDefinition<>(
-                FlatProcessorEvent.class,
-                RecordItemBuffer.class,
                 FlatProcessorEvent::new,
+                RecordRowBuffer.class,
                 List.of(
                         TsvPipelineLexer::new,
                         TsvPipelineParser::new

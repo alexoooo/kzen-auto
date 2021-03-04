@@ -2,7 +2,6 @@ package tech.kzen.auto.server.objects.report.pipeline.input.model;
 
 
 import net.openhft.hashing.LongHashFunction;
-import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.plugin.model.FlatRecordBuilder;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvRecordParser;
@@ -15,7 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 
 
-public class RecordItemBuffer
+public class RecordRowBuffer
         implements FlatRecordBuilder
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -27,21 +26,21 @@ public class RecordItemBuffer
     }
 
 
-    public static RecordItemBuffer of(String... values) {
+    public static RecordRowBuffer of(String... values) {
         return of(Arrays.asList(values));
     }
 
 
-    public static RecordItemBuffer of(List<String> values) {
-        RecordItemBuffer buffer = new RecordItemBuffer(0, 0);
+    public static RecordRowBuffer of(List<String> values) {
+        RecordRowBuffer buffer = new RecordRowBuffer(0, 0);
         buffer.addAll(values);
         buffer.populateCaches();
         return buffer;
     }
 
 
-    public static RecordItemBuffer ofSingle(char[] contents, int offset, int length) {
-        RecordItemBuffer buffer = new RecordItemBuffer(length, 1);
+    public static RecordRowBuffer ofSingle(char[] contents, int offset, int length) {
+        RecordRowBuffer buffer = new RecordRowBuffer(length, 1);
         System.arraycopy(contents, offset, buffer.fieldContents, 0, length);
         buffer.fieldCount = 1;
         buffer.fieldEnds[0] = length;
@@ -68,13 +67,13 @@ public class RecordItemBuffer
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    public RecordItemBuffer()
+    public RecordRowBuffer()
     {
         this(0, 0);
     }
 
 
-    public RecordItemBuffer(int expectedContentLength, int expectedFieldCount)
+    public RecordRowBuffer(int expectedContentLength, int expectedFieldCount)
     {
         fieldContents = new char[expectedContentLength];
         fieldEnds = new int[expectedFieldCount];
@@ -86,13 +85,13 @@ public class RecordItemBuffer
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Override
+//    @Override
     public int fieldCount() {
         return fieldCount;
     }
 
 
-    @Override
+//    @Override
     public int fieldContentLength() {
         return fieldContentLength;
     }
@@ -448,7 +447,7 @@ public class RecordItemBuffer
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    public void copy(RecordItemBuffer that) {
+    public void copy(RecordRowBuffer that) {
         fieldCount = that.fieldCount;
         fieldContentLength = that.fieldContentLength;
         nonEmpty = that.nonEmpty;
@@ -471,18 +470,18 @@ public class RecordItemBuffer
     }
 
 
-    public RecordItemBuffer prototype() {
-        RecordItemBuffer prototype = new RecordItemBuffer(0, 0);
+    public RecordRowBuffer prototype() {
+        RecordRowBuffer prototype = new RecordRowBuffer(0, 0);
         prototype.copy(this);
         return prototype;
     }
 
 
-    @Override
-    public void write(@NotNull char[] fieldContents, @NotNull int[] fieldEnds) {
-        System.arraycopy(this.fieldContents, 0, fieldContents, 0, fieldContentLength);
-        System.arraycopy(this.fieldEnds, 0, fieldEnds, 0, fieldCount);
-    }
+//    @Override
+//    public void write(@NotNull char[] fieldContents, @NotNull int[] fieldEnds) {
+//        System.arraycopy(this.fieldContents, 0, fieldContents, 0, fieldContentLength);
+//        System.arraycopy(this.fieldEnds, 0, fieldEnds, 0, fieldCount);
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.calc
 import org.junit.Test
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
 import tech.kzen.auto.server.util.WorkUtils
@@ -389,7 +389,7 @@ class CalculatedColumnEvalTest {
             columnNames)
 
         val value = calculatedColumn.evaluate(
-            RecordItemBuffer.of(aValue, bValue),
+            RecordRowBuffer.of(aValue, bValue),
             RecordHeader.of(columnNames))
 
         assertEquals(expected, value)

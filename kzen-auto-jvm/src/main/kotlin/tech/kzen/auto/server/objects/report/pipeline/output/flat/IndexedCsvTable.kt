@@ -4,7 +4,7 @@ import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.InputStreamFlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.FileOffsetStore
@@ -66,7 +66,7 @@ class IndexedCsvTable(
     //-----------------------------------------------------------------------------------------------------------------
     init {
         if (offsetStore.size() == 0L) {
-            bufferWriter.write(RecordItemBuffer.of(header).toCsv())
+            bufferWriter.write(RecordRowBuffer.of(header).toCsv())
             bufferWriter.write(lineBreak)
             bufferWriter.flush()
 
@@ -90,7 +90,7 @@ class IndexedCsvTable(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordItem: RecordItemBuffer, recordHeader: RecordHeader) {
+    fun add(recordRow: RecordRowBuffer, recordHeader: RecordHeader) {
         val indices = headerIndex.indices(recordHeader)
 
         var first = true
@@ -103,7 +103,7 @@ class IndexedCsvTable(
             }
 
             if (i != -1) {
-                recordItem.writeCsvField(i, bufferWriter)
+                recordRow.writeCsvField(i, bufferWriter)
             }
         }
 

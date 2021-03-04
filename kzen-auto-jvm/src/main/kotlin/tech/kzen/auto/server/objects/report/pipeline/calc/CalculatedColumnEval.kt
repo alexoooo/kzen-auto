@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.calc
 
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.KotlinCode
 
@@ -105,7 +105,7 @@ ${ColumnValueConversions.operators.joinToString("\n") {
 }}
 import ${ RecordHeader::class.java.name }
 import ${ RecordHeaderIndex::class.java.name }
-import ${ RecordItemBuffer::class.java.name }
+import ${ RecordRowBuffer::class.java.name }
 
 
 class $mainClassName: ${ CalculatedColumn::class.java.simpleName } {
@@ -115,7 +115,7 @@ class $mainClassName: ${ CalculatedColumn::class.java.simpleName } {
     }
 
     private var indices = IntArray(0)
-    private var record: ${ RecordItemBuffer::class.java.simpleName } = ${ RecordItemBuffer::class.java.simpleName }()
+    private var record: ${ RecordRowBuffer::class.java.simpleName } = ${ RecordRowBuffer::class.java.simpleName }()
 
     private fun columnValue(columnIndex: Int): ${ ColumnValue::class.java.simpleName } {
         val index = indices[columnIndex]
@@ -126,7 +126,7 @@ class $mainClassName: ${ CalculatedColumn::class.java.simpleName } {
 $columnAccessors
 
     override fun evaluate(
-        recordItemBuffer: ${ RecordItemBuffer::class.java.simpleName },
+        recordItemBuffer: ${ RecordRowBuffer::class.java.simpleName },
         recordHeader: ${ RecordHeader::class.java.simpleName }
     ): String {
         record = recordItemBuffer

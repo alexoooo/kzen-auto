@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
 import java.nio.file.Files
 import java.nio.file.Path
@@ -48,7 +48,7 @@ class ColumnListingAction(
         val csvBody = columnNames
             .withIndex()
             .joinToString("\n") {
-                RecordItemBuffer.of(listOf(it.index.toString(), it.value)).toCsv()
+                RecordRowBuffer.of(listOf(it.index.toString(), it.value)).toCsv()
             }
 
         val csvFile = "Number,Name\n$csvBody"

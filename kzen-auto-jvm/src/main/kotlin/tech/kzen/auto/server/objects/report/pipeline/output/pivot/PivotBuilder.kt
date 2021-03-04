@@ -7,7 +7,7 @@ import tech.kzen.auto.server.objects.report.pipeline.calc.ColumnValueUtils
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.ValueStatistics
 
@@ -80,7 +80,7 @@ class PivotBuilder(
     /**
      * @return true if new row was created
      */
-    fun add(recordItem: RecordItemBuffer, header: RecordHeader): Boolean {
+    fun add(recordRow: RecordRowBuffer, header: RecordHeader): Boolean {
         val headerIndexes = valueColumnIndex.indices(header)
 
         var present = false
@@ -94,13 +94,13 @@ class PivotBuilder(
                 }
                 else {
                     present = true
-                    flyweight.selectHostField(recordItem, headerIndex)
+                    flyweight.selectHostField(recordRow, headerIndex)
                     flyweight.toDoubleOrNan()
                 }
         }
 
         // NB: get row index regardless if any values present
-        val rowOrdinal = rowIndex(recordItem, header)
+        val rowOrdinal = rowIndex(recordRow, header)
 
         if (present) {
             valueStatistics.addOrUpdate(rowOrdinal, valueBuffer)
@@ -114,7 +114,7 @@ class PivotBuilder(
     }
 
 
-    private fun rowIndex(recordItem: RecordItemBuffer, header: RecordHeader): Long {
+    private fun rowIndex(recordRow: RecordRowBuffer, header: RecordHeader): Long {
         var valueAdded = false
         val headerIndices = rowColumnIndex.indices(header)
 
@@ -126,7 +126,7 @@ class PivotBuilder(
                     rowIndex.valueIndexOfMissing()
                 }
                 else {
-                    flyweight.selectHostField(recordItem, index)
+                    flyweight.selectHostField(recordRow, index)
 
                     val rowOrdinal = rowIndex.valueIndexOf(flyweight)
                     if (rowOrdinal.wasAdded()) {

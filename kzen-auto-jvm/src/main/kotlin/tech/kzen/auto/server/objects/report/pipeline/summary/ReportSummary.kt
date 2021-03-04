@@ -9,7 +9,7 @@ import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordItemBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
 import tech.kzen.auto.server.objects.report.pipeline.summary.model.ValueSummaryBuilder
 import tech.kzen.auto.server.util.AutoJvmUtils
@@ -40,7 +40,7 @@ class ReportSummary(
 
         //-------------------------------------------------------------------------------------------------------------
         private fun toCsv(csv: List<List<String>>): String {
-            return csv.joinToString("\n") { RecordItemBuffer.of(it).toCsv() }
+            return csv.joinToString("\n") { RecordRowBuffer.of(it).toCsv() }
         }
 
 
@@ -350,8 +350,8 @@ class ReportSummary(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordItem: RecordItemBuffer, header: RecordHeader) {
-        flyweight.selectHost(recordItem);
+    fun add(recordRow: RecordRowBuffer, header: RecordHeader) {
+        flyweight.selectHost(recordRow);
 
         val indices = headerIndex.indices(header)
         for (i in builders.indices) {

@@ -1,6 +1,8 @@
 package tech.kzen.auto.plugin.model;
 
 
+import org.jetbrains.annotations.NotNull;
+
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 
@@ -21,6 +23,7 @@ public class DataBlockBuffer {
     }
 
 
+    @NotNull
     public static DataBlockBuffer ofTextOrBinary(boolean isText, int bytesSize) {
         return isText
                 ? ofText(bytesSize)
@@ -28,24 +31,29 @@ public class DataBlockBuffer {
     }
 
 
-    public static DataBlockBuffer ofBinary() {
-        return ofBinary(defaultBytesSize);
-    }
-
-
+    @NotNull
     public static DataBlockBuffer ofText() {
         return ofText(defaultBytesSize);
     }
 
 
+    @NotNull
+    public static DataBlockBuffer ofBinary() {
+        return ofBinary(defaultBytesSize);
+    }
+
+
+    @NotNull
+    public static DataBlockBuffer ofText(int bytesSize) {
+        return new DataBlockBuffer(bytesSize, true);
+    }
+
+
+    @NotNull
     public static DataBlockBuffer ofBinary(int bytesSize) {
         return new DataBlockBuffer(bytesSize, false);
     }
 
-
-    public static DataBlockBuffer ofText(int bytesSize) {
-        return new DataBlockBuffer(bytesSize, true);
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -60,7 +68,7 @@ public class DataBlockBuffer {
     public final char[] chars;
     public int charsLength;
 
-    public boolean endOfStream;
+//    public boolean endOfStream;
 
     public final DataFrameBuffer frames;
 
@@ -97,14 +105,14 @@ public class DataBlockBuffer {
 //    }
 
 
-    public void endStream() {
+    public void setEndOfStream() {
         bytesLength = 0;
-        endOfStream = true;
+        endOfData = true;
     }
 
 
     public void readNext(int bytesLength) {
         this.bytesLength = bytesLength;
-        endOfStream = false;
+        endOfData = false;
     }
 }
