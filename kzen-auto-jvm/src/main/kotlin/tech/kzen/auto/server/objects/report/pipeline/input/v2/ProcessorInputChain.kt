@@ -7,6 +7,7 @@ import tech.kzen.auto.plugin.model.DataInputEvent
 import tech.kzen.auto.plugin.model.ModelOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.event.v2.ListPipelineOutput
 import tech.kzen.auto.server.objects.report.pipeline.event.v2.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.ProcessorInputReader.Companion.ofLiteral
 import java.nio.charset.Charset
 import java.util.function.Consumer
 
@@ -19,6 +20,30 @@ class ProcessorInputChain<T>(
 ):
         AutoCloseable
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        fun <T> readAll(
+            textBytes: ByteArray,
+            processorDataDefinition: ProcessorDataDefinition<T>,
+            transform: (T) -> (T) = { it },
+            charset: Charset = Charsets.UTF_8,
+            dataBlockSize: Int = textBytes.size
+        ): List<T> {
+            val chain = ProcessorInputChain(
+                ofLiteral(textBytes),
+                processorDataDefinition,
+                charset,
+                dataBlockSize)
+
+            val builder: MutableList<T> = mutableListOf()
+
+            chain.forEachModel { i -> builder.add(transform(i)) }
+
+            return builder
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private val dataBlockBuffer = DataBlockBuffer.ofTextOrBinary(textCharset != null, dataBlockSize)
     private val modelOutputBuffer = ListPipelineOutput { ProcessorOutputEvent<T>() }

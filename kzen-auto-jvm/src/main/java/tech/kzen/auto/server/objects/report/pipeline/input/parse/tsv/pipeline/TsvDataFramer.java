@@ -23,8 +23,8 @@ public class TsvDataFramer
     ) {
         char[] chars = Objects.requireNonNull(dataBlockBuffer.chars);
         int charLength = dataBlockBuffer.charsLength;
-
         DataFrameBuffer frames = dataBlockBuffer.frames;
+
         boolean nextPartial = partial;
 
         int offset = 0;

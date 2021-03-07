@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.pipeline;
+package tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.pipeline;
 
 
 import org.jetbrains.annotations.NotNull;
@@ -18,7 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 
-public class TsvProcessorDefiner
+public class CsvProcessorDefiner
         implements ProcessorDefiner<RecordRowBuffer>
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -26,12 +26,12 @@ public class TsvProcessorDefiner
             new TextEncodingSpec(null));
 
     private static final ProcessorDefinitionInfo info = new ProcessorDefinitionInfo(
-            "TSV",
-            List.of("tsv"),
+            "CSV",
+            List.of("csv"),
             dataEncoding);
 
 
-    public static final TsvProcessorDefiner instance = new TsvProcessorDefiner();
+    public static final CsvProcessorDefiner instance = new CsvProcessorDefiner();
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -80,7 +80,7 @@ public class TsvProcessorDefiner
 
     private ProcessorDataDefinition<RecordRowBuffer> defineData() {
         return new ProcessorDataDefinition<>(
-                TsvDataFramer::new,
+                CsvDataFramer::new,
                 RecordRowBuffer.class,
                 List.of(defineSegment()));
     }
@@ -91,8 +91,8 @@ public class TsvProcessorDefiner
                 FlatProcessorEvent::new,
                 RecordRowBuffer.class,
                 List.of(
-                        TsvPipelineLexer::new,
-                        TsvPipelineParser::new
+                        CsvPipelineLexer::new,
+                        CsvPipelineParser::new
                 ),
                 FlatPipelineHandoff::new);
     }

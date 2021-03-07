@@ -12,7 +12,6 @@ public class TsvPipelineLexer
     @Override
     public void process(FlatProcessorEvent model) {
         RecordDataBuffer data = model.getData();
-
         char[] chars = data.chars;
         int charsLength = data.charsLength;
 

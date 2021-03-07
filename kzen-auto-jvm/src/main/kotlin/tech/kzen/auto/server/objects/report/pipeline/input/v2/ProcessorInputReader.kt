@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.v2
 
 import tech.kzen.auto.plugin.model.DataBlockBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.FlatDataReader
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.InputStreamFlatDataReader
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
 
 
@@ -13,6 +14,17 @@ class ProcessorInputReader(
 ):
     AutoCloseable
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        fun ofLiteral(textBytes: ByteArray): ProcessorInputReader {
+            return ProcessorInputReader(
+                InputStreamFlatDataReader.ofLiteral(textBytes),
+                true,
+                null)
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private var doneOrClosed = false
 

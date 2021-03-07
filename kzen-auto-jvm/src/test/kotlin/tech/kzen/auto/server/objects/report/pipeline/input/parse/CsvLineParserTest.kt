@@ -4,7 +4,7 @@ import org.junit.Test
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.pipeline.CsvProcessorDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -191,7 +191,7 @@ class CsvLineParserTest {
         assertEquals(listOf(""), parsed[5].toList())
         assertEquals(listOf(""), parsed[6].toList())
 
-        for (i in 3 .. csv.length) {
+        for (i in 1 .. csv.length) {
             val parsedBuffered = read(csv, i)
             assertEquals(7, parsedBuffered.size)
         }
@@ -208,7 +208,7 @@ class CsvLineParserTest {
                 "\r\n" +
                 "\r\n"
 
-        for (i in 3 .. csv.length) {
+        for (i in 1 .. csv.length) {
             val parsedBuffered = read(csv, i)
             assertEquals(7, parsedBuffered.size)
         }
@@ -225,7 +225,7 @@ class CsvLineParserTest {
                 "\n" +
                 "\r\n"
 
-        for (i in 3 .. csv.length) {
+        for (i in 1 .. csv.length) {
             val parsedBuffered = read(csv, i)
             assertEquals(7, parsedBuffered.size)
         }
@@ -282,9 +282,27 @@ class CsvLineParserTest {
 
 
     @Test
+    fun quotesInQuotes() {
+        val csvLines = "\"\"\"foo\"\"\""
+        val parsed = read(csvLines)
+        assertEquals(listOf("\"foo\""), parsed[0].toList())
+        assertEquals(csvLines, parsed[0].toCsv())
+    }
+
+
+    @Test
+    fun doubleQuotesInQuotes() {
+        val csvLines = "\"\"\"\"\"foo\"\"\"\"\""
+        val parsed = read(csvLines)
+        assertEquals(listOf("\"\"foo\"\""), parsed[0].toList())
+        assertEquals(csvLines, parsed[0].toCsv())
+    }
+
+
+    @Test
     fun emptyLines() {
         val csvLines = "\r\n\r\n\n\n\n\r\n"
-        for (i in 3 .. csvLines.length) {
+        for (i in 1 .. csvLines.length) {
             assertEquals(6, read(csvLines, i).size)
         }
     }
@@ -303,7 +321,7 @@ class CsvLineParserTest {
         val csvLines = ",,,,,,,,,"
         val values = listOf("", "", "", "", "", "", "", "", "", "")
         assertEquals(values, read(csvLines)[0].toList())
-        for (i in 3 .. 8) {
+        for (i in 1 .. 8) {
             assertEquals(values, read(csvLines, i)[0].toList())
         }
     }
@@ -336,7 +354,7 @@ class CsvLineParserTest {
     fun fiveSingleCharacterValues() {
         val csvLine = "a,b,c,d,e"
         assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine)[0].toList())
-        for (i in 3 .. 8) {
+        for (i in 1 .. 8) {
             assertEquals(listOf("a", "b", "c", "d", "e"), read(csvLine, i)[0].toList())
         }
     }
@@ -351,7 +369,7 @@ class CsvLineParserTest {
         val cells = csvLine.split(",")
 
         assertEquals(cells, read(csvLine)[0].toList())
-        for (i in 3 .. 16) {
+        for (i in 1 .. 16) {
             assertEquals(cells, read(csvLine, i)[0].toList())
         }
     }
@@ -372,7 +390,7 @@ class CsvLineParserTest {
         assertEquals(25, line.toList().size)
         assertEquals(csvLine, line.toCsv())
 
-        for (i in 3 .. 16) {
+        for (i in 1 .. 16) {
             assertEquals(csvLine, read(csvLine, i)[0].toCsv())
         }
     }
@@ -390,7 +408,7 @@ class CsvLineParserTest {
         assertEquals(25, line.toList().size)
         assertEquals(csvLine, line.toCsv())
 
-        for (i in 3 .. 16) {
+        for (i in 1 .. 16) {
             assertEquals(csvLine, read(csvLineWithBlank, i)[0].toCsv())
         }
     }
@@ -407,7 +425,7 @@ class CsvLineParserTest {
         assertEquals(csvLineA, parsed[0].toCsv())
         assertEquals(csvLineB, parsed[1].toCsv())
 
-        for (i in 3 .. 128) {
+        for (i in 1 .. 128) {
             val parsedBuffered = read(lines, i)
             assertEquals(2, parsedBuffered.size)
             assertEquals(csvLineA, parsedBuffered[0].toCsv())
@@ -424,7 +442,7 @@ class CsvLineParserTest {
         assertEquals(1, parsed.size)
         assertEquals(csvRecord, parsed[0].toCsv())
 
-        for (i in 3 .. 128) {
+        for (i in 1 .. 128) {
             val parsedBuffered = read(csvRecord, i)
             assertEquals(1, parsedBuffered.size)
             assertEquals(csvRecord, parsedBuffered[0].toCsv())
@@ -468,6 +486,7 @@ class CsvLineParserTest {
         text: String,
         bufferSize: Int = text.encodeToByteArray().size.coerceAtLeast(RecordDataBuffer.minBufferSize)
     ): List<RecordRowBuffer> {
-        return ReportInputChain.allCsv(text, bufferSize)
+//        return ReportInputChain.allCsv(text, bufferSize)
+        return CsvProcessorDefiner.literal(text, bufferSize)
     }
 }
