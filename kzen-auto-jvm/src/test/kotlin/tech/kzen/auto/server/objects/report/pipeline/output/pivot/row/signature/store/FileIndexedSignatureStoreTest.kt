@@ -7,7 +7,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 
-@ExperimentalPathApi
 class FileIndexedSignatureStoreTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
@@ -61,6 +60,7 @@ class FileIndexedSignatureStoreTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @OptIn(ExperimentalPathApi::class)
     private fun use(signatureSize: Int, consumer: (FileIndexedSignatureStore) -> Unit) {
         val file = kotlin.io.path.createTempFile("FileIndexedSignatureStore")
 

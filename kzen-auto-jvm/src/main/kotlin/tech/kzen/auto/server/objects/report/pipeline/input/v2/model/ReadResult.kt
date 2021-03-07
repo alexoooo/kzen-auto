@@ -2,8 +2,8 @@ package tech.kzen.auto.server.objects.report.pipeline.input.v2.model
 
 
 @Suppress("EXPERIMENTAL_FEATURE_WARNING")
-@ExperimentalUnsignedTypes
-inline class ReadResult constructor(
+@OptIn(ExperimentalUnsignedTypes::class)
+inline class ReadResult  constructor(
     private val value: ULong
 ) {
     //-----------------------------------------------------------------------------------------------------------------

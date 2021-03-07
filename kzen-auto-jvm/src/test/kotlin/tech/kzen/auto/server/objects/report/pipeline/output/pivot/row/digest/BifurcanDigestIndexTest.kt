@@ -12,7 +12,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 
-@ExperimentalPathApi
 class BifurcanDigestIndexTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
@@ -89,6 +88,7 @@ class BifurcanDigestIndexTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @OptIn(ExperimentalPathApi::class)
     private fun use(consumer: (BifurcanDigestIndex) -> Unit) {
         val dir = kotlin.io.path.createTempDirectory("BifurcanDigestIndex")
 

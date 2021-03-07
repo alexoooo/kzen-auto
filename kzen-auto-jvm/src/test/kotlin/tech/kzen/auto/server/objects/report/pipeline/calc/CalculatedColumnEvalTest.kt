@@ -11,7 +11,6 @@ import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.assertEquals
 
 
-@ExperimentalPathApi
 class CalculatedColumnEvalTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
@@ -396,6 +395,7 @@ class CalculatedColumnEvalTest {
     }
 
 
+    @OptIn(ExperimentalPathApi::class)
     private fun calculatedColumnEval(): CalculatedColumnEval {
         val kotlinCompiler = EmbeddedKotlinCompiler()
         val workUtils = WorkUtils.temporary("CachedKotlinCompiler")

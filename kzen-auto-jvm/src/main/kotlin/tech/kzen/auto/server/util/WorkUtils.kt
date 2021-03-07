@@ -19,7 +19,7 @@ class WorkUtils(
         val sibling = WorkUtils(Paths.get(
             "../work"))
 
-        @ExperimentalPathApi
+        @OptIn(ExperimentalPathApi::class)
         fun temporary(name: String): WorkUtils {
             return WorkUtils(kotlin.io.path.createTempDirectory(name))
         }

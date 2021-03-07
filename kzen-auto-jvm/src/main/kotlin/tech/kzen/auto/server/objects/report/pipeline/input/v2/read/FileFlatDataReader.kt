@@ -14,7 +14,7 @@ import kotlin.io.path.name
 import kotlin.io.path.toPath
 
 
-@ExperimentalPathApi
+@OptIn(ExperimentalPathApi::class)
 class FileFlatDataReader constructor(
     location: Path,
     gzip: Boolean = location.name.endsWith(".gz"),

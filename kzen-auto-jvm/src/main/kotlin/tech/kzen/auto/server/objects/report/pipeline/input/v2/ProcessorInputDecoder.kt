@@ -21,7 +21,7 @@ class ProcessorInputDecoder(
         val output = data.charBuffer.position(0).limit(data.chars.size)
 
         if (leftover.position() > 0) {
-            while (true) {
+            while (input.hasRemaining()) {
                 leftover.put(input.get())
 
                 leftover.flip()

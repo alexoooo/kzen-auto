@@ -26,6 +26,9 @@ class ProcessorFrameFeeder(
 
         if (! frames.hasFull()) {
             check(! dataBlockBuffer.endOfData)
+            if (! continuingPartial) {
+                partialInput.addFrame(dataBlockBuffer, 0)
+            }
             return
         }
         else if (continuingPartial) {

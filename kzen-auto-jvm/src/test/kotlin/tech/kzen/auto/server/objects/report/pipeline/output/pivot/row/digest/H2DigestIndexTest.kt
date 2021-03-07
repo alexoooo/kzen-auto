@@ -12,7 +12,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 
-@ExperimentalPathApi
 class H2DigestIndexTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
@@ -90,6 +89,7 @@ class H2DigestIndexTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @OptIn(ExperimentalPathApi::class)
     private fun use(consumer: (H2DigestIndex) -> Unit) {
         val dir = kotlin.io.path.createTempDirectory("H2DigestIndex")
 

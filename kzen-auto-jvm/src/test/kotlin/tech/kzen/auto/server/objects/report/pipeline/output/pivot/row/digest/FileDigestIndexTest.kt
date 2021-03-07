@@ -13,7 +13,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 
-@ExperimentalPathApi
 class FileDigestIndexTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
@@ -114,6 +113,7 @@ class FileDigestIndexTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @OptIn(ExperimentalPathApi::class)
     private fun use(consumer: (FileDigestIndex) -> Unit) {
         val dir = kotlin.io.path.createTempDirectory("FileDigestIndex")
 

@@ -37,26 +37,32 @@ public class TsvDataFramer
             else {
                 switch (nextChar) {
                     case '\r' -> {
-                        frames.add(offset, i - offset);
+                        int length = i - offset;
+                        if (length > 0 || nextPartial) {
+                            frames.add(offset, i - offset);
+                        }
                         i++;
-                        offset = i;
+                        offset = i + 1;
                         nextPartial = false;
                     }
 
                     case '\n' -> {
-                        frames.add(offset, i - offset);
-                        offset = i;
+                        int length = i - offset;
+                        if (length > 0 || nextPartial) {
+                            frames.add(offset, i - offset);
+                        }
+                        offset = i + 1;
                         nextPartial = false;
                     }
 
                     default ->
-                            nextPartial = false;
+                            nextPartial = true;
                 }
             }
         }
 
         if (nextPartial) {
-            frames.add(offset, charLength - offset - 1);
+            frames.add(offset, charLength - offset);
             frames.setPartialLast();
         }
         partial = nextPartial;

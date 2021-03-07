@@ -10,7 +10,13 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FirstRecordItemHeaderExtractor;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProcessorEvent;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.PassthroughFlatRecordExtractor;
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.ProcessorInputChain;
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.ProcessorInputReader;
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.InputStreamFlatDataReader;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -27,7 +33,40 @@ public class TsvProcessorDefiner
             dataEncoding);
 
 
-    public static final ProcessorDefiner<RecordRowBuffer> instance = new TsvProcessorDefiner();
+    public static final TsvProcessorDefiner instance = new TsvProcessorDefiner();
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    public static List<RecordRowBuffer> literal(String text) {
+        byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
+        return literal(textBytes, StandardCharsets.UTF_8, textBytes.length);
+    }
+
+
+    public static List<RecordRowBuffer> literal(String text, int dataBlockSize) {
+        byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
+        return literal(textBytes, StandardCharsets.UTF_8, dataBlockSize);
+    }
+
+
+    public static List<RecordRowBuffer> literal(
+            byte[] textBytes, Charset charset, int dataBlockSize
+    ) {
+        ProcessorInputChain<RecordRowBuffer> chain = new ProcessorInputChain<>(
+                new ProcessorInputReader(
+                        InputStreamFlatDataReader.Companion.ofLiteral(textBytes),
+                        true,
+                        null),
+                instance.defineData(),
+                charset,
+                dataBlockSize);
+
+        List<RecordRowBuffer> builder = new ArrayList<>();
+
+        chain.forEachModel(i -> builder.add(i.prototype()));
+
+        return builder;
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -43,13 +82,17 @@ public class TsvProcessorDefiner
     @Override
     public ProcessorDefinition<RecordRowBuffer> define() {
         return new ProcessorDefinition<>(
-                new ProcessorDataDefinition<>(
-                        TsvDataFramer::new,
-                        RecordRowBuffer.class,
-                        List.of(defineSegment())
-                ),
+                defineData(),
                 FirstRecordItemHeaderExtractor::new,
                 () -> PassthroughFlatRecordExtractor.instance);
+    }
+
+
+    private ProcessorDataDefinition<RecordRowBuffer> defineData() {
+        return new ProcessorDataDefinition<>(
+                TsvDataFramer::new,
+                RecordRowBuffer.class,
+                List.of(defineSegment()));
     }
 
 

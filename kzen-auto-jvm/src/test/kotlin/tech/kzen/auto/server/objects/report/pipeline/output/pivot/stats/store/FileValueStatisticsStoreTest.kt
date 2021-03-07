@@ -8,7 +8,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 
-@ExperimentalPathApi
 class FileValueStatisticsStoreTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
@@ -73,6 +72,7 @@ class FileValueStatisticsStoreTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @OptIn(ExperimentalPathApi::class)
     private fun use(valueColumnCount: Int, consumer: (FileValueStatisticsStore) -> Unit) {
         val file = kotlin.io.path.createTempFile("FileValueStatisticsStore")
 

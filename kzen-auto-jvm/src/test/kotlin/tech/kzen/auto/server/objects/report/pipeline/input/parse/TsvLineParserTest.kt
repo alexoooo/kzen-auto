@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse
 import org.junit.Test
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.pipeline.TsvProcessorDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -62,8 +62,9 @@ class TsvLineParserTest {
         val tsvLines = "\t\t\t\t\t\t\t\t\t"
         val values = listOf("", "", "", "", "", "", "", "", "", "")
         assertEquals(values, read(tsvLines)[0].toList())
-        assertEquals(values, read(tsvLines, 3)[0].toList())
-        assertEquals(values, read(tsvLines, 4)[0].toList())
+        for (i in 1 .. 10) {
+            assertEquals(values, read(tsvLines, i)[0].toList())
+        }
     }
 
 
@@ -78,8 +79,9 @@ class TsvLineParserTest {
     fun fewCharacterValue() {
         val tsvLine = "abcde"
         assertEquals(listOf("abcde"), read(tsvLine)[0].toList())
-        assertEquals(listOf("abcde"), read(tsvLine, 3)[0].toList())
-        assertEquals(listOf("abcde"), read(tsvLine, 4)[0].toList())
+        for (i in 1 .. 4) {
+            assertEquals(listOf("abcde"), read(tsvLine, i)[0].toList())
+        }
     }
 
 
@@ -94,7 +96,7 @@ class TsvLineParserTest {
     fun fiveSingleCharacterValues() {
         val tsvLine = "a\tb\tc\td\te"
         assertEquals(listOf("a", "b", "c", "d", "e"), read(tsvLine)[0].toList())
-        for (i in 3 .. 8) {
+        for (i in 1 .. 8) {
             assertEquals(listOf("a", "b", "c", "d", "e"), read(tsvLine, i)[0].toList())
         }
     }
@@ -109,7 +111,7 @@ class TsvLineParserTest {
         val cells = tsvLine.split("\t")
 
         assertEquals(cells, read(tsvLine)[0].toList())
-        for (i in 3 .. 16) {
+        for (i in 1 .. 16) {
             assertEquals(cells, read(tsvLine, i)[0].toList())
         }
     }
@@ -121,7 +123,7 @@ class TsvLineParserTest {
         val parsed = read(tsvLines)
         assertEquals(listOf("foo", "bar"), parsed[0].toList())
         assertEquals(listOf("hello", "1"), parsed[1].toList())
-        for (i in 3 .. 18) {
+        for (i in 1 .. 18) {
             val bufferParsed = read(tsvLines, i)
             assertEquals(listOf("foo", "bar"), bufferParsed[0].toList())
             assertEquals(listOf("hello", "1"), bufferParsed[1].toList())
@@ -133,7 +135,7 @@ class TsvLineParserTest {
     fun simpleFourLineWithoutTrailer() {
         val tsvLines = "foo\tbar\r\nhello\t1\r\nworld\t42\r\nworld\t420"
         assertEquals(4, read(tsvLines).size)
-        for (i in 3 .. 38) {
+        for (i in 1 .. 38) {
             assertEquals(4, read(tsvLines).size)
         }
     }
@@ -145,7 +147,7 @@ class TsvLineParserTest {
         assertEquals(25, line.toList().size)
         assertEquals(tsvUtf8Line, line.toTsv())
 
-        for (i in 3 .. 16) {
+        for (i in 1 .. 16) {
             assertEquals(tsvUtf8Line, read(tsvUtf8Line, i)[0].toTsv())
         }
     }
@@ -162,7 +164,7 @@ class TsvLineParserTest {
         assertEquals(tsvLineA, parsed[0].toTsv())
         assertEquals(tsvLineB, parsed[1].toTsv())
 
-        for (i in 3 .. 128) {
+        for (i in 1 .. 128) {
             val parsedBuffered = read(lines, i)
             assertEquals(2, parsedBuffered.size)
             assertEquals(tsvLineA, parsedBuffered[0].toTsv())
@@ -182,7 +184,7 @@ class TsvLineParserTest {
         assertEquals(tsvLineA, parsed[0].toTsv())
         assertEquals(tsvLineB, parsed[1].toTsv())
 
-        for (i in 3 .. 128) {
+        for (i in 1 .. 128) {
             val parsedBuffered = read(lines, i)
             assertEquals(2, parsedBuffered.size)
             assertEquals(tsvLineA, parsedBuffered[0].toTsv())
@@ -196,6 +198,6 @@ class TsvLineParserTest {
         text: String,
         bufferSize: Int = text.length.coerceAtLeast(RecordDataBuffer.minBufferSize)
     ): List<RecordRowBuffer> {
-        return ReportInputChain.allTsv(text, bufferSize)
+        return TsvProcessorDefiner.literal(text, bufferSize)
     }
 }

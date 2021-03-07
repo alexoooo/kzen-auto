@@ -9,7 +9,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 
-@ExperimentalPathApi
 class FileIndexedTextStoreTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
@@ -47,6 +46,7 @@ class FileIndexedTextStoreTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @OptIn(ExperimentalPathApi::class)
     private fun use(consumer: (FileIndexedTextStore) -> Unit) {
         val workUtils = kotlin.io.path.createTempDirectory("FileIndexedTextStoreTest")
         val offsetFile = workUtils.resolve("offset")
