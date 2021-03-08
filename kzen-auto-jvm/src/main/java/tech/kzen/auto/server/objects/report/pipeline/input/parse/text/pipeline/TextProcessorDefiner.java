@@ -1,13 +1,16 @@
-package tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.pipeline;
+package tech.kzen.auto.server.objects.report.pipeline.input.parse.text.pipeline;
 
 
 import org.jetbrains.annotations.NotNull;
+import tech.kzen.auto.plugin.api.HeaderExtractor;
 import tech.kzen.auto.plugin.definition.*;
 import tech.kzen.auto.plugin.model.ModelOutputEvent;
 import tech.kzen.auto.plugin.spec.DataEncodingSpec;
 import tech.kzen.auto.plugin.spec.TextEncodingSpec;
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer;
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.*;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatPipelineHandoff;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProcessorEvent;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.PassthroughFlatRecordExtractor;
 import tech.kzen.auto.server.objects.report.pipeline.input.v2.ProcessorInputChain;
 
 import java.nio.charset.Charset;
@@ -15,7 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 
-public class TsvProcessorDefiner
+public class TextProcessorDefiner
         implements ProcessorDefiner<RecordRowBuffer>
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -23,12 +26,16 @@ public class TsvProcessorDefiner
             new TextEncodingSpec(null));
 
     private static final ProcessorDefinitionInfo info = new ProcessorDefinitionInfo(
-            "TSV",
-            List.of("tsv"),
+            "Text",
+            List.of("txt"),
             dataEncoding);
 
 
-    public static final TsvProcessorDefiner instance = new TsvProcessorDefiner();
+    public static final TextProcessorDefiner instance = new TextProcessorDefiner();
+
+    public static final String textHeader = "Text";
+    public static final HeaderExtractor<RecordRowBuffer> headerExtractor =
+            HeaderExtractor.Companion.ofLiteral(textHeader);
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -70,14 +77,14 @@ public class TsvProcessorDefiner
     public ProcessorDefinition<RecordRowBuffer> define() {
         return new ProcessorDefinition<>(
                 defineData(),
-                FirstRecordItemHeaderExtractor::new,
+                () -> headerExtractor,
                 () -> PassthroughFlatRecordExtractor.instance);
     }
 
 
     private ProcessorDataDefinition<RecordRowBuffer> defineData() {
         return new ProcessorDataDefinition<>(
-                TsvLineDataFramer::new,
+                TextLineDataFramer::new,
                 RecordRowBuffer.class,
                 List.of(defineSegment()));
     }
@@ -88,8 +95,8 @@ public class TsvProcessorDefiner
                 FlatProcessorEvent::new,
                 RecordRowBuffer.class,
                 List.of(
-                        TsvPipelineLexer::new,
-                        TsvPipelineParser::new
+                        TextPipelineLexer::new,
+                        TextPipelineParser::new
                 ),
                 FlatPipelineHandoff::new);
     }

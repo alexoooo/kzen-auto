@@ -52,7 +52,9 @@ public class CsvPipelineParser
             }
         }
 
-        recordRowBuffer.indicateNonEmpty();
+        if (charsLength > 0) {
+            recordRowBuffer.indicateNonEmpty();
+        }
         fieldEnds[nextFieldCount++] = nextFieldContentLength;
         recordRowBuffer.setCountAndLengthUnsafe(nextFieldCount, nextFieldContentLength);
     }

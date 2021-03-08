@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse
 import org.junit.Test
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.text.pipeline.TextProcessorDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -31,6 +31,19 @@ class TextLineParserTest {
 
 
     @Test
+    fun threeEmptyLinesWindows() {
+        val textLines = "\r\n\r\n"
+        for (i in 1 .. textLines.length) {
+            val read = read(textLines, i)
+            assertEquals(3, read.size)
+            for (j in 0 until 3) {
+                assertTrue(read[j].getString(0).isEmpty())
+            }
+        }
+    }
+
+
+    @Test
     fun twoEmptyLinesLinux() {
         val textLines = "\n"
         val read = read(textLines)
@@ -41,10 +54,36 @@ class TextLineParserTest {
 
 
     @Test
+    fun threeEmptyLinesLinux() {
+        val textLines = "\n\n"
+        for (i in 1 .. textLines.length) {
+            val read = read(textLines, i)
+            assertEquals(3, read.size)
+            for (j in 0 until 3) {
+                assertTrue(read[j].getString(0).isEmpty())
+            }
+        }
+    }
+
+
+    @Test
+    fun emptyLinesMixedShort() {
+        val textLines = "\r\n\n"
+//        assertEquals(7, read(textLines, 1).size)
+        assertEquals(3, read(textLines).size)
+        for (i in 1 .. textLines.length) {
+            val read = read(textLines, i)
+            assertEquals(3, read.size)
+            assertTrue(read.all { it.getString(0).isEmpty() })
+        }
+    }
+
+
+    @Test
     fun emptyLinesMixed() {
         val textLines = "\r\n\r\n\n\n\n\r\n"
         assertEquals(7, read(textLines).size)
-        for (i in 3 .. textLines.length) {
+        for (i in 1 .. textLines.length) {
             val read = read(textLines, i)
             assertEquals(7, read.size)
             assertTrue(read.all { it.getString(0).isEmpty() })
@@ -65,18 +104,22 @@ class TextLineParserTest {
     @Test
     fun fewCharacterLine() {
         val textLines = " foo, bar, bar!!  "
-        val read = read(textLines)
-        assertEquals(1, read.size)
-        assertEquals(textLines, read[0].getString(0))
+        for (i in 1 .. textLines.length) {
+            val read = read(textLines, i)
+            assertEquals(1, read.size)
+            assertEquals(textLines, read[0].getString(0))
+        }
     }
 
 
     @Test
     fun utf8CharacterLine() {
         val textLines = "\uD83D\uDE98\t✅,,"
-        val read = read(textLines)
-        assertEquals(1, read.size)
-        assertEquals(textLines, read[0].getString(0))
+        for (i in 1 .. textLines.length) {
+            val read = read(textLines, i)
+            assertEquals(1, read.size)
+            assertEquals(textLines, read[0].getString(0))
+        }
     }
 
 
@@ -84,7 +127,7 @@ class TextLineParserTest {
     @Test
     fun blankLineInBetween() {
         val textLines = "a\nb\r\n\nc"
-        for (i in 3 .. textLines.length) {
+        for (i in 1 .. textLines.length) {
             val read = read(textLines, i)
             assertEquals(4, read.size)
             assertEquals("a", read[0].getString(0))
@@ -98,7 +141,7 @@ class TextLineParserTest {
     @Test
     fun shortMixedLines() {
         val textLines = "aa\r\n\ncc\n\r\nfff"
-        for (i in 3 .. textLines.length) {
+        for (i in 1 .. textLines.length) {
             val read = read(textLines, i)
             assertEquals(5, read.size)
             assertEquals("aa", read[0].getString(0))
@@ -115,6 +158,7 @@ class TextLineParserTest {
         text: String,
         bufferSize: Int = text.length.coerceAtLeast(RecordDataBuffer.minBufferSize)
     ): List<RecordRowBuffer> {
-        return ReportInputChain.allText(text, bufferSize)
+//        return ReportInputChain.allText(text, bufferSize)
+        return TextProcessorDefiner.literal(text, bufferSize)
     }
 }

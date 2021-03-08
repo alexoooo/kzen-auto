@@ -9,7 +9,7 @@ import tech.kzen.auto.plugin.model.DataFrameBuffer;
 import java.util.Objects;
 
 
-public class TsvDataFramer
+public class TsvLineDataFramer
         implements DataFramer
 {
     //-----------------------------------------------------------------------------------------------------------------

@@ -37,7 +37,8 @@ class TsvLineParserTest {
     @Test
     fun emptyValue() {
         val tsvLines = ""
-        assertTrue(read(tsvLines).isEmpty())
+        val read = read(tsvLines)
+        assertTrue(read.isEmpty())
     }
 
 
@@ -45,7 +46,9 @@ class TsvLineParserTest {
     fun emptyLines() {
         val tsvLines = "\r\n\r\n\n\n\n\r\n"
         assertTrue(read(tsvLines).isEmpty())
-        assertTrue(read(tsvLines, 3).isEmpty())
+        for (i in 1 .. 9) {
+            assertTrue(read(tsvLines, i).isEmpty())
+        }
     }
 
 
