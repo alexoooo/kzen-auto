@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.report.spec
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -22,7 +23,7 @@ import tech.kzen.lib.common.util.Digestible
 
 
 data class PivotSpec(
-    val rows: Set<String>,
+    val rows: HeaderListing,
 //    val columns: List<String>,
     val values: PivotValueTableSpec
 ):
@@ -157,7 +158,7 @@ data class PivotSpec(
             val values = PivotValueTableSpec.ofNotation(valuesAttributeNotation)
 
             val spec = PivotSpec(
-                rows, values)
+                HeaderListing(rows.toList()), values)
 
             return AttributeDefinitionAttempt.success(
                 ValueAttributeDefinition(spec))
@@ -167,13 +168,13 @@ data class PivotSpec(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun isEmpty(): Boolean {
-        return rows.isEmpty() &&
+        return rows.values.isEmpty() &&
                 values.isEmpty()
     }
 
 
     override fun digest(builder: Digest.Builder) {
-        builder.addDigestibleUnorderedList(rows.map { Digest.ofUtf8(it) })
+        builder.addDigestible(rows)
         builder.addDigestible(values)
     }
 }

@@ -10,7 +10,6 @@ import tech.kzen.auto.plugin.spec.TextEncodingSpec;
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatPipelineHandoff;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProcessorEvent;
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.PassthroughFlatRecordExtractor;
 import tech.kzen.auto.server.objects.report.pipeline.input.v2.ProcessorInputChain;
 
 import java.nio.charset.Charset;
@@ -28,7 +27,10 @@ public class TextProcessorDefiner
     private static final ProcessorDefinitionInfo info = new ProcessorDefinitionInfo(
             "Text",
             List.of("txt"),
-            dataEncoding);
+            dataEncoding,
+            99);
+
+    private static final int ringBufferSize = 4 * 1024;
 
 
     public static final TextProcessorDefiner instance = new TextProcessorDefiner();
@@ -77,8 +79,7 @@ public class TextProcessorDefiner
     public ProcessorDefinition<RecordRowBuffer> define() {
         return new ProcessorDefinition<>(
                 defineData(),
-                () -> headerExtractor,
-                () -> PassthroughFlatRecordExtractor.instance);
+                () -> headerExtractor);
     }
 
 
@@ -98,6 +99,7 @@ public class TextProcessorDefiner
                         TextPipelineLexer::new,
                         TextPipelineParser::new
                 ),
-                FlatPipelineHandoff::new);
+                () -> new FlatPipelineHandoff(false),
+                ringBufferSize);
     }
 }

@@ -80,6 +80,7 @@ class PivotValueAdd(
             ?: return
 
         val unusedOptions = columnListing
+            .values
             .filter { it !in props.pivotSpec.values.columns }
 
         if (unusedOptions.isEmpty()) {

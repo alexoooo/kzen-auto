@@ -1,8 +1,9 @@
 package tech.kzen.auto.common.objects.document.report.listing
 
 
+
 data class InputInfo(
-    val browseDir: String,
+    val browseDir: DataLocation,
     val files: List<FileInfo>
 ) {
     companion object {
@@ -15,7 +16,7 @@ data class InputInfo(
             val selected = map[filesKey]!! as List<Map<String, String>>
 
             return InputInfo(
-                map[browseDirKey]!! as String,
+                DataLocation.of(map[browseDirKey]!! as String),
                 selected.map {
                     FileInfo.fromCollection(it)
                 }
@@ -31,7 +32,7 @@ data class InputInfo(
 
     fun toCollection(): Map<String, Any> {
         return mapOf(
-            browseDirKey to browseDir,
+            browseDirKey to browseDir.asString(),
             filesKey to files.map { it.toCollection() },
         )
     }

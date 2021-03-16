@@ -10,7 +10,6 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FirstRecordItemHeaderExtractor;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatPipelineHandoff;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProcessorEvent;
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.PassthroughFlatRecordExtractor;
 import tech.kzen.auto.server.objects.report.pipeline.input.v2.ProcessorInputChain;
 
 import java.nio.charset.Charset;
@@ -28,17 +27,20 @@ public class CsvProcessorDefiner
     private static final ProcessorDefinitionInfo info = new ProcessorDefinitionInfo(
             "CSV",
             List.of("csv"),
-            dataEncoding);
+            dataEncoding,
+            ProcessorDefinitionInfo.priorityAvoid);
+
+    private static final int ringBufferSize = 4 * 1024;
 
 
     public static final CsvProcessorDefiner instance = new CsvProcessorDefiner();
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    public static List<RecordRowBuffer> literal(String text) {
-//        byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
-//        return literal(textBytes, StandardCharsets.UTF_8, textBytes.length);
-//    }
+    public static List<RecordRowBuffer> literal(String text) {
+        byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
+        return literal(textBytes, StandardCharsets.UTF_8, textBytes.length);
+    }
 
 
     public static List<RecordRowBuffer> literal(String text, int dataBlockSize) {
@@ -73,8 +75,7 @@ public class CsvProcessorDefiner
     public ProcessorDefinition<RecordRowBuffer> define() {
         return new ProcessorDefinition<>(
                 defineData(),
-                FirstRecordItemHeaderExtractor::new,
-                () -> PassthroughFlatRecordExtractor.instance);
+                FirstRecordItemHeaderExtractor::new);
     }
 
 
@@ -94,6 +95,7 @@ public class CsvProcessorDefiner
                         CsvPipelineLexer::new,
                         CsvPipelineParser::new
                 ),
-                FlatPipelineHandoff::new);
+                () -> new FlatPipelineHandoff(true),
+                ringBufferSize);
     }
 }

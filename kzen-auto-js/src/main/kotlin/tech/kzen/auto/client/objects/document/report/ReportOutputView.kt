@@ -612,7 +612,7 @@ class ReportOutputView(
                             +"Row Number"
                         }
 
-                        for (header in outputPreview.header) {
+                        for (header in outputPreview.header.values) {
                             styledTh {
                                 css {
                                     position = Position.sticky

@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.state
 
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.InputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
@@ -7,7 +8,6 @@ import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
-
 
 //---------------------------------------------------------------------------------------------------------------------
 sealed class ReportAction {
@@ -101,7 +101,7 @@ object ListInputsBrowserRequest: ListInputsAction()
 
 
 data class ListInputsBrowserNavigate(
-    val newDirectory: String
+    val newDirectory: DataLocation
 ): ListInputsResponse()
 
 
@@ -111,12 +111,12 @@ data class InputsBrowserFilterRequest(
 
 
 data class InputsSelectionAddRequest(
-    val paths: List<String>
+    val paths: List<DataLocation>
 ): ListInputsResponse()
 
 
 data class InputsSelectionRemoveRequest(
-    val paths: List<String>
+    val paths: List<DataLocation>
 ): ListInputsResponse()
 
 

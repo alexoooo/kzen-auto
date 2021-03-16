@@ -14,6 +14,7 @@ import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.FileInfo
 
 
@@ -27,7 +28,7 @@ class InputBrowserDir(
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var editDisabled: Boolean
-        var browseDir: String
+        var browseDir: DataLocation
         var errorMode: Boolean
     }
 
@@ -41,7 +42,7 @@ class InputBrowserDir(
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
         textEdit = false
-        editDir = props.browseDir
+        editDir = props.browseDir.asString()
     }
 
 
@@ -62,8 +63,8 @@ class InputBrowserDir(
 
 
     private fun onEditSubmit() {
-        if (state.editDir != props.browseDir) {
-            props.dispatcher.dispatchAsync(ListInputsBrowserNavigate(state.editDir))
+        if (state.editDir != props.browseDir.asString()) {
+            props.dispatcher.dispatchAsync(ListInputsBrowserNavigate(DataLocation.of(state.editDir)))
         }
 
         setState {
@@ -72,7 +73,7 @@ class InputBrowserDir(
     }
 
 
-    private fun onDirSelected(dir: String) {
+    private fun onDirSelected(dir: DataLocation) {
         if (props.editDisabled) {
             return
         }
@@ -80,7 +81,7 @@ class InputBrowserDir(
         props.dispatcher.dispatchAsync(ListInputsBrowserNavigate(dir))
 
         setState {
-            editDir = dir
+            editDir = dir.asString()
         }
     }
 
@@ -148,7 +149,7 @@ class InputBrowserDir(
                             title = part.first
 
                             onClickFunction = {
-                                onDirSelected(part.first)
+                                onDirSelected(DataLocation.of(part.first))
                             }
                         }
 

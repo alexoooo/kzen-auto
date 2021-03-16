@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.calc
 
 import org.junit.Test
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
@@ -385,7 +386,7 @@ class CalculatedColumnEvalTest {
         val calculatedColumn = calculatedColumnEval.create(
             "c",
             formula,
-            columnNames)
+            HeaderListing(columnNames))
 
         val value = calculatedColumn.evaluate(
             RecordRowBuffer.of(aValue, bValue),

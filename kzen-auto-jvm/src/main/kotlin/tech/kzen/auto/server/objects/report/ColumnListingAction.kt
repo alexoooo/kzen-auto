@@ -1,9 +1,11 @@
 package tech.kzen.auto.server.objects.report
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.pipeline.CsvProcessorDefiner
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.ProcessorHeaderReader
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.FlatDataHeaderDefinition
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -18,34 +20,65 @@ class ColumnListingAction(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun columnNamesMerge(inputPaths: List<Path>): List<String> {
-        val builder = LinkedHashSet<String>()
-        for (inputPath in inputPaths) {
-            val columns = columnNames(inputPath)
-            builder.addAll(columns)
+//    suspend fun <T> columnNamesMerge(
+//        flatDataHeaderDefinitions: List<FlatDataHeaderDefinition<T>>
+//    ): HeaderListing {
+//        val builder = LinkedHashSet<String>()
+//        for (flatDataHeaderDefinition in flatDataHeaderDefinitions) {
+//            val columns = columnNames(flatDataHeaderDefinition)
+//            builder.addAll(columns.values)
+//        }
+//        return HeaderListing(builder.toList())
+//    }
+
+
+    private fun cachedHeaderListing(
+        columnsFile: Path
+    ): HeaderListing? {
+        if (! Files.exists(columnsFile)) {
+            return null
         }
-        return builder.toList()
+
+        val text =
+//            withContext(Dispatchers.IO) {
+                Files.readString(columnsFile, Charsets.UTF_8)
+//            }
+
+        return CsvProcessorDefiner
+            .literal(text)
+            .drop(1)
+            .map { it.getString(1) }
+            .let { HeaderListing(it) }
     }
 
 
-    suspend fun columnNames(inputPath: Path): List<String> {
-        val inputIndexPath = filterIndex.inputIndexPath(inputPath)
+    fun cachedHeaderListing(
+        dataLocation: DataLocation
+    ): HeaderListing? {
+        val inputIndexPath = filterIndex.inputIndexPath(dataLocation)
+        val columnsFile = inputIndexPath.resolve(columnsCsvFilename)
+        return cachedHeaderListing(columnsFile)
+    }
+
+
+    fun <T> headerListing(
+        flatDataHeaderDefinition: FlatDataHeaderDefinition<T>
+    ): HeaderListing {
+        val inputIndexPath = filterIndex.inputIndexPath(
+            flatDataHeaderDefinition.dataLocationInfo.dataLocation)
+
         val columnsFile = inputIndexPath.resolve(columnsCsvFilename)
 
-        if (Files.exists(columnsFile)) {
-            val text = withContext(Dispatchers.IO) {
-                Files.readString(columnsFile, Charsets.UTF_8)
-            }
+        val cached = cachedHeaderListing(columnsFile)
 
-            return ReportInputChain
-                .allCsv(text)
-                .drop(1)
-                .map { it.getString(1) }
+        if (cached != null) {
+            return cached
         }
 
-        val columnNames = ReportInputChain.header(inputPath).headerNames
+        val headerListing = extractColumnNames(flatDataHeaderDefinition)
 
-        val csvBody = columnNames
+        val csvBody = headerListing
+            .values
             .withIndex()
             .joinToString("\n") {
                 RecordRowBuffer.of(listOf(it.index.toString(), it.value)).toCsv()
@@ -53,10 +86,17 @@ class ColumnListingAction(
 
         val csvFile = "Number,Name\n$csvBody"
 
-        withContext(Dispatchers.IO) {
+//        withContext(Dispatchers.IO) {
             Files.writeString(columnsFile, csvFile)
-        }
+//        }
 
-        return columnNames
+        return headerListing
+    }
+
+
+    private fun <T> extractColumnNames(
+        flatDataHeaderDefinition: FlatDataHeaderDefinition<T>
+    ): HeaderListing {
+        return ProcessorHeaderReader().extract(flatDataHeaderDefinition)
     }
 }

@@ -1,11 +1,12 @@
 package tech.kzen.auto.common.objects.document.report.spec
 
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 
 
 data class InputBrowserSpec(
-    val directory: String,
+    val directory: DataLocation,
     val filter: String
 ) {
     companion object {
@@ -19,7 +20,7 @@ data class InputBrowserSpec(
         fun ofNotation(notation: MapAttributeNotation): InputBrowserSpec {
             val directory = notation.get(directoryKey)?.asString()!!
             val filter = notation.get(filterKey)?.asString()!!
-            return InputBrowserSpec(directory, filter)
+            return InputBrowserSpec(DataLocation.of(directory), filter)
         }
     }
 }

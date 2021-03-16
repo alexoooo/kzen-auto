@@ -14,6 +14,16 @@ class ProcessorFrameFeeder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @Suppress("UNUSED_PARAMETER")
+    fun feedDisruptor(
+            dataBlockBuffer: DataBlockBuffer,
+            sequence: Long,
+            endOfBatch: Boolean
+    ) {
+        feed(dataBlockBuffer)
+    }
+
+
     fun feed(
             dataBlockBuffer: DataBlockBuffer
     ) {

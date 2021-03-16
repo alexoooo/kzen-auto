@@ -1,10 +1,11 @@
 package tech.kzen.auto.server.objects.report.pipeline.input
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FirstRecordItemHeaderExtractor
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.pipeline.TsvProcessorDefiner
 import tech.kzen.auto.server.objects.report.pipeline.input.v2.ProcessorHeaderReader
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.InputStreamFlatDataReader
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.DataLocationInfo
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.FlatDataHeaderDefinition
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.FlatDataSource
 import kotlin.test.assertEquals
 
 
@@ -29,14 +30,14 @@ class ProcessorHeaderReaderTest {
                 "foo\tbar\n" +
                 "hello\t420"
 
-        val headerReader = ProcessorHeaderReader(
-                processorDataDefinition.data,
-                FirstRecordItemHeaderExtractor(),
-                { InputStreamFlatDataReader.ofLiteral(contents.toByteArray()) },
-                Charsets.UTF_8)
+        val headerReader = ProcessorHeaderReader()
 
-        val header = headerReader.extract()
+        val header = headerReader.extract(
+            FlatDataHeaderDefinition(
+                DataLocationInfo.literalUtf8,
+                FlatDataSource.ofLiteral(contents.toByteArray()),
+                processorDataDefinition))
 
-        assertEquals(listOf("foo", "bar"), header)
+        assertEquals(listOf("foo", "bar"), header.values)
     }
 }

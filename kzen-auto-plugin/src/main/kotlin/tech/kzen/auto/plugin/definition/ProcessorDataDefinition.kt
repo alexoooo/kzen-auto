@@ -34,21 +34,4 @@ data class ProcessorDataDefinition<Output>(
             }
         }
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    fun newInputEvent(): DataInputEvent {
-        val factory = segments.first().modelFactory
-
-        // checked in init
-        @Suppress("UNCHECKED_CAST")
-        factory as () -> DataInputEvent
-
-        return factory()
-    }
-
-
-//    fun outputModelType(): Class<Output> {
-//        return outputFactory().type
-//    }
 }

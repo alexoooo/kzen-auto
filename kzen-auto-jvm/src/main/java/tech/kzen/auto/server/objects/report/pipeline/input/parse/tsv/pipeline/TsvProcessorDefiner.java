@@ -25,7 +25,10 @@ public class TsvProcessorDefiner
     private static final ProcessorDefinitionInfo info = new ProcessorDefinitionInfo(
             "TSV",
             List.of("tsv"),
-            dataEncoding);
+            dataEncoding,
+            ProcessorDefinitionInfo.priorityAvoid);
+
+    private static final int ringBufferSize = 4 * 1024;
 
 
     public static final TsvProcessorDefiner instance = new TsvProcessorDefiner();
@@ -70,8 +73,7 @@ public class TsvProcessorDefiner
     public ProcessorDefinition<RecordRowBuffer> define() {
         return new ProcessorDefinition<>(
                 defineData(),
-                FirstRecordItemHeaderExtractor::new,
-                () -> PassthroughFlatRecordExtractor.instance);
+                FirstRecordItemHeaderExtractor::new);
     }
 
 
@@ -91,6 +93,7 @@ public class TsvProcessorDefiner
                         TsvPipelineLexer::new,
                         TsvPipelineParser::new
                 ),
-                FlatPipelineHandoff::new);
+                () -> new FlatPipelineHandoff(true),
+                ringBufferSize);
     }
 }

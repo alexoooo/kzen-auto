@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 
 
+// TODO: optimize add(RecordTextFlyweight)
 class BufferedIndexedTextStore(
     private val fileIndexedTextStore: FileIndexedTextStore,
     private val size: Int = 128

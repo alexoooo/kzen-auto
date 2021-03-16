@@ -30,16 +30,10 @@ import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.service.ServerContext
 import java.io.InputStream
 import java.nio.file.Path
+import java.nio.file.Paths
 
 
-/**
- * TODO: error handling
- *
- * TODO: optimize the following:
- *  - BufferedIndexedSignatureStore.add(LongArray)
- *  - ReportOutput.save csv generation
- *  - BufferedIndexedTextStore.add(RecordTextFlyweight)
- */
+// TODO: error handling
 class ReportPipeline(
     initialReportRunSpec: ReportRunSpec,
     runDir: Path,
@@ -121,10 +115,11 @@ class ReportPipeline(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val progressTracker = ReportProgressTracker(initialReportRunSpec, taskHandle)
+    private val progressTracker = ReportProgressTracker(
+        initialReportRunSpec.datasetInfo.dataLocations(), taskHandle)
 
     private val dataInput = ReportInputReader(
-        initialReportRunSpec.inputs.map { FileFlatData(it) },
+        initialReportRunSpec.datasetInfo.dataLocations().map { FileFlatData(Paths.get(it.asString())) },
         progressTracker)
 
     private val decoder = ReportInputDecoder()

@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.connect
 
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import java.io.InputStream
-import java.net.URI
 
 
 class InputStreamFlatData(
@@ -21,8 +21,9 @@ class InputStreamFlatData(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun key(): URI {
-        return URI.create(key)
+    override fun key(): DataLocation {
+//        return DataLocation(URI.create(key))
+        return DataLocation.unknown
     }
 
 

@@ -182,7 +182,7 @@ class ReportFilterItem(
                 false
             }
             else {
-                ! inputAndCalculatedColumns.contains(props.columnName)
+                ! inputAndCalculatedColumns.values.contains(props.columnName)
             }
 
         val columnSummary = reportState.tableSummary?.columnSummaries?.get(props.columnName)

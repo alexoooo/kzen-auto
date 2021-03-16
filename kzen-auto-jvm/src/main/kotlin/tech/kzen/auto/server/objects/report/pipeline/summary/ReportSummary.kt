@@ -64,10 +64,10 @@ class ReportSummary(
 
 
     private val headerIndex = RecordHeaderIndex(
-        initialReportRunSpec.inputAndFormulaColumns())
+        initialReportRunSpec.inputAndFormulaColumns)
 
     private val builders: List<ValueSummaryBuilder> =
-        headerIndex.columnHeaders.map { ValueSummaryBuilder() }
+        headerIndex.columnHeaders.values.map { ValueSummaryBuilder() }
 
 
     private val flyweight =
@@ -88,7 +88,7 @@ class ReportSummary(
 
         val builder = mutableMapOf<String, ColumnSummary>()
 
-        for (columnName in headerIndex.columnHeaders) {
+        for (columnName in headerIndex.columnHeaders.values) {
             val columnDir = columnDir(columnName)
 
             if (! Files.exists(columnDir)) {
@@ -120,8 +120,8 @@ class ReportSummary(
 
 
     private suspend fun save() {
-        for (i in headerIndex.columnHeaders.indices) {
-            val columnName = headerIndex.columnHeaders[i]
+        for (i in headerIndex.columnHeaders.values.indices) {
+            val columnName = headerIndex.columnHeaders.values[i]
             val columnDir = columnDir(columnName)
 
             val columnBuilder = builders[i]
@@ -340,6 +340,7 @@ class ReportSummary(
         val tableSummary = TableSummary(
             headerIndex
                 .columnHeaders
+                .values
                 .withIndex()
                 .map { it.value to builders[it.index].build() }
                 .toMap())

@@ -1,8 +1,10 @@
 package tech.kzen.auto.common.objects.document.report.output
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+
 
 data class OutputPreview(
-    val header: List<String>,
+    val header: HeaderListing,
     val rows: List<List<String>>,
     val startRow: Long
 ) {
@@ -18,7 +20,7 @@ data class OutputPreview(
         @Suppress("UNCHECKED_CAST")
         fun fromCollection(collection: Map<String, Any>): OutputPreview {
             return OutputPreview(
-                collection[headerKey] as List<String>,
+                HeaderListing(collection[headerKey] as List<String>),
                 collection[rowsKey] as List<List<String>>,
                 (collection[startKey] as String).toLong())
         }
@@ -27,7 +29,7 @@ data class OutputPreview(
 
     fun toCollection(): Map<String, Any> {
         return mapOf(
-            headerKey to header,
+            headerKey to header.values,
             rowsKey to rows,
             startKey to startRow.toString())
     }

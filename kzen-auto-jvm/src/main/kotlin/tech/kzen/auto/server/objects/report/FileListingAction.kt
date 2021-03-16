@@ -3,8 +3,9 @@ package tech.kzen.auto.server.objects.report
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Instant
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.FileInfo
-import tech.kzen.auto.server.util.AutoJvmUtils
+import tech.kzen.auto.common.objects.document.report.listing.FilePath
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
@@ -98,8 +99,8 @@ class FileListingAction {
     }
 
 
-    suspend fun scanInfo(pattern: String, filter: String): List<FileInfo> {
-        val parsed = AutoJvmUtils.parsePath(pattern)
+    suspend fun scanInfo(pattern: DataLocation, filter: String): List<FileInfo> {
+        val parsed = Paths.get(pattern.asString())
             ?: return listOf()
 
         if (Files.isRegularFile(parsed)) {
@@ -131,8 +132,8 @@ class FileListingAction {
     }
 
 
-    fun listInfo(paths: List<String>): List<FileInfo> {
-        val files = paths.map { Paths.get(it) }
+    fun listInfo(paths: List<DataLocation>): List<FileInfo> {
+        val files = paths.map { Paths.get(it.asString()) }
 
         return files.map {
             toFileInfo(it)
@@ -160,7 +161,7 @@ class FileListingAction {
 
 
     private fun toFileInfo(path: Path, attrs: BasicFileAttributes): FileInfo {
-        val absolutePath = path.toAbsolutePath().normalize().toString()
+        val absolutePath = DataLocation.ofFile(FilePath.of(path.toAbsolutePath().normalize().toString()))
         val filename = path.fileName.toString()
         val modified = Instant.fromEpochMilliseconds(
             attrs.lastModifiedTime().toMillis())

@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report
 
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.auto.server.util.AutoJvmUtils
 import tech.kzen.auto.server.util.WorkUtils
 import java.nio.file.Files
@@ -17,9 +18,10 @@ class FilterIndex(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun inputIndexPath(absoluteInputPath: Path): Path {
-        val indexSubPath = AutoJvmUtils.sanitizeFilename(
-            absoluteInputPath.fileName.toString())
+    fun inputIndexPath(dataLocation: DataLocation): Path {
+        val fileName = dataLocation.fileName()
+
+        val indexSubPath = AutoJvmUtils.sanitizeFilename(fileName)
 
         val pathInWork = Paths.get("${indexDirName}/$indexSubPath")
         val workPath = workUtils.resolve(pathInWork)

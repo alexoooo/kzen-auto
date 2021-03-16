@@ -2,9 +2,11 @@ package tech.kzen.auto.plugin.model;
 
 
 import org.jetbrains.annotations.NotNull;
+import tech.kzen.auto.plugin.spec.DataEncodingSpec;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
+import java.util.Arrays;
 
 
 public class DataBlockBuffer {
@@ -16,6 +18,11 @@ public class DataBlockBuffer {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    public static DataBlockBuffer ofTextOrBinary(DataEncodingSpec dataEncodingSpec) {
+        return ofTextOrBinary(dataEncodingSpec.getTextEncoding() != null);
+    }
+
+
     public static DataBlockBuffer ofTextOrBinary(boolean isText) {
         return isText
                 ? ofText()
@@ -59,16 +66,11 @@ public class DataBlockBuffer {
     //-----------------------------------------------------------------------------------------------------------------
     public boolean endOfData;
 
-//    public URI inputKey;
-//    public String innerExtension;
-
     public final byte[] bytes;
     public int bytesLength;
 
     public final char[] chars;
     public int charsLength;
-
-//    public boolean endOfStream;
 
     public final DataFrameBuffer frames;
 
@@ -105,7 +107,7 @@ public class DataBlockBuffer {
 //    }
 
 
-    public void setEndOfStream() {
+    public void setEndOfData() {
         bytesLength = 0;
         endOfData = true;
     }
@@ -114,5 +116,17 @@ public class DataBlockBuffer {
     public void readNext(int bytesLength) {
         this.bytesLength = bytesLength;
         endOfData = false;
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Override
+    public String toString() {
+        if (chars == null) {
+            return Arrays.toString(Arrays.copyOf(bytes, bytesLength));
+        }
+        else {
+            return new String(chars, 0, charsLength);
+        }
     }
 }

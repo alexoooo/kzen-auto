@@ -8,6 +8,7 @@ import tech.kzen.auto.plugin.model.ModelOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.event.v2.ListPipelineOutput
 import tech.kzen.auto.server.objects.report.pipeline.event.v2.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.input.v2.ProcessorInputReader.Companion.ofLiteral
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.instance.ProcessorSegmentInstance
 import java.nio.charset.Charset
 import java.util.function.Consumer
 
@@ -55,7 +56,7 @@ class ProcessorInputChain<T>(
     private val dataRecordBuffer = modelBuffers.first() as ListPipelineOutput<DataInputEvent>
 
     private val decoder = textCharset?.let { ProcessorInputDecoder(it) }
-    private val dataFramer = processorDataDefinition.dataFramerFactory()
+    private val framer = ProcessorInputFramer(processorDataDefinition.dataFramerFactory())
     private val feeder = ProcessorFrameFeeder(dataRecordBuffer)
 
 
@@ -86,8 +87,7 @@ class ProcessorInputChain<T>(
 
         decoder?.decode(dataBlockBuffer)
 
-        dataBlockBuffer.frames.clear()
-        dataFramer.frame(dataBlockBuffer)
+        framer.frame(dataBlockBuffer)
 
         feeder.feed(dataBlockBuffer)
 

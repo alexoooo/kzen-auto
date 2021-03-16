@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.report.spec
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -22,7 +23,7 @@ import tech.kzen.lib.common.reflect.Reflect
 
 data class InputSpec(
     val browser: InputBrowserSpec,
-    val selected: List<String>
+    val selected: List<DataLocation>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -36,11 +37,11 @@ data class InputSpec(
         private val selectedAttributePath = ReportConventions.inputAttributePath.nest(selectedKey)
 
 
-        fun browseCommand(mainLocation: ObjectLocation, directory: String): UpdateInAttributeCommand {
+        fun browseCommand(mainLocation: ObjectLocation, directory: DataLocation): UpdateInAttributeCommand {
             return UpdateInAttributeCommand(
                 mainLocation,
                 InputBrowserSpec.directoryAttributePath,
-                ScalarAttributeNotation(directory))
+                ScalarAttributeNotation(directory.asString()))
         }
 
 
@@ -54,25 +55,25 @@ data class InputSpec(
 
         fun addSelectedCommand(
             mainLocation: ObjectLocation,
-            paths: List<String>
+            paths: List<DataLocation>
         ): InsertAllListItemsInAttributeCommand {
             return InsertAllListItemsInAttributeCommand(
                 mainLocation,
                 selectedAttributePath,
                 PositionRelation.afterLast,
-                paths.map { ScalarAttributeNotation(it) }
+                paths.map { ScalarAttributeNotation(it.asString()) }
             )
         }
 
 
         fun removeSelectedCommand(
             mainLocation: ObjectLocation,
-            paths: List<String>
+            paths: List<DataLocation>
         ): RemoveAllListItemsInAttributeCommand {
             return RemoveAllListItemsInAttributeCommand(
                 mainLocation,
                 selectedAttributePath,
-                paths.map { ScalarAttributeNotation(it) },
+                paths.map { ScalarAttributeNotation(it.asString()) },
                 false
             )
         }
@@ -103,7 +104,7 @@ data class InputSpec(
             val browser = InputBrowserSpec.ofNotation(attributeNotation.get(browserKey) as MapAttributeNotation)
             val selected = (attributeNotation.get(selectedKey) as ListAttributeNotation).values.map { it.asString()!! }
 
-            val inputSpec = InputSpec(browser, selected)
+            val inputSpec = InputSpec(browser, selected.map { DataLocation.of(it) })
 
             return AttributeDefinitionAttempt.success(
                 ValueAttributeDefinition(inputSpec))

@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.flat
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.InputStreamFlatData
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
@@ -17,7 +18,7 @@ import java.nio.file.Path
 
 
 class IndexedCsvTable(
-    private val header: List<String>,
+    private val header: HeaderListing,
     dir: Path,
     private val bufferSize: Int = 1024 * 1024
 ):
@@ -66,7 +67,7 @@ class IndexedCsvTable(
     //-----------------------------------------------------------------------------------------------------------------
     init {
         if (offsetStore.size() == 0L) {
-            bufferWriter.write(RecordRowBuffer.of(header).toCsv())
+            bufferWriter.write(RecordRowBuffer.of(header.values).toCsv())
             bufferWriter.write(lineBreak)
             bufferWriter.flush()
 
@@ -151,7 +152,7 @@ class IndexedCsvTable(
 
 
     fun traverseWithHeader(visitor: (List<String>) -> Unit) {
-        visitor.invoke(header)
+        visitor.invoke(header.values)
         traverseWithoutHeader(0, rowCount()) {
             visitor.invoke(it)
         }

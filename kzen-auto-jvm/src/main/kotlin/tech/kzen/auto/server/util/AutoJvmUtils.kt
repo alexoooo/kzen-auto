@@ -9,7 +9,7 @@ object AutoJvmUtils
 {
     fun sanitizeFilename(filenameFragment: String): String {
         return filenameFragment
-            .replace(Regex("\\W+"), "_")
+            .replace(Regex("[^a-zA-Z0-9_-]+"), "_")
     }
 
 

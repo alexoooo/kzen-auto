@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.report.state
 
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.InputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.*
@@ -238,7 +239,7 @@ object ReportEffect {
 
     private suspend fun navigateBrowserFiles(
         state: ReportState,
-        newDirectory: String
+        newDirectory: DataLocation
     ): ReportAction {
         val command = InputSpec.browseCommand(state.mainLocation, newDirectory)
 
@@ -258,7 +259,7 @@ object ReportEffect {
 
     private suspend fun selectBrowserFiles(
         state: ReportState,
-        paths: List<String>
+        paths: List<DataLocation>
     ): ReportAction {
         val command = InputSpec.addSelectedCommand(state.mainLocation, paths)
 
@@ -278,7 +279,7 @@ object ReportEffect {
 
     private suspend fun unselectBrowserFiles(
         state: ReportState,
-        paths: List<String>
+        paths: List<DataLocation>
     ): ReportAction {
         val command = InputSpec.removeSelectedCommand(state.mainLocation, paths)
 

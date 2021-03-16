@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.input
 
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.auto.server.objects.report.pipeline.event.handoff.RecordHandoff
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
@@ -7,7 +8,6 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordFormat
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.RecordParser
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
-import java.net.URI
 
 
 class ReportInputParser(
@@ -15,7 +15,7 @@ class ReportInputParser(
     private val fixedFormat: RecordFormat? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    private var currentInputKey: URI? = null
+    private var currentInputKey: DataLocation? = null
     private var currentParser: RecordParser? = null
     private var previousRecordHeader: RecordHeader = RecordHeader.empty
     private var firstRowHeader: Boolean = false

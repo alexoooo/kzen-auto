@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.report.spec
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -99,6 +100,12 @@ data class FormulaSpec(
             return AttributeDefinitionAttempt.success(
                     ValueAttributeDefinition(FormulaSpec(definitionMap)))
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun headerListing(): HeaderListing {
+        return HeaderListing(formulas.keys.toList())
     }
 
 

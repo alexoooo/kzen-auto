@@ -4,19 +4,18 @@ import com.google.common.base.Stopwatch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.auto.common.objects.document.report.progress.ReportFileProgress
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.util.FormatUtils
-import tech.kzen.auto.server.objects.report.model.ReportRunSpec
-import java.net.URI
 import java.util.concurrent.TimeUnit
 import kotlin.time.ExperimentalTime
 
 
 class ReportProgressTracker(
-    reportRunSpec: ReportRunSpec,
+    dataLocations: List<DataLocation>,
     private val taskHandle: TaskHandle?,
     private val clock: Clock = Clock.System
 ) {
@@ -30,7 +29,7 @@ class ReportProgressTracker(
 
     //-----------------------------------------------------------------------------------------------------------------
     inner class Buffer(
-        private val locationKey: String
+        private val dataLocation: DataLocation
     ) {
         private val innerStopwatch = Stopwatch.createUnstarted()
 
@@ -56,7 +55,7 @@ class ReportProgressTracker(
             startTime = clock.now()
             innerStopwatch.start()
 
-            publishAndLogStarted(locationKey, totalSize)
+            publishAndLogStarted(dataLocation, totalSize)
         }
 
 
@@ -69,7 +68,7 @@ class ReportProgressTracker(
             innerStopwatch.reset()
             endTime = clock.now()
 
-            publishAndLogFinished(locationKey, totalSize)
+            publishAndLogFinished(dataLocation, totalSize)
         }
 
 
@@ -93,7 +92,7 @@ class ReportProgressTracker(
 
                 innerStopwatch.reset().start()
 
-                publishAndLogProcessed(locationKey, totalSize)
+                publishAndLogProcessed(dataLocation, totalSize)
             }
         }
 
@@ -127,16 +126,15 @@ class ReportProgressTracker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val buffers = reportRunSpec
-        .inputs
-        .map { it.toUri() to Buffer(it.toString()) }
+    private val buffers = dataLocations
+        .map { it to Buffer(it) }
         .toMap()
 
     @Volatile private var currentOutputCount = 0L
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun getInitial(locationKey: URI, totalSize: Long): Buffer {
+    fun getInitial(locationKey: DataLocation, totalSize: Long): Buffer {
         val buffer = buffers[locationKey]
             ?: throw IllegalArgumentException("Unknown: $locationKey")
 
@@ -147,7 +145,7 @@ class ReportProgressTracker(
     }
 
 
-    fun getRunning(locationKey: URI): Buffer {
+    fun getRunning(locationKey: DataLocation): Buffer {
         val buffer = buffers[locationKey]
             ?: throw IllegalArgumentException("Unknown: $locationKey")
         check(buffer.running)
@@ -176,29 +174,28 @@ class ReportProgressTracker(
     //-----------------------------------------------------------------------------------------------------------------
     private fun current(): ReportProgress {
         val snapshot = buffers
-            .map { it.key.toString() to it.value.snapshot() }
-            .toMap()
+            .mapValues { it.value.snapshot() }
 
         return ReportProgress(
             currentOutputCount, snapshot)
     }
 
 
-    private fun publishAndLogStarted(locationKey: String, totalSize: Long) {
+    private fun publishAndLogStarted(locationKey: DataLocation, totalSize: Long) {
         val published = publishUpdate()
         val message = published.inputs[locationKey]!!.toMessage(totalSize)
         logger.info("Started {} ({}) - {}", locationKey, FormatUtils.decimalSeparator(totalSize), message)
     }
 
 
-    private fun publishAndLogFinished(locationKey: String, totalSize: Long) {
+    private fun publishAndLogFinished(locationKey: DataLocation, totalSize: Long) {
         val published = publishUpdate()
         val message = published.inputs[locationKey]!!.toMessage(totalSize)
         logger.info("Finished {} - {}", locationKey, message)
     }
 
 
-    private fun publishAndLogProcessed(locationKey: String, totalSize: Long) {
+    private fun publishAndLogProcessed(locationKey: DataLocation, totalSize: Long) {
         val published = publishUpdate()
         val message = published.inputs[locationKey]!!.toMessage(totalSize)
         logger.info("{} - {}", locationKey, message)

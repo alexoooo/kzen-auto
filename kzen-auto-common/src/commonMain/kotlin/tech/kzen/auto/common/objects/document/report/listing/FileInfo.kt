@@ -4,7 +4,7 @@ import kotlinx.datetime.Instant
 
 
 data class FileInfo(
-    val path: String,
+    val path: DataLocation,
     val name: String,
     val size: Long,
     val modified: Instant,
@@ -18,13 +18,13 @@ data class FileInfo(
         private const val directoryKey = "dir"
 
 
-        fun ofFile(path: String, name: String, size: Long, modified: Instant): FileInfo {
+        fun ofFile(path: DataLocation, name: String, size: Long, modified: Instant): FileInfo {
             check(! name.endsWith("/"))
             return FileInfo(path, name, size, modified, false)
         }
 
 
-        fun ofDirectory(path: String, name: String, modified: Instant): FileInfo {
+        fun ofDirectory(path: DataLocation, name: String, modified: Instant): FileInfo {
             check(! name.endsWith("/"))
             return FileInfo(path, name, 0, modified, true)
         }
@@ -32,7 +32,7 @@ data class FileInfo(
 
         fun fromCollection(map: Map<String, String>): FileInfo {
             return FileInfo(
-                map[pathKey]!!,
+                DataLocation.of(map[pathKey]!!),
                 map[nameKey]!!,
                 map[sizeKey]!!.toLong(),
                 Instant.parse(map[modifiedKey]!!),
@@ -41,8 +41,8 @@ data class FileInfo(
         }
 
 
-        fun split(path: String): List<Pair<String, String>> {
-            val parts = path.split(Regex("[/\\\\]"))
+        fun split(path: DataLocation): List<Pair<String, String>> {
+            val parts = path.asString().split(Regex("[/\\\\]"))
 
             var cumulative = ""
             val builder = mutableListOf<Pair<String, String>>()
@@ -55,7 +55,7 @@ data class FileInfo(
                         part
                     }
                     else {
-                        cumulative + path.substring(cumulative.length, cumulative.length + 1) + part
+                        cumulative + path.asString().substring(cumulative.length, cumulative.length + 1) + part
                     }
 
                 if (part.isNotEmpty()) {
@@ -70,7 +70,7 @@ data class FileInfo(
 
     fun toCollection(): Map<String, String> {
         return mapOf(
-            pathKey to path,
+            pathKey to path.asString(),
             nameKey to name,
             sizeKey to size.toString(),
             modifiedKey to modified.toString(),

@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.report
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.InputInfo
 import tech.kzen.auto.common.objects.document.report.spec.*
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
@@ -13,11 +14,18 @@ import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.task.api.ManagedTask
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
+import tech.kzen.auto.plugin.definition.ProcessorDefinition
+import tech.kzen.auto.plugin.spec.DataEncodingSpec
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.DataLocationInfo
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.DatasetInfo
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.FlatDataHeaderDefinition
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.FlatDataInfo
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.file.FileFlatDataSource
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
-import tech.kzen.auto.server.util.AutoJvmUtils
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import java.awt.geom.IllegalPathStateException
@@ -85,22 +93,49 @@ class ReportDocument(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun inputPaths(): List<Path> {
-//        return ServerContext.fileListingAction.list(input.browser.directory)
-//        return ServerContext.fileListingAction.scan(
-//            input.browser.directory, input.browser.filter)
-        return input.selected.map { Paths.get(it) }
+    private fun processorDefinition(dataLocationInfo: DataLocationInfo): ProcessorDefinition<*> {
+        val payloadType = RecordRowBuffer.className
+        val processorDefinitionInfoCandidates = ServerContext.definitionRepository.find(
+            payloadType, dataLocationInfo.dataLocation.innerExtension(), dataLocationInfo.dataEncoding.isBinary())
+
+        val primaryProcessorDefinitionInfo = processorDefinitionInfoCandidates.firstOrNull()
+            ?: throw IllegalStateException("Processor not found: $dataLocationInfo - $payloadType")
+
+        return ServerContext.definitionRepository.define(primaryProcessorDefinitionInfo.name)
+    }
+
+
+    private fun datasetInfo(): DatasetInfo {
+//        return input.selected.map { Paths.get(it) }
+
+        val items = mutableListOf<FlatDataInfo>()
+        for (dataLocation in input.selected) {
+            val dataLocationInfo = DataLocationInfo(dataLocation, DataEncodingSpec.utf8)
+
+            val cachedHeaderListing = ServerContext.columnListingAction.cachedHeaderListing(dataLocation)
+
+            val headerListing = cachedHeaderListing
+                ?: ServerContext.columnListingAction.headerListing(
+                    FlatDataHeaderDefinition(
+                        dataLocationInfo,
+                        FileFlatDataSource(),
+                        processorDefinition(dataLocationInfo)))
+
+
+            items.add(FlatDataInfo(dataLocationInfo, headerListing))
+        }
+        return DatasetInfo(items)
     }
 
 
     private suspend fun runSpec(): ReportRunSpec? {
-        val inputPaths = inputPaths()
+        val datasetInfo = datasetInfo()
 //            ?: return null
 
-        val columnNames = ServerContext.columnListingAction.columnNamesMerge(inputPaths)
+//        val columnNames = ServerContext.columnListingAction.columnNames(datasetInfo)
 
         return ReportRunSpec(
-            inputPaths, columnNames, formula, filter, pivot)
+            datasetInfo, formula, filter, pivot)
     }
 
 
@@ -144,21 +179,23 @@ class ReportDocument(
     }
 
 
-    private fun browseDir(): String {
-        return AutoJvmUtils
-            .parsePath(input.browser.directory)
-            ?.toAbsolutePath()
-            ?.normalize()
-            ?.toString()
-            ?: input.browser.directory
+    private fun browseDir(): DataLocation {
+//        return AutoJvmUtils
+//            .parsePath(input.browser.directory)
+//            ?.toAbsolutePath()
+//            ?.normalize()
+//            ?.toString()
+//            ?: input.browser.directory
+        return input.browser.directory
     }
 
 
     private suspend fun actionColumnListing(): ExecutionResult {
-        val inputPaths = inputPaths()
+        val inputPaths = datasetInfo()
 //            ?: return ExecutionFailure("Please provide a valid input path")
 
-        val columnNames = ServerContext.columnListingAction.columnNamesMerge(inputPaths)
+//        val columnNames = ServerContext.columnListingAction.columnNamesMerge(inputPaths)
+        val columnNames = inputPaths.headerSuperset().values
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(columnNames))
     }

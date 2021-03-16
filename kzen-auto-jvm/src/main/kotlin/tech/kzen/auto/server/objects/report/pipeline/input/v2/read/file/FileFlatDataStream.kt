@@ -1,41 +1,39 @@
-package tech.kzen.auto.server.objects.report.pipeline.input.v2.read
+package tech.kzen.auto.server.objects.report.pipeline.input.v2.read.file
 
 import com.google.common.io.CountingInputStream
 import org.apache.commons.io.input.BOMInputStream
-import tech.kzen.auto.platform.DataLocation
-import tech.kzen.auto.plugin.spec.DataEncodingSpec
 import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.ReadResult
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.FlatDataStream
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPInputStream
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.name
-import kotlin.io.path.toPath
 
 
 @OptIn(ExperimentalPathApi::class)
-class FileFlatDataReader constructor(
+class FileFlatDataStream constructor(
     location: Path,
     gzip: Boolean = location.name.endsWith(".gz"),
     bomPrefix: Boolean = true
 ):
-    FlatDataReader
+    FlatDataStream
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val gzipBufferSize = 128 * 1024
 
-        fun of(
-            dataLocation: DataLocation,
-            dataEncoding: DataEncodingSpec
-        ): FileFlatDataReader {
-            val location = dataLocation.uri.toPath()
-            val isText = dataEncoding.textEncoding != null
-            return FileFlatDataReader(
-                location,
-                bomPrefix = isText)
-        }
+//        fun of(
+//            dataLocation: DataLocation,
+//            dataEncoding: DataEncodingSpec
+//        ): FileFlatDataStream {
+//            val location = dataLocation.uri.toPath()
+//            val isText = dataEncoding.textEncoding != null
+//            return FileFlatDataStream(
+//                location,
+//                bomPrefix = isText)
+//        }
     }
 
 

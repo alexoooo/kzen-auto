@@ -11,6 +11,7 @@ import styled.*
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.FileInfo
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.platform.collect.PersistentSet
@@ -41,7 +42,7 @@ class InputBrowser(
 
     interface State: RState {
         var browserOpen: Boolean
-        var selected: PersistentSet<String>
+        var selected: PersistentSet<DataLocation>
     }
 
 
@@ -105,12 +106,12 @@ class InputBrowser(
     }
 
 
-    private fun onDirSelected(dir: String) {
+    private fun onDirSelected(dir: DataLocation) {
         props.dispatcher.dispatchAsync(ListInputsBrowserNavigate(dir))
     }
 
 
-    private fun onFileSelectedToggle(path: String) {
+    private fun onFileSelectedToggle(path: DataLocation) {
         val previousChecked = state.selected.contains(path)
         setState {
             selected =
@@ -155,7 +156,7 @@ class InputBrowser(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun newSelectedPaths(): List<String> {
+    private fun newSelectedPaths(): List<DataLocation> {
         if (state.selected.isEmpty()) {
             return listOf()
         }
@@ -165,7 +166,7 @@ class InputBrowser(
     }
 
 
-    private fun existingSelectedPaths(): List<String> {
+    private fun existingSelectedPaths(): List<DataLocation> {
         if (state.selected.isEmpty()) {
             return listOf()
         }
@@ -246,10 +247,10 @@ class InputBrowser(
                     else if (browserListing == null || browserDir == null) {
                         styledDiv {
                             if (browserDir != null) {
-                                +browserDir
+                                +browserDir.asString()
                             }
                             else {
-                                +props.reportState.inputSpec().browser.directory
+                                +props.reportState.inputSpec().browser.directory.asString()
                             }
                         }
                         +"Loading..."
@@ -266,7 +267,7 @@ class InputBrowser(
     }
 
 
-    private fun RBuilder.renderDetail(browserListing: List<FileInfo>, browserDir: String) {
+    private fun RBuilder.renderDetail(browserListing: List<FileInfo>, browserDir: DataLocation) {
         renderControls()
 
         styledDiv {
@@ -539,7 +540,7 @@ class InputBrowser(
                 styledTbody {
                     for (folderInfo in folders) {
                         styledTr {
-                            key = folderInfo.path
+                            key = folderInfo.path.asString()
 
                             attrs {
                                 onClickFunction = {
@@ -591,7 +592,7 @@ class InputBrowser(
                         val checked = fileInfo.path in state.selected
                         val selected = fileInfo.path in selectedPathSet
                         styledTr {
-                            key = fileInfo.path
+                            key = fileInfo.path.asString()
 
                             css {
                                 cursor = Cursor.pointer
@@ -674,7 +675,7 @@ class InputBrowser(
     }
 
 
-    private fun RBuilder.renderPathEditError(browseDir: String) {
+    private fun RBuilder.renderPathEditError(browseDir: DataLocation) {
         child(InputBrowserDir::class) {
             attrs {
                 reportState = props.reportState
@@ -687,7 +688,7 @@ class InputBrowser(
     }
 
 
-    private fun RBuilder.renderPathEdit(browseDir: String) {
+    private fun RBuilder.renderPathEdit(browseDir: DataLocation) {
         child(InputBrowserDir::class) {
             attrs {
                 reportState = props.reportState
@@ -700,7 +701,7 @@ class InputBrowser(
     }
 
 
-    private fun RBuilder.renderSummary(browseDir: String?) {
+    private fun RBuilder.renderSummary(browseDir: DataLocation?) {
         styledDiv {
             css {
                 height = 1.px

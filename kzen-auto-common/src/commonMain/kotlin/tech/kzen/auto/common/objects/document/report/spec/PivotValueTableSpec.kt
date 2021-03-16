@@ -1,8 +1,6 @@
 package tech.kzen.auto.common.objects.document.report.spec
 
-import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
-import tech.kzen.auto.common.util.RequestParams
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.util.Digest
@@ -14,30 +12,31 @@ data class PivotValueTableSpec(
 ):
     Digestible
 {
+    //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val requestValueTypeDelimiter = "/"
 
-        fun ofPreviewRequest(request: DetachedRequest): PivotValueTableSpec {
-            val values = request.parameters.values[ReportConventions.previewPivotValuesKey]
-                ?: throw IllegalArgumentException(
-                    "Request missing '${ReportConventions.previewPivotValuesKey}': $request")
-
-            val columns = values
-                .map { encodedColumnValue ->
-                    val delimiterIndex = encodedColumnValue.indexOf(requestValueTypeDelimiter)
-                    val valueType = PivotValueType.valueOf(encodedColumnValue.substring(0, delimiterIndex))
-                    val columnName = encodedColumnValue.substring(delimiterIndex + 1)
-                    columnName to valueType
-                }.groupBy { columnValue ->
-                    columnValue.first
-                }.mapValues { columnValueGroup ->
-                    columnValueGroup.value.map { it.second }
-                }.mapValues {
-                    PivotValueColumnSpec(it.value.toSet())
-                }
-
-            return PivotValueTableSpec(columns)
-        }
+//        fun ofPreviewRequest(request: DetachedRequest): PivotValueTableSpec {
+//            val values = request.parameters.values[ReportConventions.previewPivotValuesKey]
+//                ?: throw IllegalArgumentException(
+//                    "Request missing '${ReportConventions.previewPivotValuesKey}': $request")
+//
+//            val columns = values
+//                .map { encodedColumnValue ->
+//                    val delimiterIndex = encodedColumnValue.indexOf(requestValueTypeDelimiter)
+//                    val valueType = PivotValueType.valueOf(encodedColumnValue.substring(0, delimiterIndex))
+//                    val columnName = encodedColumnValue.substring(delimiterIndex + 1)
+//                    columnName to valueType
+//                }.groupBy { columnValue ->
+//                    columnValue.first
+//                }.mapValues { columnValueGroup ->
+//                    columnValueGroup.value.map { it.second }
+//                }.mapValues {
+//                    PivotValueColumnSpec(it.value.toSet())
+//                }
+//
+//            return PivotValueTableSpec(columns)
+//        }
 
 
         fun ofNotation(notation: MapAttributeNotation): PivotValueTableSpec {
@@ -54,25 +53,31 @@ data class PivotValueTableSpec(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    fun headerListing(): HeaderListing {
+        return HeaderListing(columns.keys.toList())
+    }
+
+
     fun isEmpty(): Boolean {
         return columns.isEmpty()
     }
 
 
-    fun toPreviewRequest(): DetachedRequest {
-        val encodedValues = columns
-            .flatMap { column ->
-                column.value.types.map {
-                    "${it.name}$requestValueTypeDelimiter${column.key}"
-                }
-            }
-
-        return DetachedRequest(
-            RequestParams(mapOf(
-                ReportConventions.previewPivotValuesKey to encodedValues
-            )),
-            null)
-    }
+//    fun toPreviewRequest(): DetachedRequest {
+//        val encodedValues = columns
+//            .flatMap { column ->
+//                column.value.types.map {
+//                    "${it.name}$requestValueTypeDelimiter${column.key}"
+//                }
+//            }
+//
+//        return DetachedRequest(
+//            RequestParams(mapOf(
+//                ReportConventions.previewPivotValuesKey to encodedValues
+//            )),
+//            null)
+//    }
 
 
     override fun digest(builder: Digest.Builder) {

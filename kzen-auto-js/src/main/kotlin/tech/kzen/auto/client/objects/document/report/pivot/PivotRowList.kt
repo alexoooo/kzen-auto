@@ -36,14 +36,14 @@ class PivotRowList(
         val oldRows = props.pivotSpec.rows
 
         val action =
-            if (options.isNullOrEmpty() && oldRows.size > 1) {
+            if (options.isNullOrEmpty() && oldRows.values.size > 1) {
                 PivotRowClearRequest
             }
             else {
                 val newRows = options?.map { it.value } ?: listOf()
 
-                val added = newRows.filter { it !in oldRows }
-                val removed = oldRows.filter { it !in newRows }
+                val added = newRows.filter { it !in oldRows.values }
+                val removed = oldRows.values.filter { it !in newRows }
 
                 val changeCount = added.size + removed.size
 
@@ -98,9 +98,9 @@ class PivotRowList(
                     isMulti = true
 //                    id = selectId
 
-                    value = props.pivotSpec.rows.map { ReactSelectOption(it, it) }.toTypedArray()
+                    value = props.pivotSpec.rows.values.map { ReactSelectOption(it, it) }.toTypedArray()
 
-                    options = columnListing.map { ReactSelectOption(it, it) }.toTypedArray()
+                    options = columnListing.values.map { ReactSelectOption(it, it) }.toTypedArray()
 
                     onChange = {
                         onOptionsChange(it)

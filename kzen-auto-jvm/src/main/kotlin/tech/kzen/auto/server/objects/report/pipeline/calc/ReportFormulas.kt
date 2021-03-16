@@ -43,7 +43,7 @@ class ReportFormulas(
             formulas[nextIndex++] = calculatedColumn
         }
         augmentedHeader = RecordHeader.of(
-            header.headerNames + reportFormulaSignature.formula.formulas.keys)
+            header.headerNames.values + reportFormulaSignature.formula.formulas.keys)
     }
 
 

@@ -12,6 +12,7 @@ import tech.kzen.auto.client.objects.document.report.state.InputsSelectionRemove
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.FileInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.util.FormatUtils
@@ -45,7 +46,8 @@ class InputSelected(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun summaryText(selected: List<FileInfo>): String {
-        val folderCount = selected.map { it.path.substring(0, it.path.length - it.name.length) }.toSet().size
+//        val folderCount = selected.map { it.path.asUri().substring(0, it.path.asUri().length - it.name.length) }.toSet().size
+        val folderCount = selected.map { it.path.parent() }.toSet().size
         val totalSize = selected.map { it.size }.sum()
 
         val filesPlural = if (selected.size == 1) { "file" } else { "files" }
@@ -71,7 +73,7 @@ class InputSelected(
     }
 
 
-    private fun onRemove(path: String) {
+    private fun onRemove(path: DataLocation) {
         if (props.editDisabled) {
             return
         }
@@ -441,7 +443,7 @@ class InputSelected(
         val fileProgress = reportProgress?.inputs?.get(fileInfo.path)
 
         styledTr {
-            key = fileInfo.path
+            key = fileInfo.path.asString()
 
             css {
                 hover {
@@ -534,7 +536,9 @@ class InputSelected(
                     css {
                         paddingRight = 0.5.em
                     }
-                    +fileInfo.path.substring(0, fileInfo.path.length - fileInfo.name.length)
+
+//                    +fileInfo.path.asUri().substring(0, fileInfo.path.asUri().length - fileInfo.name.length)
+                    +fileInfo.path.parent().asString()
                 }
             }
         }

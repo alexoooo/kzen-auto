@@ -2,10 +2,11 @@ package tech.kzen.auto.server.objects.report.pipeline.input.model
 
 import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap
 import it.unimi.dsi.fastutil.objects.Object2IntMap
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 
 
 data class RecordHeader(
-    val headerNames: List<String>,
+    val headerNames: HeaderListing,
     val headerIndex: Object2IntMap<String>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -29,7 +30,7 @@ data class RecordHeader(
                 headerIndex[headerNames[i]] = i
             }
 
-            return RecordHeader(headerNames, headerIndex)
+            return RecordHeader(HeaderListing(headerNames), headerIndex)
         }
     }
 
@@ -52,7 +53,7 @@ data class RecordHeader(
 
 
     fun isEmpty(): Boolean {
-        return headerNames.isEmpty()
+        return headerNames.values.isEmpty()
     }
 
 

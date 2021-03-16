@@ -5,15 +5,15 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 
 
-class InputStreamFlatDataReader(
+class InputStreamFlatDataStream(
     private val inputStream: InputStream
 ):
-    FlatDataReader
+    FlatDataStream
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        fun ofLiteral(bytes: ByteArray): FlatDataReader {
-            return InputStreamFlatDataReader(
+        fun ofLiteral(bytes: ByteArray): FlatDataStream {
+            return InputStreamFlatDataStream(
                 ByteArrayInputStream(bytes))
         }
     }

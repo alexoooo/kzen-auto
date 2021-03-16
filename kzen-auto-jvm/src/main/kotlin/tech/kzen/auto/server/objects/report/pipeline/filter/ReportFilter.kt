@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.filter
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
@@ -13,7 +14,8 @@ class ReportFilter(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     private val filterColumnNames = reportRunSpec
-        .inputAndFormulaColumns()
+        .inputAndFormulaColumns
+        .values
         .intersect(reportRunSpec.filter.columns.keys)
         .toList()
 
@@ -26,7 +28,8 @@ class ReportFilter(
         }
 
 
-    private val recordHeaderIndex = RecordHeaderIndex(nonEmptyFilterColumnNames)
+    private val recordHeaderIndex = RecordHeaderIndex(
+        HeaderListing(nonEmptyFilterColumnNames))
 
     private val columnFilterSpecTypes: List<ColumnFilterType>
     private val columnFilterSpecValues: List<Set<RecordFieldFlyweight>>

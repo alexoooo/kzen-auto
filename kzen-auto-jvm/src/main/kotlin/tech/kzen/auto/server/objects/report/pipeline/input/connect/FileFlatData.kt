@@ -1,8 +1,9 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.connect
 
 import com.google.common.io.MoreFiles
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
+import tech.kzen.auto.common.objects.document.report.listing.FilePath
 import java.io.InputStream
-import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -11,8 +12,8 @@ import java.nio.file.Paths
 data class FileFlatData(
     val path: Path
 ): FlatData {
-    override fun key(): URI {
-        return path.toUri()
+    override fun key(): DataLocation {
+        return DataLocation.ofFile(FilePath.of(path.normalize().toAbsolutePath().toString()))
     }
 
 

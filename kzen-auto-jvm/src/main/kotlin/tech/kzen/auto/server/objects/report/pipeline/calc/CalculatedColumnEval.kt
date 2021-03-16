@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.calc
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
@@ -20,7 +21,7 @@ class CalculatedColumnEval(
     fun validate(
         calculatedColumnName: String,
         calculatedColumnFormula: String,
-        columnNames: List<String>
+        columnNames: HeaderListing
     ): String? {
         if (calculatedColumnFormula.isEmpty()) {
             return null
@@ -44,7 +45,7 @@ class CalculatedColumnEval(
     fun create(
         calculatedColumnName: String,
         calculatedColumnFormula: String,
-        columnNames: List<String>
+        columnNames: HeaderListing
     ): CalculatedColumn {
         if (calculatedColumnFormula.isEmpty()) {
             return ConstantCalculatedColumn.empty
@@ -73,22 +74,17 @@ class CalculatedColumnEval(
     private fun generate(
         calculatedColumnName: String,
         calculatedColumnFormula: String,
-        columnNames: List<String>
+        columnNames: HeaderListing
     ): KotlinCode {
         val sanitizedName = sanitizeName(calculatedColumnName)
         val mainClassName = "Column_$sanitizedName"
 
-        val columnNameStringList = columnNames.joinToString { "\"$it\""}
+        val columnNameStringList = columnNames.values.joinToString { "\"$it\""}
 
-        val userCode =
-            if (calculatedColumnFormula.contains("return ")) {
-                calculatedColumnFormula
-            }
-            else {
-                "return ($calculatedColumnFormula)"
-            }
+//        val userCode =
+//            "return ($calculatedColumnFormula)"
 
-        val columnAccessors = columnNames.withIndex().joinToString("\n") { columnName -> """
+        val columnAccessors = columnNames.values.withIndex().joinToString("\n") { columnName -> """
 val `${columnName.value}` get(): ColumnValue {
     return columnValue(${columnName.index})
 }
@@ -137,7 +133,9 @@ $columnAccessors
 
 
     private fun evaluate(): Any? {
-$userCode
+        return run {
+$calculatedColumnFormula
+        }
     }
 }
 """

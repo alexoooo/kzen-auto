@@ -10,23 +10,4 @@ public class FlatProcessorEvent
 {
     public final RecordRowBuffer model = new RecordRowBuffer();
     public boolean skip = false;
-
-
-//    @NotNull
-//    @Override
-//    public Class<RecordRowBuffer> getType() {
-//        return RecordRowBuffer.class;
-//    }
-//
-//
-//    @Override
-//    public RecordRowBuffer getModel() {
-//        return model;
-//    }
-//
-//
-//    @Override
-//    public boolean getSkip() {
-//        return skip;
-//    }
 }

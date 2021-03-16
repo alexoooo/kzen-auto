@@ -1,11 +1,12 @@
 package tech.kzen.auto.common.objects.document.report.progress
 
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.auto.common.paradigm.task.model.TaskProgress
 
 
 data class ReportProgress(
     val outputCount: Long,
-    val inputs: Map<String, ReportFileProgress>
+    val inputs: Map<DataLocation, ReportFileProgress>
 ) {
     companion object {
         private const val outputCountKey = "output"
@@ -14,12 +15,6 @@ data class ReportProgress(
 
         val empty = ReportProgress(0, mapOf())
 
-
-//        fun notStarted(filePaths: List<String>): ReportProgress {
-//            return ReportProgress(
-//                0,
-//                filePaths.map { it to ReportFileProgress.notStarted }.toPersistentMap())
-//        }
 
         @Suppress("UNCHECKED_CAST")
         fun fromTaskProgress(taskProgress: TaskProgress): ReportProgress {
@@ -31,7 +26,8 @@ data class ReportProgress(
             return ReportProgress(
                 (collection[outputCountKey] as String).toLong(),
                 (collection[inputsKey] as Map<String, Map<String, Any>>)
-                    .mapValues { ReportFileProgress.fromCollection(it.value) }
+                    .map { DataLocation.of(it.key) to ReportFileProgress.fromCollection(it.value) }
+                    .toMap()
             )
         }
     }
@@ -40,7 +36,7 @@ data class ReportProgress(
     fun toCollection(): Map<String, Any> {
         return mapOf(
             outputCountKey to outputCount.toString(),
-            inputsKey to inputs.mapValues { it.value.toCollection() }
+            inputsKey to inputs.map { it.key.asString() to it.value.toCollection() }.toMap()
         )
     }
 

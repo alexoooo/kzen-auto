@@ -14,6 +14,16 @@ class ProcessorInputDecoder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @Suppress("UNUSED_PARAMETER")
+    fun decodeDisruptor(
+        data: DataBlockBuffer,
+        sequence: Long,
+        endOfBatch: Boolean
+    ) {
+        decode(data)
+    }
+
+
     fun decode(data: DataBlockBuffer) {
         decoder.reset()
 

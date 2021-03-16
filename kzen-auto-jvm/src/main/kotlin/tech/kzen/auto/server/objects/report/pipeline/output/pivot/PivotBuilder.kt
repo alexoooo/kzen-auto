@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.pivot
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
@@ -13,8 +14,8 @@ import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.ValueSta
 
 
 class PivotBuilder(
-    rows: Set<String>,
-    values: Set<String>,
+    private val rows: HeaderListing,
+    private val values: HeaderListing,
     private val rowIndex: RowIndex,
     private val valueStatistics: ValueStatistics
 ):
@@ -29,15 +30,15 @@ class PivotBuilder(
 
     //-----------------------------------------------------------------------------------------------------------------
     data class ExportSignature(
-        val header: List<String>,
+        val header: HeaderListing,
         val valueTypes: List<IndexedValue<PivotValueType>>
     ) {
         companion object {
-            fun of(rowColumns: List<String>, values: PivotValueTableSpec): ExportSignature {
+            fun of(rowColumns: HeaderListing, values: PivotValueTableSpec): ExportSignature {
                 val header = mutableListOf<String>()
                 val valueTypes = mutableListOf<IndexedValue<PivotValueType>>()
 
-                for (rowColumn in rowColumns) {
+                for (rowColumn in rowColumns.values) {
                     header.add(rowColumn)
                 }
 
@@ -51,20 +52,20 @@ class PivotBuilder(
                     }
                 }
 
-                return ExportSignature(header, valueTypes)
+                return ExportSignature(HeaderListing(header), valueTypes)
             }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val rowColumns = rows.toList()
-    private val rowColumnIndex = RecordHeaderIndex(rowColumns)
-    private val rowValueIndexBuffer = LongArray(rowColumns.size)
+//    private val rowColumns = rows.values
+    private val rowColumnIndex = RecordHeaderIndex(rows)
+    private val rowValueIndexBuffer = LongArray(rows.values.size)
 
-    private val valueColumns = values.toList()
-    private val valueColumnIndex = RecordHeaderIndex(valueColumns)
-    private val valueBuffer = DoubleArray(valueColumns.size)
+//    private val valueColumns = values.values
+    private val valueColumnIndex = RecordHeaderIndex(values)
+    private val valueBuffer = DoubleArray(values.values.size)
 
     private val flyweight =
         RecordFieldFlyweight()
@@ -150,7 +151,7 @@ class PivotBuilder(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun corruptPreview(values: PivotValueTableSpec, start: Long): OutputPreview {
-        val exportSignature = ExportSignature.of(rowColumns, values)
+        val exportSignature = ExportSignature.of(rows, values)
         return OutputPreview(exportSignature.header, listOf(), start)
     }
 
@@ -166,7 +167,7 @@ class PivotBuilder(
                 builder.add(row)
             }
         }
-        return OutputPreview(header!!, builder, start)
+        return OutputPreview(HeaderListing(header!!), builder, start)
     }
 
 
@@ -176,9 +177,9 @@ class PivotBuilder(
         count: Long = rowCount(),
         visitor: (List<String>) -> Unit
     ) {
-        val exportSignature = ExportSignature.of(rowColumns, values)
+        val exportSignature = ExportSignature.of(rows, values)
 
-        visitor.invoke(exportSignature.header)
+        visitor.invoke(exportSignature.header.values)
 
         val adjustedStart = start.coerceAtLeast(0L)
         val adjustedEndExclusive = (adjustedStart + count).coerceAtMost(rowIndex.size())

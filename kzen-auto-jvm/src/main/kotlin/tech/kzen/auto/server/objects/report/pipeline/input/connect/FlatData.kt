@@ -1,11 +1,11 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.connect
 
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import java.io.InputStream
-import java.net.URI
 
 
 interface FlatData {
-    fun key(): URI
+    fun key(): DataLocation
 
     fun outerExtension(): String
     fun innerExtension(): String

@@ -6,6 +6,7 @@ import tech.kzen.auto.plugin.model.FlatRecordBuilder;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvRecordParser;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvRecordParser;
+import tech.kzen.lib.platform.ClassName;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -14,6 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 
 
+// TODO: factor out CSV and TSV logic
 public class RecordRowBuffer
         implements FlatRecordBuilder
 {
@@ -24,6 +26,8 @@ public class RecordRowBuffer
     private static boolean isDoubleCacheMissing(double value) {
         return Double.doubleToRawLongBits(value) == missingNumberBits;
     }
+
+    public static final ClassName className = new ClassName(RecordRowBuffer.class.getName());
 
 
     public static RecordRowBuffer of(String... values) {
@@ -85,13 +89,11 @@ public class RecordRowBuffer
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    @Override
     public int fieldCount() {
         return fieldCount;
     }
 
 
-//    @Override
     public int fieldContentLength() {
         return fieldContentLength;
     }
@@ -148,29 +150,10 @@ public class RecordRowBuffer
 
 
     public void populateCaches() {
-//        growCachesIfRequired(fieldCount);
-
         for (int i = 0; i < fieldCount; i++) {
             populateCacheIfRequired(i);
         }
     }
-
-
-//    private void growCachesIfRequired(int size) {
-//        if (doublesCache == null) {
-//            doublesCache = new double[size];
-//            Arrays.fill(doublesCache, doubleCacheMissing);
-//
-//            hashesCache = new long[size];
-//        }
-//        else if (doublesCache.length < size) {
-//            int oldLength = doublesCache.length;
-//            doublesCache = Arrays.copyOf(doublesCache, size);
-//            Arrays.fill(doublesCache, oldLength, size, doubleCacheMissing);
-//
-//            hashesCache = Arrays.copyOf(hashesCache, size);
-//        }
-//    }
 
 
     private void populateCacheIfRequired(int fieldIndex) {

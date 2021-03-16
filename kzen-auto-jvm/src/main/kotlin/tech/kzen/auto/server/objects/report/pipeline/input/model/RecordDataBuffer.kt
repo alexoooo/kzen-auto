@@ -1,12 +1,12 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.model
 
-import java.net.URI
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import java.nio.ByteBuffer
 import java.nio.CharBuffer
 
 
 class RecordDataBuffer(
-    var inputKey: URI?,
+    var inputKey: DataLocation?,
     var innerExtension: String?,
 
     val bytes: ByteArray,

@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.output
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
@@ -38,6 +39,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 
+// TODO: optimize save csv generation
 class ReportOutput(
     initialReportRunSpec: ReportRunSpec,
     private val runDir: Path,
@@ -51,18 +53,18 @@ class ReportOutput(
         private val modifiedFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
 
-        private fun headerNames(reportRunSpec: ReportRunSpec): List<String> {
+        private fun headerNames(reportRunSpec: ReportRunSpec): HeaderListing {
             val runSignature = reportRunSpec.toSignature()
 
             return when {
                 runSignature.hasPivot() ->
                     PivotBuilder.ExportSignature.of(
-                        reportRunSpec.pivot.rows.toList(),
+                        reportRunSpec.pivot.rows,
                         reportRunSpec.pivot.values
                     ).header
 
                 else ->
-                    runSignature.allColumnNames()
+                    runSignature.inputAndFormulaColumns
             }
         }
 
@@ -82,8 +84,8 @@ class ReportOutput(
 
 
         private fun filePivot(
-            rows: Set<String>,
-            values: Set<String>,
+            rows: HeaderListing,
+            values: HeaderListing,
             tempDir: Path
         ): PivotBuilder {
             val rowTextContentFile = tempDir.resolve("row-text-value.bin")
@@ -111,14 +113,14 @@ class ReportOutput(
                 H2DigestIndex(rowSignatureDigestDir)
 
             val indexedSignatureStore = BufferedIndexedSignatureStore(
-                FileIndexedSignatureStore(rowSignatureFile, rows.size)
+                FileIndexedSignatureStore(rowSignatureFile, rows.values.size)
             )
 
             val rowSignatureIndex = StoreRowSignatureIndex(
                 rowSignatureDigestIndex, indexedSignatureStore)
 
             val valueStatistics = BufferedValueStatistics(
-                FileValueStatisticsStore(valueStatisticsFile, values.size)
+                FileValueStatisticsStore(valueStatisticsFile, values.values.size)
             )
 
             return PivotBuilder(
@@ -168,14 +170,17 @@ class ReportOutput(
         }
         else {
             if (! reportRunSignature.hasPivot()) {
-                indexedCsvTable = IndexedCsvTable(reportRunSignature.allColumnNames(), runDir)
+                indexedCsvTable = IndexedCsvTable(reportRunSignature.inputAndFormulaColumns, runDir)
                 pivotBuilder = null
             }
             else {
                 indexedCsvTable = null
 
                 val pivotSpec = initialReportRunSpec.pivot
-                pivotBuilder = filePivot(pivotSpec.rows, pivotSpec.values.columns.keys, runDir)
+                pivotBuilder = filePivot(
+                    pivotSpec.rows,
+                    HeaderListing(pivotSpec.values.columns.keys.toList()),
+                    runDir)
             }
         }
     }

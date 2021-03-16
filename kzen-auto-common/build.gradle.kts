@@ -4,7 +4,15 @@ plugins {
 }
 
 kotlin {
-    jvm {}
+    jvm {
+        @Suppress("UNUSED_VARIABLE")
+        val main by compilations.getting {
+            kotlinOptions {
+//                useIR = true
+                jvmTarget = jvmTargetVersion
+            }
+        }
+    }
 
     js {
         browser {

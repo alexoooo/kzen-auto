@@ -7,12 +7,9 @@ import org.w3c.xhr.ARRAYBUFFER
 import org.w3c.xhr.EMPTY
 import org.w3c.xhr.XMLHttpRequest
 import org.w3c.xhr.XMLHttpRequestResponseType
+import tech.kzen.auto.platform.encodeURIComponent
 import kotlin.coroutines.*
 import kotlin.js.Promise
-
-
-external fun encodeURIComponent(str: String): String
-external fun decodeURIComponent(str: String): String
 
 
 suspend fun httpGet(url: String): String = suspendCoroutine { c ->

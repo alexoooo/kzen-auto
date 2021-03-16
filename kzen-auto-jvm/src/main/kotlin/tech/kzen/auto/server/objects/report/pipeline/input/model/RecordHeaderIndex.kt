@@ -1,8 +1,10 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.model
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+
 
 data class RecordHeaderIndex(
-    val columnHeaders: List<String>
+    val columnHeaders: HeaderListing
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     private var cachedIndices = IntArray(0)
@@ -16,11 +18,11 @@ data class RecordHeaderIndex(
         }
 
 //        val indices = IntArray(recordHeader.headerNames.size)
-        val indices = IntArray(columnHeaders.size)
-        for (i in columnHeaders.indices) {
-            val columnHeader = columnHeaders[i]
+        val indices = IntArray(columnHeaders.values.size)
+        for (i in columnHeaders.values.indices) {
+            val columnHeader = columnHeaders.values[i]
 //            indices[i] = columnHeaders.indexOf(recordHeader.headerNames[i])
-            indices[i] = recordHeader.headerNames.indexOf(columnHeader)
+            indices[i] = recordHeader.headerNames.values.indexOf(columnHeader)
         }
 
         cachedIndices = indices

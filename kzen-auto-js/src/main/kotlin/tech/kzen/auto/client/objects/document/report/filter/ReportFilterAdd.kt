@@ -74,6 +74,7 @@ class ReportFilterAdd(
 
         val filterSpec = props.reportState.filterSpec()
         val unusedOptions = availableColumns
+            .values
             .filter { it !in filterSpec.columns }
 
         if (unusedOptions.isEmpty()) {

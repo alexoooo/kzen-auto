@@ -2,7 +2,9 @@ package tech.kzen.auto.client.objects.document.report.state
 
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.FileInfo
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.objects.document.report.spec.*
@@ -22,7 +24,7 @@ data class ReportState(
     val inputLoading: Boolean = false,
     val inputSelected: List<FileInfo>? = null,
     val inputBrowser: List<FileInfo>? = null,
-    val inputBrowseDir: String? = null,
+    val inputBrowseDir: DataLocation? = null,
     val inputError: String? = null,
 
     val columnListingLoaded: Boolean = false,
@@ -92,7 +94,7 @@ data class ReportState(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var selectedPathSet: Set<String>? = null
+    private var selectedPathSet: Set<DataLocation>? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -187,15 +189,15 @@ data class ReportState(
     }
 
 
-    fun inputAndCalculatedColumns(): List<String>? {
+    fun inputAndCalculatedColumns(): HeaderListing? {
         if (columnListing == null) {
             return null
         }
-        return columnListing + formulaSpec().formulas.keys
+        return HeaderListing(columnListing + formulaSpec().formulas.keys)
     }
 
 
-    fun selectedPathSet(): Set<String> {
+    fun selectedPathSet(): Set<DataLocation> {
         if (selectedPathSet == null) {
             selectedPathSet = inputSpec().selected.toSet()
         }

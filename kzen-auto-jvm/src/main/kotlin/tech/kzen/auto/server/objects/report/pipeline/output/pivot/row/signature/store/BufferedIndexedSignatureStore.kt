@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.signature.RowSignature
 
 
+// TODO: optimize BufferedIndexedSignatureStore.add(LongArray)
 class BufferedIndexedSignatureStore(
     private val fileIndexedSignatureStore: FileIndexedSignatureStore,
     private val size: Int = 128
