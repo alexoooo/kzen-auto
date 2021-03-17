@@ -1,10 +1,12 @@
 package tech.kzen.auto.common.objects.document.report.listing
 
+import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.auto.common.util.data.DataLocationInfo
 
 
 data class InputInfo(
     val browseDir: DataLocation,
-    val files: List<FileInfo>
+    val files: List<DataLocationInfo>
 ) {
     companion object {
         private const val browseDirKey = "dir"
@@ -18,7 +20,7 @@ data class InputInfo(
             return InputInfo(
                 DataLocation.of(map[browseDirKey]!! as String),
                 selected.map {
-                    FileInfo.fromCollection(it)
+                    DataLocationInfo.fromCollection(it)
                 }
             )
         }

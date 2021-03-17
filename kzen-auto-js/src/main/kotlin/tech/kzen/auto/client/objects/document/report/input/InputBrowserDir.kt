@@ -14,8 +14,7 @@ import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
-import tech.kzen.auto.common.objects.document.report.listing.FileInfo
+import tech.kzen.auto.common.util.data.DataLocation
 
 
 class InputBrowserDir(
@@ -43,6 +42,19 @@ class InputBrowserDir(
     override fun State.init(props: Props) {
         textEdit = false
         editDir = props.browseDir.asString()
+    }
+
+
+    override fun componentDidUpdate(
+        prevProps: Props,
+        prevState: State,
+        snapshot: Any
+    ) {
+        if (! state.textEdit) {
+            setState {
+                editDir = props.browseDir.asString()
+            }
+        }
     }
 
 
@@ -104,7 +116,8 @@ class InputBrowserDir(
 
 
     private fun RBuilder.renderBreadCrumbs() {
-        val parts = FileInfo.split(props.browseDir)
+//        val parts = DataLocationInfo.split(props.browseDir)
+        val parts = props.browseDir.ancestors()
 
         styledDiv {
             css {
@@ -115,7 +128,7 @@ class InputBrowserDir(
 
             for ((index, part) in parts.withIndex()) {
                 styledSpan {
-                    key = part.first
+                    key = part.asString()
 
                     if (index != 0) {
                         child(ArrowForwardIosIcon::class) {
@@ -146,14 +159,14 @@ class InputBrowserDir(
                         }
 
                         attrs {
-                            title = part.first
+                            title = part.asString()
 
                             onClickFunction = {
-                                onDirSelected(DataLocation.of(part.first))
+                                onDirSelected(part)
                             }
                         }
 
-                        +part.second
+                        +part.fileName()
                     }
                 }
             }

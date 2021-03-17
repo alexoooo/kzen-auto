@@ -13,4 +13,6 @@ expect class Url: Digestible {
     val scheme: String
     val path: String
     val query: String?
+
+//    fun normalize(): Url
 }

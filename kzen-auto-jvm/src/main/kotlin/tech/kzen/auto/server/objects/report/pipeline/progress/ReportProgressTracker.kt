@@ -4,7 +4,7 @@ import com.google.common.base.Stopwatch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.objects.document.report.progress.ReportFileProgress
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue

@@ -43,6 +43,11 @@ actual class Url(
         }
 
 
+    fun normalize(): Url {
+        return Url(uri.normalize())
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun toString(): String {
         return uri.toString()

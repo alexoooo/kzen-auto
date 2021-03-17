@@ -38,14 +38,14 @@ class RibbonController(
 
 
     class State(
-            var updatePending: Boolean,
-            var documentPath: DocumentPath?,
-            var parameters: RequestParams,
+        var updatePending: Boolean,
+        var documentPath: DocumentPath?,
+        var parameters: RequestParams,
 
-            var type: ObjectLocation?,
-            var tabIndex: Int = 0,
+        var type: ObjectLocation?,
+        var tabIndex: Int = 0,
 
-            var currentRibbonGroups: List<RibbonGroup>
+        var currentRibbonGroups: List<RibbonGroup>
     ): RState
 
 

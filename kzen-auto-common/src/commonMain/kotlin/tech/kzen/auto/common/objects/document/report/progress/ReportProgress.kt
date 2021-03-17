@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.objects.document.report.progress
 
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.paradigm.task.model.TaskProgress
 
 

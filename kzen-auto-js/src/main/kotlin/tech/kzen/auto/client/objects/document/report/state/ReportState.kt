@@ -2,8 +2,8 @@ package tech.kzen.auto.client.objects.document.report.state
 
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
-import tech.kzen.auto.common.objects.document.report.listing.FileInfo
+import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
@@ -22,8 +22,8 @@ data class ReportState(
 
     val inputLoaded: Boolean = false,
     val inputLoading: Boolean = false,
-    val inputSelected: List<FileInfo>? = null,
-    val inputBrowser: List<FileInfo>? = null,
+    val inputSelected: List<DataLocationInfo>? = null,
+    val inputBrowser: List<DataLocationInfo>? = null,
     val inputBrowseDir: DataLocation? = null,
     val inputError: String? = null,
 

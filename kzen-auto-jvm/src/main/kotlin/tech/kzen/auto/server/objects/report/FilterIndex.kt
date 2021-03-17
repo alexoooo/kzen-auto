@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report
 
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.server.util.AutoJvmUtils
 import tech.kzen.auto.server.util.WorkUtils
 import java.nio.file.Files

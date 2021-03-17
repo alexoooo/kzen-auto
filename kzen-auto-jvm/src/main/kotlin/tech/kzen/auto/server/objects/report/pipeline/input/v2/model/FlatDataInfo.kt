@@ -6,11 +6,11 @@ import tech.kzen.lib.common.util.Digestible
 
 
 data class FlatDataInfo(
-    val dataLocationInfo: DataLocationInfo,
+    val flatDataLocation: FlatDataLocation,
     val headerListing: HeaderListing
 ): Digestible {
     override fun digest(builder: Digest.Builder) {
-        builder.addDigestible(dataLocationInfo)
+        builder.addDigestible(flatDataLocation)
         builder.addDigestible(headerListing)
     }
 }

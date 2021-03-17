@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report
 
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.pipeline.CsvProcessorDefiner
@@ -65,7 +65,7 @@ class ColumnListingAction(
         flatDataHeaderDefinition: FlatDataHeaderDefinition<T>
     ): HeaderListing {
         val inputIndexPath = filterIndex.inputIndexPath(
-            flatDataHeaderDefinition.dataLocationInfo.dataLocation)
+            flatDataHeaderDefinition.flatDataLocation.dataLocation)
 
         val columnsFile = inputIndexPath.resolve(columnsCsvFilename)
 

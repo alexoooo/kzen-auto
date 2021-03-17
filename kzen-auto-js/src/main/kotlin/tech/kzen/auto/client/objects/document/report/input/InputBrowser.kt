@@ -11,9 +11,9 @@ import styled.*
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
-import tech.kzen.auto.common.objects.document.report.listing.FileInfo
 import tech.kzen.auto.common.util.FormatUtils
+import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.lib.platform.collect.PersistentSet
 import tech.kzen.lib.platform.collect.persistentSetOf
 import tech.kzen.lib.platform.collect.toPersistentSet
@@ -267,7 +267,7 @@ class InputBrowser(
     }
 
 
-    private fun RBuilder.renderDetail(browserListing: List<FileInfo>, browserDir: DataLocation) {
+    private fun RBuilder.renderDetail(browserListing: List<DataLocationInfo>, browserDir: DataLocation) {
         renderControls()
 
         styledDiv {
@@ -389,7 +389,7 @@ class InputBrowser(
     }
 
 
-    private fun RBuilder.renderFileTable(browserListing: List<FileInfo>) {
+    private fun RBuilder.renderFileTable(browserListing: List<DataLocationInfo>) {
         if (browserListing.isEmpty()) {
             styledDiv {
                 css {

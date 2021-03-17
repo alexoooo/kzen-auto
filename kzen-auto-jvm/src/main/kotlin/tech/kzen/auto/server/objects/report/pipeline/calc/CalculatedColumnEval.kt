@@ -102,11 +102,12 @@ ${ColumnValueConversions.operators.joinToString("\n") {
 import ${ RecordHeader::class.java.name }
 import ${ RecordHeaderIndex::class.java.name }
 import ${ RecordRowBuffer::class.java.name }
+import ${ HeaderListing::class.java.name }
 
 
 class $mainClassName: ${ CalculatedColumn::class.java.simpleName } {
     companion object {
-        private val columnNames: List<String> = listOf($columnNameStringList)
+        private val columnNames: HeaderListing = HeaderListing(listOf($columnNameStringList))
         private val recordHeaderIndex = ${ RecordHeaderIndex::class.java.simpleName }(columnNames)
     }
 

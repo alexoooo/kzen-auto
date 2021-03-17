@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.objects.document.report.spec
 
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 

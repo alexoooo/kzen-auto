@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.model
 
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
+import tech.kzen.auto.common.util.data.DataLocation
 import java.nio.ByteBuffer
 import java.nio.CharBuffer
 

@@ -2,7 +2,7 @@ package tech.kzen.auto.client.objects.document.report.state
 
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.InputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.*

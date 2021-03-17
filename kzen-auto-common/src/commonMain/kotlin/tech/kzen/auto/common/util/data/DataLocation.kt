@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.report.listing
+package tech.kzen.auto.common.util.data
 
 import tech.kzen.auto.platform.Url
 import tech.kzen.lib.common.util.Digest
@@ -52,7 +52,22 @@ data class DataLocation(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        require(filePath == null || url == null)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun fileName(): String {
+        if (filePath != null) {
+            if (filePath.isWindowsDriveRoot()) {
+                return filePath.location.substring(0, 2)
+            }
+            else if (filePath.isWindowsNetworkShare()) {
+                return filePath.location.substring(filePath.location.lastIndexOf('\\') + 1)
+            }
+        }
+
         val asString = asString()
 
         @Suppress("MoveVariableDeclarationIntoWhen")
@@ -94,16 +109,75 @@ data class DataLocation(
     }
 
 
-    fun parent(): DataLocation {
-        val simpleString = toString()
+    //-----------------------------------------------------------------------------------------------------------------
+    fun parent(): DataLocation? {
+        if (filePath != null) {
+            if (filePath.isRoot()) {
+                return null
+            }
+        }
+        else if (url != null) {
+            if (url.path.isEmpty()) {
+                return null
+            }
+        }
+        else {
+            return null
+        }
+
+        val simpleString = asString()
+
+        val withoutTrainingSlash =
+            if (simpleString.endsWith("/")) {
+                simpleString.substring(0, simpleString.length - 1)
+            }
+            else {
+                simpleString
+            }
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val lastSeparator = simpleString.lastIndexOf('/')
+        val lastSeparator = withoutTrainingSlash.lastIndexOf('/')
 
-        return when (lastSeparator) {
-            -1 -> of(simpleString)
-            else -> of(simpleString.substring(0, lastSeparator + 1))
+        return when {
+            lastSeparator == -1 ->
+                if (filePath != null &&
+                        filePath.type == FilePathType.NetworkWindows) {
+                    val backslashIndex = withoutTrainingSlash.lastIndexOf('\\')
+                    if (backslashIndex <= 1) {
+                        null
+                    }
+                    else {
+                        of(withoutTrainingSlash.substring(0, backslashIndex))
+                    }
+                }
+                else {
+                    null
+                }
+
+            lastSeparator == 0 ->
+                of("/")
+
+            filePath != null &&
+                    filePath.type == FilePathType.AbsoluteWindows &&
+                    lastSeparator == 2 ->
+                of(simpleString.substring(0, lastSeparator + 1))
+
+            else -> of(simpleString.substring(0, lastSeparator))
         }
+    }
+
+
+    fun ancestors(): List<DataLocation> {
+        val builder = mutableListOf<DataLocation>()
+        var parent = this
+        while (true) {
+            builder.add(parent)
+            val nextParent = parent.parent()
+                ?: break
+            parent = nextParent
+        }
+        builder.reverse()
+        return builder
     }
 
 
@@ -118,5 +192,10 @@ data class DataLocation(
     override fun digest(builder: Digest.Builder) {
         builder.addDigestibleNullable(filePath)
         builder.addDigestibleNullable(url)
+    }
+
+
+    override fun toString(): String {
+        return asString()
     }
 }

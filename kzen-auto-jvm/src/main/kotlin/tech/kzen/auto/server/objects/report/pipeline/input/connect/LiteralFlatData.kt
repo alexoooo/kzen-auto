@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.connect
 
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.util.Digest
 import java.io.ByteArrayInputStream
 import java.io.InputStream

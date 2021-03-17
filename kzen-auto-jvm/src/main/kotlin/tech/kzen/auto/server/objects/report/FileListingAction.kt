@@ -3,9 +3,9 @@ package tech.kzen.auto.server.objects.report
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Instant
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
-import tech.kzen.auto.common.objects.document.report.listing.FileInfo
-import tech.kzen.auto.common.objects.document.report.listing.FilePath
+import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.auto.common.util.data.DataLocationInfo
+import tech.kzen.auto.common.util.data.FilePath
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
@@ -99,7 +99,7 @@ class FileListingAction {
     }
 
 
-    suspend fun scanInfo(pattern: DataLocation, filter: String): List<FileInfo> {
+    suspend fun scanInfo(pattern: DataLocation, filter: String): List<DataLocationInfo> {
         val parsed = Paths.get(pattern.asString())
             ?: return listOf()
 
@@ -114,7 +114,7 @@ class FileListingAction {
         val filterFunction = parseFilter(filter)
 
         return withContext(Dispatchers.IO) {
-            val builder = mutableListOf<FileInfo>()
+            val builder = mutableListOf<DataLocationInfo>()
             Files.walkFileTree(
                 parsed,
                 EnumSet.noneOf(FileVisitOption::class.java),
@@ -132,7 +132,7 @@ class FileListingAction {
     }
 
 
-    fun listInfo(paths: List<DataLocation>): List<FileInfo> {
+    fun listInfo(paths: List<DataLocation>): List<DataLocationInfo> {
         val files = paths.map { Paths.get(it.asString()) }
 
         return files.map {
@@ -141,7 +141,7 @@ class FileListingAction {
     }
 
 
-    private fun toFileInfo(path: Path): FileInfo {
+    private fun toFileInfo(path: Path): DataLocationInfo {
         val attrs = Files.readAttributes(path, BasicFileAttributes::class.java)
         return toFileInfo(path, attrs)
 
@@ -160,7 +160,7 @@ class FileListingAction {
     }
 
 
-    private fun toFileInfo(path: Path, attrs: BasicFileAttributes): FileInfo {
+    private fun toFileInfo(path: Path, attrs: BasicFileAttributes): DataLocationInfo {
         val absolutePath = DataLocation.ofFile(FilePath.of(path.toAbsolutePath().normalize().toString()))
         val filename = path.fileName.toString()
         val modified = Instant.fromEpochMilliseconds(
@@ -168,10 +168,10 @@ class FileListingAction {
 
         return when {
             attrs.isDirectory ->
-                FileInfo.ofDirectory(absolutePath, filename, modified)
+                DataLocationInfo.ofDirectory(absolutePath, filename, modified)
 
             else ->
-                FileInfo.ofFile(absolutePath, filename, attrs.size(), modified)
+                DataLocationInfo.ofFile(absolutePath, filename, attrs.size(), modified)
         }
     }
 }

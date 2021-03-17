@@ -13,14 +13,10 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.NavigationRoute
-import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 
 
@@ -165,16 +161,20 @@ class RibbonRun (
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onInitialRunning(host: DocumentPath) {
-        ClientContext.navigationGlobal.parameterize(RequestParams(
+        ClientContext.navigationGlobal.parameterize(
+            RequestParams(
                 mapOf(runningKey to listOf(host.asString()))
-        ))
+        )
+        )
     }
 
 
     private fun onStoppedRunning() {
-        ClientContext.navigationGlobal.parameterize(RequestParams(
+        ClientContext.navigationGlobal.parameterize(
+            RequestParams(
                 mapOf()
-        ))
+        )
+        )
     }
 
 

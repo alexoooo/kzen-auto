@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.input
 
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.server.objects.report.pipeline.event.handoff.RecordHandoff
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader

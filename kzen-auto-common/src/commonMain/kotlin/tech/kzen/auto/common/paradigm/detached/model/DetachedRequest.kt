@@ -6,8 +6,8 @@ import tech.kzen.lib.platform.IoUtils
 
 
 data class DetachedRequest(
-        val parameters: RequestParams,
-        val body: ImmutableByteArray?
+    val parameters: RequestParams,
+    val body: ImmutableByteArray?
 ) {
     companion object {
         private const val parametersKey = "params"

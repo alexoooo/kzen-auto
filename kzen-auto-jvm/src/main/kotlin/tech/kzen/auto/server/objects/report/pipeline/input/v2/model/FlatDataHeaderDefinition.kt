@@ -9,17 +9,17 @@ import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.FlatDataSourc
 
 
 data class FlatDataHeaderDefinition<T>(
-    val dataLocationInfo: DataLocationInfo,
+    val flatDataLocation: FlatDataLocation,
     val flatDataSource: FlatDataSource,
     val processorDefinition: ProcessorDefinition<T>
 ) {
     fun openInputChain(dataBlockSize: Int): ProcessorInputChain<T> {
-        val flatDataStream = flatDataSource.open(dataLocationInfo)
+        val flatDataStream = flatDataSource.open(flatDataLocation)
 
         return ProcessorInputChain(
             ProcessorInputReader(flatDataStream),
             processorDefinition.processorDataDefinition,
-            dataLocationInfo.dataEncoding.textEncoding?.charset,
+            flatDataLocation.dataEncoding.textEncoding?.charset,
             dataBlockSize)
     }
 

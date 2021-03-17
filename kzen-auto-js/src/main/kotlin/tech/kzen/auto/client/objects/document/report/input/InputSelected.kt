@@ -12,10 +12,10 @@ import tech.kzen.auto.client.objects.document.report.state.InputsSelectionRemove
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.report.listing.DataLocation
-import tech.kzen.auto.common.objects.document.report.listing.FileInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.util.FormatUtils
+import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.auto.common.util.data.DataLocationInfo
 
 
 class InputSelected(
@@ -45,7 +45,7 @@ class InputSelected(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun summaryText(selected: List<FileInfo>): String {
+    private fun summaryText(selected: List<DataLocationInfo>): String {
 //        val folderCount = selected.map { it.path.asUri().substring(0, it.path.asUri().length - it.name.length) }.toSet().size
         val folderCount = selected.map { it.path.parent() }.toSet().size
         val totalSize = selected.map { it.size }.sum()
@@ -211,7 +211,7 @@ class InputSelected(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderSummary(selected: List<FileInfo>, reportProgress: ReportProgress?) {
+    private fun RBuilder.renderSummary(selected: List<DataLocationInfo>, reportProgress: ReportProgress?) {
         val runningFile = reportProgress?.inputs?.filter { it.value.running }?.keys?.lastOrNull()
 
         if (selected.size == 1) {
@@ -310,7 +310,7 @@ class InputSelected(
     }
 
 
-    private fun RBuilder.renderDetail(selected: List<FileInfo>, reportProgress: ReportProgress?) {
+    private fun RBuilder.renderDetail(selected: List<DataLocationInfo>, reportProgress: ReportProgress?) {
         styledDiv {
             css {
                 marginBottom = 0.25.em
@@ -439,7 +439,7 @@ class InputSelected(
     }
 
 
-    private fun RBuilder.renderDetailRow(fileInfo: FileInfo, reportProgress: ReportProgress?) {
+    private fun RBuilder.renderDetailRow(fileInfo: DataLocationInfo, reportProgress: ReportProgress?) {
         val fileProgress = reportProgress?.inputs?.get(fileInfo.path)
 
         styledTr {
@@ -538,7 +538,7 @@ class InputSelected(
                     }
 
 //                    +fileInfo.path.asUri().substring(0, fileInfo.path.asUri().length - fileInfo.name.length)
-                    +fileInfo.path.parent().asString()
+                    +fileInfo.path.parent()!!.asString()
                 }
             }
         }

@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input
 import org.junit.Test
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.pipeline.TsvProcessorDefiner
 import tech.kzen.auto.server.objects.report.pipeline.input.v2.ProcessorHeaderReader
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.DataLocationInfo
+import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.FlatDataLocation
 import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.FlatDataHeaderDefinition
 import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.FlatDataSource
 import kotlin.test.assertEquals
@@ -34,7 +34,7 @@ class ProcessorHeaderReaderTest {
 
         val header = headerReader.extract(
             FlatDataHeaderDefinition(
-                DataLocationInfo.literalUtf8,
+                FlatDataLocation.literalUtf8,
                 FlatDataSource.ofLiteral(contents.toByteArray()),
                 processorDataDefinition))
 
