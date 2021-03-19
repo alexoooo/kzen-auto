@@ -11,9 +11,9 @@ import tech.kzen.auto.common.service.GraphInstanceCreator
 import tech.kzen.auto.server.codegen.KzenAutoJvmModule
 import tech.kzen.auto.server.objects.report.*
 import tech.kzen.auto.server.objects.report.pipeline.calc.CalculatedColumnEval
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.pipeline.CsvProcessorDefiner
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.text.pipeline.TextProcessorDefiner
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.pipeline.TsvProcessorDefiner
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.text.TextProcessorDefiner
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvProcessorDefiner
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
 import tech.kzen.auto.server.service.exec.EmptyExecutionInitializer

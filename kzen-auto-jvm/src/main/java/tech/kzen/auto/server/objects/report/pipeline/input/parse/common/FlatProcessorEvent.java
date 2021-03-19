@@ -9,5 +9,4 @@ public class FlatProcessorEvent
         extends DataInputEvent
 {
     public final RecordRowBuffer model = new RecordRowBuffer();
-    public boolean skip = false;
 }

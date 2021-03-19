@@ -30,12 +30,18 @@ public class FlatPipelineHandoff
         ModelOutputEvent<RecordRowBuffer> nextEvent = output.next();
 
         if (skipFirst) {
-            nextEvent.setSkip(model.skip);
+            nextEvent.setSkip(true);
             skipFirst = false;
+        }
+        else {
+            nextEvent.setSkip(false);
         }
 
         RecordRowBuffer recordRowBuffer = nextEvent.modelOrInit(RecordRowBuffer::new);
         recordRowBuffer.copy(model.model);
+
+        RecordRowBuffer row = (RecordRowBuffer) nextEvent.getRow();
+        row.clone(recordRowBuffer);
 
         output.commit();
     }

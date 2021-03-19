@@ -2,7 +2,6 @@ package tech.kzen.auto.server.service.plugin
 
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
 import tech.kzen.auto.plugin.definition.ProcessorDefinitionInfo
-import tech.kzen.lib.platform.ClassName
 
 
 interface ProcessorDefinitionRepository {
@@ -11,8 +10,8 @@ interface ProcessorDefinitionRepository {
     fun listMetadata(): List<ProcessorDefinitionMetadata>
 
 
-    fun find(payloadType: ClassName, fileExtension: String, binary: Boolean): List<ProcessorDefinitionInfo> {
-        val matchingPayload = listMetadata().filter { it.payloadType == payloadType }
+    fun find(processorDefinitionSignature: ProcessorDefinitionSignature): List<ProcessorDefinitionInfo> {
+        val matchingPayload = listMetadata().filter { it.payloadType == processorDefinitionSignature.payloadType }
         val matchingPayloadInfo = matchingPayload.map { it.processorDefinitionInfo }
 
         if (matchingPayloadInfo.isEmpty()) {
@@ -22,7 +21,9 @@ interface ProcessorDefinitionRepository {
             return matchingPayloadInfo
         }
 
-        val matchingEncoding = matchingPayloadInfo.filter { it.dataEncoding.isBinary() == binary }
+        val matchingEncoding = matchingPayloadInfo
+            .filter { it.dataEncoding.isBinary() == processorDefinitionSignature.binary }
+
         if (matchingEncoding.isEmpty()) {
             return matchingPayloadInfo
         }
@@ -30,7 +31,9 @@ interface ProcessorDefinitionRepository {
             return matchingEncoding
         }
 
-        val matchingExtensions = matchingEncoding.filter { fileExtension in it.extensions }
+        val matchingExtensions = matchingEncoding
+            .filter { processorDefinitionSignature.fileExtension in it.extensions }
+
         if (matchingExtensions.isNotEmpty()) {
             return matchingExtensions.sortedByDescending { it.priority }
         }

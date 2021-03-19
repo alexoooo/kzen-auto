@@ -1,10 +1,9 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.pipeline.CsvProcessorDefiner
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -484,7 +483,7 @@ class CsvLineParserTest {
     //-----------------------------------------------------------------------------------------------------------------
     private fun read(
         text: String,
-        bufferSize: Int = text.encodeToByteArray().size.coerceAtLeast(RecordDataBuffer.minBufferSize)
+        bufferSize: Int = text.encodeToByteArray().size
     ): List<RecordRowBuffer> {
 //        return ReportInputChain.allCsv(text, bufferSize)
         return CsvProcessorDefiner.literal(text, bufferSize)

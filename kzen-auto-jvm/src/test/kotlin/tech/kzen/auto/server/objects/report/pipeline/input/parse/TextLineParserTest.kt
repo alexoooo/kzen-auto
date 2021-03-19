@@ -1,9 +1,8 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.text.pipeline.TextProcessorDefiner
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.text.TextProcessorDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -156,7 +155,7 @@ class TextLineParserTest {
     //-----------------------------------------------------------------------------------------------------------------
     private fun read(
         text: String,
-        bufferSize: Int = text.length.coerceAtLeast(RecordDataBuffer.minBufferSize)
+        bufferSize: Int = text.length
     ): List<RecordRowBuffer> {
 //        return ReportInputChain.allText(text, bufferSize)
         return TextProcessorDefiner.literal(text, bufferSize)

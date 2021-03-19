@@ -6,8 +6,8 @@ import tech.kzen.auto.common.objects.document.report.spec.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
 import tech.kzen.auto.server.objects.report.pipeline.calc.ColumnValueUtils
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
+import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.ValueStatistics

@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.report.pipeline.calc
 
 import tech.kzen.auto.server.objects.report.model.ReportFormulaSignature
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 
 

@@ -1,9 +1,8 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.pipeline.TsvProcessorDefiner
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvProcessorDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -199,7 +198,7 @@ class TsvLineParserTest {
     //-----------------------------------------------------------------------------------------------------------------
     private fun read(
         text: String,
-        bufferSize: Int = text.length.coerceAtLeast(RecordDataBuffer.minBufferSize)
+        bufferSize: Int = text.length
     ): List<RecordRowBuffer> {
         return TsvProcessorDefiner.literal(text, bufferSize)
     }

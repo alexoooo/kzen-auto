@@ -1,7 +1,10 @@
 package tech.kzen.auto.server.util
 
+import com.lmax.disruptor.EventHandler
 import com.lmax.disruptor.WaitStrategy
 import com.lmax.disruptor.YieldingWaitStrategy
+import com.lmax.disruptor.dsl.Disruptor
+import com.lmax.disruptor.dsl.EventHandlerGroup
 
 
 object DisruptorUtils {
@@ -9,5 +12,21 @@ object DisruptorUtils {
 //        return BusySpinWaitStrategy()
         return YieldingWaitStrategy()
 //        return LiteBlockingWaitStrategy()
+    }
+
+
+
+    fun <T> addHandler(
+        disruptor: Disruptor<T>,
+        group: EventHandlerGroup<T>?,
+        handler: EventHandler<T>
+    ): EventHandlerGroup<T> {
+        return when (group) {
+            null ->
+                disruptor.handleEventsWith(handler)
+
+            else ->
+                group.handleEventsWith(handler)
+        }
     }
 }

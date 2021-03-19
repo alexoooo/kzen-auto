@@ -4,8 +4,8 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
+import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 
 

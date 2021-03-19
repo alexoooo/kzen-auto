@@ -4,7 +4,7 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.DatasetInfo
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
 
 
 data class ReportRunSpec(

@@ -1,7 +1,8 @@
 package tech.kzen.auto.server.objects.report.pipeline.input
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordDataBuffer
+import tech.kzen.auto.plugin.model.DataBlockBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputDecoder
 import kotlin.test.assertEquals
 
 
@@ -48,16 +49,16 @@ class ReportInputDecoderTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun decode(encoded: ByteArray, bufferSize: Int = encoded.size): String {
-        val buffer = RecordDataBuffer.ofBufferSize(
-            bufferSize.coerceAtLeast(RecordDataBuffer.minBufferSize))
-        val decoder = ReportInputDecoder()
+        val buffer = DataBlockBuffer.ofText(
+            bufferSize.coerceAtLeast(DataBlockBuffer.maxUnicodeSize))
+        val decoder = ProcessorInputDecoder(Charsets.UTF_8)
         val builder = StringBuilder()
 
         var offset = 0
         while (offset < encoded.size) {
             val end = (offset + bufferSize).coerceAtMost(encoded.size)
 
-            buffer.endOfStream = end == encoded.size
+            buffer.endOfData = end == encoded.size
             encoded.copyInto(buffer.bytes, 0, offset, end)
             buffer.bytesLength = end - offset
 

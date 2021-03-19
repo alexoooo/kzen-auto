@@ -19,14 +19,15 @@ import tech.kzen.auto.plugin.definition.ProcessorDefinition
 import tech.kzen.auto.plugin.spec.DataEncodingSpec
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.DatasetInfo
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.FlatDataHeaderDefinition
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.FlatDataInfo
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.FlatDataLocation
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.file.FileFlatDataSource
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataInfo
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataLocation
+import tech.kzen.auto.server.objects.report.pipeline.input.connect.file.FileFlatDataSource
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
+import tech.kzen.auto.server.service.plugin.ProcessorDefinitionSignature
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import java.awt.geom.IllegalPathStateException
@@ -97,7 +98,11 @@ class ReportDocument(
     private fun processorDefinition(flatDataLocation: FlatDataLocation): ProcessorDefinition<*> {
         val payloadType = RecordRowBuffer.className
         val processorDefinitionInfoCandidates = ServerContext.definitionRepository.find(
-            payloadType, flatDataLocation.dataLocation.innerExtension(), flatDataLocation.dataEncoding.isBinary())
+            ProcessorDefinitionSignature(
+                payloadType,
+                flatDataLocation.dataLocation.innerExtension(),
+                flatDataLocation.dataEncoding.isBinary()
+            ))
 
         val primaryProcessorDefinitionInfo = processorDefinitionInfoCandidates.firstOrNull()
             ?: throw IllegalStateException("Processor not found: $flatDataLocation - $payloadType")
@@ -120,7 +125,8 @@ class ReportDocument(
                     FlatDataHeaderDefinition(
                         dataLocationInfo,
                         FileFlatDataSource(),
-                        processorDefinition(dataLocationInfo)))
+                        processorDefinition(dataLocationInfo))
+                )
 
             items.add(FlatDataInfo(dataLocationInfo, headerListing))
         }
@@ -128,7 +134,7 @@ class ReportDocument(
     }
 
 
-    private suspend fun runSpec(): ReportRunSpec? {
+    private fun runSpec(): ReportRunSpec? {
         val datasetInfo = datasetInfo()
 //            ?: return null
 
@@ -246,7 +252,7 @@ class ReportDocument(
     }
 
 
-    private suspend fun actionDownload(): ExecutionDownloadResult {
+    private fun actionDownload(): ExecutionDownloadResult {
         val runSpec = runSpec()
             ?: error("Missing run")
 

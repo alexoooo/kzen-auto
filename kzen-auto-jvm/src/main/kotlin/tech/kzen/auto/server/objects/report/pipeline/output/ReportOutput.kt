@@ -9,7 +9,7 @@ import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.model.ReportRunSignature
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.PivotBuilder
@@ -189,7 +189,6 @@ class ReportOutput(
     //-----------------------------------------------------------------------------------------------------------------
     fun add(recordRow: RecordRowBuffer, header: RecordHeader) {
         if (indexedCsvTable != null) {
-//            val values = row.getOrEmptyAll(reportRunSignature.columnNames)
             indexedCsvTable.add(recordRow, header)
             progress?.nextOutput(1L)
         }

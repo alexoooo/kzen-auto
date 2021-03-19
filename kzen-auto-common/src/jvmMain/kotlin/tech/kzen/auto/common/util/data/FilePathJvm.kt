@@ -11,6 +11,11 @@ object FilePathJvm {
 
 
     fun FilePath.normalize(): FilePath {
-        return FilePath.of(Paths.get(location))
+        return FilePath.of(toPath())
+    }
+
+
+    fun FilePath.toPath(): Path {
+        return Paths.get(location)
     }
 }

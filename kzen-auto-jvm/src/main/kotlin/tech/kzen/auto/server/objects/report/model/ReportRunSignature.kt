@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.model
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.DatasetInfo
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
 

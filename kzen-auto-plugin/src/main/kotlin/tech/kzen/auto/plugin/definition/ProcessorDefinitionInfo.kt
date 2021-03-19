@@ -12,8 +12,4 @@ data class ProcessorDefinitionInfo(
     companion object {
         const val priorityAvoid = -1
     }
-
-    fun isBinary(): Boolean {
-        return dataEncoding.textEncoding == null
-    }
 }

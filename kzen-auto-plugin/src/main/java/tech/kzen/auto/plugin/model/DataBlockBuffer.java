@@ -14,7 +14,7 @@ public class DataBlockBuffer {
     public static final int defaultBytesSize = 64 * 1024;
 
     // https://stijndewitt.com/2014/08/09/max-bytes-in-a-utf-8-char/
-    private static final int maxUnicodeSize = 3;
+    public static final int maxUnicodeSize = 3;
 
 
     //-----------------------------------------------------------------------------------------------------------------

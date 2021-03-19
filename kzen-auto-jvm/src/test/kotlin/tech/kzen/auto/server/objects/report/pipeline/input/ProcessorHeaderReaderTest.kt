@@ -1,11 +1,11 @@
 package tech.kzen.auto.server.objects.report.pipeline.input
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.pipeline.TsvProcessorDefiner
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.ProcessorHeaderReader
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.FlatDataLocation
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.FlatDataHeaderDefinition
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.read.FlatDataSource
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvProcessorDefiner
+import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorHeaderReader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataLocation
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
+import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatDataSource
 import kotlin.test.assertEquals
 
 
@@ -36,7 +36,8 @@ class ProcessorHeaderReaderTest {
             FlatDataHeaderDefinition(
                 FlatDataLocation.literalUtf8,
                 FlatDataSource.ofLiteral(contents.toByteArray()),
-                processorDataDefinition))
+                processorDataDefinition)
+        )
 
         assertEquals(listOf("foo", "bar"), header.values)
     }

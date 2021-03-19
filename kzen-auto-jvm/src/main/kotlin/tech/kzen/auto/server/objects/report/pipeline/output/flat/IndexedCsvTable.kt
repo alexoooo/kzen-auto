@@ -2,11 +2,13 @@ package tech.kzen.auto.server.objects.report.pipeline.output.flat
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
-import tech.kzen.auto.server.objects.report.pipeline.input.connect.InputStreamFlatData
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordHeaderIndex
+import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.util.ReportInputChain
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
+import tech.kzen.auto.server.objects.report.pipeline.input.ProcessorInputChain
+import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
+import tech.kzen.auto.server.objects.report.pipeline.input.connect.InputStreamFlatDataStream
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.FileOffsetStore
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.StoreUtils
@@ -85,7 +87,6 @@ class IndexedCsvTable(
     //-----------------------------------------------------------------------------------------------------------------
     fun rowCount(): Long {
         // NB: -1 for header
-//        return (offsetStore.size() - 1).coerceAtLeast(0) + pending.size
         return (offsetStore.size() - 1).coerceAtLeast(0)
     }
 
@@ -179,17 +180,14 @@ class IndexedCsvTable(
             seek(storedStartSpan.offset)
 
             // NB: don't close, because that would also close handle
-            val inputChain = ReportInputChain.withoutReadingHeader(
-                InputStreamFlatData.ofCsv(
-                    Channels.newInputStream(handle.channel)))
+            val inputChain = handleChannelProcessorInputChain()
 
             var remainingCount = storedEnd - offsetStoreStart + 1
-//            var remainingCount = storedEnd - offsetStoreStart
 
             while (true) {
                 val hasNext = inputChain.poll { recordItem ->
                     if (remainingCount-- > 0) {
-                        visitor.invoke(recordItem.toList())
+                        visitor.invoke(recordItem.model!!.toList())
                     }
                 }
                 if (! hasNext || remainingCount <= 0) {
@@ -200,6 +198,17 @@ class IndexedCsvTable(
             handle.seek(storedEndSpan.endOffset())
             previousPosition = storedEndSpan.endOffset()
         }
+    }
+
+
+    private fun handleChannelProcessorInputChain(): ProcessorInputChain<RecordRowBuffer> {
+        val flatDataStream = InputStreamFlatDataStream(
+            Channels.newInputStream(handle.channel))
+
+        return ProcessorInputChain(
+            ProcessorInputReader(flatDataStream, null),
+            CsvProcessorDefiner.instance.define().processorDataDefinition,
+            Charsets.UTF_8)
     }
 
 

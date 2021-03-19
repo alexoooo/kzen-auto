@@ -7,7 +7,7 @@ import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.report.model.ReportFormulaSignature
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
-import tech.kzen.auto.server.objects.report.pipeline.ReportPipeline
+import tech.kzen.auto.server.objects.report.pipeline.ProcessorDatasetPipeline
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
@@ -68,7 +68,7 @@ class ReportRunAction(
             .modelTaskRepository
             .lookupActive(objectLocation)
             .singleOrNull()
-            ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ReportPipeline }
+            ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ProcessorDatasetPipeline }
 
         val tableSummary =
             activeReportHandle?.summaryView()
@@ -90,11 +90,11 @@ class ReportRunAction(
             .modelTaskRepository
             .lookupActive(objectLocation)
             .singleOrNull()
-            ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ReportPipeline }
+            ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ProcessorDatasetPipeline }
 
         val outputInfo =
             activeReportHandle?.outputPreview(runSpec, outputSpec)
-                ?: ReportPipeline.passivePreview(runSpec, runDir, outputSpec, reportWorkPool)
+                ?: ProcessorDatasetPipeline.passivePreview(runSpec, runDir, outputSpec, reportWorkPool)
 
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(outputInfo.toCollection()))
@@ -108,7 +108,7 @@ class ReportRunAction(
         outputSpec: OutputSpec
     ): ExecutionResult {
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val outPath = ReportPipeline.passiveSave(runSpec, runDir, outputSpec, reportWorkPool)
+        val outPath = ProcessorDatasetPipeline.passiveSave(runSpec, runDir, outputSpec, reportWorkPool)
 
         return when (outPath) {
             null ->
@@ -131,7 +131,7 @@ class ReportRunAction(
         val filenameSuffix = DateTimeUtils.filenameTimestamp()
         val filename = filenamePrefix + "_" + filenameSuffix + ".csv"
 
-        val inputStream = ReportPipeline.passiveDownload(runSpec, runDir, outputSpec, reportWorkPool)
+        val inputStream = ProcessorDatasetPipeline.passiveDownload(runSpec, runDir, outputSpec, reportWorkPool)
         return ExecutionDownloadResult(
             inputStream,
             filename,
@@ -159,22 +159,24 @@ class ReportRunAction(
         reportRunSpec: ReportRunSpec,
         runDir: Path,
         taskHandle: TaskHandle
-    ): ReportPipeline {
+    ): ProcessorDatasetPipeline {
         logger.info("Starting: $runDir | $reportRunSpec")
 
         val outputValue = ExecutionValue.of(runDir.toString())
 
         taskHandle.update(ExecutionSuccess.ofValue(outputValue))
 
-        val reportHandle = ReportPipeline(
-            reportRunSpec, runDir, taskHandle, reportWorkPool)
+//        val reportHandle = ReportPipeline(
+//            reportRunSpec, runDir, taskHandle, reportWorkPool)
+        val reportHandle = ProcessorDatasetPipeline(
+            reportRunSpec, runDir, reportWorkPool, taskHandle)
 
         Thread {
             processSync(
                 taskHandle, reportHandle, runDir)
         }.start()
 
-        logger.info("Done: {} | {}", runDir, reportRunSpec)
+        logger.info("Started: {} | {}", runDir, reportRunSpec)
 
         return reportHandle
     }
@@ -183,7 +185,7 @@ class ReportRunAction(
     //-----------------------------------------------------------------------------------------------------------------
     private fun processSync(
         taskHandle: TaskHandle,
-        reportHandle: ReportPipeline,
+        reportHandle: ProcessorDatasetPipeline,
         runDir: Path
     ) {
         try {

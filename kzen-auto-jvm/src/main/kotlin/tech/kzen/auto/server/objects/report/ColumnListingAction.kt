@@ -3,9 +3,9 @@ package tech.kzen.auto.server.objects.report
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.pipeline.CsvProcessorDefiner
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.ProcessorHeaderReader
-import tech.kzen.auto.server.objects.report.pipeline.input.v2.model.FlatDataHeaderDefinition
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
+import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorHeaderReader
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
 import java.nio.file.Files
 import java.nio.file.Path
 

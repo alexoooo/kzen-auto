@@ -4,8 +4,8 @@ package tech.kzen.auto.server.objects.report.pipeline.input.model;
 import net.openhft.hashing.LongHashFunction;
 import tech.kzen.auto.plugin.model.FlatRecordBuilder;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils;
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvRecordParser;
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvRecordParser;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvFormatUtils;
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvFormatUtils;
 import tech.kzen.lib.platform.ClassName;
 
 import java.io.*;
@@ -230,7 +230,7 @@ public class RecordRowBuffer
 
         for (int i = 0; i < fieldCount; i++) {
             if (i != 0) {
-                out.write(CsvRecordParser.delimiterInt);
+                out.write(CsvFormatUtils.delimiterInt);
             }
 
             writeCsvField(i, out);
@@ -241,7 +241,7 @@ public class RecordRowBuffer
     public void writeCsvField(int fieldIndex, Writer out) throws IOException {
         int startIndex = start(fieldIndex);
         int endIndex = fieldEnds[fieldIndex];
-        CsvRecordParser.writeCsv(fieldContents, startIndex, endIndex, out);
+        CsvFormatUtils.writeCsv(fieldContents, startIndex, endIndex, out);
     }
 
 
@@ -264,7 +264,7 @@ public class RecordRowBuffer
 
         for (int i = 0; i < fieldCount; i++) {
             if (i != 0) {
-                out.write(TsvRecordParser.delimiterInt);
+                out.write(TsvFormatUtils.delimiterInt);
             }
 
             writeTsvField(i, out);
@@ -453,18 +453,25 @@ public class RecordRowBuffer
     }
 
 
+    public void clone(RecordRowBuffer that) {
+        fieldCount = that.fieldCount;
+        fieldContentLength = that.fieldContentLength;
+        nonEmpty = that.nonEmpty;
+
+        fieldContents = that.fieldContents;
+        fieldEnds = that.fieldEnds;
+
+        hasCache = that.hasCache;
+        doublesCache = that.doublesCache;
+        hashesCache = that.hashesCache;
+    }
+
+
     public RecordRowBuffer prototype() {
         RecordRowBuffer prototype = new RecordRowBuffer(0, 0);
         prototype.copy(this);
         return prototype;
     }
-
-
-//    @Override
-//    public void write(@NotNull char[] fieldContents, @NotNull int[] fieldEnds) {
-//        System.arraycopy(this.fieldContents, 0, fieldContents, 0, fieldContentLength);
-//        System.arraycopy(this.fieldEnds, 0, fieldEnds, 0, fieldCount);
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
