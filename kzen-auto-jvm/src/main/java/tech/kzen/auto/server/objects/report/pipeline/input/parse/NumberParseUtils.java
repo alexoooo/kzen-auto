@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse;
 
 
 // Similar to Java Util Lang, but more tolerant and specialized, also it normalizes -0 to 0
+// TODO: https://github.com/wrandelshofer/FastDoubleParser
 public enum NumberParseUtils {;
     public static final long[] decimalLongPowers = {
             1,
