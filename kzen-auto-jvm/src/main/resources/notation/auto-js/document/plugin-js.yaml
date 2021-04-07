@@ -1,0 +1,5 @@
+
+PluginController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.plugin.PluginController$Wrapper
+  archetype: Plugin

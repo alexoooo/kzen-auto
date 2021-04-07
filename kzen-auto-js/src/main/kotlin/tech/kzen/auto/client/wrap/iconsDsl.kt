@@ -138,6 +138,12 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
         "CallReceived" ->
             CallReceivedIcon::class
 
+        "MenuBook" ->
+            MenuBookIcon::class
+
+        "Settings" ->
+            SettingsIcon::class
+
         else ->
             TextureIcon::class
     }

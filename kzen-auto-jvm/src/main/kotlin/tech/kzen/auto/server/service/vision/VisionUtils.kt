@@ -76,14 +76,20 @@ object VisionUtils {
     }
 
 
-    private fun xpathEscape(value: String): String {
+    fun xpathEscape(value: String): String {
         // https://stackoverflow.com/a/38254661/1941359
-        return if (! value.contains("'"))
-            "'$value'"
-        else if (!value.contains("\""))
-            '"' + value + '"'
-        else
-            "concat('" + value.replace("'", "',\"'\",'") + "')"
+        return when {
+            "'" !in value ->
+                "'$value'"
+
+            "\"" !in value ->
+                '"' + value + '"'
+
+            else ->
+                "concat('${
+                    value.replace("'", """',"'",'""")
+                }')"
+        }
     }
 
 

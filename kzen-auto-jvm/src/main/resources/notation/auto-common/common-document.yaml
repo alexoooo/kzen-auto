@@ -156,3 +156,16 @@ OutputSpec:
 OutputSpecDefiner:
   class: tech.kzen.auto.common.objects.document.report.spec.OutputSpec$Definer
 
+
+################################################################
+
+
+Plugin:
+  abstract: true
+  is: Document
+  class: tech.kzen.auto.server.objects.plugin.PluginDocument
+  title: "Plugin"
+  icon: Settings
+  jarPath: "path/to/plugin.jar"
+  meta:
+    jarPath: String

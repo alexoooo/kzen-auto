@@ -39,7 +39,7 @@ dependencies {
     implementation(group = "com.google.guava", name = "guava", version = guavaVersion)
     implementation(group = "org.seleniumhq.selenium", name = "selenium-java", version = seleniumVersion)
     implementation(group = "org.apache.commons", name = "commons-compress", version = commonsCompressVersion)
-    implementation(group = "it.unimi.dsi", name = "fastutil", version = fastutilVersion)
+    implementation(group = "it.unimi.dsi", name = "fastutil-core", version = fastutilVersion)
     implementation(group = "io.lacuna", name = "bifurcan", version = bifurcanVersion)
     implementation(group = "com.h2database", name = "h2", version = h2Version)
     implementation(group = "net.openhft", name = "zero-allocation-hashing", version = zeroAllocationHashingVersion)

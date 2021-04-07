@@ -210,8 +210,13 @@ class StageController(
     ) {
 //        console.log("%%%%%% renderDocumentController", props.documentControllers)
         val documentController = props.documentControllers
-                .single { archetypeName == it.archetypeLocation().objectPath.name }
+                .singleOrNull { archetypeName == it.archetypeLocation().objectPath.name }
 
-        documentController.child(this) {}
+        if (documentController == null) {
+            +"Document: $archetypeName"
+        }
+        else {
+            documentController.child(this) {}
+        }
     }
 }
