@@ -105,21 +105,21 @@ class ProcessorInputPipeline<Output>(
 
         return binaryDisruptor
     }
-
-
+    
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun setupModelDisruptorChain(): List<Disruptor<*>> {
         val chain = mutableListOf<Disruptor<*>>()
 
         val recordHeader = RecordHeader.of(headerListing)
-        val headerOutputDecorator =
+        val resetDecorator =
             DecoratorPipelineOutput(output) {
                 it.header.value = recordHeader
+                it.row.clear()
             }
 
         @Suppress("UNCHECKED_CAST")
-        var nextOutput = headerOutputDecorator as PipelineOutput<Any>
+        var nextOutput = resetDecorator as PipelineOutput<Any>
 
         for (i in processorDataInstance.segments.size - 1 .. 0) {
             val segmentDisruptor = setupModelDisruptorSegment(i, nextOutput)

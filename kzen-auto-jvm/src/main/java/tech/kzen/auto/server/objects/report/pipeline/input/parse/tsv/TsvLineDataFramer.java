@@ -31,7 +31,7 @@ public class TsvLineDataFramer
         for (int i = 0; i < charLength; i++) {
             char nextChar = chars[i];
 
-            if (nextChar > 13) { // NB: max of (lineFeed, carriageReturn)
+            if (nextChar > 13) { // max of (lineFeed, carriageReturn)
                 nextPartial = true;
             }
             else {

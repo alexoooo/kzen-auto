@@ -5,17 +5,17 @@ import tech.kzen.auto.plugin.api.managed.PipelineOutput
 
 class DecoratorPipelineOutput<T>(
     private val delegate: PipelineOutput<T>,
-    private val postProcessor: (T) -> Unit
+    private val preProcessor: (T) -> Unit
 ): PipelineOutput<T> {
     private var next: T? = null
 
     override fun next(): T {
         next = delegate.next()
+        preProcessor(next!!)
         return next!!
     }
 
     override fun commit() {
-        postProcessor(next!!)
         delegate.commit()
     }
 }

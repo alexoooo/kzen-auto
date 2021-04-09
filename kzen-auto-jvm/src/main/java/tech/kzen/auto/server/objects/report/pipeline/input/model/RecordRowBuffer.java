@@ -378,6 +378,14 @@ public class RecordRowBuffer
     }
 
 
+    public void clearCache() {
+        if (hasCache) {
+            Arrays.fill(doublesCache, 0, fieldCount, doubleCacheMissing);
+            hasCache = false;
+        }
+    }
+
+
     public void clearWithoutCache() {
         fieldCount = 0;
         fieldContentLength = 0;
@@ -431,6 +439,8 @@ public class RecordRowBuffer
 
     //-----------------------------------------------------------------------------------------------------------------
     public void copy(RecordRowBuffer that) {
+        int previousFieldCount = fieldCount;
+
         fieldCount = that.fieldCount;
         fieldContentLength = that.fieldContentLength;
         nonEmpty = that.nonEmpty;
@@ -441,13 +451,9 @@ public class RecordRowBuffer
         System.arraycopy(that.fieldContents, 0, fieldContents, 0, fieldContentLength);
         System.arraycopy(that.fieldEnds, 0, fieldEnds, 0, fieldCount);
 
-        if (that.hasCache) {
-            System.arraycopy(that.doublesCache, 0, doublesCache, 0, fieldCount);
-            System.arraycopy(that.hashesCache, 0, hashesCache, 0, fieldCount);
-            hasCache = true;
-        }
-        else if (hasCache) {
-            Arrays.fill(doublesCache, 0, fieldCount, missingNumberBits);
+        if (hasCache) {
+            int maxFieldCount = Math.max(previousFieldCount, fieldCount);
+            Arrays.fill(doublesCache, 0, maxFieldCount, doubleCacheMissing);
             hasCache = false;
         }
     }

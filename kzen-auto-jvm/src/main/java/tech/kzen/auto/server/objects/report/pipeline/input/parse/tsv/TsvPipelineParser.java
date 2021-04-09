@@ -14,6 +14,7 @@ public class TsvPipelineParser
     public void process(FlatProcessorEvent model) {
         RecordDataBuffer data = model.getData();
         RecordRowBuffer recordRowBuffer = model.model;
+        recordRowBuffer.clearCache();
 
         char[] contentChars = data.chars;
         int charsLength = data.charsLength;

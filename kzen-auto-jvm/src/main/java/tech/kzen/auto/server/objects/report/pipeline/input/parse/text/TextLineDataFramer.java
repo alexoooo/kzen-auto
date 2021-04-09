@@ -13,7 +13,6 @@ public class TextLineDataFramer
         implements DataFramer
 {
     //-----------------------------------------------------------------------------------------------------------------
-//    private boolean partial = true;
     private boolean midDelimiter = false;
 
 
@@ -26,7 +25,6 @@ public class TextLineDataFramer
         int charLength = dataBlockBuffer.charsLength;
         DataFrameBuffer frames = dataBlockBuffer.frames;
 
-//        boolean nextPartial = partial;
         int startIndex = 0;
         if (midDelimiter) {
             startIndex++;
@@ -46,18 +44,13 @@ public class TextLineDataFramer
                     if (i == charLength) {
                         midDelimiter = true;
                     }
-//                    nextPartial = false;
                 }
 
                 case '\n' -> {
                     int length = i - offset;
                     frames.add(offset, length);
                     offset = i + 1;
-//                    nextPartial = false;
                 }
-
-//                default ->
-//                        nextPartial = true;
             }
         }
 
@@ -66,11 +59,8 @@ public class TextLineDataFramer
             frames.setPartialLast();
         }
 
-//        partial = nextPartial;
-
         if (dataBlockBuffer.endOfData) {
             dataBlockBuffer.frames.clearPartialLast();
-//            partial = false;
         }
     }
 }

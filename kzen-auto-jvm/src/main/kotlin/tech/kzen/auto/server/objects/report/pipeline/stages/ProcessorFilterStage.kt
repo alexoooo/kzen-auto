@@ -6,9 +6,9 @@ import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
+import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
 
 
 class ProcessorFilterStage(
@@ -16,6 +16,10 @@ class ProcessorFilterStage(
 ):
     EventHandler<ProcessorOutputEvent<*>>
 {
+//    //-----------------------------------------------------------------------------------------------------------------
+//    private var count: Long = 0
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private val filterColumnNames = reportRunSpec
         .inputAndFormulaColumns
@@ -59,6 +63,10 @@ class ProcessorFilterStage(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onEvent(event: ProcessorOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
+//        if (++count == 794477L) {
+//            println("> $count");
+//        }
+
         if (event.skip) {
             return
         }
@@ -69,6 +77,8 @@ class ProcessorFilterStage(
 
     private fun test(row: RecordRowBuffer, header: RecordHeader): Boolean {
         val itemIndices = recordHeaderIndex.indices(header)
+
+        flyweight.selectHost(row)
 
         for (i in nonEmptyFilterColumnNames.indices) {
             val columnCriteriaType = columnFilterSpecTypes[i]
@@ -81,21 +91,18 @@ class ProcessorFilterStage(
                 }
             }
             else {
-                flyweight.selectHostField(row, indexInItem)
+                flyweight.selectField(indexInItem)
                 val present = columnCriteriaSpecValues.contains(flyweight)
 
-                when (columnCriteriaType) {
-                    ColumnFilterType.RequireAny ->
-                        if (! present) {
-                            return false
-                        }
-
-                    ColumnFilterType.ExcludeAll ->
-                        if (present) {
-                            return false
-                        }
+                val reject = columnCriteriaType.reject(present)
+                if (reject) {
+                    return false
                 }
             }
+
+//            if (i > 0) {
+//                println("foo - $count")
+//            }
         }
 
         return true

@@ -10,11 +10,21 @@ import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProc
 public class CsvPipelineParser
         implements PipelineIntermediateStep<FlatProcessorEvent>
 {
+//    //-----------------------------------------------------------------------------------------------------------------
+//    private long count = 0;
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     @SuppressWarnings("EnhancedSwitchMigration")
     @Override
     public void process(FlatProcessorEvent model) {
+//        if (++count == 794477) {
+//            System.out.println("> " + count);
+//        }
+
         RecordDataBuffer data = model.getData();
         RecordRowBuffer recordRowBuffer = model.model;
+        recordRowBuffer.clearCache();
 
         char[] contentChars = data.chars;
         int charsLength = data.charsLength;
