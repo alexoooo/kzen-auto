@@ -1,4 +1,4 @@
-package tech.kzen.auto.plugin.model
+package tech.kzen.auto.plugin.api.managed
 
 
 interface FlatRecordBuilder {

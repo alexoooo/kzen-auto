@@ -1,5 +1,7 @@
 package tech.kzen.auto.plugin.model
 
+import tech.kzen.auto.plugin.api.managed.FlatRecordBuilder
+
 
 abstract class ModelOutputEvent<T> {
     var model: T? = null

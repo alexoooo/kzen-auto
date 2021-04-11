@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.model;
 
 
 import net.openhft.hashing.LongHashFunction;
-import tech.kzen.auto.plugin.model.FlatRecordBuilder;
+import tech.kzen.auto.plugin.api.managed.FlatRecordBuilder;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvFormatUtils;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvFormatUtils;
@@ -356,16 +356,15 @@ public class RecordRowBuffer
     }
 
 
-    public void addAllAndPopulateCaches(String[] values) {
-//        growCachesIfRequired(fieldCount + values.length);
-
-        for (String value : values) {
-            add(value);
-            populateCache(fieldCount - 1);
-        }
-    }
+//    public void addAllAndPopulateCaches(String[] values) {
+//        for (String value : values) {
+//            add(value);
+//            populateCache(fieldCount - 1);
+//        }
+//    }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     public void clear() {
         if (hasCache) {
             Arrays.fill(doublesCache, 0, fieldCount, doubleCacheMissing);
