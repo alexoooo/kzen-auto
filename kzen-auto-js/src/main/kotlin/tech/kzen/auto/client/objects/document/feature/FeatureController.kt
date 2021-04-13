@@ -189,7 +189,7 @@ class FeatureController(
     private fun doRequestScreenshot() {
         async {
 //            console.log("doRequestScreenshot", screenshotTakerLocation.toString())
-            val result= ClientContext.restClient.performDetached(
+            val result = ClientContext.restClient.performDetached(
                     screenshotTakerLocation)
 
             if (result is ExecutionSuccess) {

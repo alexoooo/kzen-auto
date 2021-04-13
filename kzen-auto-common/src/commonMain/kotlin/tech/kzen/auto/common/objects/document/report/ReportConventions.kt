@@ -3,6 +3,7 @@ package tech.kzen.auto.common.objects.document.report
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -54,7 +55,7 @@ object ReportConventions {
     const val actionValidateFormulas = "formulas"
 
 
-    fun isFilter(documentNotation: DocumentNotation): Boolean {
+    fun isReport(documentNotation: DocumentNotation): Boolean {
         val mainObjectNotation =
             documentNotation.objects.notations[NotationConventions.mainObjectPath]
                 ?: return false

@@ -2,18 +2,17 @@ package tech.kzen.auto.client.objects.document.report.state
 
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.util.data.DataLocation
-import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.objects.document.report.spec.*
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
+import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 data class ReportState(
@@ -84,11 +83,11 @@ data class ReportState(
                 .documents[documentPath]
                 ?: return null
 
-            if (! ReportConventions.isFilter(documentNotation)) {
+            if (! ReportConventions.isReport(documentNotation)) {
                 return null
             }
 
-            return ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+            return documentPath.toMainObjectLocation()
         }
     }
 
