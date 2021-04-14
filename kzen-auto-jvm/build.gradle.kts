@@ -8,7 +8,10 @@ plugins {
     kotlin("jvm")
     id("org.springframework.boot") version springBootVersion
     id("io.spring.dependency-management") version dependencyManagementVersion
-    id("com.github.johnrengelman.shadow") version shadowVersion
+
+//    id("com.github.johnrengelman.shadow") version shadowVersion
+    id("com.github.johnrengelman.shadow")
+
     kotlin("plugin.spring") version kotlinVersion
     `maven-publish`
 }

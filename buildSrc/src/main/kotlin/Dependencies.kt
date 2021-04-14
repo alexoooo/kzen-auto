@@ -5,6 +5,7 @@ const val jvmTargetVersion = "15"
 const val springBootVersion = "2.4.4"
 const val dependencyManagementVersion = "1.0.11.RELEASE"
 const val shadowVersion = "6.1.0"
+//const val shadowVersion = "6.2.0"
 const val jacksonModuleKotlin = "2.12.2"
 
 const val coroutinesVersion = "1.4.3"

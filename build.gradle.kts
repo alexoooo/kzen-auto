@@ -9,12 +9,12 @@ allprojects {
 
     repositories {
         mavenCentral()
-        jcenter()
+//        jcenter()
 
-        maven { setUrl("https://dl.bintray.com/kotlin/kotlin-dev") }
-        maven { setUrl("https://dl.bintray.com/kotlin/kotlin-eap") }
-        maven { setUrl("https://dl.bintray.com/kotlin/kotlin-js-wrappers") }
-        maven { setUrl("https://dl.bintray.com/kotlin/kotlinx") }
+//        maven { setUrl("https://dl.bintray.com/kotlin/kotlin-dev") }
+//        maven { setUrl("https://dl.bintray.com/kotlin/kotlin-eap") }
+//        maven { setUrl("https://dl.bintray.com/kotlin/kotlin-js-wrappers") }
+//        maven { setUrl("https://dl.bintray.com/kotlin/kotlinx") }
 
         maven { setUrl("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-js-wrappers") }
         maven { setUrl("https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven") }
@@ -24,3 +24,14 @@ allprojects {
         mavenLocal()
     }
 }
+
+//buildscript {
+//    repositories {
+//        gradlePluginPortal()
+//        maven { setUrl("https://jitpack.io") }
+//    }
+//
+//    dependencies {
+//        classpath("com.github.maxm123:shadow:master-SNAPSHOT")
+//    }
+//}
