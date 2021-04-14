@@ -3,7 +3,7 @@ package tech.kzen.auto.common.objects.document.plugin.model
 import tech.kzen.lib.platform.ClassName
 
 
-data class ProcessorDefinitionDetail(
+data class ProcessorDefinerDetail(
     val name: String,
     val extensions: List<String>,
     val dataEncoding: CommonDataEncodingSpec,
@@ -18,8 +18,8 @@ data class ProcessorDefinitionDetail(
         private const val modelTypeKey = "modelType"
 
         @Suppress("UNCHECKED_CAST")
-        fun ofCollection(collection: Map<String, Any?>): ProcessorDefinitionDetail {
-            return ProcessorDefinitionDetail(
+        fun ofCollection(collection: Map<String, Any?>): ProcessorDefinerDetail {
+            return ProcessorDefinerDetail(
                 collection[nameKey] as String,
                 collection[extensionsKey] as List<String>,
                 CommonDataEncodingSpec((collection[dataEncodingKey] as String?)?.let { CommonTextEncodingSpec(it) }),
