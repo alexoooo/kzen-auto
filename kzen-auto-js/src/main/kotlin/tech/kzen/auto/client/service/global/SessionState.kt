@@ -21,6 +21,6 @@ data class SessionState(
 //        return imperativeModel?.frames?.get(0)?.path
 //    }
     fun graphStructure(): GraphStructure {
-        return graphDefinitionAttempt.successful.graphStructure
+        return graphDefinitionAttempt.graphStructure
     }
 }

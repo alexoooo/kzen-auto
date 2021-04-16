@@ -1,14 +1,14 @@
 package tech.kzen.auto.client
 
+import kotlinx.browser.document
+import kotlinx.browser.window
+import kotlinx.dom.clear
 import react.dom.render
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.locate.ObjectReference
-import kotlinx.browser.document
-import kotlinx.browser.window
-import kotlinx.dom.clear
 
 
 fun main() {
@@ -20,7 +20,7 @@ fun main() {
 
             val clientGraphDefinition = ClientContext.mirroredGraphStore
                     .graphDefinition()
-                    .successful
+                    .successful()
                     .filterDefinitions(AutoConventions.clientUiAllowed)
 //            console.log("^^^ filteredGraphDefinition - $clientGraphDefinition")
 

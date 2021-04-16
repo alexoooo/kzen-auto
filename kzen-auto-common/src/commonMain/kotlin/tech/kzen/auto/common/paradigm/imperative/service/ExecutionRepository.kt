@@ -109,7 +109,7 @@ class ExecutionRepository(
     override suspend fun onCommandSuccess(
             event: NotationEvent, graphDefinition: GraphDefinitionAttempt
     ) {
-        val graphStructure = graphDefinition.successful.graphStructure
+        val graphStructure = graphDefinition.graphStructure
 
         for (host in models.keys) {
             val newModels = apply(host, event, graphStructure)

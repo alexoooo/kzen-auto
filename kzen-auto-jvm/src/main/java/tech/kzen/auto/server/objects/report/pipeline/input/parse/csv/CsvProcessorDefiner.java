@@ -76,7 +76,8 @@ public class CsvProcessorDefiner
     public ProcessorDefinition<RecordRowBuffer> define() {
         return new ProcessorDefinition<>(
                 defineData(),
-                FirstRecordItemHeaderExtractor::new);
+                FirstRecordItemHeaderExtractor::new,
+                () -> {});
     }
 
 

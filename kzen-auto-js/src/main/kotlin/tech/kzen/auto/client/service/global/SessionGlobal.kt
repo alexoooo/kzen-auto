@@ -64,7 +64,7 @@ class SessionGlobal:
         if (selected != null) {
             async {
                 imperativeModel = ClientContext.executionRepository.executionModel(
-                        selected, graphDefinitionAttempt!!.successful.graphStructure)
+                        selected, graphDefinitionAttempt!!.graphStructure)
                 publishIfReady()
             }
         }

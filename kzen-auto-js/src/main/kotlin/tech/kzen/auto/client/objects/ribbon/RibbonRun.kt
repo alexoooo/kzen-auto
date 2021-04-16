@@ -254,7 +254,7 @@ class RibbonRun (
 
                 renderActiveSelection(
                         selected,
-                        clientState.graphDefinitionAttempt.successful.graphStructure.graphNotation,
+                        clientState.graphDefinitionAttempt.graphStructure.graphNotation,
                         active,
                         clientState.navigationRoute)
             }

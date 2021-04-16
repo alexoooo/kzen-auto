@@ -121,7 +121,7 @@ class StageController(
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         setState {
-            structure = graphDefinition.successful.graphStructure
+            structure = graphDefinition.graphStructure
         }
     }
 
@@ -131,7 +131,7 @@ class StageController(
 
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
         setState {
-            structure = graphDefinition.successful.graphStructure
+            structure = graphDefinition.graphStructure
         }
     }
 

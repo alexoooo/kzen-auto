@@ -153,7 +153,6 @@ data class ReportState(
     fun reportDefinition(): ObjectDefinition {
         return clientState
             .graphDefinitionAttempt
-            .successful
             .objectDefinitions[mainLocation]!!
     }
 

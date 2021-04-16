@@ -172,7 +172,7 @@ class ScriptController:
                 ScriptDocument.stepsAttributePath,
                 index,
                 archetypeObjectLocation,
-                clientState.graphDefinitionAttempt.successful.graphStructure
+                clientState.graphDefinitionAttempt.graphStructure
         )
 
         async {
@@ -200,7 +200,7 @@ class ScriptController:
 
         val imperativeModel = clientState.imperativeModel
                 ?: ClientContext.executionRepository.emptyState(
-                        documentPath, clientState.graphDefinitionAttempt.successful.graphStructure)
+                        documentPath, clientState.graphDefinitionAttempt.graphStructure)
 
         styledDiv {
             css {
@@ -219,7 +219,7 @@ class ScriptController:
             clientState: SessionState,
             imperativeModel: ImperativeModel
     ) {
-        val graphStructure: GraphStructure = clientState.graphDefinitionAttempt.successful.graphStructure
+        val graphStructure: GraphStructure = clientState.graphDefinitionAttempt.graphStructure
         val documentPath: DocumentPath = clientState.navigationRoute.documentPath!!
 
         val stepLocations = stepLocations(graphStructure, documentPath)
@@ -403,7 +403,7 @@ class ScriptController:
                 attrs {
                     documentPath = clientState.navigationRoute.documentPath!!
                     runningHost = clientState.activeHost
-                    structure = clientState.graphDefinitionAttempt.successful.graphStructure
+                    structure = clientState.graphDefinitionAttempt.graphStructure
                     execution = imperativeModel
                 }
             }

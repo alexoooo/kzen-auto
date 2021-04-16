@@ -170,7 +170,7 @@ class FeatureController(
         }
 
         setState {
-            this.graphStructure = graphDefinition.successful.graphStructure
+            this.graphStructure = graphDefinition.graphStructure
         }
     }
 
@@ -180,7 +180,7 @@ class FeatureController(
 
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
         setState {
-            this.graphStructure = graphDefinition.successful.graphStructure
+            this.graphStructure = graphDefinition.graphStructure
         }
     }
 

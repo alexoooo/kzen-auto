@@ -6,8 +6,8 @@ import tech.kzen.auto.plugin.definition.ProcessorDefinitionInfo
 
 interface ProcessorDefinitionRepository {
     fun contains(name: String): Boolean
-    fun define(name: String): ProcessorDefinition<*>
     fun listMetadata(): List<ProcessorDefinitionMetadata>
+    fun define(name: String): ProcessorDefinition<*>
 
 
     fun find(processorDefinitionSignature: ProcessorDefinitionSignature): List<ProcessorDefinitionInfo> {

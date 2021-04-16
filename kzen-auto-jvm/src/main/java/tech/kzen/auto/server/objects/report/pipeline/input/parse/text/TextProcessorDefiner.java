@@ -79,7 +79,8 @@ public class TextProcessorDefiner
     public ProcessorDefinition<RecordRowBuffer> define() {
         return new ProcessorDefinition<>(
                 defineData(),
-                () -> headerExtractor);
+                () -> headerExtractor,
+                () -> {});
     }
 
 

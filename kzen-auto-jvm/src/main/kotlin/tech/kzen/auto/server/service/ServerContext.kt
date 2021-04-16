@@ -9,6 +9,7 @@ import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepo
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.service.GraphInstanceCreator
 import tech.kzen.auto.server.codegen.KzenAutoJvmModule
+import tech.kzen.auto.server.objects.plugin.PluginProcessorDefinitionRepository
 import tech.kzen.auto.server.objects.report.*
 import tech.kzen.auto.server.objects.report.pipeline.calc.CalculatedColumnEval
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
@@ -109,10 +110,13 @@ object ServerContext {
     private val basicDefinitionRepository = DefinerDefinitionRepository(listOf(
         CsvProcessorDefiner(),
         TsvProcessorDefiner(),
-        TextProcessorDefiner()
-    ))
+        TextProcessorDefiner()))
+
+    private val pluginProcessorDefinitionRepository = PluginProcessorDefinitionRepository(
+         graphStore, graphDefiner, graphCreator)
+
     val definitionRepository = MultiDefinitionRepository(listOf(
-        basicDefinitionRepository))
+        basicDefinitionRepository, pluginProcessorDefinitionRepository))
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -92,7 +92,7 @@ class SidebarController(
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
 //        console.log("^ handleModel")
         setState {
-            structure = graphDefinition.successful.graphStructure
+            structure = graphDefinition.graphStructure
         }
     }
 
@@ -102,7 +102,7 @@ class SidebarController(
 
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
         setState {
-            structure = graphDefinition.successful.graphStructure
+            structure = graphDefinition.graphStructure
         }
     }
 

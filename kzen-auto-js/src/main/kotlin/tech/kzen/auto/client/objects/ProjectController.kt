@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects
 
+import kotlinx.browser.window
 import kotlinx.coroutines.delay
 import kotlinx.css.*
 import org.w3c.dom.HTMLElement
@@ -24,7 +25,6 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
-import kotlinx.browser.window
 
 
 @Suppress("unused")
@@ -132,7 +132,7 @@ class ProjectController(
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         setState {
-            structure = graphDefinition.successful.graphStructure
+            structure = graphDefinition.graphStructure
             commandError = null
         }
     }
@@ -148,7 +148,7 @@ class ProjectController(
 
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
         setState {
-            structure = graphDefinition.successful.graphStructure
+            structure = graphDefinition.graphStructure
         }
     }
 
