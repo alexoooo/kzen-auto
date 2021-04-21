@@ -9,7 +9,7 @@ import tech.kzen.auto.server.objects.report.model.ReportRunSpec
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
 import tech.kzen.auto.server.objects.report.pipeline.summary.model.ValueSummaryBuilder
 import tech.kzen.auto.server.util.AutoJvmUtils
@@ -40,7 +40,7 @@ class ReportSummary(
 
         //-------------------------------------------------------------------------------------------------------------
         private fun toCsv(csv: List<List<String>>): String {
-            return csv.joinToString("\n") { RecordRowBuffer.of(it).toCsv() }
+            return csv.joinToString("\n") { FlatDataRecord.of(it).toCsv() }
         }
 
 
@@ -191,7 +191,7 @@ class ReportSummary(
         }
 
         val numericFile = columnDir.resolve(numericCsvFilename)
-        val numericFileCsv = valueSummary.numericValueSummary.toCsv()
+        val numericFileCsv = valueSummary.numericValueSummary.asCsv()
         val numericFileContent = toCsv(numericFileCsv)
 
         withContext(Dispatchers.IO) {
@@ -215,7 +215,7 @@ class ReportSummary(
         }
 
         val numericFileCsv = fromCsv(numericFileContent)
-        return StatisticValueSummary.fromCsv(numericFileCsv)
+        return StatisticValueSummary.ofCsv(numericFileCsv)
     }
 
 
@@ -351,7 +351,7 @@ class ReportSummary(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordRow: RecordRowBuffer, header: RecordHeader) {
+    fun add(recordRow: FlatDataRecord, header: RecordHeader) {
         flyweight.selectHost(recordRow);
 
         val indices = headerIndex.indices(header)

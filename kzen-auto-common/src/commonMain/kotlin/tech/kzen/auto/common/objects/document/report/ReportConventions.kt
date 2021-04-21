@@ -3,7 +3,6 @@ package tech.kzen.auto.common.objects.document.report
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
-import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -40,12 +39,15 @@ object ReportConventions {
     const val saveFileKey = "save"
     val saveFilePath = outputAttributePath.nest(AttributeSegment.ofKey(saveFileKey))
 
-    const val previewPivotValuesKey = "values"
+//    const val previewPivotValuesKey = "values"
 
 
     const val actionParameter = "action"
     const val actionBrowseFiles = "browse"
     const val actionInputInfo = "files"
+    const val actionDataTypes = "types"
+    const val actionDefaultFormat = "defaultFormat"
+    const val actionTypeFormats = "typeFormats"
     const val actionListColumns = "columns"
     const val actionLookupOutput = "output"
     const val actionSummaryLookup = "summary-lookup"
@@ -53,6 +55,8 @@ object ReportConventions {
     const val actionSave = "save"
     const val actionReset = "reset"
     const val actionValidateFormulas = "formulas"
+
+    const val filesParameter = "files"
 
 
     fun isReport(documentNotation: DocumentNotation): Boolean {

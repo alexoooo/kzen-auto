@@ -1,13 +1,15 @@
 package tech.kzen.auto.client.objects.document.report.state
 
-import tech.kzen.auto.common.util.data.DataLocation
-import tech.kzen.auto.common.objects.document.report.listing.InputInfo
+import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
+import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
+import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
+import tech.kzen.auto.common.util.data.DataLocation
 
 //---------------------------------------------------------------------------------------------------------------------
 sealed class ReportAction {
@@ -111,25 +113,25 @@ data class InputsBrowserFilterRequest(
 
 
 data class InputsSelectionAddRequest(
-    val paths: List<DataLocation>
+    val paths: List<InputDataSpec>
 ): ListInputsResponse()
 
 
 data class InputsSelectionRemoveRequest(
-    val paths: List<DataLocation>
+    val paths: List<InputDataSpec>
 ): ListInputsResponse()
 
 
 sealed class ListInputsResponse: ListInputsAction()
 
 
-data class ListInputsSelectedResult(
-    val inputInfo: InputInfo
+data class ListInputsBrowserResult(
+    val inputBrowserInfo: InputBrowserInfo
 ): ListInputsResponse()
 
 
-data class ListInputsBrowserResult(
-    val inputInfo: InputInfo
+data class ListInputsSelectedResult(
+    val inputSelectionInfo: InputSelectionInfo
 ): ListInputsResponse()
 
 

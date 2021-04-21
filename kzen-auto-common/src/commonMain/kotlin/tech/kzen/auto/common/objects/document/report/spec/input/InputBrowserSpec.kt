@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.report.spec
+package tech.kzen.auto.common.objects.document.report.spec.input
 
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.attribute.AttributeSegment

@@ -3,9 +3,14 @@ package tech.kzen.auto.client.objects.document.report.state
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
-import tech.kzen.auto.common.objects.document.report.spec.*
+import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
+import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
+import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
+import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.common.util.data.DataLocation
@@ -21,7 +26,7 @@ data class ReportState(
 
     val inputLoaded: Boolean = false,
     val inputLoading: Boolean = false,
-    val inputSelected: List<DataLocationInfo>? = null,
+    val inputSelection: InputSelectionInfo? = null,
     val inputBrowser: List<DataLocationInfo>? = null,
     val inputBrowseDir: DataLocation? = null,
     val inputError: String? = null,
@@ -98,7 +103,7 @@ data class ReportState(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun isInitiating(): Boolean {
-        if (inputSpec().selected.isEmpty()) {
+        if (inputSpec().selection.locations.isEmpty()) {
             return false
         }
 
@@ -197,7 +202,7 @@ data class ReportState(
 
     fun selectedPathSet(): Set<DataLocation> {
         if (selectedPathSet == null) {
-            selectedPathSet = inputSpec().selected.toSet()
+            selectedPathSet = inputSpec().selection.locations.map { it.location }.toSet()
         }
         return selectedPathSet!!
     }

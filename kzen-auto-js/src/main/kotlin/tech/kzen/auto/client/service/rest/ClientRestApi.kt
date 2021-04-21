@@ -1,6 +1,9 @@
 package tech.kzen.auto.client.service.rest
 
-import tech.kzen.auto.client.util.*
+import tech.kzen.auto.client.util.httpGet
+import tech.kzen.auto.client.util.httpGetBytes
+import tech.kzen.auto.client.util.httpPostBytes
+import tech.kzen.auto.client.util.httpPutForm
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
@@ -30,7 +33,6 @@ import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.platform.collect.toPersistentMap
 import kotlin.js.Json
-import kotlin.js.json
 
 
 class ClientRestApi(
@@ -109,7 +111,7 @@ class ClientRestApi(
         documentPath: DocumentPath,
         unparsedDocumentNotation: String
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandDocumentCreate,
                 CommonRestApi.paramDocumentPath to documentPath.asString(),
                 CommonRestApi.paramDocumentNotation to unparsedDocumentNotation)
@@ -119,7 +121,7 @@ class ClientRestApi(
     suspend fun deleteDocument(
             documentPath: DocumentPath
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandDocumentDelete,
                 CommonRestApi.paramDocumentPath to documentPath.asRelativeFile())
     }
@@ -131,7 +133,7 @@ class ClientRestApi(
         indexInDocument: PositionRelation,
         unparsedObjectNotation: String
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandObjectAdd,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -143,7 +145,7 @@ class ClientRestApi(
     suspend fun removeObject(
             objectLocation: ObjectLocation
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandObjectRemove,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
@@ -154,7 +156,7 @@ class ClientRestApi(
             objectLocation: ObjectLocation,
             newPositionInDocument: PositionRelation
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandObjectShift,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -166,7 +168,7 @@ class ClientRestApi(
             objectLocation: ObjectLocation,
             newName: ObjectName
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandObjectRename,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -182,7 +184,7 @@ class ClientRestApi(
         positionInDocument: PositionRelation,
         unparsedObjectNotation: String
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandObjectInsertInList,
                 CommonRestApi.paramDocumentPath to containingObjectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
@@ -198,7 +200,7 @@ class ClientRestApi(
             containingObjectLocation: ObjectLocation,
             attributePath: AttributePath
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandObjectRemoveIn,
                 CommonRestApi.paramDocumentPath to containingObjectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
@@ -212,7 +214,7 @@ class ClientRestApi(
         attributeName: AttributeName,
         unparsedAttributeNotation: String
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandAttributeUpsert,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -226,7 +228,7 @@ class ClientRestApi(
         attributePath: AttributePath,
         unparsedAttributeNotation: String
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandAttributeUpdateIn,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -241,7 +243,7 @@ class ClientRestApi(
         indexInList: PositionRelation,
         unparsedItemNotation: String
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandAttributeInsertItemIn,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -257,7 +259,7 @@ class ClientRestApi(
         indexInList: PositionRelation,
         unparsedItemNotations: List<String>
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
             CommonRestApi.commandAttributeInsertAllItemsIn,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -275,7 +277,7 @@ class ClientRestApi(
         unparsedValueNotation: String,
         createAncestorsIfAbsent: Boolean
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
             CommonRestApi.commandAttributeInsertEntryIn,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -292,7 +294,7 @@ class ClientRestApi(
         attributePath: AttributePath,
         removeContainerIfEmpty: Boolean
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
             CommonRestApi.commandAttributeRemoveIn,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -307,7 +309,7 @@ class ClientRestApi(
         unparsedItemNotation: String,
         removeContainerIfEmpty: Boolean
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
             CommonRestApi.commandAttributeRemoveItemIn,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -323,7 +325,7 @@ class ClientRestApi(
         unparsedItemNotations: List<String>,
         removeContainerIfEmpty: Boolean
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
             CommonRestApi.commandAttributeRemoveAllItemsIn,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -338,7 +340,7 @@ class ClientRestApi(
         attributePath: AttributePath,
         newPosition: PositionRelation
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
             CommonRestApi.commandAttributeShiftIn,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -352,7 +354,7 @@ class ClientRestApi(
         objectLocation: ObjectLocation,
         newName: ObjectName
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
             CommonRestApi.commandRefactorObjectRename,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -364,7 +366,7 @@ class ClientRestApi(
             documentPath: DocumentPath,
             documentName: DocumentName
     ): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandRefactorDocumentRename,
                 CommonRestApi.paramDocumentPath to documentPath.asString(),
                 CommonRestApi.paramDocumentName to documentName.value)
@@ -385,7 +387,7 @@ class ClientRestApi(
 
 
     suspend fun removeResource(location: ResourceLocation): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.commandResourceRemove,
                 CommonRestApi.paramDocumentPath to location.documentPath.asString(),
                 CommonRestApi.paramResourcePath to location.resourcePath.asString())
@@ -423,7 +425,7 @@ class ClientRestApi(
 
     // todo: should this be used?
     suspend fun startExecution(documentPath: DocumentPath): Digest {
-        return getDigest(
+        return getOrPutDigest(
                 CommonRestApi.actionStart,
                 CommonRestApi.paramDocumentPath to documentPath.asString())
     }
@@ -441,7 +443,7 @@ class ClientRestApi(
             host: DocumentPath,
             objectLocation: ObjectLocation
     ): ImperativeResponse {
-        val responseJson = getJson(
+        val responseJson = getOrPutJson(
                 CommonRestApi.actionPerform,
                 CommonRestApi.paramHostDocumentPath to host.asString(),
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
@@ -467,7 +469,7 @@ class ClientRestApi(
             objectLocation: ObjectLocation,
             vararg parameters: Pair<String, String>
     ): ExecutionResult {
-        val responseJson = getJson(
+        val responseJson = getOrPutJson(
                 CommonRestApi.actionDetached,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -515,7 +517,7 @@ class ClientRestApi(
     suspend fun visualDataflowModel(
             host: DocumentPath
     ): VisualDataflowModel {
-        val responseJson = getJson(
+        val responseJson = getOrPutJson(
                 CommonRestApi.execModel,
                 CommonRestApi.paramDocumentPath to host.asString())
 
@@ -531,7 +533,7 @@ class ClientRestApi(
             host: DocumentPath,
             vertexLocation: ObjectLocation
     ): VisualVertexModel {
-        val responseJson = getJson(
+        val responseJson = getOrPutJson(
                 CommonRestApi.execModel,
                 CommonRestApi.paramDocumentPath to host.asString(),
                 CommonRestApi.paramObjectPath to vertexLocation.objectPath.asString())
@@ -546,7 +548,7 @@ class ClientRestApi(
     suspend fun resetDataflowExecution(
             host: DocumentPath
     ): VisualDataflowModel {
-        val responseJson = getJson(
+        val responseJson = getOrPutJson(
                 CommonRestApi.execReset,
                 CommonRestApi.paramDocumentPath to host.asString())
 
@@ -561,7 +563,7 @@ class ClientRestApi(
     suspend fun execDataflow(
             objectLocation: ObjectLocation
     ): VisualVertexTransition {
-        val responseJson = getJson(
+        val responseJson = getOrPutJson(
                 CommonRestApi.execPerform,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
@@ -577,7 +579,7 @@ class ClientRestApi(
         objectLocation: ObjectLocation,
         vararg parameters: Pair<String, String>
     ): TaskModel {
-        val responseJson = getJson(
+        val responseJson = getOrPutJson(
             CommonRestApi.taskSubmit,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
@@ -592,7 +594,7 @@ class ClientRestApi(
     suspend fun taskQuery(
         taskId: TaskId
     ): TaskModel? {
-        val responseJson = getJsonOrNull(
+        val responseJson = getOrPutJsonOrNull(
             CommonRestApi.taskQuery,
             CommonRestApi.paramTaskId to taskId.identifier)
             ?: return null
@@ -606,7 +608,7 @@ class ClientRestApi(
     suspend fun taskCancel(
         taskId: TaskId
     ): TaskModel? {
-        val responseJson = getJsonOrNull(
+        val responseJson = getOrPutJsonOrNull(
             CommonRestApi.taskCancel,
             CommonRestApi.paramTaskId to taskId.identifier)
             ?: return null
@@ -633,7 +635,7 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     // TODO: change to POST to better align with HTTP semantics?
-    private suspend fun getDigest(
+    private suspend fun getOrPutDigest(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): Digest {
@@ -662,7 +664,7 @@ class ClientRestApi(
     }
 
 
-    private suspend fun getJson(
+    private suspend fun getOrPutJson(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): Json {
@@ -671,7 +673,7 @@ class ClientRestApi(
     }
 
 
-    private suspend fun getJsonOrNull(
+    private suspend fun getOrPutJsonOrNull(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): Json? {
@@ -708,7 +710,7 @@ class ClientRestApi(
     }
 
 
-    fun url(
+    private fun url(
         commandPath: String,
         vararg parameters: Pair<String, String>
     ): String {
@@ -727,15 +729,6 @@ class ClientRestApi(
     }
 
 
-    private suspend fun delete(
-            commandPath: String,
-            vararg parameters: Pair<String, String>
-    ) {
-        val suffix = paramSuffix(*parameters)
-        httpDelete("$baseUrl$commandPath$suffix")
-    }
-
-
     private fun paramSuffix(
             vararg parameters: Pair<String, String>
     ): String {
@@ -750,15 +743,24 @@ class ClientRestApi(
     }
 
 
-    private fun paramJsonMultimap(vararg parameters: Pair<String, String>): Json {
-        val builder = mutableMapOf<String, MutableList<String>>()
-        for (param in parameters) {
-            val values = builder.getOrPut(param.first) { mutableListOf() }
-            values.add(param.second)
-        }
-        return json(*builder
-            .entries
-            .map { it.key to it.value.toTypedArray() }
-            .toTypedArray())
-    }
+//    private suspend fun delete(
+//            commandPath: String,
+//            vararg parameters: Pair<String, String>
+//    ) {
+//        val suffix = paramSuffix(*parameters)
+//        httpDelete("$baseUrl$commandPath$suffix")
+//    }
+
+
+//    private fun paramJsonMultimap(vararg parameters: Pair<String, String>): Json {
+//        val builder = mutableMapOf<String, MutableList<String>>()
+//        for (param in parameters) {
+//            val values = builder.getOrPut(param.first) { mutableListOf() }
+//            values.add(param.second)
+//        }
+//        return json(*builder
+//            .entries
+//            .map { it.key to it.value.toTypedArray() }
+//            .toTypedArray())
+//    }
 }

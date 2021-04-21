@@ -2,6 +2,7 @@ package tech.kzen.auto.server.service.plugin
 
 import tech.kzen.auto.plugin.definition.ProcessorDefiner
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
+import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.lib.platform.ClassName
 
 
@@ -17,21 +18,31 @@ class DefinerDefinitionRepository(
             ClassName(it.define().processorDataDefinition.outputModelType.name))
         }
 
+    private val metadataByCoordinate = metadata
+        .groupBy { it.processorDefinitionInfo.coordinate }
+        .mapValues { it.value.single() }
 
-    private val byName = definers
-        .groupBy { it.info().name }
+
+    private val definersByCoordinate = definers
+        .groupBy { it.info().coordinate }
         .mapValues { it.value.single() }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun contains(name: String): Boolean {
-        return name in byName
+    override fun contains(coordinate: PluginCoordinate): Boolean {
+        return coordinate in definersByCoordinate
     }
 
 
-    override fun define(name: String): ProcessorDefinition<*> {
-        val definer = byName[name]
-            ?: throw IllegalArgumentException("Missing: $name")
+    override fun metadata(coordinate: PluginCoordinate): ProcessorDefinitionMetadata {
+        return metadataByCoordinate[coordinate]
+            ?: throw IllegalArgumentException("Not found: $coordinate")
+    }
+
+
+    override fun define(coordinate: PluginCoordinate): ProcessorDefinition<*> {
+        val definer = definersByCoordinate[coordinate]
+            ?: throw IllegalArgumentException("Missing: $coordinate")
 
         return definer.define()
     }

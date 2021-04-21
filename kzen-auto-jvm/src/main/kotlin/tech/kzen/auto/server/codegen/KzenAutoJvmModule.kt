@@ -22,7 +22,7 @@ import tech.kzen.auto.server.objects.graph.ReplaceProcessor
 import tech.kzen.auto.server.objects.graph.SelectLast
 import tech.kzen.auto.server.objects.plugin.PluginDocument
 import tech.kzen.auto.server.objects.report.ReportDocument
-import tech.kzen.auto.common.objects.document.report.spec.InputSpec
+import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.PivotSpec

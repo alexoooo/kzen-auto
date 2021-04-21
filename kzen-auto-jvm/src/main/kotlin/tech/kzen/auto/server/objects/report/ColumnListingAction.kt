@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report
 
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorHeaderReader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
@@ -81,7 +81,7 @@ class ColumnListingAction(
             .values
             .withIndex()
             .joinToString("\n") {
-                RecordRowBuffer.of(listOf(it.index.toString(), it.value)).toCsv()
+                FlatDataRecord.of(listOf(it.index.toString(), it.value)).toCsv()
             }
 
         val csvFile = "Number,Name\n$csvBody"

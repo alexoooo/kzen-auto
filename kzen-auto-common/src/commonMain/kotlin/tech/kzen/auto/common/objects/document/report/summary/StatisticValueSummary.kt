@@ -22,7 +22,7 @@ data class StatisticValueSummary(
             Double.NEGATIVE_INFINITY)
 
 
-        fun fromCollection(collection: Map<String, Any>): StatisticValueSummary {
+        fun ofCollection(collection: Map<String, Any>): StatisticValueSummary {
             return StatisticValueSummary(
                 collection[countKey] as Long,
                 collection[sumKey] as Double,
@@ -31,7 +31,7 @@ data class StatisticValueSummary(
         }
 
 
-        fun fromCsv(csv: List<List<String>>): StatisticValueSummary {
+        fun ofCsv(csv: List<List<String>>): StatisticValueSummary {
             return StatisticValueSummary(
                 csv[1][1].toLong(),
                 csv[2][1].toDouble(),
@@ -47,7 +47,7 @@ data class StatisticValueSummary(
     }
 
 
-    fun toCollection(): Map<String, Any> {
+    fun asCollection(): Map<String, Any> {
         return mapOf(
             countKey to count,
             sumKey to sum,
@@ -56,7 +56,7 @@ data class StatisticValueSummary(
     }
 
 
-    fun toCsv(): List<List<String>> {
+    fun asCsv(): List<List<String>> {
         val builder = mutableListOf<List<String>>()
 
         builder.add(listOf("Statistic", "Value"))

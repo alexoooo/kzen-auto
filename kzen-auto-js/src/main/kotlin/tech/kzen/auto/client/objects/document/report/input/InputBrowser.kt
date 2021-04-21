@@ -64,8 +64,8 @@ class InputBrowser(
             return
         }
 
-        if (props.reportState.inputSelected != null &&
-                props.reportState.inputSelected!!.isEmpty() &&
+        if (props.reportState.inputSelection != null &&
+                props.reportState.inputSelection!!.locations.isEmpty() &&
                 ! state.browserOpen
         ) {
 //            console.log("^^^^ setting browserOpen")
@@ -145,13 +145,21 @@ class InputBrowser(
 
     private fun onAddToSelection() {
         val addedPaths = newSelectedPaths()
-        props.dispatcher.dispatchAsync(InputsSelectionAddRequest(addedPaths))
+
+        TODO()
+
+//        props.dispatcher.dispatchAsync(InputsSelectionAddRequest(addedPaths))
     }
 
 
     private fun onRemoveFromSelection() {
         val removedPaths = existingSelectedPaths()
-        props.dispatcher.dispatchAsync(InputsSelectionRemoveRequest(removedPaths))
+
+        val dataLocationsSet = removedPaths.toSet()
+        val inputSelectionSpec = props.reportState.inputSpec().selection
+        val removedSpecs = inputSelectionSpec.locations.filter { it.location in dataLocationsSet }
+
+        props.dispatcher.dispatchAsync(InputsSelectionRemoveRequest(removedSpecs))
     }
 
 
@@ -176,15 +184,21 @@ class InputBrowser(
     }
 
 
+//    private fun dataLocationToSpec(dataLocations: List<DataLocation>): List<InputDataSpec> {
+//        val inputSpec = props.reportState.inputSpec().selection
+//        TODO()
+//    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val listingSelected = props.reportState.inputSelected
+        val listingSelected = props.reportState.inputSelection
         val browserListing = props.reportState.inputBrowser
         val browserDir = props.reportState.inputBrowseDir
         val inputError = props.reportState.inputError
 
         val forceOpen =
-            listingSelected != null && listingSelected.isEmpty()
+            listingSelected != null && listingSelected.locations.isEmpty()
 
         styledDiv {
             css {

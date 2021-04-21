@@ -4,7 +4,7 @@ import tech.kzen.lib.platform.ClassName
 
 
 data class ProcessorDefinerDetail(
-    val name: String,
+    val coordinate: CommonPluginCoordinate,
     val extensions: List<String>,
     val dataEncoding: CommonDataEncodingSpec,
     val priority: Int,
@@ -20,7 +20,7 @@ data class ProcessorDefinerDetail(
         @Suppress("UNCHECKED_CAST")
         fun ofCollection(collection: Map<String, Any?>): ProcessorDefinerDetail {
             return ProcessorDefinerDetail(
-                collection[nameKey] as String,
+                CommonPluginCoordinate.ofString(collection[nameKey] as String),
                 collection[extensionsKey] as List<String>,
                 CommonDataEncodingSpec((collection[dataEncodingKey] as String?)?.let { CommonTextEncodingSpec(it) }),
                 (collection[priorityKey] as String).toInt(),
@@ -32,7 +32,7 @@ data class ProcessorDefinerDetail(
 
     fun asCollection(): Map<String, Any?> {
         return mapOf(
-            nameKey to name,
+            nameKey to coordinate.asString(),
             extensionsKey to extensions,
             dataEncodingKey to dataEncoding.textEncoding?.charsetName,
             priorityKey to priority.toString(),

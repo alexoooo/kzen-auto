@@ -2,10 +2,12 @@ package tech.kzen.auto.client.objects.document.report.state
 
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.util.data.DataLocation
-import tech.kzen.auto.common.objects.document.report.listing.InputInfo
+import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
+import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.*
+import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
+import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -13,6 +15,7 @@ import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskState
 import tech.kzen.auto.common.util.RequestParams
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphSuccess
@@ -201,10 +204,10 @@ object ReportEffect {
         return when (result) {
             is ExecutionSuccess -> {
                 @Suppress("UNCHECKED_CAST")
-                val resultValue = result.value.get() as Map<String, Any>
+                val resultValue = result.value.get() as List<Map<String, Any>>
 
                 ListInputsSelectedResult(
-                    InputInfo.fromCollection(resultValue))
+                    InputSelectionInfo.ofCollection(resultValue))
             }
 
             is ExecutionFailure -> {
@@ -227,7 +230,7 @@ object ReportEffect {
                 val resultValue = result.value.get() as Map<String, Any>
 
                 ListInputsBrowserResult(
-                    InputInfo.fromCollection(resultValue))
+                    InputBrowserInfo.ofCollection(resultValue))
             }
 
             is ExecutionFailure -> {
@@ -259,7 +262,7 @@ object ReportEffect {
 
     private suspend fun selectBrowserFiles(
         state: ReportState,
-        paths: List<DataLocation>
+        paths: List<InputDataSpec>
     ): ReportAction {
         val command = InputSpec.addSelectedCommand(state.mainLocation, paths)
 
@@ -279,7 +282,7 @@ object ReportEffect {
 
     private suspend fun unselectBrowserFiles(
         state: ReportState,
-        paths: List<DataLocation>
+        paths: List<InputDataSpec>
     ): ReportAction {
         val command = InputSpec.removeSelectedCommand(state.mainLocation, paths)
 
@@ -321,8 +324,8 @@ object ReportEffect {
     private suspend fun loadColumnListing(
         state: ReportState
     ): ReportAction {
-        if (state.inputSelected == null ||
-                state.inputSelected.isEmpty()) {
+        if (state.inputSelection == null ||
+                state.inputSelection.isEmpty()) {
             return EmptyInputSelection
         }
 

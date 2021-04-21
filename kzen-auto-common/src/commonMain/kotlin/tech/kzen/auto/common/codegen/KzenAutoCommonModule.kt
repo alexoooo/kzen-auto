@@ -15,7 +15,7 @@ import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
 import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
-import tech.kzen.auto.common.objects.document.report.spec.InputSpec
+import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
 import tech.kzen.auto.common.objects.document.script.action.PrintlnAction
@@ -90,7 +90,7 @@ reflectionRegistry.put(
 }
 
 reflectionRegistry.put(
-    "tech.kzen.auto.common.objects.document.report.spec.InputSpec\$Definer",
+    "tech.kzen.auto.common.objects.document.report.spec.input.InputSpec\$Definer",
     listOf()
 ) {
     InputSpec.Definer

@@ -12,23 +12,22 @@ import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.definition.ProcessorDataDefinition
+import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
-import tech.kzen.auto.server.objects.report.pipeline.event.output.DisruptorPipelineOutput
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
+import tech.kzen.auto.server.objects.report.pipeline.event.output.DisruptorPipelineOutput
 import tech.kzen.auto.server.objects.report.pipeline.input.ProcessorInputPipeline
-import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.instance.ProcessorDataInstance
+import tech.kzen.auto.server.objects.report.pipeline.input.connect.file.FileFlatDataSource
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetDefinition
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataContentDefinition
-import tech.kzen.auto.server.objects.report.pipeline.input.connect.file.FileFlatDataSource
+import tech.kzen.auto.server.objects.report.pipeline.input.model.instance.ProcessorDataInstance
+import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
 import tech.kzen.auto.server.objects.report.pipeline.output.ReportOutput
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
 import tech.kzen.auto.server.objects.report.pipeline.stages.*
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.service.ServerContext
-import tech.kzen.auto.server.service.plugin.ProcessorDefinitionSignature
 import tech.kzen.auto.server.util.DisruptorUtils
 import java.io.InputStream
 import java.nio.file.Path
@@ -46,7 +45,7 @@ class ProcessorDatasetPipeline(
     companion object {
         private val logger = LoggerFactory.getLogger(ProcessorDatasetPipeline::class.java)
 
-        private val payloadType = RecordRowBuffer.className
+//        private val payloadType = FlatDataRecord.className
 
 
 //        private const val preCachePartitionCount = 0
@@ -186,29 +185,31 @@ class ProcessorDatasetPipeline(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun <T> datasetDefinition(): DatasetDefinition<T> {
-        val cache = mutableMapOf<ProcessorDefinitionSignature, ProcessorDataDefinition<T>>()
+        val cache = mutableMapOf<PluginCoordinate, ProcessorDataDefinition<T>>()
         val builder = mutableListOf<FlatDataContentDefinition<T>>()
 
         for (flatDataInfo in initialReportRunSpec.datasetInfo.items) {
             val flatDataLocation = flatDataInfo.flatDataLocation
 
-            val signature = ProcessorDefinitionSignature(
-                payloadType,
-                flatDataLocation.dataLocation.innerExtension(),
-                flatDataLocation.dataEncoding.isBinary()
-            )
+            val processorPluginCoordinate = flatDataInfo.processorPluginCoordinate
+//            val signature = ProcessorDefinitionSignature(
+//                payloadType,
+//                flatDataLocation.dataLocation.innerExtension(),
+//                flatDataLocation.dataEncoding.isBinary()
+//            )
 
             val processorDataDefinition =
-                cache.getOrPut(signature) {
-                    processorDataDefinition(signature)
-                        ?: throw IllegalStateException("Processor not found: $flatDataLocation - $payloadType")
+                cache.getOrPut(processorPluginCoordinate) {
+                    processorDataDefinition(processorPluginCoordinate)
+                        ?: throw IllegalStateException(
+                            "Processor not found: $flatDataLocation - $processorPluginCoordinate")
                 }
 
             builder.add(
                 FlatDataContentDefinition(
-                flatDataInfo,
-                FileFlatDataSource.instance,
-                processorDataDefinition)
+                    flatDataInfo,
+                    FileFlatDataSource.instance,
+                    processorDataDefinition)
             )
         }
 
@@ -217,18 +218,12 @@ class ProcessorDatasetPipeline(
 
 
     private fun <T> processorDataDefinition(
-        processorDefinitionSignature: ProcessorDefinitionSignature
-    ): ProcessorDataDefinition<T>? {
-        val processorDefinitionInfoCandidates = ServerContext.definitionRepository.find(
-            processorDefinitionSignature)
-
-        val primaryProcessorDefinitionInfo = processorDefinitionInfoCandidates.firstOrNull()
-            ?: return null
-
-        val processorDefinition = ServerContext.definitionRepository.define(primaryProcessorDefinitionInfo.name)
+        processorDefinitionCoordinate: PluginCoordinate
+    ): ProcessorDataDefinition<T> {
+        val definition = ServerContext.definitionRepository.define(processorDefinitionCoordinate)
 
         @Suppress("UNCHECKED_CAST")
-        return processorDefinition.processorDataDefinition as ProcessorDataDefinition<T>
+        return definition.processorDataDefinition as ProcessorDataDefinition<T>
     }
 
 

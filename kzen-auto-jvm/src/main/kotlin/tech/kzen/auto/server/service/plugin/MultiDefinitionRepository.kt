@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.service.plugin
 
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
+import tech.kzen.auto.plugin.model.PluginCoordinate
 
 
 class MultiDefinitionRepository(
@@ -8,16 +9,27 @@ class MultiDefinitionRepository(
 ):
     ProcessorDefinitionRepository
 {
-    override fun contains(name: String): Boolean {
-        return repositories.any { it.contains(name) }
+    override fun contains(coordinate: PluginCoordinate): Boolean {
+        return repositories.any { it.contains(coordinate) }
     }
 
 
-    override fun define(name: String): ProcessorDefinition<*> {
-        val repository = repositories.find { it.contains(name) }
-            ?: throw IllegalArgumentException("Unknown: $name")
+    override fun metadata(coordinate: PluginCoordinate): ProcessorDefinitionMetadata {
+        for (repository in repositories) {
+            if (repository.contains(coordinate)) {
+                continue
+            }
+            return repository.metadata(coordinate)
+        }
+        throw IllegalArgumentException("Unknown: $coordinate")
+    }
 
-        return repository.define(name)
+
+    override fun define(coordinate: PluginCoordinate): ProcessorDefinition<*> {
+        val repository = repositories.find { it.contains(coordinate) }
+            ?: throw IllegalArgumentException("Unknown: $coordinate")
+
+        return repository.define(coordinate)
     }
 
 

@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.plugin
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.objects.document.plugin.PluginConventions
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
+import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.server.service.plugin.ProcessorDefinitionMetadata
 import tech.kzen.auto.server.service.plugin.ProcessorDefinitionRepository
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -21,17 +22,31 @@ class PluginProcessorDefinitionRepository(
     ProcessorDefinitionRepository
 {
     //-----------------------------------------------------------------------------------------------------------------
-    private val cache = mutableMapOf<ObjectLocation, ProcessorDefinitionMetadataCache>()
+    private val metadataByDefinerCache = mutableMapOf<ObjectLocation, DefinerMetadataCache>()
 
-    private data class ProcessorDefinitionMetadataCache(
+    private data class DefinerMetadataCache(
         val digest: Digest,
         val metadata: List<ProcessorDefinitionMetadata>)
 
 
+    private var metadataByCoordinateCache = mutableMapOf<PluginCoordinate, DefinitionMetadataCache>()
+
+    private data class DefinitionMetadataCache(
+        val definerObjectLocation: ObjectLocation,
+        val metadata: ProcessorDefinitionMetadata)
+
+
+    private var cachedStructureDigest: Digest = Digest.missing
+
+
     //-----------------------------------------------------------------------------------------------------------------
-    private fun pluginProcessorDefinitionMetadata(): Map<ObjectLocation, List<ProcessorDefinitionMetadata>> {
+    private fun refreshCacheIfRequired() {
         val graphStructure = runBlocking {
             graphStore.graphStructure()
+        }
+
+        if (cachedStructureDigest == graphStructure.digest()) {
+            return
         }
 
         val pluginObjectLocations = graphStructure
@@ -44,12 +59,17 @@ class PluginProcessorDefinitionRepository(
             .toSet()
 
         val objectNotations = graphStructure.graphNotation.coalesce
-        if (cache.keys == pluginObjectLocations) {
-            val allCached = pluginObjectLocations.all { cache[it]!!.digest == objectNotations[it]!!.digest() }
-            if (allCached) {
-                return cache.mapValues { it.value.metadata }
+
+        metadataByDefinerCache.keys.retainAll(pluginObjectLocations)
+        for (pluginObjectLocation in pluginObjectLocations) {
+            val cached = metadataByDefinerCache[pluginObjectLocation]
+            if (cached != null && cached.digest != objectNotations[pluginObjectLocation]!!.digest()) {
+                metadataByDefinerCache.remove(pluginObjectLocation)
             }
-            cache.clear()
+        }
+
+        if (metadataByDefinerCache.keys == pluginObjectLocations) {
+            return
         }
 
         val graphDefinitionAttempt = graphDefiner.tryDefine(graphStructure)
@@ -62,9 +82,11 @@ class PluginProcessorDefinitionRepository(
 
         val pluginGraphInstance = graphCreator.createGraph(pluginGraphDefinition)
 
-        val builder = mutableMapOf<ObjectLocation, List<ProcessorDefinitionMetadata>>()
-
         for (pluginObjectLocation in definedPluginObjectLocations) {
+            if (pluginObjectLocation in metadataByDefinerCache) {
+                continue
+            }
+
             val pluginDocument = pluginGraphInstance[pluginObjectLocation]!!.reference as PluginDocument
 
             val definersAndClassLoader = pluginDocument.loadDefiners()
@@ -85,35 +107,49 @@ class PluginProcessorDefinitionRepository(
                 definersAndClassLoader.classLoader.close()
             }
 
-            builder[pluginObjectLocation] = metadata
-            cache[pluginObjectLocation] = ProcessorDefinitionMetadataCache(
+            metadataByDefinerCache[pluginObjectLocation] = DefinerMetadataCache(
                 objectNotations[pluginObjectLocation]!!.digest(), metadata)
         }
 
-        return builder
+        metadataByCoordinateCache.clear()
+        for ((objectLocation, cache) in metadataByDefinerCache) {
+            for (metadata in cache.metadata) {
+                metadataByCoordinateCache[metadata.processorDefinitionInfo.coordinate] =
+                    DefinitionMetadataCache(objectLocation, metadata)
+            }
+        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Synchronized
-    override fun contains(name: String): Boolean {
-        return pluginProcessorDefinitionMetadata()
-            .any { e -> e.value.any { it.processorDefinitionInfo.name == name } }
+    override fun contains(coordinate: PluginCoordinate): Boolean {
+        refreshCacheIfRequired()
+        return coordinate in metadataByCoordinateCache
+    }
+
+
+    @Synchronized
+    override fun metadata(coordinate: PluginCoordinate): ProcessorDefinitionMetadata {
+        refreshCacheIfRequired()
+        return metadataByCoordinateCache[coordinate]?.metadata
+            ?: throw IllegalArgumentException("Name found: $coordinate")
     }
 
 
     @Synchronized
     override fun listMetadata(): List<ProcessorDefinitionMetadata> {
-        return pluginProcessorDefinitionMetadata().values.flatten()
+        refreshCacheIfRequired()
+        return metadataByCoordinateCache.values.map { it.metadata }
     }
 
 
     @Synchronized
-    override fun define(name: String): ProcessorDefinition<*> {
-        val pluginObjectLocation = pluginProcessorDefinitionMetadata()
-            .filterValues { i -> i.any { it.processorDefinitionInfo.name == name } }
-            .keys
-            .single()
+    override fun define(coordinate: PluginCoordinate): ProcessorDefinition<*> {
+        refreshCacheIfRequired()
+
+        val pluginObjectLocation = metadataByCoordinateCache[coordinate]?.definerObjectLocation
+            ?: throw IllegalArgumentException("Name found: $coordinate")
 
         val graphDefinitionAttempt = runBlocking {
             graphStore.graphDefinition()
@@ -125,10 +161,13 @@ class PluginProcessorDefinitionRepository(
         val pluginDocument = graphInstance[pluginObjectLocation]!!.reference as PluginDocument
 
         val definersAndClassLoader = pluginDocument.loadDefiners()
-            ?: throw IllegalStateException("Unable to load: $name")
+            ?: throw IllegalStateException("Unable to load: $coordinate")
 
-        val processorDefiner = definersAndClassLoader.processorDefiners.find { it.info().name == name }
-            ?: throw IllegalStateException("Not found: $name")
+        val processorDefiner = definersAndClassLoader.processorDefiners.find { it.info().coordinate == coordinate }
+            ?: run {
+                definersAndClassLoader.classLoader.close()
+                throw IllegalStateException("Not found: $coordinate")
+            }
 
         val processorDefinition = processorDefiner.define()
 

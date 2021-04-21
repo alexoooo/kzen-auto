@@ -1,7 +1,8 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
+import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvFormatUtils
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvProcessorDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -55,7 +56,7 @@ class TsvLineParserTest {
     fun tsvEmptyValues() {
         val tsvLines = "\t"
         assertEquals(listOf("", ""), read(tsvLines)[0].toList())
-        assertEquals(tsvLines, read(tsvLines)[0].toTsv())
+        assertEquals(tsvLines, TsvFormatUtils.toTsv(read(tsvLines)[0]))
     }
 
 
@@ -147,10 +148,10 @@ class TsvLineParserTest {
     fun utf8Line() {
         val line = read(tsvUtf8Line)[0]
         assertEquals(25, line.toList().size)
-        assertEquals(tsvUtf8Line, line.toTsv())
+        assertEquals(tsvUtf8Line, TsvFormatUtils.toTsv(line))
 
         for (i in 1 .. 16) {
-            assertEquals(tsvUtf8Line, read(tsvUtf8Line, i)[0].toTsv())
+            assertEquals(tsvUtf8Line, TsvFormatUtils.toTsv(read(tsvUtf8Line, i)[0]))
         }
     }
 
@@ -163,14 +164,14 @@ class TsvLineParserTest {
 
         val parsed = read(lines)
         assertEquals(2, parsed.size)
-        assertEquals(tsvLineA, parsed[0].toTsv())
-        assertEquals(tsvLineB, parsed[1].toTsv())
+        assertEquals(tsvLineA, TsvFormatUtils.toTsv(parsed[0]))
+        assertEquals(tsvLineB, TsvFormatUtils.toTsv(parsed[1]))
 
         for (i in 1 .. 128) {
             val parsedBuffered = read(lines, i)
             assertEquals(2, parsedBuffered.size)
-            assertEquals(tsvLineA, parsedBuffered[0].toTsv())
-            assertEquals(tsvLineB, parsedBuffered[1].toTsv())
+            assertEquals(tsvLineA, TsvFormatUtils.toTsv(parsedBuffered[0]))
+            assertEquals(tsvLineB, TsvFormatUtils.toTsv(parsedBuffered[1]))
         }
     }
 
@@ -183,14 +184,14 @@ class TsvLineParserTest {
 
         val parsed = read(lines)
         assertEquals(2, parsed.size)
-        assertEquals(tsvLineA, parsed[0].toTsv())
-        assertEquals(tsvLineB, parsed[1].toTsv())
+        assertEquals(tsvLineA, TsvFormatUtils.toTsv(parsed[0]))
+        assertEquals(tsvLineB, TsvFormatUtils.toTsv(parsed[1]))
 
         for (i in 1 .. 128) {
             val parsedBuffered = read(lines, i)
             assertEquals(2, parsedBuffered.size)
-            assertEquals(tsvLineA, parsedBuffered[0].toTsv())
-            assertEquals(tsvLineB, parsedBuffered[1].toTsv())
+            assertEquals(tsvLineA, TsvFormatUtils.toTsv(parsedBuffered[0]))
+            assertEquals(tsvLineB, TsvFormatUtils.toTsv(parsedBuffered[1]))
         }
     }
 
@@ -199,7 +200,7 @@ class TsvLineParserTest {
     private fun read(
         text: String,
         bufferSize: Int = text.length
-    ): List<RecordRowBuffer> {
+    ): List<FlatDataRecord> {
         return TsvProcessorDefiner.literal(text, bufferSize)
     }
 }

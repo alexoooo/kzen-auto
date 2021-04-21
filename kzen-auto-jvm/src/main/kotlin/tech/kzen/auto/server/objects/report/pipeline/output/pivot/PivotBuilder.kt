@@ -8,7 +8,7 @@ import tech.kzen.auto.server.objects.report.pipeline.calc.ColumnValueUtils
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.ValueStatistics
 
@@ -81,7 +81,7 @@ class PivotBuilder(
     /**
      * @return true if new row was created
      */
-    fun add(recordRow: RecordRowBuffer, header: RecordHeader): Boolean {
+    fun add(recordRow: FlatDataRecord, header: RecordHeader): Boolean {
         val headerIndexes = valueColumnIndex.indices(header)
 
         var present = false
@@ -115,7 +115,7 @@ class PivotBuilder(
     }
 
 
-    private fun rowIndex(recordRow: RecordRowBuffer, header: RecordHeader): Long {
+    private fun rowIndex(recordRow: FlatDataRecord, header: RecordHeader): Long {
         var valueAdded = false
         val headerIndices = rowColumnIndex.indices(header)
 

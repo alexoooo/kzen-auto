@@ -12,10 +12,12 @@ import tech.kzen.auto.client.objects.document.report.state.InputsSelectionRemove
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.report.listing.InputDataInfo
+import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
+import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
-import tech.kzen.auto.common.util.data.DataLocationInfo
 
 
 class InputSelected(
@@ -45,31 +47,20 @@ class InputSelected(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun summaryText(selected: List<DataLocationInfo>): String {
-//        val folderCount = selected.map { it.path.asUri().substring(0, it.path.asUri().length - it.name.length) }.toSet().size
-        val folderCount = selected.map { it.path.parent() }.toSet().size
-        val totalSize = selected.map { it.size }.sum()
-
-        val filesPlural = if (selected.size == 1) { "file" } else { "files" }
-        val foldersText = if (folderCount == 1) { "" } else { "from $folderCount folders " }
-        val totalPrefix = if (selected.size == 1) { "" } else { "total " }
-
-        return "${selected.size} $filesPlural ${foldersText}($totalPrefix${FormatUtils.readableFileSize(totalSize)})"
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private fun onRemoveAll() {
         if (props.editDisabled) {
             return
         }
 
-        val inputSelected = props.reportState.inputSelected
+        val inputSelection = props.reportState.inputSelection
             ?: return
+
+        val inputSelectionSpecs = dataLocationToSpec(
+            inputSelection.locations.map { it.dataLocationInfo.path })
 
         props.dispatcher.dispatchAsync(
             InputsSelectionRemoveRequest(
-                inputSelected.map { it.path }))
+                inputSelectionSpecs))
     }
 
 
@@ -78,9 +69,11 @@ class InputSelected(
             return
         }
 
+        val inputSelectionSpecs = dataLocationToSpec(listOf(path))
+
         props.dispatcher.dispatchAsync(
             InputsSelectionRemoveRequest(
-                listOf(path)))
+                inputSelectionSpecs))
     }
 
 
@@ -99,8 +92,30 @@ class InputSelected(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun summaryText(inputSelectionInfo: InputSelectionInfo): String {
+        val selected = inputSelectionInfo.locations.map { it.dataLocationInfo }
+
+        val folderCount = selected.map { it.path.parent() }.toSet().size
+        val totalSize = selected.sumOf { it.size }
+
+        val filesPlural = if (selected.size == 1) { "file" } else { "files" }
+        val foldersText = if (folderCount == 1) { "" } else { "from $folderCount folders " }
+        val totalPrefix = if (selected.size == 1) { "" } else { "total " }
+
+        return "${selected.size} $filesPlural ${foldersText}($totalPrefix${FormatUtils.readableFileSize(totalSize)})"
+    }
+
+
+    private fun dataLocationToSpec(dataLocations: List<DataLocation>): List<InputDataSpec> {
+        val dataLocationsSet = dataLocations.toSet()
+        val inputSelectionSpec = props.reportState.inputSpec().selection
+        return inputSelectionSpec.locations.filter { it.location in dataLocationsSet }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val fileListing = props.reportState.inputSelected
+        val fileListing = props.reportState.inputSelection
         val forceOpen = fileListing?.isEmpty() ?: false
 
         styledDiv {
@@ -129,58 +144,7 @@ class InputSelected(
                             float = Float.right
                         }
 
-                        if (state.selectedOpen) {
-                            child(MaterialButton::class) {
-                                attrs {
-                                    variant = "outlined"
-                                    size = "small"
-
-                                    onClick = {
-                                        onToggleFolders()
-                                    }
-
-                                    style = reactStyle {
-                                        if (state.showFolders) {
-                                            backgroundColor = Color.darkGray
-                                        }
-
-                                        paddingLeft = 0.px
-                                        paddingRight = 0.px
-                                    }
-
-                                    title =
-                                        if (state.showFolders) {
-                                            "Hide folders"
-                                        }
-                                        else {
-                                            "Show folders"
-                                        }
-                                }
-
-                                child(FolderOpenIcon::class) {
-                                    attrs {
-                                        style = reactStyle {
-//                                            marginLeft = (-1).em
-//                                            marginRight = (-1).em
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        child(MaterialIconButton::class) {
-                            attrs {
-                                onClick = {
-                                    onToggleSelected()
-                                }
-                            }
-
-                            if (state.selectedOpen) {
-                                child(ExpandLessIcon::class) {}
-                            } else {
-                                child(ExpandMoreIcon::class) {}
-                            }
-                        }
+                        renderOptions()
                     }
                 }
             }
@@ -211,8 +175,62 @@ class InputSelected(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderSummary(selected: List<DataLocationInfo>, reportProgress: ReportProgress?) {
+    private fun RBuilder.renderOptions() {
+        +"[Data Type]"
+
+        if (state.selectedOpen) {
+            child(MaterialButton::class) {
+                attrs {
+                    variant = "outlined"
+                    size = "small"
+
+                    onClick = {
+                        onToggleFolders()
+                    }
+
+                    style = reactStyle {
+                        if (state.showFolders) {
+                            backgroundColor = Color.darkGray
+                        }
+
+                        paddingLeft = 0.px
+                        paddingRight = 0.px
+                    }
+
+                    title =
+                        if (state.showFolders) {
+                            "Hide folders"
+                        }
+                        else {
+                            "Show folders"
+                        }
+                }
+
+                child(FolderOpenIcon::class) {}
+            }
+        }
+
+        child(MaterialIconButton::class) {
+            attrs {
+                onClick = {
+                    onToggleSelected()
+                }
+            }
+
+            if (state.selectedOpen) {
+                child(ExpandLessIcon::class) {}
+            } else {
+                child(ExpandMoreIcon::class) {}
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderSummary(inputSelectionInfo: InputSelectionInfo, reportProgress: ReportProgress?) {
         val runningFile = reportProgress?.inputs?.filter { it.value.running }?.keys?.lastOrNull()
+
+        val selected = inputSelectionInfo.locations
 
         if (selected.size == 1) {
             styledSpan {
@@ -221,12 +239,12 @@ class InputSelected(
                         fontWeight = FontWeight.bold
                     }
                 }
-                +selected.single().name
+                +selected.single().dataLocationInfo.name
             }
             if (runningFile != null) {
                 div {
                     +reportProgress.inputs[runningFile]!!.toMessage(
-                        selected.single().size)
+                        selected.single().dataLocationInfo.size)
                 }
             }
         }
@@ -238,7 +256,7 @@ class InputSelected(
                             +"1."
                         }
                         styledTd {
-                            +selected[0].name
+                            +selected[0].dataLocationInfo.name
                         }
                     }
 
@@ -248,7 +266,7 @@ class InputSelected(
                                 +"2."
                             }
                             styledTd {
-                                +selected[1].name
+                                +selected[1].dataLocationInfo.name
                             }
                         }
                     }
@@ -286,31 +304,31 @@ class InputSelected(
                             +"${selected.size}."
                         }
                         styledTd {
-                            +selected.last().name
+                            +selected.last().dataLocationInfo.name
                         }
                     }
                 }
             }
 
             if (runningFile != null) {
-                val selectedRunning = selected.first { it.path == runningFile }
+                val selectedRunning = selected.first { it.dataLocationInfo.path == runningFile }
                 styledDiv {
                     css {
                         marginTop = 0.25.em
                         fontWeight = FontWeight.bold
                     }
-                    +"Running: ${selectedRunning.name}"
+                    +"Running: ${selectedRunning.dataLocationInfo.name}"
                 }
                 div {
                     +reportProgress.inputs[runningFile]!!.toMessage(
-                        selectedRunning.size)
+                        selectedRunning.dataLocationInfo.size)
                 }
             }
         }
     }
 
 
-    private fun RBuilder.renderDetail(selected: List<DataLocationInfo>, reportProgress: ReportProgress?) {
+    private fun RBuilder.renderDetail(selected: InputSelectionInfo, reportProgress: ReportProgress?) {
         styledDiv {
             css {
                 marginBottom = 0.25.em
@@ -430,7 +448,7 @@ class InputSelected(
                         cursor = Cursor.default
                     }
 
-                    for (fileInfo in selected) {
+                    for (fileInfo in selected.locations) {
                         renderDetailRow(fileInfo, reportProgress)
                     }
                 }
@@ -439,7 +457,8 @@ class InputSelected(
     }
 
 
-    private fun RBuilder.renderDetailRow(fileInfo: DataLocationInfo, reportProgress: ReportProgress?) {
+    private fun RBuilder.renderDetailRow(inputDataInfo: InputDataInfo, reportProgress: ReportProgress?) {
+        val fileInfo = inputDataInfo.dataLocationInfo
         val fileProgress = reportProgress?.inputs?.get(fileInfo.path)
 
         styledTr {

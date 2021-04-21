@@ -225,7 +225,7 @@ class PluginController(
 
         for (processorDefinitionDetail in detailList) {
             styledDiv {
-                key = processorDefinitionDetail.name
+                key = processorDefinitionDetail.coordinate.asString()
 
                 css {
                     filter = "drop-shadow(0 1px 1px gray)"
@@ -241,7 +241,7 @@ class PluginController(
                         marginTop = (-0.5).em
                         marginBottom = 0.px
                     }
-                    +processorDefinitionDetail.name
+                    +processorDefinitionDetail.coordinate.name
                 }
 
                 div {

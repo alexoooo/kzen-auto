@@ -82,7 +82,9 @@ Report:
     browser:
       directory: ./
       filter: ""
-    selected: []
+    selection:
+      dataType: tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
+      locations: []
   formula: {}
   filter: {}
   pivot:
@@ -104,13 +106,13 @@ Report:
 
 InputSpec:
   abstract: true
-  class: tech.kzen.auto.common.objects.document.report.spec.InputSpec
+  class: tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
   meta:
     ref:
       by: InputSpecDefiner
 
 InputSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.report.spec.InputSpec$Definer
+  class: tech.kzen.auto.common.objects.document.report.spec.input.InputSpec$Definer
 
 
 FormulaSpec:

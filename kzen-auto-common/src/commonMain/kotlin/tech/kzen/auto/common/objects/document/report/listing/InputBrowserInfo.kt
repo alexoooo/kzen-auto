@@ -4,7 +4,7 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
 
 
-data class InputInfo(
+data class InputBrowserInfo(
     val browseDir: DataLocation,
     val files: List<DataLocationInfo>
 ) {
@@ -13,14 +13,14 @@ data class InputInfo(
         private const val filesKey = "files"
 
 
-        fun fromCollection(map: Map<String, Any>): InputInfo {
+        fun ofCollection(map: Map<String, Any>): InputBrowserInfo {
             @Suppress("UNCHECKED_CAST")
             val selected = map[filesKey]!! as List<Map<String, String>>
 
-            return InputInfo(
+            return InputBrowserInfo(
                 DataLocation.of(map[browseDirKey]!! as String),
                 selected.map {
-                    DataLocationInfo.fromCollection(it)
+                    DataLocationInfo.ofCollection(it)
                 }
             )
         }
@@ -32,7 +32,7 @@ data class InputInfo(
     }
 
 
-    fun toCollection(): Map<String, Any> {
+    fun asCollection(): Map<String, Any> {
         return mapOf(
             browseDirKey to browseDir.asString(),
             filesKey to files.map { it.toCollection() },

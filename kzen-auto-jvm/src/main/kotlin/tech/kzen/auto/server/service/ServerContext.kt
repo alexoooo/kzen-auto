@@ -23,6 +23,7 @@ import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.plugin.DefinerDefinitionRepository
 import tech.kzen.auto.server.service.plugin.MultiDefinitionRepository
+import tech.kzen.auto.server.service.plugin.ProcessorDefinitionRepository
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
 import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
@@ -115,7 +116,7 @@ object ServerContext {
     private val pluginProcessorDefinitionRepository = PluginProcessorDefinitionRepository(
          graphStore, graphDefiner, graphCreator)
 
-    val definitionRepository = MultiDefinitionRepository(listOf(
+    val definitionRepository: ProcessorDefinitionRepository = MultiDefinitionRepository(listOf(
         basicDefinitionRepository, pluginProcessorDefinitionRepository))
 
 

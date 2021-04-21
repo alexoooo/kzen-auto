@@ -30,7 +30,7 @@ data class DataLocationInfo(
         }
 
 
-        fun fromCollection(map: Map<String, String>): DataLocationInfo {
+        fun ofCollection(map: Map<String, String>): DataLocationInfo {
             return DataLocationInfo(
                 DataLocation.of(map[pathKey]!!),
                 map[nameKey]!!,

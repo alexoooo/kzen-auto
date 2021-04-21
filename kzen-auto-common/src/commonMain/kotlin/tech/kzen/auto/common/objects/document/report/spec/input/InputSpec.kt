@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.report.spec
+package tech.kzen.auto.common.objects.document.report.spec.input
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.util.data.DataLocation
@@ -11,7 +11,6 @@ import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
@@ -23,18 +22,15 @@ import tech.kzen.lib.common.reflect.Reflect
 
 data class InputSpec(
     val browser: InputBrowserSpec,
-    val selected: List<DataLocation>
+    val selection: InputSelectionSpec
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val browserKey = AttributeSegment.ofKey("browser")
         val browserAttributePath = ReportConventions.inputAttributePath.nest(browserKey)
 
-//        private val directoryKey = AttributeSegment.ofKey("directory")
-//        val directoryAttributePath = ReportConventions.inputAttributePath.nest(directoryKey)
-
-        private val selectedKey = AttributeSegment.ofKey("selected")
-        private val selectedAttributePath = ReportConventions.inputAttributePath.nest(selectedKey)
+        private val selectionKey = AttributeSegment.ofKey("selection")
+        val selectionAttributePath = ReportConventions.inputAttributePath.nest(selectionKey)
 
 
         fun browseCommand(mainLocation: ObjectLocation, directory: DataLocation): UpdateInAttributeCommand {
@@ -55,25 +51,25 @@ data class InputSpec(
 
         fun addSelectedCommand(
             mainLocation: ObjectLocation,
-            paths: List<DataLocation>
+            paths: List<InputDataSpec>
         ): InsertAllListItemsInAttributeCommand {
             return InsertAllListItemsInAttributeCommand(
                 mainLocation,
-                selectedAttributePath,
+                selectionAttributePath,
                 PositionRelation.afterLast,
-                paths.map { ScalarAttributeNotation(it.asString()) }
+                paths.map { it.asNotation() }
             )
         }
 
 
         fun removeSelectedCommand(
             mainLocation: ObjectLocation,
-            paths: List<DataLocation>
+            paths: List<InputDataSpec>
         ): RemoveAllListItemsInAttributeCommand {
             return RemoveAllListItemsInAttributeCommand(
                 mainLocation,
-                selectedAttributePath,
-                paths.map { ScalarAttributeNotation(it.asString()) },
+                InputSelectionSpec.locationsAttributePath,
+                paths.map { it.asNotation() },
                 false
             )
         }
@@ -102,9 +98,10 @@ data class InputSpec(
                             " $objectLocation - $attributeName")
 
             val browser = InputBrowserSpec.ofNotation(attributeNotation.get(browserKey) as MapAttributeNotation)
-            val selected = (attributeNotation.get(selectedKey) as ListAttributeNotation).values.map { it.asString()!! }
 
-            val inputSpec = InputSpec(browser, selected.map { DataLocation.of(it) })
+            val selectionNotation = attributeNotation.get(selectionKey) as MapAttributeNotation
+            val selection = InputSelectionSpec.ofNotation(selectionNotation)
+            val inputSpec = InputSpec(browser, selection)
 
             return AttributeDefinitionAttempt.success(
                 ValueAttributeDefinition(inputSpec))

@@ -4,7 +4,7 @@ import org.junit.Test
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
 import tech.kzen.auto.server.util.WorkUtils
@@ -389,7 +389,7 @@ class CalculatedColumnEvalTest {
             HeaderListing(columnNames))
 
         val value = calculatedColumn.evaluate(
-            RecordRowBuffer.of(aValue, bValue),
+            FlatDataRecord.of(aValue, bValue),
             RecordHeader.of(columnNames))
 
         assertEquals(expected, value)

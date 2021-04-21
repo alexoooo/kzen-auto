@@ -5,11 +5,11 @@ import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.plugin.api.PipelineTerminalStep;
 import tech.kzen.auto.plugin.api.managed.PipelineOutput;
 import tech.kzen.auto.plugin.model.ModelOutputEvent;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer;
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord;
 
 
 public class FlatPipelineHandoff
-        implements PipelineTerminalStep<FlatProcessorEvent, ModelOutputEvent<RecordRowBuffer>>
+        implements PipelineTerminalStep<FlatProcessorEvent, ModelOutputEvent<FlatDataRecord>>
 {
     //-----------------------------------------------------------------------------------------------------------------
     private boolean skipFirst;
@@ -25,9 +25,9 @@ public class FlatPipelineHandoff
     @Override
     public void process(
             FlatProcessorEvent model,
-            @NotNull PipelineOutput<ModelOutputEvent<RecordRowBuffer>> output
+            @NotNull PipelineOutput<ModelOutputEvent<FlatDataRecord>> output
     ) {
-        ModelOutputEvent<RecordRowBuffer> nextEvent = output.next();
+        ModelOutputEvent<FlatDataRecord> nextEvent = output.next();
 
         if (skipFirst) {
             nextEvent.setSkip(true);
@@ -37,11 +37,11 @@ public class FlatPipelineHandoff
             nextEvent.setSkip(false);
         }
 
-        RecordRowBuffer recordRowBuffer = nextEvent.modelOrInit(RecordRowBuffer::new);
-        recordRowBuffer.copy(model.model);
+        FlatDataRecord flatDataRecord = nextEvent.modelOrInit(FlatDataRecord::new);
+        flatDataRecord.copy(model.model);
 
-        RecordRowBuffer row = (RecordRowBuffer) nextEvent.getRow();
-        row.clone(recordRowBuffer);
+        FlatDataRecord row = (FlatDataRecord) nextEvent.getRow();
+        row.clone(flatDataRecord);
 
         output.commit();
     }

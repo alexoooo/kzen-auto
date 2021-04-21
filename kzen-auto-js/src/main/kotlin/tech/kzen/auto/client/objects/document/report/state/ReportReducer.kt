@@ -91,16 +91,15 @@ object ReportReducer {
                 inputError = null)
 
             is ListInputsSelectedResult -> state.copy(
-                inputSelected = action.inputInfo.files,
-                inputBrowseDir = action.inputInfo.browseDir,
+                inputSelection = action.inputSelectionInfo,
                 inputLoaded = true,
                 inputLoading = false,
                 columnListing = null,
                 columnListingError = null)
 
             is ListInputsBrowserResult -> state.copy(
-                inputBrowser = action.inputInfo.files,
-                inputBrowseDir = action.inputInfo.browseDir,
+                inputBrowser = action.inputBrowserInfo.files,
+                inputBrowseDir = action.inputBrowserInfo.browseDir,
                 inputLoaded = true,
                 inputLoading = false)
 

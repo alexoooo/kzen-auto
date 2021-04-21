@@ -4,9 +4,10 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse.csv;
 import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.plugin.definition.*;
 import tech.kzen.auto.plugin.model.ModelOutputEvent;
+import tech.kzen.auto.plugin.model.PluginCoordinate;
 import tech.kzen.auto.plugin.spec.DataEncodingSpec;
 import tech.kzen.auto.plugin.spec.TextEncodingSpec;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer;
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FirstRecordItemHeaderExtractor;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatPipelineHandoff;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProcessorEvent;
@@ -18,14 +19,14 @@ import java.util.List;
 
 
 public class CsvProcessorDefiner
-        implements ProcessorDefiner<RecordRowBuffer>
+        implements ProcessorDefiner<FlatDataRecord>
 {
     //-----------------------------------------------------------------------------------------------------------------
     private static final DataEncodingSpec dataEncoding = new DataEncodingSpec(
             new TextEncodingSpec(null));
 
     private static final ProcessorDefinitionInfo info = new ProcessorDefinitionInfo(
-            "CSV",
+            new PluginCoordinate("CSV"),
             List.of("csv"),
             dataEncoding,
             ProcessorDefinitionInfo.priorityAvoid);
@@ -38,25 +39,25 @@ public class CsvProcessorDefiner
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    public static List<RecordRowBuffer> literal(String text) {
+    public static List<FlatDataRecord> literal(String text) {
         byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
         return literal(textBytes, StandardCharsets.UTF_8, textBytes.length);
     }
 
 
-    public static List<RecordRowBuffer> literal(String text, int dataBlockSize) {
+    public static List<FlatDataRecord> literal(String text, int dataBlockSize) {
         byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
         return literal(textBytes, StandardCharsets.UTF_8, dataBlockSize);
     }
 
 
-    public static List<RecordRowBuffer> literal(
+    public static List<FlatDataRecord> literal(
             byte[] textBytes, Charset charset, int dataBlockSize
     ) {
         return ProcessorInputChain.Companion.readAll(
                 textBytes,
                 instance.defineData(),
-                RecordRowBuffer::prototype,
+                FlatDataRecord::prototype,
                 charset,
                 dataBlockSize);
     }
@@ -73,7 +74,7 @@ public class CsvProcessorDefiner
     //-----------------------------------------------------------------------------------------------------------------
     @NotNull
     @Override
-    public ProcessorDefinition<RecordRowBuffer> define() {
+    public ProcessorDefinition<FlatDataRecord> define() {
         return new ProcessorDefinition<>(
                 defineData(),
                 FirstRecordItemHeaderExtractor::new,
@@ -81,18 +82,18 @@ public class CsvProcessorDefiner
     }
 
 
-    private ProcessorDataDefinition<RecordRowBuffer> defineData() {
+    private ProcessorDataDefinition<FlatDataRecord> defineData() {
         return new ProcessorDataDefinition<>(
                 CsvDataFramer::new,
-                RecordRowBuffer.class,
+                FlatDataRecord.class,
                 List.of(defineSegment()));
     }
 
 
-    private ProcessorSegmentDefinition<FlatProcessorEvent, ModelOutputEvent<RecordRowBuffer>> defineSegment() {
+    private ProcessorSegmentDefinition<FlatProcessorEvent, ModelOutputEvent<FlatDataRecord>> defineSegment() {
         return new ProcessorSegmentDefinition<>(
                 FlatProcessorEvent::new,
-                RecordRowBuffer.class,
+                FlatDataRecord.class,
                 List.of(
                         CsvPipelineLexer::new,
                         CsvPipelineParser::new

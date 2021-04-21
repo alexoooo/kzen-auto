@@ -5,7 +5,6 @@ import net.openhft.hashing.LongHashFunction;
 import tech.kzen.auto.plugin.api.managed.FlatRecordBuilder;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvFormatUtils;
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvFormatUtils;
 import tech.kzen.lib.platform.ClassName;
 
 import java.io.*;
@@ -15,8 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 
 
-// TODO: factor out CSV and TSV logic
-public class RecordRowBuffer
+public class FlatDataRecord
         implements FlatRecordBuilder
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -27,24 +25,24 @@ public class RecordRowBuffer
         return Double.doubleToRawLongBits(value) == missingNumberBits;
     }
 
-    public static final ClassName className = new ClassName(RecordRowBuffer.class.getName());
+    public static final ClassName className = new ClassName(FlatDataRecord.class.getName());
 
 
-    public static RecordRowBuffer of(String... values) {
+    public static FlatDataRecord of(String... values) {
         return of(Arrays.asList(values));
     }
 
 
-    public static RecordRowBuffer of(List<String> values) {
-        RecordRowBuffer buffer = new RecordRowBuffer(0, 0);
+    public static FlatDataRecord of(List<String> values) {
+        FlatDataRecord buffer = new FlatDataRecord(0, 0);
         buffer.addAll(values);
         buffer.populateCaches();
         return buffer;
     }
 
 
-    public static RecordRowBuffer ofSingle(char[] contents, int offset, int length) {
-        RecordRowBuffer buffer = new RecordRowBuffer(length, 1);
+    public static FlatDataRecord ofSingle(char[] contents, int offset, int length) {
+        FlatDataRecord buffer = new FlatDataRecord(length, 1);
         System.arraycopy(contents, offset, buffer.fieldContents, 0, length);
         buffer.fieldCount = 1;
         buffer.fieldEnds[0] = length;
@@ -71,13 +69,13 @@ public class RecordRowBuffer
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    public RecordRowBuffer()
+    public FlatDataRecord()
     {
         this(0, 0);
     }
 
 
-    public RecordRowBuffer(int expectedContentLength, int expectedFieldCount)
+    public FlatDataRecord(int expectedContentLength, int expectedFieldCount)
     {
         fieldContents = new char[expectedContentLength];
         fieldEnds = new int[expectedFieldCount];
@@ -108,7 +106,7 @@ public class RecordRowBuffer
 
     //-----------------------------------------------------------------------------------------------------------------
     public String getString(int fieldIndex) {
-        int startIndex = start(fieldIndex);
+        int startIndex = contentStart(fieldIndex);
         int length = fieldEnds[fieldIndex] - startIndex;
         return new String(fieldContents, startIndex, length);
     }
@@ -161,7 +159,7 @@ public class RecordRowBuffer
             return;
         }
 
-        int start = start(fieldIndex);
+        int start = contentStart(fieldIndex);
         int length = fieldEnds[fieldIndex] - start;
 
         cacheDouble(fieldIndex, start, length);
@@ -171,7 +169,7 @@ public class RecordRowBuffer
 
 
     private void populateCache(int fieldIndex) {
-        int start = start(fieldIndex);
+        int start = contentStart(fieldIndex);
         int length = fieldEnds[fieldIndex] - start;
 
         cacheDouble(fieldIndex, start, length);
@@ -239,43 +237,9 @@ public class RecordRowBuffer
 
 
     public void writeCsvField(int fieldIndex, Writer out) throws IOException {
-        int startIndex = start(fieldIndex);
+        int startIndex = contentStart(fieldIndex);
         int endIndex = fieldEnds[fieldIndex];
         CsvFormatUtils.writeCsv(fieldContents, startIndex, endIndex, out);
-    }
-
-
-    public String toTsv() {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
-            writeTsv(writer);
-        }
-        catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        return out.toString(StandardCharsets.UTF_8);
-    }
-
-
-    private void writeTsv(Writer out) throws IOException {
-        if (fieldCount == 1 && fieldContentLength == 0 && nonEmpty) {
-            throw new IllegalStateException("Can't represent non-empty record with single empty column");
-        }
-
-        for (int i = 0; i < fieldCount; i++) {
-            if (i != 0) {
-                out.write(TsvFormatUtils.delimiterInt);
-            }
-
-            writeTsvField(i, out);
-        }
-    }
-
-
-    private void writeTsvField(int fieldIndex, Writer out) throws IOException {
-        int startIndex = start(fieldIndex);
-        int length = fieldEnds[fieldIndex] - startIndex;
-        out.write(fieldContents, startIndex, length);
     }
 
 
@@ -437,7 +401,7 @@ public class RecordRowBuffer
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    public void copy(RecordRowBuffer that) {
+    public void copy(FlatDataRecord that) {
         int previousFieldCount = fieldCount;
 
         fieldCount = that.fieldCount;
@@ -458,7 +422,7 @@ public class RecordRowBuffer
     }
 
 
-    public void clone(RecordRowBuffer that) {
+    public void clone(FlatDataRecord that) {
         fieldCount = that.fieldCount;
         fieldContentLength = that.fieldContentLength;
         nonEmpty = that.nonEmpty;
@@ -472,8 +436,8 @@ public class RecordRowBuffer
     }
 
 
-    public RecordRowBuffer prototype() {
-        RecordRowBuffer prototype = new RecordRowBuffer(0, 0);
+    public FlatDataRecord prototype() {
+        FlatDataRecord prototype = new FlatDataRecord(0, 0);
         prototype.copy(this);
         return prototype;
     }
@@ -513,7 +477,13 @@ public class RecordRowBuffer
     }
 
 
-    int start(int fieldIndex) {
+    //-----------------------------------------------------------------------------------------------------------------
+    public int contentEnd(int fieldIndex) {
+        return fieldEnds[fieldIndex];
+    }
+
+
+    public int contentStart(int fieldIndex) {
         return fieldIndex == 0 ? 0 : fieldEnds[fieldIndex - 1];
     }
 

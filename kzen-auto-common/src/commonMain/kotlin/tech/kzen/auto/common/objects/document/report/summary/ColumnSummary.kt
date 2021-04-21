@@ -25,7 +25,7 @@ data class ColumnSummary(
             return ColumnSummary(
                 collection[countKey] as Long,
                 NominalValueSummary.fromCollection(collection[nominalKey] as Map<String, String>),
-                StatisticValueSummary.fromCollection(collection[numericKey] as Map<String, Any>),
+                StatisticValueSummary.ofCollection(collection[numericKey] as Map<String, Any>),
                 OpaqueValueSummary.fromCollection(collection[opaqueKey] as List<String>)
             )
         }
@@ -47,7 +47,7 @@ data class ColumnSummary(
         return mapOf(
             countKey to count,
             nominalKey to nominalValueSummary.toCollection(),
-            numericKey to numericValueSummary.toCollection(),
+            numericKey to numericValueSummary.asCollection(),
             opaqueKey to opaqueValueSummary.toCollection()
         )
     }

@@ -2,8 +2,13 @@ package tech.kzen.auto.server.objects.report
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.objects.document.report.listing.InputInfo
-import tech.kzen.auto.common.objects.document.report.spec.*
+import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
+import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
+import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
+import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
+import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
+import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -15,19 +20,17 @@ import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
-import tech.kzen.auto.plugin.definition.ProcessorDefinition
-import tech.kzen.auto.plugin.spec.DataEncodingSpec
+import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
+import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.connect.file.FileFlatDataSource
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataInfo
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataLocation
-import tech.kzen.auto.server.objects.report.pipeline.input.connect.file.FileFlatDataSource
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
-import tech.kzen.auto.server.service.plugin.ProcessorDefinitionSignature
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import java.awt.geom.IllegalPathStateException
@@ -62,6 +65,15 @@ class ReportDocument(
             ReportConventions.actionBrowseFiles ->
                 actionBrowseFiles()
 
+            ReportConventions.actionDataTypes ->
+                actionDataTypes()
+
+            ReportConventions.actionDefaultFormat ->
+                actionDefaultFormat(request)
+
+            ReportConventions.actionTypeFormats ->
+                actionTypeFormats()
+
             ReportConventions.actionInputInfo ->
                 actionInputInfo()
 
@@ -95,40 +107,32 @@ class ReportDocument(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun processorDefinition(flatDataLocation: FlatDataLocation): ProcessorDefinition<*> {
-        val payloadType = RecordRowBuffer.className
-        val processorDefinitionInfoCandidates = ServerContext.definitionRepository.find(
-            ProcessorDefinitionSignature(
-                payloadType,
-                flatDataLocation.dataLocation.innerExtension(),
-                flatDataLocation.dataEncoding.isBinary()
-            ))
-
-        val primaryProcessorDefinitionInfo = processorDefinitionInfoCandidates.firstOrNull()
-            ?: throw IllegalStateException("Processor not found: $flatDataLocation - $payloadType")
-
-        return ServerContext.definitionRepository.define(primaryProcessorDefinitionInfo.name)
-    }
-
-
     private fun datasetInfo(): DatasetInfo {
-//        return input.selected.map { Paths.get(it) }
-
         val items = mutableListOf<FlatDataInfo>()
-        for (dataLocation in input.selected) {
-            val dataLocationInfo = FlatDataLocation(dataLocation, DataEncodingSpec.utf8)
+        for (inputDataSpec in input.selection.locations) {
+            val dataLocation = inputDataSpec.location
+            val dataEncoding = ReportUtils.encoding(inputDataSpec)
+            val dataLocationInfo = FlatDataLocation(
+                dataLocation, dataEncoding)
 
             val cachedHeaderListing = ServerContext.columnListingAction.cachedHeaderListing(dataLocation)
+            val pluginCoordinate = inputDataSpec.processorDefinitionCoordinate.asPluginCoordinate()
 
             val headerListing = cachedHeaderListing
-                ?: ServerContext.columnListingAction.headerListing(
-                    FlatDataHeaderDefinition(
-                        dataLocationInfo,
-                        FileFlatDataSource(),
-                        processorDefinition(dataLocationInfo))
-                )
+                ?: run {
+                    val processorDefinition = ServerContext.definitionRepository.define(pluginCoordinate)
 
-            items.add(FlatDataInfo(dataLocationInfo, headerListing))
+                    processorDefinition.use {
+                        ServerContext.columnListingAction.headerListing(
+                            FlatDataHeaderDefinition(
+                                dataLocationInfo,
+                                FileFlatDataSource(),
+                                it)
+                        )
+                    }
+                }
+
+            items.add(FlatDataInfo(dataLocationInfo, headerListing, pluginCoordinate))
         }
         return DatasetInfo(items)
     }
@@ -165,23 +169,19 @@ class ReportDocument(
         val inputPaths = ServerContext.fileListingAction.scanInfo(
             input.browser.directory, input.browser.filter)
 
-        val inputInfo = InputInfo(
+        val inputInfo = InputBrowserInfo(
             absoluteDir, inputPaths)
 
         return ExecutionSuccess.ofValue(ExecutionValue.of(
-            inputInfo.toCollection()))
+            inputInfo.asCollection()))
     }
 
 
     private fun actionInputInfo(): ExecutionResult {
-        val absoluteDir = browseDir()
-        val selectedPaths = ServerContext.fileListingAction.listInfo(input.selected)
-
-        val inputInfo = InputInfo(
-            absoluteDir, selectedPaths)
+        val inputSelectionInfo = ServerContext.fileListingAction.selectionInfo(input.selection)
 
         return ExecutionSuccess.ofValue(ExecutionValue.of(
-            inputInfo.toCollection()))
+            inputSelectionInfo.asCollection()))
     }
 
 
@@ -197,6 +197,58 @@ class ReportDocument(
         val columnNames = inputPaths.headerSuperset().values
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(columnNames))
+    }
+
+
+    private fun actionDataTypes(): ExecutionResult {
+        val dataTypes = ServerContext.definitionRepository
+            .listMetadata()
+            .map { it.payloadType }
+            .toSet()
+            .map { it.toString() }
+
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(dataTypes))
+    }
+
+
+    private fun actionDefaultFormat(request: DetachedRequest): ExecutionResult {
+        val filesParam = request.parameters.getAll(ReportConventions.filesParameter)
+        val dataLocations = filesParam.map { DataLocation.of(it) }
+
+        val dataType = input.selection.dataType
+
+        val inputDataSpecs = mutableListOf<InputDataSpec>()
+
+        for (dataLocation in dataLocations) {
+            val defaultCoordinate = ServerContext.definitionRepository
+                .find(dataType, dataLocation)
+                .map { it.coordinate }
+                .firstOrNull()
+                ?: return ExecutionFailure("Unknown: $dataType - $dataLocation")
+
+            val inputDataSpec = InputDataSpec(dataLocation, defaultCoordinate.asCommon())
+            inputDataSpecs.add(inputDataSpec)
+        }
+
+        val asCollection = inputDataSpecs.map { it.asCollection() }
+
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(asCollection))
+    }
+
+
+    private fun actionTypeFormats(): ExecutionResult {
+        val dataType = input.selection.dataType
+
+        val processorDefinerDetails = ServerContext.definitionRepository
+            .listMetadata()
+            .filter { it.payloadType == dataType }
+            .map { it.toProcessorDefinerDetail() }
+
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(
+                processorDefinerDetails.map { it.asCollection() }))
     }
 
 

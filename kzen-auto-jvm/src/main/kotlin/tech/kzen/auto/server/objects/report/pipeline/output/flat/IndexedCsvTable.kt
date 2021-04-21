@@ -4,7 +4,7 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordRowBuffer
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
 import tech.kzen.auto.server.objects.report.pipeline.input.ProcessorInputChain
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
@@ -69,7 +69,7 @@ class IndexedCsvTable(
     //-----------------------------------------------------------------------------------------------------------------
     init {
         if (offsetStore.size() == 0L) {
-            bufferWriter.write(RecordRowBuffer.of(header.values).toCsv())
+            bufferWriter.write(FlatDataRecord.of(header.values).toCsv())
             bufferWriter.write(lineBreak)
             bufferWriter.flush()
 
@@ -92,7 +92,7 @@ class IndexedCsvTable(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordRow: RecordRowBuffer, recordHeader: RecordHeader) {
+    fun add(recordRow: FlatDataRecord, recordHeader: RecordHeader) {
         val indices = headerIndex.indices(recordHeader)
 
         var first = true
@@ -201,7 +201,7 @@ class IndexedCsvTable(
     }
 
 
-    private fun handleChannelProcessorInputChain(): ProcessorInputChain<RecordRowBuffer> {
+    private fun handleChannelProcessorInputChain(): ProcessorInputChain<FlatDataRecord> {
         val flatDataStream = InputStreamFlatDataStream(
             Channels.newInputStream(handle.channel))
 
