@@ -46,15 +46,17 @@ object ReportReducer {
             is PivotAction ->
                 reducePivot(state, action)
 
-            ReportSaveAction -> state
-            ReportResetAction -> state
-            is ReportResetResult -> state.copy(
-                reportProgress = null
-            )
+            ReportSaveAction ->
+                state
 
-            //--------------------------------------------------
-//            else ->
-//                state
+            ReportResetAction ->
+                state
+
+            is ReportResetResult ->
+                state.copy(reportProgress = null)
+
+            is ReportPluginAction ->
+                state
         }
     }
 

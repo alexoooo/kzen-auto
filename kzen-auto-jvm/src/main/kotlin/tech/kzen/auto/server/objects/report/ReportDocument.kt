@@ -68,11 +68,11 @@ class ReportDocument(
             ReportConventions.actionDataTypes ->
                 actionDataTypes()
 
-            ReportConventions.actionDefaultFormat ->
-                actionDefaultFormat(request)
-
             ReportConventions.actionTypeFormats ->
                 actionTypeFormats()
+
+            ReportConventions.actionDefaultFormat ->
+                actionDefaultFormat(request)
 
             ReportConventions.actionInputInfo ->
                 actionInputInfo()
@@ -212,6 +212,20 @@ class ReportDocument(
     }
 
 
+    private fun actionTypeFormats(): ExecutionResult {
+        val dataType = input.selection.dataType
+
+        val processorDefinerDetails = ServerContext.definitionRepository
+            .listMetadata()
+            .filter { it.payloadType == dataType }
+            .map { it.toProcessorDefinerDetail() }
+
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(
+                processorDefinerDetails.map { it.asCollection() }))
+    }
+
+
     private fun actionDefaultFormat(request: DetachedRequest): ExecutionResult {
         val filesParam = request.parameters.getAll(ReportConventions.filesParameter)
         val dataLocations = filesParam.map { DataLocation.of(it) }
@@ -238,20 +252,7 @@ class ReportDocument(
     }
 
 
-    private fun actionTypeFormats(): ExecutionResult {
-        val dataType = input.selection.dataType
-
-        val processorDefinerDetails = ServerContext.definitionRepository
-            .listMetadata()
-            .filter { it.payloadType == dataType }
-            .map { it.toProcessorDefinerDetail() }
-
-        return ExecutionSuccess.ofValue(
-            ExecutionValue.of(
-                processorDefinerDetails.map { it.asCollection() }))
-    }
-
-
+    //-----------------------------------------------------------------------------------------------------------------
     private suspend fun actionColumnSummaryLookup(): ExecutionResult {
         val runSpec = runSpec()
             ?: return ExecutionFailure("Missing run")

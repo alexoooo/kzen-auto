@@ -176,7 +176,9 @@ class InputSelected(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderOptions() {
-        +"[Data Type]"
+        val dataType = props.reportState.inputSpec().selection.dataType
+        val dataTypeLabel = dataType.get().substringAfterLast(".")
+        +"[Type: $dataTypeLabel]"
 
         if (state.selectedOpen) {
             child(MaterialButton::class) {

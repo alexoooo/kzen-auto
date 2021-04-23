@@ -377,7 +377,6 @@ data class ReportRefreshSchedule(
 object ReportRefreshCancel: ReportRefreshAction()
 
 
-
 //---------------------------------------------------------------------------------------------------------------------
 object ReportSaveAction: SingularReportAction()
 
@@ -389,3 +388,20 @@ object ReportResetAction: SingularReportAction()
 data class ReportResetResult(
     override val errorMessage: String?
 ): SingularReportAction(), ReportUpdateResult
+
+
+
+//---------------------------------------------------------------------------------------------------------------------
+sealed class ReportPluginAction: SingularReportAction()
+
+
+data class PluginPathInfoRequest(
+    val paths: List<DataLocation>
+): ReportPluginAction()
+
+
+data class PluginPathInfoResult(
+    val paths: List<InputDataSpec>?,
+    val errorMessage: String?
+): ReportPluginAction()
+

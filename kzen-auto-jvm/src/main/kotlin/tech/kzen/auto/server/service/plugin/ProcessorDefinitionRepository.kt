@@ -8,7 +8,7 @@ import tech.kzen.lib.platform.ClassName
 
 
 interface ProcessorDefinitionRepository {
-    fun contains(coordinate: PluginCoordinate): Boolean
+    operator fun contains(coordinate: PluginCoordinate): Boolean
     fun metadata(coordinate: PluginCoordinate): ProcessorDefinitionMetadata
     fun listMetadata(): List<ProcessorDefinitionMetadata>
     fun define(coordinate: PluginCoordinate): ProcessorDefinition<*>

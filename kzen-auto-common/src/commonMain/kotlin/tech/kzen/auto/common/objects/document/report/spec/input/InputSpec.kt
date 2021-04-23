@@ -55,7 +55,7 @@ data class InputSpec(
         ): InsertAllListItemsInAttributeCommand {
             return InsertAllListItemsInAttributeCommand(
                 mainLocation,
-                selectionAttributePath,
+                InputSelectionSpec.locationsAttributePath,
                 PositionRelation.afterLast,
                 paths.map { it.asNotation() }
             )

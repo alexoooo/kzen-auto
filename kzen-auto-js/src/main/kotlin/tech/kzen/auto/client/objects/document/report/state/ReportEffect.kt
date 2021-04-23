@@ -188,6 +188,9 @@ object ReportEffect {
             ReportResetAction ->
                 reportResetAction(state)
 
+            is PluginPathInfoRequest ->
+                pathDefaultFormats(state, action.paths)
+
             else -> null
         }
     }
@@ -841,6 +844,35 @@ object ReportEffect {
             is ExecutionFailure -> {
                 FormulaValidationResult(
                     mapOf(),
+                    result.errorMessage)
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun pathDefaultFormats(
+        state: ReportState,
+        paths: List<DataLocation>
+    ): ReportAction {
+        val result = ClientContext.restClient.performDetached(
+            state.mainLocation,
+            ReportConventions.actionParameter to ReportConventions.actionDefaultFormat,
+            *paths.map { ReportConventions.filesParameter to it.asString() }.toTypedArray())
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val resultValue = result.value.get() as List<Map<String, String>>
+
+                val inputDataSpecs = resultValue.map { InputDataSpec.ofCollection(it) }
+
+                PluginPathInfoResult(inputDataSpecs, null)
+            }
+
+            is ExecutionFailure -> {
+                PluginPathInfoResult(
+                    null,
                     result.errorMessage)
             }
         }

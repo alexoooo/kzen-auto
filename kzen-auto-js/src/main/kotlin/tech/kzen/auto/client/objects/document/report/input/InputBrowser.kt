@@ -10,6 +10,7 @@ import react.dom.td
 import styled.*
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.*
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
@@ -146,9 +147,14 @@ class InputBrowser(
     private fun onAddToSelection() {
         val addedPaths = newSelectedPaths()
 
-        TODO()
+        async {
+            val effects = props.dispatcher.dispatch(PluginPathInfoRequest(addedPaths))
 
-//        props.dispatcher.dispatchAsync(InputsSelectionAddRequest(addedPaths))
+            val pathDataSpecs = effects.filterIsInstance<PluginPathInfoResult>().first().paths
+                ?: return@async
+
+            props.dispatcher.dispatch(InputsSelectionAddRequest(pathDataSpecs))
+        }
     }
 
 
