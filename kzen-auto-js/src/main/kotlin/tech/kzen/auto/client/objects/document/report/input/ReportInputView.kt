@@ -2,10 +2,7 @@ package tech.kzen.auto.client.objects.document.report.input
 
 import kotlinx.css.*
 import kotlinx.html.title
-import react.RBuilder
-import react.RProps
-import react.RPureComponent
-import react.RState
+import react.*
 import react.dom.div
 import styled.css
 import styled.styledDiv
@@ -13,9 +10,7 @@ import styled.styledSpan
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.wrap.InputIcon
-import tech.kzen.auto.client.wrap.MaterialCircularProgress
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 
 
 class ReportInputView(
@@ -30,7 +25,39 @@ class ReportInputView(
     }
 
 
-    interface State: RState
+    interface State: RState {
+        var browserOpen: Boolean
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: Props) {
+        browserOpen = false
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun isBrowserForceOpen(): Boolean {
+        val listingSelected = props.reportState.inputSelection
+        return listingSelected != null && listingSelected.isEmpty()
+    }
+
+
+    private fun isBrowserOpen(): Boolean {
+        return isBrowserForceOpen() || state.browserOpen
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onToggleBrowser() {
+        if (isBrowserForceOpen()) {
+            return
+        }
+
+        setState {
+            browserOpen = ! browserOpen
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -81,19 +108,23 @@ class ReportInputView(
                     if (props.reportState.isInitiating()) {
                         title = "Disabled while loading"
                     }
-//                        else {
-//                            "Disabled while task running"
-//                        }
                 }
             }
 
-            renderBrowseFiles(editDisabled)
+            if (isBrowserOpen()) {
+                renderBrowseFiles(editDisabled)
+            }
+
             renderSelectedFiles(editDisabled)
         }
     }
 
 
     private fun RBuilder.renderHeader() {
+//        val listingSelected = props.reportState.inputSelection
+//        val browserForceOpen = listingSelected != null && listingSelected.isEmpty()
+//        val browserOpen = browserForceOpen || state.browserOpen
+
         styledDiv {
             child(InputIcon::class) {
                 attrs {
@@ -112,14 +143,14 @@ class ReportInputView(
                 +"Input"
             }
 
-            if (props.reportState.inputLoading ||
-                    props.reportState.columnListingLoading
-            ) {
-                styledSpan {
-                    css {
-                        float = Float.right
-                    }
+            styledSpan {
+                css {
+                    float = Float.right
+                }
 
+                if (props.reportState.inputLoading ||
+                        props.reportState.columnListingLoading
+                ) {
                     child(MaterialCircularProgress::class) {
                         attrs {
                             style = reactStyle {
@@ -127,6 +158,45 @@ class ReportInputView(
                                 height = 2.em
                             }
                         }
+                    }
+                }
+                else if (! isBrowserForceOpen()) {
+                    child(MaterialButton::class) {
+                        attrs {
+                            variant = "outlined"
+                            size = "small"
+
+                            onClick = {
+                                onToggleBrowser()
+                            }
+
+                            style = reactStyle {
+                                if (isBrowserOpen()) {
+                                    backgroundColor = Color.darkGray
+                                }
+                            }
+
+                            title = when {
+//                                isBrowserForceOpen() ->
+//                                    "Please [ADD] a file"
+
+                                isBrowserOpen() ->
+                                    "Hide browser"
+
+                                else ->
+                                    "Show browser"
+                            }
+                        }
+
+                        child(FolderOpenIcon::class) {
+                            attrs {
+                                style = reactStyle {
+                                    marginRight = 0.25.em
+                                }
+                            }
+                        }
+
+                        +"Browse"
                     }
                 }
             }
@@ -151,6 +221,7 @@ class ReportInputView(
                 reportState = props.reportState
                 dispatcher = props.dispatcher
                 this.editDisabled = editDisabled
+                browserOpen = state.browserOpen
             }
         }
     }

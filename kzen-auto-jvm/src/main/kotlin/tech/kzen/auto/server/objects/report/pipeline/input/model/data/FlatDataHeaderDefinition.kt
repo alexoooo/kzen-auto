@@ -16,10 +16,12 @@ data class FlatDataHeaderDefinition<T>(
     fun openInputChain(dataBlockSize: Int): ProcessorInputChain<T> {
         val flatDataStream = flatDataSource.open(flatDataLocation)
 
+        val testEncodingOrNull = flatDataLocation.dataEncoding.textEncoding?.getOrDefault()
+
         return ProcessorInputChain(
             ProcessorInputReader(flatDataStream),
             processorDefinition.processorDataDefinition,
-            flatDataLocation.dataEncoding.textEncoding?.charset,
+            testEncodingOrNull,
             dataBlockSize)
     }
 

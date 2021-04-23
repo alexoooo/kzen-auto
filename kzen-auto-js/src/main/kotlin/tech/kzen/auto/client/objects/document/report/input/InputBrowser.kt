@@ -42,16 +42,28 @@ class InputBrowser(
 
 
     interface State: RState {
-        var browserOpen: Boolean
+//        var browserOpen: Boolean
+        var requestedInitial: Boolean
         var selected: PersistentSet<DataLocation>
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-//        console.log("^^^^ State.init")
-        browserOpen = false
+//        browserOpen = false
+        requestedInitial = false
         selected = persistentSetOf()
+    }
+
+
+    override fun componentDidMount() {
+        if (props.reportState.inputBrowser == null) {
+            if (! state.requestedInitial) {
+                setState {
+                    requestedInitial = true
+                }
+            }
+        }
     }
 
 
@@ -65,19 +77,8 @@ class InputBrowser(
             return
         }
 
-        if (props.reportState.inputSelection != null &&
-                props.reportState.inputSelection!!.locations.isEmpty() &&
-                ! state.browserOpen
-        ) {
-//            console.log("^^^^ setting browserOpen")
-            setState {
-                browserOpen = true
-            }
-        }
-
-        if (state.browserOpen && ! prevState.browserOpen &&
-                props.reportState.inputBrowser == null
-        ) {
+//        console.log("^^^ componentDidUpdate - ${props.reportState.inputBrowser} - ${state.requestedInitial} - ${prevState.requestedInitial}")
+        if (state.requestedInitial && ! prevState.requestedInitial) {
             onBrowseRefresh()
         }
 
@@ -99,12 +100,12 @@ class InputBrowser(
     }
 
 
-    private fun onToggleBrowser() {
-//        console.log("&&& onToggleBrowser")
-        setState {
-            browserOpen = ! browserOpen
-        }
-    }
+//    private fun onToggleBrowser() {
+////        console.log("&&& onToggleBrowser")
+//        setState {
+//            browserOpen = ! browserOpen
+//        }
+//    }
 
 
     private fun onDirSelected(dir: DataLocation) {
@@ -206,82 +207,40 @@ class InputBrowser(
         val forceOpen =
             listingSelected != null && listingSelected.locations.isEmpty()
 
-        styledDiv {
-            css {
-                borderTopWidth = ReportController.separatorWidth
-                borderTopColor = ReportController.separatorColor
-                borderTopStyle = BorderStyle.solid
-            }
-
+        if (! forceOpen) {
             styledDiv {
                 css {
+                    borderTopWidth = ReportController.separatorWidth
+                    borderTopColor = ReportController.separatorColor
+                    borderTopStyle = BorderStyle.solid
                     width = 100.pct
+                    fontSize = 1.5.em
                 }
 
-                styledSpan {
-                    css {
-                        fontSize = 1.5.em
-                    }
-                    +"Browser"
-                }
-
-                styledSpan {
-                    css {
-                        float = Float.right
-                        height = 0.px
-                        overflow = Overflow.visible
-                    }
-
-                    child(MaterialIconButton::class) {
-                        attrs {
-                            onClick = {
-                                onToggleBrowser()
-                            }
-
-                            disabled = forceOpen
-                        }
-
-                        if (state.browserOpen) {
-                            child(ExpandLessIcon::class) {}
-                        } else {
-                            child(ExpandMoreIcon::class) {}
-                        }
-                    }
-                }
+                +"Browser"
             }
+        }
 
-//            +"state.browserOpen - ${state.browserOpen}"
-
-            styledDiv {
-                css {
-                    marginTop = 0.5.em
-                }
-
-                if (state.browserOpen) {
-                    if (listingSelected == null && inputError != null) {
-                        +"Error"
-                    }
-                    else if (listingSelected != null && inputError != null) {
-                        renderPathEditError(props.reportState.inputSpec().browser.directory)
-                    }
-                    else if (browserListing == null || browserDir == null) {
-                        styledDiv {
-                            if (browserDir != null) {
-                                +browserDir.asString()
-                            }
-                            else {
-                                +props.reportState.inputSpec().browser.directory.asString()
-                            }
-                        }
-                        +"Loading..."
+        styledDiv {
+            if (listingSelected == null && inputError != null) {
+                +"Error"
+            }
+            else if (listingSelected != null && inputError != null) {
+                renderPathEditError(props.reportState.inputSpec().browser.directory)
+            }
+            else if (browserListing == null || browserDir == null) {
+                styledDiv {
+                    if (browserDir != null) {
+                        +browserDir.asString()
                     }
                     else {
-                        renderDetail(browserListing, browserDir)
+                        +props.reportState.inputSpec().browser.directory.asString()
                     }
                 }
-                else {
-                    renderSummary(props.reportState.inputBrowseDir)
-                }
+                +"Loading..."
+            }
+            else {
+                renderDetail(browserListing, browserDir)
             }
         }
     }

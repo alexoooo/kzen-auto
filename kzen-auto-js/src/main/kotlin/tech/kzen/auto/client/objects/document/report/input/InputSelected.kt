@@ -2,16 +2,18 @@ package tech.kzen.auto.client.objects.document.report.input
 
 import kotlinx.css.*
 import kotlinx.css.properties.boxShadowInset
-import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import react.*
-import react.dom.*
+import react.dom.td
 import styled.*
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.InputsSelectionRemoveRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.FolderOpenIcon
+import tech.kzen.auto.client.wrap.MaterialButton
+import tech.kzen.auto.client.wrap.RemoveCircleOutlineIcon
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.listing.InputDataInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
@@ -30,18 +32,19 @@ class InputSelected(
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var editDisabled: Boolean
+        var browserOpen: Boolean
     }
 
 
     interface State: RState {
-        var selectedOpen: Boolean
+//        var selectedOpen: Boolean
         var showFolders: Boolean
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        selectedOpen = false
+//        selectedOpen = false
         showFolders = false
     }
 
@@ -77,11 +80,11 @@ class InputSelected(
     }
 
 
-    private fun onToggleSelected() {
-        setState {
-            selectedOpen = ! selectedOpen
-        }
-    }
+//    private fun onToggleSelected() {
+//        setState {
+//            selectedOpen = ! selectedOpen
+//        }
+//    }
 
 
     private fun onToggleFolders() {
@@ -116,227 +119,63 @@ class InputSelected(
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val fileListing = props.reportState.inputSelection
-        val forceOpen = fileListing?.isEmpty() ?: false
+
+        if (fileListing == null || fileListing.isEmpty()) {
+            return
+        }
 
         styledDiv {
-            css {
-                borderTopWidth = ReportController.separatorWidth
-                borderTopColor = ReportController.separatorColor
-                borderTopStyle = BorderStyle.solid
-                marginTop = 1.em
+            if (props.browserOpen) {
+                css {
+                    borderTopWidth = ReportController.separatorWidth
+                    borderTopColor = ReportController.separatorColor
+                    borderTopStyle = BorderStyle.solid
+                    marginTop = 1.em
+                }
             }
 
-            styledDiv {
-                css {
-                    width = 100.pct
-                }
-
-                styledSpan {
+            if (props.browserOpen) {
+                styledDiv {
                     css {
-                        fontSize = 1.5.em
+                        width = 100.pct
                     }
-                    +"Selected"
-                }
 
-                if (! forceOpen) {
                     styledSpan {
                         css {
-                            float = Float.right
+                            fontSize = 1.5.em
                         }
-
-                        renderOptions()
+                        +"Selected"
+//                        +"Dataset"
                     }
+
+//                    styledSpan {
+//                        css {
+//                            float = Float.right
+//                        }
+//
+//                        renderOptions()
+//                    }
                 }
             }
 
             val reportProgress = props.reportState.reportProgress
 
             styledDiv {
-                when {
-                    fileListing == null -> {
-                        +"Loading..."
-                    }
-
-                    fileListing.isEmpty() -> {
-                        +"None (please select in Browser above)"
-                    }
-
-                    state.selectedOpen -> {
-                        renderDetail(fileListing, reportProgress)
-                    }
-
-                    else -> {
-                        renderSummary(fileListing, reportProgress)
-                    }
-                }
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderOptions() {
-        val dataType = props.reportState.inputSpec().selection.dataType
-        val dataTypeLabel = dataType.get().substringAfterLast(".")
-        +"[Type: $dataTypeLabel]"
-
-        if (state.selectedOpen) {
-            child(MaterialButton::class) {
-                attrs {
-                    variant = "outlined"
-                    size = "small"
-
-                    onClick = {
-                        onToggleFolders()
-                    }
-
-                    style = reactStyle {
-                        if (state.showFolders) {
-                            backgroundColor = Color.darkGray
-                        }
-
-                        paddingLeft = 0.px
-                        paddingRight = 0.px
-                    }
-
-                    title =
-                        if (state.showFolders) {
-                            "Hide folders"
-                        }
-                        else {
-                            "Show folders"
-                        }
-                }
-
-                child(FolderOpenIcon::class) {}
-            }
-        }
-
-        child(MaterialIconButton::class) {
-            attrs {
-                onClick = {
-                    onToggleSelected()
-                }
-            }
-
-            if (state.selectedOpen) {
-                child(ExpandLessIcon::class) {}
-            } else {
-                child(ExpandMoreIcon::class) {}
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderSummary(inputSelectionInfo: InputSelectionInfo, reportProgress: ReportProgress?) {
-        val runningFile = reportProgress?.inputs?.filter { it.value.running }?.keys?.lastOrNull()
-
-        val selected = inputSelectionInfo.locations
-
-        if (selected.size == 1) {
-            styledSpan {
-                css {
-                    if (runningFile != null) {
-                        fontWeight = FontWeight.bold
-                    }
-                }
-                +selected.single().dataLocationInfo.name
-            }
-            if (runningFile != null) {
-                div {
-                    +reportProgress.inputs[runningFile]!!.toMessage(
-                        selected.single().dataLocationInfo.size)
-                }
-            }
-        }
-        else {
-            table {
-                tbody {
-                    tr {
-                        td {
-                            +"1."
-                        }
-                        styledTd {
-                            +selected[0].dataLocationInfo.name
-                        }
-                    }
-
-                    if (selected.size == 3) {
-                        tr {
-                            td {
-                                +"2."
-                            }
-                            styledTd {
-                                +selected[1].dataLocationInfo.name
-                            }
-                        }
-                    }
-                    else if (selected.size > 3) {
-                        tr {
-                            styledTd {
-                                css {
-                                    paddingTop = 0.25.em
-                                    paddingBottom = 0.25.em
-                                }
-
-                                attrs {
-                                    colSpan = "2"
-                                }
-
-                                styledSpan {
-                                    css {
-                                        cursor = Cursor.pointer
-                                    }
-
-                                    attrs {
-                                        onClickFunction = {
-                                            onToggleSelected()
-                                        }
-                                    }
-
-                                    +"... ${selected.size - 2} more files, expand to view all ..."
-                                }
-                            }
-                        }
-                    }
-
-                    tr {
-                        td {
-                            +"${selected.size}."
-                        }
-                        styledTd {
-                            +selected.last().dataLocationInfo.name
-                        }
-                    }
-                }
-            }
-
-            if (runningFile != null) {
-                val selectedRunning = selected.first { it.dataLocationInfo.path == runningFile }
-                styledDiv {
-                    css {
-                        marginTop = 0.25.em
-                        fontWeight = FontWeight.bold
-                    }
-                    +"Running: ${selectedRunning.dataLocationInfo.name}"
-                }
-                div {
-                    +reportProgress.inputs[runningFile]!!.toMessage(
-                        selectedRunning.dataLocationInfo.size)
-                }
+                renderDetail(fileListing, reportProgress)
             }
         }
     }
 
 
     private fun RBuilder.renderDetail(selected: InputSelectionInfo, reportProgress: ReportProgress?) {
-        styledDiv {
-            css {
-                marginBottom = 0.25.em
-            }
-            +summaryText(selected)
-        }
+        renderControls(selected)
+
+//        styledDiv {
+//            css {
+//                marginBottom = 0.25.em
+//            }
+//            +summaryText(selected)
+//        }
 
         styledDiv {
             css {
@@ -345,6 +184,7 @@ class InputSelected(
                 borderWidth = 1.px
                 borderStyle = BorderStyle.solid
                 borderColor = Color.lightGray
+                marginTop = 0.5.em
             }
 
             styledTable {
@@ -454,6 +294,87 @@ class InputSelected(
                         renderDetailRow(fileInfo, reportProgress)
                     }
                 }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderControls(selected: InputSelectionInfo) {
+        styledDiv {
+            child(MaterialButton::class) {
+                attrs {
+                    variant = "outlined"
+                    size = "small"
+
+                    onClick = {
+//                        onRemoveFromSelection()
+                    }
+
+//                    if (selectedRemoveCount == 0) {
+//                        disabled = true
+//                        title =
+//                            if (state.selected.isEmpty()) {
+//                                "No files selected"
+//                            }
+//                            else {
+//                                "No existing files selected"
+//                            }
+//                    }
+//                    else if (props.editDisabled) {
+//                        disabled = true
+//                        title = "Disabled while running"
+//                    }
+                }
+
+                child(RemoveCircleOutlineIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            marginRight = 0.25.em
+                        }
+                    }
+                }
+
+//                if (selectedRemoveCount == 0) {
+                +"Remove"
+//                }
+//                else {
+//                    +"Remove ($selectedRemoveCount files)"
+//                }
+            }
+
+
+            val dataType = props.reportState.inputSpec().selection.dataType
+            val dataTypeLabel = dataType.get().substringAfterLast(".")
+            +"[Type: $dataTypeLabel]"
+
+            child(MaterialButton::class) {
+                attrs {
+                    variant = "outlined"
+                    size = "small"
+
+                    onClick = {
+                        onToggleFolders()
+                    }
+
+                    style = reactStyle {
+                        if (state.showFolders) {
+                            backgroundColor = Color.darkGray
+                        }
+
+                        paddingLeft = 0.px
+                        paddingRight = 0.px
+                    }
+
+                    title =
+                        if (state.showFolders) {
+                            "Hide folders"
+                        }
+                        else {
+                            "Show folders"
+                        }
+                }
+
+                child(FolderOpenIcon::class) {}
             }
         }
     }
