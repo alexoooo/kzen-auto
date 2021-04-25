@@ -118,8 +118,10 @@ class SessionGlobal:
 
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent)) {
-            runningHosts -= event.documentPath
+            runningHosts = runningHosts - event.documentPath
         }
+
+//        console.log("^^ onCommandSuccess - $event")
 
 //        when (event) {
 //            is RenamedDocumentRefactorEvent -> {

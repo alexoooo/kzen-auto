@@ -79,7 +79,7 @@ class ReportController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onReportState(reportState: ReportState?) {
-//        console.log("^^^^^ onProcessState!!")
+//        console.log("^^^^^ onReportState!!")
 
         setState {
             this.reportState = reportState

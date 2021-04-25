@@ -76,6 +76,7 @@ class ReportStore: SessionGlobal.Observer, ReportDispatcher
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: SessionState) {
+//        println("&^%&^&^% onClientState")
         if (! mounted) {
             return
         }
@@ -102,10 +103,6 @@ class ReportStore: SessionGlobal.Observer, ReportDispatcher
         if (initial) {
             clearRefresh()
             dispatchAsync(InitiateReport)
-//            async {
-//                dispatch(InitiateReportStart)
-//                dispatch(InitiateReportDone)
-//            }
         }
     }
 

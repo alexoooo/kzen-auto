@@ -38,6 +38,7 @@ class InputBrowser(
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var editDisabled: Boolean
+        var browserOpen: Boolean
     }
 
 
@@ -56,15 +57,17 @@ class InputBrowser(
     }
 
 
-    override fun componentDidMount() {
-        if (props.reportState.inputBrowser == null) {
-            if (! state.requestedInitial) {
-                setState {
-                    requestedInitial = true
-                }
-            }
-        }
-    }
+//    override fun componentDidMount() {
+//        console.log("^^^^ componentDidMount - ${props.browserOpen} - ${state.requestedInitial} - ${props.reportState.inputBrowser}")
+//        if (props.browserOpen && props.reportState.inputBrowser == null && ! state.requestedInitial) {
+//            console.log("^^^^ componentDidMount - request")
+//
+//            setState {
+//                requestedInitial = true
+//            }
+//            onBrowseRefresh()
+//        }
+//    }
 
 
     override fun componentDidUpdate(
@@ -72,13 +75,19 @@ class InputBrowser(
         prevState: State,
         snapshot: Any
     ) {
-        if (props.reportState.isInitiating()) {
+//        console.log("^^^ componentDidUpdate - ${props.browserOpen}")
+
+        if (props.reportState.isInitiating() || ! props.browserOpen) {
 //            console.log("^^^ INIT")
             return
         }
 
-//        console.log("^^^ componentDidUpdate - ${props.reportState.inputBrowser} - ${state.requestedInitial} - ${prevState.requestedInitial}")
-        if (state.requestedInitial && ! prevState.requestedInitial) {
+        if (! state.requestedInitial && props.reportState.inputBrowser == null) {
+            setState {
+                requestedInitial = true
+            }
+        }
+        else if (state.requestedInitial && ! prevState.requestedInitial) {
             onBrowseRefresh()
         }
 
@@ -191,14 +200,12 @@ class InputBrowser(
     }
 
 
-//    private fun dataLocationToSpec(dataLocations: List<DataLocation>): List<InputDataSpec> {
-//        val inputSpec = props.reportState.inputSpec().selection
-//        TODO()
-//    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        if (! props.browserOpen) {
+            return
+        }
+
         val listingSelected = props.reportState.inputSelection
         val browserListing = props.reportState.inputBrowser
         val browserDir = props.reportState.inputBrowseDir
@@ -230,14 +237,15 @@ class InputBrowser(
             }
             else if (browserListing == null || browserDir == null) {
                 styledDiv {
-                    if (browserDir != null) {
-                        +browserDir.asString()
-                    }
-                    else {
-                        +props.reportState.inputSpec().browser.directory.asString()
+                    val asString =
+                        browserDir?.asString()
+                        ?: props.reportState.inputSpec().browser.directory.asString()
+
+                    if (asString != ".") {
+                        +asString
                     }
                 }
-                +"Loading..."
+//                +"Loading..."
             }
             else {
                 renderDetail(browserListing, browserDir)
@@ -634,7 +642,7 @@ class InputBrowser(
                             styledTd {
                                 css {
                                     paddingLeft = 0.5.em
-                                    paddingRight = 0.5.em
+                                    paddingRight = 1.em
                                     whiteSpace = WhiteSpace.nowrap
                                 }
                                 +FormatUtils.formatLocalDateTime(fileInfo.modified)

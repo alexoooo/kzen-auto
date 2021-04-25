@@ -2,6 +2,8 @@ package tech.kzen.auto.client.objects.document.report.input
 
 import kotlinx.css.*
 import kotlinx.css.properties.boxShadowInset
+import kotlinx.html.InputType
+import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import react.*
 import react.dom.td
@@ -10,16 +12,16 @@ import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.InputsSelectionRemoveRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.wrap.FolderOpenIcon
-import tech.kzen.auto.client.wrap.MaterialButton
-import tech.kzen.auto.client.wrap.RemoveCircleOutlineIcon
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.report.listing.InputDataInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.lib.platform.collect.PersistentSet
+import tech.kzen.lib.platform.collect.persistentSetOf
+import tech.kzen.lib.platform.collect.toPersistentSet
 
 
 class InputSelected(
@@ -37,6 +39,7 @@ class InputSelected(
 
 
     interface State: RState {
+        var selected: PersistentSet<DataLocation>
 //        var selectedOpen: Boolean
         var showFolders: Boolean
     }
@@ -45,51 +48,73 @@ class InputSelected(
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
 //        selectedOpen = false
+        selected = persistentSetOf()
         showFolders = false
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onRemoveAll() {
-        if (props.editDisabled) {
+    private fun onRemoveSelected() {
+        if (props.editDisabled || state.selected.isEmpty()) {
             return
         }
 
-        val inputSelection = props.reportState.inputSelection
-            ?: return
-
-        val inputSelectionSpecs = dataLocationToSpec(
-            inputSelection.locations.map { it.dataLocationInfo.path })
-
-        props.dispatcher.dispatchAsync(
-            InputsSelectionRemoveRequest(
-                inputSelectionSpecs))
-    }
-
-
-    private fun onRemove(path: DataLocation) {
-        if (props.editDisabled) {
-            return
+        if (state.selected.size == 1) {
+            val path = state.selected.single()
+            val inputSelectionSpecs = dataLocationToSpec(listOf(path))
+            props.dispatcher.dispatchAsync(
+                InputsSelectionRemoveRequest(
+                    inputSelectionSpecs))
+        }
+        else {
+            val inputSelectionSpecs = dataLocationToSpec(state.selected)
+            props.dispatcher.dispatchAsync(
+                InputsSelectionRemoveRequest(
+                    inputSelectionSpecs))
         }
 
-        val inputSelectionSpecs = dataLocationToSpec(listOf(path))
-
-        props.dispatcher.dispatchAsync(
-            InputsSelectionRemoveRequest(
-                inputSelectionSpecs))
+        setState {
+            selected = persistentSetOf()
+        }
     }
-
-
-//    private fun onToggleSelected() {
-//        setState {
-//            selectedOpen = ! selectedOpen
-//        }
-//    }
 
 
     private fun onToggleFolders() {
         setState {
             showFolders = ! showFolders
+        }
+    }
+
+
+    private fun onFileSelectedToggle(path: DataLocation) {
+        val previousChecked = state.selected.contains(path)
+        setState {
+            selected =
+                if (previousChecked) {
+                    selected.remove(path)
+                }
+                else {
+                    selected.add(path)
+                }
+        }
+    }
+
+
+    private fun onFileSelectedAllToggle(allSelected: Boolean) {
+        setState {
+            selected =
+                if (allSelected) {
+                    persistentSetOf()
+                }
+                else {
+                    props
+                        .reportState
+                        .inputSpec()
+                        .selection
+                        .locations
+                        .map { it.location }
+                        .toPersistentSet()
+                }
         }
     }
 
@@ -109,7 +134,7 @@ class InputSelected(
     }
 
 
-    private fun dataLocationToSpec(dataLocations: List<DataLocation>): List<InputDataSpec> {
+    private fun dataLocationToSpec(dataLocations: Collection<DataLocation>): List<InputDataSpec> {
         val dataLocationsSet = dataLocations.toSet()
         val inputSelectionSpec = props.reportState.inputSpec().selection
         return inputSelectionSpec.locations.filter { it.location in dataLocationsSet }
@@ -118,64 +143,40 @@ class InputSelected(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val fileListing = props.reportState.inputSelection
+        val selectionSpec = props.reportState.inputSpec().selection.locations
+        val selectionInfo = props.reportState.inputSelection
 
-        if (fileListing == null || fileListing.isEmpty()) {
+        if (selectionSpec.isEmpty()) {
             return
         }
 
-        styledDiv {
-            if (props.browserOpen) {
+        if (props.browserOpen) {
+            styledDiv {
                 css {
                     borderTopWidth = ReportController.separatorWidth
                     borderTopColor = ReportController.separatorColor
                     borderTopStyle = BorderStyle.solid
                     marginTop = 1.em
+                    width = 100.pct
+                    fontSize = 1.5.em
                 }
-            }
 
-            if (props.browserOpen) {
-                styledDiv {
-                    css {
-                        width = 100.pct
-                    }
-
-                    styledSpan {
-                        css {
-                            fontSize = 1.5.em
-                        }
-                        +"Selected"
-//                        +"Dataset"
-                    }
-
-//                    styledSpan {
-//                        css {
-//                            float = Float.right
-//                        }
-//
-//                        renderOptions()
-//                    }
-                }
-            }
-
-            val reportProgress = props.reportState.reportProgress
-
-            styledDiv {
-                renderDetail(fileListing, reportProgress)
+                +"Selected"
             }
         }
+
+        val reportProgress = props.reportState.reportProgress
+
+        renderDetail(selectionSpec, selectionInfo, reportProgress)
     }
 
 
-    private fun RBuilder.renderDetail(selected: InputSelectionInfo, reportProgress: ReportProgress?) {
-        renderControls(selected)
-
-//        styledDiv {
-//            css {
-//                marginBottom = 0.25.em
-//            }
-//            +summaryText(selected)
-//        }
+    private fun RBuilder.renderDetail(
+        selectionSpec: List<InputDataSpec>,
+        selectedInfo: InputSelectionInfo?,
+        reportProgress: ReportProgress?
+    ) {
+        renderControls()
 
         styledDiv {
             css {
@@ -205,32 +206,53 @@ class InputSelected(
                                 height = 2.em
                                 boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
                             }
-                            attrs {
-                                title =
-                                    if (props.editDisabled) {
-                                        "Can't remove while running"
-                                    }
-                                    else {
-                                        "Remove all"
-                                    }
-                            }
-                            child(RemoveCircleOutlineIcon::class) {
+
+                            var allSelected = false
+                            child(MaterialCheckbox::class) {
                                 attrs {
                                     style = reactStyle {
-                                        if (props.editDisabled) {
-                                            color = Color.lightGray
+                                        marginTop = (-0.5).em
+                                        marginBottom = (-0.5).em
+                                        marginLeft = (-0.25).em
+                                        marginRight = (-0.25).em
+                                        backgroundColor = Color.transparent
+                                        height = 0.px
+                                        overflow = Overflow.visible
+                                    }
+                                    disableRipple = true
+
+//                                    disabled = false
+                                    if (state.selected.isNotEmpty()) {
+                                        if (state.selected.size == selectionSpec.size) {
+                                            checked = true
+                                            indeterminate = false
+                                            allSelected = true
                                         }
                                         else {
-                                            cursor = Cursor.pointer
+                                            checked = false
+                                            indeterminate = true
                                         }
                                     }
-
-                                    onClick = {
-                                        onRemoveAll()
+                                    else {
+                                        checked = false
+                                        indeterminate = false
                                     }
+
+                                    onChange = { onFileSelectedAllToggle(allSelected) }
                                 }
                             }
+
+                            attrs {
+                                title =
+                                    if (allSelected) {
+                                        "Un-select all"
+                                    }
+                                    else {
+                                        "Select all"
+                                    }
+                            }
                         }
+
                         styledTh {
                             css {
                                 position = Position.sticky
@@ -268,20 +290,6 @@ class InputSelected(
                             }
                             +"Size"
                         }
-                        if (state.showFolders) {
-                            styledTh {
-                                css {
-                                    position = Position.sticky
-                                    top = 0.px
-                                    backgroundColor = Color.white
-                                    zIndex = 999
-                                    width = 100.pct
-                                    textAlign = TextAlign.left
-                                    boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
-                                }
-                                +"Folder"
-                            }
-                        }
                     }
                 }
 
@@ -290,8 +298,15 @@ class InputSelected(
                         cursor = Cursor.default
                     }
 
-                    for (fileInfo in selected.locations) {
-                        renderDetailRow(fileInfo, reportProgress)
+                    val inputDataInfoByPath = selectedInfo
+                        ?.locations
+                        ?.groupBy { it.dataLocationInfo.path }
+                        ?.mapValues { it.value.single() }
+                        ?: mapOf()
+
+                    for (inputDataSpec in selectionSpec) {
+                        val inputDataInfo = inputDataInfoByPath[inputDataSpec.location]
+                        renderDetailRow(inputDataSpec, inputDataInfo, reportProgress)
                     }
                 }
             }
@@ -299,7 +314,9 @@ class InputSelected(
     }
 
 
-    private fun RBuilder.renderControls(selected: InputSelectionInfo) {
+    private fun RBuilder.renderControls() {
+        val selectedRowCount = state.selected.size
+
         styledDiv {
             child(MaterialButton::class) {
                 attrs {
@@ -307,23 +324,17 @@ class InputSelected(
                     size = "small"
 
                     onClick = {
-//                        onRemoveFromSelection()
+                        onRemoveSelected()
                     }
 
-//                    if (selectedRemoveCount == 0) {
-//                        disabled = true
-//                        title =
-//                            if (state.selected.isEmpty()) {
-//                                "No files selected"
-//                            }
-//                            else {
-//                                "No existing files selected"
-//                            }
-//                    }
-//                    else if (props.editDisabled) {
-//                        disabled = true
-//                        title = "Disabled while running"
-//                    }
+                    if (selectedRowCount == 0) {
+                        disabled = true
+                        title = "No files selected"
+                    }
+                    else if (props.editDisabled) {
+                        disabled = true
+                        title = "Disabled while running"
+                    }
                 }
 
                 child(RemoveCircleOutlineIcon::class) {
@@ -334,14 +345,13 @@ class InputSelected(
                     }
                 }
 
-//                if (selectedRemoveCount == 0) {
-                +"Remove"
-//                }
-//                else {
-//                    +"Remove ($selectedRemoveCount files)"
-//                }
+                if (selectedRowCount == 0) {
+                    +"Remove"
+                }
+                else {
+                    +"Remove ($selectedRowCount files)"
+                }
             }
-
 
             val dataType = props.reportState.inputSpec().selection.dataType
             val dataTypeLabel = dataType.get().substringAfterLast(".")
@@ -380,12 +390,19 @@ class InputSelected(
     }
 
 
-    private fun RBuilder.renderDetailRow(inputDataInfo: InputDataInfo, reportProgress: ReportProgress?) {
-        val fileInfo = inputDataInfo.dataLocationInfo
-        val fileProgress = reportProgress?.inputs?.get(fileInfo.path)
+    private fun RBuilder.renderDetailRow(
+        inputDataSpec: InputDataSpec,
+        inputDataInfo: InputDataInfo?,
+        reportProgress: ReportProgress?
+    ) {
+        val dataLocation = inputDataSpec.location
+
+        val fileInfo = inputDataInfo?.dataLocationInfo
+        val fileProgress = reportProgress?.inputs?.get(dataLocation)
+        val checked = dataLocation in state.selected
 
         styledTr {
-            key = fileInfo.path.asString()
+            key = dataLocation.asString()
 
             css {
                 hover {
@@ -393,58 +410,55 @@ class InputSelected(
                 }
             }
 
-            styledTd {
-                styledDiv {
-                    css {
-                        height = 1.em
-                        overflow = Overflow.hidden
-                    }
-                    attrs {
-                        title =
-                            if (props.editDisabled) {
-                                "Can't remove while running"
-                            }
-                            else {
-                                "Remove"
-                            }
-                    }
-                    child(RemoveCircleOutlineIcon::class) {
-                        attrs {
-                            style = reactStyle {
-                                marginLeft = 0.2.em
-                                fontSize = 1.em
-                                if (props.editDisabled) {
-                                    color = Color.lightGray
-                                }
-                                else {
-                                    cursor = Cursor.pointer
-                                }
-                            }
+            attrs {
+                onClickFunction = {
+                    onFileSelectedToggle(dataLocation)
+                }
+            }
 
-                            onClick = {
-                                onRemove(fileInfo.path)
-                            }
-                        }
+            styledTd {
+                styledInput(InputType.checkBox) {
+                    css {
+                        marginLeft = 0.5.em
                     }
+
+                    // https://github.com/JetBrains/kotlin-wrappers/issues/35#issuecomment-723471655
+                    attrs["checked"] = checked
+                    attrs["disabled"] = props.editDisabled
+                    attrs["onChange"] = {}
                 }
             }
 
             td {
                 if (fileProgress == null) {
-                    +fileInfo.name
+//                    +fileInfo.name
+                    +dataLocation.fileName()
                 }
                 else {
                     styledDiv {
                         css {
                             if (fileProgress.running) {
                                 fontWeight = FontWeight.bold
-                            }
-                            else if (fileProgress.finished) {
+                            } else if (fileProgress.finished) {
                                 color = Color.darkGreen
                             }
                         }
-                        +fileInfo.name
+//                        +fileInfo.name
+                        +dataLocation.fileName()
                     }
+                }
+
+                if (state.showFolders) {
+                    styledDiv {
+                        css {
+                            fontFamily = "monospace"
+                        }
+                        +dataLocation.asString()
+//                        +fileInfo.path.asString()
+                    }
+                }
+
+                if (fileProgress != null && fileInfo != null) {
                     styledDiv {
                         css {
                             fontStyle = FontStyle.italic
@@ -458,10 +472,13 @@ class InputSelected(
             styledTd {
                 css {
                     paddingLeft = 0.5.em
-                    paddingRight = 0.5.em
+                    paddingRight = 1.em
                     whiteSpace = WhiteSpace.nowrap
                 }
-                +FormatUtils.formatLocalDateTime(fileInfo.modified)
+
+                if (fileInfo != null) {
+                    +FormatUtils.formatLocalDateTime(fileInfo.modified)
+                }
             }
 
             styledTd {
@@ -470,17 +487,9 @@ class InputSelected(
                     textAlign = TextAlign.right
                     whiteSpace = WhiteSpace.nowrap
                 }
-                +FormatUtils.readableFileSize(fileInfo.size)
-            }
 
-            if (state.showFolders) {
-                styledTd {
-                    css {
-                        paddingRight = 0.5.em
-                    }
-
-//                    +fileInfo.path.asUri().substring(0, fileInfo.path.asUri().length - fileInfo.name.length)
-                    +fileInfo.path.parent()!!.asString()
+                if (fileInfo != null) {
+                    +FormatUtils.readableFileSize(fileInfo.size)
                 }
             }
         }

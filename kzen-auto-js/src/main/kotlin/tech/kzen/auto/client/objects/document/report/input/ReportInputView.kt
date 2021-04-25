@@ -111,9 +111,9 @@ class ReportInputView(
                 }
             }
 
-            if (isBrowserOpen()) {
+//            if (isBrowserOpen()) {
                 renderBrowseFiles(editDisabled)
-            }
+//            }
 
             renderSelectedFiles(editDisabled)
         }
@@ -121,11 +121,11 @@ class ReportInputView(
 
 
     private fun RBuilder.renderHeader() {
-//        val listingSelected = props.reportState.inputSelection
-//        val browserForceOpen = listingSelected != null && listingSelected.isEmpty()
-//        val browserOpen = browserForceOpen || state.browserOpen
-
         styledDiv {
+            css {
+                marginBottom = 0.25.em
+            }
+
             child(InputIcon::class) {
                 attrs {
                     style = reactStyle {
@@ -177,9 +177,6 @@ class ReportInputView(
                             }
 
                             title = when {
-//                                isBrowserForceOpen() ->
-//                                    "Please [ADD] a file"
-
                                 isBrowserOpen() ->
                                     "Hide browser"
 
@@ -210,6 +207,7 @@ class ReportInputView(
                 reportState = props.reportState
                 dispatcher = props.dispatcher
                 this.editDisabled = editDisabled
+                browserOpen = isBrowserOpen()
             }
         }
     }
@@ -221,7 +219,7 @@ class ReportInputView(
                 reportState = props.reportState
                 dispatcher = props.dispatcher
                 this.editDisabled = editDisabled
-                browserOpen = state.browserOpen
+                browserOpen = isBrowserOpen()
             }
         }
     }
