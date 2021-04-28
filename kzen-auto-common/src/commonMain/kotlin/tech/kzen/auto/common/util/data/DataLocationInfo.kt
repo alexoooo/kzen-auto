@@ -10,22 +10,34 @@ data class DataLocationInfo(
     val modified: Instant,
     val directory: Boolean
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val pathKey = "path"
         private const val nameKey = "name"
         private const val sizeKey = "size"
         private const val modifiedKey = "modified"
         private const val directoryKey = "dir"
+        private const val missingSize = -1L
+        private val missingModified = Instant.DISTANT_PAST
+
+
+        fun ofMissingFile(path: DataLocation, name: String): DataLocationInfo {
+            return DataLocationInfo(path, name, missingSize, missingModified, false)
+        }
+
+
+//        fun ofMissingDirectory(path: DataLocation, name: String): DataLocationInfo {
+//            return DataLocationInfo(path, name, missingSize, missingModified, true)
+//        }
 
 
         fun ofFile(path: DataLocation, name: String, size: Long, modified: Instant): DataLocationInfo {
-            check(! name.endsWith("/"))
+            check(size >= 0)
             return DataLocationInfo(path, name, size, modified, false)
         }
 
 
         fun ofDirectory(path: DataLocation, name: String, modified: Instant): DataLocationInfo {
-            check(! name.endsWith("/"))
             return DataLocationInfo(path, name, 0, modified, true)
         }
 
@@ -42,6 +54,19 @@ data class DataLocationInfo(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        check(! name.endsWith("/") && ! name.endsWith("\\"))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun isMissing(): Boolean {
+        return size == missingSize
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun toCollection(): Map<String, String> {
         return mapOf(
             pathKey to path.asString(),

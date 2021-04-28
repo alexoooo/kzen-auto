@@ -8,6 +8,8 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
+import tech.kzen.auto.client.objects.document.report.input.browse.InputBrowser
+import tech.kzen.auto.client.objects.document.report.input.select.InputSelected
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.*
@@ -111,15 +113,14 @@ class ReportInputView(
                 }
             }
 
-//            if (isBrowserOpen()) {
-                renderBrowseFiles(editDisabled)
-//            }
+            renderBrowseFiles(editDisabled)
 
             renderSelectedFiles(editDisabled)
         }
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderHeader() {
         styledDiv {
             css {
@@ -161,46 +162,52 @@ class ReportInputView(
                     }
                 }
                 else if (! isBrowserForceOpen()) {
-                    child(MaterialButton::class) {
-                        attrs {
-                            variant = "outlined"
-                            size = "small"
-
-                            onClick = {
-                                onToggleBrowser()
-                            }
-
-                            style = reactStyle {
-                                if (isBrowserOpen()) {
-                                    backgroundColor = Color.darkGray
-                                }
-                            }
-
-                            title = when {
-                                isBrowserOpen() ->
-                                    "Hide browser"
-
-                                else ->
-                                    "Show browser"
-                            }
-                        }
-
-                        child(FolderOpenIcon::class) {
-                            attrs {
-                                style = reactStyle {
-                                    marginRight = 0.25.em
-                                }
-                            }
-                        }
-
-                        +"Browse"
-                    }
+                    renderBrowserToggle()
                 }
             }
         }
     }
 
 
+    private fun RBuilder.renderBrowserToggle() {
+        child(MaterialButton::class) {
+            attrs {
+                variant = "outlined"
+                size = "small"
+
+                onClick = {
+                    onToggleBrowser()
+                }
+
+                style = reactStyle {
+                    if (isBrowserOpen()) {
+                        backgroundColor = Color.darkGray
+                    }
+                }
+
+                title = when {
+                    isBrowserOpen() ->
+                        "Hide browser"
+
+                    else ->
+                        "Show browser"
+                }
+            }
+
+            child(FolderOpenIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        marginRight = 0.25.em
+                    }
+                }
+            }
+
+            +"Browse"
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderBrowseFiles(editDisabled: Boolean) {
         child(InputBrowser::class) {
             attrs {

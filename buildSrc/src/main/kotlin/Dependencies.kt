@@ -2,8 +2,8 @@
 const val kotlinVersion = "1.4.32"
 const val jvmTargetVersion = "15"
 
-const val shadowVersion = "6.1.0"
-//const val shadowVersion = "6.2.0"
+//const val shadowVersion = "6.1.0"
+const val shadowVersion = "7.0.0"
 
 const val springBootVersion = "2.4.5"
 const val dependencyManagementVersion = "1.0.11.RELEASE"

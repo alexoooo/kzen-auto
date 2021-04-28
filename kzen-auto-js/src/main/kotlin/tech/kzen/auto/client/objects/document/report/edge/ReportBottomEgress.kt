@@ -34,7 +34,8 @@ class ReportBottomEgress(
             css {
 //                height = CellController.egressLength
                 height = 1.5.em
-                marginBottom = 0.5.em
+//                marginBottom = 0.5.em
+                marginBottom = 1.em
             }
 
 //            child(ArrowDownwardIcon::class) {}

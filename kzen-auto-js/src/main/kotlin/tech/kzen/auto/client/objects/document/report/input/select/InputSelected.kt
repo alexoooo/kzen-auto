@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.report.input
+package tech.kzen.auto.client.objects.document.report.input.select
 
 import kotlinx.css.*
 import kotlinx.css.properties.boxShadowInset
@@ -9,6 +9,7 @@ import react.*
 import react.dom.td
 import styled.*
 import tech.kzen.auto.client.objects.document.report.ReportController
+import tech.kzen.auto.client.objects.document.report.input.browse.InputBrowser
 import tech.kzen.auto.client.objects.document.report.state.InputsSelectionRemoveRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
@@ -167,17 +168,167 @@ class InputSelected(
 
         val reportProgress = props.reportState.reportProgress
 
-        renderDetail(selectionSpec, selectionInfo, reportProgress)
+        renderControls()
+
+        renderTable(selectionSpec, selectionInfo, reportProgress)
     }
 
 
-    private fun RBuilder.renderDetail(
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderControls() {
+        styledDiv {
+            css {
+                width = 100.pct
+            }
+
+            styledDiv {
+                css {
+                    marginRight = 2.em
+                    display = Display.inlineBlock
+                }
+                renderRemove()
+            }
+
+            styledDiv {
+                css {
+                    marginRight = 2.em
+                    display = Display.inlineBlock
+                }
+                renderTypeSelect()
+            }
+
+            styledDiv {
+                css {
+                    marginRight = 2.em
+                    display = Display.inlineBlock
+                }
+                renderFormatSelect()
+            }
+
+            styledDiv {
+                css {
+                    float = Float.right
+                    display = Display.inlineBlock
+//                    marginTop = 1.em
+                    paddingTop = 1.2.em
+//                    height = 3.em
+//                    backgroundColor = Color.yellow
+                }
+                renderDetailToggle()
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderRemove() {
+        val selectedRowCount = state.selected.size
+
+        child(MaterialButton::class) {
+            attrs {
+                variant = "outlined"
+                size = "small"
+
+                onClick = {
+                    onRemoveSelected()
+                }
+
+                if (selectedRowCount == 0) {
+                    disabled = true
+                    title = "No files selected"
+                }
+                else if (props.editDisabled) {
+                    disabled = true
+                    title = "Disabled while running"
+                }
+            }
+
+            child(RemoveCircleOutlineIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        marginRight = 0.25.em
+                    }
+                }
+            }
+
+            if (selectedRowCount == 0) {
+                +"Remove"
+            }
+            else {
+                +"Remove ($selectedRowCount files)"
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderTypeSelect() {
+        child(InputSelectedType::class) {
+            attrs {
+                reportState = props.reportState
+                dispatcher = props.dispatcher
+                editDisabled = props.editDisabled
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderFormatSelect() {
+        child(InputSelectedFormat::class) {
+            attrs {
+                reportState = props.reportState
+                dispatcher = props.dispatcher
+                editDisabled = props.editDisabled
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderDetailToggle() {
+        child(MaterialButton::class) {
+            attrs {
+                variant = "outlined"
+                size = "small"
+
+                onClick = {
+                    onToggleFolders()
+                }
+
+                style = reactStyle {
+                    if (state.showFolders) {
+                        backgroundColor = Color.darkGray
+                    }
+
+//                    paddingLeft = 0.px
+//                    paddingRight = 0.px
+                }
+
+                title =
+                    if (state.showFolders) {
+                        "Hide details"
+                    }
+                    else {
+                        "Show details"
+                    }
+            }
+
+            child(MoreHorizIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        marginRight = 0.25.em
+                    }
+                }
+            }
+
+            +"Details"
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderTable(
         selectionSpec: List<InputDataSpec>,
         selectedInfo: InputSelectionInfo?,
         reportProgress: ReportProgress?
     ) {
-        renderControls()
-
         styledDiv {
             css {
                 maxHeight = 20.em
@@ -275,6 +426,7 @@ class InputSelected(
                                 paddingRight = 0.5.em
                                 textAlign = TextAlign.left
                                 boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                minWidth = 9.5.em
                             }
                             +"Modified"
                         }
@@ -306,7 +458,7 @@ class InputSelected(
 
                     for (inputDataSpec in selectionSpec) {
                         val inputDataInfo = inputDataInfoByPath[inputDataSpec.location]
-                        renderDetailRow(inputDataSpec, inputDataInfo, reportProgress)
+                        renderTableRow(inputDataSpec, inputDataInfo, reportProgress)
                     }
                 }
             }
@@ -314,83 +466,7 @@ class InputSelected(
     }
 
 
-    private fun RBuilder.renderControls() {
-        val selectedRowCount = state.selected.size
-
-        styledDiv {
-            child(MaterialButton::class) {
-                attrs {
-                    variant = "outlined"
-                    size = "small"
-
-                    onClick = {
-                        onRemoveSelected()
-                    }
-
-                    if (selectedRowCount == 0) {
-                        disabled = true
-                        title = "No files selected"
-                    }
-                    else if (props.editDisabled) {
-                        disabled = true
-                        title = "Disabled while running"
-                    }
-                }
-
-                child(RemoveCircleOutlineIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            marginRight = 0.25.em
-                        }
-                    }
-                }
-
-                if (selectedRowCount == 0) {
-                    +"Remove"
-                }
-                else {
-                    +"Remove ($selectedRowCount files)"
-                }
-            }
-
-            val dataType = props.reportState.inputSpec().selection.dataType
-            val dataTypeLabel = dataType.get().substringAfterLast(".")
-            +"[Type: $dataTypeLabel]"
-
-            child(MaterialButton::class) {
-                attrs {
-                    variant = "outlined"
-                    size = "small"
-
-                    onClick = {
-                        onToggleFolders()
-                    }
-
-                    style = reactStyle {
-                        if (state.showFolders) {
-                            backgroundColor = Color.darkGray
-                        }
-
-                        paddingLeft = 0.px
-                        paddingRight = 0.px
-                    }
-
-                    title =
-                        if (state.showFolders) {
-                            "Hide folders"
-                        }
-                        else {
-                            "Show folders"
-                        }
-                }
-
-                child(FolderOpenIcon::class) {}
-            }
-        }
-    }
-
-
-    private fun RBuilder.renderDetailRow(
+    private fun RBuilder.renderTableRow(
         inputDataSpec: InputDataSpec,
         inputDataInfo: InputDataInfo?,
         reportProgress: ReportProgress?
@@ -400,11 +476,13 @@ class InputSelected(
         val fileInfo = inputDataInfo?.dataLocationInfo
         val fileProgress = reportProgress?.inputs?.get(dataLocation)
         val checked = dataLocation in state.selected
+        val missing = inputDataInfo?.dataLocationInfo?.isMissing() ?: false
 
         styledTr {
             key = dataLocation.asString()
 
             css {
+                cursor = Cursor.pointer
                 hover {
                     backgroundColor = InputBrowser.hoverRow
                 }
@@ -430,22 +508,31 @@ class InputSelected(
             }
 
             td {
-                if (fileProgress == null) {
-//                    +fileInfo.name
-                    +dataLocation.fileName()
-                }
-                else {
-                    styledDiv {
-                        css {
-                            if (fileProgress.running) {
-                                fontWeight = FontWeight.bold
-                            } else if (fileProgress.finished) {
-                                color = Color.darkGreen
+                when {
+                    missing ->
+                        styledSpan {
+                            css {
+                                color = Color.gray
                             }
+                            +dataLocation.fileName()
+                            +" (missing)"
                         }
-//                        +fileInfo.name
+
+                    fileProgress != null ->
+                        styledDiv {
+                            css {
+                                if (fileProgress.running) {
+                                    fontWeight = FontWeight.bold
+                                } else if (fileProgress.finished) {
+                                    color = Color.darkGreen
+                                }
+                            }
+
+                            +dataLocation.fileName()
+                        }
+
+                    else ->
                         +dataLocation.fileName()
-                    }
                 }
 
                 if (state.showFolders) {
@@ -454,7 +541,6 @@ class InputSelected(
                             fontFamily = "monospace"
                         }
                         +dataLocation.asString()
-//                        +fileInfo.path.asString()
                     }
                 }
 
@@ -476,7 +562,7 @@ class InputSelected(
                     whiteSpace = WhiteSpace.nowrap
                 }
 
-                if (fileInfo != null) {
+                if (fileInfo != null && ! missing) {
                     +FormatUtils.formatLocalDateTime(fileInfo.modified)
                 }
             }
@@ -488,7 +574,7 @@ class InputSelected(
                     whiteSpace = WhiteSpace.nowrap
                 }
 
-                if (fileInfo != null) {
+                if (fileInfo != null && ! missing) {
                     +FormatUtils.readableFileSize(fileInfo.size)
                 }
             }

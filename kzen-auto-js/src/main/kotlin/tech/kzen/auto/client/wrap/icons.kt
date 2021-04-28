@@ -209,6 +209,12 @@ external class MoreVertIcon: Component<IconProps, RState> {
 }
 
 
+@JsName("MoreHoriz")
+external class MoreHorizIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
 @JsName("SubdirectoryArrowLeft")
 external class SubdirectoryArrowLeftIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?

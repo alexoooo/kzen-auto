@@ -2,7 +2,6 @@ package tech.kzen.auto.common.objects.document.report.listing
 
 
 data class InputSelectionInfo(
-//    val dataType: ClassName,
     val locations: List<InputDataInfo>
 ) {
     //-----------------------------------------------------------------------------------------------------------------

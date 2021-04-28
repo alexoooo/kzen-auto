@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.report.input
+package tech.kzen.auto.client.objects.document.report.input.browse
 
 import kotlinx.css.em
 import kotlinx.css.width

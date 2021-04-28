@@ -89,23 +89,40 @@ class FileListingAction {
 
 
     private fun toFileInfo(path: Path): DataLocationInfo {
-        val attrs = Files.readAttributes(path, BasicFileAttributes::class.java)
+        val attrs =
+            try {
+                Files.readAttributes(path, BasicFileAttributes::class.java)
+            }
+            catch (e: NoSuchFileException) {
+                null
+            }
+
         return toFileInfo(path, attrs)
     }
 
 
-    private fun toFileInfo(path: Path, attrs: BasicFileAttributes): DataLocationInfo {
-        val absolutePath = DataLocation.ofFile(FilePath.of(path.toAbsolutePath().normalize().toString()))
+    private fun toFileInfo(path: Path, attrs: BasicFileAttributes?): DataLocationInfo {
+        val absolutePathString = path.toAbsolutePath().normalize().toString()
+        val absoluteFilePath = FilePath.of(absolutePathString)
+        val absoluteDataLocation = DataLocation.ofFile(absoluteFilePath)
         val filename = path.fileName.toString()
-        val modified = Instant.fromEpochMilliseconds(
-            attrs.lastModifiedTime().toMillis())
 
         return when {
-            attrs.isDirectory ->
-                DataLocationInfo.ofDirectory(absolutePath, filename, modified)
+            attrs != null -> {
+                val modified = Instant.fromEpochMilliseconds(
+                    attrs.lastModifiedTime().toMillis())
+
+                when {
+                    attrs.isDirectory ->
+                        DataLocationInfo.ofDirectory(absoluteDataLocation, filename, modified)
+
+                    else ->
+                        DataLocationInfo.ofFile(absoluteDataLocation, filename, attrs.size(), modified)
+                }
+            }
 
             else ->
-                DataLocationInfo.ofFile(absolutePath, filename, attrs.size(), modified)
+                DataLocationInfo.ofMissingFile(absoluteDataLocation, filename)
         }
     }
 }
