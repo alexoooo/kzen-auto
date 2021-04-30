@@ -78,6 +78,22 @@ class ClientRestGraphStore(
             }
 
 
+            is UpdateAllNestingsInAttributeCommand -> {
+                val unparsed = notationParser.unparseAttribute(command.attributeNotation)
+                restClient.updateAllNestingsInAttribute(
+                        command.objectLocation, command.attributeName, command.attributeNestings, unparsed)
+            }
+
+
+            is UpdateAllValuesInAttributeCommand -> {
+                val nestingUnparsedNotations = command.nestingNotations.mapValues {
+                    notationParser.unparseAttribute(it.value)
+                }
+                restClient.updateAllValuesInAttribute(
+                        command.objectLocation, command.attributeName, nestingUnparsedNotations)
+            }
+
+
             is InsertListItemInAttributeCommand -> {
                 val unparsed = notationParser.unparseAttribute(command.item)
                 restClient.insertListItemInAttribute(

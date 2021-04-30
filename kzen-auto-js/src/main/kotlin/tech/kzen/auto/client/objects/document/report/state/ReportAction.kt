@@ -1,5 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.state
 
+import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
+import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
@@ -10,6 +12,7 @@ import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.lib.platform.ClassName
 
 //---------------------------------------------------------------------------------------------------------------------
 sealed class ReportAction {
@@ -89,55 +92,70 @@ object InitiateReport: SingularReportAction()
 //---------------------------------------------------------------------------------------------------------------------
 sealed class InputReportAction: SingularReportAction()
 
+//sealed class ListInputsResponse: ListInputsAction()
+
 
 object EmptyInputSelection: InputReportAction()
 
 
-sealed class ListInputsAction: InputReportAction()
+//sealed class ListInputsAction: InputReportAction()
 
 
-object ListInputsSelectedRequest: ListInputsAction()
+object ListInputsSelectedRequest: InputReportAction()
 
 
-object ListInputsBrowserRequest: ListInputsAction()
+object ListInputsBrowserRequest: InputReportAction()
 
 
 data class ListInputsBrowserNavigate(
     val newDirectory: DataLocation
-): ListInputsResponse()
+): InputReportAction()
 
 
 data class InputsBrowserFilterRequest(
     val filter: String
-): ListInputsResponse()
+): InputReportAction()
 
 
 data class InputsSelectionAddRequest(
     val paths: List<InputDataSpec>
-): ListInputsResponse()
+): InputReportAction()
 
 
 data class InputsSelectionRemoveRequest(
     val paths: List<InputDataSpec>
-): ListInputsResponse()
+): InputReportAction()
 
 
-sealed class ListInputsResponse: ListInputsAction()
+data class InputsSelectionDataTypeRequest(
+    val dataType: ClassName
+): InputReportAction()
+
+
+data class InputsSelectionFormatRequest(
+    val format: CommonPluginCoordinate,
+    val dataLocations: List<DataLocation>
+): InputReportAction()
+
+
+data class InputsSelectionMultiFormatRequest(
+    val locationFormats: Map<DataLocation, CommonPluginCoordinate>
+): InputReportAction()
 
 
 data class ListInputsBrowserResult(
     val inputBrowserInfo: InputBrowserInfo
-): ListInputsResponse()
+): InputReportAction()
 
 
 data class ListInputsSelectedResult(
     val inputSelectionInfo: InputSelectionInfo
-): ListInputsResponse()
+): InputReportAction()
 
 
 data class ListInputsError(
     val message: String
-): ListInputsResponse()
+): InputReportAction()
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -390,7 +408,6 @@ data class ReportResetResult(
 ): SingularReportAction(), ReportUpdateResult
 
 
-
 //---------------------------------------------------------------------------------------------------------------------
 sealed class ReportPluginAction: SingularReportAction()
 
@@ -402,6 +419,24 @@ data class PluginPathInfoRequest(
 
 data class PluginPathInfoResult(
     val paths: List<InputDataSpec>?,
+    val errorMessage: String?
+): ReportPluginAction()
+
+
+object PluginDataTypesRequest: ReportPluginAction()
+
+
+data class PluginDataTypesResult(
+    val dataTypes: List<ClassName>?,
+    val errorMessage: String?
+): ReportPluginAction()
+
+
+object PluginFormatsRequest: ReportPluginAction()
+
+
+data class PluginFormatsResult(
+    val formats: List<ProcessorDefinerDetail>?,
     val errorMessage: String?
 ): ReportPluginAction()
 

@@ -1,11 +1,12 @@
 package tech.kzen.auto.server.objects.report
 
-import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorHeaderReader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -53,19 +54,22 @@ class ColumnListingAction(
 
 
     fun cachedHeaderListing(
-        dataLocation: DataLocation
+        dataLocation: DataLocation,
+        processorPluginCoordinate: PluginCoordinate
     ): HeaderListing? {
-        val inputIndexPath = filterIndex.inputIndexPath(dataLocation)
+        val inputIndexPath = filterIndex.inputIndexPath(dataLocation, processorPluginCoordinate)
         val columnsFile = inputIndexPath.resolve(columnsCsvFilename)
         return cachedHeaderListing(columnsFile)
     }
 
 
     fun <T> headerListing(
-        flatDataHeaderDefinition: FlatDataHeaderDefinition<T>
+        flatDataHeaderDefinition: FlatDataHeaderDefinition<T>,
+        processorPluginCoordinate: PluginCoordinate
     ): HeaderListing {
         val inputIndexPath = filterIndex.inputIndexPath(
-            flatDataHeaderDefinition.flatDataLocation.dataLocation)
+            flatDataHeaderDefinition.flatDataLocation.dataLocation,
+            processorPluginCoordinate)
 
         val columnsFile = inputIndexPath.resolve(columnsCsvFilename)
 

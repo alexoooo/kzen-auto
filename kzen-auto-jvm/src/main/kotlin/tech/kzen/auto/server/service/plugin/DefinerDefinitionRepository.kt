@@ -34,9 +34,8 @@ class DefinerDefinitionRepository(
     }
 
 
-    override fun metadata(coordinate: PluginCoordinate): ProcessorDefinitionMetadata {
+    override fun metadata(coordinate: PluginCoordinate): ProcessorDefinitionMetadata? {
         return metadataByCoordinate[coordinate]
-            ?: throw IllegalArgumentException("Not found: $coordinate")
     }
 
 

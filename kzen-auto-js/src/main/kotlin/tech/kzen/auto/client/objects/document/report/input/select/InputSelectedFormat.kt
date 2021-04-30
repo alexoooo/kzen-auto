@@ -4,16 +4,19 @@ import kotlinx.browser.document
 import kotlinx.css.em
 import kotlinx.css.fontSize
 import kotlinx.css.width
-import react.RBuilder
-import react.RProps
-import react.RPureComponent
-import react.RState
-import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
-import tech.kzen.auto.client.objects.document.report.state.ReportState
+import kotlinx.html.title
+import react.*
+import react.dom.span
+import tech.kzen.auto.client.objects.document.report.state.*
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.MaterialInputLabel
 import tech.kzen.auto.client.wrap.ReactSelect
 import tech.kzen.auto.client.wrap.ReactSelectOption
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
+import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
+import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.lib.platform.collect.PersistentSet
 import kotlin.js.Json
 import kotlin.js.json
 
@@ -28,11 +31,121 @@ class InputSelectedFormat(
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var editDisabled: Boolean
+        var selected: PersistentSet<DataLocation>
     }
 
 
     interface State: RState {
-//        var showFolders: Boolean
+        var loadedFormats: List<ProcessorDefinerDetail>?
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: Props) {
+        loadedFormats = null
+    }
+
+
+    override fun componentDidUpdate(
+        prevProps: Props,
+        prevState: State,
+        snapshot: Any
+    ) {
+        if (state.loadedFormats != null &&
+                props.reportState.inputSpec().selection.dataType !=
+                    prevProps.reportState.inputSpec().selection.dataType
+        ) {
+            setState {
+                loadedFormats = null
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun loadIfRequired() {
+        if (state.loadedFormats != null) {
+            return
+        }
+
+        async {
+            val effects = props.dispatcher.dispatch(PluginFormatsRequest)
+
+            val formats = effects.filterIsInstance<PluginFormatsResult>().first().formats
+                ?: return@async
+
+            setState {
+                loadedFormats = formats
+            }
+        }
+    }
+
+
+    private fun onValueChange(coordinateValue: String) {
+        val selected = props.selected
+        if (selected.isEmpty()) {
+            return
+        }
+
+        val selectedCoordinate = CommonPluginCoordinate.ofString(coordinateValue)
+        val selectedSpecs = props.reportState.inputSpec().selection.locations.filter { it.location in selected }
+
+        if (selectedCoordinate.isDefault()) {
+            val selectedLocations = selectedSpecs.map { it.location }
+
+            async {
+                val effects = props.dispatcher.dispatch(PluginPathInfoRequest(selectedLocations))
+
+                val selectedLocationSpecs = effects.filterIsInstance<PluginPathInfoResult>().first().paths
+                    ?: return@async
+
+                val defaultCoordinateSet = selectedLocationSpecs.map { it.processorDefinitionCoordinate }.toSet()
+
+                if (defaultCoordinateSet.size == 1) {
+                    val defaultCoordinate = defaultCoordinateSet.single()
+
+                    val changedLocations = selectedSpecs
+                        .filter { it.processorDefinitionCoordinate != defaultCoordinate }
+                        .map { it.location }
+
+                    if (changedLocations.isEmpty()) {
+                        return@async
+                    }
+
+//                    console.log("^%$^%$^%$ InputsSelectionFormatRequest - $defaultCoordinate - $changedLocations")
+                    props.dispatcher.dispatch(InputsSelectionFormatRequest(
+                        defaultCoordinate, changedLocations))
+                }
+                else {
+                    val locationFormats = selectedLocationSpecs.associate {
+                        it.location to it.processorDefinitionCoordinate
+                    }
+
+//                    console.log("^%$^%$^%$ InputsSelectionMultiFormatRequest - $locationFormats")
+                    props.dispatcher.dispatch(InputsSelectionMultiFormatRequest(
+                        locationFormats))
+                }
+            }
+        }
+        else {
+            val changedLocations = selectedSpecs
+                .filter { it.processorDefinitionCoordinate != selectedCoordinate }
+                .map { it.location }
+
+            if (changedLocations.isEmpty()) {
+                return
+            }
+
+//            console.log("^%$^%$^%$ InputsSelectionFormatRequest - $selectedCoordinate - $changedLocations")
+            props.dispatcher.dispatchAsync(InputsSelectionFormatRequest(
+                selectedCoordinate, changedLocations))
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun typeLabel(processorDefinerDetail: ProcessorDefinerDetail): String {
+        return processorDefinerDetail.coordinate.asString()
     }
 
 
@@ -40,69 +153,112 @@ class InputSelectedFormat(
     override fun RBuilder.render() {
         val selectId = "material-react-data-type"
 
-        child(MaterialInputLabel::class) {
-            attrs {
-                htmlFor = selectId
+        val selectionProcessorDefinitionCoordinates = props
+            .reportState
+            .inputSelection
+            ?.locations
+            ?.filter { ! it.dataLocationInfo.isMissing() && ! it.invalidProcessor }
+            ?.map { it.processorDefinitionCoordinate }
+            ?.toSet()
 
-                style = reactStyle {
-                    fontSize = 0.8.em
-                    width = 14.em
+        val loadedFormats = state.loadedFormats
+        val singleOption = loadedFormats != null && loadedFormats.size == 1
+
+        val classNamesLabels = when {
+            loadedFormats != null -> {
+                val loadedOptions = loadedFormats.map {
+                    ReactSelectOption(it.coordinate.asString(), typeLabel(it))
+                }
+
+                if (loadedOptions.size <= 1) {
+                    loadedOptions
+                }
+                else {
+                    listOf(
+                        ReactSelectOption(CommonPluginCoordinate.defaultName, "Default")
+                    ) + loadedOptions
                 }
             }
-            +"Format"
+
+            selectionProcessorDefinitionCoordinates != null ->
+                selectionProcessorDefinitionCoordinates
+                    .map { ReactSelectOption(it.name, it.asString()) }
+
+            else ->
+                listOf()
         }
-
-        val selectionProcessorDefinitionCoordinates = props
-            .reportState.inputSpec().selection.locations.map { it.processorDefinitionCoordinate }.toSet()
-
-//        if (selectionProcessorDefinitionCoordinates.size == 1) {
-//
-//        }
-
-        val classNamesLabels = selectionProcessorDefinitionCoordinates
-            .map { ReactSelectOption(it.name, it.asString()) }
 
         val selectOptions = classNamesLabels
             .toTypedArray()
 
-        child(ReactSelect::class) {
+        val selectionEmpty = props.selected.isEmpty()
+
+        span {
             attrs {
-                id = selectId
+                title = when {
+                    singleOption ->
+                        "Only one format is available"
 
-//                value = selectOptions.find { it.value == state.selectedColumn }
-                value =
-                    if (classNamesLabels.size == 1) {
-                        classNamesLabels.single()
-                    }
-                    else {
-                        null
-                    }
+                    props.selected.isEmpty() ->
+                        "Please select one or more files"
 
-                options = selectOptions
-//                options = optionsArray
-
-                onChange = {
-//                    console.log("^^^^^ selected: $it")
-//                    onColumnSelected(it.value)
+                    else ->
+                        "Specify format for selected files"
                 }
+            }
 
-                isDisabled = props.editDisabled
+            child(MaterialInputLabel::class) {
+                attrs {
+                    htmlFor = selectId
 
-                // https://stackoverflow.com/a/51844542/1941359
-                val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                    val transformed = json()
-                    transformed.add(base)
-                    transformed["background"] = "transparent"
-                    transformed
+                    style = reactStyle {
+                        fontSize = 0.8.em
+                        width = 16.em
+                    }
                 }
+                +"Format"
+            }
 
-                val reactStyles = json()
-                reactStyles["control"] = styleTransformer
-                styles = reactStyles
+            child(ReactSelect::class) {
+                attrs {
+                    id = selectId
 
-                // NB: this was causing clipping when used in ConditionalStepDisplay table,
-                //   see: https://react-select.com/advanced#portaling
-                menuPortalTarget = document.body!!
+                    value =
+                        if (classNamesLabels.size == 1) {
+                            classNamesLabels.single()
+                        }
+                        else {
+                            null
+                        }
+
+                    options = selectOptions
+
+                    onChange = {
+                        onValueChange(it.value)
+                    }
+
+                    onMenuOpen = {
+                        loadIfRequired()
+                    }
+
+                    isDisabled = props.editDisabled || (selectionEmpty && ! singleOption)
+
+                    // https://stackoverflow.com/a/51844542/1941359
+                    val styleTransformer: (Json, Json) -> Json = { base, _ ->
+                        val transformed = json()
+                        transformed.add(base)
+                        transformed["background"] = "transparent"
+                        transformed
+                    }
+
+                    val reactStyles = json()
+                    reactStyles["control"] = styleTransformer
+                    styles = reactStyles
+
+                    // NB: this was causing clipping when used in ConditionalStepDisplay table,
+                    //   see: https://react-select.com/advanced#portaling
+                    menuPortalTarget = document.body!!
+                }
             }
         }
     }

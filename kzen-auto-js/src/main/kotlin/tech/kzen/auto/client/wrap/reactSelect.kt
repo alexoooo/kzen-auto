@@ -27,6 +27,8 @@ external interface ReactSelectProps: RProps {
     var menuPortalTarget: HTMLElement
     var placeholder: String
 
+    var onMenuOpen: () -> Unit
+
     var isDisabled: Boolean
 
 //    var id: String

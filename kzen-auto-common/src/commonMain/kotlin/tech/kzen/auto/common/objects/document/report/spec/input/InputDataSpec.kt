@@ -2,6 +2,7 @@ package tech.kzen.auto.common.objects.document.report.spec.input
 
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
@@ -19,6 +20,11 @@ data class InputDataSpec(
         private const val processorDefinitionCoordinateKey = "coordinate"
         private val processorDefinitionCoordinateAttributeSegment =
             AttributeSegment.ofKey(processorDefinitionCoordinateKey)
+
+
+        fun coordinateNesting(index: Int): AttributeNesting {
+            return InputSelectionSpec.locationNesting(index).push(processorDefinitionCoordinateAttributeSegment)
+        }
 
 
         fun ofNotation(mapAttributeNotation: MapAttributeNotation): InputDataSpec {

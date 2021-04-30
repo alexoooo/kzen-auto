@@ -18,6 +18,7 @@ import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.platform.ClassNames.topLevel
 
 
 class DefaultAttributeEditor(
@@ -147,7 +148,7 @@ class DefaultAttributeEditor(
                 +"${props.attributeName} (type not supported)"
 
                 div {
-                    +"type: ${attributeMetadata.type?.className?.get()}"
+                    +"type: ${attributeMetadata.type?.className?.topLevel()}"
                     br {}
                     +"generics: ${attributeMetadata.type?.generics?.map { it.className.get() }}"
                 }

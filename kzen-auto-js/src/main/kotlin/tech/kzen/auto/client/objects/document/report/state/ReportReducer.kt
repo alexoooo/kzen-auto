@@ -88,6 +88,9 @@ object ReportReducer {
             is ListInputsBrowserNavigate,
             is InputsSelectionAddRequest,
             is InputsSelectionRemoveRequest,
+            is InputsSelectionDataTypeRequest,
+            is InputsSelectionFormatRequest,
+            is InputsSelectionMultiFormatRequest,
             is InputsBrowserFilterRequest -> state.copy(
                 inputLoading = true,
                 inputError = null)

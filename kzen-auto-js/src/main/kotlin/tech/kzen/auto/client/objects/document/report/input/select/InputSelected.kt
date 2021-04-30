@@ -41,16 +41,14 @@ class InputSelected(
 
     interface State: RState {
         var selected: PersistentSet<DataLocation>
-//        var selectedOpen: Boolean
-        var showFolders: Boolean
+        var showDetails: Boolean
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-//        selectedOpen = false
         selected = persistentSetOf()
-        showFolders = false
+        showDetails = false
     }
 
 
@@ -82,7 +80,7 @@ class InputSelected(
 
     private fun onToggleFolders() {
         setState {
-            showFolders = ! showFolders
+            showDetails = ! showDetails
         }
     }
 
@@ -183,15 +181,16 @@ class InputSelected(
 
             styledDiv {
                 css {
-                    marginRight = 2.em
+                    marginRight = 1.em
                     display = Display.inlineBlock
+                    minWidth = 8.5.em
                 }
                 renderRemove()
             }
 
             styledDiv {
                 css {
-                    marginRight = 2.em
+                    marginRight = 1.em
                     display = Display.inlineBlock
                 }
                 renderTypeSelect()
@@ -199,7 +198,7 @@ class InputSelected(
 
             styledDiv {
                 css {
-                    marginRight = 2.em
+                    marginRight = 1.em
                     display = Display.inlineBlock
                 }
                 renderFormatSelect()
@@ -209,10 +208,7 @@ class InputSelected(
                 css {
                     float = Float.right
                     display = Display.inlineBlock
-//                    marginTop = 1.em
                     paddingTop = 1.2.em
-//                    height = 3.em
-//                    backgroundColor = Color.yellow
                 }
                 renderDetailToggle()
             }
@@ -254,7 +250,7 @@ class InputSelected(
                 +"Remove"
             }
             else {
-                +"Remove ($selectedRowCount files)"
+                +"Remove ($selectedRowCount)"
             }
         }
     }
@@ -277,6 +273,7 @@ class InputSelected(
                 reportState = props.reportState
                 dispatcher = props.dispatcher
                 editDisabled = props.editDisabled
+                selected = state.selected
             }
         }
     }
@@ -293,7 +290,7 @@ class InputSelected(
                 }
 
                 style = reactStyle {
-                    if (state.showFolders) {
+                    if (state.showDetails) {
                         backgroundColor = Color.darkGray
                     }
 
@@ -302,7 +299,7 @@ class InputSelected(
                 }
 
                 title =
-                    if (state.showFolders) {
+                    if (state.showDetails) {
                         "Hide details"
                     }
                     else {
@@ -416,6 +413,22 @@ class InputSelected(
                             }
                             +"File"
                         }
+                        if (state.showDetails) {
+                            styledTh {
+                                css {
+                                    position = Position.sticky
+                                    top = 0.px
+                                    backgroundColor = Color.white
+                                    zIndex = 999
+                                    paddingLeft = 0.5.em
+                                    paddingRight = 0.5.em
+                                    textAlign = TextAlign.left
+                                    boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+//                                    minWidth = 9.5.em
+                                }
+                                +"Format"
+                            }
+                        }
                         styledTh {
                             css {
                                 position = Position.sticky
@@ -477,6 +490,7 @@ class InputSelected(
         val fileProgress = reportProgress?.inputs?.get(dataLocation)
         val checked = dataLocation in state.selected
         val missing = inputDataInfo?.dataLocationInfo?.isMissing() ?: false
+        val processorInvalid = inputDataInfo?.invalidProcessor ?: false
 
         styledTr {
             key = dataLocation.asString()
@@ -509,13 +523,19 @@ class InputSelected(
 
             td {
                 when {
-                    missing ->
+                    missing || processorInvalid ->
                         styledSpan {
                             css {
                                 color = Color.gray
                             }
                             +dataLocation.fileName()
-                            +" (missing)"
+
+                            val reason = when {
+                                missing -> "missing"
+                                else -> "invalid format"
+                            }
+
+                            +" ($reason)"
                         }
 
                     fileProgress != null ->
@@ -523,7 +543,8 @@ class InputSelected(
                             css {
                                 if (fileProgress.running) {
                                     fontWeight = FontWeight.bold
-                                } else if (fileProgress.finished) {
+                                }
+                                else if (fileProgress.finished) {
                                     color = Color.darkGreen
                                 }
                             }
@@ -535,7 +556,7 @@ class InputSelected(
                         +dataLocation.fileName()
                 }
 
-                if (state.showFolders) {
+                if (state.showDetails) {
                     styledDiv {
                         css {
                             fontFamily = "monospace"
@@ -552,6 +573,18 @@ class InputSelected(
                         }
                         +fileProgress.toMessage(fileInfo.size)
                     }
+                }
+            }
+
+            if (state.showDetails) {
+                styledTd {
+                    css {
+                        paddingLeft = 0.5.em
+//                        paddingRight = 1.em
+                        whiteSpace = WhiteSpace.nowrap
+                    }
+
+                    +inputDataSpec.processorDefinitionCoordinate.asString()
                 }
             }
 

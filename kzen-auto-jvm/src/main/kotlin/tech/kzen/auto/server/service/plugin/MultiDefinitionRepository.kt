@@ -14,7 +14,7 @@ class MultiDefinitionRepository(
     }
 
 
-    override fun metadata(coordinate: PluginCoordinate): ProcessorDefinitionMetadata {
+    override fun metadata(coordinate: PluginCoordinate): ProcessorDefinitionMetadata? {
         for (repository in repositories) {
             if (coordinate !in repository) {
                 continue
@@ -22,7 +22,8 @@ class MultiDefinitionRepository(
 
             return repository.metadata(coordinate)
         }
-        throw IllegalArgumentException("Unknown: $coordinate")
+
+        return null
     }
 
 

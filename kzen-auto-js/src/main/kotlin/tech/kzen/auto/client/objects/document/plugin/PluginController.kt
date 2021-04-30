@@ -272,7 +272,7 @@ class PluginController(
                         css {
                             fontFamily = "monospace"
                         }
-                        +processorDefinitionDetail.modelType.get()
+                        +processorDefinitionDetail.modelType.asString()
                     }
                 }
 

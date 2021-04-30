@@ -1,6 +1,8 @@
 package tech.kzen.auto.client.objects.document.report.state
 
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
+import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
@@ -19,6 +21,7 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphSuccess
+import tech.kzen.lib.platform.ClassName
 
 
 object ReportEffect {
@@ -188,8 +191,24 @@ object ReportEffect {
             ReportResetAction ->
                 reportResetAction(state)
 
+
+            is InputsSelectionDataTypeRequest ->
+                selectDataType(state, action.dataType)
+
+            is InputsSelectionFormatRequest ->
+                selectFormat(state, action.format, action.dataLocations)
+
+            is InputsSelectionMultiFormatRequest ->
+                selectMultiFormat(state, action.locationFormats)
+
             is PluginPathInfoRequest ->
                 pathDefaultFormats(state, action.paths)
+
+            PluginDataTypesRequest ->
+                listDataTypes(state)
+
+            PluginFormatsRequest ->
+                listFormats(state)
 
             else -> null
         }
@@ -288,6 +307,69 @@ object ReportEffect {
         paths: List<InputDataSpec>
     ): ReportAction {
         val command = InputSpec.removeSelectedCommand(state.mainLocation, paths)
+
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        return when (result) {
+            is MirroredGraphSuccess -> {
+                ListInputsSelectedRequest
+            }
+
+            is MirroredGraphError ->
+                ListInputsError(result.error.message ?: "error")
+        }
+    }
+
+
+    private suspend fun selectDataType(
+        state: ReportState,
+        dataType: ClassName
+    ): ReportAction {
+        val command = InputSpec.selectDataTypeCommand(state.mainLocation, dataType)
+
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        return when (result) {
+            is MirroredGraphSuccess -> {
+                ListInputsSelectedRequest
+            }
+
+            is MirroredGraphError ->
+                ListInputsError(result.error.message ?: "error")
+        }
+    }
+
+
+    private suspend fun selectFormat(
+        state: ReportState,
+        format: CommonPluginCoordinate,
+        dataLocations: List<DataLocation>
+    ): ReportAction {
+        val command = InputSpec.selectFormatCommand(
+            state.mainLocation, state.inputSpec().selection, dataLocations, format)
+
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        return when (result) {
+            is MirroredGraphSuccess -> {
+                ListInputsSelectedRequest
+            }
+
+            is MirroredGraphError ->
+                ListInputsError(result.error.message ?: "error")
+        }
+    }
+
+
+    private suspend fun selectMultiFormat(
+        state: ReportState,
+        locationFormats: Map<DataLocation, CommonPluginCoordinate>
+    ): ReportAction {
+        val command = InputSpec.selectMultiFormatCommand(
+            state.mainLocation, state.inputSpec().selection, locationFormats)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
         val result = ClientContext.mirroredGraphStore.apply(command)
@@ -872,6 +954,58 @@ object ReportEffect {
 
             is ExecutionFailure -> {
                 PluginPathInfoResult(
+                    null,
+                    result.errorMessage)
+            }
+        }
+    }
+
+
+    private suspend fun listDataTypes(
+        state: ReportState
+    ): ReportAction {
+        val result = ClientContext.restClient.performDetached(
+            state.mainLocation,
+            ReportConventions.actionParameter to ReportConventions.actionDataTypes)
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val resultValue = result.value.get() as List<String>
+
+                val dataTypes = resultValue.map { ClassName(it) }
+
+                PluginDataTypesResult(dataTypes, null)
+            }
+
+            is ExecutionFailure -> {
+                PluginDataTypesResult(
+                    null,
+                    result.errorMessage)
+            }
+        }
+    }
+
+
+    private suspend fun listFormats(
+        state: ReportState
+    ): ReportAction {
+        val result = ClientContext.restClient.performDetached(
+            state.mainLocation,
+            ReportConventions.actionParameter to ReportConventions.actionTypeFormats)
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val resultValue = result.value.get() as List<Map<String, Any?>>
+
+                val formats = resultValue.map { ProcessorDefinerDetail.ofCollection(it) }
+
+                PluginFormatsResult(formats, null)
+            }
+
+            is ExecutionFailure -> {
+                PluginFormatsResult(
                     null,
                     result.errorMessage)
             }

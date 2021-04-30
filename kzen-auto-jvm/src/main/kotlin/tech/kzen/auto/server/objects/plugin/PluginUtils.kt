@@ -12,6 +12,7 @@ object PluginUtils {
 
 
     fun CommonPluginCoordinate.asPluginCoordinate(): PluginCoordinate {
+        check(name != CommonPluginCoordinate.defaultName)
         return PluginCoordinate(name)
     }
 

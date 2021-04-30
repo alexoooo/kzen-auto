@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.report.spec.input
 
+import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.api.AttributeDefiner
@@ -14,10 +15,9 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.InsertAllListItemsInAttributeCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveAllListItemsInAttributeCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.platform.ClassName
 
 
 data class InputSpec(
@@ -71,6 +71,57 @@ data class InputSpec(
                 InputSelectionSpec.locationsAttributePath,
                 paths.map { it.asNotation() },
                 false
+            )
+        }
+
+
+        fun selectDataTypeCommand(
+            mainLocation: ObjectLocation,
+            dataType: ClassName
+        ): UpdateInAttributeCommand {
+            return UpdateInAttributeCommand(
+                mainLocation,
+                InputSelectionSpec.dataTypeAttributePath,
+                ScalarAttributeNotation(dataType.asString())
+            )
+        }
+
+
+        fun selectFormatCommand(
+            mainLocation: ObjectLocation,
+            inputSelectionSpec: InputSelectionSpec,
+            dataLocations: List<DataLocation>,
+            pluginCoordinate: CommonPluginCoordinate
+        ): UpdateAllNestingsInAttributeCommand {
+            val specDataLocations = inputSelectionSpec.locations.map { it.location }
+            val dataLocationIndexes = dataLocations.map { specDataLocations.indexOf(it) }
+            val dataLocationCoordinateNestings = dataLocationIndexes.map { InputDataSpec.coordinateNesting(it) }
+
+            return UpdateAllNestingsInAttributeCommand(
+                mainLocation,
+                ReportConventions.inputAttributeName,
+                dataLocationCoordinateNestings,
+                ScalarAttributeNotation(pluginCoordinate.asString())
+            )
+        }
+
+
+        fun selectMultiFormatCommand(
+            mainLocation: ObjectLocation,
+            inputSelectionSpec: InputSelectionSpec,
+            locationFormats: Map<DataLocation, CommonPluginCoordinate>
+        ): UpdateAllValuesInAttributeCommand {
+            val specDataLocations = inputSelectionSpec.locations.map { it.location }
+
+            val nestingNotations = locationFormats.map {
+                InputDataSpec.coordinateNesting(specDataLocations.indexOf(it.key)) to
+                        ScalarAttributeNotation(it.value.asString())
+            }.toMap()
+
+            return UpdateAllValuesInAttributeCommand(
+                mainLocation,
+                ReportConventions.inputAttributeName,
+                nestingNotations
             )
         }
     }

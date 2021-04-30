@@ -266,36 +266,34 @@ class ReportOutputView(
                 }
             }
 
-//            if (! state.savingOpen) {
-                child(MaterialButton::class) {
-                    attrs {
-                        variant = "outlined"
-                        size = "small"
+            child(MaterialButton::class) {
+                attrs {
+                    variant = "outlined"
+                    size = "small"
 
-                        onClick = {
-                            onSaveToggle()
-                        }
-
-                        style = reactStyle {
-                            marginLeft = 1.em
-
-                            if (state.savingOpen) {
-                                backgroundColor = Color.darkGray
-                            }
-                        }
+                    onClick = {
+                        onSaveToggle()
                     }
 
-                    child(SaveIcon::class) {
-                        attrs {
-                            style = reactStyle {
-                                marginRight = 0.25.em
-                            }
+                    style = reactStyle {
+                        marginLeft = 1.em
+
+                        if (state.savingOpen) {
+                            backgroundColor = Color.darkGray
                         }
                     }
-
-                    +"Save"
                 }
-//            }
+
+                child(SaveIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            marginRight = 0.25.em
+                        }
+                    }
+                }
+
+                +"Save"
+            }
         }
 
         child(MaterialButton::class) {
@@ -324,6 +322,8 @@ class ReportOutputView(
                     }
                 }
             }
+
+            +"Settings"
         }
     }
 

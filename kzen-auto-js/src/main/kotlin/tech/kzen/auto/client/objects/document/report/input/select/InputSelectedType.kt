@@ -4,16 +4,15 @@ import kotlinx.browser.document
 import kotlinx.css.em
 import kotlinx.css.fontSize
 import kotlinx.css.width
-import react.RBuilder
-import react.RProps
-import react.RPureComponent
-import react.RState
-import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
-import tech.kzen.auto.client.objects.document.report.state.ReportState
+import react.*
+import tech.kzen.auto.client.objects.document.report.state.*
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.MaterialInputLabel
 import tech.kzen.auto.client.wrap.ReactSelect
 import tech.kzen.auto.client.wrap.ReactSelectOption
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.lib.platform.ClassName
+import tech.kzen.lib.platform.ClassNames.topLevelWords
 import kotlin.js.Json
 import kotlin.js.json
 
@@ -32,7 +31,60 @@ class InputSelectedType(
 
 
     interface State: RState {
-//        var showFolders: Boolean
+        var loadedDataTypes: List<ClassName>?
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: Props) {
+        loadedDataTypes = null
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun loadIfRequired() {
+        if (state.loadedDataTypes != null) {
+            return
+        }
+
+        async {
+            val effects = props.dispatcher.dispatch(PluginDataTypesRequest)
+
+            val dataTypes = effects.filterIsInstance<PluginDataTypesResult>().first().dataTypes
+                ?: return@async
+
+            setState {
+                loadedDataTypes = dataTypes
+            }
+        }
+    }
+
+
+    private fun onValueChange(classNameValue: String) {
+        val dataType = props.reportState.inputSpec().selection.dataType
+        if (dataType.asString() == classNameValue) {
+            return
+        }
+
+        val className = ClassName(classNameValue)
+
+        props.dispatcher.dispatchAsync(InputsSelectionDataTypeRequest(className))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun typeLabel(className: ClassName): String {
+        val words = className.topLevelWords()
+
+        val adjustedWords =
+            if (words.size > 1 && words.last() == "Record") {
+                words.subList(0, words.size - 1)
+            }
+            else {
+                words
+            }
+
+        return adjustedWords.joinToString(" ")
     }
 
 
@@ -46,7 +98,7 @@ class InputSelectedType(
 
                 style = reactStyle {
                     fontSize = 0.8.em
-                    width = 14.em
+                    width = 16.em
                 }
             }
 
@@ -54,13 +106,15 @@ class InputSelectedType(
         }
 
         val dataType = props.reportState.inputSpec().selection.dataType
-        val className = dataType.get()
-        val dataTypeLabel = className.substringAfterLast(".")
+        val selectedOption = ReactSelectOption(dataType.asString(), typeLabel(dataType))
 
-        val classNamesLabels = listOf(
-            ReactSelectOption(className, dataTypeLabel))
+        val loadedDataTypes = state.loadedDataTypes
 
-//        +"[Type: $dataTypeLabel]"
+        val classNamesLabels =
+            loadedDataTypes?.map {
+                ReactSelectOption(it.asString(), typeLabel(it))
+            }
+            ?: listOf(selectedOption)
 
         val selectOptions = classNamesLabels
             .toTypedArray()
@@ -70,14 +124,17 @@ class InputSelectedType(
                 id = selectId
 
 //                value = selectOptions.find { it.value == state.selectedColumn }
-                value = classNamesLabels[0]
+                value = selectedOption
 
                 options = selectOptions
 //                options = optionsArray
 
                 onChange = {
-//                    console.log("^^^^^ selected: $it")
-//                    onColumnSelected(it.value)
+                    onValueChange(it.value)
+                }
+
+                onMenuOpen = {
+                    loadIfRequired()
                 }
 
                 isDisabled = props.editDisabled

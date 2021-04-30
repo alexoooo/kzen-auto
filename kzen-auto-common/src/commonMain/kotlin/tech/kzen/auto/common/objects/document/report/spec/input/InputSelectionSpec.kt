@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.report.spec.input
 
+import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
@@ -12,10 +13,15 @@ data class InputSelectionSpec(
 ) {
     companion object {
         private val dataTypeKey = AttributeSegment.ofKey("dataType")
-//        val dataTypeAttributePath = InputSpec.selectionAttributePath.nest(dataTypeKey)
+        val dataTypeAttributePath = InputSpec.selectionAttributePath.nest(dataTypeKey)
 
         private val locationsKey = AttributeSegment.ofKey("locations")
         val locationsAttributePath = InputSpec.selectionAttributePath.nest(locationsKey)
+
+
+        fun locationNesting(index: Int): AttributeNesting {
+            return locationsAttributePath.nest(AttributeSegment.ofIndex(index)).nesting
+        }
 
 
         fun ofNotation(mapAttributeNotation: MapAttributeNotation): InputSelectionSpec {

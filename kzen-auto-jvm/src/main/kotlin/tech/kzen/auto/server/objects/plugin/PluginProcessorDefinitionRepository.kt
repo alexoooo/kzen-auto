@@ -130,10 +130,9 @@ class PluginProcessorDefinitionRepository(
 
 
     @Synchronized
-    override fun metadata(coordinate: PluginCoordinate): ProcessorDefinitionMetadata {
+    override fun metadata(coordinate: PluginCoordinate): ProcessorDefinitionMetadata? {
         refreshCacheIfRequired()
         return metadataByCoordinateCache[coordinate]?.metadata
-            ?: throw IllegalArgumentException("Name found: $coordinate")
     }
 
 

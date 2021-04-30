@@ -16,6 +16,7 @@ import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.platform.encodeURIComponent
 import tech.kzen.lib.client.ClientJsonUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentName
@@ -234,6 +235,46 @@ class ClientRestApi(
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 CommonRestApi.paramAttributePath to attributePath.asString(),
                 CommonRestApi.paramAttributeNotation to unparsedAttributeNotation)
+    }
+
+
+    suspend fun updateAllNestingsInAttribute(
+        objectLocation: ObjectLocation,
+        attributeName: AttributeName,
+        attributeNestings: List<AttributeNesting>,
+        unparsedAttributeNotation: String
+    ): Digest {
+        val attributeNestingPairs = attributeNestings
+            .map { CommonRestApi.paramAttributeNesting to it.asString() }
+
+        return getOrPutDigest(
+            CommonRestApi.commandAttributeUpdateAllNestingsIn,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributeName to attributeName.asString(),
+            CommonRestApi.paramAttributeNotation to unparsedAttributeNotation,
+            * attributeNestingPairs.toTypedArray())
+    }
+
+
+    suspend fun updateAllValuesInAttribute(
+        objectLocation: ObjectLocation,
+        attributeName: AttributeName,
+        nestingUnparsedNotations: Map<AttributeNesting, String>
+    ): Digest {
+        val nestingUnparsedNotationPairs =
+            nestingUnparsedNotations.flatMap {
+                listOf(
+                    CommonRestApi.paramAttributeNesting to it.key.asString(),
+                    CommonRestApi.paramAttributeNotation to it.value)
+            }
+
+        return getOrPutDigest(
+            CommonRestApi.commandAttributeUpdateAllValuesIn,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributeName to attributeName.asString(),
+            * nestingUnparsedNotationPairs.toTypedArray())
     }
 
 

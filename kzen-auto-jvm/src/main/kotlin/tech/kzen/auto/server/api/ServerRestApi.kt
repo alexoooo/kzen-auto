@@ -29,6 +29,10 @@ class ServerRestApi(
 
         GET(CommonRestApi.commandAttributeUpsert, counterHandler::upsertAttribute)
         GET(CommonRestApi.commandAttributeUpdateIn, counterHandler::updateInAttribute)
+        GET(CommonRestApi.commandAttributeUpdateAllNestingsIn, counterHandler::updateAllNestingsInAttributeGet)
+        PUT(CommonRestApi.commandAttributeUpdateAllNestingsIn, counterHandler::updateAllNestingsInAttributePut)
+        GET(CommonRestApi.commandAttributeUpdateAllValuesIn, counterHandler::updateAllValuesInAttributeGet)
+        PUT(CommonRestApi.commandAttributeUpdateAllValuesIn, counterHandler::updateAllValuesInAttributePut)
         GET(CommonRestApi.commandAttributeInsertItemIn, counterHandler::insertListItemInAttribute)
         GET(CommonRestApi.commandAttributeInsertAllItemsIn, counterHandler::insertAllListItemsInAttributeGet)
         PUT(CommonRestApi.commandAttributeInsertAllItemsIn, counterHandler::insertAllListItemsInAttributePut)

@@ -107,16 +107,23 @@ class ReportDocument(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun datasetInfo(): DatasetInfo {
+    private fun datasetInfo(): DatasetInfo? {
         val items = mutableListOf<FlatDataInfo>()
         for (inputDataSpec in input.selection.locations) {
             val dataLocation = inputDataSpec.location
-            val dataEncoding = ReportUtils.encoding(inputDataSpec)
+
+            val processorDefinitionMetadata = ServerContext.definitionRepository.metadata(
+                inputDataSpec.processorDefinitionCoordinate.asPluginCoordinate())
+                ?: return null
+
+            val dataEncoding = ReportUtils.encodingWithMetadata(inputDataSpec, processorDefinitionMetadata)
+
             val dataLocationInfo = FlatDataLocation(
                 dataLocation, dataEncoding)
 
-            val cachedHeaderListing = ServerContext.columnListingAction.cachedHeaderListing(dataLocation)
             val pluginCoordinate = inputDataSpec.processorDefinitionCoordinate.asPluginCoordinate()
+            val cachedHeaderListing = ServerContext.columnListingAction.cachedHeaderListing(
+                dataLocation, pluginCoordinate)
 
             val headerListing = cachedHeaderListing
                 ?: run {
@@ -127,7 +134,8 @@ class ReportDocument(
                             FlatDataHeaderDefinition(
                                 dataLocationInfo,
                                 FileFlatDataSource(),
-                                it)
+                                it),
+                            pluginCoordinate
                         )
                     }
                 }
@@ -140,7 +148,7 @@ class ReportDocument(
 
     private fun runSpec(): ReportRunSpec? {
         val datasetInfo = datasetInfo()
-//            ?: return null
+            ?: return null
 
 //        val columnNames = ServerContext.columnListingAction.columnNames(datasetInfo)
 
@@ -192,7 +200,7 @@ class ReportDocument(
 
     private fun actionColumnListing(): ExecutionResult {
         val inputPaths = datasetInfo()
-//            ?: return ExecutionFailure("Please provide a valid input path")
+            ?: return ExecutionFailure("Please provide a valid inputs")
 
         val columnNames = inputPaths.headerSuperset().values
         return ExecutionSuccess.ofValue(

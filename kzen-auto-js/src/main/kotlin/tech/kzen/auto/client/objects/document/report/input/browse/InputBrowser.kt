@@ -274,89 +274,102 @@ class InputBrowser(
         val selectedRemoveCount = existingSelectedPaths().size
 
         styledDiv {
-            child(MaterialButton::class) {
-                attrs {
-                    variant = "outlined"
-                    size = "small"
+            styledDiv {
+                css {
+                    minWidth = 8.em
+                    display = Display.inlineBlock
+                }
 
-                    style = reactStyle {
-                        marginRight = 1.em
+                child(MaterialButton::class) {
+                    attrs {
+                        variant = "outlined"
+                        size = "small"
+
+                        style = reactStyle {
+                            marginRight = 1.em
+                        }
+
+                        onClick = {
+                            onAddToSelection()
+                        }
+
+                        if (selectedAddCount == 0) {
+                            disabled = true
+                            title =
+                                if (state.selected.isEmpty()) {
+                                    "No files selected"
+                                }
+                                else {
+                                    "No new files selected"
+                                }
+                        }
+                        else if (props.editDisabled) {
+                            disabled = true
+                            title = "Disabled while running"
+                        }
                     }
 
-                    onClick = {
-                        onAddToSelection()
+                    child(AddCircleOutlineIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                marginRight = 0.25.em
+                            }
+                        }
                     }
 
                     if (selectedAddCount == 0) {
-                        disabled = true
-                        title =
-                            if (state.selected.isEmpty()) {
-                                "No files selected"
-                            }
-                            else {
-                                "No new files selected"
-                            }
+                        +"Add"
                     }
-                    else if (props.editDisabled) {
-                        disabled = true
-                        title = "Disabled while running"
+                    else {
+                        +"Add ($selectedAddCount)"
                     }
-                }
-
-                child(AddCircleOutlineIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            marginRight = 0.25.em
-                        }
-                    }
-                }
-
-                if (selectedAddCount == 0) {
-                    +"Add"
-                }
-                else {
-                    +"Add ($selectedAddCount files)"
                 }
             }
 
-            child(MaterialButton::class) {
-                attrs {
-                    variant = "outlined"
-                    size = "small"
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+                }
 
-                    onClick = {
-                        onRemoveFromSelection()
+                child(MaterialButton::class) {
+                    attrs {
+                        variant = "outlined"
+                        size = "small"
+
+                        onClick = {
+                            onRemoveFromSelection()
+                        }
+
+                        if (selectedRemoveCount == 0) {
+                            disabled = true
+                            title =
+                                if (state.selected.isEmpty()) {
+                                    "No files selected"
+                                }
+                                else {
+                                    "No existing files selected"
+                                }
+                        }
+                        else if (props.editDisabled) {
+                            disabled = true
+                            title = "Disabled while running"
+                        }
+                    }
+
+                    child(RemoveCircleOutlineIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                marginRight = 0.25.em
+                            }
+                        }
                     }
 
                     if (selectedRemoveCount == 0) {
-                        disabled = true
-                        title =
-                            if (state.selected.isEmpty()) {
-                                "No files selected"
-                            }
-                            else {
-                                "No existing files selected"
-                            }
+                        +"Remove"
                     }
-                    else if (props.editDisabled) {
-                        disabled = true
-                        title = "Disabled while running"
+                    else {
+                        +"Remove ($selectedRemoveCount)"
                     }
-                }
-
-                child(RemoveCircleOutlineIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            marginRight = 0.25.em
-                        }
-                    }
-                }
-
-                if (selectedRemoveCount == 0) {
-                    +"Remove"
-                }
-                else {
-                    +"Remove ($selectedRemoveCount files)"
                 }
             }
 
