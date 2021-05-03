@@ -24,6 +24,24 @@ class ReportWorkPool(
 
         private val processSignatureKey = "process-signature"
         private val statusKey = "status"
+
+
+        fun deleteDir(tempDir: Path) {
+            try {
+                val toDelete = Files
+                    .walk(tempDir)
+                    .sorted(Comparator.reverseOrder())
+                    .toList()
+
+                for (path in toDelete) {
+                    Files.delete(path)
+                }
+            }
+            catch (e: Exception) {
+                logger.error("Unable to cleanup", e)
+                throw IOException(e)
+            }
+        }
     }
 
 
@@ -113,23 +131,5 @@ class ReportWorkPool(
         Files.write(
             dir.resolve(reportInfoFile),
             initialInfoYaml.toByteArray())
-    }
-
-
-    fun deleteDir(tempDir: Path) {
-        try {
-            val toDelete = Files
-                .walk(tempDir)
-                .sorted(Comparator.reverseOrder())
-                .toList()
-
-            for (path in toDelete) {
-                Files.delete(path)
-            }
-        }
-        catch (e: Exception) {
-            logger.error("Unable to cleanup", e)
-            throw IOException(e)
-        }
     }
 }

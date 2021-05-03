@@ -37,9 +37,11 @@ class WorkUtils(
         return base
     }
 
+
     fun resolve(relativePath: String): Path {
         return resolve(Path.of(relativePath))
     }
+
 
     fun resolve(relativePath: Path): Path {
         check(! relativePath.isAbsolute)

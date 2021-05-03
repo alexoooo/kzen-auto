@@ -116,10 +116,10 @@ class ReportProgressTracker(
                     0
 
                 endTime == Instant.DISTANT_PAST ->
-                    (clock.now() - startTime).toLongMilliseconds()
+                    (clock.now() - startTime).inWholeMilliseconds
 
                 else ->
-                    (endTime - startTime).toLongMilliseconds()
+                    (endTime - startTime).inWholeMilliseconds
             }
         }
     }
@@ -127,8 +127,7 @@ class ReportProgressTracker(
 
     //-----------------------------------------------------------------------------------------------------------------
     private val buffers = dataLocations
-        .map { it to Buffer(it) }
-        .toMap()
+        .associateWith { Buffer(it) }
 
     @Volatile private var currentOutputCount = 0L
 

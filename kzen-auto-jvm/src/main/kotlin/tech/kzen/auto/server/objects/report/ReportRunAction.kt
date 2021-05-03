@@ -102,7 +102,7 @@ class ReportRunAction(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun outputSave(
+    fun outputSave(
         runSpec: ReportRunSpec,
         runDir: Path,
         outputSpec: OutputSpec
@@ -141,11 +141,11 @@ class ReportRunAction(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun delete(
+    fun delete(
         runDir: Path
     ): ExecutionResult {
         return try {
-            reportWorkPool.deleteDir(runDir)
+            ReportWorkPool.deleteDir(runDir)
             ExecutionSuccess.empty
         }
         catch (e: Exception) {
@@ -155,7 +155,7 @@ class ReportRunAction(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun startReport(
+    fun startReport(
         reportRunSpec: ReportRunSpec,
         runDir: Path,
         taskHandle: TaskHandle
@@ -200,7 +200,7 @@ class ReportRunAction(
 
             taskHandle.completeWithPartialResult()
         }
-        catch (e: Exception) {
+        catch (e: Throwable) {
             logger.warn("Data processing failed", e)
 
             reportWorkPool.updateRunStatus(runDir, OutputStatus.Failed)

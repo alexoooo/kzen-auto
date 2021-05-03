@@ -113,7 +113,7 @@ class CachedKotlinCompiler(
             return null
         }
 
-        reportWorkPool.deleteDir(codeDir)
+        ReportWorkPool.deleteDir(codeDir)
         return tryCompileNew(kotlinCode, codeDir)
     }
 

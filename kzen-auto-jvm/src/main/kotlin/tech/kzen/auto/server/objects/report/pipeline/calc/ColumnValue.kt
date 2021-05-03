@@ -158,6 +158,10 @@ class ColumnValue(
         get() = text == "NaN"
 
 
+    val isBlank: Boolean
+        get() = isBlank()
+
+
     //-----------------------------------------------------------------------------------------------------------------
     operator fun plus(that: Number): ColumnValue {
         val thisNumber = toDoubleOrNan()

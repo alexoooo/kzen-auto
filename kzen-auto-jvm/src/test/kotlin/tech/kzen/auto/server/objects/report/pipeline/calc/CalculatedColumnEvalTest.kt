@@ -8,11 +8,28 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHe
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
 import tech.kzen.auto.server.util.WorkUtils
-import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.assertEquals
 
 
 class CalculatedColumnEvalTest {
+    //-----------------------------------------------------------------------------------------------------------------
+//    private var workUtils: WorkUtils? = null
+//    private var calculatedColumnEval: CalculatedColumnEval? = null
+//
+//
+//    @BeforeClass
+//    fun init() {
+//        workUtils = WorkUtils.temporary("CachedKotlinCompiler")
+//        calculatedColumnEval = calculatedColumnEval(workUtils!!)
+//    }
+//
+//
+//    @AfterClass
+//    fun cleanup() {
+//        ReportWorkPool.deleteDir(workUtils?.base()!!)
+//    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun twoPlusTwoIsFour() {
@@ -380,7 +397,8 @@ class CalculatedColumnEvalTest {
         aValue: String = "",
         bValue: String = ""
     ) {
-        val calculatedColumnEval = calculatedColumnEval()
+        val workUtils = WorkUtils.temporary("CachedKotlinCompiler")
+        val calculatedColumnEval = calculatedColumnEval(workUtils)
 
         val columnNames = listOf("a", "b")
         val calculatedColumn = calculatedColumnEval.create(
@@ -396,10 +414,8 @@ class CalculatedColumnEvalTest {
     }
 
 
-    @OptIn(ExperimentalPathApi::class)
-    private fun calculatedColumnEval(): CalculatedColumnEval {
+    private fun calculatedColumnEval(workUtils: WorkUtils): CalculatedColumnEval {
         val kotlinCompiler = EmbeddedKotlinCompiler()
-        val workUtils = WorkUtils.temporary("CachedKotlinCompiler")
         val reportWorkPool = ReportWorkPool(workUtils)
         val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, reportWorkPool, workUtils)
         return CalculatedColumnEval(cachedKotlinCompiler)
