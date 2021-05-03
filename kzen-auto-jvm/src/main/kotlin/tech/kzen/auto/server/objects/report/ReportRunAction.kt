@@ -191,7 +191,7 @@ class ReportRunAction(
         try {
             reportHandle.run()
 
-            if (taskHandle.cancelRequested()) {
+            if (taskHandle.stopRequested()) {
                 reportWorkPool.updateRunStatus(runDir, OutputStatus.Cancelled)
             }
             else {

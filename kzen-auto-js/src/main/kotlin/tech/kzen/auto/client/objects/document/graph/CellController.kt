@@ -15,7 +15,6 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescri
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 
 class CellController(
         props: Props

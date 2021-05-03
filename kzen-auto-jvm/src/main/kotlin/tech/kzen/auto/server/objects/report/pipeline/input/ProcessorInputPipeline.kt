@@ -8,6 +8,8 @@ import com.lmax.disruptor.dsl.ProducerType
 import com.lmax.disruptor.util.DaemonThreadFactory
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
+import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.model.DataBlockBuffer
 import tech.kzen.auto.plugin.model.DataInputEvent
@@ -32,7 +34,8 @@ class ProcessorInputPipeline<Output>(
     private val processorDataInstance: ProcessorDataInstance<Output>,
     private val dataEncodingSpec: DataEncodingSpec,
     private val headerListing: HeaderListing,
-    private val streamProgressTracker: ReportProgressTracker.Buffer
+    private val streamProgressTracker: ReportProgressTracker.Buffer,
+    private val taskHandle: TaskHandle
 ):
     AutoCloseable
 {
@@ -172,15 +175,33 @@ class ProcessorInputPipeline<Output>(
     private fun <T> loggingExceptionHandler(name: String): ExceptionHandler<T> {
         return object : ExceptionHandler<T> {
             override fun handleEventException(ex: Throwable, sequence: Long, event: T) {
-                logger.error("$name event - {}", event, ex)
+                if (taskHandle.isFailed()) {
+                    return
+                }
+
+                logger.error("{} event - {}", name, event, ex)
+                taskHandle.terminalFailure(ExecutionFailure.ofException(
+                    "$name event - $event - ", ex))
             }
 
             override fun handleOnStartException(ex: Throwable) {
-                logger.error("$name start", ex)
+                if (taskHandle.isFailed()) {
+                    return
+                }
+
+                logger.error("{} start", name, ex)
+                taskHandle.terminalFailure(ExecutionFailure.ofException(
+                    "$name start - ", ex))
             }
 
             override fun handleOnShutdownException(ex: Throwable) {
-                logger.error("$name shutdown", ex)
+                if (taskHandle.isFailed()) {
+                    return
+                }
+
+                logger.error("{} shutdown", name, ex)
+                taskHandle.terminalFailure(ExecutionFailure.ofException(
+                    "$name shutdown - ", ex))
             }
         }
     }

@@ -58,6 +58,10 @@ data class ExecutionFailure(
 ): ExecutionResult() {
     companion object {
         fun ofException(throwable: Throwable): ExecutionFailure {
+            return ofException("", throwable)
+        }
+
+        fun ofException(userMessage: String, throwable: Throwable): ExecutionFailure {
             val errorName = throwable::class
                 .simpleName
                 ?.removeSuffix("Exception")
@@ -79,9 +83,10 @@ data class ExecutionFailure(
                     message ?: "exception"
                 }
 
-            return ExecutionFailure(fullMessage)
+            return ExecutionFailure(userMessage + fullMessage)
         }
     }
+
 
     override fun toJsonCollection(): Map<String, Any?> {
         return mapOf(

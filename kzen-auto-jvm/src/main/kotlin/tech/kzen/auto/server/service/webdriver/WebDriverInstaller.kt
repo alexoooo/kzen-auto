@@ -1,12 +1,17 @@
 package tech.kzen.auto.server.service.webdriver
 
 import com.google.common.io.ByteStreams
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.server.service.DownloadClient
 import tech.kzen.auto.server.service.webdriver.model.BrowserLauncher
 import tech.kzen.auto.server.service.webdriver.model.DownloadFormat
 import tech.kzen.auto.server.service.webdriver.model.WebDriverOption
+import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
+import java.io.FileOutputStream
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -14,13 +19,6 @@ import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermission
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
-import java.io.BufferedOutputStream
-import java.io.FileOutputStream
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
-
-
 
 
 // see: https://github.com/Ardesco/selenium-standalone-server-plugin

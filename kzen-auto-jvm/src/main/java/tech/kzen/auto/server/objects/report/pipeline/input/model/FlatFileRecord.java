@@ -14,7 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 
 
-public class FlatDataRecord
+public class FlatFileRecord
         implements FlatRecordBuilder
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -25,24 +25,24 @@ public class FlatDataRecord
         return Double.doubleToRawLongBits(value) == missingNumberBits;
     }
 
-    public static final ClassName className = new ClassName(FlatDataRecord.class.getName());
+    public static final ClassName className = new ClassName(FlatFileRecord.class.getName());
 
 
-    public static FlatDataRecord of(String... values) {
+    public static FlatFileRecord of(String... values) {
         return of(Arrays.asList(values));
     }
 
 
-    public static FlatDataRecord of(List<String> values) {
-        FlatDataRecord buffer = new FlatDataRecord(0, 0);
+    public static FlatFileRecord of(List<String> values) {
+        FlatFileRecord buffer = new FlatFileRecord(0, 0);
         buffer.addAll(values);
         buffer.populateCaches();
         return buffer;
     }
 
 
-    public static FlatDataRecord ofSingle(char[] contents, int offset, int length) {
-        FlatDataRecord buffer = new FlatDataRecord(length, 1);
+    public static FlatFileRecord ofSingle(char[] contents, int offset, int length) {
+        FlatFileRecord buffer = new FlatFileRecord(length, 1);
         System.arraycopy(contents, offset, buffer.fieldContents, 0, length);
         buffer.fieldCount = 1;
         buffer.fieldEnds[0] = length;
@@ -69,13 +69,13 @@ public class FlatDataRecord
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    public FlatDataRecord()
+    public FlatFileRecord()
     {
         this(0, 0);
     }
 
 
-    public FlatDataRecord(int expectedContentLength, int expectedFieldCount)
+    public FlatFileRecord(int expectedContentLength, int expectedFieldCount)
     {
         fieldContents = new char[expectedContentLength];
         fieldEnds = new int[expectedFieldCount];
@@ -401,7 +401,7 @@ public class FlatDataRecord
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    public void copy(FlatDataRecord that) {
+    public void copy(FlatFileRecord that) {
         int previousFieldCount = fieldCount;
 
         fieldCount = that.fieldCount;
@@ -422,7 +422,7 @@ public class FlatDataRecord
     }
 
 
-    public void clone(FlatDataRecord that) {
+    public void clone(FlatFileRecord that) {
         fieldCount = that.fieldCount;
         fieldContentLength = that.fieldContentLength;
         nonEmpty = that.nonEmpty;
@@ -436,8 +436,8 @@ public class FlatDataRecord
     }
 
 
-    public FlatDataRecord prototype() {
-        FlatDataRecord prototype = new FlatDataRecord(0, 0);
+    public FlatFileRecord prototype() {
+        FlatFileRecord prototype = new FlatFileRecord(0, 0);
         prototype.copy(this);
         return prototype;
     }

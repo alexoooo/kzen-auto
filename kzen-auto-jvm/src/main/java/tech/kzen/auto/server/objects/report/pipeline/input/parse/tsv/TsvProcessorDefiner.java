@@ -8,7 +8,7 @@ import tech.kzen.auto.plugin.model.PluginCoordinate;
 import tech.kzen.auto.plugin.spec.DataEncodingSpec;
 import tech.kzen.auto.plugin.spec.TextEncodingSpec;
 import tech.kzen.auto.server.objects.report.pipeline.input.ProcessorInputChain;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord;
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FirstRecordItemHeaderExtractor;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatPipelineHandoff;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProcessorEvent;
@@ -19,7 +19,7 @@ import java.util.List;
 
 
 public class TsvProcessorDefiner
-        implements ProcessorDefiner<FlatDataRecord>
+        implements ProcessorDefiner<FlatFileRecord>
 {
     //-----------------------------------------------------------------------------------------------------------------
     private static final DataEncodingSpec dataEncoding = new DataEncodingSpec(
@@ -45,19 +45,19 @@ public class TsvProcessorDefiner
 //    }
 
 
-    public static List<FlatDataRecord> literal(String text, int dataBlockSize) {
+    public static List<FlatFileRecord> literal(String text, int dataBlockSize) {
         byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
         return literal(textBytes, StandardCharsets.UTF_8, dataBlockSize);
     }
 
 
-    public static List<FlatDataRecord> literal(
+    public static List<FlatFileRecord> literal(
             byte[] textBytes, Charset charset, int dataBlockSize
     ) {
         return ProcessorInputChain.Companion.readAll(
                 textBytes,
                 instance.defineData(),
-                FlatDataRecord::prototype,
+                FlatFileRecord::prototype,
                 charset,
                 dataBlockSize);
     }
@@ -74,7 +74,7 @@ public class TsvProcessorDefiner
     //-----------------------------------------------------------------------------------------------------------------
     @NotNull
     @Override
-    public ProcessorDefinition<FlatDataRecord> define() {
+    public ProcessorDefinition<FlatFileRecord> define() {
         return new ProcessorDefinition<>(
                 defineData(),
                 FirstRecordItemHeaderExtractor::new,
@@ -82,18 +82,18 @@ public class TsvProcessorDefiner
     }
 
 
-    private ProcessorDataDefinition<FlatDataRecord> defineData() {
+    private ProcessorDataDefinition<FlatFileRecord> defineData() {
         return new ProcessorDataDefinition<>(
                 TsvLineDataFramer::new,
-                FlatDataRecord.class,
+                FlatFileRecord.class,
                 List.of(defineSegment()));
     }
 
 
-    private ProcessorSegmentDefinition<FlatProcessorEvent, ModelOutputEvent<FlatDataRecord>> defineSegment() {
+    private ProcessorSegmentDefinition<FlatProcessorEvent, ModelOutputEvent<FlatFileRecord>> defineSegment() {
         return new ProcessorSegmentDefinition<>(
                 FlatProcessorEvent::new,
-                FlatDataRecord.class,
+                FlatFileRecord.class,
                 List.of(
                         TsvPipelineLexer::new,
                         TsvPipelineParser::new

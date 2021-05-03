@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse.csv;
 
 import tech.kzen.auto.plugin.api.PipelineIntermediateStep;
 import tech.kzen.auto.plugin.model.RecordDataBuffer;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord;
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProcessorEvent;
 
 
@@ -23,14 +23,14 @@ public class CsvPipelineParser
 //        }
 
         RecordDataBuffer data = model.getData();
-        FlatDataRecord flatDataRecord = model.model;
-        flatDataRecord.clearCache();
+        FlatFileRecord flatFileRecord = model.model;
+        flatFileRecord.clearCache();
 
         char[] contentChars = data.chars;
         int charsLength = data.charsLength;
 
-        char[] fieldContents = flatDataRecord.fieldContentsUnsafe();
-        int[] fieldEnds = flatDataRecord.fieldEndsUnsafe();
+        char[] fieldContents = flatFileRecord.fieldContentsUnsafe();
+        int[] fieldEnds = flatFileRecord.fieldEndsUnsafe();
 
         int nextFieldCount = 0;
         int nextFieldContentLength = 0;
@@ -63,9 +63,9 @@ public class CsvPipelineParser
         }
 
         if (charsLength > 0) {
-            flatDataRecord.indicateNonEmpty();
+            flatFileRecord.indicateNonEmpty();
         }
         fieldEnds[nextFieldCount++] = nextFieldContentLength;
-        flatDataRecord.setCountAndLengthUnsafe(nextFieldCount, nextFieldContentLength);
+        flatFileRecord.setCountAndLengthUnsafe(nextFieldCount, nextFieldContentLength);
     }
 }

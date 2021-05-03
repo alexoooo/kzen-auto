@@ -6,10 +6,10 @@ import kotlinx.coroutines.withContext
 import tech.kzen.auto.common.objects.document.report.summary.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
 import tech.kzen.auto.server.objects.report.pipeline.summary.model.ValueSummaryBuilder
 import tech.kzen.auto.server.util.AutoJvmUtils
@@ -40,7 +40,7 @@ class ReportSummary(
 
         //-------------------------------------------------------------------------------------------------------------
         private fun toCsv(csv: List<List<String>>): String {
-            return csv.joinToString("\n") { FlatDataRecord.of(it).toCsv() }
+            return csv.joinToString("\n") { FlatFileRecord.of(it).toCsv() }
         }
 
 
@@ -119,7 +119,7 @@ class ReportSummary(
     }
 
 
-    private suspend fun save() {
+    private fun save() {
         for (i in headerIndex.columnHeaders.values.indices) {
             val columnName = headerIndex.columnHeaders.values[i]
             val columnDir = columnDir(columnName)
@@ -132,7 +132,7 @@ class ReportSummary(
     }
 
 
-    private suspend fun saveValueSummary(
+    private fun saveValueSummary(
         valueSummary: ColumnSummary,
         columnDir: Path
     ) {
@@ -145,7 +145,7 @@ class ReportSummary(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun saveNominal(
+    private fun saveNominal(
         valueSummary: ColumnSummary,
         columnDir: Path
     ) {
@@ -157,9 +157,7 @@ class ReportSummary(
         val nominalFileCsv = valueSummary.nominalValueSummary.toCsv()
         val nominalFileContent = toCsv(nominalFileCsv)
 
-        withContext(Dispatchers.IO) {
-            Files.writeString(nominalFile, nominalFileContent)
-        }
+        Files.writeString(nominalFile, nominalFileContent)
     }
 
 
@@ -182,7 +180,7 @@ class ReportSummary(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun saveNumeric(
+    private fun saveNumeric(
         valueSummary: ColumnSummary,
         columnDir: Path
     ) {
@@ -194,9 +192,7 @@ class ReportSummary(
         val numericFileCsv = valueSummary.numericValueSummary.asCsv()
         val numericFileContent = toCsv(numericFileCsv)
 
-        withContext(Dispatchers.IO) {
-            Files.writeString(numericFile, numericFileContent)
-        }
+        Files.writeString(numericFile, numericFileContent)
     }
 
 
@@ -220,7 +216,7 @@ class ReportSummary(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun saveSummary(
+    private fun saveSummary(
         valueSummary: ColumnSummary,
         columnDir: Path
     ) {
@@ -229,10 +225,8 @@ class ReportSummary(
         val summaryFileContent = "Measure,Value\n" +
                 "count," + valueSummary.count
 
-        withContext(Dispatchers.IO) {
-            Files.createDirectories(columnDir)
-            Files.writeString(summaryFile, summaryFileContent)
-        }
+        Files.createDirectories(columnDir)
+        Files.writeString(summaryFile, summaryFileContent)
     }
 
 
@@ -258,7 +252,7 @@ class ReportSummary(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun saveOpaque(
+    private fun saveOpaque(
         valueSummary: ColumnSummary,
         columnDir: Path
     ) {
@@ -270,9 +264,7 @@ class ReportSummary(
         val opaqueFileCsv = valueSummary.opaqueValueSummary.toCsv()
         val opaqueFileContent = toCsv(opaqueFileCsv)
 
-        withContext(Dispatchers.IO) {
-            Files.writeString(opaqueFile, opaqueFileContent)
-        }
+        Files.writeString(opaqueFile, opaqueFileContent)
     }
 
 
@@ -351,7 +343,7 @@ class ReportSummary(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordRow: FlatDataRecord, header: RecordHeader) {
+    fun add(recordRow: FlatFileRecord, header: RecordHeader) {
         flyweight.selectHost(recordRow);
 
         val indices = headerIndex.indices(header)
@@ -370,9 +362,7 @@ class ReportSummary(
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
         if (taskHandle != null) {
-            runBlocking {
-                save()
-            }
+            save()
         }
     }
 }

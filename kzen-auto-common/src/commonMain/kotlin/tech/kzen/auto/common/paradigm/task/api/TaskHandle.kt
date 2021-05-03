@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.paradigm.task.api
 
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 
@@ -13,12 +14,19 @@ interface TaskHandle {
     fun update(updater: (ExecutionSuccess?) -> ExecutionSuccess)
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    fun cancelRequested(): Boolean
+    fun terminalFailure(error: ExecutionFailure)
 
-    fun completeCancelled()
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun stopRequested(): Boolean
+
+    fun isFailed(): Boolean
 
     fun isTerminated(): Boolean
+
+
+    fun awaitTerminal()
+
 
     //-----------------------------------------------------------------------------------------------------------------
 //    fun processRequests(processor: (DetachedRequest) -> ExecutionResult)

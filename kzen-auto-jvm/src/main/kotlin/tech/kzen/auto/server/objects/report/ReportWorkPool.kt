@@ -7,7 +7,6 @@ import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.util.yaml.YamlMap
 import tech.kzen.lib.common.util.yaml.YamlNode
 import tech.kzen.lib.common.util.yaml.YamlParser
-import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -119,10 +118,14 @@ class ReportWorkPool(
 
     fun deleteDir(tempDir: Path) {
         try {
-            Files.walk(tempDir)
+            val toDelete = Files
+                .walk(tempDir)
                 .sorted(Comparator.reverseOrder())
-                .map(Path::toFile)
-                .forEach(File::delete)
+                .toList()
+
+            for (path in toDelete) {
+                Files.delete(path)
+            }
         }
         catch (e: Exception) {
             logger.error("Unable to cleanup", e)

@@ -1,11 +1,11 @@
 package tech.kzen.auto.server.objects.report.pipeline.input
 
 import org.junit.Test
+import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatDataSource
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataLocation
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv.TsvProcessorDefiner
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorHeaderReader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataLocation
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
-import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatDataSource
 import kotlin.test.assertEquals
 
 

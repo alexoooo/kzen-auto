@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.wrap
 
-import kotlinx.css.*
+import kotlinx.css.CSSBuilder
+import kotlinx.css.RuleSet
 import kotlin.js.Json
 import kotlin.js.json
 

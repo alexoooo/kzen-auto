@@ -146,9 +146,6 @@ class ReportRun(
                         props.reportState.isLoadingError() || ! readyToRun ->
                             "Please specify valid input"
 
-//                        props.reportState.indexTaskRunning ->
-//                            "Pause index"
-
                         props.reportState.taskRunning ->
                             "Cancel"
 
@@ -156,8 +153,8 @@ class ReportRun(
                             "Reset"
 
                         else ->
-                            "Play"
-//                            "Run"
+//                            "Play"
+                            "Run"
                     }
             }
 
@@ -209,16 +206,6 @@ class ReportRun(
                         }
                     }
                 }
-//
-//                else -> {
-//                    child(MenuBookIcon::class) {
-//                        attrs {
-//                            style = reactStyle {
-//                                fontSize = 3.em
-//                            }
-//                        }
-//                    }
-//                }
             }
         }
     }

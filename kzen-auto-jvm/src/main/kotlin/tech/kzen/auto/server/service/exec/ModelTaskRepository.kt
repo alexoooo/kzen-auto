@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.service.exec
 
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
@@ -78,7 +79,7 @@ class ModelTaskRepository(
         val activeDeletedModel =
             active.values.find { it.model().taskLocation.documentPath == event.documentPath }
         if (activeDeletedModel != null) {
-            activeDeletedModel.requestCancel()
+            activeDeletedModel.requestStop()
             activeDeletedModel.awaitTerminal()
             terminated.remove(activeDeletedModel.model().taskId)
         }
@@ -158,7 +159,7 @@ class ModelTaskRepository(
         val handle = active.remove(taskId)
             ?: return terminated[taskId]
 
-        handle.requestCancel()
+        handle.requestStop()
         handle.awaitTerminal()
 
         return handle.model()
@@ -205,13 +206,14 @@ class ModelTaskRepository(
         var run: TaskRun? = null
     ): TaskHandle {
         private var cancelRequested = AtomicBoolean(false)
+        private var errorReported = AtomicBoolean(false)
         private val completeLatch = CountDownLatch(1)
 
-//        private val requestQueue = LinkedTransferQueue<RequestHandle>()
 
         fun model(): TaskModel {
             return model.get()
         }
+
 
         fun updateModel(updater: (TaskModel) -> TaskModel) {
             while (true) {
@@ -226,11 +228,29 @@ class ModelTaskRepository(
         }
 
 
-        override fun completeWithPartialResult() {
-            val result = model().partialResult
-                ?: error("partial result missing")
+        fun updateModelNonTerminal(updater: (TaskModel) -> TaskModel) {
+            while (! stopRequested() && ! isTerminated()) {
+                val value = model.get()
+                val updated = updater(value)
+                val success = model.compareAndSet(value, updated)
 
-            complete(result)
+                if (success) {
+                    break
+                }
+            }
+        }
+
+
+        override fun completeWithPartialResult() {
+            if (isFailed()) {
+                terminate()
+            }
+            else {
+                val result = model().partialResult
+                    ?: error("partial result missing")
+
+                complete(result)
+            }
         }
 
 
@@ -246,18 +266,8 @@ class ModelTaskRepository(
         }
 
 
-        override fun completeCancelled() {
-            updateModel { snapshot ->
-                snapshot.copy(
-                    state = TaskState.Cancelled)
-            }
-
-            terminate()
-        }
-
-
         override fun update(partialResult: ExecutionSuccess) {
-            updateModel { snapshot ->
+            updateModelNonTerminal { snapshot ->
                 snapshot.copy(
                     partialResult = partialResult)
             }
@@ -265,7 +275,7 @@ class ModelTaskRepository(
 
 
         override fun update(updater: (ExecutionSuccess?) -> ExecutionSuccess) {
-            updateModel { snapshot ->
+            updateModelNonTerminal { snapshot ->
                 val nextPartialResult = updater(snapshot.partialResult)
                 snapshot.copy(
                     partialResult = nextPartialResult)
@@ -273,8 +283,28 @@ class ModelTaskRepository(
         }
 
 
-        override fun cancelRequested(): Boolean {
-            return cancelRequested.get()
+        override fun terminalFailure(error: ExecutionFailure) {
+            val previouslyReported = errorReported.getAndSet(true)
+            if (previouslyReported) {
+                return
+            }
+
+            updateModel { snapshot ->
+                snapshot.copy(
+                    partialResult = null,
+                    finalResult = error,
+                    state = TaskState.FinishedOrFailed)
+            }
+        }
+
+
+        override fun isFailed(): Boolean {
+            return errorReported.get()
+        }
+
+
+        override fun stopRequested(): Boolean {
+            return cancelRequested.get() || errorReported.get()
         }
 
 
@@ -284,6 +314,10 @@ class ModelTaskRepository(
 
 
         private fun terminate() {
+            check(! isTerminated()) {
+                "Already terminated"
+            }
+
             run?.close()
 
             val snapshot = model()
@@ -295,12 +329,12 @@ class ModelTaskRepository(
         }
 
 
-        fun requestCancel() {
+        fun requestStop() {
             cancelRequested.set(true)
         }
 
 
-        fun awaitTerminal() {
+        override fun awaitTerminal() {
             try {
                 completeLatch.await()
             }

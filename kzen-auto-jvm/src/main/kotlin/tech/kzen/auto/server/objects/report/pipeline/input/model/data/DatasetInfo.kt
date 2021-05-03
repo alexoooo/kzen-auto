@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.model.data
 
-import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
 

@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.service
 
+import kotlinx.browser.window
 import tech.kzen.auto.client.codegen.KzenAutoJsModule
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
@@ -22,7 +23,6 @@ import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.common.service.store.DirectGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
-import kotlinx.browser.window
 
 
 object ClientContext {

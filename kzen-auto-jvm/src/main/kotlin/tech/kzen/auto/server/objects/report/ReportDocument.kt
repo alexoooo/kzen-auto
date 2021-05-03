@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report
 
+import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
@@ -56,6 +57,12 @@ class ReportDocument(
     DetachedDownloadAction,
     ManagedTask
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val logger = LoggerFactory.getLogger(ReportDocument::class.java)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun execute(request: DetachedRequest): ExecutionResult {
         val action = request.parameters.get(ReportConventions.actionParameter)
@@ -341,20 +348,23 @@ class ReportDocument(
             return null
         }
 
-        when (action) {
-//            ProcessConventions.actionSummaryTask -> {
-//                val runSignature = runSpec.toSignature()
-//                actionColumnSummaryAsync(runSignature, handle)
-//            }
-
+        return when (action) {
             ReportConventions.actionRunTask -> {
-                return actionRunReport(runSpec, handle)
+                try {
+                    actionRunReport(runSpec, handle)
+                }
+                catch (e: Exception) {
+                    logger.warn("Unable to start", e)
+                    handle.complete(ExecutionFailure.ofException(
+                        "Unable to start - ", e))
+                    null
+                }
             }
 
             else -> {
                 handle.complete(ExecutionFailure(
                     "Unknown action: $action"))
-                return null
+                null
             }
         }
     }

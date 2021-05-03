@@ -2,9 +2,9 @@ package tech.kzen.auto.server.objects.report.pipeline.input.connect.file
 
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.FilePathJvm.toPath
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataLocation
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatDataSource
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatDataStream
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataLocation
 import java.nio.file.Files
 
 

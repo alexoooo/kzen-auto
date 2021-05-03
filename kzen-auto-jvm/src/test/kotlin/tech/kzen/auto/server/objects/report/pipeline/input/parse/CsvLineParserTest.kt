@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import org.junit.Test
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -234,7 +234,7 @@ class CsvLineParserTest {
     @Test
     fun literalItemBufferEmptySuffix() {
         val csvLines = "400,"
-        val literal = FlatDataRecord.of("400", "")
+        val literal = FlatFileRecord.of("400", "")
         val parsed = read(csvLines)[0]
         assertEquals(listOf("400", ""), literal.toList())
         assertEquals(csvLines, literal.toCsv())
@@ -246,7 +246,7 @@ class CsvLineParserTest {
     @Test
     fun literalItemBufferEmptyPrefix() {
         val csvLines = ",400"
-        val literal = FlatDataRecord.of("", "400")
+        val literal = FlatFileRecord.of("", "400")
         val parsed = read(csvLines)[0]
         assertEquals(listOf("", "400"), literal.toList())
         assertEquals(csvLines, literal.toCsv())
@@ -484,7 +484,7 @@ class CsvLineParserTest {
     private fun read(
         text: String,
         bufferSize: Int = text.encodeToByteArray().size
-    ): List<FlatDataRecord> {
+    ): List<FlatFileRecord> {
 //        return ReportInputChain.allCsv(text, bufferSize)
         return CsvProcessorDefiner.literal(text, bufferSize)
     }

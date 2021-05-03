@@ -4,12 +4,12 @@ import com.google.common.base.Stopwatch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.objects.document.report.progress.ReportFileProgress
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.util.FormatUtils
+import tech.kzen.auto.common.util.data.DataLocation
 import java.util.concurrent.TimeUnit
 import kotlin.time.ExperimentalTime
 
@@ -183,26 +183,41 @@ class ReportProgressTracker(
 
     private fun publishAndLogStarted(locationKey: DataLocation, totalSize: Long) {
         val published = publishUpdate()
-        val message = published.inputs[locationKey]!!.toMessage(totalSize)
-        logger.info("Started {} ({}) - {}", locationKey, FormatUtils.decimalSeparator(totalSize), message)
+        if (published == null) {
+            logger.info("Started after error: {}", locationKey)
+        }
+        else {
+            val message = published.inputs[locationKey]!!.toMessage(totalSize)
+            logger.info("Started {} ({}) - {}", locationKey, FormatUtils.decimalSeparator(totalSize), message)
+        }
     }
 
 
     private fun publishAndLogFinished(locationKey: DataLocation, totalSize: Long) {
         val published = publishUpdate()
-        val message = published.inputs[locationKey]!!.toMessage(totalSize)
-        logger.info("Finished {} - {}", locationKey, message)
+        if (published == null) {
+            logger.info("Finished after error: {}", locationKey)
+        }
+        else {
+            val message = published.inputs[locationKey]!!.toMessage(totalSize)
+            logger.info("Finished {} - {}", locationKey, message)
+        }
     }
 
 
     private fun publishAndLogProcessed(locationKey: DataLocation, totalSize: Long) {
         val published = publishUpdate()
-        val message = published.inputs[locationKey]!!.toMessage(totalSize)
-        logger.info("{} - {}", locationKey, message)
+        if (published == null) {
+            logger.info("Progress after error: {}", locationKey)
+        }
+        else {
+            val message = published.inputs[locationKey]!!.toMessage(totalSize)
+            logger.info("{} - {}", locationKey, message)
+        }
     }
 
 
-    private fun publishUpdate(): ReportProgress {
+    private fun publishUpdate(): ReportProgress? {
         var published: ReportProgress? = null
         taskHandle!!.update { previous ->
             val current = current()
@@ -210,6 +225,6 @@ class ReportProgressTracker(
             previous!!.withDetail(ExecutionValue.of(
                 current.toTaskProgress().toCollection()))
         }
-        return published!!
+        return published
     }
 }

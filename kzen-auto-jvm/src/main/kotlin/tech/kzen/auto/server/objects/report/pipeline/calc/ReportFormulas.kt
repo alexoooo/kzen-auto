@@ -1,9 +1,9 @@
 package tech.kzen.auto.server.objects.report.pipeline.calc
 
 import tech.kzen.auto.server.objects.report.model.ReportFormulaSignature
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
 
 
 class ReportFormulas(
@@ -47,7 +47,7 @@ class ReportFormulas(
     }
 
 
-    fun evaluate(row: FlatDataRecord, headerBuffer: RecordHeaderBuffer) {
+    fun evaluate(row: FlatFileRecord, headerBuffer: RecordHeaderBuffer) {
         val header = headerBuffer.value
         getFormulasAndAugmentHeader(header)
         headerBuffer.value = augmentedHeader!!

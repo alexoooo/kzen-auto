@@ -1,14 +1,15 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.flat
 
+import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
+import tech.kzen.auto.server.objects.report.pipeline.input.ProcessorInputChain
+import tech.kzen.auto.server.objects.report.pipeline.input.connect.InputStreamFlatDataStream
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
-import tech.kzen.auto.server.objects.report.pipeline.input.ProcessorInputChain
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
-import tech.kzen.auto.server.objects.report.pipeline.input.connect.InputStreamFlatDataStream
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.FileOffsetStore
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.StoreUtils
@@ -28,6 +29,8 @@ class IndexedCsvTable(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        private val logger = LoggerFactory.getLogger(IndexedCsvTable::class.java)
+
         val tableFile: Path = Path.of("table.csv")
         private val offsetFile = Path.of("index.bin")
 
@@ -68,8 +71,10 @@ class IndexedCsvTable(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
+//        logger.info("Open {}", tablePath, RuntimeException())
+
         if (offsetStore.size() == 0L) {
-            bufferWriter.write(FlatDataRecord.of(header.values).toCsv())
+            bufferWriter.write(FlatFileRecord.of(header.values).toCsv())
             bufferWriter.write(lineBreak)
             bufferWriter.flush()
 
@@ -92,7 +97,7 @@ class IndexedCsvTable(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordRow: FlatDataRecord, recordHeader: RecordHeader) {
+    fun add(recordRow: FlatFileRecord, recordHeader: RecordHeader) {
         val indices = headerIndex.indices(recordHeader)
 
         var first = true
@@ -201,7 +206,7 @@ class IndexedCsvTable(
     }
 
 
-    private fun handleChannelProcessorInputChain(): ProcessorInputChain<FlatDataRecord> {
+    private fun handleChannelProcessorInputChain(): ProcessorInputChain<FlatFileRecord> {
         val flatDataStream = InputStreamFlatDataStream(
             Channels.newInputStream(handle.channel))
 
@@ -228,5 +233,7 @@ class IndexedCsvTable(
         flushPending()
         handle.close()
         offsetStore.close()
+
+//        logger.info("Close {}", tablePath)
     }
 }

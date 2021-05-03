@@ -7,11 +7,11 @@ import tech.kzen.auto.plugin.model.ModelOutputEvent;
 import tech.kzen.auto.plugin.model.PluginCoordinate;
 import tech.kzen.auto.plugin.spec.DataEncodingSpec;
 import tech.kzen.auto.plugin.spec.TextEncodingSpec;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord;
+import tech.kzen.auto.server.objects.report.pipeline.input.ProcessorInputChain;
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FirstRecordItemHeaderExtractor;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatPipelineHandoff;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProcessorEvent;
-import tech.kzen.auto.server.objects.report.pipeline.input.ProcessorInputChain;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -19,7 +19,7 @@ import java.util.List;
 
 
 public class CsvProcessorDefiner
-        implements ProcessorDefiner<FlatDataRecord>
+        implements ProcessorDefiner<FlatFileRecord>
 {
     //-----------------------------------------------------------------------------------------------------------------
     private static final DataEncodingSpec dataEncoding = new DataEncodingSpec(
@@ -39,25 +39,25 @@ public class CsvProcessorDefiner
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    public static List<FlatDataRecord> literal(String text) {
+    public static List<FlatFileRecord> literal(String text) {
         byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
         return literal(textBytes, StandardCharsets.UTF_8, textBytes.length);
     }
 
 
-    public static List<FlatDataRecord> literal(String text, int dataBlockSize) {
+    public static List<FlatFileRecord> literal(String text, int dataBlockSize) {
         byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
         return literal(textBytes, StandardCharsets.UTF_8, dataBlockSize);
     }
 
 
-    public static List<FlatDataRecord> literal(
+    public static List<FlatFileRecord> literal(
             byte[] textBytes, Charset charset, int dataBlockSize
     ) {
         return ProcessorInputChain.Companion.readAll(
                 textBytes,
                 instance.defineData(),
-                FlatDataRecord::prototype,
+                FlatFileRecord::prototype,
                 charset,
                 dataBlockSize);
     }
@@ -74,7 +74,7 @@ public class CsvProcessorDefiner
     //-----------------------------------------------------------------------------------------------------------------
     @NotNull
     @Override
-    public ProcessorDefinition<FlatDataRecord> define() {
+    public ProcessorDefinition<FlatFileRecord> define() {
         return new ProcessorDefinition<>(
                 defineData(),
                 FirstRecordItemHeaderExtractor::new,
@@ -82,18 +82,18 @@ public class CsvProcessorDefiner
     }
 
 
-    private ProcessorDataDefinition<FlatDataRecord> defineData() {
+    private ProcessorDataDefinition<FlatFileRecord> defineData() {
         return new ProcessorDataDefinition<>(
                 CsvDataFramer::new,
-                FlatDataRecord.class,
+                FlatFileRecord.class,
                 List.of(defineSegment()));
     }
 
 
-    private ProcessorSegmentDefinition<FlatProcessorEvent, ModelOutputEvent<FlatDataRecord>> defineSegment() {
+    private ProcessorSegmentDefinition<FlatProcessorEvent, ModelOutputEvent<FlatFileRecord>> defineSegment() {
         return new ProcessorSegmentDefinition<>(
                 FlatProcessorEvent::new,
-                FlatDataRecord.class,
+                FlatFileRecord.class,
                 List.of(
                         CsvPipelineLexer::new,
                         CsvPipelineParser::new

@@ -1,8 +1,5 @@
 package tech.kzen.auto.client.wrap
 
-import kotlinext.js.jsObject
-import react.*
-
 
 // https://github.com/JetBrains/kotlin-wrappers/issues/61
 //abstract class RPureComponent<P: RProps, S: RState>: PureComponent<P, S> {

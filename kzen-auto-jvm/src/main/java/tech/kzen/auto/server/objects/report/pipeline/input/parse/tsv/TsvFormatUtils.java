@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv;
 
 
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord;
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -14,10 +14,10 @@ public enum TsvFormatUtils {;
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    public static String toTsv(FlatDataRecord flatDataRecord) {
+    public static String toTsv(FlatFileRecord flatFileRecord) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
-            writeTsv(flatDataRecord, writer);
+            writeTsv(flatFileRecord, writer);
         }
         catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -26,10 +26,10 @@ public enum TsvFormatUtils {;
     }
 
 
-    private static void writeTsv(FlatDataRecord flatDataRecord, Writer out) throws IOException {
-        int fieldCount = flatDataRecord.fieldCount();
-        int fieldContentLength = flatDataRecord.fieldContentLength();
-        boolean nonEmpty = ! flatDataRecord.isEmpty();
+    private static void writeTsv(FlatFileRecord flatFileRecord, Writer out) throws IOException {
+        int fieldCount = flatFileRecord.fieldCount();
+        int fieldContentLength = flatFileRecord.fieldContentLength();
+        boolean nonEmpty = ! flatFileRecord.isEmpty();
 
         if (fieldCount == 1 && fieldContentLength == 0 && nonEmpty) {
             throw new IllegalStateException("Can't represent non-empty record with single empty column");
@@ -40,16 +40,16 @@ public enum TsvFormatUtils {;
                 out.write(TsvFormatUtils.delimiterInt);
             }
 
-            writeTsvField(flatDataRecord, i, out);
+            writeTsvField(flatFileRecord, i, out);
         }
     }
 
 
     private static void writeTsvField(
-            FlatDataRecord flatDataRecord, int fieldIndex, Writer out
+            FlatFileRecord flatFileRecord, int fieldIndex, Writer out
     ) throws IOException {
-        int startIndex = flatDataRecord.contentStart(fieldIndex);
-        int length = flatDataRecord.contentEnd(fieldIndex) - startIndex;
-        out.write(flatDataRecord.fieldContentsUnsafe(), startIndex, length);
+        int startIndex = flatFileRecord.contentStart(fieldIndex);
+        int length = flatFileRecord.contentEnd(fieldIndex) - startIndex;
+        out.write(flatFileRecord.fieldContentsUnsafe(), startIndex, length);
     }
 }

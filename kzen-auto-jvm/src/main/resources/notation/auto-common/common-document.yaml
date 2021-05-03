@@ -83,7 +83,7 @@ Report:
       directory: ./
       filter: ""
     selection:
-      dataType: tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
+      dataType: tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
       locations: []
   formula: {}
   filter: {}

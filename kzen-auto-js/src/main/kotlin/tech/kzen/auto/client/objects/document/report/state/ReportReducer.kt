@@ -52,8 +52,11 @@ object ReportReducer {
             ReportResetAction ->
                 state
 
-            is ReportResetResult ->
-                state.copy(reportProgress = null)
+            is ReportResetResult -> state.copy(
+                reportProgress = null,
+                taskError = null,
+                tableSummaryError = null,
+                outputError = null)
 
             is ReportPluginAction ->
                 state

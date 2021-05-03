@@ -8,10 +8,11 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
-import tech.kzen.auto.plugin.definition.ProcessorDataDefinition
+import tech.kzen.auto.plugin.definition.ProcessorDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.model.ReportRunSpec
@@ -66,7 +67,7 @@ class ProcessorDatasetPipeline(
             reportWorkPool: ReportWorkPool
         ): OutputInfo {
             return ofPassive(reportRunSpec, runDir, reportWorkPool).use {
-                it.outputPreview(reportRunSpec, outputSpec)
+                it.outputPreview(reportRunSpec, outputSpec)!!
             }
         }
 
@@ -76,7 +77,7 @@ class ProcessorDatasetPipeline(
             runDir: Path,
             outputSpec: OutputSpec,
             reportWorkPool: ReportWorkPool
-        ): Path? {
+        ): Path {
             return ofPassive(reportRunSpec, runDir, reportWorkPool).use {
                 it.outputSave(reportRunSpec, outputSpec)
             }
@@ -126,29 +127,32 @@ class ProcessorDatasetPipeline(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun run() {
-        val datasetDefinition = datasetDefinition<Any>()
+        val handle = taskHandle!!
 
-        val recordDisruptor = setupRecordDisruptor()
-        recordDisruptor.start()
+        datasetDefinition<Any>().use { datasetDefinition ->
+            val recordDisruptor = setupRecordDisruptor()
+            recordDisruptor.start()
 
-        val recordDisruptorInput = DisruptorPipelineOutput(recordDisruptor.ringBuffer)
+            val recordDisruptorInput = DisruptorPipelineOutput(recordDisruptor.ringBuffer)
 
-        for (flatDataContentDefinition in datasetDefinition.items) {
-            runFlatData(recordDisruptorInput, flatDataContentDefinition)
+            for (flatDataContentDefinition in datasetDefinition.items) {
+                runFlatData(recordDisruptorInput, flatDataContentDefinition, handle)
 
-            if (taskHandle!!.cancelRequested()) {
-                break
+                if (handle.stopRequested()) {
+                    break
+                }
             }
-        }
 
-        recordDisruptor.shutdown()
-        progressTracker.finish()
+            recordDisruptor.shutdown()
+            progressTracker.finish()
+        }
     }
 
 
     private fun <T> runFlatData(
         recordDisruptorInput: PipelineOutput<ProcessorOutputEvent<T>>,
-        flatDataContentDefinition: FlatDataContentDefinition<T>
+        flatDataContentDefinition: FlatDataContentDefinition<T>,
+        handle: TaskHandle
     ) {
         val flatDataStream = flatDataContentDefinition.open()
         val totalSize = flatDataContentDefinition.size()
@@ -157,7 +161,8 @@ class ProcessorDatasetPipeline(
         val streamProgressTracker = progressTracker.getInitial(flatDataLocation.dataLocation, totalSize)
 
         val processorInputReader = ProcessorInputReader(flatDataStream, streamProgressTracker)
-        val processorDataInstance = ProcessorDataInstance(flatDataContentDefinition.processorDataDefinition)
+        val processorDataInstance = ProcessorDataInstance(
+            flatDataContentDefinition.processorDefinition.processorDataDefinition)
 
         val processorInputPipeline = ProcessorInputPipeline(
             processorInputReader,
@@ -165,12 +170,13 @@ class ProcessorDatasetPipeline(
             processorDataInstance,
             flatDataLocation.dataEncoding,
             flatDataContentDefinition.flatDataInfo.headerListing,
-            streamProgressTracker)
+            streamProgressTracker,
+            handle)
 
         processorInputPipeline.start()
         streamProgressTracker.startReading()
 
-        while (! taskHandle!!.cancelRequested()) {
+        while (! handle.stopRequested()) {
             val hasNext = processorInputPipeline.poll()
 
             if (! hasNext) {
@@ -185,32 +191,22 @@ class ProcessorDatasetPipeline(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun <T> datasetDefinition(): DatasetDefinition<T> {
-        val cache = mutableMapOf<PluginCoordinate, ProcessorDataDefinition<T>>()
+        val cache = mutableMapOf<PluginCoordinate, ProcessorDefinition<T>>()
         val builder = mutableListOf<FlatDataContentDefinition<T>>()
 
         for (flatDataInfo in initialReportRunSpec.datasetInfo.items) {
-            val flatDataLocation = flatDataInfo.flatDataLocation
-
             val processorPluginCoordinate = flatDataInfo.processorPluginCoordinate
-//            val signature = ProcessorDefinitionSignature(
-//                payloadType,
-//                flatDataLocation.dataLocation.innerExtension(),
-//                flatDataLocation.dataEncoding.isBinary()
-//            )
 
             val processorDataDefinition =
                 cache.getOrPut(processorPluginCoordinate) {
                     processorDataDefinition(processorPluginCoordinate)
-                        ?: throw IllegalStateException(
-                            "Processor not found: $flatDataLocation - $processorPluginCoordinate")
                 }
 
             builder.add(
                 FlatDataContentDefinition(
                     flatDataInfo,
                     FileFlatDataSource.instance,
-                    processorDataDefinition)
-            )
+                    processorDataDefinition))
         }
 
         return DatasetDefinition(builder)
@@ -219,11 +215,11 @@ class ProcessorDatasetPipeline(
 
     private fun <T> processorDataDefinition(
         processorDefinitionCoordinate: PluginCoordinate
-    ): ProcessorDataDefinition<T> {
+    ): ProcessorDefinition<T> {
         val definition = ServerContext.definitionRepository.define(processorDefinitionCoordinate)
 
         @Suppress("UNCHECKED_CAST")
-        return definition.processorDataDefinition as ProcessorDataDefinition<T>
+        return definition as ProcessorDefinition<T>
     }
 
 
@@ -244,16 +240,31 @@ class ProcessorDatasetPipeline(
             .then(summary, output)
 
         recordDisruptor.setDefaultExceptionHandler(object : ExceptionHandler<ProcessorOutputEvent<*>> {
-            override fun handleEventException(ex: Throwable?, sequence: Long, event: ProcessorOutputEvent<*>) {
+            override fun handleEventException(ex: Throwable, sequence: Long, event: ProcessorOutputEvent<*>) {
+                if (taskHandle?.isFailed() == true) {
+                    return
+                }
+
                 logger.error("Record event - {}", event.row, ex)
+                taskHandle?.terminalFailure(ExecutionFailure.ofException("Processing: ${event.row} - ", ex))
             }
 
-            override fun handleOnStartException(ex: Throwable?) {
+            override fun handleOnStartException(ex: Throwable) {
+                if (taskHandle?.isFailed() == true) {
+                    return
+                }
+
                 logger.error("Record start", ex)
+                taskHandle?.terminalFailure(ExecutionFailure.ofException("Startup - ", ex))
             }
 
-            override fun handleOnShutdownException(ex: Throwable?) {
+            override fun handleOnShutdownException(ex: Throwable) {
+                if (taskHandle?.isFailed() == true) {
+                    return
+                }
+
                 logger.error("Record shutdown", ex)
+                taskHandle?.terminalFailure(ExecutionFailure.ofException("Shutdown - ", ex))
             }
         })
 
@@ -265,12 +276,17 @@ class ProcessorDatasetPipeline(
     fun outputPreview(
         reportRunSpec: ReportRunSpec,
         outputSpec: OutputSpec
-    ): OutputInfo {
+    ): OutputInfo? {
+        if (taskHandle?.isFailed() == true) {
+            taskHandle.awaitTerminal()
+            return null
+        }
+
         return output.reportOutput.preview(reportRunSpec, outputSpec, reportWorkPool)
     }
 
 
-    private fun outputSave(reportRunSpec: ReportRunSpec, outputSpec: OutputSpec): Path? {
+    private fun outputSave(reportRunSpec: ReportRunSpec, outputSpec: OutputSpec): Path {
         return output.reportOutput.save(reportRunSpec, outputSpec)
     }
 
@@ -280,7 +296,11 @@ class ProcessorDatasetPipeline(
     }
 
 
-    fun summaryView(): TableSummary {
+    fun summaryView(): TableSummary? {
+        if (taskHandle?.isFailed() == true) {
+            taskHandle.awaitTerminal()
+            return null
+        }
         return summary.reportSummary.view()
     }
 

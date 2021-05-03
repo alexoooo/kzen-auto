@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.model.header
 import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap
 import it.unimi.dsi.fastutil.objects.Object2IntMap
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatDataRecord
+import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
 
 
 // TODO: better name
@@ -15,7 +15,7 @@ data class RecordHeader(
     companion object {
         const val missingIndex = -1
 
-        val empty = ofLine(FlatDataRecord())
+        val empty = ofLine(FlatFileRecord())
 
 
         fun of(headerListing: HeaderListing): RecordHeader {
@@ -24,11 +24,11 @@ data class RecordHeader(
 
 
         fun of(headerNames: List<String>): RecordHeader {
-            return ofLine(FlatDataRecord.of(headerNames))
+            return ofLine(FlatFileRecord.of(headerNames))
         }
 
 
-        fun ofLine(recordLineBuffer: FlatDataRecord): RecordHeader {
+        fun ofLine(recordLineBuffer: FlatFileRecord): RecordHeader {
             val headerNames = recordLineBuffer.toList()
 
             val headerIndex = Object2IntLinkedOpenHashMap<String>(headerNames.size)
