@@ -133,18 +133,21 @@ class ProcessorDatasetPipeline(
             val recordDisruptor = setupRecordDisruptor()
             recordDisruptor.start()
 
-            val recordDisruptorInput = DisruptorPipelineOutput(recordDisruptor.ringBuffer)
+            try {
+                val recordDisruptorInput = DisruptorPipelineOutput(recordDisruptor.ringBuffer)
 
-            for (flatDataContentDefinition in datasetDefinition.items) {
-                runFlatData(recordDisruptorInput, flatDataContentDefinition, handle)
+                for (flatDataContentDefinition in datasetDefinition.items) {
+                    runFlatData(recordDisruptorInput, flatDataContentDefinition, handle)
 
-                if (handle.stopRequested()) {
-                    break
+                    if (handle.stopRequested()) {
+                        break
+                    }
                 }
             }
-
-            recordDisruptor.shutdown()
-            progressTracker.finish()
+            finally {
+                recordDisruptor.shutdown()
+                progressTracker.finish()
+            }
         }
     }
 
@@ -174,18 +177,21 @@ class ProcessorDatasetPipeline(
             handle)
 
         processorInputPipeline.start()
-        streamProgressTracker.startReading()
+        try {
+            streamProgressTracker.startReading()
 
-        while (! handle.stopRequested()) {
-            val hasNext = processorInputPipeline.poll()
+            while (! handle.stopRequested()) {
+                val hasNext = processorInputPipeline.poll()
 
-            if (! hasNext) {
-                break
+                if (! hasNext) {
+                    break
+                }
             }
         }
-
-        processorInputPipeline.close()
-        streamProgressTracker.finishParsing()
+        finally {
+            processorInputPipeline.close()
+            streamProgressTracker.finishParsing()
+        }
     }
 
 

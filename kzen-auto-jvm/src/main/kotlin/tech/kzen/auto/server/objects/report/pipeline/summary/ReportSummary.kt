@@ -334,8 +334,7 @@ class ReportSummary(
                 .columnHeaders
                 .values
                 .withIndex()
-                .map { it.value to builders[it.index].build() }
-                .toMap())
+                .associate { it.value to builders[it.index].build() })
 
         viewResponse.complete(tableSummary)
         viewRequested = false

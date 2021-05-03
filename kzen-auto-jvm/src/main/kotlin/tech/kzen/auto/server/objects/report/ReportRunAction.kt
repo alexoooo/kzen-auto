@@ -203,9 +203,10 @@ class ReportRunAction(
 
             reportWorkPool.updateRunStatus(runDir, OutputStatus.Failed)
 
-            taskHandle.complete(
-                ExecutionFailure(
-                    "Unable to process: ${e.message}"))
+            taskHandle.terminalFailure(ExecutionFailure.ofException(
+                "Unable to process - ", e))
+
+            taskHandle.completeWithPartialResult()
         }
     }
 }

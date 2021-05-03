@@ -72,6 +72,7 @@ class IndexedCsvTable(
     //-----------------------------------------------------------------------------------------------------------------
     init {
 //        logger.info("Open {}", tablePath, RuntimeException())
+        logger.info("Open {}", tablePath)
 
         if (offsetStore.size() == 0L) {
             bufferWriter.write(FlatFileRecord.of(header.values).toCsv())
@@ -234,6 +235,6 @@ class IndexedCsvTable(
         handle.close()
         offsetStore.close()
 
-//        logger.info("Close {}", tablePath)
+        logger.info("Close {}", tablePath)
     }
 }

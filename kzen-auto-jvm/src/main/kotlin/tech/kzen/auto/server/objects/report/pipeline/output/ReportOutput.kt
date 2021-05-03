@@ -228,8 +228,9 @@ class ReportOutput(
                     }
                     catch (e: TimeoutException) {
                         if (taskHandle.isTerminated()) {
-                            ReportOutput(reportRunSpec, runDir, null, null)
-                                .previewInCurrentThread(reportRunSpec, outputSpec, reportWorkPool)
+                            ReportOutput(reportRunSpec, runDir, null, null).use { reportOutput ->
+                                reportOutput.previewInCurrentThread(reportRunSpec, outputSpec, reportWorkPool)
+                            }
                         }
                         else {
                             continue

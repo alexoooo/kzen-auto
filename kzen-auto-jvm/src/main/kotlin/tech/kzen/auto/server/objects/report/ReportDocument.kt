@@ -299,7 +299,7 @@ class ReportDocument(
     }
 
 
-    private suspend fun actionSave(): ExecutionResult {
+    private fun actionSave(): ExecutionResult {
         val runSpec = runSpec()
             ?: return ExecutionFailure("Missing run")
 
@@ -310,7 +310,7 @@ class ReportDocument(
     }
 
 
-    private suspend fun actionReset(): ExecutionResult {
+    private fun actionReset(): ExecutionResult {
         val runSpec = runSpec()
             ?: return ExecutionFailure("Missing run")
 
@@ -370,7 +370,7 @@ class ReportDocument(
     }
 
 
-    private suspend fun actionRunReport(
+    private fun actionRunReport(
         runSpec: ReportRunSpec,
         handle: TaskHandle
     ): TaskRun {

@@ -76,6 +76,7 @@ tasks.getByName<Jar>("jar") {
     enabled = true
 }
 
+
 // https://discuss.kotlinlang.org/t/kotlin-compiler-embeddable-exception-on-kotlin-script-evaluation/6547/7
 // https://shareablecode.com/snippets/example-build-gradle-kt-to-build-a-shadow-jar-for-java-and-kotlin-application-ko-TYWV-i5yf
 tasks.named<ShadowJar>("shadowJar") {
