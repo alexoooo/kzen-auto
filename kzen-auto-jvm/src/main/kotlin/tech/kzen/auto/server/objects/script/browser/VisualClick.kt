@@ -30,8 +30,8 @@ class VisualClick(
 
         val element = targetLocation.webElement!!
 
-        if (element.tagName.toLowerCase() == "input" &&
-                element.getAttribute("type").toLowerCase() == "submit") {
+        if (element.tagName.lowercase() == "input" &&
+                element.getAttribute("type").lowercase() == "submit") {
             element.submit()
         }
         else {

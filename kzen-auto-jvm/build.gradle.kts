@@ -19,7 +19,6 @@ plugins {
 
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$coroutinesVersion")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
@@ -37,9 +36,6 @@ dependencies {
     implementation("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
     implementation("tech.kzen.lib:kzen-lib-jvm:$kzenLibVersion")
 
-    implementation("com.github.andrewoma.dexx:collection:$dexxVersion")
-
-    implementation(group = "com.google.guava", name = "guava", version = guavaVersion)
     implementation(group = "org.seleniumhq.selenium", name = "selenium-java", version = seleniumVersion)
     implementation(group = "org.apache.commons", name = "commons-compress", version = commonsCompressVersion)
     implementation(group = "it.unimi.dsi", name = "fastutil-core", version = fastutilVersion)
@@ -49,7 +45,6 @@ dependencies {
     implementation(group = "com.lmax", name = "disruptor", version = disruptorVersion)
     implementation(group = "com.sangupta", name = "bloomfilter", version = bloomFilterVersion)
 
-//    implementation("org.apache.commons:commons-csv:$commonsCsvVersion")
     implementation("commons-io:commons-io:$commonsIoVersion")
 
     implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion")
@@ -71,7 +66,6 @@ tasks.withType<ProcessResources> {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        useIR = true
         freeCompilerArgs = listOf("-Xjsr305=strict")
         jvmTarget = jvmTargetVersion
     }
@@ -89,7 +83,7 @@ tasks.named<ShadowJar>("shadowJar") {
     isZip64 = true
     mergeServiceFiles()
     manifest {
-        // For: MyApp.kt
+        // For: KzenAutoMain.kt
         attributes(mapOf("Main-Class" to "tech.kzen.auto.server.KzenAutoMainKt"))
     }
 }

@@ -8,7 +8,6 @@ kotlin {
         @Suppress("UNUSED_VARIABLE")
         val main by compilations.getting {
             kotlinOptions {
-//                useIR = true
                 jvmTarget = jvmTargetVersion
             }
         }
@@ -33,11 +32,8 @@ kotlin {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
                 implementation("org.jetbrains:kotlin-css:$kotlinCssVersion")
-//                implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:$serializationVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-//                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$coroutinesVersion")
+//                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
 
-//                implementation("tech.kzen.lib:kzen-lib-common-metadata:$kzenLibVersion")
                 implementation("tech.kzen.lib:kzen-lib-common:$kzenLibVersion")
             }
         }
@@ -57,7 +53,6 @@ kotlin {
 //                implementation(kotlin("stdlib-jdk8"))
                 implementation("ch.qos.logback:logback-classic:$logbackVersion")
                 implementation("org.jetbrains:kotlin-css-jvm:$kotlinCssVersion")
-//                implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationVersion")
                 implementation("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
             }
         }
@@ -76,7 +71,7 @@ kotlin {
             dependencies {
 //                implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-js:$serializationVersion")
                 implementation("tech.kzen.lib:kzen-lib-common-js:$kzenLibVersion")
-                implementation(npm("immutable", immutaleJsVersion))
+//                implementation(npm("immutable", immutaleJsVersion))
             }
         }
 

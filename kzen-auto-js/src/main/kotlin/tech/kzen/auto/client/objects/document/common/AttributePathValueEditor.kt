@@ -255,7 +255,8 @@ class AttributePathValueEditor(
                 props.attributePath.nesting.segments.last().asString()
             }
 
-        val upperCamelCase = defaultLabel.capitalize()
+        val upperCamelCase = defaultLabel
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
         val results = Regex("\\w+").findAll(upperCamelCase)
         val words = results.map { it.groups[0]!!.value }

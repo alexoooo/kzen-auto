@@ -8,11 +8,10 @@ import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPInputStream
-import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.name
 
 
-@OptIn(ExperimentalPathApi::class)
+//@OptIn(ExperimentalPathApi::class)
 class FileFlatDataStream constructor(
     location: Path,
     gzip: Boolean = location.name.endsWith(".gz"),

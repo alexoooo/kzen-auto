@@ -2,7 +2,6 @@ package tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.value.sto
 
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.FileOffsetStore
 import java.nio.file.Files
-import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -83,7 +82,7 @@ class FileOffsetStoreTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @OptIn(ExperimentalPathApi::class)
+//    @OptIn(ExperimentalPathApi::class)
     private fun use(consumer: (FileOffsetStore) -> Unit) {
         val file = kotlin.io.path.createTempFile("FileIndexedStoreOffsetTest")
 

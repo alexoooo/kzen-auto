@@ -90,7 +90,7 @@ class SidebarFolder(
                 .values
                 .keys
                 .filter { it.startsWith(documentBaseNesting) }
-                .sortedBy { it.asString().toLowerCase() }
+                .sortedBy { it.asString().lowercase() }
     }
 
 

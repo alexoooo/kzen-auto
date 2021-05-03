@@ -701,18 +701,18 @@ class InputBrowser(
     }
 
 
-    private fun RBuilder.renderSummary(browseDir: DataLocation?) {
-        styledDiv {
-            css {
-                height = 1.px
-                marginTop = (-4).px
-            }
-        }
-//        if (browseDir != null) {
-//            +browseDir
+//    private fun RBuilder.renderSummary(browseDir: DataLocation?) {
+//        styledDiv {
+//            css {
+//                height = 1.px
+//                marginTop = (-4).px
+//            }
 //        }
-//        else {
-//            +props.reportState.inputSpec().browser.directory
-//        }
-    }
+////        if (browseDir != null) {
+////            +browseDir
+////        }
+////        else {
+////            +props.reportState.inputSpec().browser.directory
+////        }
+//    }
 }

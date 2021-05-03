@@ -25,7 +25,6 @@ dependencies {
 
     implementation(project(":kzen-auto-common"))
 
-    implementation(npm("core-js", coreJsVersion))
     implementation("org.jetbrains.kotlinx:kotlinx-html-assembly:$kotlinxHtmlVersion")
     implementation("org.jetbrains:kotlin-react:$kotlinReactVersion")
     implementation("org.jetbrains:kotlin-react-dom:$kotlinReactDomVersion")

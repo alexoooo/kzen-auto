@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.paradigm.dataflow.service.visual
 
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
@@ -100,6 +101,8 @@ class VisualDataflowLoop(
     }
 
 
+    @Suppress("DeferredResultUnused")
+    @OptIn(DelicateCoroutinesApi::class)
     private suspend fun run(
             host: DocumentPath,
             next: ObjectLocation

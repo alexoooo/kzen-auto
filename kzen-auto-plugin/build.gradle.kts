@@ -15,7 +15,6 @@ dependencies {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        useIR = true
         freeCompilerArgs = listOf("-Xjsr305=strict")
         jvmTarget = jvmTargetVersion
     }

@@ -106,7 +106,7 @@ class IndexedCsvTable(
                 first = false
             }
             else {
-                bufferWriter.write(','.toInt())
+                bufferWriter.write(','.code)
             }
 
             if (i != -1) {

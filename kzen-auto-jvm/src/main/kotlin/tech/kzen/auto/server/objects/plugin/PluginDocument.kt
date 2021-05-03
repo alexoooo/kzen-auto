@@ -21,7 +21,6 @@ import java.net.JarURLConnection
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
-import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.isRegularFile
 
 
@@ -33,7 +32,7 @@ class PluginDocument(
     DetachedAction
 {
     //-----------------------------------------------------------------------------------------------------------------
-    @OptIn(ExperimentalPathApi::class)
+//    @OptIn(ExperimentalPathApi::class)
     private fun parseJarPath(): Path? {
         val parsedJarPath = FilePath.parse(jarPath)
             ?: return null

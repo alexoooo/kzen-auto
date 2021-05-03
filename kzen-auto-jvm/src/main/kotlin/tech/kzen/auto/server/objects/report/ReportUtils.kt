@@ -23,7 +23,7 @@ object ReportUtils {
     }
 
 
-    fun encodingWithoutMetadata(
+    private fun encodingWithoutMetadata(
         inputDataSpec: InputDataSpec
     ): DataEncodingSpec? {
         return null

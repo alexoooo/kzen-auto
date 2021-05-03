@@ -5,7 +5,6 @@ import tech.kzen.lib.common.util.Digest
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.LocalDateTime
-import kotlin.io.path.ExperimentalPathApi
 
 
 class WorkUtils(
@@ -19,7 +18,7 @@ class WorkUtils(
         val sibling = WorkUtils(Paths.get(
             "../work"))
 
-        @OptIn(ExperimentalPathApi::class)
+//        @OptIn(ExperimentalPathApi::class)
         fun temporary(name: String): WorkUtils {
             return WorkUtils(kotlin.io.path.createTempDirectory(name))
         }

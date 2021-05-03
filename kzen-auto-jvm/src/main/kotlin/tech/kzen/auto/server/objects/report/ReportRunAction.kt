@@ -107,16 +107,14 @@ class ReportRunAction(
         runDir: Path,
         outputSpec: OutputSpec
     ): ExecutionResult {
-        @Suppress("MoveVariableDeclarationIntoWhen")
-        val outPath = ProcessorDatasetPipeline.passiveSave(runSpec, runDir, outputSpec, reportWorkPool)
-
-        return when (outPath) {
-            null ->
-                ExecutionFailure("Not found: $runDir")
-
-            else -> ExecutionSuccess(
+        return try {
+            val outPath = ProcessorDatasetPipeline.passiveSave(runSpec, runDir, outputSpec, reportWorkPool)
+            ExecutionSuccess(
                 ExecutionValue.of(outPath.toString()),
                 NullExecutionValue)
+        }
+        catch (e: Exception) {
+            ExecutionFailure("Not found: $runDir")
         }
     }
 

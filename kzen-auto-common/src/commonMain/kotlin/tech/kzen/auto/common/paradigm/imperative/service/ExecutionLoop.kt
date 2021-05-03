@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.paradigm.imperative.service
 
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
@@ -120,6 +121,7 @@ class ExecutionLoop(
     }
 
 
+    @OptIn(DelicateCoroutinesApi::class)
     private suspend fun run(
             host: DocumentPath,
             next: ObjectLocation,

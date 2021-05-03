@@ -7,7 +7,6 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
-import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
@@ -88,7 +87,7 @@ class BifurcanDigestIndexTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @OptIn(ExperimentalPathApi::class)
+//    @OptIn(ExperimentalPathApi::class)
     private fun use(consumer: (BifurcanDigestIndex) -> Unit) {
         val dir = kotlin.io.path.createTempDirectory("BifurcanDigestIndex")
 

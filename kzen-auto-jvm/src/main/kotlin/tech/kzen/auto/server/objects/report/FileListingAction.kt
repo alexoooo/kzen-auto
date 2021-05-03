@@ -27,11 +27,11 @@ class FileListingAction {
         }
 
         val filterParts: List<String> = trimmedFilter
-            .toLowerCase()
+            .lowercase()
             .split(Regex("\\s+"))
 
         return { path: Path? ->
-            val normalizedPath = path!!.fileName.toString().toLowerCase()
+            val normalizedPath = path!!.fileName.toString().lowercase()
             filterParts.all { normalizedPath.contains(it) }
         }
     }

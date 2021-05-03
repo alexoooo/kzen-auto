@@ -4,7 +4,6 @@ import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.FileOffs
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -46,7 +45,7 @@ class FileIndexedTextStoreTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @OptIn(ExperimentalPathApi::class)
+//    @OptIn(ExperimentalPathApi::class)
     private fun use(consumer: (FileIndexedTextStore) -> Unit) {
         val workUtils = kotlin.io.path.createTempDirectory("FileIndexedTextStoreTest")
         val offsetFile = workUtils.resolve("offset")

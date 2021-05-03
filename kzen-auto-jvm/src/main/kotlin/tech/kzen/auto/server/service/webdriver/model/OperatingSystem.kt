@@ -12,7 +12,7 @@ enum class OperatingSystem(
     companion object {
         private fun find(osName: String): OperatingSystem {
             for (operatingSystemName in values()) {
-                if (osName.toLowerCase().contains(operatingSystemName.osIdentifier)) {
+                if (osName.lowercase().contains(operatingSystemName.osIdentifier)) {
                     return operatingSystemName
                 }
             }

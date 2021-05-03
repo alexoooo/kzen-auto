@@ -3,7 +3,6 @@ package tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.store
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.ValueStatistics
 import java.nio.file.Files
-import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -72,7 +71,7 @@ class FileValueStatisticsStoreTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @OptIn(ExperimentalPathApi::class)
+//    @OptIn(ExperimentalPathApi::class)
     private fun use(valueColumnCount: Int, consumer: (FileValueStatisticsStore) -> Unit) {
         val file = kotlin.io.path.createTempFile("FileValueStatisticsStore")
 

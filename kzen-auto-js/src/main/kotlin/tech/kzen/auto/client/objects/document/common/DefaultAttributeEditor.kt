@@ -109,7 +109,10 @@ class DefaultAttributeEditor(
             return labelOverride
         }
 
-        val upperCamelCase = props.attributeName.value.capitalize()
+        val upperCamelCase = props
+            .attributeName
+            .value
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
         val results = Regex("[A-Z][a-z]*").findAll(upperCamelCase)
         val words = results.map { it.groups[0]!!.value }
