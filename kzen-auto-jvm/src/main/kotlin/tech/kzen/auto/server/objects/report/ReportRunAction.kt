@@ -1,18 +1,20 @@
 package tech.kzen.auto.server.objects.report
 
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
+import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.server.objects.report.model.ReportFormulaSignature
-import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.ProcessorDatasetPipeline
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.util.AutoJvmUtils
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.DateTimeUtils
 import java.nio.file.Path
 
@@ -28,30 +30,24 @@ class ReportRunAction(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun formulaValidation(
-//        objectLocation: ObjectLocation,
-        formulaSignature: ReportFormulaSignature//,
-//        runDir: Path
+    fun formulaValidation(
+        formulaSpec: FormulaSpec,
+        flatHeaderListing: HeaderListing,
+        modelType: ClassName,
+        classLoader: ClassLoader
     ): ExecutionResult {
-        val errors: Map<String, String> = formulaSignature
-            .formula
+        val errors: Map<String, String> = formulaSpec
             .formulas
             .mapValues { formula ->
                 ServerContext.calculatedColumnEval.validate(
-                    formula.key, formula.value, formulaSignature.columnNames)
+                    formula.key,
+                    formula.value,
+                    flatHeaderListing,
+                    modelType,
+                    classLoader)
             }
             .filterValues { error -> error != null }
             .mapValues { e -> e.value!! }
-
-//        val activeReportHandle = ServerContext
-//            .modelTaskRepository
-//            .lookupActive(objectLocation)
-//            .singleOrNull()
-//            ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ReportHandle }
-//
-//        val tableSummary =
-//            activeReportHandle?.summaryView()
-//                ?: ReportSummary(reportRunSpec, runDir, null).view()
 
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(errors))
@@ -61,7 +57,7 @@ class ReportRunAction(
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun summaryView(
         objectLocation: ObjectLocation,
-        reportRunSpec: ReportRunSpec,
+        reportRunContext: ReportRunContext,
         runDir: Path
     ): ExecutionResult {
         val activeReportHandle = ServerContext
@@ -72,7 +68,7 @@ class ReportRunAction(
 
         val tableSummary =
             activeReportHandle?.summaryView()
-                ?: ReportSummary(reportRunSpec, runDir, null).view()
+                ?: ReportSummary(reportRunContext, runDir, null).view()
 
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(tableSummary.toCollection()))
@@ -82,7 +78,7 @@ class ReportRunAction(
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun outputPreview(
         objectLocation: ObjectLocation,
-        runSpec: ReportRunSpec,
+        runContext: ReportRunContext,
         runDir: Path,
         outputSpec: OutputSpec
     ): ExecutionResult {
@@ -93,8 +89,8 @@ class ReportRunAction(
             ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ProcessorDatasetPipeline }
 
         val outputInfo =
-            activeReportHandle?.outputPreview(runSpec, outputSpec)
-                ?: ProcessorDatasetPipeline.passivePreview(runSpec, runDir, outputSpec, reportWorkPool)
+            activeReportHandle?.outputPreview(runContext, outputSpec)
+                ?: ProcessorDatasetPipeline.passivePreview(runContext, runDir, outputSpec, reportWorkPool)
 
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(outputInfo.toCollection()))
@@ -103,12 +99,12 @@ class ReportRunAction(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun outputSave(
-        runSpec: ReportRunSpec,
+        runContext: ReportRunContext,
         runDir: Path,
         outputSpec: OutputSpec
     ): ExecutionResult {
         return try {
-            val outPath = ProcessorDatasetPipeline.passiveSave(runSpec, runDir, outputSpec, reportWorkPool)
+            val outPath = ProcessorDatasetPipeline.passiveSave(runContext, runDir, outputSpec, reportWorkPool)
             ExecutionSuccess(
                 ExecutionValue.of(outPath.toString()),
                 NullExecutionValue)
@@ -120,7 +116,7 @@ class ReportRunAction(
 
 
     fun outputDownload(
-        runSpec: ReportRunSpec,
+        runContext: ReportRunContext,
         runDir: Path,
         outputSpec: OutputSpec,
         mainLocation: ObjectLocation
@@ -129,7 +125,7 @@ class ReportRunAction(
         val filenameSuffix = DateTimeUtils.filenameTimestamp()
         val filename = filenamePrefix + "_" + filenameSuffix + ".csv"
 
-        val inputStream = ProcessorDatasetPipeline.passiveDownload(runSpec, runDir, outputSpec, reportWorkPool)
+        val inputStream = ProcessorDatasetPipeline.passiveDownload(runContext, runDir, outputSpec, reportWorkPool)
         return ExecutionDownloadResult(
             inputStream,
             filename,
@@ -154,27 +150,26 @@ class ReportRunAction(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun startReport(
-        reportRunSpec: ReportRunSpec,
+//        classLoaderHandle: ClassLoaderHandle,
+        reportRunContext: ReportRunContext,
         runDir: Path,
         taskHandle: TaskHandle
     ): ProcessorDatasetPipeline {
-        logger.info("Starting: $runDir | $reportRunSpec")
+        logger.info("Starting: $runDir | $reportRunContext")
 
         val outputValue = ExecutionValue.of(runDir.toString())
 
         taskHandle.update(ExecutionSuccess.ofValue(outputValue))
 
-//        val reportHandle = ReportPipeline(
-//            reportRunSpec, runDir, taskHandle, reportWorkPool)
         val reportHandle = ProcessorDatasetPipeline(
-            reportRunSpec, runDir, reportWorkPool, taskHandle)
+            /*classLoaderHandle,*/ reportRunContext, runDir, reportWorkPool, taskHandle)
 
         Thread {
             processSync(
                 taskHandle, reportHandle, runDir)
         }.start()
 
-        logger.info("Started: {} | {}", runDir, reportRunSpec)
+        logger.info("Started: {} | {}", runDir, reportRunContext)
 
         return reportHandle
     }

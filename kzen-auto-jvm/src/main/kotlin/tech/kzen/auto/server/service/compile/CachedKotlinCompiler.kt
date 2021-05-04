@@ -10,7 +10,6 @@ import java.time.LocalDateTime
 
 class CachedKotlinCompiler(
     private val kotlinCompiler: KotlinCompiler,
-    private val reportWorkPool: ReportWorkPool,
     workUtils: WorkUtils
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -74,14 +73,18 @@ class CachedKotlinCompiler(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun tryLoad(
-        kotlinCode: KotlinCode
+        kotlinCode: KotlinCode,
+        classLoader: ClassLoader
     ): Class<out Any>? {
-        val codeDir = cacheDir.resolve(kotlinCode.signature())
+        val signature = kotlinCode.signature()
+        val codeDir = cacheDir.resolve(signature)
         val classDir = codeDir.resolve(buildDir)
         val classUrl = classDir.toUri().toURL()
 
-        val classLoader = object: ClassLoader() {}
-        val sourceClassLoader = URLClassLoader(arrayOf(classUrl), classLoader)
+        val sourceClassLoader = URLClassLoader(
+            "code_$signature",
+            arrayOf(classUrl),
+            classLoader)
 
         @Suppress("LiftReturnOrAssignment")
         try {
@@ -95,13 +98,14 @@ class CachedKotlinCompiler(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun tryCompile(
-        kotlinCode: KotlinCode
+        kotlinCode: KotlinCode,
+        classLoader: ClassLoader
     ): String? {
         val codeDir = cacheDir.resolve(kotlinCode.signature())
 
         val previouslyCompiled = Files.exists(codeDir)
         if (! previouslyCompiled) {
-            return tryCompileNew(kotlinCode, codeDir)
+            return tryCompileNew(kotlinCode, codeDir, classLoader)
         }
 
         val previousError = readErrorFile(codeDir)
@@ -114,19 +118,20 @@ class CachedKotlinCompiler(
         }
 
         ReportWorkPool.deleteDir(codeDir)
-        return tryCompileNew(kotlinCode, codeDir)
+        return tryCompileNew(kotlinCode, codeDir, classLoader)
     }
 
 
     private fun tryCompileNew(
         kotlinCode: KotlinCode,
-        codeDir: Path
+        codeDir: Path,
+        classLoader: ClassLoader
     ): String? {
         val codeFile = codeDir.resolve(sourceDir).resolve(kotlinCode.mainClassName + sourceExtension)
         Files.createDirectories(codeFile.parent)
         Files.write(codeFile, kotlinCode.fileSourceCode.toByteArray())
 
-        val classLoader = object: ClassLoader() {}
+//        val classLoader = object: ClassLoader() {}
         val errorMessage = kotlinCompiler.tryCompileModule(
             kotlinCode.mainClassName,
             listOf(codeFile),

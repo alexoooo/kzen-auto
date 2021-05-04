@@ -77,8 +77,7 @@ public class CsvProcessorDefiner
     public ProcessorDefinition<FlatFileRecord> define() {
         return new ProcessorDefinition<>(
                 defineData(),
-                FirstRecordItemHeaderExtractor::new,
-                () -> {});
+                FirstRecordItemHeaderExtractor::new);
     }
 
 

@@ -24,9 +24,7 @@ class IndexedCsvTable(
     private val header: HeaderListing,
     dir: Path,
     private val bufferSize: Int = 1024 * 1024
-):
-    AutoCloseable
-{
+) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val logger = LoggerFactory.getLogger(IndexedCsvTable::class.java)
@@ -230,8 +228,11 @@ class IndexedCsvTable(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun close() {
-        flushPending()
+    fun close(error: Boolean) {
+        if (! error) {
+            flushPending()
+        }
+
         handle.close()
         offsetStore.close()
 

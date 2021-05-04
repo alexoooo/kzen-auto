@@ -19,26 +19,6 @@ data class ReportRunSignature(
     Digestible
 {
     //-----------------------------------------------------------------------------------------------------------------
-//    val inputAndFormulaColumns: HeaderListing by lazy {
-//        datasetInfo.headerSuperset().append(formula.headerListing())
-//    }
-
-//    fun inputColumns(): HeaderListing {
-//        return HeaderListing(inputs.flatMap { it.headerListing.values }.toSet().toList())
-//    }
-
-
-//    fun formulaColumns(): HeaderListing {
-//        return HeaderListing(formula.formulas.keys.toList())
-//    }
-
-
-//    fun inputAndFormulaColumns(): HeaderListing {
-//        return datasetInfo.headerSuperset().append(formula.headerListing())
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     fun hasPivot(): Boolean {
         return pivotRows.values.isNotEmpty() ||
                 pivotValues.values.isNotEmpty()
@@ -47,8 +27,6 @@ data class ReportRunSignature(
 
     override fun digest(builder: Digest.Builder) {
         builder.addDigestible(datasetInfo)
-//        builder.addDigestibleList(inputs.map { Digest.ofUtf8(it.toString()) })
-//        builder.addDigestibleList(inputColumns().values.map { Digest.ofUtf8(it) })
 
         builder.addDigestible(formula)
         builder.addDigestible(nonEmptyFilter)

@@ -4,19 +4,23 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 
 
-class ConstantCalculatedColumn(
-    private val value: String
-): CalculatedColumn {
+class ConstantCalculatedColumn<T>(
+    private val value: ColumnValue
+): CalculatedColumn<T> {
     companion object {
-        val empty = ConstantCalculatedColumn("")
-        val error = ConstantCalculatedColumn(ColumnValue.errorText)
+        fun <T> empty() =
+            ConstantCalculatedColumn<T>(ColumnValue.ofScalar(""))
+
+        fun <T> error() =
+            ConstantCalculatedColumn<T>(ColumnValue.errorValue)
     }
 
 
     override fun evaluate(
-        recordLineBuffer: FlatFileRecord,
+        model: T,
+        flatFileRecord: FlatFileRecord,
         recordHeader: RecordHeader
-    ): String {
+    ): ColumnValue {
         return value
     }
 }

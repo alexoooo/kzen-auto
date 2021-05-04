@@ -80,8 +80,7 @@ public class TextProcessorDefiner
     public ProcessorDefinition<FlatFileRecord> define() {
         return new ProcessorDefinition<>(
                 defineData(),
-                () -> headerExtractor,
-                () -> {});
+                () -> headerExtractor);
     }
 
 

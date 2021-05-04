@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.stages
 import com.lmax.disruptor.EventHandler
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
-import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
@@ -12,7 +12,7 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHe
 
 
 class ProcessorFilterStage(
-    reportRunSpec: ReportRunSpec
+    reportRunContext: ReportRunContext
 ):
     EventHandler<ProcessorOutputEvent<*>>
 {
@@ -21,15 +21,15 @@ class ProcessorFilterStage(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val filterColumnNames = reportRunSpec
+    private val filterColumnNames = reportRunContext
         .inputAndFormulaColumns
         .values
-        .intersect(reportRunSpec.filter.columns.keys)
+        .intersect(reportRunContext.filter.columns.keys)
         .toList()
 
     private val nonEmptyFilterColumnNames = filterColumnNames
         .filter { columnName ->
-            val spec = reportRunSpec.filter.columns[columnName]
+            val spec = reportRunContext.filter.columns[columnName]
                 ?: error("Missing: $columnName")
 
             spec.values.isNotEmpty()
@@ -45,7 +45,7 @@ class ProcessorFilterStage(
 
     init {
         val columnFilterSpecs = nonEmptyFilterColumnNames
-            .map { reportRunSpec.filter.columns.getValue(it) }
+            .map { reportRunContext.filter.columns.getValue(it) }
 
         columnFilterSpecTypes = columnFilterSpecs.map { it.type }
 

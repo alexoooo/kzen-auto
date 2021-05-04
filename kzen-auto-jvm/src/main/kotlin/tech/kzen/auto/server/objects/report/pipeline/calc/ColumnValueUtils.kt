@@ -5,9 +5,6 @@ import java.text.DecimalFormatSymbols
 import java.util.*
 
 
-
-
-
 object ColumnValueUtils {
     //-----------------------------------------------------------------------------------------------------------------
     // see: https://stackoverflow.com/a/25307973/1941359

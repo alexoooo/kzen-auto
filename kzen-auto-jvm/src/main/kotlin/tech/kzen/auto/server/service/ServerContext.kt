@@ -21,7 +21,7 @@ import tech.kzen.auto.server.service.exec.EmptyExecutionInitializer
 import tech.kzen.auto.server.service.exec.ModelActionExecutor
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository
-import tech.kzen.auto.server.service.plugin.DefinerDefinitionRepository
+import tech.kzen.auto.server.service.plugin.HostProcessorDefinitionRepository
 import tech.kzen.auto.server.service.plugin.MultiDefinitionRepository
 import tech.kzen.auto.server.service.plugin.ProcessorDefinitionRepository
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
@@ -99,7 +99,7 @@ object ServerContext {
     val reportWorkPool = ReportWorkPool(workUtils)
 
     val kotlinCompiler = EmbeddedKotlinCompiler()
-    val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, reportWorkPool, workUtils)
+    val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workUtils)
     val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler)
 
     val fileListingAction = FileListingAction()
@@ -108,7 +108,7 @@ object ServerContext {
     val columnListingAction = ColumnListingAction(filterIndex)
 
 
-    private val basicDefinitionRepository = DefinerDefinitionRepository(listOf(
+    private val basicDefinitionRepository = HostProcessorDefinitionRepository(listOf(
         CsvProcessorDefiner(),
         TsvProcessorDefiner(),
         TextProcessorDefiner()))

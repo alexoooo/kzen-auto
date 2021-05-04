@@ -4,9 +4,10 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 
 
-interface CalculatedColumn {
+interface CalculatedColumn<T> {
     fun evaluate(
-        recordLineBuffer: FlatFileRecord,
+        model: T,
+        flatFileRecord: FlatFileRecord,
         recordHeader: RecordHeader
-    ): String
+    ): ColumnValue
 }

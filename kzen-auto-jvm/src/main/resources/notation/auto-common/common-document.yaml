@@ -171,3 +171,4 @@ Plugin:
   jarPath: "path/to/plugin.jar"
   meta:
     jarPath: String
+    selfLocation: SelfLocation

@@ -318,7 +318,7 @@ class ModelTaskRepository(
                 "Already terminated"
             }
 
-            run?.close()
+            run?.close(errorReported.get())
 
             val snapshot = model()
             active.remove(snapshot.taskId)

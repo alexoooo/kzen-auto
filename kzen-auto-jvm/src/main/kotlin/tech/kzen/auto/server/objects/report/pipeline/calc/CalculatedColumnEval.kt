@@ -6,6 +6,9 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHe
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.KotlinCode
+import tech.kzen.lib.platform.ClassName
+import tech.kzen.lib.platform.ClassNames.asTopLevelImport
+import tech.kzen.lib.platform.ClassNames.topLevel
 
 
 class CalculatedColumnEval(
@@ -21,14 +24,16 @@ class CalculatedColumnEval(
     fun validate(
         calculatedColumnName: String,
         calculatedColumnFormula: String,
-        columnNames: HeaderListing
+        columnNames: HeaderListing,
+        modelType: ClassName,
+        classLoader: ClassLoader
     ): String? {
         if (calculatedColumnFormula.isEmpty()) {
             return null
         }
 
-        val code = generate(calculatedColumnName, calculatedColumnFormula, columnNames)
-        val errorMessage = cachedKotlinCompiler.tryCompile(code)
+        val code = generate(calculatedColumnName, calculatedColumnFormula, columnNames, modelType)
+        val errorMessage = cachedKotlinCompiler.tryCompile(code, classLoader)
         return errorMessage?.let { cleanupErrorMessage(it) }
     }
 
@@ -41,30 +46,33 @@ class CalculatedColumnEval(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     // TODO: return with compilation / creation error?
     fun create(
         calculatedColumnName: String,
         calculatedColumnFormula: String,
-        columnNames: HeaderListing
-    ): CalculatedColumn {
+        columnNames: HeaderListing,
+        modelType: ClassName,
+        classLoader: ClassLoader
+    ): CalculatedColumn<Any> {
         if (calculatedColumnFormula.isEmpty()) {
-            return ConstantCalculatedColumn.empty
+            return ConstantCalculatedColumn.empty()
         }
 
-        val code = generate(calculatedColumnName, calculatedColumnFormula, columnNames)
+        val code = generate(calculatedColumnName, calculatedColumnFormula, columnNames, modelType)
 
-        val error = cachedKotlinCompiler.tryCompile(code)
+        val error = cachedKotlinCompiler.tryCompile(code, classLoader)
         check(error == null) {
             "Unable to compile: $error - $calculatedColumnName - $calculatedColumnFormula - $columnNames"
         }
 
-        val clazz = cachedKotlinCompiler.tryLoad(code)
+        val clazz = cachedKotlinCompiler.tryLoad(code, classLoader)
         check(clazz != null) {
             "Unable to load: $code"
         }
 
         @Suppress("UNCHECKED_CAST")
-        val classCast = clazz as Class<CalculatedColumn>
+        val classCast = clazz as Class<CalculatedColumn<Any>>
 
         return classCast.getDeclaredConstructor().newInstance()
     }
@@ -74,38 +82,24 @@ class CalculatedColumnEval(
     private fun generate(
         calculatedColumnName: String,
         calculatedColumnFormula: String,
-        columnNames: HeaderListing
+        columnNames: HeaderListing,
+        modelType: ClassName
     ): KotlinCode {
         val sanitizedName = sanitizeName(calculatedColumnName)
         val mainClassName = "Column_$sanitizedName"
 
+        val imports = generateImports(modelType)
+
         val columnNameStringList = columnNames.values.joinToString { "\"$it\""}
 
-//        val userCode =
-//            "return ($calculatedColumnFormula)"
-
-        val columnAccessors = columnNames.values.withIndex().joinToString("\n") { columnName -> """
-val `${columnName.value}` get(): ColumnValue {
-    return columnValue(${columnName.index})
-}
-"""
-        }
+        val columnAccessors = generateColumnAccessors(columnNames)
 
         val code = """
 package $packagePath
 
-import ${ CalculatedColumn::class.java.name }
-import ${ ColumnValue::class.java.name }
-${ColumnValueConversions.operators.joinToString("\n") {
-    "import ${ ColumnValueConversions::class.java.name }.$it"
-}}
-import ${ RecordHeader::class.java.name }
-import ${ RecordHeaderIndex::class.java.name }
-import ${ FlatFileRecord::class.java.name }
-import ${ HeaderListing::class.java.name }
+$imports
 
-
-class $mainClassName: ${ CalculatedColumn::class.java.simpleName } {
+class $mainClassName: ${ CalculatedColumn::class.java.simpleName }<${modelType.topLevel()}> {
     companion object {
         private val columnNames: HeaderListing = HeaderListing(listOf($columnNameStringList))
         private val recordHeaderIndex = ${ RecordHeaderIndex::class.java.simpleName }(columnNames)
@@ -123,17 +117,18 @@ class $mainClassName: ${ CalculatedColumn::class.java.simpleName } {
 $columnAccessors
 
     override fun evaluate(
-        recordItemBuffer: ${ FlatFileRecord::class.java.simpleName },
+        model: ${ modelType.topLevel() },
+        flatFileRecord: ${ FlatFileRecord::class.java.simpleName },
         recordHeader: ${ RecordHeader::class.java.simpleName }
-    ): String {
-        record = recordItemBuffer
+    ): ColumnValue {
+        record = flatFileRecord
         indices = recordHeaderIndex.indices(recordHeader)
-        val value = evaluate()
-        return ${ ColumnValue::class.java.simpleName }.toText(value)
+        val value = model.evaluate()
+        return ${ ColumnValue::class.java.simpleName }.ofScalar(value)
     }
 
 
-    private fun evaluate(): Any? {
+    private fun ${ modelType.topLevel() }.evaluate(): Any? {
         return run {
 $calculatedColumnFormula
         }
@@ -144,6 +139,41 @@ $calculatedColumnFormula
             packagePath,
             mainClassName,
             code)
+    }
+
+
+    private fun generateImports(modelType: ClassName): String {
+        val operatorImports = ColumnValueConversions.operators.map {
+            ColumnValueConversions::class.java.name + ".$it"
+        }
+
+        val classImports = setOf(
+            CalculatedColumn::class.java.name,
+            ColumnValue::class.java.name,
+            RecordHeader::class.java.name,
+            RecordHeaderIndex::class.java.name,
+            FlatFileRecord::class.java.name,
+            HeaderListing::class.java.name,
+            modelType.asTopLevelImport()
+        )
+
+        val allImports: Set<String> = classImports + operatorImports
+
+        return allImports.joinToString("\n") {
+            "import $it"
+        }
+    }
+
+
+    private fun generateColumnAccessors(columnNames: HeaderListing): String {
+        return columnNames
+            .values
+            .withIndex()
+            .joinToString("\n") { columnName ->
+                "val `${columnName.value}` get(): ColumnValue {" +
+                "    return columnValue(${columnName.index})" +
+                "}"
+            }
     }
 
 

@@ -5,9 +5,11 @@ import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
+import tech.kzen.lib.platform.ClassName
 
 
-data class ReportRunSpec(
+data class ReportRunContext(
+    val dataType: ClassName,
     val datasetInfo: DatasetInfo,
     val formula: FormulaSpec,
     val filter: FilterSpec,
@@ -30,8 +32,8 @@ data class ReportRunSpec(
     }
 
 
-    fun toFormulaSignature(): ReportFormulaSignature {
-        return ReportFormulaSignature(
-            datasetInfo.headerSuperset(), formula)
-    }
+//    fun toFormulaSignature(): ReportFormulaSignature {
+//        return ReportFormulaSignature(
+//            datasetInfo.headerSuperset(), formula, dataType)
+//    }
 }

@@ -10,7 +10,7 @@ class ProcessorOutputStage(
     val reportOutput: ReportOutput,
     private val reportWorkPool: ReportWorkPool
 ):
-    EventHandler<ProcessorOutputEvent<*>>, AutoCloseable
+    EventHandler<ProcessorOutputEvent<*>>
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun onEvent(event: ProcessorOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
@@ -28,7 +28,7 @@ class ProcessorOutputStage(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun close() {
-        reportOutput.close()
+    fun close(error: Boolean) {
+        reportOutput.close(error)
     }
 }

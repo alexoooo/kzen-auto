@@ -14,8 +14,9 @@ import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
+import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 import tech.kzen.auto.server.objects.report.ReportWorkPool
-import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.event.output.DisruptorPipelineOutput
 import tech.kzen.auto.server.objects.report.pipeline.input.ProcessorInputPipeline
@@ -35,12 +36,12 @@ import java.nio.file.Path
 
 
 class ProcessorDatasetPipeline(
-    private val initialReportRunSpec: ReportRunSpec,
+    private val initialReportRunContext: ReportRunContext,
     runDir: Path,
     private val reportWorkPool: ReportWorkPool,
     private val taskHandle: TaskHandle?
 ):
-    TaskRun, AutoCloseable
+    TaskRun
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -61,67 +62,88 @@ class ProcessorDatasetPipeline(
 
 
         fun passivePreview(
-            reportRunSpec: ReportRunSpec,
+            reportRunContext: ReportRunContext,
             runDir: Path,
             outputSpec: OutputSpec,
             reportWorkPool: ReportWorkPool
         ): OutputInfo {
-            return ofPassive(reportRunSpec, runDir, reportWorkPool).use {
-                it.outputPreview(reportRunSpec, outputSpec)!!
+            return usePassive(reportRunContext, runDir, reportWorkPool) {
+                it.outputPreview(reportRunContext, outputSpec)!!
             }
         }
 
 
         fun passiveSave(
-            reportRunSpec: ReportRunSpec,
+            reportRunContext: ReportRunContext,
             runDir: Path,
             outputSpec: OutputSpec,
             reportWorkPool: ReportWorkPool
         ): Path {
-            return ofPassive(reportRunSpec, runDir, reportWorkPool).use {
-                it.outputSave(reportRunSpec, outputSpec)
+            return usePassive(reportRunContext, runDir, reportWorkPool) {
+                it.outputSave(reportRunContext, outputSpec)
             }
         }
 
 
         fun passiveDownload(
-            reportRunSpec: ReportRunSpec,
+            reportRunContext: ReportRunContext,
             runDir: Path,
             outputSpec: OutputSpec,
             reportWorkPool: ReportWorkPool
         ): InputStream {
-            return ofPassive(reportRunSpec, runDir, reportWorkPool).use {
-                it.outputDownload(reportRunSpec, outputSpec)
+            return usePassive(reportRunContext, runDir, reportWorkPool) {
+                it.outputDownload(reportRunContext, outputSpec)
+            }
+        }
+
+
+        private fun <T> usePassive(
+            reportRunContext: ReportRunContext,
+            runDir: Path,
+            reportWorkPool: ReportWorkPool,
+            user: (ProcessorDatasetPipeline) -> T
+        ): T {
+            val instance = ofPassive(reportRunContext, runDir, reportWorkPool)
+            var error = true
+            return try {
+                val value = user(instance)
+                error = false
+                value
+            }
+            finally {
+                instance.close(error)
             }
         }
 
 
         private fun ofPassive(
-            reportRunSpec: ReportRunSpec,
+            reportRunContext: ReportRunContext,
             runDir: Path,
             reportWorkPool: ReportWorkPool
         ): ProcessorDatasetPipeline {
-            return ProcessorDatasetPipeline(reportRunSpec, runDir, reportWorkPool, null)
+            return ProcessorDatasetPipeline(
+//                DataTypeProvider.any,
+                reportRunContext,
+                runDir,
+                reportWorkPool,
+                null)
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private val progressTracker: ReportProgressTracker = ReportProgressTracker(
-        initialReportRunSpec.datasetInfo.dataLocations(), taskHandle)
+        initialReportRunContext.datasetInfo.dataLocations(), taskHandle)
 
-    private val formulas = ProcessorFormulaStage(
-        initialReportRunSpec.formula, ServerContext.calculatedColumnEval)
-
-    private val filter = ProcessorFilterStage(initialReportRunSpec)
+    private val filter = ProcessorFilterStage(initialReportRunContext)
 
     private val preCachePartitions = ProcessorPreCacheStage.partitions(preCachePartitionCount)
 
     private val summary = ProcessorSummaryStage(
-        ReportSummary(initialReportRunSpec, runDir, taskHandle))
+        ReportSummary(initialReportRunContext, runDir, taskHandle))
 
     private val output = ProcessorOutputStage(
-        ReportOutput(initialReportRunSpec, runDir, taskHandle, progressTracker),
+        ReportOutput(initialReportRunContext, runDir, taskHandle, progressTracker),
         reportWorkPool)
 
 
@@ -130,7 +152,7 @@ class ProcessorDatasetPipeline(
         val handle = taskHandle!!
 
         datasetDefinition<Any>().use { datasetDefinition ->
-            val recordDisruptor = setupRecordDisruptor()
+            val recordDisruptor = setupRecordDisruptor(datasetDefinition.classLoaderHandle)
             recordDisruptor.start()
 
             try {
@@ -197,15 +219,19 @@ class ProcessorDatasetPipeline(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun <T> datasetDefinition(): DatasetDefinition<T> {
+        val pluginCoordinates = initialReportRunContext.datasetInfo.items.map { it.processorPluginCoordinate }.toSet()
+        val classLoaderHandle = ServerContext.definitionRepository
+            .classLoaderHandle(pluginCoordinates, ClassLoader.getSystemClassLoader())
+
         val cache = mutableMapOf<PluginCoordinate, ProcessorDefinition<T>>()
         val builder = mutableListOf<FlatDataContentDefinition<T>>()
 
-        for (flatDataInfo in initialReportRunSpec.datasetInfo.items) {
+        for (flatDataInfo in initialReportRunContext.datasetInfo.items) {
             val processorPluginCoordinate = flatDataInfo.processorPluginCoordinate
 
             val processorDataDefinition =
                 cache.getOrPut(processorPluginCoordinate) {
-                    processorDataDefinition(processorPluginCoordinate)
+                    processorDataDefinition(processorPluginCoordinate, classLoaderHandle)
                 }
 
             builder.add(
@@ -215,14 +241,15 @@ class ProcessorDatasetPipeline(
                     processorDataDefinition))
         }
 
-        return DatasetDefinition(builder)
+        return DatasetDefinition(builder, classLoaderHandle)
     }
 
 
     private fun <T> processorDataDefinition(
-        processorDefinitionCoordinate: PluginCoordinate
+        processorDefinitionCoordinate: PluginCoordinate,
+        classLoaderHandle: ClassLoaderHandle
     ): ProcessorDefinition<T> {
-        val definition = ServerContext.definitionRepository.define(processorDefinitionCoordinate)
+        val definition = ServerContext.definitionRepository.define(processorDefinitionCoordinate, classLoaderHandle)
 
         @Suppress("UNCHECKED_CAST")
         return definition as ProcessorDefinition<T>
@@ -230,7 +257,9 @@ class ProcessorDatasetPipeline(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun setupRecordDisruptor(): Disruptor<ProcessorOutputEvent<Any>> {
+    private fun setupRecordDisruptor(
+        classLoaderHandle: ClassLoaderHandle
+    ): Disruptor<ProcessorOutputEvent<Any>> {
         val recordDisruptor = Disruptor(
             { ProcessorOutputEvent<Any>() },
             recordDisruptorBufferSize,
@@ -238,6 +267,12 @@ class ProcessorDatasetPipeline(
             ProducerType.SINGLE,
             DisruptorUtils.newWaitStrategy()
         )
+
+        val formulas = ProcessorFormulaStage(
+            initialReportRunContext.dataType,
+            initialReportRunContext.formula,
+            classLoaderHandle.classLoader,
+            ServerContext.calculatedColumnEval)
 
         recordDisruptor
             .handleEventsWith(formulas)
@@ -280,7 +315,7 @@ class ProcessorDatasetPipeline(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun outputPreview(
-        reportRunSpec: ReportRunSpec,
+        reportRunContext: ReportRunContext,
         outputSpec: OutputSpec
     ): OutputInfo? {
         if (taskHandle?.isFailed() == true) {
@@ -288,17 +323,17 @@ class ProcessorDatasetPipeline(
             return null
         }
 
-        return output.reportOutput.preview(reportRunSpec, outputSpec, reportWorkPool)
+        return output.reportOutput.preview(reportRunContext, outputSpec, reportWorkPool)
     }
 
 
-    private fun outputSave(reportRunSpec: ReportRunSpec, outputSpec: OutputSpec): Path {
-        return output.reportOutput.save(reportRunSpec, outputSpec)
+    private fun outputSave(reportRunContext: ReportRunContext, outputSpec: OutputSpec): Path {
+        return output.reportOutput.save(reportRunContext, outputSpec)
     }
 
 
-    private fun outputDownload(reportRunSpec: ReportRunSpec, outputSpec: OutputSpec): InputStream {
-        return output.reportOutput.download(reportRunSpec, outputSpec)
+    private fun outputDownload(reportRunContext: ReportRunContext, outputSpec: OutputSpec): InputStream {
+        return output.reportOutput.download(reportRunContext, outputSpec)
     }
 
 
@@ -312,8 +347,9 @@ class ProcessorDatasetPipeline(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun close() {
+    override fun close(error: Boolean) {
         summary.close()
-        output.close()
+        output.close(error)
+//        classLoaderHandle.close()
     }
 }

@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.objects.document.plugin.PluginConventions
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
+import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 import tech.kzen.auto.server.service.plugin.ProcessorDefinitionMetadata
 import tech.kzen.auto.server.service.plugin.ProcessorDefinitionRepository
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -12,6 +13,7 @@ import tech.kzen.lib.common.service.context.GraphDefiner
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.platform.ClassName
+import java.net.URLClassLoader
 
 
 class PluginProcessorDefinitionRepository(
@@ -32,7 +34,7 @@ class PluginProcessorDefinitionRepository(
     private var metadataByCoordinateCache = mutableMapOf<PluginCoordinate, DefinitionMetadataCache>()
 
     private data class DefinitionMetadataCache(
-        val definerObjectLocation: ObjectLocation,
+        val pluginObjectLocation: ObjectLocation,
         val metadata: ProcessorDefinitionMetadata)
 
 
@@ -89,22 +91,34 @@ class PluginProcessorDefinitionRepository(
 
             val pluginDocument = pluginGraphInstance[pluginObjectLocation]!!.reference as PluginDocument
 
-            val definersAndClassLoader = pluginDocument.loadDefiners()
+            val classLoader = pluginDocument.jarClassLoader()
                 ?: continue
 
-            val metadata = mutableListOf<ProcessorDefinitionMetadata>()
+            val metadata: List<ProcessorDefinitionMetadata> = classLoader.use {
+                val processorDefiners = pluginDocument.loadDefiners(classLoader)
 
-            try {
-                for (processorDefiner in definersAndClassLoader.processorDefiners) {
-                    val definition = processorDefiner.define()
-                    val payloadType = ClassName(definition.processorDataDefinition.outputModelType.name)
-
-                    metadata.add(ProcessorDefinitionMetadata(
-                        processorDefiner.info(), payloadType))
+                if (processorDefiners == null) {
+                    listOf()
                 }
-            }
-            finally {
-                definersAndClassLoader.classLoader.close()
+                else {
+                    val builder = mutableListOf<ProcessorDefinitionMetadata>()
+
+                    for (processorDefiner in processorDefiners) {
+                        val definition = try {
+                            processorDefiner.define()
+                        }
+                        catch (e: Throwable) {
+                            continue
+                        }
+
+                        val payloadType = ClassName(definition.processorDataDefinition.outputModelType.name)
+
+                        builder.add(ProcessorDefinitionMetadata(
+                            processorDefiner.info(), payloadType))
+                    }
+
+                    builder
+                }
             }
 
             metadataByDefinerCache[pluginObjectLocation] = DefinerMetadataCache(
@@ -143,11 +157,58 @@ class PluginProcessorDefinitionRepository(
     }
 
 
-    @Synchronized
-    override fun define(coordinate: PluginCoordinate): ProcessorDefinition<*> {
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun classLoaderHandle(
+        coordinates: Set<PluginCoordinate>,
+        parentClassLoader: ClassLoader
+    ): ClassLoaderHandle {
         refreshCacheIfRequired()
 
-        val pluginObjectLocation = metadataByCoordinateCache[coordinate]?.definerObjectLocation
+        val matchingMetadata = metadataByCoordinateCache
+            .filterValues { it.metadata.processorDefinitionInfo.coordinate in coordinates }
+
+        val pluginLocations = matchingMetadata
+            .map { it.value.pluginObjectLocation }
+            .toSet()
+
+        check(pluginLocations.isNotEmpty()) {
+            "Not found: $coordinates"
+        }
+
+        val graphDefinitionAttempt = runBlocking {
+            graphStore.graphDefinition()
+        }
+
+        val transitiveGraphDefinition = graphDefinitionAttempt.successful().filterTransitive(pluginLocations)
+        val graphInstance = graphCreator.createGraph(transitiveGraphDefinition)
+
+        val jarUrls = pluginLocations
+            .map { graphInstance[it]!!.reference as PluginDocument }
+            .mapNotNull { it.jarRoot() }
+            .mapNotNull { it.toURL() }
+
+        check(jarUrls.isNotEmpty()) {
+            "Missing: $pluginLocations"
+        }
+
+        val classLoader = URLClassLoader(
+            "plugin",
+            jarUrls.toTypedArray(),
+            parentClassLoader)
+
+        return ClassLoaderHandle.ofGuest(classLoader)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Synchronized
+    override fun define(
+        coordinate: PluginCoordinate,
+        classLoaderHandle: ClassLoaderHandle
+    ): ProcessorDefinition<*> {
+        refreshCacheIfRequired()
+
+        val pluginObjectLocation = metadataByCoordinateCache[coordinate]?.pluginObjectLocation
             ?: throw IllegalArgumentException("Name found: $coordinate")
 
         val graphDefinitionAttempt = runBlocking {
@@ -159,23 +220,17 @@ class PluginProcessorDefinitionRepository(
 
         val pluginDocument = graphInstance[pluginObjectLocation]!!.reference as PluginDocument
 
-        val definersAndClassLoader = pluginDocument.loadDefiners()
+        val processorDefiners = pluginDocument.loadDefiners(classLoaderHandle.classLoader)
             ?: throw IllegalStateException("Unable to load: $coordinate")
 
-        val processorDefiner = definersAndClassLoader.processorDefiners.find { it.info().coordinate == coordinate }
+        val processorDefiner = processorDefiners.find { it.info().coordinate == coordinate }
             ?: run {
-                definersAndClassLoader.classLoader.close()
                 throw IllegalStateException("Not found: $coordinate")
             }
 
+        @Suppress("UnnecessaryVariable")
         val processorDefinition = processorDefiner.define()
 
-        @Suppress("UnnecessaryVariable")
-        val withClassLoaderCloser = processorDefinition.copy(closer = {
-            definersAndClassLoader.classLoader.close()
-            processorDefinition.close()
-        })
-
-        return withClassLoaderCloser
+        return processorDefinition
     }
 }

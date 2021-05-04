@@ -5,7 +5,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import tech.kzen.auto.common.objects.document.report.summary.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
@@ -21,7 +21,7 @@ import java.util.concurrent.TimeoutException
 
 
 class ReportSummary(
-    initialReportRunSpec: ReportRunSpec,
+    initialReportRunContext: ReportRunContext,
     runDir: Path,
     private val taskHandle: TaskHandle?
 ):
@@ -64,7 +64,7 @@ class ReportSummary(
 
 
     private val headerIndex = RecordHeaderIndex(
-        initialReportRunSpec.inputAndFormulaColumns)
+        initialReportRunContext.inputAndFormulaColumns)
 
     private val builders: List<ValueSummaryBuilder> =
         headerIndex.columnHeaders.values.map { ValueSummaryBuilder() }

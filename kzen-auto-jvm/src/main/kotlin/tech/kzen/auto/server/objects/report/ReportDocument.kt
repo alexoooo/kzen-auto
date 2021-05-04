@@ -23,7 +23,7 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
-import tech.kzen.auto.server.objects.report.model.ReportRunSpec
+import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.file.FileFlatDataSource
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
@@ -134,14 +134,18 @@ class ReportDocument(
 
             val headerListing = cachedHeaderListing
                 ?: run {
-                    val processorDefinition = ServerContext.definitionRepository.define(pluginCoordinate)
+                    val classLoaderHandle = ServerContext.definitionRepository
+                        .classLoaderHandle(setOf(pluginCoordinate), ClassLoader.getSystemClassLoader())
 
-                    processorDefinition.use {
+                    classLoaderHandle.use {
+                        val processorDefinition = ServerContext.definitionRepository.define(
+                            pluginCoordinate, it)
+
                         ServerContext.columnListingAction.headerListing(
                             FlatDataHeaderDefinition(
                                 dataLocationInfo,
                                 FileFlatDataSource(),
-                                it),
+                                processorDefinition),
                             pluginCoordinate
                         )
                     }
@@ -153,18 +157,18 @@ class ReportDocument(
     }
 
 
-    private fun runSpec(): ReportRunSpec? {
+    private fun runContext(): ReportRunContext? {
         val datasetInfo = datasetInfo()
             ?: return null
 
-//        val columnNames = ServerContext.columnListingAction.columnNames(datasetInfo)
+        val dataType = input.selection.dataType
 
-        return ReportRunSpec(
-            datasetInfo, formula, filter, pivot)
+        return ReportRunContext(
+            dataType, datasetInfo, formula, filter, pivot)
     }
 
 
-    private fun runDir(runSpec: ReportRunSpec): Path {
+    private fun runDir(runContext: ReportRunContext): Path {
         val reportDir =
             try {
                 Paths.get(output.workPath)
@@ -173,7 +177,7 @@ class ReportDocument(
                 ReportWorkPool.defaultReportDir
             }
 
-        val runSignature = runSpec.toSignature()
+        val runSignature = runContext.toSignature()
         return ServerContext.reportWorkPool.resolveRunDir(runSignature, reportDir)
     }
 
@@ -269,7 +273,7 @@ class ReportDocument(
 
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun actionColumnSummaryLookup(): ExecutionResult {
-        val runSpec = runSpec()
+        val runSpec = runContext()
             ?: return ExecutionFailure("Missing run")
 
         val runDir = runDir(runSpec)
@@ -279,17 +283,34 @@ class ReportDocument(
     }
 
 
-    private suspend fun actionValidateFormulas(): ExecutionResult {
-        val runSpec = runSpec()
+//    private fun dataTypeProvider(): ClassLoaderHandle {
+//        val modelType = input.selection.dataType
+//
+//        return ServerContext
+//            .definitionRepository
+//            .classLoaderHandle(modelType)
+//    }
+
+
+    private fun actionValidateFormulas(): ExecutionResult {
+        val runSpec = runContext()
             ?: return ExecutionFailure("Missing run")
 
-        return ServerContext.reportRunAction.formulaValidation(
-            runSpec.toFormulaSignature())
+        val pluginCoordinates = runSpec.datasetInfo.items.map { it.processorPluginCoordinate }.toSet()
+        val classLoaderHandle = ServerContext.definitionRepository
+            .classLoaderHandle(pluginCoordinates, ClassLoader.getSystemClassLoader())
+
+        val dataType = input.selection.dataType
+
+        return classLoaderHandle.use {
+            ServerContext.reportRunAction.formulaValidation(
+                runSpec.formula, runSpec.datasetInfo.headerSuperset(), dataType, it.classLoader)
+        }
     }
 
 
     private suspend fun actionLookupOutput(): ExecutionResult {
-        val runSpec = runSpec()
+        val runSpec = runContext()
             ?: return ExecutionFailure("Missing run")
 
         val runDir = runDir(runSpec)
@@ -300,7 +321,7 @@ class ReportDocument(
 
 
     private fun actionSave(): ExecutionResult {
-        val runSpec = runSpec()
+        val runSpec = runContext()
             ?: return ExecutionFailure("Missing run")
 
         val runDir = runDir(runSpec)
@@ -311,7 +332,7 @@ class ReportDocument(
 
 
     private fun actionReset(): ExecutionResult {
-        val runSpec = runSpec()
+        val runSpec = runContext()
             ?: return ExecutionFailure("Missing run")
 
         val runDir = runDir(runSpec)
@@ -321,7 +342,7 @@ class ReportDocument(
 
 
     private fun actionDownload(): ExecutionDownloadResult {
-        val runSpec = runSpec()
+        val runSpec = runContext()
             ?: error("Missing run")
 
         val runDir = runDir(runSpec)
@@ -340,9 +361,9 @@ class ReportDocument(
             return null
         }
 
-        val runSpec = runSpec()
+        val runContext = runContext()
 
-        if (runSpec == null) {
+        if (runContext == null) {
             handle.complete(ExecutionFailure(
                 "Please provide a valid input path"))
             return null
@@ -351,7 +372,7 @@ class ReportDocument(
         return when (action) {
             ReportConventions.actionRunTask -> {
                 try {
-                    actionRunReport(runSpec, handle)
+                    actionRunReport(runContext, handle)
                 }
                 catch (e: Exception) {
                     logger.warn("Unable to start", e)
@@ -371,14 +392,16 @@ class ReportDocument(
 
 
     private fun actionRunReport(
-        runSpec: ReportRunSpec,
+        runContext: ReportRunContext,
         handle: TaskHandle
     ): TaskRun {
-        val runDir = runDir(runSpec)
+        val runDir = runDir(runContext)
 
         ServerContext.reportWorkPool.prepareRunDir(runDir)
 
+//        val dataTypeProvider = dataTypeProvider()
+
         return ServerContext.reportRunAction.startReport(
-            runSpec, runDir, handle)
+            /*dataTypeProvider,*/ runContext, runDir, handle)
     }
 }

@@ -4,6 +4,7 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
 import tech.kzen.auto.plugin.definition.ProcessorDefinitionInfo
 import tech.kzen.auto.plugin.model.PluginCoordinate
+import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 import tech.kzen.lib.platform.ClassName
 
 
@@ -11,7 +12,10 @@ interface ProcessorDefinitionRepository {
     operator fun contains(coordinate: PluginCoordinate): Boolean
     fun metadata(coordinate: PluginCoordinate): ProcessorDefinitionMetadata?
     fun listMetadata(): List<ProcessorDefinitionMetadata>
-    fun define(coordinate: PluginCoordinate): ProcessorDefinition<*>
+
+    fun classLoaderHandle(coordinates: Set<PluginCoordinate>, parentClassLoader: ClassLoader): ClassLoaderHandle
+
+    fun define(coordinate: PluginCoordinate, classLoaderHandle: ClassLoaderHandle): ProcessorDefinition<*>
 
 
     fun find(payloadType: ClassName, dataLocation: DataLocation): List<ProcessorDefinitionInfo> {

@@ -10,14 +10,15 @@ import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.common.util.data.FilePathJvm.toPath
 import tech.kzen.auto.plugin.definition.ProcessorDefiner
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
-import tech.kzen.auto.server.objects.plugin.model.DefinersAndClassLoader
 import tech.kzen.auto.server.objects.report.ReportUtils.asCommon
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.yaml.YamlList
 import tech.kzen.lib.common.util.yaml.YamlParser
 import tech.kzen.lib.common.util.yaml.YamlString
 import tech.kzen.lib.platform.ClassName
 import java.net.JarURLConnection
+import java.net.URI
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
@@ -26,13 +27,13 @@ import kotlin.io.path.isRegularFile
 
 @Reflect
 class PluginDocument(
-    private val jarPath: String
+    private val jarPath: String,
+    private val selfLocation: ObjectLocation
 ):
     DocumentArchetype(),
     DetachedAction
 {
     //-----------------------------------------------------------------------------------------------------------------
-//    @OptIn(ExperimentalPathApi::class)
     private fun parseJarPath(): Path? {
         val parsedJarPath = FilePath.parse(jarPath)
             ?: return null
@@ -53,14 +54,31 @@ class PluginDocument(
     }
 
 
-    fun loadDefiners(): DefinersAndClassLoader? {
+    fun jarRoot(): URI? {
         val path = parseJarPath()
             ?: return null
 
         // https://stackoverflow.com/a/2271974/1941359
         val pathString = path.toUri().toString()
 
-        val jarRoot = "jar:$pathString!/"
+        return URI("jar:$pathString!/")
+    }
+
+
+    fun jarClassLoader(): URLClassLoader? {
+        val jarRoot = jarRoot()
+            ?: return null
+
+        return URLClassLoader(
+            "plugin-${selfLocation.documentPath.name}",
+            arrayOf(jarRoot.toURL()),
+            ClassLoader.getSystemClassLoader())
+    }
+
+
+    fun loadDefiners(classLoader: ClassLoader): List<ProcessorDefiner<*>>? {
+        val jarRoot = jarRoot()
+            ?: return null
 
         val pluginsPathInJar = "${jarRoot}META-INF/kzen/plugins.yaml"
 
@@ -75,58 +93,41 @@ class PluginDocument(
             .map { (it as YamlString).value }
 
         val builder = mutableListOf<ProcessorDefiner<*>>()
-        val classLoader = URLClassLoader(arrayOf(URL(jarRoot)))
 
-        var success = false
-        try {
-            for (pluginClass in pluginClasses) {
-                val loadedClass = classLoader.loadClass(pluginClass)
-                val noArgConstructor = loadedClass.getDeclaredConstructor()
-                val newInstance = noArgConstructor.newInstance()
+        for (pluginClass in pluginClasses) {
+            val loadedClass = classLoader.loadClass(pluginClass)
+            val noArgConstructor = loadedClass.getDeclaredConstructor()
+            val newInstance = noArgConstructor.newInstance()
 
-                val cast = newInstance as ProcessorDefiner<*>
-                builder.add(cast)
-            }
-            success = true
-        }
-        finally {
-            if (! success) {
-                classLoader.close()
-            }
+            val cast = newInstance as ProcessorDefiner<*>
+            builder.add(cast)
         }
 
-        return DefinersAndClassLoader(builder, classLoader)
+        return builder
     }
 
 
-    private fun definerDetailsImpl(): List<ProcessorDefinerDetail>? {
-        val definersAndClassLoader = loadDefiners()
+    private fun definerDetailsImpl(classLoader: ClassLoader): List<ProcessorDefinerDetail>? {
+        val processorDefiners = loadDefiners(classLoader)
             ?: return null
 
         @Suppress("UnnecessaryVariable")
-        val definerDetails = try {
-            definersAndClassLoader
-                .processorDefiners
-                .map { processorDefiner ->
-                    val info = processorDefiner.info()
+        val definerDetails = processorDefiners.map { processorDefiner ->
+            val info = processorDefiner.info()
 
-                    val commonCoordinate = info.coordinate.asCommon()
-                    val commonDataEncodingSpec = info.dataEncoding.asCommon()
+            val commonCoordinate = info.coordinate.asCommon()
+            val commonDataEncodingSpec = info.dataEncoding.asCommon()
 
-                    val definition = processorDefiner.define()
-                    val modelType = ClassName(definition.processorDataDefinition.outputModelType.name)
+            val definition = processorDefiner.define()
+            val modelType = ClassName(definition.processorDataDefinition.outputModelType.name)
 
-                    ProcessorDefinerDetail(
-                        commonCoordinate,
-                        info.extensions,
-                        commonDataEncodingSpec,
-                        info.priority,
-                        modelType
-                    )
-                }
-        }
-        finally {
-            definersAndClassLoader.classLoader.close()
+            ProcessorDefinerDetail(
+                commonCoordinate,
+                info.extensions,
+                commonDataEncodingSpec,
+                info.priority,
+                modelType
+            )
         }
 
         return definerDetails
@@ -134,13 +135,19 @@ class PluginDocument(
 
 
     private fun definerDetails(): List<ProcessorDefinerDetail>? {
-        val definerDetails = definerDetailsImpl()
+        val classLoader = jarClassLoader()
+            ?: return null
 
-        // attempt to nudge the URLClassLoader
+        val definerDetails = classLoader.use {
+            definerDetailsImpl(it)
+        }
+
+        // attempt to nudge the classLoader
         System.gc()
 
         return definerDetails
     }
+
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun execute(request: DetachedRequest): ExecutionResult {

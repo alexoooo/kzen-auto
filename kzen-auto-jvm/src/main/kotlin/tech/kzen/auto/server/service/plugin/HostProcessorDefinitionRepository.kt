@@ -3,10 +3,11 @@ package tech.kzen.auto.server.service.plugin
 import tech.kzen.auto.plugin.definition.ProcessorDefiner
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
+import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 import tech.kzen.lib.platform.ClassName
 
 
-class DefinerDefinitionRepository(
+class HostProcessorDefinitionRepository(
     definers: List<ProcessorDefiner<*>>
 ):
     ProcessorDefinitionRepository
@@ -39,15 +40,26 @@ class DefinerDefinitionRepository(
     }
 
 
-    override fun define(coordinate: PluginCoordinate): ProcessorDefinition<*> {
+    override fun listMetadata(): List<ProcessorDefinitionMetadata> {
+        return metadata
+    }
+
+
+    override fun classLoaderHandle(
+        coordinates: Set<PluginCoordinate>,
+        parentClassLoader: ClassLoader
+    ): ClassLoaderHandle {
+        return ClassLoaderHandle.ofHost(parentClassLoader)
+    }
+
+
+    override fun define(
+        coordinate: PluginCoordinate,
+        classLoaderHandle: ClassLoaderHandle
+    ): ProcessorDefinition<*> {
         val definer = definersByCoordinate[coordinate]
             ?: throw IllegalArgumentException("Missing: $coordinate")
 
         return definer.define()
-    }
-
-
-    override fun listMetadata(): List<ProcessorDefinitionMetadata> {
-        return metadata
     }
 }
