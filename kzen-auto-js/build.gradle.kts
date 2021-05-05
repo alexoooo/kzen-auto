@@ -21,32 +21,32 @@ kotlin {
 
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
-
     implementation(project(":kzen-auto-common"))
 
+//    implementation("tech.kzen.lib:kzen-lib-common-js:$kzenLibVersion")
+    api("tech.kzen.lib:kzen-lib-js:$kzenLibVersion")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-html-assembly:$kotlinxHtmlVersion")
     implementation("org.jetbrains:kotlin-react:$kotlinReactVersion")
     implementation("org.jetbrains:kotlin-react-dom:$kotlinReactDomVersion")
     implementation("org.jetbrains:kotlin-styled:$kotlinStyledVersion")
     implementation("org.jetbrains:kotlin-extensions:$kotlinExtensionsVersion")
     implementation("org.jetbrains:kotlin-css-js:$kotlinCssVersion")
+
     implementation(npm("react", reactVersion))
     implementation(npm("react-dom", reactVersion))
     implementation(npm("react-is", reactVersion))
     implementation(npm("inline-style-prefixer", inlineStylePrefixerVersion))
     implementation(npm("styled-components", styledComponentsVersion))
-    testImplementation("org.jetbrains.kotlin:kotlin-test-js")
-
-    implementation("tech.kzen.lib:kzen-lib-common-js:$kzenLibVersion")
-    implementation("tech.kzen.lib:kzen-lib-js:$kzenLibVersion")
-
     implementation(npm("@material-ui/core", materialUiCoreVersion))
     implementation(npm("@material-ui/icons", materialUiIconsVersion))
     implementation(npm("@material-ui/lab", materialUiLabVersion))
     implementation(npm("cropperjs", cropperJsVersion))
     implementation(npm("lodash", lodashVersion))
     implementation(npm("react-select", reactSelectVersion))
+
+    testImplementation(kotlin("test"))
 }
 
 

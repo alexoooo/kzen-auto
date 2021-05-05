@@ -10,7 +10,6 @@ plugins {
     id("io.spring.dependency-management") version dependencyManagementVersion
 
     id("com.github.johnrengelman.shadow") version shadowVersion
-//    id("com.github.johnrengelman.shadow")
 
     kotlin("plugin.spring") version kotlinVersion
     `maven-publish`
@@ -18,37 +17,33 @@ plugins {
 
 
 dependencies {
+    implementation(project(":kzen-auto-common"))
+    implementation(project(":kzen-auto-plugin"))
+
+//    implementation("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
+    api("tech.kzen.lib:kzen-lib-jvm:$kzenLibVersion")
+
+//    implementation("org.springframework.boot:spring-boot-starter-webflux")
+    api("org.springframework.boot:spring-boot-starter-webflux")
+
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion")
+    implementation("org.jetbrains.kotlin:kotlin-scripting-jvm:$kotlinVersion")
 
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("org.jetbrains:kotlin-css-jvm:1.0.0-$wrapperKotlinVersion")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
-
-    implementation(project(":kzen-auto-common"))
-    implementation(project(":kzen-auto-plugin"))
-
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
-
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
-
-    implementation("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
-    implementation("tech.kzen.lib:kzen-lib-jvm:$kzenLibVersion")
-
-    implementation(group = "org.seleniumhq.selenium", name = "selenium-java", version = seleniumVersion)
-    implementation(group = "org.apache.commons", name = "commons-compress", version = commonsCompressVersion)
-    implementation(group = "it.unimi.dsi", name = "fastutil-core", version = fastutilVersion)
-    implementation(group = "io.lacuna", name = "bifurcan", version = bifurcanVersion)
-    implementation(group = "com.h2database", name = "h2", version = h2Version)
-    implementation(group = "net.openhft", name = "zero-allocation-hashing", version = zeroAllocationHashingVersion)
-    implementation(group = "com.lmax", name = "disruptor", version = disruptorVersion)
-    implementation(group = "com.sangupta", name = "bloomfilter", version = bloomFilterVersion)
-
+    implementation("org.seleniumhq.selenium:selenium-java:$seleniumVersion")
+    implementation("org.apache.commons:commons-compress:$commonsCompressVersion")
+    implementation("it.unimi.dsi:fastutil-core:$fastutilVersion")
+    implementation("io.lacuna:bifurcan:$bifurcanVersion")
+    implementation("com.h2database:h2:$h2Version")
+    implementation("net.openhft:zero-allocation-hashing:$zeroAllocationHashingVersion")
+    implementation("com.lmax:disruptor:$disruptorVersion")
+    implementation("com.sangupta:bloomfilter:$bloomFilterVersion")
     implementation("commons-io:commons-io:$commonsIoVersion")
 
-    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion")
-    implementation("org.jetbrains.kotlin:kotlin-scripting-jvm:$kotlinVersion")
+    testImplementation(kotlin("test"))
 }
 
 

@@ -3,6 +3,7 @@ plugins {
     `maven-publish`
 }
 
+
 kotlin {
     jvm {
         @Suppress("UNUSED_VARIABLE")
@@ -30,19 +31,17 @@ kotlin {
         @Suppress("UNUSED_VARIABLE")
         val commonMain by getting {
             dependencies {
+                api("tech.kzen.lib:kzen-lib-common:$kzenLibVersion")
+
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
                 implementation("org.jetbrains:kotlin-css:$kotlinCssVersion")
-//                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-
-                implementation("tech.kzen.lib:kzen-lib-common:$kzenLibVersion")
             }
         }
 
         @Suppress("UNUSED_VARIABLE")
         val commonTest by getting {
             dependencies {
-                implementation(kotlin("test-common"))
-                implementation(kotlin("test-annotations-common"))
+                implementation(kotlin("test"))
             }
         }
 
@@ -50,36 +49,29 @@ kotlin {
         @Suppress("UNUSED_VARIABLE")
         val jvmMain by getting {
             dependencies {
-//                implementation(kotlin("stdlib-jdk8"))
+                api("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
+
                 implementation("ch.qos.logback:logback-classic:$logbackVersion")
                 implementation("org.jetbrains:kotlin-css-jvm:$kotlinCssVersion")
-                implementation("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
             }
         }
 
         @Suppress("UNUSED_VARIABLE")
         val jvmTest by getting {
-            dependencies {
-                implementation(kotlin("test"))
-                implementation(kotlin("test-junit"))
-            }
+            dependencies {}
         }
 
 
         @Suppress("UNUSED_VARIABLE")
         val jsMain by getting {
             dependencies {
-//                implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-js:$serializationVersion")
-                implementation("tech.kzen.lib:kzen-lib-common-js:$kzenLibVersion")
-//                implementation(npm("immutable", immutaleJsVersion))
+                api("tech.kzen.lib:kzen-lib-common-js:$kzenLibVersion")
             }
         }
 
         @Suppress("UNUSED_VARIABLE")
         val jsTest by getting {
-            dependencies {
-                implementation(kotlin("test-js"))
-            }
+            dependencies {}
         }
     }
 }
