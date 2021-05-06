@@ -5,12 +5,8 @@ plugins {
     `maven-publish`
 }
 
-group = "tech.kzen.auto"
-version = "0.22.0-SNAPSHOT"
 
-
-dependencies {
-}
+dependencies {}
 
 
 tasks.withType<KotlinCompile> {
