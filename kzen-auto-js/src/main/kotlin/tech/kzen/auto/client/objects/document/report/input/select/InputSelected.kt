@@ -52,6 +52,23 @@ class InputSelected(
     }
 
 
+    override fun componentDidUpdate(prevProps: Props, prevState: State, snapshot: Any) {
+        val inputSelection = props.reportState.inputSelection
+        if (inputSelection != null &&
+                inputSelection != prevProps.reportState.inputSelection &&
+                state.selected.isNotEmpty()
+        ) {
+            val selectionLocations = inputSelection.locations.map { it.dataLocationInfo.path }
+            val filtered = state.selected.filter { it in selectionLocations }
+            if (state.selected.size != filtered.size) {
+                setState {
+                    selected = filtered.toPersistentSet()
+                }
+            }
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRemoveSelected() {
         if (props.editDisabled || state.selected.isEmpty()) {
@@ -119,18 +136,18 @@ class InputSelected(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun summaryText(inputSelectionInfo: InputSelectionInfo): String {
-        val selected = inputSelectionInfo.locations.map { it.dataLocationInfo }
-
-        val folderCount = selected.map { it.path.parent() }.toSet().size
-        val totalSize = selected.sumOf { it.size }
-
-        val filesPlural = if (selected.size == 1) { "file" } else { "files" }
-        val foldersText = if (folderCount == 1) { "" } else { "from $folderCount folders " }
-        val totalPrefix = if (selected.size == 1) { "" } else { "total " }
-
-        return "${selected.size} $filesPlural ${foldersText}($totalPrefix${FormatUtils.readableFileSize(totalSize)})"
-    }
+//    private fun summaryText(inputSelectionInfo: InputSelectionInfo): String {
+//        val selected = inputSelectionInfo.locations.map { it.dataLocationInfo }
+//
+//        val folderCount = selected.map { it.path.parent() }.toSet().size
+//        val totalSize = selected.sumOf { it.size }
+//
+//        val filesPlural = if (selected.size == 1) { "file" } else { "files" }
+//        val foldersText = if (folderCount == 1) { "" } else { "from $folderCount folders " }
+//        val totalPrefix = if (selected.size == 1) { "" } else { "total " }
+//
+//        return "${selected.size} $filesPlural ${foldersText}($totalPrefix${FormatUtils.readableFileSize(totalSize)})"
+//    }
 
 
     private fun dataLocationToSpec(dataLocations: Collection<DataLocation>): List<InputDataSpec> {
