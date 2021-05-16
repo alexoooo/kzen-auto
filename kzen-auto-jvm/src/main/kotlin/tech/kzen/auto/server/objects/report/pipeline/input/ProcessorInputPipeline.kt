@@ -124,7 +124,7 @@ class ProcessorInputPipeline<Output>(
         @Suppress("UNCHECKED_CAST")
         var nextOutput = resetDecorator as PipelineOutput<Any>
 
-        for (i in processorDataInstance.segments.size - 1 .. 0) {
+        for (i in processorDataInstance.segments.size - 1 downTo 0) {
             val segmentDisruptor = setupModelDisruptorSegment(i, nextOutput)
             chain.add(segmentDisruptor)
             nextOutput = DisruptorPipelineOutput(segmentDisruptor.ringBuffer)

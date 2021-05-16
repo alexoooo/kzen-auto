@@ -27,6 +27,10 @@ public class FlatPipelineHandoff
             FlatProcessorEvent model,
             @NotNull PipelineOutput<ModelOutputEvent<FlatFileRecord>> output
     ) {
+        if (model.getEndOfData()) {
+            return;
+        }
+
         ModelOutputEvent<FlatFileRecord> nextEvent = output.next();
 
         if (skipFirst) {

@@ -17,6 +17,8 @@ public class RecordDataBuffer {
     public char[] chars = emptyChars;
     public int charsLength;
 
+//    public boolean endOfData;
+
 
     //-----------------------------------------------------------------------------------------------------------------
     public int length() {

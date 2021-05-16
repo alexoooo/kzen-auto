@@ -62,6 +62,12 @@ class ProcessorFilterStage(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun isEmpty(): Boolean {
+        return nonEmptyFilterColumnNames.isEmpty()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun onEvent(event: ProcessorOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
 //        if (++count == 794477L) {
 //            println("> $count");

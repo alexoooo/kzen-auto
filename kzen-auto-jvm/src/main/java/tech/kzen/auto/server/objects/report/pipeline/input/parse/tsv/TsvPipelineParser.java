@@ -12,6 +12,10 @@ public class TsvPipelineParser
 {
     @Override
     public void process(FlatProcessorEvent model) {
+        if (model.getEndOfData()) {
+            return;
+        }
+
         RecordDataBuffer data = model.getData();
         FlatFileRecord flatFileRecord = model.model;
         flatFileRecord.clearCache();

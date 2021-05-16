@@ -18,6 +18,10 @@ public class CsvPipelineParser
     @SuppressWarnings("EnhancedSwitchMigration")
     @Override
     public void process(FlatProcessorEvent model) {
+        if (model.getEndOfData()) {
+            return;
+        }
+
 //        if (++count == 794477) {
 //            System.out.println("> " + count);
 //        }

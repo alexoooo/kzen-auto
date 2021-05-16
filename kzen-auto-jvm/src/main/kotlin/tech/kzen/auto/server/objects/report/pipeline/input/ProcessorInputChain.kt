@@ -2,13 +2,13 @@ package tech.kzen.auto.server.objects.report.pipeline.input
 
 import tech.kzen.auto.plugin.api.PipelineTerminalStep
 import tech.kzen.auto.plugin.definition.ProcessorDataDefinition
+import tech.kzen.auto.plugin.helper.DataFrameFeeder
+import tech.kzen.auto.plugin.helper.ListPipelineOutput
 import tech.kzen.auto.plugin.model.DataBlockBuffer
 import tech.kzen.auto.plugin.model.DataInputEvent
 import tech.kzen.auto.plugin.model.ModelOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
-import tech.kzen.auto.server.objects.report.pipeline.event.output.ListPipelineOutput
 import tech.kzen.auto.server.objects.report.pipeline.input.model.instance.ProcessorSegmentInstance
-import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorFrameFeeder
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputDecoder
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputFramer
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
@@ -61,10 +61,10 @@ class ProcessorInputChain<T>(
 
     private val decoder = textCharset?.let { ProcessorInputDecoder(it) }
     private val framer = ProcessorInputFramer(processorDataDefinition.dataFramerFactory())
-    private val feeder = ProcessorFrameFeeder(dataRecordBuffer)
+    private val feeder = DataFrameFeeder(dataRecordBuffer)
 
 
-    private var reachedEnd = false
+//    private var reachedEnd = false
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -83,9 +83,9 @@ class ProcessorInputChain<T>(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun poll(visitor: Consumer<ModelOutputEvent<T>>): Boolean {
-        if (reachedEnd) {
-            return false
-        }
+//        if (reachedEnd) {
+//            return false
+//        }
 
         val hasNext = inputReader.poll(dataBlockBuffer)
 

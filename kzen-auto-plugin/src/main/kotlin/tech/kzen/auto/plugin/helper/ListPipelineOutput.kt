@@ -1,15 +1,19 @@
-package tech.kzen.auto.server.objects.report.pipeline.event.output
+package tech.kzen.auto.plugin.helper
 
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 
 
 class ListPipelineOutput<T>(
         private val factory: () -> T
-): PipelineOutput<T> {
+):
+    PipelineOutput<T>
+{
+    //-----------------------------------------------------------------------------------------------------------------
     private val buffer = mutableListOf<T>()
     private var nextIndex = 0
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override fun next(): T {
         return when {
             buffer.size <= nextIndex -> {
@@ -29,6 +33,7 @@ class ListPipelineOutput<T>(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     fun flush(consumer: (T) -> Unit) {
         for (i in 0 until nextIndex) {
             consumer(buffer[i])

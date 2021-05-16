@@ -51,8 +51,8 @@ class ProcessorDatasetPipeline(
 
 
 //        private const val preCachePartitionCount = 0
-//        private const val preCachePartitionCount = 1
-        private const val preCachePartitionCount = 2
+        private const val preCachePartitionCount = 1
+//        private const val preCachePartitionCount = 2
 //        private const val preCachePartitionCount = 3
 //        private const val preCachePartitionCount = 4
 
@@ -134,8 +134,6 @@ class ProcessorDatasetPipeline(
     //-----------------------------------------------------------------------------------------------------------------
     private val progressTracker: ReportProgressTracker = ReportProgressTracker(
         initialReportRunContext.datasetInfo.dataLocations(), taskHandle)
-
-    private val filter = ProcessorFilterStage(initialReportRunContext)
 
     private val preCachePartitions = ProcessorPreCacheStage.partitions(preCachePartitionCount)
 
@@ -274,13 +272,25 @@ class ProcessorDatasetPipeline(
             classLoaderHandle.classLoader,
             ServerContext.calculatedColumnEval)
 
-        recordDisruptor
-            .handleEventsWith(formulas)
-            .then(filter)
+        var builder = recordDisruptor.handleEventsWith(formulas)
+
+        val filter = ProcessorFilterStage(initialReportRunContext)
+        if (! filter.isEmpty()) {
+            builder = builder.then(filter)
+        }
+
+        builder
             .then(*preCachePartitions)
             .then(summary, output)
 
-        recordDisruptor.setDefaultExceptionHandler(object : ExceptionHandler<ProcessorOutputEvent<*>> {
+        recordDisruptor.setDefaultExceptionHandler(recordExceptionHandler())
+
+        return recordDisruptor
+    }
+
+
+    private fun recordExceptionHandler(): ExceptionHandler<ProcessorOutputEvent<*>> {
+        return object : ExceptionHandler<ProcessorOutputEvent<*>> {
             override fun handleEventException(ex: Throwable, sequence: Long, event: ProcessorOutputEvent<*>) {
                 if (taskHandle?.isFailed() == true) {
                     return
@@ -307,9 +317,7 @@ class ProcessorDatasetPipeline(
                 logger.error("Record shutdown", ex)
                 taskHandle?.terminalFailure(ExecutionFailure.ofException("Shutdown - ", ex))
             }
-        })
-
-        return recordDisruptor
+        }
     }
 
 

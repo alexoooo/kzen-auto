@@ -11,6 +11,10 @@ public class TextPipelineLexer
 {
     @Override
     public void process(FlatProcessorEvent model) {
+        if (model.getEndOfData()) {
+            return;
+        }
+
         RecordDataBuffer data = model.getData();
         int charsLength = data.charsLength;
 

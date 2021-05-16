@@ -97,8 +97,8 @@ class ReportProgressTracker(
         }
 
 
-        fun nextParsed(nextParsedRecords: Int) {
-            records += nextParsedRecords
+        fun nextRecords(additionalRecords: Int) {
+            records += additionalRecords
         }
 
 
