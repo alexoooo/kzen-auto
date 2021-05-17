@@ -12,8 +12,6 @@ class DataFrameFeeder(
     //-----------------------------------------------------------------------------------------------------------------
     private val partialInput = RecordDataBuffer()
 
-    private var nextIndex = 0L
-
 
     //-----------------------------------------------------------------------------------------------------------------
     fun feed(
@@ -37,7 +35,6 @@ class DataFrameFeeder(
         else if (continuingPartial) {
             val next = output.next()
             next.data.copy(partialInput)
-            next.index = nextIndex++
             output.commit()
             partialInput.clear()
             count++
@@ -50,7 +47,6 @@ class DataFrameFeeder(
         for (i in firstComplete .. lastComplete) {
             val next = output.next()
             next.data.setFrame(dataBlockBuffer, i)
-            next.index = nextIndex++
             output.commit()
             count++
         }
@@ -63,7 +59,6 @@ class DataFrameFeeder(
         if (dataBlockBuffer.endOfData) {
             val next = output.next()
             next.data.clear()
-            next.index = -1
             next.endOfData = true
             output.commit()
         }

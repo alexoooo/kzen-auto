@@ -94,8 +94,10 @@ public class CsvProcessorDefiner
                 FlatProcessorEvent::new,
                 FlatFileRecord.class,
                 List.of(
-                        CsvPipelineLexer::new,
-                        CsvPipelineParser::new
+                        new ProcessorSegmentStepDefinition<>(List.of(
+                                CsvPipelineLexer::new)),
+                        new ProcessorSegmentStepDefinition<>(List.of(
+                                CsvPipelineParser::new))
                 ),
                 () -> new FlatPipelineHandoff(true),
                 ringBufferSize);

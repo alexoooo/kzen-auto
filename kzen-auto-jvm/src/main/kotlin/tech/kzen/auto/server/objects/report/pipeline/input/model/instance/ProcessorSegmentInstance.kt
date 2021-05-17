@@ -11,9 +11,13 @@ class ProcessorSegmentInstance<Model, Output>(
     val modelFactory = definition.modelFactory
     val ringBufferSize = definition.ringBufferSize
 
-    val intermediateStages: List<PipelineIntermediateStep<Model>> =
-            definition.intermediateStageFactories.map { it() }
+    val intermediateStages: List<List<PipelineIntermediateStep<Model>>> =
+        definition
+            .intermediateStepFactories
+            .map { step ->
+                step.intermediateStepFactories.map { it() }
+            }
 
     val finalStage: PipelineTerminalStep<Model, Output> =
-            definition.finalStageFactory()
+            definition.finalStepFactory()
 }

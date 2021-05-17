@@ -97,8 +97,10 @@ public class TextProcessorDefiner
                 FlatProcessorEvent::new,
                 FlatFileRecord.class,
                 List.of(
-                        TextPipelineLexer::new,
-                        TextPipelineParser::new
+                        new ProcessorSegmentStepDefinition<>(List.of(
+                            TextPipelineLexer::new)),
+                        new ProcessorSegmentStepDefinition<>(List.of(
+                            TextPipelineParser::new))
                 ),
                 () -> new FlatPipelineHandoff(false),
                 ringBufferSize);

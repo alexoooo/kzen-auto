@@ -18,7 +18,7 @@ plugins {
 
 dependencies {
     implementation(project(":kzen-auto-common"))
-    implementation(project(":kzen-auto-plugin"))
+    api(project(":kzen-auto-plugin"))
 
 //    implementation("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
     api("tech.kzen.lib:kzen-lib-jvm:$kzenLibVersion")
@@ -33,7 +33,7 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("org.jetbrains:kotlin-css-jvm:1.0.0-$wrapperKotlinVersion")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
-    implementation("org.seleniumhq.selenium:selenium-java:$seleniumVersion")
+    api("org.seleniumhq.selenium:selenium-java:$seleniumVersion")
     implementation("org.apache.commons:commons-compress:$commonsCompressVersion")
     implementation("it.unimi.dsi:fastutil-core:$fastutilVersion")
     implementation("io.lacuna:bifurcan:$bifurcanVersion")

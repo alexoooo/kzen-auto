@@ -55,6 +55,7 @@ class ProcessorInputChain<T>(
 
     private val segments = processorDataDefinition.segments.map { ProcessorSegmentInstance(it) }
     private val modelBuffers = processorDataDefinition.segments.map { ListPipelineOutput(it.modelFactory) }
+    private val segmentIndexes = LongArray(segments.size) { 0 }
 
     @Suppress("UNCHECKED_CAST")
     private val dataRecordBuffer = modelBuffers.first() as ListPipelineOutput<DataInputEvent>
@@ -111,8 +112,13 @@ class ProcessorInputChain<T>(
         @Suppress("UNCHECKED_CAST")
         val segment = segments[index] as ProcessorSegmentInstance<Model, Any>
 
+        val segmentIndex = segmentIndexes[index]
+        segmentIndexes[index]++
+
         for (intermediateStage in segment.intermediateStages) {
-            intermediateStage.process(model)
+            for (step in intermediateStage) {
+                step.process(model, segmentIndex)
+            }
         }
 
         if (index + 1 == segments.size) {

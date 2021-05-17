@@ -9,8 +9,9 @@ import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProc
 public class TextPipelineLexer
         implements PipelineIntermediateStep<FlatProcessorEvent>
 {
+    //-----------------------------------------------------------------------------------------------------------------
     @Override
-    public void process(FlatProcessorEvent model) {
+    public void process(FlatProcessorEvent model, long index) {
         if (model.getEndOfData()) {
             return;
         }

@@ -1,15 +1,14 @@
 package tech.kzen.auto.plugin.definition
 
-import tech.kzen.auto.plugin.api.PipelineIntermediateStep
 import tech.kzen.auto.plugin.api.PipelineTerminalStep
 
 
 data class ProcessorSegmentDefinition<Model, Output>(
-        val modelFactory: () -> Model,
-        val outputPayloadType: Class<*>,
-        val intermediateStageFactories: List<() -> PipelineIntermediateStep<Model>>,
-        val finalStageFactory: () -> PipelineTerminalStep<Model, Output>,
-        val ringBufferSize: Int
+    val modelFactory: () -> Model,
+    val outputPayloadType: Class<*>,
+    val intermediateStepFactories: List<ProcessorSegmentStepDefinition<Model>>,
+    val finalStepFactory: () -> PipelineTerminalStep<Model, Output>,
+    val ringBufferSize: Int
 ) {
     init {
         require(ringBufferSize != 0 && (ringBufferSize and ringBufferSize - 1) == 0) {

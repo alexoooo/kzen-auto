@@ -18,17 +18,17 @@ object DisruptorUtils {
 
 
 
-    fun <T> addHandler(
+    fun <T> addHandlers(
         disruptor: Disruptor<T>,
         group: EventHandlerGroup<T>?,
-        handler: EventHandler<T>
+        vararg handlers: EventHandler<T>
     ): EventHandlerGroup<T> {
         return when (group) {
             null ->
-                disruptor.handleEventsWith(handler)
+                disruptor.handleEventsWith(*handlers)
 
             else ->
-                group.handleEventsWith(handler)
+                group.handleEventsWith(*handlers)
         }
     }
 }

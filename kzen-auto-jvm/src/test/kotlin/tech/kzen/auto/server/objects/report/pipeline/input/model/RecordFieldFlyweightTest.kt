@@ -1,8 +1,6 @@
-package tech.kzen.auto.server.objects.report.pipeline.input.parse
+package tech.kzen.auto.server.objects.report.pipeline.input.model
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
 import kotlin.test.assertEquals
 
 

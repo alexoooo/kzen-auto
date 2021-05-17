@@ -273,25 +273,6 @@ public class FlatFileRecord
     }
 
 
-//    public void addToFieldAndCommit(char[] chars, int offset, int length) {
-//        if (length != 0) {
-//            if (fieldContents.length < fieldContentLength + length) {
-//                int nextSize = Math.max((int) (fieldContents.length * 1.2), fieldContentLength + length);
-//                fieldContents = Arrays.copyOf(fieldContents, nextSize);
-//            }
-//            System.arraycopy(chars, offset, fieldContents, fieldContentLength, length);
-//            fieldContentLength += length;
-//        }
-//
-//        if (fieldEnds.length <= fieldCount) {
-//            int nextSize = Math.max((int) (fieldEnds.length * 1.2 + 1), fieldCount);
-//            fieldEnds = Arrays.copyOf(fieldEnds, nextSize);
-//        }
-//        fieldEnds[fieldCount] = fieldContentLength;
-//        fieldCount++;
-//    }
-
-
     @Override
     public void add(String value) {
         growFieldContentsIfRequired(fieldContentLength + value.length());
@@ -320,12 +301,17 @@ public class FlatFileRecord
     }
 
 
-//    public void addAllAndPopulateCaches(String[] values) {
-//        for (String value : values) {
-//            add(value);
-//            populateCache(fieldCount - 1);
-//        }
-//    }
+    @Override
+    public void add(long value) {
+        int length = NumberParseUtils.stringSize(value);
+        int requiredContentLength = fieldContentLength + length;
+
+        growFieldContentsIfRequired(requiredContentLength);
+        NumberParseUtils.toStringFromRight(value, requiredContentLength - 1, fieldContents);
+
+        fieldContentLength = requiredContentLength;
+        commitField();
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

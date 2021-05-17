@@ -94,8 +94,10 @@ public class TsvProcessorDefiner
                 FlatProcessorEvent::new,
                 FlatFileRecord.class,
                 List.of(
-                        TsvPipelineLexer::new,
-                        TsvPipelineParser::new
+                        new ProcessorSegmentStepDefinition<>(List.of(
+                            TsvPipelineLexer::new)),
+                        new ProcessorSegmentStepDefinition<>(List.of(
+                                TsvPipelineParser::new))
                 ),
                 () -> new FlatPipelineHandoff(true),
                 ringBufferSize);

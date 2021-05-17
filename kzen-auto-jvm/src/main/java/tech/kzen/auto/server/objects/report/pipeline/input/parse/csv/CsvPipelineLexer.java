@@ -16,7 +16,7 @@ public class CsvPipelineLexer
     //-----------------------------------------------------------------------------------------------------------------
     @SuppressWarnings("EnhancedSwitchMigration")
     @Override
-    public void process(FlatProcessorEvent model) {
+    public void process(FlatProcessorEvent model, long index) {
         if (model.getEndOfData()) {
             return;
         }

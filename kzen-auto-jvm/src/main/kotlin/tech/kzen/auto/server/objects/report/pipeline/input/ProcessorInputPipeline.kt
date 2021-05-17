@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.input
 
+import com.lmax.disruptor.EventHandler
 import com.lmax.disruptor.ExceptionHandler
 import com.lmax.disruptor.RingBuffer
 import com.lmax.disruptor.dsl.Disruptor
@@ -97,7 +98,7 @@ class ProcessorInputPipeline<Output>(
         }
 
         val framer = ProcessorInputFramer(processorDataInstance.dataFramer)
-        eventHandlerGroup = DisruptorUtils.addHandler(binaryDisruptor, eventHandlerGroup, framer)
+        eventHandlerGroup = DisruptorUtils.addHandlers(binaryDisruptor, eventHandlerGroup, framer)
 
         val output = DisruptorPipelineOutput(recordRingBuffer)
         val feeder = ProcessorFrameFeeder(output, streamProgressTracker)
@@ -154,15 +155,18 @@ class ProcessorInputPipeline<Output>(
         var eventHandlerGroup: EventHandlerGroup<Any>? = null
 
         for (intermediateStage in segment.intermediateStages) {
-            eventHandlerGroup = DisruptorUtils.addHandler(segmentDisruptor, eventHandlerGroup) { event, _, _ ->
-                intermediateStage.process(event)
+            val handlers: List<EventHandler<Any>> = intermediateStage.map { step ->
+                EventHandler { event, sequence, _ -> step.process(event, sequence) }
             }
+
+            eventHandlerGroup = DisruptorUtils.addHandlers(
+                segmentDisruptor, eventHandlerGroup, *handlers.toTypedArray())
         }
 
         val finalStage = segment.finalStage
-        DisruptorUtils.addHandler(segmentDisruptor, eventHandlerGroup) { event, _, _ ->
+        DisruptorUtils.addHandlers(segmentDisruptor, eventHandlerGroup, { event, _, _ ->
             finalStage.process(event, segmentOutput)
-        }
+        })
 
         segmentDisruptor.setDefaultExceptionHandler(
             loggingExceptionHandler("Segment ${index + 1}"))
