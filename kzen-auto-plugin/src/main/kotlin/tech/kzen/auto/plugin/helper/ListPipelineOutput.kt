@@ -33,6 +33,15 @@ class ListPipelineOutput<T>(
     }
 
 
+    override fun batch(size: Int, processor: (T) -> Unit) {
+        for (i in 0 until size) {
+            val next = next()
+            processor(next)
+            commit()
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun flush(consumer: (T) -> Unit) {
         for (i in 0 until nextIndex) {

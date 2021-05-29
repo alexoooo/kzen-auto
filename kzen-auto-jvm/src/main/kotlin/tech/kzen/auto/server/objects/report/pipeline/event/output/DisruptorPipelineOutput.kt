@@ -21,4 +21,14 @@ class DisruptorPipelineOutput<T>(
     override fun commit() {
         ringBuffer.publish(sequence)
     }
+
+
+    override fun batch(size: Int, processor: (T) -> Unit) {
+        val last = ringBuffer.next(size)
+        for (i in size - 1 downTo 0) {
+            val event = ringBuffer.get(last - i)
+            processor(event)
+        }
+        ringBuffer.publish(last - size, last)
+    }
 }
