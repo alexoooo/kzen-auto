@@ -7,7 +7,8 @@ import tech.kzen.lib.common.util.Digestible
 
 // see: https://developer.mozilla.org/en-US/docs/Web/API/URL
 actual class Url(
-    private val url: URL
+    private val url: URL,
+    private val networkFile: Boolean
 ): Digestible {
     //-----------------------------------------------------------------------------------------------------------------
     actual companion object {
@@ -17,19 +18,17 @@ actual class Url(
 
 
         actual fun of(url: String): Url {
-            return Url(URL(url))
+            return Url(URL(url), url.startsWith(networkFilePrefix))
         }
 
         actual fun parse(url: String): Url? {
-            val parsed =
-                try {
-                    URL(url)
-                }
-                catch (e: Exception) {
-                    return null
-                }
-
-            return Url(parsed)
+            @Suppress("LiftReturnOrAssignment")
+            try {
+                return of(url)
+            }
+            catch (e: Exception) {
+                return null
+            }
         }
     }
 
@@ -41,8 +40,13 @@ actual class Url(
 
     actual val path: String
         get() =
-            if (isFile() && isNetworkFile()) {
-                "//" + url.hostname + url.pathname
+            if (isFile() && networkFile) {
+                if (url.hostname == "" && url.pathname.startsWith("/")) {
+                    "/" + url.pathname
+                }
+                else {
+                    "//" + url.hostname + url.pathname
+                }
             }
             else {
                 url.pathname
@@ -64,9 +68,9 @@ actual class Url(
     }
 
 
-    private fun isNetworkFile(href: String = url.href): Boolean {
-        return href.startsWith(filePrefix) && ! href.startsWith(localFilePrefix)
-    }
+//    private fun isNetworkFile(href: String = url.href): Boolean {
+//        return href.startsWith(filePrefix) && ! href.startsWith(localFilePrefix)
+//    }
 
 
 //    actual fun normalize(): Url {
@@ -79,9 +83,20 @@ actual class Url(
         val href = url.href
 
         return when {
-            isNetworkFile(href) -> {
-                val networkPath = href.substring(filePrefix.length)
-                "$networkFilePrefix$networkPath"
+            networkFile -> {
+                when {
+                    href.startsWith(networkFilePrefix) ->
+                        href
+
+                    href.startsWith(localFilePrefix) ->
+                        "$networkFilePrefix${href.substring(localFilePrefix.length)}"
+
+                    href.startsWith(filePrefix) ->
+                        "$networkFilePrefix${href.substring(filePrefix.length)}"
+
+                    else ->
+                        throw IllegalStateException("Network file expected: $href")
+                }
             }
 
             else ->

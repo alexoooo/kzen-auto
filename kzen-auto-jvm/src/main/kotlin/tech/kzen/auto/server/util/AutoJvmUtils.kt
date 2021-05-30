@@ -7,6 +7,9 @@ import java.nio.file.Paths
 
 object AutoJvmUtils
 {
+//    private val bareWindowsDrive = Regex("[a-zA-Z]:")
+
+
     fun sanitizeFilename(filenameFragment: String): String {
         return filenameFragment
             .replace(Regex("[^a-zA-Z0-9_-]+"), "_")
@@ -46,13 +49,18 @@ object AutoJvmUtils
     }
 
     private fun adjustPath(path: String): String {
-        if (path.contains('/') ||
-                path.contains('\\') ||
-                ! path.endsWith(":")
+        val normalizedSeparators = path.replace('\\', '/')
+
+        if (normalizedSeparators.contains('/') ||
+                ! normalizedSeparators.endsWith(":")
         ) {
-            return path
+            return normalizedSeparators
         }
 
-        return "$path/"
+//        if (path.matches(bareWindowsDrive)) {
+//            return "$path\\"
+//        }
+
+        return "$normalizedSeparators/"
     }
 }
