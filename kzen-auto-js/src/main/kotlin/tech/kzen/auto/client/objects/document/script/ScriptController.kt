@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.script
 import kotlinx.css.*
 import kotlinx.html.title
 import react.*
+import react.dom.attrs
 import react.dom.span
 import styled.css
 import styled.styledDiv
@@ -264,7 +265,7 @@ class ScriptController:
 
         styledDiv {
             css {
-                width = 20.em
+                width = StepController.width
             }
 
             for ((index, stepLocation) in stepLocations.withIndex()) {

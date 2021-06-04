@@ -5,6 +5,7 @@ import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
 import react.*
+import react.dom.attrs
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.report.state.FormulaAddRequest

@@ -3,10 +3,7 @@ package tech.kzen.auto.client.objects.document.report.filter
 import kotlinx.css.*
 import kotlinx.html.title
 import react.*
-import react.dom.table
-import react.dom.tbody
-import react.dom.td
-import react.dom.tr
+import react.dom.*
 import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
 import tech.kzen.auto.client.objects.document.report.ReportController

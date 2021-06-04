@@ -8,6 +8,7 @@ import react.RBuilder
 import react.RProps
 import react.RPureComponent
 import react.RState
+import react.dom.attrs
 import styled.css
 import styled.styledDiv
 import styled.styledImg

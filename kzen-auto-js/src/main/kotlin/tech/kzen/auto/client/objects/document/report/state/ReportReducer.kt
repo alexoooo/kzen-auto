@@ -92,6 +92,7 @@ object ReportReducer {
             is InputsSelectionAddRequest,
             is InputsSelectionRemoveRequest,
             is InputsSelectionDataTypeRequest,
+            is InputsSelectionGroupByRequest,
             is InputsSelectionFormatRequest,
             is InputsSelectionMultiFormatRequest,
             is InputsBrowserFilterRequest -> state.copy(

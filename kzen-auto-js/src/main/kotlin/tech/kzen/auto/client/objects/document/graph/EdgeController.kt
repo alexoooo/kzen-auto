@@ -8,6 +8,7 @@ import kotlinx.css.properties.borderTop
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import react.*
+import react.dom.attrs
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress

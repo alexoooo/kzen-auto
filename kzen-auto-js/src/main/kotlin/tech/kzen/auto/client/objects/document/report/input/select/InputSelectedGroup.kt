@@ -1,22 +1,25 @@
-package tech.kzen.auto.client.objects.document.report.input.browse
+package tech.kzen.auto.client.objects.document.report.input.select
 
 import kotlinx.css.em
-import kotlinx.css.width
+import kotlinx.css.marginTop
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
 import react.*
-import tech.kzen.auto.client.objects.document.report.state.InputsBrowserFilterRequest
+import tech.kzen.auto.client.objects.document.report.state.InputsSelectionGroupByRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.FunctionWithDebounce
+import tech.kzen.auto.client.wrap.MaterialTextField
+import tech.kzen.auto.client.wrap.lodash
+import tech.kzen.auto.client.wrap.reactStyle
 
 
-class InputBrowserFilter(
+class InputSelectedGroup(
     props: Props
 ):
-    RPureComponent<InputBrowserFilter.Props, InputBrowserFilter.State>(props)
+    RPureComponent<InputSelectedGroup.Props, InputSelectedGroup.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: RProps {
@@ -27,15 +30,14 @@ class InputBrowserFilter(
 
 
     interface State: RState {
-        var filterText: String
-//        var browserOpen: Boolean
-//        var selected: PersistentSet<String>
+        var groupByText: String
     }
+
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        filterText = props.reportState.inputSpec().browser.filter
+        groupByText = props.reportState.inputSpec().selection.groupBy
     }
 
 
@@ -50,18 +52,18 @@ class InputBrowserFilter(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onValueChange(newValue: String) {
         setState {
-            filterText = newValue
+            groupByText = newValue
         }
         submitDebounce.apply()
     }
 
 
     private fun submitEdit() {
-        if (props.reportState.inputSpec().browser.filter == state.filterText) {
+        if (props.reportState.inputSpec().selection.groupBy == state.groupByText) {
             return
         }
 
-        props.dispatcher.dispatchAsync(InputsBrowserFilterRequest(state.filterText))
+        props.dispatcher.dispatchAsync(InputsSelectionGroupByRequest(state.groupByText))
     }
 
 
@@ -78,28 +80,18 @@ class InputBrowserFilter(
         child(MaterialTextField::class) {
             attrs {
                 style = reactStyle {
-//                    float = Float.right
-                    width = 20.em
+                    marginTop = 0.25.em
                 }
 
-                size = "small"
-
-                InputProps = object : RProps {
-                    @Suppress("unused")
-                    var startAdornment = child(MaterialInputAdornment::class) {
-                        attrs {
-                            position = "start"
-                        }
-                        child(SearchIcon::class) {}
-                    }
-                }
+                label = "Group By (Regular Expression)"
+                fullWidth = true
 
                 onChange = {
                     val target = it.target as HTMLInputElement
                     onValueChange(target.value)
                 }
 
-                value = state.filterText
+                value = state.groupByText
                 disabled = props.editDisabled
                 onKeyDown = ::handleEnter
             }

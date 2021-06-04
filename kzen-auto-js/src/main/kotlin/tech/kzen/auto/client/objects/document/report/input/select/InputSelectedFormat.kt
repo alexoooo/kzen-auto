@@ -6,6 +6,7 @@ import kotlinx.css.fontSize
 import kotlinx.css.width
 import kotlinx.html.title
 import react.*
+import react.dom.attrs
 import react.dom.span
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.util.async

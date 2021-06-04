@@ -5,11 +5,13 @@ import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
 import react.*
+import react.dom.attrs
 import react.dom.img
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.common.AttributeController
+import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.wrap.MaterialCardContent
 import tech.kzen.auto.client.wrap.MaterialPaper
@@ -95,7 +97,7 @@ class DefaultStepDisplay(
     override fun RBuilder.render() {
         styledSpan {
             css {
-                width = 20.em
+                width = StepController.width
             }
 
             attrs {
@@ -167,7 +169,7 @@ class DefaultStepDisplay(
 
             backgroundColor = cardColor
 
-            width = 20.em
+            width = StepController.width
         }
 
         child(MaterialPaper::class) {

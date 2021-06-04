@@ -4,6 +4,7 @@ import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.title
 import react.*
+import react.dom.attrs
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.report.state.PivotValueAddRequest

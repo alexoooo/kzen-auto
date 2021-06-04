@@ -5,6 +5,7 @@ import kotlinx.css.properties.TextDecorationLine
 import kotlinx.css.properties.textDecoration
 import org.w3c.dom.HTMLElement
 import react.*
+import react.dom.attrs
 import react.dom.hr
 import styled.css
 import styled.styledA

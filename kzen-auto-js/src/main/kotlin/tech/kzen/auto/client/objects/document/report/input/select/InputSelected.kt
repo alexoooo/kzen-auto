@@ -6,6 +6,7 @@ import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import react.*
+import react.dom.attrs
 import react.dom.td
 import styled.*
 import tech.kzen.auto.client.objects.document.report.ReportController
@@ -42,6 +43,7 @@ class InputSelected(
     interface State: RState {
         var selected: PersistentSet<DataLocation>
         var showDetails: Boolean
+        var showGroupBy: Boolean
     }
 
 
@@ -49,6 +51,7 @@ class InputSelected(
     override fun State.init(props: Props) {
         selected = persistentSetOf()
         showDetails = false
+        showGroupBy = false
     }
 
 
@@ -98,6 +101,13 @@ class InputSelected(
     private fun onToggleFolders() {
         setState {
             showDetails = ! showDetails
+        }
+    }
+
+
+    private fun onToggleGroupBy() {
+        setState {
+            showGroupBy = ! showGroupBy
         }
     }
 
@@ -184,7 +194,7 @@ class InputSelected(
         val reportProgress = props.reportState.reportProgress
 
         renderControls()
-
+        renderGroupBy()
         renderTable(selectionSpec, selectionInfo, reportProgress)
     }
 
@@ -227,6 +237,7 @@ class InputSelected(
                     display = Display.inlineBlock
                     paddingTop = 1.2.em
                 }
+                renderGroupByToggle()
                 renderDetailToggle()
             }
         }
@@ -273,6 +284,85 @@ class InputSelected(
     }
 
 
+    private fun RBuilder.renderGroupByToggle() {
+        child(MaterialButton::class) {
+            attrs {
+                variant = "outlined"
+                size = "small"
+
+                onClick = {
+                    onToggleGroupBy()
+                }
+
+                style = reactStyle {
+                    if (state.showGroupBy) {
+                        backgroundColor = Color.darkGray
+                    }
+                }
+
+                title =
+                    if (state.showGroupBy) {
+                        "Hide: Group By"
+                    }
+                    else {
+                        "Show: Group By"
+                    }
+            }
+
+            child(GroupWorkIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        marginRight = 0.25.em
+                    }
+                }
+            }
+
+            +"Group By"
+        }
+    }
+
+
+    private fun RBuilder.renderDetailToggle() {
+        child(MaterialButton::class) {
+            attrs {
+                variant = "outlined"
+                size = "small"
+
+                onClick = {
+                    onToggleFolders()
+                }
+
+                style = reactStyle {
+                    marginLeft = 1.em
+
+                    if (state.showDetails) {
+                        backgroundColor = Color.darkGray
+                    }
+                }
+
+                title =
+                    if (state.showDetails) {
+                        "Hide: Details"
+                    }
+                    else {
+                        "Show: Details"
+                    }
+            }
+
+            child(MoreHorizIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        marginRight = 0.25.em
+                    }
+                }
+            }
+
+            +"Details"
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderTypeSelect() {
         child(InputSelectedType::class) {
             attrs {
@@ -296,43 +386,17 @@ class InputSelected(
     }
 
 
-    private fun RBuilder.renderDetailToggle() {
-        child(MaterialButton::class) {
+    private fun RBuilder.renderGroupBy() {
+        if (! state.showGroupBy) {
+            return
+        }
+
+        child(InputSelectedGroup::class) {
             attrs {
-                variant = "outlined"
-                size = "small"
-
-                onClick = {
-                    onToggleFolders()
-                }
-
-                style = reactStyle {
-                    if (state.showDetails) {
-                        backgroundColor = Color.darkGray
-                    }
-
-//                    paddingLeft = 0.px
-//                    paddingRight = 0.px
-                }
-
-                title =
-                    if (state.showDetails) {
-                        "Hide details"
-                    }
-                    else {
-                        "Show details"
-                    }
+                reportState = props.reportState
+                dispatcher = props.dispatcher
+                editDisabled = props.editDisabled
             }
-
-            child(MoreHorizIcon::class) {
-                attrs {
-                    style = reactStyle {
-                        marginRight = 0.25.em
-                    }
-                }
-            }
-
-            +"Details"
         }
     }
 

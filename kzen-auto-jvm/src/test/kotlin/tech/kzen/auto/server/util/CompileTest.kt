@@ -16,17 +16,17 @@ class CompileTest {
     @Ignore
     fun foo() {
         val configuration = CompilerConfiguration()
+
         configuration.put(MODULE_NAME, "test")
         configuration.put(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, NONE)
 
-        for (i in 0 .. 1_000_000_000) {
-            println("i = $i")
+        for (i in 0 .. 1_000_000) {
+            println("> $i")
             val parentDisposable = Disposer.newDisposable()
             KotlinCoreEnvironment.createForProduction(
-                parentDisposable, configuration, EnvironmentConfigFiles.JVM_CONFIG_FILES
-            )
-            Disposer.dispose(parentDisposable);
-            System.gc();
+                parentDisposable, configuration, EnvironmentConfigFiles.JVM_CONFIG_FILES)
+//            Disposer.dispose(parentDisposable)
+            parentDisposable.dispose()
         }
     }
 }

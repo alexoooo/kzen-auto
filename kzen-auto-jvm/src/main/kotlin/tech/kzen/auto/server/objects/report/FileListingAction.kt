@@ -12,6 +12,7 @@ import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.common.util.data.FilePathJvm.toPath
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
 import tech.kzen.auto.server.objects.report.ReportUtils.asCommon
+import tech.kzen.auto.server.objects.report.group.GroupPattern
 import tech.kzen.auto.server.service.ServerContext
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
@@ -70,7 +71,7 @@ class FileListingAction {
     }
 
 
-    fun selectionInfo(inputSelectionSpec: InputSelectionSpec): InputSelectionInfo {
+    fun selectionInfo(inputSelectionSpec: InputSelectionSpec, groupPattern: GroupPattern): InputSelectionInfo {
         val locations = mutableListOf<InputDataInfo>()
         for (inputDataSpec in inputSelectionSpec.locations) {
             val path = inputDataSpec.location.filePath!!.toPath()
@@ -85,10 +86,14 @@ class FileListingAction {
             val invalidProcessor =
                 processorDefinitionMetadata?.payloadType != inputSelectionSpec.dataType
 
+            val dataLocationGroup =
+                groupPattern.extract(dataLocationInfo.name)
+
             locations.add(InputDataInfo(
                 dataLocationInfo,
                 inputDataSpec.processorDefinitionCoordinate,
                 commonDataEncodingSpec,
+                dataLocationGroup,
                 invalidProcessor
             ))
         }

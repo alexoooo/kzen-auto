@@ -9,6 +9,7 @@ import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
 import react.*
+import react.dom.attrs
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -304,11 +305,13 @@ class StepNameEditor(
             css {
                 display = Display.inlineBlock
 
-                width = 100.pct.minus(4.em)
+//                width = 100.pct.minus(4.em)
+                width = 100.pct.minus(5.em)
                 height = StepHeader.headerHeight
 
 //                marginTop = 10.px
                 marginTop = 8.px
+//                backgroundColor = Color.red
             }
 
             child(MaterialTextField::class) {
@@ -362,9 +365,10 @@ class StepNameEditor(
                     title = "Save name (keyboard shortcut: Enter)"
 
                     style = reactStyle {
-//                        marginLeft = (-0.5).em
-                        marginLeft = (-0.75).em
-                        marginRight = (-1).em
+//                        marginLeft = (-0.75).em
+//                        marginRight = (-1).em
+                        marginLeft = (-0.5).em
+                        marginRight = 0.25.em
                     }
 
                     onClick = ::onRename

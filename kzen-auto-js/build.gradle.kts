@@ -28,11 +28,11 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-html-assembly:$kotlinxHtmlVersion")
-    implementation("org.jetbrains:kotlin-react:$kotlinReactVersion")
-    implementation("org.jetbrains:kotlin-react-dom:$kotlinReactDomVersion")
-    implementation("org.jetbrains:kotlin-styled:$kotlinStyledVersion")
-    implementation("org.jetbrains:kotlin-extensions:$kotlinExtensionsVersion")
-    implementation("org.jetbrains:kotlin-css-js:$kotlinCssVersion")
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-react:$kotlinReactVersion")
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$kotlinReactDomVersion")
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:$kotlinStyledVersion")
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-extensions:$kotlinExtensionsVersion")
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-css-js:$kotlinCssVersion")
 
     implementation(npm("react", reactVersion))
     implementation(npm("react-dom", reactVersion))

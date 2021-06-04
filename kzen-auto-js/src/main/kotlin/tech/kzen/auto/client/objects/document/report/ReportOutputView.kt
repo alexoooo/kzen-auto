@@ -4,6 +4,7 @@ import kotlinx.css.*
 import kotlinx.css.properties.TextDecoration
 import kotlinx.css.properties.boxShadowInset
 import react.*
+import react.dom.attrs
 import react.dom.tbody
 import react.dom.thead
 import react.dom.tr

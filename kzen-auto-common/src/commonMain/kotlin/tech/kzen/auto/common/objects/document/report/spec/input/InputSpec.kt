@@ -57,8 +57,7 @@ data class InputSpec(
                 mainLocation,
                 InputSelectionSpec.locationsAttributePath,
                 PositionRelation.afterLast,
-                paths.map { it.asNotation() }
-            )
+                paths.map { it.asNotation() })
         }
 
 
@@ -70,8 +69,7 @@ data class InputSpec(
                 mainLocation,
                 InputSelectionSpec.locationsAttributePath,
                 paths.map { it.asNotation() },
-                false
-            )
+                false)
         }
 
 
@@ -82,8 +80,7 @@ data class InputSpec(
             return UpdateInAttributeCommand(
                 mainLocation,
                 InputSelectionSpec.dataTypeAttributePath,
-                ScalarAttributeNotation(dataType.asString())
-            )
+                ScalarAttributeNotation(dataType.asString()))
         }
 
 
@@ -101,8 +98,7 @@ data class InputSpec(
                 mainLocation,
                 ReportConventions.inputAttributeName,
                 dataLocationCoordinateNestings,
-                ScalarAttributeNotation(pluginCoordinate.asString())
-            )
+                ScalarAttributeNotation(pluginCoordinate.asString()))
         }
 
 
@@ -121,8 +117,18 @@ data class InputSpec(
             return UpdateAllValuesInAttributeCommand(
                 mainLocation,
                 ReportConventions.inputAttributeName,
-                nestingNotations
-            )
+                nestingNotations)
+        }
+
+
+        fun setGroupByCommand(
+            mainLocation: ObjectLocation,
+            groupBy: String
+        ): UpdateInAttributeCommand {
+            return UpdateInAttributeCommand(
+                mainLocation,
+                InputSelectionSpec.groupByAttributePath,
+                ScalarAttributeNotation(groupBy))
         }
     }
 

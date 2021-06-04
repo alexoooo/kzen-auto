@@ -4,6 +4,7 @@ import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import react.*
+import react.dom.attrs
 import react.dom.div
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.wrap.*

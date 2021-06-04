@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.feature
 
 import kotlinx.css.*
 import react.*
+import react.dom.attrs
 import react.dom.br
 import react.dom.hr
 import react.dom.img

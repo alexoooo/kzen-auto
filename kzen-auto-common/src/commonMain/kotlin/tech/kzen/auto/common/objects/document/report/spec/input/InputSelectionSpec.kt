@@ -9,11 +9,15 @@ import tech.kzen.lib.platform.ClassName
 
 data class InputSelectionSpec(
     val dataType: ClassName,
+    val groupBy: String,
     val locations: List<InputDataSpec>
 ) {
     companion object {
         private val dataTypeKey = AttributeSegment.ofKey("dataType")
         val dataTypeAttributePath = InputSpec.selectionAttributePath.nest(dataTypeKey)
+
+        private val groupByKey = AttributeSegment.ofKey("groupBy")
+        val groupByAttributePath = InputSpec.selectionAttributePath.nest(groupByKey)
 
         private val locationsKey = AttributeSegment.ofKey("locations")
         val locationsAttributePath = InputSpec.selectionAttributePath.nest(locationsKey)
@@ -27,13 +31,15 @@ data class InputSelectionSpec(
         fun ofNotation(mapAttributeNotation: MapAttributeNotation): InputSelectionSpec {
             val dataType = ClassName(mapAttributeNotation.values[dataTypeKey]!!.asString()!!)
 
+            val groupBy = mapAttributeNotation.values[groupByKey]!!.asString()!!
+
             val locationsAttributeNotation = mapAttributeNotation.values[locationsKey] as ListAttributeNotation
             val locations = locationsAttributeNotation
                 .values
                 .map { InputDataSpec.ofNotation(it as MapAttributeNotation) }
 
             return InputSelectionSpec(
-                dataType, locations)
+                dataType, groupBy, locations)
         }
     }
 }

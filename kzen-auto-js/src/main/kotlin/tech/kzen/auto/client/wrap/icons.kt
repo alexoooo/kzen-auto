@@ -501,3 +501,9 @@ external class CheckIcon: Component<IconProps, RState> {
 external class CallReceivedIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+
+@JsName("GroupWork")
+external class GroupWorkIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

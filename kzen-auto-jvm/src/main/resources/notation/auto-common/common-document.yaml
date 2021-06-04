@@ -84,6 +84,7 @@ Report:
       filter: ""
     selection:
       dataType: tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
+      groupBy: ""
       locations: []
   formula: {}
   filter: {}

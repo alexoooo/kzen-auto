@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.graph
 import kotlinx.css.*
 import kotlinx.html.title
 import react.*
+import react.dom.attrs
 import react.dom.tbody
 import react.dom.tr
 import styled.*

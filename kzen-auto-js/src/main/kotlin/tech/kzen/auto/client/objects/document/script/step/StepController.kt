@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.step
 
+import kotlinx.css.em
 import react.*
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
@@ -14,6 +15,12 @@ class StepController(
 ):
         RPureComponent<StepController.Props, RState>(props)
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        val width = 24.em
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var stepDisplays: List<StepDisplayWrapper>,

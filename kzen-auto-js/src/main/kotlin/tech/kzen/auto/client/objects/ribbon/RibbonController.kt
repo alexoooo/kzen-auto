@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.ribbon
 import kotlinx.css.*
 import kotlinx.html.title
 import react.*
+import react.dom.attrs
 import styled.*
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext

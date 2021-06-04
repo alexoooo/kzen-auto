@@ -31,7 +31,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-scripting-jvm:$kotlinVersion")
 
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
-    implementation("org.jetbrains:kotlin-css-jvm:1.0.0-$wrapperKotlinVersion")
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-css-jvm:$kotlinCssVersion")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
     api("org.seleniumhq.selenium:selenium-java:$seleniumVersion")
     implementation("org.apache.commons:commons-compress:$commonsCompressVersion")

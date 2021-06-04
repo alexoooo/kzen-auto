@@ -132,6 +132,11 @@ data class InputsSelectionDataTypeRequest(
 ): InputReportAction()
 
 
+data class InputsSelectionGroupByRequest(
+    val groupBy: String
+): InputReportAction()
+
+
 data class InputsSelectionFormatRequest(
     val format: CommonPluginCoordinate,
     val dataLocations: List<DataLocation>

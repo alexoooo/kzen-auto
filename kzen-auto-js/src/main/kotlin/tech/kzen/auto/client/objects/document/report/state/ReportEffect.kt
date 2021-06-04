@@ -198,6 +198,9 @@ object ReportEffect {
             is InputsSelectionFormatRequest ->
                 selectFormat(state, action.format, action.dataLocations)
 
+            is InputsSelectionGroupByRequest ->
+                setGroupBy(state, action.groupBy)
+
             is InputsSelectionMultiFormatRequest ->
                 selectMultiFormat(state, action.locationFormats)
 
@@ -349,6 +352,27 @@ object ReportEffect {
     ): ReportAction {
         val command = InputSpec.selectFormatCommand(
             state.mainLocation, state.inputSpec().selection, dataLocations, format)
+
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = ClientContext.mirroredGraphStore.apply(command)
+
+        return when (result) {
+            is MirroredGraphSuccess -> {
+                ListInputsSelectedRequest
+            }
+
+            is MirroredGraphError ->
+                ListInputsError(result.error.message ?: "error")
+        }
+    }
+
+
+    private suspend fun setGroupBy(
+        state: ReportState,
+        groupBy: String
+    ): ReportAction {
+        val command = InputSpec.setGroupByCommand(
+            state.mainLocation, groupBy)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
         val result = ClientContext.mirroredGraphStore.apply(command)

@@ -23,6 +23,7 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
+import tech.kzen.auto.server.objects.report.group.GroupPattern
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.file.FileFlatDataSource
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
@@ -197,7 +198,11 @@ class ReportDocument(
 
 
     private fun actionInputInfo(): ExecutionResult {
-        val inputSelectionInfo = ServerContext.fileListingAction.selectionInfo(input.selection)
+        val groupPattern = GroupPattern.parse(input.selection.groupBy)
+            ?: return ExecutionFailure("Group By pattern error: ${input.selection.groupBy}")
+
+        val inputSelectionInfo = ServerContext.fileListingAction
+            .selectionInfo(input.selection, groupPattern)
 
         return ExecutionSuccess.ofValue(ExecutionValue.of(
             inputSelectionInfo.asCollection()))

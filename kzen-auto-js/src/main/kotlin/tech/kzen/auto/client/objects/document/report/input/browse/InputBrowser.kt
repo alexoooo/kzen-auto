@@ -6,6 +6,7 @@ import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import react.*
+import react.dom.attrs
 import react.dom.td
 import styled.*
 import tech.kzen.auto.client.objects.document.report.ReportController
