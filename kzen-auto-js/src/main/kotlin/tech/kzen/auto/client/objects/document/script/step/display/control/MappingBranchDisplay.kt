@@ -200,7 +200,7 @@ class MappingBranchDisplay(
     ) {
         styledDiv {
             css {
-                width = 20.em
+                width = StepController.width
             }
 
             for ((index, stepLocation) in stepLocations.withIndex()) {
@@ -221,7 +221,7 @@ class MappingBranchDisplay(
             css {
                 position = Position.relative
                 height = 4.em
-                width = 9.em
+                width = StepController.width.div(2).minus(1.em)
             }
 
             styledDiv {
@@ -243,7 +243,7 @@ class MappingBranchDisplay(
                     height = 3.em
                     width = 3.em
                     top = 0.em
-                    left = 8.5.em
+                    left = StepController.width.div(2).minus(1.em)
 
                     marginTop =  0.5.em
                     marginBottom = 0.5.em

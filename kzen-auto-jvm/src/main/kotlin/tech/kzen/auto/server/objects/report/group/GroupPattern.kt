@@ -36,11 +36,18 @@ class GroupPattern(
         }
 
         val matcher = regex!!.matcher(fileName)
-        if (! matcher.matches()) {
+        if (! matcher.find()) {
             return DataLocationGroup.other
         }
 
-        val groupText = matcher.group()
+        val groupText =
+            if (matcher.groupCount() > 0) {
+                matcher.group(1)
+            }
+            else {
+                matcher.group()
+            }
+
         if (groupText.isNullOrEmpty()) {
             return DataLocationGroup.empty
         }

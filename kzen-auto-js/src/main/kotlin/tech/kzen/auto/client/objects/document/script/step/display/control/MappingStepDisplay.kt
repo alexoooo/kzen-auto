@@ -39,12 +39,11 @@ class MappingStepDisplay(
 ):
         RPureComponent<MappingStepDisplay.Props, RState>(props)
 {
-
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val itemsAttributeName = AttributeName("items")
 
-        private val stepWidth = 18.em
+        private val stepWidth = StepController.width.minus(2.em)
         private val overlapTop = 4.px
     }
 
@@ -186,7 +185,7 @@ class MappingStepDisplay(
     ) {
         styledDiv {
             css {
-                width = 18.em
+                width = stepWidth
                 padding(16.px, 16.px, 0.px, 16.px)
                 borderTopLeftRadius = 3.px
                 borderTopRightRadius = 3.px
@@ -312,7 +311,7 @@ class MappingStepDisplay(
 
             styledDiv {
                 css {
-                    width = 10.em
+                    width = StepController.width.div(2)
                     display = Display.inlineBlock
                     marginLeft = 3.px
                 }

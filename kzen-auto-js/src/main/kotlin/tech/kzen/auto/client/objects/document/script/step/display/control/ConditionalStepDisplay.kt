@@ -38,7 +38,7 @@ class ConditionalStepDisplay(
         private val conditionAttributeName = AttributeName("condition")
         private val thenAttributeName = AttributeName("then")
         private val elseAttributeName = AttributeName("else")
-        private val stepWidth = 18.em
+        private val stepWidth = StepController.width.minus(2.em)
         private val overlapTop = 4.px
 
 //        private const val tableBorders = true
@@ -208,7 +208,7 @@ class ConditionalStepDisplay(
     ) {
         styledDiv {
             css {
-                width = 18.em
+                width = stepWidth
                 padding(16.px, 16.px, 0.px, 16.px)
                 borderTopLeftRadius = 3.px
                 borderTopRightRadius = 3.px

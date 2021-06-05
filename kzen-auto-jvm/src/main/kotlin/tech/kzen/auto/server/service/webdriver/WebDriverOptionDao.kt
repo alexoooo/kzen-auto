@@ -31,23 +31,23 @@ class WebDriverOptionDao {
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_32,
-                    "90.0.4430.24",
-                    URI("https://chromedriver.storage.googleapis.com/90.0.4430.24/chromedriver_win32.zip")
+                    "91.0.4472.19",
+                    URI("https://chromedriver.storage.googleapis.com/91.0.4472.19/chromedriver_win32.zip")
             ),
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_64,
-                    "90.0.4430.24",
-                    URI("https://chromedriver.storage.googleapis.com/90.0.4430.24/chromedriver_win32.zip")
+                    "91.0.4472.19",
+                    URI("https://chromedriver.storage.googleapis.com/91.0.4472.19/chromedriver_win32.zip")
             ),
 
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.OsX,
                     CpuArchitecture.X86_64,
-                    "90.0.4430.24",
-                    URI("https://chromedriver.storage.googleapis.com/90.0.4430.24/chromedriver_mac64.zip")
+                    "91.0.4472.19",
+                    URI("https://chromedriver.storage.googleapis.com/91.0.4472.19v/chromedriver_mac64.zip")
             ))
 
 

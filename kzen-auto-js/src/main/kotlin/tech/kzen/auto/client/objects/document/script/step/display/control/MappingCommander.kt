@@ -37,8 +37,8 @@ class MappingCommander(
                 .objects
                 .notations
                 .values
-                .size
-                + 1
+                .size +
+                1
 
         val objectNotation = ObjectNotation.ofParent(
                 itemArchetype.objectPath.name)

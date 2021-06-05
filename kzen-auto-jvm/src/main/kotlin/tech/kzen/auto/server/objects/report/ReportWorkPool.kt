@@ -10,6 +10,7 @@ import tech.kzen.lib.common.util.yaml.YamlParser
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.stream.Collectors
 
 
 class ReportWorkPool(
@@ -28,10 +29,11 @@ class ReportWorkPool(
 
         fun deleteDir(tempDir: Path) {
             try {
+                // NB: .toList throws "Unresolved reference" with Kotlin 1.5.10
                 val toDelete = Files
                     .walk(tempDir)
                     .sorted(Comparator.reverseOrder())
-                    .toList()
+                    .collect(Collectors.toList())
 
                 for (path in toDelete) {
                     Files.delete(path)
