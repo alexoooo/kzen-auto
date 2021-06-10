@@ -116,6 +116,9 @@ class ReportDocument(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun datasetInfo(): DatasetInfo? {
+        val groupPattern = GroupPattern.parse(input.selection.groupBy)
+            ?: GroupPattern.empty
+
         val items = mutableListOf<FlatDataInfo>()
         for (inputDataSpec in input.selection.locations) {
             val dataLocation = inputDataSpec.location
@@ -126,7 +129,7 @@ class ReportDocument(
 
             val dataEncoding = ReportUtils.encodingWithMetadata(inputDataSpec, processorDefinitionMetadata)
 
-            val dataLocationInfo = FlatDataLocation(
+            val flatDataLocation = FlatDataLocation(
                 dataLocation, dataEncoding)
 
             val pluginCoordinate = inputDataSpec.processorDefinitionCoordinate.asPluginCoordinate()
@@ -144,7 +147,7 @@ class ReportDocument(
 
                         ServerContext.columnListingAction.headerListing(
                             FlatDataHeaderDefinition(
-                                dataLocationInfo,
+                                flatDataLocation,
                                 FileFlatDataSource(),
                                 processorDefinition),
                             pluginCoordinate
@@ -152,9 +155,11 @@ class ReportDocument(
                     }
                 }
 
-            items.add(FlatDataInfo(dataLocationInfo, headerListing, pluginCoordinate))
+            val fileGroup = groupPattern.extract(flatDataLocation.dataLocation.fileName())
+
+            items.add(FlatDataInfo(flatDataLocation, headerListing, pluginCoordinate, fileGroup))
         }
-        return DatasetInfo(items)
+        return DatasetInfo(items.sorted())
     }
 
 
@@ -203,6 +208,7 @@ class ReportDocument(
 
         val inputSelectionInfo = ServerContext.fileListingAction
             .selectionInfo(input.selection, groupPattern)
+            .sorted()
 
         return ExecutionSuccess.ofValue(ExecutionValue.of(
             inputSelectionInfo.asCollection()))

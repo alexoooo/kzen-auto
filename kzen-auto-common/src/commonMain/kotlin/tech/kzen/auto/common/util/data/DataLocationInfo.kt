@@ -9,7 +9,9 @@ data class DataLocationInfo(
     val size: Long,
     val modified: Instant,
     val directory: Boolean
-) {
+):
+    Comparable<DataLocationInfo>
+{
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val pathKey = "path"
@@ -75,5 +77,11 @@ data class DataLocationInfo(
             modifiedKey to modified.toString(),
             directoryKey to directory.toString()
         )
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun compareTo(other: DataLocationInfo): Int {
+        return path.asString().compareTo(other.path.asString())
     }
 }

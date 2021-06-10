@@ -78,19 +78,10 @@ class InputSelected(
             return
         }
 
-        if (state.selected.size == 1) {
-            val path = state.selected.single()
-            val inputSelectionSpecs = dataLocationToSpec(listOf(path))
-            props.dispatcher.dispatchAsync(
-                InputsSelectionRemoveRequest(
-                    inputSelectionSpecs))
-        }
-        else {
-            val inputSelectionSpecs = dataLocationToSpec(state.selected)
-            props.dispatcher.dispatchAsync(
-                InputsSelectionRemoveRequest(
-                    inputSelectionSpecs))
-        }
+        val inputSelectionSpecs = dataLocationToSpec(state.selected)
+        props.dispatcher.dispatchAsync(
+            InputsSelectionRemoveRequest(
+                inputSelectionSpecs))
 
         setState {
             selected = persistentSetOf()
@@ -407,6 +398,11 @@ class InputSelected(
         selectedInfo: InputSelectionInfo?,
         reportProgress: ReportProgress?
     ) {
+        val hasGroup = selectedInfo
+            ?.locations
+            ?.any { it.group.group != null }
+            ?: false
+
         styledDiv {
             css {
                 maxHeight = 20.em
@@ -482,6 +478,23 @@ class InputSelected(
                             }
                         }
 
+                        if (hasGroup) {
+                            styledTh {
+                                css {
+                                    position = Position.sticky
+                                    top = 0.px
+                                    backgroundColor = Color.white
+                                    zIndex = 999
+//                                    width = 100.pct
+                                    textAlign = TextAlign.left
+                                    paddingLeft = 0.5.em
+                                    paddingRight = 0.5.em
+                                    boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                }
+                                +"Group"
+                            }
+                        }
+
                         styledTh {
                             css {
                                 position = Position.sticky
@@ -544,15 +557,20 @@ class InputSelected(
                         cursor = Cursor.default
                     }
 
-                    val inputDataInfoByPath = selectedInfo
-                        ?.locations
-                        ?.groupBy { it.dataLocationInfo.path }
-                        ?.mapValues { it.value.single() }
-                        ?: mapOf()
+                    if (selectedInfo == null) {
+                        for (inputDataSpec in selectionSpec) {
+                            renderTableRow(inputDataSpec, null, reportProgress)
+                        }
+                    }
+                    else {
+                        val inputDataSpecByPath = selectionSpec
+                            .groupBy { it.location }
+                            .mapValues { it.value.single() }
 
-                    for (inputDataSpec in selectionSpec) {
-                        val inputDataInfo = inputDataInfoByPath[inputDataSpec.location]
-                        renderTableRow(inputDataSpec, inputDataInfo, reportProgress)
+                        for (inputDataInfo in selectedInfo.locations) {
+                            val inputDataSpec = inputDataSpecByPath[inputDataInfo.dataLocationInfo.path]!!
+                            renderTableRow(inputDataSpec, inputDataInfo, reportProgress)
+                        }
                     }
                 }
             }
@@ -572,6 +590,7 @@ class InputSelected(
         val checked = dataLocation in state.selected
         val missing = inputDataInfo?.dataLocationInfo?.isMissing() ?: false
         val processorInvalid = inputDataInfo?.invalidProcessor ?: false
+        val group = inputDataInfo?.group
 
         styledTr {
             key = dataLocation.asString()
@@ -599,6 +618,17 @@ class InputSelected(
                     attrs["checked"] = checked
                     attrs["disabled"] = props.editDisabled
                     attrs["onChange"] = {}
+                }
+            }
+
+            if (group?.group != null) {
+                styledTd {
+                    css {
+                        paddingLeft = 0.5.em
+//                        whiteSpace = WhiteSpace.nowrap
+                    }
+
+                    +group.group!!
                 }
             }
 

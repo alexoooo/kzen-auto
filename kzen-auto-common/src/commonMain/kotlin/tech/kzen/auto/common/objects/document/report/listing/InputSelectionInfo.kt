@@ -19,6 +19,11 @@ data class InputSelectionInfo(
     }
 
 
+    fun sorted(): InputSelectionInfo {
+        return InputSelectionInfo(locations.sorted())
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun asCollection(): List<Map<String, Any>> {
         return locations

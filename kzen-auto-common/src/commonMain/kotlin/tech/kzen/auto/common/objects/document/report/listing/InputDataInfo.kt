@@ -12,7 +12,9 @@ data class InputDataInfo(
     val dataEncodingSpec: CommonDataEncodingSpec?,
     val group: DataLocationGroup,
     val invalidProcessor: Boolean
-) {
+):
+    Comparable<InputDataInfo>
+{
     companion object {
         private const val dataLocationInfoKey = "location"
         private const val processorDefinitionNameKey = "processor"
@@ -55,5 +57,15 @@ data class InputDataInfo(
             dataLocationGroupKey to (group.group ?: ""),
             invalidProcessorKey to invalidProcessor
         )
+    }
+
+
+    override fun compareTo(other: InputDataInfo): Int {
+        val groupCmp = group.compareTo(other.group)
+        if (groupCmp != 0) {
+            return groupCmp
+        }
+
+        return dataLocationInfo.compareTo(other.dataLocationInfo)
     }
 }
