@@ -12,10 +12,10 @@ import tech.kzen.auto.client.objects.document.report.state.FormulaAddRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.util.ClientInputUtils
-import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
-import tech.kzen.auto.client.wrap.CancelIcon
-import tech.kzen.auto.client.wrap.MaterialIconButton
-import tech.kzen.auto.client.wrap.MaterialTextField
+import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
+import tech.kzen.auto.client.wrap.material.CancelIcon
+import tech.kzen.auto.client.wrap.material.MaterialIconButton
+import tech.kzen.auto.client.wrap.material.MaterialTextField
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 
 

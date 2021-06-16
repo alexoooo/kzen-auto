@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.wrap
+package tech.kzen.auto.client.wrap.material
 
 import react.RProps
 import react.ReactElement

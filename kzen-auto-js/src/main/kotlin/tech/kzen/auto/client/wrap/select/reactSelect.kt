@@ -1,5 +1,5 @@
 @file:JsModule("react-select")
-package tech.kzen.auto.client.wrap
+package tech.kzen.auto.client.wrap.select
 
 import org.w3c.dom.HTMLElement
 import react.Component

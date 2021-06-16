@@ -6,13 +6,15 @@ import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.StageController
+import tech.kzen.auto.client.objects.document.report.analysis.AnalysisView
 import tech.kzen.auto.client.objects.document.report.filter.ReportFilterList
 import tech.kzen.auto.client.objects.document.report.formula.ReportFormulaList
 import tech.kzen.auto.client.objects.document.report.input.ReportInputView
-import tech.kzen.auto.client.objects.document.report.pivot.ReportPivot
+import tech.kzen.auto.client.objects.document.report.output.ReportOutputView2
+import tech.kzen.auto.client.objects.document.report.preview.PreviewView
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.objects.document.report.state.ReportStore
-import tech.kzen.auto.client.wrap.MaterialLinearProgress
+import tech.kzen.auto.client.wrap.material.MaterialLinearProgress
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -113,8 +115,10 @@ class ReportController(
 
             renderInput(processState)
             renderFormulas(processState)
+            renderPreview(processState, false)
             renderFilter(processState)
-            renderPivot(processState)
+            renderPreview(processState, true)
+            renderAnalysis(processState)
             renderOutput(processState)
         }
 
@@ -196,8 +200,29 @@ class ReportController(
     }
 
 
-    private fun RBuilder.renderPivot(reportState: ReportState) {
-        child(ReportPivot::class) {
+    private fun RBuilder.renderPreview(reportState: ReportState, afterFilter: Boolean) {
+        child(PreviewView::class) {
+            attrs {
+                this.reportState = reportState
+                this.dispatcher = store
+                this.afterFilter = afterFilter
+            }
+        }
+    }
+
+
+//    private fun RBuilder.renderPivot(reportState: ReportState) {
+//        child(ReportPivot::class) {
+//            attrs {
+//                this.reportState = reportState
+//                this.dispatcher = store
+//            }
+//        }
+//    }
+
+
+    private fun RBuilder.renderAnalysis(reportState: ReportState) {
+        child(AnalysisView::class) {
             attrs {
                 this.reportState = reportState
                 this.dispatcher = store
@@ -207,7 +232,7 @@ class ReportController(
 
 
     private fun RBuilder.renderOutput(reportState: ReportState) {
-        child(ReportOutputView::class) {
+        child(ReportOutputView2::class) {
             attrs {
                 this.reportState = reportState
                 this.dispatcher = store

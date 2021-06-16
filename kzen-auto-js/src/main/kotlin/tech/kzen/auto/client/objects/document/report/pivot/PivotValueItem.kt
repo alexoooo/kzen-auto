@@ -10,8 +10,8 @@ import styled.styledDiv
 import tech.kzen.auto.client.objects.document.report.state.PivotValueRemoveRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.wrap.DeleteIcon
-import tech.kzen.auto.client.wrap.MaterialIconButton
+import tech.kzen.auto.client.wrap.material.DeleteIcon
+import tech.kzen.auto.client.wrap.material.MaterialIconButton
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
 import tech.kzen.auto.common.objects.document.report.spec.PivotValueColumnSpec

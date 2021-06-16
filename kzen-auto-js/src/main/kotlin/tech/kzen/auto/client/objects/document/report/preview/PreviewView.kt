@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.report.filter
+package tech.kzen.auto.client.objects.document.report.preview
 
 import kotlinx.css.*
 import react.RBuilder
@@ -11,39 +11,27 @@ import styled.styledSpan
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.objects.document.report.state.SummaryLookupRequest
-import tech.kzen.auto.client.wrap.material.FilterListIcon
 import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.RefreshIcon
+import tech.kzen.auto.client.wrap.material.VisibilityIcon
 import tech.kzen.auto.client.wrap.reactStyle
 
 
-class ReportFilterList(
+class PreviewView(
     props: Props
 ):
-    RPureComponent<ReportFilterList.Props, ReportFilterList.State>(props)
+    RPureComponent<PreviewView.Props, PreviewView.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-        var reportState: ReportState,
+    interface Props: RProps {
+        var reportState: ReportState
         var dispatcher: ReportDispatcher
-    ): RProps
-
-
-    class State(
-//        var adding: Boolean
-    ): RState
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-//        adding = false
+        var afterFilter: Boolean
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun onSummaryRefresh() {
-        props.dispatcher.dispatchAsync(SummaryLookupRequest)
+    interface State: RState {
+//        var adding: Boolean
     }
 
 
@@ -83,15 +71,21 @@ class ReportFilterList(
     }
 
 
+
     private fun RBuilder.renderContent() {
         renderHeader()
-        renderFilters()
+        renderPreview()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderHeader() {
         val showRefresh = props.reportState.isTaskRunning()
+
+        val suffix = when (props.afterFilter) {
+            true -> "Filtered"
+            false -> "All"
+        }
 
         styledDiv {
             styledSpan {
@@ -101,13 +95,13 @@ class ReportFilterList(
                     position = Position.relative
                 }
 
-                child(FilterListIcon::class) {
+                child(VisibilityIcon::class) {
                     attrs {
                         style = reactStyle {
                             position = Position.absolute
                             fontSize = 2.5.em
-                            top = (-16.5).px
-                            left = (-3.5).px
+                            top = (-17).px
+                            left = (-3).px
                         }
                     }
                 }
@@ -119,7 +113,7 @@ class ReportFilterList(
                     fontSize = 2.em
                 }
 
-                +"Filter"
+                +"Preview $suffix"
             }
 
             styledSpan {
@@ -134,7 +128,7 @@ class ReportFilterList(
                             size = "small"
 
                             onClick = {
-                                onSummaryRefresh()
+//                                onSummaryRefresh()
                             }
                         }
 
@@ -154,47 +148,9 @@ class ReportFilterList(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderFilters() {
+    private fun RBuilder.renderPreview() {
         styledDiv {
-            renderFilterList()
-            renderFilterAdd()
-        }
-    }
-
-
-    private fun RBuilder.renderFilterList() {
-        val filterSpec = props.reportState.filterSpec()
-        styledDiv {
-            for ((index, columnName) in filterSpec.columns.keys.withIndex()) {
-                styledDiv {
-                    key = columnName
-
-                    if (index < filterSpec.columns.size - 1) {
-                        css {
-                            marginBottom = 1.em
-                        }
-                    }
-
-                    child(ReportFilterItem::class) {
-                        attrs {
-                            reportState = props.reportState
-                            dispatcher = props.dispatcher
-                            this.filterSpec = filterSpec
-                            this.columnName = columnName
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-
-    private fun RBuilder.renderFilterAdd() {
-        child(ReportFilterAdd::class) {
-            attrs {
-                reportState = props.reportState
-                dispatcher = props.dispatcher
-            }
+            +"[Preview]"
         }
     }
 }

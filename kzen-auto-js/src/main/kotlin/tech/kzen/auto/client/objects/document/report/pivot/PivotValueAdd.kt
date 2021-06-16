@@ -12,6 +12,12 @@ import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
+import tech.kzen.auto.client.wrap.material.CancelIcon
+import tech.kzen.auto.client.wrap.material.MaterialIconButton
+import tech.kzen.auto.client.wrap.material.MaterialInputLabel
+import tech.kzen.auto.client.wrap.select.ReactSelect
+import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
 import kotlin.js.Json
 import kotlin.js.json

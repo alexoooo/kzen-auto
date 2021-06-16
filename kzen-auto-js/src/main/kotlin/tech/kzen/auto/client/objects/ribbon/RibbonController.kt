@@ -11,6 +11,10 @@ import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
 //import tech.kzen.auto.client.util.decodeURIComponent
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.material.MaterialButton
+import tech.kzen.auto.client.wrap.material.MaterialTab
+import tech.kzen.auto.client.wrap.material.MaterialTabs
+import tech.kzen.auto.client.wrap.material.iconClassForName
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.common.util.RequestParams

@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.wrap
+package tech.kzen.auto.client.wrap.cropper
 
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLImageElement

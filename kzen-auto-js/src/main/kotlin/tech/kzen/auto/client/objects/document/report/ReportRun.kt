@@ -8,6 +8,7 @@ import react.dom.attrs
 import react.dom.div
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 
 

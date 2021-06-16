@@ -13,8 +13,8 @@ import styled.styledSpan
 import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
-import tech.kzen.auto.client.wrap.MaterialCardContent
-import tech.kzen.auto.client.wrap.MaterialPaper
+import tech.kzen.auto.client.wrap.material.MaterialCardContent
+import tech.kzen.auto.client.wrap.material.MaterialPaper
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativePhase

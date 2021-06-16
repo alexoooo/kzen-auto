@@ -11,6 +11,9 @@ import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.material.MaterialInputAdornment
+import tech.kzen.auto.client.wrap.material.MaterialTextField
+import tech.kzen.auto.client.wrap.material.SearchIcon
 
 
 class InputBrowserFilter(

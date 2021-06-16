@@ -10,9 +10,9 @@ import react.dom.attrs
 import react.dom.span
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.MaterialInputLabel
-import tech.kzen.auto.client.wrap.ReactSelect
-import tech.kzen.auto.client.wrap.ReactSelectOption
+import tech.kzen.auto.client.wrap.material.MaterialInputLabel
+import tech.kzen.auto.client.wrap.select.ReactSelect
+import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail

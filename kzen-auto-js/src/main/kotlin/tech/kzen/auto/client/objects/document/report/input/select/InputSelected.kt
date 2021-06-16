@@ -15,6 +15,7 @@ import tech.kzen.auto.client.objects.document.report.state.InputsSelectionRemove
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.common.objects.document.report.listing.InputDataInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
@@ -226,7 +227,8 @@ class InputSelected(
                 css {
                     float = Float.right
                     display = Display.inlineBlock
-                    paddingTop = 1.2.em
+//                    paddingTop = 1.2.em
+                    marginTop = 18.px
                 }
                 renderGroupByToggle()
                 renderDetailToggle()
@@ -254,6 +256,10 @@ class InputSelected(
                 else if (props.editDisabled) {
                     disabled = true
                     title = "Disabled while running"
+                }
+
+                style = reactStyle {
+                    marginBottom = (-3).px
                 }
             }
 
@@ -308,7 +314,8 @@ class InputSelected(
                 }
             }
 
-            +"Group By"
+//            +"Group By"
+            +"Group"
         }
     }
 

@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.wrap
+package tech.kzen.auto.client.wrap.cropper
 
 import kotlinx.css.*
 import org.w3c.dom.CustomEvent

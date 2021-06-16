@@ -14,6 +14,12 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.cropper.CropperDetail
+import tech.kzen.auto.client.wrap.cropper.CropperWrapper
+import tech.kzen.auto.client.wrap.material.CameraAltIcon
+import tech.kzen.auto.client.wrap.material.DeleteIcon
+import tech.kzen.auto.client.wrap.material.MaterialButton
+import tech.kzen.auto.client.wrap.material.RefreshIcon
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -66,13 +72,13 @@ class FeatureController(
 
 
     class State(
-            var documentPath: DocumentPath?,
-            var graphStructure: GraphStructure?,
+        var documentPath: DocumentPath?,
+        var graphStructure: GraphStructure?,
 
-            var detail: CropperDetail?,
-            var screenshotDataUrl: String?,
-            var capturedDataUrl: String?,
-            var requestingScreenshot: Boolean?
+        var detail: CropperDetail?,
+        var screenshotDataUrl: String?,
+        var capturedDataUrl: String?,
+        var requestingScreenshot: Boolean?
     ): RState
 
 

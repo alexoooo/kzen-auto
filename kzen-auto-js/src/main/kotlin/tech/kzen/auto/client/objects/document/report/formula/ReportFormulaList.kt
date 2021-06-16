@@ -11,8 +11,8 @@ import styled.styledSpan
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.wrap.FunctionsIcon
-import tech.kzen.auto.client.wrap.MaterialCircularProgress
+import tech.kzen.auto.client.wrap.material.FunctionsIcon
+import tech.kzen.auto.client.wrap.material.MaterialCircularProgress
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 
@@ -79,32 +79,52 @@ class ReportFormulaList(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderHeader() {
         styledDiv {
-            styledDiv {
+            styledSpan {
                 css {
-                    display = Display.inlineBlock
                     height = 2.em
-                    width = 2.em
+                    width = 2.5.em
                     position = Position.relative
-                    marginRight = 0.25.em
                 }
+
                 child(FunctionsIcon::class) {
                     attrs {
                         style = reactStyle {
                             position = Position.absolute
-                            top = 0.px
-                            left = 0.px
-                            fontSize = 2.25.em
+                            fontSize = 2.5.em
+                            top = (-16.5).px
+                            left = (-3.5).px
                         }
                     }
                 }
             }
+//            styledDiv {
+//                css {
+//                    display = Display.inlineBlock
+//                    height = 2.em
+//                    width = 2.em
+//                    position = Position.relative
+//                    marginRight = 0.25.em
+//                }
+//                child(FunctionsIcon::class) {
+//                    attrs {
+//                        style = reactStyle {
+//                            position = Position.absolute
+//                            top = 0.px
+//                            left = 0.px
+//                            fontSize = 2.25.em
+//                        }
+//                    }
+//                }
+//            }
 
             styledSpan {
                 css {
+                    marginLeft = 1.25.em
                     fontSize = 2.em
                 }
 
-                +"Calculated Columns"
+//                +"Calculated Columns"
+                +"Formulas"
             }
 
             styledSpan {

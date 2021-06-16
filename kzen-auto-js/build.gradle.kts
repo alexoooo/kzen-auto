@@ -45,6 +45,9 @@ dependencies {
     implementation(npm("cropperjs", cropperJsVersion))
     implementation(npm("lodash", lodashVersion))
     implementation(npm("react-select", reactSelectVersion))
+    implementation(npm("@iconify/react", iconifyReactVersion))
+    implementation(npm("@iconify/icons-vaadin", iconifyIconsVaadinVersion))
+//    implementation(npm("@iconify/icons-vaadin/area-select", iconifyIconsVaadinVersion))
 
     testImplementation(kotlin("test"))
 }

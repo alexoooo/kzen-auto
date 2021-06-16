@@ -1,5 +1,5 @@
 @file:JsModule("@material-ui/icons")
-package tech.kzen.auto.client.wrap
+package tech.kzen.auto.client.wrap.material
 
 
 import react.Component
@@ -505,5 +505,11 @@ external class CallReceivedIcon: Component<IconProps, RState> {
 
 @JsName("GroupWork")
 external class GroupWorkIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Visibility")
+external class VisibilityIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }

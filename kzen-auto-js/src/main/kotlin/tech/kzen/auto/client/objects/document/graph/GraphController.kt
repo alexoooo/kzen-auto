@@ -14,8 +14,8 @@ import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.AddCircleOutlineIcon
-import tech.kzen.auto.client.wrap.MaterialIconButton
+import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
+import tech.kzen.auto.client.wrap.material.MaterialIconButton
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.graph.DataflowWiring
 import tech.kzen.auto.common.objects.document.graph.GraphDocument

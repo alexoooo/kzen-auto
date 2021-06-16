@@ -33,6 +33,8 @@ const val materialUiCoreVersion = "4.11.4"
 const val materialUiIconsVersion = "4.11.2"
 const val materialUiLabVersion = "4.0.0-alpha.58"
 const val reactSelectVersion = "4.3.1"
+const val iconifyReactVersion = "1.1.4"
+const val iconifyIconsVaadinVersion = "1.1.0"
 
 const val wrapperKotlinVersion = "pre.206-kotlin-1.5.10"
 const val kotlinReactVersion = "17.0.2-$wrapperKotlinVersion"

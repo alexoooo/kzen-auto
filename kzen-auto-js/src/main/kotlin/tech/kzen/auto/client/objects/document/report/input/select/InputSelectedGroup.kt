@@ -11,7 +11,7 @@ import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
-import tech.kzen.auto.client.wrap.MaterialTextField
+import tech.kzen.auto.client.wrap.material.MaterialTextField
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.reactStyle
 

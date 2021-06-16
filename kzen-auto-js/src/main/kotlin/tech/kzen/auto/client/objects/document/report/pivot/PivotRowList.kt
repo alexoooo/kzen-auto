@@ -11,8 +11,8 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.*
-import tech.kzen.auto.client.wrap.ReactSelectMulti
-import tech.kzen.auto.client.wrap.ReactSelectOption
+import tech.kzen.auto.client.wrap.select.ReactSelectMulti
+import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
 import kotlin.js.Json
 import kotlin.js.json

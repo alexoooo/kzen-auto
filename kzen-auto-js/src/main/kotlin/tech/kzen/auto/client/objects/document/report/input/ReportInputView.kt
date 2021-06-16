@@ -14,6 +14,10 @@ import tech.kzen.auto.client.objects.document.report.input.select.InputSelected
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.material.FolderOpenIcon
+import tech.kzen.auto.client.wrap.material.InputIcon
+import tech.kzen.auto.client.wrap.material.MaterialButton
+import tech.kzen.auto.client.wrap.material.MaterialCircularProgress
 
 
 class ReportInputView(
@@ -128,17 +132,28 @@ class ReportInputView(
                 marginBottom = 0.25.em
             }
 
-            child(InputIcon::class) {
-                attrs {
-                    style = reactStyle {
-                        fontSize = 1.75.em
-                        marginRight = 0.25.em
+            styledSpan {
+                css {
+                    height = 2.em
+                    width = 2.5.em
+                    position = Position.relative
+                }
+
+                child(InputIcon::class) {
+                    attrs {
+                        style = reactStyle {
+                            position = Position.absolute
+                            fontSize = 2.5.em
+                            top = (-16.5).px
+                            left = (-6.5).px
+                        }
                     }
                 }
             }
 
             styledSpan {
                 css {
+                    marginLeft = 1.25.em
                     fontSize = 2.em
                 }
 

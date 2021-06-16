@@ -1,5 +1,5 @@
 @file:JsModule("@material-ui/core")
-package tech.kzen.auto.client.wrap
+package tech.kzen.auto.client.wrap.material
 
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLElement
