@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.report.spec
+package tech.kzen.auto.common.objects.document.report.spec.filter
 
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
@@ -17,6 +17,8 @@ data class ColumnFilterSpec(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        val empty = ColumnFilterSpec(ColumnFilterType.RequireAny, setOf())
+
         val typeAttributeSegment = AttributeSegment.ofKey("type")
         val valuesAttributeSegment = AttributeSegment.ofKey("values")
 

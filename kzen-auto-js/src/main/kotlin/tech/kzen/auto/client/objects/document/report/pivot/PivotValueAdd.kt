@@ -18,7 +18,7 @@ import tech.kzen.auto.client.wrap.material.MaterialIconButton
 import tech.kzen.auto.client.wrap.material.MaterialInputLabel
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
-import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 import kotlin.js.Json
 import kotlin.js.json
 

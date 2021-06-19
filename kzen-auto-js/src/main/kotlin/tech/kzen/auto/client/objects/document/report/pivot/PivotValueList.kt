@@ -9,7 +9,7 @@ import styled.*
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 
 
 class PivotValueList(

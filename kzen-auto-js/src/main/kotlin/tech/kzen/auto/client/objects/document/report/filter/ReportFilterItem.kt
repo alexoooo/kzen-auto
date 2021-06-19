@@ -10,9 +10,9 @@ import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.material.*
-import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterSpec
-import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
-import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
+import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterSpec
+import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
+import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.summary.ColumnSummary
 import tech.kzen.auto.common.objects.document.report.summary.NominalValueSummary
 import tech.kzen.auto.common.objects.document.report.summary.OpaqueValueSummary

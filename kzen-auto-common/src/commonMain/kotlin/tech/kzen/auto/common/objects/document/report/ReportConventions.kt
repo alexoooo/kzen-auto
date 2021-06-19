@@ -21,8 +21,12 @@ object ReportConventions {
     val filterAttributeName = AttributeName("filter")
     val filterAttributePath = AttributePath.ofName(filterAttributeName)
 
-    val pivotAttributeName = AttributeName("pivot")
-    val pivotAttributePath = AttributePath.ofName(pivotAttributeName)
+//    val pivotAttributeName = AttributeName("pivot")
+//    val pivotAttributePath = AttributePath.ofName(pivotAttributeName)
+
+    val analysisAttributeName = AttributeName("analysis")
+    val analysisAttributePath = AttributePath.ofName(analysisAttributeName)
+    val pivotAttributePath = analysisAttributePath.nest(AttributeSegment.ofKey("pivot"))
 
     val outputAttributeName = AttributeName("output")
     val outputAttributePath = AttributePath.ofName(outputAttributeName)

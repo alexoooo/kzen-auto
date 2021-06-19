@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats
 
-import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 import java.nio.ByteBuffer
 
 

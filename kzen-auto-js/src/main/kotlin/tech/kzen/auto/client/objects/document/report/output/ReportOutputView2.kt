@@ -44,7 +44,7 @@ class ReportOutputView2(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        settingsOpen = ! props.reportState.outputSpec().isDefaultWorkPath()
+        settingsOpen = ! props.reportState.outputSpec().explore.isDefaultWorkPath()
     }
 
 

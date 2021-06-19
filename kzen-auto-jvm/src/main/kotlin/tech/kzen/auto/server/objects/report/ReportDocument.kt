@@ -4,12 +4,13 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
-import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
-import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
-import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
+import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
+import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -48,9 +49,12 @@ import java.nio.file.Paths
 class ReportDocument(
     private val input: InputSpec,
     private val formula: FormulaSpec,
+    private val previewAll: PreviewSpec,
     private val filter: FilterSpec,
-    private val pivot: PivotSpec,
+    private val previewFiltered: PreviewSpec,
+    private val analysis: AnalysisSpec,
     private val output: OutputSpec,
+
     private val selfLocation: ObjectLocation
 ):
     DocumentArchetype(),
@@ -170,14 +174,14 @@ class ReportDocument(
         val dataType = input.selection.dataType
 
         return ReportRunContext(
-            dataType, datasetInfo, formula, filter, pivot)
+            dataType, datasetInfo, formula, previewAll, filter, previewFiltered, analysis)
     }
 
 
     private fun runDir(runContext: ReportRunContext): Path {
         val reportDir =
             try {
-                Paths.get(output.workPath)
+                Paths.get(output.explore.workPath)
             }
             catch (e: IllegalPathStateException) {
                 ReportWorkPool.defaultReportDir
@@ -327,7 +331,7 @@ class ReportDocument(
         val runDir = runDir(runSpec)
 
         return ServerContext.reportRunAction.outputPreview(
-            selfLocation, runSpec, runDir, output)
+            selfLocation, runSpec, runDir, output.explore)
     }
 
 
@@ -338,7 +342,7 @@ class ReportDocument(
         val runDir = runDir(runSpec)
 
         return ServerContext.reportRunAction.outputSave(
-            runSpec, runDir, output)
+            runSpec, runDir, output.explore)
     }
 
 
@@ -359,7 +363,7 @@ class ReportDocument(
         val runDir = runDir(runSpec)
 
         return ServerContext.reportRunAction.outputDownload(
-            runSpec, runDir, output, selfLocation)
+            runSpec, runDir, output.explore, selfLocation)
     }
 
 

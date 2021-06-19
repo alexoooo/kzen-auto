@@ -6,11 +6,11 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
-import tech.kzen.auto.common.objects.document.report.spec.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
-import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
-import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
+import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.common.util.data.DataLocation
@@ -180,9 +180,9 @@ data class ReportState(
     }
 
 
-    fun pivotSpec(): PivotSpec {
-        val pivotDefinition = reportDefinition().attributeDefinitions[ReportConventions.pivotAttributeName]!!
-        return (pivotDefinition as ValueAttributeDefinition).value as PivotSpec
+    fun analysisSpec(): AnalysisSpec {
+        val pivotDefinition = reportDefinition().attributeDefinitions[ReportConventions.analysisAttributeName]!!
+        return (pivotDefinition as ValueAttributeDefinition).value as AnalysisSpec
     }
 
 

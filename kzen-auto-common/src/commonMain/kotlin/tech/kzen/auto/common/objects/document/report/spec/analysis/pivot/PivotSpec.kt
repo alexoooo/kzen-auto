@@ -1,23 +1,15 @@
-package tech.kzen.auto.common.objects.document.report.spec
+package tech.kzen.auto.common.objects.document.report.spec.analysis.pivot
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
-import tech.kzen.lib.common.api.AttributeDefiner
-import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
-import tech.kzen.lib.common.model.definition.AttributeDefinitionAttempt
-import tech.kzen.lib.common.model.definition.GraphDefinition
-import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
-import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
-import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
 
@@ -31,11 +23,35 @@ data class PivotSpec(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        val empty = PivotSpec(HeaderListing.empty, PivotValueTableSpec.empty)
+
         private val rowsKey = AttributeSegment.ofKey("rows")
         val rowsAttributePath = ReportConventions.pivotAttributePath.nest(rowsKey)
 
         private val valuesKey = AttributeSegment.ofKey("values")
         val valuesAttributePath = ReportConventions.pivotAttributePath.nest(valuesKey)
+
+
+        fun ofNotation(attributeNotation: MapAttributeNotation): PivotSpec {
+            val rowsNotation = attributeNotation
+                .get(rowsKey) as? ListAttributeNotation
+                ?: throw IllegalArgumentException("'$rowsKey' attribute notation not found")
+
+            val valuesNotation = attributeNotation
+                .get(valuesKey) as? MapAttributeNotation
+                ?: throw IllegalArgumentException("'$valuesKey' attribute notation not found")
+
+            val rows = rowsNotation
+                .values
+                .map { it.asString()!! }
+                .toSet()
+
+            val values = PivotValueTableSpec.ofNotation(valuesNotation)
+
+            return PivotSpec(
+                HeaderListing(rows.toList()),
+                values)
+        }
 
 
         fun addRowCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
@@ -120,50 +136,50 @@ data class PivotSpec(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Reflect
-    object Definer: AttributeDefiner {
-        override fun define(
-            objectLocation: ObjectLocation,
-            attributeName: AttributeName,
-            graphStructure: GraphStructure,
-            partialGraphDefinition: GraphDefinition,
-            partialGraphInstance: GraphInstance
-        ): AttributeDefinitionAttempt {
-            check(attributeName == ReportConventions.pivotAttributeName) {
-                "Unexpected attribute name: $attributeName"
-            }
-
-//            graphStructure.graphNotation.mergeAttribute(
-//                objectLocation, ProcessConventions.pivotAttributeName)
-
-            val rowsAttributeNotation = graphStructure
-                .graphNotation
-                .firstAttribute(objectLocation, rowsAttributePath) as? ListAttributeNotation
-                ?: return AttributeDefinitionAttempt.failure(
-                    "'$rowsAttributePath' attribute notation not found:" +
-                            " $objectLocation - $attributeName")
-
-            val valuesAttributeNotation = graphStructure
-                .graphNotation
-                .firstAttribute(objectLocation, valuesAttributePath) as? MapAttributeNotation
-                ?: return AttributeDefinitionAttempt.failure(
-                    "'$valuesAttributePath' attribute notation not found:" +
-                            " $objectLocation - $attributeName")
-
-            val rows = rowsAttributeNotation
-                .values
-                .map { it.asString()!! }
-                .toSet()
-
-            val values = PivotValueTableSpec.ofNotation(valuesAttributeNotation)
-
-            val spec = PivotSpec(
-                HeaderListing(rows.toList()), values)
-
-            return AttributeDefinitionAttempt.success(
-                ValueAttributeDefinition(spec))
-        }
-    }
+//    @Reflect
+//    object Definer: AttributeDefiner {
+//        override fun define(
+//            objectLocation: ObjectLocation,
+//            attributeName: AttributeName,
+//            graphStructure: GraphStructure,
+//            partialGraphDefinition: GraphDefinition,
+//            partialGraphInstance: GraphInstance
+//        ): AttributeDefinitionAttempt {
+//            check(attributeName == ReportConventions.pivotAttributeName) {
+//                "Unexpected attribute name: $attributeName"
+//            }
+//
+////            graphStructure.graphNotation.mergeAttribute(
+////                objectLocation, ProcessConventions.pivotAttributeName)
+//
+//            val rowsAttributeNotation = graphStructure
+//                .graphNotation
+//                .firstAttribute(objectLocation, rowsAttributePath) as? ListAttributeNotation
+//                ?: return AttributeDefinitionAttempt.failure(
+//                    "'$rowsAttributePath' attribute notation not found:" +
+//                            " $objectLocation - $attributeName")
+//
+//            val valuesAttributeNotation = graphStructure
+//                .graphNotation
+//                .firstAttribute(objectLocation, valuesAttributePath) as? MapAttributeNotation
+//                ?: return AttributeDefinitionAttempt.failure(
+//                    "'$valuesAttributePath' attribute notation not found:" +
+//                            " $objectLocation - $attributeName")
+//
+//            val rows = rowsAttributeNotation
+//                .values
+//                .map { it.asString()!! }
+//                .toSet()
+//
+//            val values = PivotValueTableSpec.ofNotation(valuesAttributeNotation)
+//
+//            val spec = PivotSpec(
+//                HeaderListing(rows.toList()), values)
+//
+//            return AttributeDefinitionAttempt.success(
+//                ValueAttributeDefinition(spec))
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

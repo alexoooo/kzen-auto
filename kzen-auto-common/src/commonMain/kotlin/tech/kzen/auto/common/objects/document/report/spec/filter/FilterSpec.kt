@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.report.spec
+package tech.kzen.auto.common.objects.document.report.spec.filter
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.lib.common.api.AttributeDefiner
@@ -133,7 +133,7 @@ data class FilterSpec(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun filterNonEmpty(): FilterSpec {
+    fun toRunSignature(): FilterSpec {
         return FilterSpec(
             columns.filterValues { it.values.isNotEmpty() })
     }

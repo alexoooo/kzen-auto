@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.stages
 
 import com.lmax.disruptor.EventHandler
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
-import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
+import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord

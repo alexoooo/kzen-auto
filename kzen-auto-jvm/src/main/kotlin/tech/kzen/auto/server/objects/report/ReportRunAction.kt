@@ -4,7 +4,7 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
-import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
@@ -80,7 +80,7 @@ class ReportRunAction(
         objectLocation: ObjectLocation,
         runContext: ReportRunContext,
         runDir: Path,
-        outputSpec: OutputSpec
+        outputSpec: OutputExploreSpec
     ): ExecutionResult {
         val activeReportHandle = ServerContext
             .modelTaskRepository
@@ -101,7 +101,7 @@ class ReportRunAction(
     fun outputSave(
         runContext: ReportRunContext,
         runDir: Path,
-        outputSpec: OutputSpec
+        outputSpec: OutputExploreSpec
     ): ExecutionResult {
         return try {
             val outPath = ProcessorDatasetPipeline.passiveSave(runContext, runDir, outputSpec, reportWorkPool)
@@ -118,7 +118,7 @@ class ReportRunAction(
     fun outputDownload(
         runContext: ReportRunContext,
         runDir: Path,
-        outputSpec: OutputSpec,
+        outputSpec: OutputExploreSpec,
         mainLocation: ObjectLocation
     ): ExecutionDownloadResult {
         val filenamePrefix = AutoJvmUtils.sanitizeFilename(mainLocation.documentPath.name.value)

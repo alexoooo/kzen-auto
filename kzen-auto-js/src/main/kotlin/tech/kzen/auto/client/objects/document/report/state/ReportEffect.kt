@@ -7,7 +7,11 @@ import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
-import tech.kzen.auto.common.objects.document.report.spec.*
+import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
+import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
+import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary

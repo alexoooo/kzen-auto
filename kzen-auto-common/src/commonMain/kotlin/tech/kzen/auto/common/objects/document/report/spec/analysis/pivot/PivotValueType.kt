@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.report.spec
+package tech.kzen.auto.common.objects.document.report.spec.analysis.pivot
 
 
 enum class PivotValueType {

@@ -87,20 +87,32 @@ Report:
       groupBy: ""
       locations: []
   formula: {}
+  previewAll: false
   filter: {}
-  pivot:
-    rows: []
-    values: {}
+  previewFiltered: false
+  analysis:
+    type: FlatData
+    flat:
+      type: RequireAny
+      values: []
+    pivot:
+      rows: []
+      values: {}
   output:
-    work: "report" # NB: referenced in OutputSpec
-    save: ""
-    start: 1
-    count: 50
+    type: Explore
+    explore:
+      work: "report" # NB: referenced in OutputSpec
+      save: ""
+      start: 1
+      count: 50
+    export: '"$report_$group_$time.csv"'
   meta:
     input: InputSpec
     formula: FormulaSpec
+    previewAll: PreviewSpec
     filter: FilterSpec
-    pivot: PivotSpec
+    previewFiltered: PreviewSpec
+    analysis: AnalysisSpec
     output: OutputSpec
     selfLocation: SelfLocation
 
@@ -127,37 +139,48 @@ FormulaSpecDefiner:
   class: tech.kzen.auto.common.objects.document.report.spec.FormulaSpec$Definer
 
 
+PreviewSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
+  meta:
+    ref:
+      by: PreviewSpecDefiner
+
+PreviewSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.report.spec.PreviewSpec$Definer
+
+
 FilterSpec:
   abstract: true
-  class: tech.kzen.auto.common.objects.document.report.spec.FilterSpec
+  class: tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
   meta:
     ref:
       by: FilterSpecDefiner
 
 FilterSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.report.spec.FilterSpec$Definer
+  class: tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec$Definer
 
 
-PivotSpec:
+AnalysisSpec:
   abstract: true
-  class: tech.kzen.auto.common.objects.document.report.spec.PivotSpec
+  class: tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
   meta:
     ref:
-      by: PivotSpecDefiner
+      by: AnalysisSpecDefiner
 
-PivotSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.report.spec.PivotSpec$Definer
+AnalysisSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec$Definer
 
 
 OutputSpec:
   abstract: true
-  class: tech.kzen.auto.common.objects.document.report.spec.OutputSpec
+  class: tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
   meta:
     ref:
       by: OutputSpecDefiner
 
 OutputSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.report.spec.OutputSpec$Definer
+  class: tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec$Definer
 
 
 ################################################################

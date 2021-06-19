@@ -8,6 +8,12 @@ data class HeaderListing(
     val values: List<String>
 ): Digestible {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        val empty = HeaderListing(listOf())
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     init {
         val duplicates = values.groupBy { it }.filterValues { it.size > 1 }.keys
         require(duplicates.isEmpty()) {

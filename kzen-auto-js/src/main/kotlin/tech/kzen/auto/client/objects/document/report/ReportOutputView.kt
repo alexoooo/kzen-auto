@@ -16,8 +16,8 @@ import tech.kzen.auto.client.objects.document.report.state.ReportSaveAction
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.*
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
@@ -47,7 +47,7 @@ class ReportOutputView(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        settingsOpen = ! props.reportState.outputSpec().isDefaultWorkPath()
+        settingsOpen = ! props.reportState.outputSpec().explore.isDefaultWorkPath()
         savingOpen = false
         savingLoading = false
     }

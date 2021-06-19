@@ -4,7 +4,7 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
-import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
@@ -57,8 +57,8 @@ class ReportOutput(
             return when {
                 runSignature.hasPivot() ->
                     PivotBuilder.ExportSignature.of(
-                        reportRunContext.pivot.rows,
-                        reportRunContext.pivot.values
+                        reportRunContext.analysis.pivot.rows,
+                        reportRunContext.analysis.pivot.values
                     ).header
 
                 else ->
@@ -160,7 +160,7 @@ class ReportOutput(
 
     private data class PreviewRequest(
         val reportRunContext: ReportRunContext,
-        val outputSpec: OutputSpec
+        val outputSpec: OutputExploreSpec
     )
 
 
@@ -192,7 +192,7 @@ class ReportOutput(
             else {
                 indexedCsvTable = null
 
-                val pivotSpec = initialReportRunContext.pivot
+                val pivotSpec = initialReportRunContext.analysis.pivot
                 pivotBuilder = filePivot(
                     pivotSpec.rows,
                     HeaderListing(pivotSpec.values.columns.keys.toList()),
@@ -221,7 +221,7 @@ class ReportOutput(
     @Synchronized
     fun preview(
         reportRunContext: ReportRunContext,
-        outputSpec: OutputSpec,
+        outputSpec: OutputExploreSpec,
         reportWorkPool: ReportWorkPool
     ): OutputInfo {
         if (! Files.exists(runDir)) {
@@ -263,7 +263,7 @@ class ReportOutput(
 
     private fun previewInCurrentThread(
         reportRunContext: ReportRunContext,
-        outputSpec: OutputSpec,
+        outputSpec: OutputExploreSpec,
         reportWorkPool: ReportWorkPool
     ): OutputInfo {
         val zeroBasedPreview = outputSpec.previewStartZeroBased()
@@ -285,7 +285,7 @@ class ReportOutput(
                 check(pivotBuilder != null)
                 rowCount = pivotBuilder.rowCount()
                 preview = pivotBuilder.preview(
-                    reportRunContext.pivot.values, zeroBasedPreview, outputSpec.previewCount)
+                    reportRunContext.analysis.pivot.values, zeroBasedPreview, outputSpec.previewCount)
             }
         }
         catch (e: Exception) {
@@ -295,7 +295,7 @@ class ReportOutput(
             if (preview == null) {
                 preview =
                     indexedCsvTable?.corruptPreview(zeroBasedPreview)
-                        ?: pivotBuilder!!.corruptPreview(reportRunContext.pivot.values, zeroBasedPreview)
+                        ?: pivotBuilder!!.corruptPreview(reportRunContext.analysis.pivot.values, zeroBasedPreview)
             }
 
             statusOverride = OutputStatus.Failed
@@ -315,7 +315,7 @@ class ReportOutput(
     }
 
 
-    fun save(reportRunContext: ReportRunContext, outputSpec: OutputSpec): Path {
+    fun save(reportRunContext: ReportRunContext, outputSpec: OutputExploreSpec): Path {
         check(taskHandle == null)
         check(Files.exists(runDir))
 
@@ -328,7 +328,7 @@ class ReportOutput(
     }
 
 
-    private fun save(reportRunContext: ReportRunContext, outputSpec: OutputSpec, path: Path) {
+    private fun save(reportRunContext: ReportRunContext, outputSpec: OutputExploreSpec, path: Path) {
         val runSignature = reportRunContext.toSignature()
         val saveInfo = saveInfo(runDir, outputSpec)
 
@@ -353,7 +353,7 @@ class ReportOutput(
             }
             else {
                 check(pivotBuilder != null)
-                pivotBuilder.traverseWithHeader(reportRunContext.pivot.values) { row ->
+                pivotBuilder.traverseWithHeader(reportRunContext.analysis.pivot.values) { row ->
                     record.clearWithoutCache()
                     record.addAll(row)
                     record.writeCsv(output)
@@ -364,7 +364,7 @@ class ReportOutput(
     }
 
 
-    fun download(reportRunContext: ReportRunContext, outputSpec: OutputSpec): InputStream {
+    fun download(reportRunContext: ReportRunContext, outputSpec: OutputExploreSpec): InputStream {
         check(taskHandle == null)
         check(Files.exists(runDir))
 
@@ -384,7 +384,7 @@ class ReportOutput(
     }
 
 
-    private fun saveInfo(runDir: Path, outputSpec: OutputSpec): SaveInfo {
+    private fun saveInfo(runDir: Path, outputSpec: OutputExploreSpec): SaveInfo {
         val defaultPath = runDir.resolve(IndexedCsvTable.tableFile)
 
         val customPath: Path?

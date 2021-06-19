@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.store
 
-import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.ValueStatistics
 import java.nio.file.Files
 import kotlin.test.Test

@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.map
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
-import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.MutableStatistics
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.ValueStatistics
 

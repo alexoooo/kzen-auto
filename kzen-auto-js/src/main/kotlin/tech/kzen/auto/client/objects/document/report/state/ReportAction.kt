@@ -5,8 +5,8 @@ import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetai
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
-import tech.kzen.auto.common.objects.document.report.spec.ColumnFilterType
-import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
+import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskId

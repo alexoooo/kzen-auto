@@ -14,9 +14,9 @@ import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.material.MaterialToggleButton
 import tech.kzen.auto.client.wrap.material.MaterialToggleButtonMultiGroup
-import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
-import tech.kzen.auto.common.objects.document.report.spec.PivotValueColumnSpec
-import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueColumnSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 
 
 class PivotValueTypes(

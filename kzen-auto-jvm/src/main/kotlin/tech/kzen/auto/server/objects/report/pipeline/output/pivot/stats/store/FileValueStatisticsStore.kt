@@ -4,7 +4,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap
 import it.unimi.dsi.fastutil.longs.LongArrayList
 import it.unimi.dsi.fastutil.longs.LongList
 import it.unimi.dsi.fastutil.longs.LongSortedSet
-import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.MutableStatistics
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.ValueStatistics
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.store.StoreUtils

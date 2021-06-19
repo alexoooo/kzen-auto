@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongRBTreeSet
-import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.stats.store.FileValueStatisticsStore
 
 

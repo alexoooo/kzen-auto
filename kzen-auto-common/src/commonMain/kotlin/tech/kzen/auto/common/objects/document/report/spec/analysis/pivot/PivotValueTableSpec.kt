@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.report.spec
+package tech.kzen.auto.common.objects.document.report.spec.analysis.pivot
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
@@ -14,7 +14,9 @@ data class PivotValueTableSpec(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val requestValueTypeDelimiter = "/"
+        val empty = PivotValueTableSpec(mapOf())
+
+//        private const val requestValueTypeDelimiter = "/"
 
 //        fun ofPreviewRequest(request: DetachedRequest): PivotValueTableSpec {
 //            val values = request.parameters.values[ReportConventions.previewPivotValuesKey]

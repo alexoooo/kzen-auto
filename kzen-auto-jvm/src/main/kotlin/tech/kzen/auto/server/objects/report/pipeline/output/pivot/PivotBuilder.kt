@@ -2,8 +2,8 @@ package tech.kzen.auto.server.objects.report.pipeline.output.pivot
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
-import tech.kzen.auto.common.objects.document.report.spec.PivotValueTableSpec
-import tech.kzen.auto.common.objects.document.report.spec.PivotValueType
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 import tech.kzen.auto.server.objects.report.pipeline.calc.ColumnValueUtils
 import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight

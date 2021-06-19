@@ -6,7 +6,7 @@ import com.lmax.disruptor.dsl.ProducerType
 import com.lmax.disruptor.util.DaemonThreadFactory
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
-import tech.kzen.auto.common.objects.document.report.spec.OutputSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
@@ -64,7 +64,7 @@ class ProcessorDatasetPipeline(
         fun passivePreview(
             reportRunContext: ReportRunContext,
             runDir: Path,
-            outputSpec: OutputSpec,
+            outputSpec: OutputExploreSpec,
             reportWorkPool: ReportWorkPool
         ): OutputInfo {
             return usePassive(reportRunContext, runDir, reportWorkPool) {
@@ -76,7 +76,7 @@ class ProcessorDatasetPipeline(
         fun passiveSave(
             reportRunContext: ReportRunContext,
             runDir: Path,
-            outputSpec: OutputSpec,
+            outputSpec: OutputExploreSpec,
             reportWorkPool: ReportWorkPool
         ): Path {
             return usePassive(reportRunContext, runDir, reportWorkPool) {
@@ -88,7 +88,7 @@ class ProcessorDatasetPipeline(
         fun passiveDownload(
             reportRunContext: ReportRunContext,
             runDir: Path,
-            outputSpec: OutputSpec,
+            outputSpec: OutputExploreSpec,
             reportWorkPool: ReportWorkPool
         ): InputStream {
             return usePassive(reportRunContext, runDir, reportWorkPool) {
@@ -324,7 +324,7 @@ class ProcessorDatasetPipeline(
     //-----------------------------------------------------------------------------------------------------------------
     fun outputPreview(
         reportRunContext: ReportRunContext,
-        outputSpec: OutputSpec
+        outputSpec: OutputExploreSpec
     ): OutputInfo? {
         if (taskHandle?.isFailed() == true) {
             taskHandle.awaitTerminal()
@@ -335,12 +335,12 @@ class ProcessorDatasetPipeline(
     }
 
 
-    private fun outputSave(reportRunContext: ReportRunContext, outputSpec: OutputSpec): Path {
+    private fun outputSave(reportRunContext: ReportRunContext, outputSpec: OutputExploreSpec): Path {
         return output.reportOutput.save(reportRunContext, outputSpec)
     }
 
 
-    private fun outputDownload(reportRunContext: ReportRunContext, outputSpec: OutputSpec): InputStream {
+    private fun outputDownload(reportRunContext: ReportRunContext, outputSpec: OutputExploreSpec): InputStream {
         return output.reportOutput.download(reportRunContext, outputSpec)
     }
 

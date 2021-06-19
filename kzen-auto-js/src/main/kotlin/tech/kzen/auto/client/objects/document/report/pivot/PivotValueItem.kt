@@ -13,8 +13,8 @@ import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.material.MaterialIconButton
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.report.spec.PivotSpec
-import tech.kzen.auto.common.objects.document.report.spec.PivotValueColumnSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueColumnSpec
 
 
 class PivotValueItem(
