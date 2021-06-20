@@ -8,6 +8,8 @@ import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
@@ -157,6 +159,9 @@ object ReportEffect {
             is FilterTypeChangeRequest ->
                 submitFilterTypeChange(state, action.columnName, action.filterType)
 
+
+            is AnalysisChangeTypeRequest ->
+                submitAnalysisChangeType(state, action.analysisType)
 
             is PivotRowAddRequest ->
                 submitPivotRowAdd(state, action.columnName)
@@ -812,36 +817,43 @@ object ReportEffect {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun submitAnalysisChangeType(state: ReportState, analysisType: AnalysisType): ReportAction {
+        return submitAnalysisUpdate(
+            AnalysisSpec.changeTypeCommand(
+                state.mainLocation, analysisType))
+    }
+
+
     private suspend fun submitPivotRowAdd(state: ReportState, columnName: String): ReportAction {
-        return submitPivotUpdate(
+        return submitAnalysisUpdate(
             PivotSpec.addRowCommand(
             state.mainLocation, columnName))
     }
 
 
     private suspend fun submitPivotRowRemove(state: ReportState, columnName: String): ReportAction {
-        return submitPivotUpdate(
+        return submitAnalysisUpdate(
             PivotSpec.removeRowCommand(
             state.mainLocation, columnName))
     }
 
 
     private suspend fun submitPivotRowClear(state: ReportState): ReportAction {
-        return submitPivotUpdate(
+        return submitAnalysisUpdate(
             PivotSpec.clearRowCommand(
             state.mainLocation))
     }
 
 
     private suspend fun submitPivotValueAdd(state: ReportState, columnName: String): ReportAction {
-        return submitPivotUpdate(
+        return submitAnalysisUpdate(
             PivotSpec.addValueCommand(
             state.mainLocation, columnName))
     }
 
 
     private suspend fun submitPivotValueRemove(state: ReportState, columnName: String): ReportAction {
-        return submitPivotUpdate(
+        return submitAnalysisUpdate(
             PivotSpec.removeValueCommand(
             state.mainLocation, columnName))
     }
@@ -850,7 +862,7 @@ object ReportEffect {
     private suspend fun submitPivotValueTypeAdd(
         state: ReportState, columnName: String, valueType: PivotValueType
     ): ReportAction {
-        return submitPivotUpdate(
+        return submitAnalysisUpdate(
             PivotSpec.addValueTypeCommand(
             state.mainLocation, columnName, valueType))
     }
@@ -859,13 +871,13 @@ object ReportEffect {
     private suspend fun submitPivotValueTypeRemove(
         state: ReportState, columnName: String, valueType: PivotValueType
     ): ReportAction {
-        return submitPivotUpdate(
+        return submitAnalysisUpdate(
             PivotSpec.removeValueTypeCommand(
             state.mainLocation, columnName, valueType))
     }
 
 
-    private suspend fun submitPivotUpdate(
+    private suspend fun submitAnalysisUpdate(
         pivotUpdateCommand: NotationCommand
     ): ReportAction {
         val result = ClientContext.mirroredGraphStore.apply(pivotUpdateCommand)
@@ -873,7 +885,7 @@ object ReportEffect {
         val errorMessage =
             (result as? MirroredGraphError)?.error?.message
 
-        return PivotUpdateResult(errorMessage)
+        return AnalysisUpdateResult(errorMessage)
     }
 
 

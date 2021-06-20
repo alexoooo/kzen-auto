@@ -1,11 +1,16 @@
 package tech.kzen.auto.client.objects.document.report.analysis
 
 import kotlinx.css.*
-import react.*
+import react.RBuilder
+import react.RProps
+import react.RPureComponent
+import react.RState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
+import tech.kzen.auto.client.objects.document.report.pivot.ReportPivot
+import tech.kzen.auto.client.objects.document.report.state.AnalysisChangeTypeRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.iconify.iconify
@@ -15,6 +20,7 @@ import tech.kzen.auto.client.wrap.material.MaterialToggleButton
 import tech.kzen.auto.client.wrap.material.MaterialToggleButtonGroup
 import tech.kzen.auto.client.wrap.material.TableChartIcon
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 
 
 class AnalysisView(
@@ -30,20 +36,21 @@ class AnalysisView(
 
 
     interface State: RState {
-        var pivot: Boolean
+//        var analysisType: AnalysisType
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        pivot = false
+//        analysisType = props.reportState.analysisSpec().type
     }
 
 
-    private fun onTypeChange(pivot: Boolean) {
-        setState {
-            this.pivot = pivot
-        }
+    private fun onTypeChange(analysisType: AnalysisType) {
+        props.dispatcher.dispatchAsync(AnalysisChangeTypeRequest(analysisType))
+//        setState {
+//            this.pivot = pivot
+//        }
     }
 
 
@@ -130,23 +137,24 @@ class AnalysisView(
 
                 child(MaterialToggleButtonGroup::class) {
                     attrs {
-                        value = state.pivot.toString()
+                        value = props.reportState.analysisSpec().type.name
                         exclusive = true
                         onChange = { _, v ->
                             if (v is String) {
-                                onTypeChange(v.toBooleanStrict())
+                                onTypeChange(AnalysisType.valueOf(v))
                             }
                         }
                     }
 
                     child(MaterialToggleButton::class) {
                         attrs {
-                            value = "false"
+                            value = AnalysisType.FlatData.name
 //                            disabled = editDisabled
                             size = "small"
                             style = reactStyle {
                                 height = 2.5.em
                                 color = Color.black
+                                borderWidth = 2.px
                             }
                         }
 
@@ -164,12 +172,13 @@ class AnalysisView(
 
                     child(MaterialToggleButton::class) {
                         attrs {
-                            value = "true"
+                            value = AnalysisType.PivotTable.name
 //                            disabled = editDisabled
                             size = "small"
                             style = reactStyle {
                                 height = 2.5.em
                                 color = Color.black
+                                borderWidth = 2.px
                             }
                         }
 
@@ -192,8 +201,31 @@ class AnalysisView(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderAnalysis() {
+        val analysis = props.reportState.analysisSpec()
+
         styledDiv {
-            +"[Analysis]"
+            when (analysis.type) {
+                AnalysisType.FlatData ->
+                    renderFlat()
+
+                AnalysisType.PivotTable ->
+                    renderPivot()
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderFlat() {
+        +"-FLAT-"
+    }
+
+
+    private fun RBuilder.renderPivot() {
+        child(ReportPivot::class) {
+            attrs {
+                this.reportState = props.reportState
+                this.dispatcher = props.dispatcher
+            }
         }
     }
 }

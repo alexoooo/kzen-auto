@@ -8,16 +8,17 @@ import react.dom.div
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.objects.document.report.input.browse.InputBrowser
 import tech.kzen.auto.client.objects.document.report.input.select.InputSelected
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.FolderOpenIcon
 import tech.kzen.auto.client.wrap.material.InputIcon
 import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.MaterialCircularProgress
+import tech.kzen.auto.client.wrap.reactStyle
 
 
 class ReportInputView(
@@ -197,8 +198,9 @@ class ReportInputView(
 
                 style = reactStyle {
                     if (isBrowserOpen()) {
-                        backgroundColor = Color.darkGray
+                        backgroundColor = ReportController.selectedColor
                     }
+                    borderWidth = 2.px
                 }
 
                 title = when {

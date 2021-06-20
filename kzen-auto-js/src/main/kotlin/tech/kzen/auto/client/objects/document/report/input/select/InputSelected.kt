@@ -14,8 +14,8 @@ import tech.kzen.auto.client.objects.document.report.input.browse.InputBrowser
 import tech.kzen.auto.client.objects.document.report.state.InputsSelectionRemoveRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.*
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.listing.InputDataInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
@@ -260,6 +260,7 @@ class InputSelected(
 
                 style = reactStyle {
                     marginBottom = (-3).px
+                    borderWidth = 2.px
                 }
             }
 
@@ -285,6 +286,7 @@ class InputSelected(
         child(MaterialButton::class) {
             attrs {
                 variant = "outlined"
+//                variant = "contained"
                 size = "small"
 
                 onClick = {
@@ -293,8 +295,10 @@ class InputSelected(
 
                 style = reactStyle {
                     if (state.showGroupBy) {
-                        backgroundColor = Color.darkGray
+                        backgroundColor = ReportController.selectedColor
                     }
+                    borderWidth = 2.px
+//                    disableElevation = false
                 }
 
                 title =
@@ -314,7 +318,6 @@ class InputSelected(
                 }
             }
 
-//            +"Group By"
             +"Group"
         }
     }
@@ -334,8 +337,10 @@ class InputSelected(
                     marginLeft = 1.em
 
                     if (state.showDetails) {
-                        backgroundColor = Color.darkGray
+//                        backgroundColor = Color.darkGray
+                        backgroundColor = ReportController.selectedColor
                     }
+                    borderWidth = 2.px
                 }
 
                 title =
@@ -350,12 +355,12 @@ class InputSelected(
             child(MoreHorizIcon::class) {
                 attrs {
                     style = reactStyle {
-                        marginRight = 0.25.em
+//                        marginRight = 0.25.em
                     }
                 }
             }
 
-            +"Details"
+//            +"Details"
         }
     }
 
@@ -414,7 +419,8 @@ class InputSelected(
             css {
                 maxHeight = 20.em
                 overflowY = Overflow.auto
-                borderWidth = 1.px
+//                borderWidth = 1.px
+                borderWidth = 2.px
                 borderStyle = BorderStyle.solid
                 borderColor = Color.lightGray
                 marginTop = 0.5.em

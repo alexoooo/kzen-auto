@@ -1,6 +1,9 @@
 package tech.kzen.auto.client.objects.document.report.pivot
 
-import kotlinx.css.*
+import kotlinx.css.em
+import kotlinx.css.fontSize
+import kotlinx.css.marginBottom
+import kotlinx.css.marginRight
 import react.RBuilder
 import react.RProps
 import react.RPureComponent
@@ -8,7 +11,6 @@ import react.RState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
-import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.material.TableChartIcon
@@ -30,52 +32,9 @@ class ReportPivot(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        styledDiv {
-            css {
-                position = Position.relative
-                filter = "drop-shadow(0 1px 1px gray)"
-                height = 100.pct
-                marginTop = 5.px
-            }
-
-//            child(TopIngress::class) {
-//                attrs {
-//                    ingressColor = Color.white
-//                    parentWidth = 100.pct
-//                }
-//            }
-
-            styledDiv {
-                css {
-                    borderRadius = 3.px
-                    backgroundColor = Color.white
-                    width = 100.pct
-                }
-
-                styledDiv {
-                    css {
-                        padding(0.5.em)
-                    }
-
-                    renderContent()
-                }
-            }
-
-            child(ReportBottomEgress::class) {
-                attrs {
-                    this.egressColor = Color.white
-                    parentWidth = 100.pct
-                }
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderContent() {
         val pivotSpec = props.reportState.analysisSpec().pivot
 
-        renderHeader()
+//        renderHeader()
 
         if (props.reportState.columnListing == null) {
             // TODO: is this good usability?

@@ -33,6 +33,7 @@ external interface ToggleButtonGroupProps: RProps {
     var exclusive: Boolean
     var onChange: (e: Event, v: Any?) -> Unit
     var size: String
+    var style: Json
 }
 
 
@@ -46,5 +47,6 @@ external interface ToggleButtonGroupMultiProps: RProps {
     var exclusive: Boolean
     var onChange: (e: Event, v: Array<String>) -> Unit
     var size: String
+    var style: Json
 }
 

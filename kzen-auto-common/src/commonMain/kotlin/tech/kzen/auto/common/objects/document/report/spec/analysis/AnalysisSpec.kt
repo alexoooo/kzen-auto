@@ -13,6 +13,8 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
@@ -35,6 +37,14 @@ data class AnalysisSpec(
 
         private val pivotKey = AttributeSegment.ofKey("pivot")
         val pivotAttributePath = ReportConventions.analysisAttributePath.nest(pivotKey)
+
+
+        fun changeTypeCommand(mainLocation: ObjectLocation, type: AnalysisType): NotationCommand {
+            return UpdateInAttributeCommand(
+                mainLocation,
+                typeAttributePath,
+                ScalarAttributeNotation(type.name))
+        }
     }
 
 

@@ -43,7 +43,7 @@ object ReportReducer {
             is FilterAction ->
                 reduceFilter(state, action)
 
-            is PivotAction ->
+            is AnalysisAction ->
                 reducePivot(state, action)
 
             ReportSaveAction ->
@@ -386,14 +386,14 @@ object ReportReducer {
     //-----------------------------------------------------------------------------------------------------------------
     private fun reducePivot(
         state: ReportState,
-        action: PivotAction
+        action: AnalysisAction
     ): ReportState {
         return when (action) {
-            is PivotUpdateRequest -> state.copy(
+            is AnalysisUpdateRequest -> state.copy(
                 pivotLoading = true,
                 pivotError = null)
 
-            is PivotUpdateResult -> state.copy(
+            is AnalysisUpdateResult -> state.copy(
                 pivotLoading = false,
                 pivotError = action.errorMessage)
         }

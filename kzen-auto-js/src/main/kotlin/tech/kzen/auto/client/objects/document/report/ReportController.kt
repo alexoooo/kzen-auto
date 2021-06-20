@@ -30,6 +30,7 @@ class ReportController(
     companion object {
         val separatorWidth = 2.px
         val separatorColor = Color("#c3c3c3")
+        val selectedColor = Color("#e0e0e0")
     }
 
 

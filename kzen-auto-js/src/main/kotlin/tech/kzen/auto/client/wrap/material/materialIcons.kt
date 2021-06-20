@@ -17,7 +17,7 @@ import kotlin.js.Json
 
 external interface IconProps: RProps {
     var title: String
-    var color: String
+//    var color: String
     var style: Json
 
     var onClick: () -> Unit

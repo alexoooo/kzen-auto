@@ -11,9 +11,9 @@ import react.dom.span
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.material.MaterialInputLabel
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
-import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
 import tech.kzen.auto.common.util.data.DataLocation
@@ -215,6 +215,7 @@ class InputSelectedFormat(
                     style = reactStyle {
                         fontSize = 0.8.em
                         width = 16.em
+//                        color = Color.black
                     }
                 }
                 +"Format"
@@ -249,6 +250,8 @@ class InputSelectedFormat(
                         val transformed = json()
                         transformed.add(base)
                         transformed["background"] = "transparent"
+//                        transformed["border-color"] = "black"
+                        transformed["border-width"] = "2px"
                         transformed
                     }
 

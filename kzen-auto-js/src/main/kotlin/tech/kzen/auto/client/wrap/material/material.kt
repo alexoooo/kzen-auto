@@ -30,6 +30,7 @@ external interface MaterialButtonProps: RProps {
     var size: String
     var fullWidth: Boolean
     var disabled: Boolean
+    var disableElevation: Boolean
 
     var onClick: () -> Unit
     var onMouseOver: () -> Unit

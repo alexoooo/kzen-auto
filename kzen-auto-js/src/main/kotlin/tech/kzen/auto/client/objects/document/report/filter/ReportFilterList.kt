@@ -12,7 +12,8 @@ import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.objects.document.report.state.SummaryLookupRequest
-import tech.kzen.auto.client.wrap.material.FilterListIcon
+import tech.kzen.auto.client.wrap.iconify.iconify
+import tech.kzen.auto.client.wrap.iconify.vaadinIconFilter
 import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.RefreshIcon
 import tech.kzen.auto.client.wrap.reactStyle
@@ -101,16 +102,26 @@ class ReportFilterList(
                     position = Position.relative
                 }
 
-                child(FilterListIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            position = Position.absolute
-                            fontSize = 2.5.em
-                            top = (-16.5).px
-                            left = (-3.5).px
-                        }
+                styledSpan {
+                    css {
+                        position = Position.absolute
+                        fontSize = 2.5.em
+                        top = (-16.5).px
+                        left = (-3.5).px
                     }
+                    iconify(vaadinIconFilter)
                 }
+
+//                child(FilterListIcon::class) {
+//                    attrs {
+//                        style = reactStyle {
+//                            position = Position.absolute
+//                            fontSize = 2.5.em
+//                            top = (-16.5).px
+//                            left = (-3.5).px
+//                        }
+//                    }
+//                }
             }
 
             styledSpan {

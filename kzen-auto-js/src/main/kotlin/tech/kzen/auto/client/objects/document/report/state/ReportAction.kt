@@ -5,8 +5,9 @@ import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetai
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
-import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
+import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskId
@@ -261,52 +262,58 @@ data class FilterTypeChangeRequest(
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class PivotAction: SingularReportAction()
+sealed class AnalysisAction: SingularReportAction()
 
 
-sealed class PivotUpdateRequest: PivotAction()
+sealed class AnalysisUpdateRequest: AnalysisAction()
 
 
-data class PivotUpdateResult(
+data class AnalysisUpdateResult(
     override val errorMessage: String?
-): PivotAction(), ReportUpdateResult
+): AnalysisAction(), ReportUpdateResult
+
+
+//--------------------------------------------------------------
+data class AnalysisChangeTypeRequest(
+    val analysisType: AnalysisType
+): AnalysisUpdateRequest()
 
 
 //--------------------------------------------------------------
 data class PivotRowAddRequest(
     val columnName: String
-): PivotUpdateRequest()
+): AnalysisUpdateRequest()
 
 
 data class PivotRowRemoveRequest(
     val columnName: String
-): PivotUpdateRequest()
+): AnalysisUpdateRequest()
 
 
-object PivotRowClearRequest: PivotUpdateRequest()
+object PivotRowClearRequest: AnalysisUpdateRequest()
 
 
 //--------------------------------------------------------------
 data class PivotValueAddRequest(
     val columnName: String
-): PivotUpdateRequest()
+): AnalysisUpdateRequest()
 
 
 data class PivotValueRemoveRequest(
     val columnName: String
-): PivotUpdateRequest()
+): AnalysisUpdateRequest()
 
 
 data class PivotValueTypeAddRequest(
     val columnName: String,
     val valueType: PivotValueType
-): PivotUpdateRequest()
+): AnalysisUpdateRequest()
 
 
 data class PivotValueTypeRemoveRequest(
     val columnName: String,
     val valueType: PivotValueType
-): PivotUpdateRequest()
+): AnalysisUpdateRequest()
 
 
 //---------------------------------------------------------------------------------------------------------------------
