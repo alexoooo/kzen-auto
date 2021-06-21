@@ -34,7 +34,7 @@ object ReportReducer {
             is SummaryLookupAction ->
                 reduceSummaryLookup(state, action)
 
-            is OutputLookupAction ->
+            is OutputAction ->
                 reduceOutputLookup(state, action)
 
             is FormulaAction ->
@@ -320,13 +320,13 @@ object ReportReducer {
     //-----------------------------------------------------------------------------------------------------------------
     private fun reduceOutputLookup(
         state: ReportState,
-        action: OutputLookupAction
+        action: OutputAction
     ): ReportState {
         return when (action) {
             is OutputLookupRequest -> state.copy(
                 outputLoading = true)
 
-            is OutputLookupError -> state.copy(
+            is OutputErrorResult -> state.copy(
                 outputLoaded = true,
                 outputLoading = false,
                 outputError = action.errorMessage)
@@ -336,6 +336,8 @@ object ReportReducer {
                 outputLoading = false,
                 outputInfo = action.outputInfo,
                 outputError = null)
+
+            is OutputChangeTypeRequest -> state
         }
     }
 

@@ -16,6 +16,8 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterTyp
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -66,6 +68,9 @@ object ReportEffect {
 
             is OutputLookupRequest ->
                 lookupOutput(state)
+
+            is OutputChangeTypeRequest ->
+                submitOutputChangeType(state, action.outputType)
 
 
             ListInputsSelectedRequest ->
@@ -622,9 +627,16 @@ object ReportEffect {
             }
 
             is ExecutionFailure -> {
-                OutputLookupError(result.errorMessage)
+                OutputErrorResult(result.errorMessage)
             }
         }
+    }
+
+
+    private suspend fun submitOutputChangeType(state: ReportState, outputType: OutputType): ReportAction {
+        return submitAnalysisUpdate(
+            OutputSpec.changeTypeCommand(
+                state.mainLocation, outputType))
     }
 
 

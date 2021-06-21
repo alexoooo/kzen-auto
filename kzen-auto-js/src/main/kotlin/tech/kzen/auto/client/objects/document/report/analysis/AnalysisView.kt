@@ -5,6 +5,7 @@ import react.RBuilder
 import react.RProps
 import react.RPureComponent
 import react.RState
+import react.dom.span
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -150,9 +151,9 @@ class AnalysisView(
                         attrs {
                             value = AnalysisType.FlatData.name
 //                            disabled = editDisabled
-                            size = "small"
+                            size = "medium"
                             style = reactStyle {
-                                height = 2.5.em
+                                height = 34.px
                                 color = Color.black
                                 borderWidth = 2.px
                             }
@@ -174,9 +175,9 @@ class AnalysisView(
                         attrs {
                             value = AnalysisType.PivotTable.name
 //                            disabled = editDisabled
-                            size = "small"
+                            size = "medium"
                             style = reactStyle {
-                                height = 2.5.em
+                                height = 34.px
                                 color = Color.black
                                 borderWidth = 2.px
                             }
@@ -216,7 +217,52 @@ class AnalysisView(
 
 
     private fun RBuilder.renderFlat() {
-        +"-FLAT-"
+        val header = props.reportState.inputAndCalculatedColumns()
+            ?: return
+
+        styledDiv {
+            css {
+                maxHeight = 10.em
+                overflowY = Overflow.auto
+            }
+
+            +"Columns: "
+
+            for (i in header.values.withIndex()) {
+                span {
+                    key = i.value
+
+                    styledDiv {
+                        css {
+                            display = Display.inlineBlock
+                            whiteSpace = WhiteSpace.nowrap
+                            borderStyle = BorderStyle.solid
+                            borderWidth = 1.px
+                            borderColor = Color.lightGray
+                            marginLeft = 0.5.em
+                            marginRight = 0.5.em
+                            marginTop = 0.25.em
+                            marginBottom = 0.25.em
+                            padding(0.25.em)
+                        }
+
+                        +"${i.index + 1}"
+
+                        styledSpan {
+                            css {
+                                fontFamily = "monospace"
+                                whiteSpace = WhiteSpace.nowrap
+                                marginLeft = 1.em
+                            }
+
+                            +i.value
+                        }
+                    }
+
+                    +" "
+                }
+            }
+        }
     }
 
 

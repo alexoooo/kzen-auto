@@ -217,7 +217,7 @@ class InputSelected(
 
             styledDiv {
                 css {
-                    marginRight = 1.em
+//                    marginRight = 1.em
                     display = Display.inlineBlock
                 }
                 renderFormatSelect()
@@ -355,7 +355,8 @@ class InputSelected(
             child(MoreHorizIcon::class) {
                 attrs {
                     style = reactStyle {
-//                        marginRight = 0.25.em
+                        marginLeft = (-0.25).em
+                        marginRight = (-0.25).em
                     }
                 }
             }

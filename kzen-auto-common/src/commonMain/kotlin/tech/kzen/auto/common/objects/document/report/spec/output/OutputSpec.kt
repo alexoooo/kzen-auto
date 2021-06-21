@@ -12,6 +12,8 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 
 
@@ -30,6 +32,13 @@ data class OutputSpec(
 
         private val exportKey = AttributeSegment.ofKey("export")
         val exportAttributePath = ReportConventions.outputAttributePath.nest(exportKey)
+
+        fun changeTypeCommand(mainLocation: ObjectLocation, type: OutputType): NotationCommand {
+            return UpdateInAttributeCommand(
+                mainLocation,
+                typeAttributePath,
+                ScalarAttributeNotation(type.name))
+        }
     }
 
 

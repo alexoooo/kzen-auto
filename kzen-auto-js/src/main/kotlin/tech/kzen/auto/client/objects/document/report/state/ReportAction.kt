@@ -9,6 +9,7 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
@@ -293,7 +294,6 @@ data class PivotRowRemoveRequest(
 object PivotRowClearRequest: AnalysisUpdateRequest()
 
 
-//--------------------------------------------------------------
 data class PivotValueAddRequest(
     val columnName: String
 ): AnalysisUpdateRequest()
@@ -379,20 +379,25 @@ data class SummaryLookupError(
 
 
 //---------------------------------------------------------------------------------------------------------------------
-sealed class OutputLookupAction: SingularReportAction()
+sealed class OutputAction: SingularReportAction()
 
 
-object OutputLookupRequest: OutputLookupAction()
+object OutputLookupRequest: OutputAction()
 
 
 data class OutputLookupResult(
     val outputInfo: OutputInfo
-): OutputLookupAction()
+): OutputAction()
 
 
-data class OutputLookupError(
+data class OutputErrorResult(
     val errorMessage: String
-): OutputLookupAction()
+): OutputAction()
+
+
+data class OutputChangeTypeRequest(
+    val outputType: OutputType
+): OutputAction()
 
 
 //---------------------------------------------------------------------------------------------------------------------

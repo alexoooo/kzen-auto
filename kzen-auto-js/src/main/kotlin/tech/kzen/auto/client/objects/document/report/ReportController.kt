@@ -10,7 +10,7 @@ import tech.kzen.auto.client.objects.document.report.analysis.AnalysisView
 import tech.kzen.auto.client.objects.document.report.filter.ReportFilterList
 import tech.kzen.auto.client.objects.document.report.formula.ReportFormulaList
 import tech.kzen.auto.client.objects.document.report.input.ReportInputView
-import tech.kzen.auto.client.objects.document.report.output.ReportOutputView2
+import tech.kzen.auto.client.objects.document.report.output.ReportOutputView
 import tech.kzen.auto.client.objects.document.report.preview.PreviewView
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.objects.document.report.state.ReportStore
@@ -116,7 +116,7 @@ class ReportController(
 
             renderInput(processState)
             renderFormulas(processState)
-            renderPreview(processState, false)
+//            renderPreview(processState, false)
             renderFilter(processState)
             renderPreview(processState, true)
             renderAnalysis(processState)
@@ -233,7 +233,7 @@ class ReportController(
 
 
     private fun RBuilder.renderOutput(reportState: ReportState) {
-        child(ReportOutputView2::class) {
+        child(ReportOutputView::class) {
             attrs {
                 this.reportState = reportState
                 this.dispatcher = store

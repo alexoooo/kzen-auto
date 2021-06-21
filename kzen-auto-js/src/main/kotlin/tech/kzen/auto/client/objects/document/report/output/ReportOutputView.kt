@@ -6,23 +6,27 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
+import tech.kzen.auto.client.objects.document.report.ReportController
+import tech.kzen.auto.client.objects.document.report.state.OutputChangeTypeRequest
 import tech.kzen.auto.client.objects.document.report.state.OutputLookupRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.wrap.material.MaterialButton
-import tech.kzen.auto.client.wrap.material.SaveAltIcon
-import tech.kzen.auto.client.wrap.material.SettingsIcon
+import tech.kzen.auto.client.wrap.iconify.iconify
+import tech.kzen.auto.client.wrap.iconify.vaadinIconTable
+import tech.kzen.auto.client.wrap.iconify.vaadinIconUploadAlt
+import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
 
-class ReportOutputView2(
+class ReportOutputView(
     props: Props
 ):
-    RPureComponent<ReportOutputView2.Props, ReportOutputView2.State>(props)
+    RPureComponent<ReportOutputView.Props, ReportOutputView.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -58,6 +62,14 @@ class ReportOutputView2(
         setState {
             settingsOpen = ! settingsOpen
         }
+    }
+
+
+    private fun onTypeChange(outputType: OutputType) {
+        props.dispatcher.dispatchAsync(OutputChangeTypeRequest(outputType))
+//        setState {
+//            this.pivot = pivot
+//        }
     }
 
 
@@ -140,32 +152,23 @@ class ReportOutputView2(
 
             styledSpan {
                 css {
-                    width = 100.pct
-                    position = Position.absolute
-                    top = 0.px
-                    left = 0.px
+//                    marginLeft = iconWithPadding.div(2)
+                    marginLeft = 1.em
+                    fontSize = 1.5.em
+                    fontStyle = FontStyle.italic
                 }
 
-                styledDiv {
-                    css {
-                        display = Display.table
-                        margin(0.px, LinearDimension.auto)
-//                        fontWeight = FontWeight.bold
-                        fontSize = 1.5.em
-                    }
-
-                    val status = props.reportState.outputInfo?.status ?: OutputStatus.Missing
-                    if (status == OutputStatus.Missing) {
-                        if (props.reportState.columnListing.isNullOrEmpty()) {
-                            +"Please select valid input (top of page)"
-                        }
-                        else {
-                            +"Run report using ⏵ (bottom right)"
-                        }
+                val status = props.reportState.outputInfo?.status ?: OutputStatus.Missing
+                if (status == OutputStatus.Missing) {
+                    if (props.reportState.columnListing.isNullOrEmpty()) {
+                        +"Select input (top of page)"
                     }
                     else {
-                        +"Status: ${status.name}"
+                        +"Run report (bottom right)"
                     }
+                }
+                else {
+                    +"Status: ${status.name}"
                 }
             }
 
@@ -181,6 +184,69 @@ class ReportOutputView2(
 
 
     private fun RBuilder.renderHeaderControls() {
+        child(MaterialToggleButtonGroup::class) {
+            attrs {
+                value = props.reportState.outputSpec().type.name
+                exclusive = true
+                onChange = { _, v ->
+                    if (v is String) {
+                        onTypeChange(OutputType.valueOf(v))
+                    }
+                }
+//                style = reactStyle {
+//                    height = 15.px
+//                }
+            }
+
+            child(MaterialToggleButton::class) {
+                attrs {
+                    value = OutputType.Explore.name
+//                    disabled = editDisabled
+                    size = "medium"
+                    style = reactStyle {
+                        height = 34.px
+                        color = Color.black
+                        borderWidth = 2.px
+                    }
+                }
+
+                styledSpan {
+                    css {
+                        fontSize = 1.5.em
+                        marginRight = 0.25.em
+                        marginBottom = (-0.25).em
+                    }
+                    iconify(vaadinIconTable)
+                }
+
+                +"Table"
+            }
+
+            child(MaterialToggleButton::class) {
+                attrs {
+                    value = OutputType.Export.name
+//                    disabled = editDisabled
+                    size = "medium"
+                    style = reactStyle {
+                        height = 34.px
+                        color = Color.black
+                        borderWidth = 2.px
+                    }
+                }
+
+                styledSpan {
+                    css {
+                        fontSize = 1.5.em
+                        marginRight = 0.25.em
+//                        marginBottom = (-0.25).em
+                    }
+                    iconify(vaadinIconUploadAlt)
+                }
+
+                +"Export"
+            }
+        }
+
         child(MaterialButton::class) {
             attrs {
                 title = "Settings"
@@ -193,9 +259,11 @@ class ReportOutputView2(
 
                 style = reactStyle {
                     marginLeft = 1.em
+                    borderWidth = 2.px
+                    marginTop = (-10).px
 
                     if (state.settingsOpen) {
-                        backgroundColor = Color.darkGray
+                        backgroundColor = ReportController.selectedColor
                     }
                 }
             }
@@ -203,12 +271,12 @@ class ReportOutputView2(
             child(SettingsIcon::class) {
                 attrs {
                     style = reactStyle {
-                        marginRight = 0.25.em
+//                        marginRight = 0.25.em
                     }
                 }
             }
 
-            +"Settings"
+//            +"Settings"
         }
     }
 
@@ -232,9 +300,32 @@ class ReportOutputView2(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderOutputType() {
+        val type = props.reportState.outputSpec().type
+
         styledDiv {
-            +"[output]"
+            when (type) {
+                OutputType.Explore ->
+                    renderTable()
+
+                OutputType.Export ->
+                    renderExport()
+            }
         }
+    }
+
+
+    private fun RBuilder.renderTable() {
+        child(OutputTableView::class) {
+            attrs {
+                reportState = props.reportState
+                dispatcher = props.dispatcher
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderExport() {
+        +"-EXPORT-"
     }
 
 

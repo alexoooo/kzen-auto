@@ -113,7 +113,8 @@ class PreviewView(
                     fontSize = 2.em
                 }
 
-                +"Preview $suffix"
+//                +"Preview $suffix"
+                +"Preview"
             }
 
             styledSpan {

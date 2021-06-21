@@ -250,8 +250,7 @@ class InputSelectedFormat(
                         val transformed = json()
                         transformed.add(base)
                         transformed["background"] = "transparent"
-//                        transformed["border-color"] = "black"
-                        transformed["border-width"] = "2px"
+                        transformed["borderWidth"] = "2px"
                         transformed
                     }
 

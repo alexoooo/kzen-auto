@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.report
 
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -32,16 +33,16 @@ object ReportConventions {
     val outputAttributePath = AttributePath.ofName(outputAttributeName)
 
     const val workDirKey = "work"
-    val workDirPath = outputAttributePath.nest(AttributeSegment.ofKey(workDirKey))
+    val workDirPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(workDirKey))
 
     const val previewStartKey = "start"
-    val previewStartPath = outputAttributePath.nest(AttributeSegment.ofKey(previewStartKey))
+    val previewStartPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewStartKey))
 
     const val previewRowCountKey = "count"
-    val previewCountPath = outputAttributePath.nest(AttributeSegment.ofKey(previewRowCountKey))
+    val previewCountPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewRowCountKey))
 
     const val saveFileKey = "save"
-    val saveFilePath = outputAttributePath.nest(AttributeSegment.ofKey(saveFileKey))
+    val saveFilePath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(saveFileKey))
 
 //    const val previewPivotValuesKey = "values"
 

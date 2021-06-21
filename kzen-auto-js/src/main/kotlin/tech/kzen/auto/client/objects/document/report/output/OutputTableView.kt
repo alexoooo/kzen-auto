@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.report
+package tech.kzen.auto.client.objects.document.report.output
 
 import kotlinx.css.*
 import kotlinx.css.properties.TextDecoration
@@ -10,6 +10,7 @@ import react.dom.thead
 import react.dom.tr
 import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
+import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.OutputLookupRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportSaveAction
@@ -21,15 +22,14 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
-import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
 
-class ReportOutputView(
+class OutputTableView(
     props: Props
 ):
-    RPureComponent<ReportOutputView.Props, ReportOutputView.State>(props)
+    RPureComponent<OutputTableView.Props, OutputTableView.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: RProps {
@@ -116,41 +116,10 @@ class ReportOutputView(
     override fun RBuilder.render() {
         styledDiv {
             css {
-                position = Position.relative
-                filter = "drop-shadow(0 1px 1px gray)"
-                height = 100.pct
-                marginTop = 5.px
+                float = Float.right
             }
-
-//            child(TopIngress::class) {
-//                attrs {
-//                    ingressColor = Color.white
-//                    parentWidth = 100.pct
-//                }
-//            }
-
-            styledDiv {
-                css {
-                    borderRadius = 3.px
-                    backgroundColor = Color.white
-                    width = 100.pct
-                }
-
-                styledDiv {
-                    css {
-                        padding(0.5.em)
-                    }
-
-                    renderContent()
-                }
-            }
+            renderHeaderControls()
         }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderContent() {
-        renderHeader()
 
 //        +"props.reportState.columnListing: ${props.reportState.columnListing}"
         if (! props.reportState.columnListing.isNullOrEmpty()) {
@@ -160,55 +129,6 @@ class ReportOutputView(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderHeader() {
-        styledDiv {
-            child(PageviewIcon::class) {
-                attrs {
-                    style = reactStyle {
-                        fontSize = 1.75.em
-                        marginRight = 0.25.em
-                    }
-                }
-            }
-
-            styledSpan {
-                css {
-                    fontSize = 2.em
-                }
-
-                +"Output"
-            }
-
-            styledSpan {
-                css {
-                    marginLeft = 1.em
-                }
-
-                val status = props.reportState.outputInfo?.status ?: OutputStatus.Missing
-                if (status == OutputStatus.Missing) {
-                    if (props.reportState.columnListing.isNullOrEmpty()) {
-                        +"Please select valid input (top of page)"
-                    }
-                    else {
-                        +"Run using play button (bottom right)"
-                    }
-                }
-                else {
-                    +status.name
-                }
-            }
-
-            styledSpan {
-                css {
-                    float = Float.right
-                }
-
-                renderHeaderControls()
-            }
-        }
-    }
-
-
     private fun RBuilder.renderHeaderControls() {
         val showRefresh = props.reportState.isTaskRunning()
         val showSave = props.reportState.outputInfo?.modifiedTime != null
@@ -221,6 +141,11 @@ class ReportOutputView(
 
                     onClick = {
                         onPreviewRefresh()
+                    }
+
+                    style = reactStyle {
+                        borderWidth = 2.px
+                        marginLeft = 0.5.em
                     }
                 }
 
@@ -241,6 +166,7 @@ class ReportOutputView(
             styledA {
                 css {
                     textDecoration = TextDecoration.none
+                    marginLeft = 0.5.em
                 }
 
                 attrs {
@@ -251,9 +177,9 @@ class ReportOutputView(
                     attrs {
                         variant = "outlined"
                         size = "small"
-//                        style = reactStyle {
-//                            textDecoration = TextDecoration.none
-//                        }
+                        style = reactStyle {
+                            borderWidth = 2.px
+                        }
                     }
 
                     child(CloudDownloadIcon::class) {
@@ -279,9 +205,10 @@ class ReportOutputView(
 
                     style = reactStyle {
                         marginLeft = 1.em
+                        borderWidth = 2.px
 
                         if (state.savingOpen) {
-                            backgroundColor = Color.darkGray
+                            backgroundColor = ReportController.selectedColor
                         }
                     }
                 }
@@ -297,36 +224,6 @@ class ReportOutputView(
                 +"Save"
             }
         }
-
-        child(MaterialButton::class) {
-            attrs {
-                title = "Settings"
-                variant = "outlined"
-                size = "small"
-
-                onClick = {
-                    onSettingsToggle()
-                }
-
-                style = reactStyle {
-                    marginLeft = 1.em
-
-                    if (state.settingsOpen) {
-                        backgroundColor = Color.darkGray
-                    }
-                }
-            }
-
-            child(SettingsIcon::class) {
-                attrs {
-                    style = reactStyle {
-                        marginRight = 0.25.em
-                    }
-                }
-            }
-
-            +"Settings"
-        }
     }
 
 
@@ -340,7 +237,7 @@ class ReportOutputView(
 //            +"outputPreview $outputPreview"
 
             renderInfo(error, outputInfo)
-            renderSettings(outputInfo)
+//            renderSettings(outputInfo)
             renderSave(outputInfo)
 
             if (outputPreview != null) {
@@ -427,6 +324,11 @@ class ReportOutputView(
                 borderBottomWidth = 2.px
                 borderBottomStyle = BorderStyle.solid
                 borderBottomColor = Color.lightGray
+
+//                paddingTop = 1.em
+//                borderTopWidth = 2.px
+//                borderTopStyle = BorderStyle.solid
+//                borderTopColor = Color.lightGray
             }
 
             styledDiv {
@@ -469,6 +371,10 @@ class ReportOutputView(
                         onClick = {
 //                            console.log("^$%^$%^$%^ writing")
                             onSaveAction()
+                        }
+
+                        style = reactStyle {
+                            borderWidth = 2.px
                         }
                     }
 
