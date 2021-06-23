@@ -22,8 +22,8 @@ object ReportConventions {
     val filterAttributeName = AttributeName("filter")
     val filterAttributePath = AttributePath.ofName(filterAttributeName)
 
-//    val pivotAttributeName = AttributeName("pivot")
-//    val pivotAttributePath = AttributePath.ofName(pivotAttributeName)
+    val previewAllAttributeName = AttributeName("previewAll")
+    val previewFilteredAttributeName = AttributeName("previewFiltered")
 
     val analysisAttributeName = AttributeName("analysis")
     val analysisAttributePath = AttributePath.ofName(analysisAttributeName)

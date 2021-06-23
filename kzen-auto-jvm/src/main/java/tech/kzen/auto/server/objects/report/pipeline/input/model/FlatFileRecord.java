@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.model;
 
 
 import net.openhft.hashing.LongHashFunction;
+import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.plugin.api.managed.FlatRecordBuilder;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvFormatUtils;
@@ -274,7 +275,7 @@ public class FlatFileRecord
 
 
     @Override
-    public void add(String value) {
+    public void add(CharSequence value) {
         growFieldContentsIfRequired(fieldContentLength + value.length());
 
         // see: https://stackoverflow.com/questions/8894258/fastest-way-to-iterate-over-all-the-chars-in-a-string
@@ -308,6 +309,63 @@ public class FlatFileRecord
 
         growFieldContentsIfRequired(requiredContentLength);
         NumberParseUtils.toStringFromRight(value, requiredContentLength - 1, fieldContents);
+
+        fieldContentLength = requiredContentLength;
+        commitField();
+    }
+
+
+    @Override
+    public void add(double value, int decimalPlaces) {
+        if (decimalPlaces == 0) {
+            add(Math.round(value));
+            return;
+        }
+
+        double absolute = Math.abs(value);
+        long wholeValue = (long) absolute;
+        double factionValue = absolute - wholeValue;
+
+        long fractionFactor = NumberParseUtils.decimalLongPowers[decimalPlaces];
+        long fractionLong = Math.round(factionValue * fractionFactor);
+
+        int wholeLength = NumberParseUtils.stringSize(wholeValue);
+        int length = wholeLength + decimalPlaces + 1;
+
+        boolean negative = value < 0.0;
+        int minusLength = (negative ? 1 : 0);
+
+        int requiredContentLength = fieldContentLength + length + minusLength;
+        growFieldContentsIfRequired(requiredContentLength);
+
+        int endOfWhole = fieldContentLength + wholeLength + minusLength - 1;
+        NumberParseUtils.toStringFromRight(wholeValue, endOfWhole, fieldContents);
+
+        fieldContents[endOfWhole + 1] = '.';
+
+        NumberParseUtils.toStringFromRight(fractionLong, requiredContentLength - 1, fieldContents);
+
+        int fractionLength = NumberParseUtils.stringSize(fractionLong);
+        int fractionLeadingZeroes = decimalPlaces - fractionLength;
+        for (int i = 0; i < fractionLeadingZeroes; i++) {
+            fieldContents[endOfWhole + i + 2] = '0';
+        }
+
+        if (negative) {
+            fieldContents[fieldContentLength] = '-';
+        }
+
+        fieldContentLength = requiredContentLength;
+        commitField();
+    }
+
+
+    @Override
+    public void add(@NotNull char[] value, int offset, int length) {
+        int requiredContentLength = fieldContentLength + length;
+        growFieldContentsIfRequired(requiredContentLength);
+
+        System.arraycopy(value, offset, fieldContents, fieldContentLength, length);
 
         fieldContentLength = requiredContentLength;
         commitField();

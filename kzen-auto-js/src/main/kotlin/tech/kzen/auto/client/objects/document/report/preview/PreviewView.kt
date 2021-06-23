@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.preview
 
 import kotlinx.css.*
+import org.w3c.dom.HTMLInputElement
 import react.RBuilder
 import react.RProps
 import react.RPureComponent
@@ -9,11 +10,10 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
+import tech.kzen.auto.client.objects.document.report.state.PreviewChangeEnabledRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.wrap.material.MaterialButton
-import tech.kzen.auto.client.wrap.material.RefreshIcon
-import tech.kzen.auto.client.wrap.material.VisibilityIcon
+import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
 
 
@@ -32,6 +32,13 @@ class PreviewView(
 
     interface State: RState {
 //        var adding: Boolean
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onEnabledChange(enabled: Boolean) {
+        props.dispatcher.dispatchAsync(
+            PreviewChangeEnabledRequest(props.afterFilter, enabled))
     }
 
 
@@ -71,7 +78,6 @@ class PreviewView(
     }
 
 
-
     private fun RBuilder.renderContent() {
         renderHeader()
         renderPreview()
@@ -82,10 +88,10 @@ class PreviewView(
     private fun RBuilder.renderHeader() {
         val showRefresh = props.reportState.isTaskRunning()
 
-        val suffix = when (props.afterFilter) {
-            true -> "Filtered"
-            false -> "All"
-        }
+//        val suffix = when (props.afterFilter) {
+//            false -> "All"
+//            true -> "Filtered"
+//        }
 
         styledDiv {
             styledSpan {
@@ -143,6 +149,47 @@ class PreviewView(
                         +"Refresh"
                     }
                 }
+
+                renderEnable()
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderEnable() {
+        val previewSpec = props.reportState.previewSpec(props.afterFilter)
+        val enabled = previewSpec.enabled
+
+        val inputId = "material-react-switch-id"
+        styledSpan {
+            child(MaterialInputLabel::class) {
+                attrs {
+                    htmlFor = inputId
+
+                    style = reactStyle {
+                        fontSize = 0.8.em
+                    }
+                }
+
+                if (enabled) {
+                    +"Enabled"
+                }
+                else {
+                    +"Disabled"
+                }
+            }
+
+            child(MaterialSwitch::class) {
+                attrs {
+                    id = inputId
+
+                    checked = enabled
+
+                    onChange = {
+                        val target = it.target as HTMLInputElement
+                        onEnabledChange(target.checked)
+                    }
+                }
             }
         }
     }
@@ -151,7 +198,15 @@ class PreviewView(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderPreview() {
         styledDiv {
-            +"[Preview]"
+            //child(InfoIcon::class) {}
+
+            styledSpan {
+                css {
+                    fontSize = 1.25.em
+                    fontStyle = FontStyle.italic
+                }
+                +"Must be enabled for suggestions to appear in Filter"
+            }
         }
     }
 }

@@ -325,7 +325,12 @@ class ReportOutputView(
 
 
     private fun RBuilder.renderExport() {
-        +"-EXPORT-"
+        child(OutputExportView::class) {
+            attrs {
+                reportState = props.reportState
+                dispatcher = props.dispatcher
+            }
+        }
     }
 
 
@@ -387,5 +392,4 @@ class ReportOutputView(
             +"Absolute path: ${outputInfo.runDir}"
         }
     }
-
 }

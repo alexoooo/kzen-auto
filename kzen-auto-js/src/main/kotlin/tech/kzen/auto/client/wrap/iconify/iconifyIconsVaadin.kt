@@ -16,3 +16,6 @@ external val vaadinIconFilter: IconifyIconModule
 @JsModule("@iconify/icons-vaadin/upload-alt")
 external val vaadinIconUploadAlt: IconifyIconModule
 
+@JsModule("@iconify/icons-vaadin/file")
+external val vaadinIconFile: IconifyIconModule
+

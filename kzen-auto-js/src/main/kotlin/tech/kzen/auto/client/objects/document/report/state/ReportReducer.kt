@@ -40,6 +40,9 @@ object ReportReducer {
             is FormulaAction ->
                 reduceFormula(state, action)
 
+            is PreviewAction ->
+                state
+
             is FilterAction ->
                 reduceFilter(state, action)
 
@@ -338,6 +341,11 @@ object ReportReducer {
                 outputError = null)
 
             is OutputChangeTypeRequest -> state
+
+            is ExportFormatRequest,
+            is ExportCompressionRequest,
+            is ExportPathRequest ->
+                state
         }
     }
 

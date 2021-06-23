@@ -513,3 +513,8 @@ external class GroupWorkIcon: Component<IconProps, RState> {
 external class VisibilityIcon: Component<IconProps, RState> {
     override fun render(): ReactElement?
 }
+
+@JsName("Info")
+external class InfoIcon: Component<IconProps, RState> {
+    override fun render(): ReactElement?
+}

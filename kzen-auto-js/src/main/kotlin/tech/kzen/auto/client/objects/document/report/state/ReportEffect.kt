@@ -8,6 +8,7 @@ import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
@@ -16,6 +17,7 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterTyp
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
@@ -71,6 +73,15 @@ object ReportEffect {
 
             is OutputChangeTypeRequest ->
                 submitOutputChangeType(state, action.outputType)
+
+            is ExportFormatRequest ->
+                submitExportChangeFormat(state, action.format)
+
+            is ExportCompressionRequest ->
+                submitExportChangeCompression(state, action.compression)
+
+            is ExportPathRequest ->
+                submitExportChangePath(state, action.path)
 
 
             ListInputsSelectedRequest ->
@@ -147,6 +158,10 @@ object ReportEffect {
 
             is FormulaValidationRequest ->
                 validateFormulasAction(state)
+
+
+            is PreviewChangeEnabledRequest ->
+                submitPreviewChangeEnabled(state, action.filtered, action.enabled)
 
 
             is FilterAddRequest ->
@@ -640,6 +655,27 @@ object ReportEffect {
     }
 
 
+    private suspend fun submitExportChangeFormat(state: ReportState, format: String): ReportAction {
+        return submitAnalysisUpdate(
+            OutputExportSpec.changeFormatCommand(
+                state.mainLocation, format))
+    }
+
+
+    private suspend fun submitExportChangeCompression(state: ReportState, compression: String): ReportAction {
+        return submitAnalysisUpdate(
+            OutputExportSpec.changeCompressionCommand(
+                state.mainLocation, compression))
+    }
+
+
+    private suspend fun submitExportChangePath(state: ReportState, path: String): ReportAction {
+        return submitAnalysisUpdate(
+            OutputExportSpec.changePathCommand(
+                state.mainLocation, path))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun runTask(
         state: ReportState,
@@ -733,6 +769,28 @@ object ReportEffect {
             (result as? MirroredGraphError)?.error?.message
 
         return FilterUpdateResult(errorMessage)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun submitPreviewChangeEnabled(
+        state: ReportState, filtered: Boolean, enabled: Boolean
+    ): ReportAction {
+        return submitPreviewUpdate(
+            PreviewSpec.changeEnabledCommand(
+                state.mainLocation, filtered, enabled))
+    }
+
+
+    private suspend fun submitPreviewUpdate(
+        previewUpdateCommand: NotationCommand
+    ): ReportAction {
+        val result = ClientContext.mirroredGraphStore.apply(previewUpdateCommand)
+
+        val errorMessage =
+            (result as? MirroredGraphError)?.error?.message
+
+        return PreviewUpdateResult(errorMessage)
     }
 
 

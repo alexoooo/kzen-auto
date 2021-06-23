@@ -7,6 +7,7 @@ import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
@@ -174,6 +175,26 @@ data class ReportState(
     }
 
 
+    fun previewSpec(filtered: Boolean): PreviewSpec {
+        return when (filtered) {
+            false -> previewAllSpec()
+            true -> previewFilteredSpec()
+        }
+    }
+
+
+    fun previewAllSpec(): PreviewSpec {
+        val previewDefinition = reportDefinition().attributeDefinitions[ReportConventions.previewFilteredAttributeName]!!
+        return (previewDefinition as ValueAttributeDefinition).value as PreviewSpec
+    }
+
+
+    fun previewFilteredSpec(): PreviewSpec {
+        val previewDefinition = reportDefinition().attributeDefinitions[ReportConventions.previewFilteredAttributeName]!!
+        return (previewDefinition as ValueAttributeDefinition).value as PreviewSpec
+    }
+
+
     fun filterSpec(): FilterSpec {
         val filterDefinition = reportDefinition().attributeDefinitions[ReportConventions.filterAttributeName]!!
         return (filterDefinition as ValueAttributeDefinition).value as FilterSpec
@@ -187,8 +208,8 @@ data class ReportState(
 
 
     fun outputSpec(): OutputSpec {
-        val pivotDefinition = reportDefinition().attributeDefinitions[ReportConventions.outputAttributeName]!!
-        return (pivotDefinition as ValueAttributeDefinition).value as OutputSpec
+        val outputDefinition = reportDefinition().attributeDefinitions[ReportConventions.outputAttributeName]!!
+        return (outputDefinition as ValueAttributeDefinition).value as OutputSpec
     }
 
 

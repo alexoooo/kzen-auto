@@ -105,7 +105,10 @@ Report:
       save: ""
       start: 1
       count: 50
-    export: '"$report_$group_$time.csv"'
+    export:
+      format: csv
+      compression: none
+      path: "${report}_${group}_${time}.${extension}"
   meta:
     input: InputSpec
     formula: FormulaSpec

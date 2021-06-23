@@ -74,7 +74,7 @@ data class OutputSpec(
 
             val exportNotation = graphStructure
                 .graphNotation
-                .mergeAttribute(objectLocation, exportAttributePath) as? ScalarAttributeNotation
+                .mergeAttribute(objectLocation, exportAttributePath) as? MapAttributeNotation
                 ?: return AttributeDefinitionAttempt.failure(
                     "'${exportAttributePath}' attribute notation not found:" +
                             " $objectLocation - $attributeName")

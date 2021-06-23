@@ -221,6 +221,29 @@ data class FormulaValidationResult(
 ): FormulaAction()
 
 
+
+//---------------------------------------------------------------------------------------------------------------------
+sealed class PreviewAction: SingularReportAction()
+
+
+sealed class PreviewUpdateRequest: PreviewAction() {
+    abstract val filtered: Boolean
+}
+
+
+data class PreviewUpdateResult(
+    override val errorMessage: String?
+): PreviewAction(), ReportUpdateResult
+
+
+//--------------------------------------------------------------
+data class PreviewChangeEnabledRequest(
+    override val filtered: Boolean,
+    val enabled: Boolean
+): PreviewUpdateRequest()
+
+
+
 //---------------------------------------------------------------------------------------------------------------------
 sealed class FilterAction: SingularReportAction()
 
@@ -398,6 +421,25 @@ data class OutputErrorResult(
 data class OutputChangeTypeRequest(
     val outputType: OutputType
 ): OutputAction()
+
+
+//--------------------------------------------------------------
+sealed class OutputExportRequest: OutputAction()
+
+
+data class ExportFormatRequest(
+    val format: String
+): OutputExportRequest()
+
+
+data class ExportCompressionRequest(
+    val compression: String
+): OutputExportRequest()
+
+
+data class ExportPathRequest(
+    val path: String
+): OutputExportRequest()
 
 
 //---------------------------------------------------------------------------------------------------------------------

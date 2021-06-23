@@ -1,7 +1,9 @@
 package tech.kzen.auto.common.objects.document.report.spec
 
+import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.AttributeDefinitionAttempt
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
@@ -9,6 +11,8 @@ import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
@@ -18,44 +22,19 @@ data class PreviewSpec(
     val enabled: Boolean
 ): Digestible {
     //-----------------------------------------------------------------------------------------------------------------
-//    companion object {
-//        fun addCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
-//            val columnAttributeSegment = AttributeSegment.ofKey(columnName)
-//            return InsertMapEntryInAttributeCommand(
-//                mainLocation,
-//                ReportConventions.formulaAttributePath,
-//                PositionRelation.afterLast,
-//                columnAttributeSegment,
-//                ScalarAttributeNotation(""),
-//                true)
-//        }
-//
-//
-//        fun removeCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
-//            return RemoveInAttributeCommand(
-//                mainLocation,
-//                formulaAttributePath(columnName),
-//                true)
-//        }
-//
-//
-//        fun updateFormulaCommand(
-//            mainLocation: ObjectLocation,
-//            columnName: String,
-//            formula: String
-//        ): NotationCommand {
-//            return UpdateInAttributeCommand(
-//                mainLocation,
-//                formulaAttributePath(columnName),
-//                ScalarAttributeNotation(formula))
-//        }
-//
-//
-//        fun formulaAttributePath(columnName: String): AttributePath {
-//            val columnAttributeSegment = AttributeSegment.ofKey(columnName)
-//            return ReportConventions.formulaAttributePath.nest(columnAttributeSegment)
-//        }
-//    }
+    companion object {
+        fun changeEnabledCommand(mainLocation: ObjectLocation, filtered: Boolean, enabled: Boolean): NotationCommand {
+            val attributeName = when (filtered) {
+                false -> ReportConventions.previewAllAttributeName
+                true -> ReportConventions.previewFilteredAttributeName
+            }
+
+            return UpdateInAttributeCommand(
+                mainLocation,
+                AttributePath.ofName(attributeName),
+                ScalarAttributeNotation(enabled.toString()))
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
