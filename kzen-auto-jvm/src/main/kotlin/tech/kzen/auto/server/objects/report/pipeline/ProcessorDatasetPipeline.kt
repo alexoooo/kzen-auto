@@ -239,6 +239,8 @@ class ProcessorDatasetPipeline(
                     processorDataDefinition))
         }
 
+        builder.sortBy { it.flatDataInfo }
+
         return DatasetDefinition(builder, classLoaderHandle)
     }
 
@@ -279,9 +281,20 @@ class ProcessorDatasetPipeline(
             builder = builder.then(filter)
         }
 
-        builder
-            .then(*preCachePartitions)
-            .then(summary, output)
+        if (initialReportRunContext.previewAll.enabled) {
+            TODO("Preview All not implemented (yet)")
+        }
+        val filterEnabled = initialReportRunContext.previewFiltered.enabled
+
+        if (filterEnabled) {
+            builder
+                .then(*preCachePartitions)
+                .then(summary, output)
+        }
+        else {
+            builder
+                .then(output)
+        }
 
         recordDisruptor.setDefaultExceptionHandler(recordExceptionHandler())
 

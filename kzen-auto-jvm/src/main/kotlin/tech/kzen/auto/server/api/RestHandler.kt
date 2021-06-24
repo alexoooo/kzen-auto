@@ -904,57 +904,69 @@ class RestHandler {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun actionDetached(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val documentPath: DocumentPath = serverRequest.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse
-        )
+    fun actionDetachedByQuery(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return actionDetachedImpl(serverRequest, serverRequest.queryParams())
+    }
 
-        val objectPath: ObjectPath = serverRequest.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse
-        )
+
+    fun actionDetachedByForm(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return serverRequest.formData().flatMap { params ->
+            actionDetachedImpl(serverRequest, params)
+        }
+    }
+
+
+    private fun actionDetachedImpl(
+        serverRequest: ServerRequest,
+        params: MultiValueMap<String, String>
+    ): Mono<ServerResponse> {
+        val documentPath: DocumentPath = params.getParam(
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+
+        val objectPath: ObjectPath = params.getParam(
+            CommonRestApi.paramObjectPath, ObjectPath::parse)
 
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
-        val params = mutableMapOf<String, List<String>>()
-        for (e in serverRequest.queryParams()) {
+        val detachedParams = mutableMapOf<String, List<String>>()
+        for (e in params) {
             if (e.key == CommonRestApi.paramDocumentPath ||
-                    e.key == CommonRestApi.paramObjectPath) {
+                    e.key == CommonRestApi.paramObjectPath
+            ) {
                 continue
             }
-            params[e.key] = e.value
+            detachedParams[e.key] = e.value
         }
 
         return serverRequest
-                .bodyToMono(ByteArray::class.java)
-                .map { Optional.of(ImmutableByteArray.wrap(it)) }
-                .defaultIfEmpty(Optional.empty())
-                .flatMap { optionalBody ->
-                    val body = optionalBody.orElse(null)
+            .bodyToMono(ByteArray::class.java)
+            .map { Optional.of(ImmutableByteArray.wrap(it)) }
+            .defaultIfEmpty(Optional.empty())
+            .flatMap { optionalBody ->
+                val body = optionalBody.orElse(null)
 
-                    val detachedRequest = DetachedRequest(RequestParams(params), body)
+                val detachedRequest = DetachedRequest(RequestParams(detachedParams), body)
 
-                    val execution: ExecutionResult = runBlocking {
-                        ServerContext.detachedExecutor.execute(
-                            objectLocation,
-                            detachedRequest
-                        )
-                    }
-
-                    ServerResponse
-                            .ok()
-                            .body(Mono.just(execution.toJsonCollection()))
+                val execution: ExecutionResult = runBlocking {
+                    ServerContext.detachedExecutor.execute(
+                        objectLocation,
+                        detachedRequest
+                    )
                 }
+
+                ServerResponse
+                    .ok()
+                    .body(Mono.just(execution.toJsonCollection()))
+            }
     }
 
 
     fun actionDetachedDownload(serverRequest: ServerRequest): Mono<ServerResponse> {
         val documentPath: DocumentPath = serverRequest.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse
-        )
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse
-        )
+            CommonRestApi.paramObjectPath, ObjectPath::parse)
 
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
@@ -999,12 +1011,10 @@ class RestHandler {
     //-----------------------------------------------------------------------------------------------------------------
     fun execModel(serverRequest: ServerRequest): Mono<ServerResponse> {
         val documentPath: DocumentPath = serverRequest.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse
-        )
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
         val objectPath: ObjectPath? = serverRequest.tryGetParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse
-        )
+            CommonRestApi.paramObjectPath, ObjectPath::parse)
 
         val visualDataflowModel = runBlocking {
             ServerContext.visualDataflowRepository.get(documentPath)
@@ -1045,12 +1055,10 @@ class RestHandler {
 
     fun execPerform(serverRequest: ServerRequest): Mono<ServerResponse> {
         val documentPath: DocumentPath = serverRequest.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse
-        )
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse
-        )
+            CommonRestApi.paramObjectPath, ObjectPath::parse)
 
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
@@ -1067,12 +1075,10 @@ class RestHandler {
     //-----------------------------------------------------------------------------------------------------------------
     fun taskSubmit(serverRequest: ServerRequest): Mono<ServerResponse> {
         val documentPath: DocumentPath = serverRequest.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse
-        )
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse
-        )
+            CommonRestApi.paramObjectPath, ObjectPath::parse)
 
         val objectLocation = ObjectLocation(documentPath, objectPath)
 

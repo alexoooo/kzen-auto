@@ -13,7 +13,9 @@ import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.objects.document.report.state.PreviewChangeEnabledRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.wrap.material.*
+import tech.kzen.auto.client.wrap.material.MaterialInputLabel
+import tech.kzen.auto.client.wrap.material.MaterialSwitch
+import tech.kzen.auto.client.wrap.material.VisibilityIcon
 import tech.kzen.auto.client.wrap.reactStyle
 
 
@@ -86,7 +88,12 @@ class PreviewView(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderHeader() {
-        val showRefresh = props.reportState.isTaskRunning()
+        val previewSpec = props.reportState.previewSpec(props.afterFilter)
+        val previewEnabled = previewSpec.enabled
+
+        val running = props.reportState.isTaskRunning()
+        val disabled = props.reportState.isInitiating() || running
+//        val showRefresh = running && previewEnabled
 
 //        val suffix = when (props.afterFilter) {
 //            false -> "All"
@@ -128,38 +135,37 @@ class PreviewView(
                     float = Float.right
                 }
 
-                if (showRefresh) {
-                    child(MaterialButton::class) {
-                        attrs {
-                            variant = "outlined"
-                            size = "small"
+//                if (showRefresh) {
+//                    styledSpan {
+//                        child(MaterialButton::class) {
+//                            attrs {
+//                                variant = "outlined"
+//                                size = "small"
+//
+//                                onClick = {
+////                                onSummaryRefresh()
+//                                }
+//                            }
+//
+//                            child(RefreshIcon::class) {
+//                                attrs {
+//                                    style = reactStyle {
+//                                        marginRight = 0.25.em
+//                                    }
+//                                }
+//                            }
+//                            +"Refresh"
+//                        }
+//                    }
+//                }
 
-                            onClick = {
-//                                onSummaryRefresh()
-                            }
-                        }
-
-                        child(RefreshIcon::class) {
-                            attrs {
-                                style = reactStyle {
-                                    marginRight = 0.25.em
-                                }
-                            }
-                        }
-                        +"Refresh"
-                    }
-                }
-
-                renderEnable()
+                renderEnable(previewEnabled, disabled)
             }
         }
     }
 
 
-    private fun RBuilder.renderEnable() {
-        val previewSpec = props.reportState.previewSpec(props.afterFilter)
-        val enabled = previewSpec.enabled
-
+    private fun RBuilder.renderEnable(previewEnabled: Boolean, disabled: Boolean) {
         val inputId = "material-react-switch-id"
         styledSpan {
             child(MaterialInputLabel::class) {
@@ -171,7 +177,7 @@ class PreviewView(
                     }
                 }
 
-                if (enabled) {
+                if (previewEnabled) {
                     +"Enabled"
                 }
                 else {
@@ -182,9 +188,8 @@ class PreviewView(
             child(MaterialSwitch::class) {
                 attrs {
                     id = inputId
-
-                    checked = enabled
-
+                    checked = previewEnabled
+                    this.disabled = disabled
                     onChange = {
                         val target = it.target as HTMLInputElement
                         onEnabledChange(target.checked)

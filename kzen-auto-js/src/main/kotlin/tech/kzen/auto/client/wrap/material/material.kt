@@ -262,6 +262,8 @@ external interface SwitchProps: RProps {
     var checked: Boolean
     var onChange: (e: Event) -> Unit
 
+    var disabled: Boolean
+
 //    var onKeyDown: (e: KeyboardEvent) -> Unit
 //    var onKeyPress: (e: KeyboardEvent) -> Unit
 //
