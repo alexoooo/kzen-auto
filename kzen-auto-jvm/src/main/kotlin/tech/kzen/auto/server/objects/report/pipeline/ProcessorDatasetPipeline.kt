@@ -25,7 +25,7 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetDef
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataContentDefinition
 import tech.kzen.auto.server.objects.report.pipeline.input.model.instance.ProcessorDataInstance
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
-import tech.kzen.auto.server.objects.report.pipeline.output.ReportOutput
+import tech.kzen.auto.server.objects.report.pipeline.output.TableReportOutput
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
 import tech.kzen.auto.server.objects.report.pipeline.stages.*
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
@@ -140,8 +140,8 @@ class ProcessorDatasetPipeline(
     private val summary = ProcessorSummaryStage(
         ReportSummary(initialReportRunContext, runDir, taskHandle))
 
-    private val output = ProcessorOutputStage(
-        ReportOutput(initialReportRunContext, runDir, taskHandle, progressTracker),
+    private val tableOutput = ProcessorOutputStage(
+        TableReportOutput(initialReportRunContext, runDir, taskHandle, progressTracker),
         reportWorkPool)
 
 
@@ -289,11 +289,11 @@ class ProcessorDatasetPipeline(
         if (filterEnabled) {
             builder
                 .then(*preCachePartitions)
-                .then(summary, output)
+                .then(summary, tableOutput)
         }
         else {
             builder
-                .then(output)
+                .then(tableOutput)
         }
 
         recordDisruptor.setDefaultExceptionHandler(recordExceptionHandler())
@@ -344,17 +344,17 @@ class ProcessorDatasetPipeline(
             return null
         }
 
-        return output.reportOutput.preview(reportRunContext, outputSpec, reportWorkPool)
+        return tableOutput.tableReportOutput.preview(reportRunContext, outputSpec, reportWorkPool)
     }
 
 
     private fun outputSave(reportRunContext: ReportRunContext, outputSpec: OutputExploreSpec): Path {
-        return output.reportOutput.save(reportRunContext, outputSpec)
+        return tableOutput.tableReportOutput.save(reportRunContext, outputSpec)
     }
 
 
     private fun outputDownload(reportRunContext: ReportRunContext, outputSpec: OutputExploreSpec): InputStream {
-        return output.reportOutput.download(reportRunContext, outputSpec)
+        return tableOutput.tableReportOutput.download(reportRunContext, outputSpec)
     }
 
 
@@ -370,7 +370,6 @@ class ProcessorDatasetPipeline(
     //-----------------------------------------------------------------------------------------------------------------
     override fun close(error: Boolean) {
         summary.close()
-        output.close(error)
-//        classLoaderHandle.close()
+        tableOutput.close(error)
     }
 }

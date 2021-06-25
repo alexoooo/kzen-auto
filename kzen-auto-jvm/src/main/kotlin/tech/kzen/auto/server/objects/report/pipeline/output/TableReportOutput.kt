@@ -4,6 +4,7 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
+import tech.kzen.auto.common.objects.document.report.output.OutputTableInfo
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.server.objects.report.ReportWorkPool
@@ -40,7 +41,7 @@ import java.util.concurrent.TimeoutException
 
 
 // TODO: optimize save csv generation
-class ReportOutput(
+class TableReportOutput(
     initialReportRunContext: ReportRunContext,
     private val runDir: Path,
     private val taskHandle: TaskHandle?,
@@ -72,10 +73,10 @@ class ReportOutput(
 
             return OutputInfo(
                 runDir.toAbsolutePath().normalize().toString(),
-                "Missing, will be created: $runDir",
-                null,
-                0L,
-                OutputPreview(header, listOf(), 0L),
+                OutputTableInfo(
+                    "Missing, will be created: $runDir",
+                    0L,
+                    OutputPreview(header, listOf(), 0L)),
                 OutputStatus.Missing
             )
         }
@@ -84,25 +85,23 @@ class ReportOutput(
         private fun filePivot(
             rows: HeaderListing,
             values: HeaderListing,
-            tempDir: Path
+            pivotDir: Path
         ): PivotBuilder {
-            val rowTextContentFile = tempDir.resolve("row-text-value.bin")
-            val rowTextIndexFile= tempDir.resolve("row-text-index.bin")
-            val rowSignatureFile = tempDir.resolve("row-signature.bin")
-            val valueStatisticsFile = tempDir.resolve("value-statistics.bin")
-            val rowValueDigestDir = tempDir.resolve("row-text-digest")
-            val rowSignatureDigestDir = tempDir.resolve("row-signature-digest")
+            val rowTextContentFile = pivotDir.resolve("row-text-value.bin")
+            val rowTextIndexFile= pivotDir.resolve("row-text-index.bin")
+            val rowSignatureFile = pivotDir.resolve("row-signature.bin")
+            val valueStatisticsFile = pivotDir.resolve("value-statistics.bin")
+            val rowValueDigestDir = pivotDir.resolve("row-text-digest")
+            val rowSignatureDigestDir = pivotDir.resolve("row-signature-digest")
 
             val rowValueDigestIndex =
                 H2DigestIndex(rowValueDigestDir)
 
             val textOffsetStore = BufferedOffsetStore(
-                FileOffsetStore(rowTextIndexFile)
-            )
+                FileOffsetStore(rowTextIndexFile))
 
             val indexedTextStore = BufferedIndexedTextStore(
-                FileIndexedTextStore(rowTextContentFile, textOffsetStore)
-            )
+                FileIndexedTextStore(rowTextContentFile, textOffsetStore))
 
             val rowValueIndex = StoreRowValueIndex(
                 rowValueDigestIndex, indexedTextStore)
@@ -111,15 +110,13 @@ class ReportOutput(
                 H2DigestIndex(rowSignatureDigestDir)
 
             val indexedSignatureStore = BufferedIndexedSignatureStore(
-                FileIndexedSignatureStore(rowSignatureFile, rows.values.size)
-            )
+                FileIndexedSignatureStore(rowSignatureFile, rows.values.size))
 
             val rowSignatureIndex = StoreRowSignatureIndex(
                 rowSignatureDigestIndex, indexedSignatureStore)
 
             val valueStatistics = BufferedValueStatistics(
-                FileValueStatisticsStore(valueStatisticsFile, values.values.size)
-            )
+                FileValueStatisticsStore(valueStatisticsFile, values.values.size))
 
             return PivotBuilder(
                 rows,
@@ -132,9 +129,9 @@ class ReportOutput(
         private fun <T> usePassive(
             reportRunContext: ReportRunContext,
             runDir: Path,
-            user: (ReportOutput) -> T
+            user: (TableReportOutput) -> T
         ): T {
-            val instance = ReportOutput(reportRunContext, runDir, null, null)
+            val instance = TableReportOutput(reportRunContext, runDir, null, null)
             var error = true
             return try {
                 val value = user(instance)
@@ -268,8 +265,8 @@ class ReportOutput(
     ): OutputInfo {
         val zeroBasedPreview = outputSpec.previewStartZeroBased()
 
-        val fileTime = Files.getLastModifiedTime(runDir)
-        val formattedTime = formatTime(fileTime.toInstant())
+//        val fileTime = Files.getLastModifiedTime(runDir)
+//        val formattedTime = formatTime(fileTime.toInstant())
 
         var rowCount: Long = -1
         var preview: OutputPreview? = null
@@ -307,10 +304,10 @@ class ReportOutput(
 
         return OutputInfo(
             runDir.toAbsolutePath().normalize().toString(),
-            saveInfo.message,
-            formattedTime,
-            rowCount,
-            preview,
+            OutputTableInfo(
+                saveInfo.message,
+                rowCount,
+                preview),
             statusOverride ?: status)
     }
 

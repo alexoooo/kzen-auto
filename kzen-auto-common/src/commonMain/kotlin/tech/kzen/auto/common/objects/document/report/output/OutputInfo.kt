@@ -3,42 +3,32 @@ package tech.kzen.auto.common.objects.document.report.output
 
 data class OutputInfo(
     val runDir: String,
-    val saveMessage: String,
-    val modifiedTime: String?,
-    val rowCount: Long,
-    val preview: OutputPreview?,
+    val table: OutputTableInfo?,
     val status: OutputStatus
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val runDirKey = "work"
-        private const val saveMessageKey = "message"
-        private const val modifiedTimeKey = "modified"
-        private const val previewKey = "preview"
-        private const val countKey = "count"
         private const val statusKey = "status"
+        private const val tableKey = "table"
 
 
         fun fromCollection(collection: Map<String, Any?>): OutputInfo {
 //            println("^^^ OutputInfo ## fromCollection - $collection")
 
             @Suppress("UNCHECKED_CAST")
-            val outputPreviewCollection =
-                collection[previewKey] as Map<String, Any>?
+            val tableMap = collection[tableKey] as? Map<String, Any?>
 
-            val outputPreview =
-                outputPreviewCollection
-                    ?.let { OutputPreview.fromCollection(it) }
+            val table = tableMap?.let {
+                OutputTableInfo.fromCollection(it)
+            }
 
             val status = OutputStatus.valueOf(
                 collection[statusKey] as String)
 
             return OutputInfo(
                 collection[runDirKey] as String,
-                collection[saveMessageKey] as String,
-                collection[modifiedTimeKey] as String?,
-                (collection[countKey] as String).toLong(),
-                outputPreview,
+                table,
                 status)
         }
     }
@@ -46,12 +36,15 @@ data class OutputInfo(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun toCollection(): Map<String, Any?> {
-        return mapOf(
-            runDirKey to runDir,
-            saveMessageKey to saveMessage,
-            modifiedTimeKey to modifiedTime,
-            countKey to rowCount.toString(),
-            previewKey to preview?.toCollection(),
-            statusKey to status.name)
+        val builder = mutableMapOf<String, Any?>()
+        builder[runDirKey] = runDir
+
+        if (table != null) {
+            builder[tableKey] = table.toCollection()
+        }
+
+        builder[statusKey] = status.name
+
+        return builder
     }
 }

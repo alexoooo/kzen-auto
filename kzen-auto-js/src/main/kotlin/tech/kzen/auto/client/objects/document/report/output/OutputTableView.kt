@@ -22,6 +22,7 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
+import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
@@ -131,7 +132,7 @@ class OutputTableView(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderHeaderControls() {
         val showRefresh = props.reportState.isTaskRunning()
-        val showSave = props.reportState.outputInfo?.modifiedTime != null
+        val showSave = (props.reportState.outputInfo?.status ?: OutputStatus.Missing) != OutputStatus.Missing
 
         if (showRefresh) {
             child(MaterialButton::class) {
@@ -231,7 +232,7 @@ class OutputTableView(
     private fun RBuilder.renderOutput() {
         val error = props.reportState.outputError
         val outputInfo = props.reportState.outputInfo
-        val outputPreview = outputInfo?.preview
+        val outputPreview = outputInfo?.table?.preview
 
         styledDiv {
 //            +"outputPreview $outputPreview"
@@ -311,7 +312,7 @@ class OutputTableView(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderSave(outputInfo: OutputInfo?) {
-        if (! state.savingOpen || outputInfo?.modifiedTime == null) {
+        if (! state.savingOpen || outputInfo == null || outputInfo.status == OutputStatus.Missing) {
             return
         }
 
@@ -355,7 +356,7 @@ class OutputTableView(
                     key = "save-file"
                 }
 
-                +outputInfo.saveMessage
+                +(outputInfo.table?.saveMessage ?: "")
             }
 
             styledDiv {
@@ -406,7 +407,7 @@ class OutputTableView(
 
 
     private fun RBuilder.renderPreviewHeader(outputInfo: OutputInfo) {
-        if (outputInfo.modifiedTime == null) {
+        if (outputInfo.status == OutputStatus.Missing) {
             return
         }
 

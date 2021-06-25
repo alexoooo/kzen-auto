@@ -9,9 +9,6 @@ data class OutputPreview(
     val startRow: Long
 ) {
     companion object {
-        const val defaultRowCount = 100
-//        const val defaultRowCount = 1_000
-
         private const val headerKey = "header"
         private const val rowsKey = "rows"
         private const val startKey = "start"

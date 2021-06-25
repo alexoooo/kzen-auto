@@ -231,7 +231,7 @@ data class ReportState(
 
     fun outputCount(): Long {
         val progressOutputCount = reportProgress?.outputCount ?: 0
-        val infoOutputCount = outputInfo?.rowCount ?: 0
+        val infoOutputCount = outputInfo?.table?.rowCount ?: 0
         return progressOutputCount.coerceAtLeast(infoOutputCount)
     }
 }
