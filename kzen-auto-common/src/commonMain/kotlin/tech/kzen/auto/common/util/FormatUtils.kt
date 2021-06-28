@@ -12,6 +12,12 @@ object FormatUtils {
     private val units = arrayOf("B", "kB", "MB", "GB", "TB")
 
 
+    fun sanitizeFilename(filenameFragment: String): String {
+        return filenameFragment
+            .replace(Regex("[^a-zA-Z0-9_-]+"), "_")
+    }
+
+
     fun decimalSeparator(number: Long): String {
         return number
             .toString()

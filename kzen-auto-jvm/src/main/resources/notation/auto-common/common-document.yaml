@@ -108,7 +108,7 @@ Report:
     export:
       format: csv
       compression: none
-      path: "${report}_${group}_${time}.${extension}"
+      path: "../work/export/${report}_${group}_${time}.${extension}"
   meta:
     input: InputSpec
     formula: FormulaSpec

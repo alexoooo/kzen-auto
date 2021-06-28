@@ -7,6 +7,7 @@ import com.lmax.disruptor.util.DaemonThreadFactory
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
@@ -26,6 +27,10 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataCo
 import tech.kzen.auto.server.objects.report.pipeline.input.model.instance.ProcessorDataInstance
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
 import tech.kzen.auto.server.objects.report.pipeline.output.TableReportOutput
+import tech.kzen.auto.server.objects.report.pipeline.output.export.CharsetExportEncoder
+import tech.kzen.auto.server.objects.report.pipeline.output.export.CompressedExportWriter
+import tech.kzen.auto.server.objects.report.pipeline.output.export.format.ExportFormatter
+import tech.kzen.auto.server.objects.report.pipeline.output.export.model.ExportFormat
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
 import tech.kzen.auto.server.objects.report.pipeline.stages.*
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
@@ -37,7 +42,7 @@ import java.nio.file.Path
 
 class ProcessorDatasetPipeline(
     private val initialReportRunContext: ReportRunContext,
-    runDir: Path,
+    private val runDir: Path,
     private val reportWorkPool: ReportWorkPool,
     private val taskHandle: TaskHandle?
 ):
@@ -61,14 +66,15 @@ class ProcessorDatasetPipeline(
 //        private const val recordDisruptorBufferSize = 64 * 1024
 
 
-        fun passivePreview(
+        fun passiveOutputInfo(
             reportRunContext: ReportRunContext,
             runDir: Path,
             outputSpec: OutputExploreSpec,
             reportWorkPool: ReportWorkPool
         ): OutputInfo {
             return usePassive(reportRunContext, runDir, reportWorkPool) {
-                it.outputPreview(reportRunContext, outputSpec)!!
+                it.activeOutputInfo(reportRunContext, outputSpec)
+                    ?: throw IllegalStateException("harmless race condition")
             }
         }
 
@@ -140,9 +146,24 @@ class ProcessorDatasetPipeline(
     private val summary = ProcessorSummaryStage(
         ReportSummary(initialReportRunContext, runDir, taskHandle))
 
-    private val tableOutput = ProcessorOutputStage(
-        TableReportOutput(initialReportRunContext, runDir, taskHandle, progressTracker),
-        reportWorkPool)
+    private var tableOutput: ProcessorOutputTableStage? = null
+    private var exportWriter: CompressedExportWriter? = null
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        if (initialReportRunContext.output.type == OutputType.Explore) {
+            tableOutput = ProcessorOutputTableStage(
+                TableReportOutput(initialReportRunContext, runDir, taskHandle, progressTracker),
+                reportWorkPool)
+        }
+        else {
+            exportWriter = CompressedExportWriter(
+                runDir,
+                initialReportRunContext.reportDocumentName,
+                initialReportRunContext.output.export)
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -192,7 +213,7 @@ class ProcessorDatasetPipeline(
             recordDisruptorInput,
             processorDataInstance,
             flatDataLocation.dataEncoding,
-            flatDataContentDefinition.flatDataInfo.headerListing,
+            flatDataContentDefinition.flatDataInfo,
             streamProgressTracker,
             handle)
 
@@ -286,14 +307,30 @@ class ProcessorDatasetPipeline(
         }
         val filterEnabled = initialReportRunContext.previewFiltered.enabled
 
-        if (filterEnabled) {
+        val startOfOutput =
+            if (tableOutput != null) {
+                tableOutput
+            }
+            else {
+                ExportFormatter(ExportFormat.byName(
+                    initialReportRunContext.output.export.format))
+            }
+
+        builder =
+            if (filterEnabled) {
+                builder
+                    .then(*preCachePartitions)
+                    .then(summary, startOfOutput)
+            }
+            else {
+                builder
+                    .then(startOfOutput)
+            }
+
+        if (exportWriter != null) {
             builder
-                .then(*preCachePartitions)
-                .then(summary, tableOutput)
-        }
-        else {
-            builder
-                .then(tableOutput)
+                .then(CharsetExportEncoder(Charsets.UTF_8))
+                .then(exportWriter)
         }
 
         recordDisruptor.setDefaultExceptionHandler(recordExceptionHandler())
@@ -335,7 +372,7 @@ class ProcessorDatasetPipeline(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun outputPreview(
+    fun activeOutputInfo(
         reportRunContext: ReportRunContext,
         outputSpec: OutputExploreSpec
     ): OutputInfo? {
@@ -344,17 +381,22 @@ class ProcessorDatasetPipeline(
             return null
         }
 
-        return tableOutput.tableReportOutput.preview(reportRunContext, outputSpec, reportWorkPool)
+        if (tableOutput != null) {
+            return tableOutput!!.tableReportOutput.preview(reportRunContext, outputSpec, reportWorkPool)
+        }
+
+//        return tableOutput.tableReportOutput.preview(reportRunContext, outputSpec, reportWorkPool)
+        return exportWriter!!.preview(reportRunContext, reportWorkPool)
     }
 
 
     private fun outputSave(reportRunContext: ReportRunContext, outputSpec: OutputExploreSpec): Path {
-        return tableOutput.tableReportOutput.save(reportRunContext, outputSpec)
+        return tableOutput!!.tableReportOutput.save(reportRunContext, outputSpec)
     }
 
 
     private fun outputDownload(reportRunContext: ReportRunContext, outputSpec: OutputExploreSpec): InputStream {
-        return tableOutput.tableReportOutput.download(reportRunContext, outputSpec)
+        return tableOutput!!.tableReportOutput.download(reportRunContext, outputSpec)
     }
 
 
@@ -370,6 +412,7 @@ class ProcessorDatasetPipeline(
     //-----------------------------------------------------------------------------------------------------------------
     override fun close(error: Boolean) {
         summary.close()
-        tableOutput.close(error)
+        tableOutput?.close(error)
+        exportWriter?.close(error)
     }
 }

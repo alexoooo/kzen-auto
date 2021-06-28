@@ -10,12 +10,6 @@ object AutoJvmUtils
 //    private val bareWindowsDrive = Regex("[a-zA-Z]:")
 
 
-    fun sanitizeFilename(filenameFragment: String): String {
-        return filenameFragment
-            .replace(Regex("[^a-zA-Z0-9_-]+"), "_")
-    }
-
-
     fun parsePath(asString: String): Path? {
         tryParsePath(asString)
             ?.let { return it }
@@ -47,6 +41,7 @@ object AutoJvmUtils
 
         return null
     }
+
 
     private fun adjustPath(path: String): String {
         val normalizedSeparators = path.replace('\\', '/')

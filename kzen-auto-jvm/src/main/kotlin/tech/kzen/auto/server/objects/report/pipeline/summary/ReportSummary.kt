@@ -5,6 +5,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import tech.kzen.auto.common.objects.document.report.summary.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
+import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
@@ -12,7 +13,6 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHe
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
 import tech.kzen.auto.server.objects.report.pipeline.summary.model.ValueSummaryBuilder
-import tech.kzen.auto.server.util.AutoJvmUtils
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -76,7 +76,7 @@ class ReportSummary(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun columnDir(columnName: String): Path {
-        val columnDirName = AutoJvmUtils.sanitizeFilename(columnName)
+        val columnDirName = FormatUtils.sanitizeFilename(columnName)
         return summaryDir.resolve(columnDirName)
     }
 

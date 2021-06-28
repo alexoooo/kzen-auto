@@ -1,6 +1,10 @@
 package tech.kzen.auto.common.objects.document.report.spec.output
 
+import kotlinx.datetime.Instant
+import tech.kzen.auto.common.util.FormatUtils
+import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
@@ -15,7 +19,13 @@ data class OutputExportSpec(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val formatOptions = listOf("csv", "tsv")
+        const val formatCsvName = "csv"
+        const val formatTsvName = "tsv"
+        val formatOptions = listOf(formatCsvName, formatTsvName)
+
+        const val compressionNoneName = "none"
+        const val compressionZipName = "zip"
+        const val compressionGzName = "gz"
         val compressionOptions = listOf("none", "zip", "gz")
 
 
@@ -65,5 +75,80 @@ data class OutputExportSpec(
                 pathAttributePath,
                 ScalarAttributeNotation(path))
         }
+
+
+        private fun resolvePattern(
+            pattern: String, reportName: DocumentName, group: DataLocationGroup, time: Instant, extension: String
+        ): String {
+            val timeFormat = FormatUtils.formatLocalDateTime(time)
+                .replace("-", "")
+                .replace(":", "")
+                .replace(" ", "T")
+
+            val sanitizedReportName = FormatUtils.sanitizeFilename(reportName.value)
+            val sanitizedGroup = FormatUtils.sanitizeFilename(group.group ?: "")
+
+            return pattern
+                .replace("\${report}", sanitizedReportName)
+                .replace("\${group}", sanitizedGroup)
+                .replace("\${time}", timeFormat)
+                .replace("\${extension}", extension)
+                .replace(Regex("_+"), "_")
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun resolvePath(reportName: DocumentName, group: DataLocationGroup, time: Instant): String {
+        val extension =
+            if (compression == compressionZipName) {
+                "zip"
+            }
+            else {
+                val outerExtension =
+                    if (compression == compressionNoneName) {
+                        ""
+                    }
+                    else {
+                        ".$compression"
+                    }
+
+                format + outerExtension
+            }
+
+        return resolvePattern(pathPattern, reportName, group, time, extension)
+    }
+
+
+    fun resolveInnerFilename(reportName: DocumentName, group: DataLocationGroup, time: Instant): String {
+        val outerExtension =
+            if (compression == compressionNoneName ||
+                    compression == compressionZipName
+            ) {
+                ""
+            }
+            else {
+                ".$compression"
+            }
+
+        val extension = format + outerExtension
+
+        val indexOfLastSeparator =
+            if (pathPattern.contains('/')) {
+                pathPattern.lastIndexOf('/')
+            }
+            else {
+                pathPattern.lastIndexOf('\\')
+            }
+
+        val namePattern =
+            if (indexOfLastSeparator == -1) {
+                pathPattern
+            }
+            else {
+                pathPattern.substring(indexOfLastSeparator + 1)
+            }
+
+        return resolvePattern(namePattern, reportName, group, time, extension)
     }
 }

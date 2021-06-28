@@ -99,7 +99,7 @@ class ReportDocument(
                 actionColumnSummaryLookup()
 
             ReportConventions.actionLookupOutput ->
-                actionLookupOutput()
+                actionOutputInfo()
 
             ReportConventions.actionSave ->
                 actionSave()
@@ -174,7 +174,15 @@ class ReportDocument(
         val dataType = input.selection.dataType
 
         return ReportRunContext(
-            dataType, datasetInfo, formula, previewAll, filter, previewFiltered, analysis)
+            selfLocation.documentPath.name,
+            dataType,
+            datasetInfo,
+            formula,
+            previewAll,
+            filter,
+            previewFiltered,
+            analysis,
+            output)
     }
 
 
@@ -324,13 +332,13 @@ class ReportDocument(
     }
 
 
-    private suspend fun actionLookupOutput(): ExecutionResult {
+    private suspend fun actionOutputInfo(): ExecutionResult {
         val runSpec = runContext()
             ?: return ExecutionFailure("Missing run")
 
         val runDir = runDir(runSpec)
 
-        return ServerContext.reportRunAction.outputPreview(
+        return ServerContext.reportRunAction.outputInfo(
             selfLocation, runSpec, runDir, output.explore)
     }
 

@@ -6,7 +6,7 @@ import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.output.TableReportOutput
 
 
-class ProcessorOutputStage(
+class ProcessorOutputTableStage(
     val tableReportOutput: TableReportOutput,
     private val reportWorkPool: ReportWorkPool
 ):

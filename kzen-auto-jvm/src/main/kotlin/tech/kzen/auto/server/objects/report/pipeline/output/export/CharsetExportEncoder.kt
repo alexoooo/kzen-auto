@@ -1,0 +1,45 @@
+package tech.kzen.auto.server.objects.report.pipeline.output.export
+
+import com.lmax.disruptor.EventHandler
+import tech.kzen.auto.plugin.model.RecordDataBuffer
+import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
+import java.nio.charset.Charset
+import kotlin.math.ceil
+
+
+class CharsetExportEncoder(
+    val charset: Charset
+):
+    EventHandler<ProcessorOutputEvent<*>>
+{
+    //-----------------------------------------------------------------------------------------------------------------
+    private val encoder = charset.newEncoder()
+    private val maxBytesPerChar = encoder.maxBytesPerChar().toDouble()
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun onEvent(event: ProcessorOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
+        if (event.skip) {
+            return
+        }
+
+        encode(event.exportData)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun encode(output: RecordDataBuffer) {
+        val charsLength = output.charsLength
+        val maxOutputLength = ceil(maxBytesPerChar * charsLength).toInt()
+        output.ensureByteCapacity(maxOutputLength)
+
+        val inputBuffer = output.initializedCharBuffer(charsLength)
+        val outputBuffer = output.initializedByteBuffer(maxOutputLength)
+
+        encoder.reset()
+        encoder.encode(inputBuffer, outputBuffer, true)
+        encoder.flush(outputBuffer)
+
+        output.bytesLength = outputBuffer.position()
+    }
+}

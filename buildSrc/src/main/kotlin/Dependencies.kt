@@ -1,7 +1,7 @@
-const val kotlinVersion = "1.5.10"
+const val kotlinVersion = "1.5.20"
 const val jvmTargetVersion = "16"
 const val shadowVersion = "7.0.0"
-const val springBootVersion = "2.5.0"
+const val springBootVersion = "2.5.2"
 const val dependencyManagementVersion = "1.0.11.RELEASE"
 
 
@@ -10,7 +10,7 @@ const val kzenLibVersion = "0.23.0-SNAPSHOT"
 
 
 const val logbackVersion = "1.2.3"
-const val jacksonModuleKotlin = "2.12.2"
+const val jacksonModuleKotlin = "2.12.3"
 const val seleniumVersion = "3.141.59"
 const val commonsCompressVersion = "1.20"
 const val fastutilVersion = "8.5.4"

@@ -77,6 +77,7 @@ class TableReportOutput(
                     "Missing, will be created: $runDir",
                     0L,
                     OutputPreview(header, listOf(), 0L)),
+                null,
                 OutputStatus.Missing
             )
         }
@@ -308,6 +309,7 @@ class TableReportOutput(
                 saveInfo.message,
                 rowCount,
                 preview),
+            null,
             statusOverride ?: status)
     }
 

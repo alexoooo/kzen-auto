@@ -1,6 +1,8 @@
 package tech.kzen.auto.plugin.model;
 
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.util.Arrays;
 
 
@@ -13,11 +15,11 @@ public class RecordDataBuffer {
     //-----------------------------------------------------------------------------------------------------------------
     public byte[] bytes = emptyBytes;
     public int bytesLength;
+    private ByteBuffer byteBufferOrNull;
 
     public char[] chars = emptyChars;
     public int charsLength;
-
-//    public boolean endOfData;
+    private CharBuffer charBufferOrNull;
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -26,10 +28,50 @@ public class RecordDataBuffer {
     }
 
 
+    public ByteBuffer initializedByteBuffer(int limit) {
+        ByteBuffer existing = byteBufferOrNull;
+        if (existing != null) {
+            return existing.position(0).limit(limit);
+        }
+
+        ByteBuffer created = ByteBuffer.wrap(bytes);
+        byteBufferOrNull = created.limit(limit);
+        return created;
+    }
+
+
+    public CharBuffer initializedCharBuffer(int limit) {
+        CharBuffer existing = charBufferOrNull;
+        if (existing != null) {
+            return existing.position(0).limit(limit);
+        }
+
+        CharBuffer created = CharBuffer.wrap(chars);
+        charBufferOrNull = created.limit(limit);
+        return created;
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     public void clear() {
         bytesLength = 0;
         charsLength = 0;
+    }
+
+
+    public void ensureCharCapacity(int capacity) {
+        if (chars.length < capacity) {
+            chars = Arrays.copyOf(chars, capacity);
+            charBufferOrNull = null;
+        }
+    }
+
+
+    public void ensureByteCapacity(int capacity) {
+        if (bytes.length < capacity) {
+            bytes = Arrays.copyOf(bytes, capacity);
+            byteBufferOrNull = null;
+        }
     }
 
 
@@ -42,6 +84,7 @@ public class RecordDataBuffer {
         if (eventChars == null) {
             if (bytes.length < length) {
                 bytes = new byte[length];
+                byteBufferOrNull = null;
             }
             System.arraycopy(dataBlockBuffer.bytes, offset, bytes, 0, length);
             bytesLength = length;
@@ -49,6 +92,7 @@ public class RecordDataBuffer {
         else {
             if (chars.length < length) {
                 chars = new char[length];
+                charBufferOrNull = null;
             }
             System.arraycopy(eventChars, offset, chars, 0, length);
             charsLength = length;
@@ -65,6 +109,7 @@ public class RecordDataBuffer {
         if (eventChars == null) {
             if (bytes.length < bytesLength + length) {
                 bytes = Arrays.copyOf(bytes, bytesLength + length);
+                byteBufferOrNull = null;
             }
             System.arraycopy(dataBlockBuffer.bytes, offset, bytes, bytesLength, length);
             bytesLength += length;
@@ -72,6 +117,7 @@ public class RecordDataBuffer {
         else {
             if (chars.length < charsLength + length) {
                 chars = Arrays.copyOf(chars, charsLength + length);
+                charBufferOrNull = null;
             }
             System.arraycopy(eventChars, offset, chars, charsLength, length);
             charsLength += length;
@@ -83,6 +129,7 @@ public class RecordDataBuffer {
         if (source.bytesLength != 0) {
             if (bytes.length < source.bytesLength) {
                 bytes = Arrays.copyOf(source.bytes, source.bytesLength);
+                byteBufferOrNull = null;
             }
             else {
                 System.arraycopy(source.bytes, 0, bytes, 0, source.bytesLength);
@@ -93,6 +140,7 @@ public class RecordDataBuffer {
         if (source.charsLength != 0) {
             if (chars.length < source.charsLength) {
                 chars = Arrays.copyOf(source.chars, source.charsLength);
+                charBufferOrNull = null;
             }
             else {
                 System.arraycopy(source.chars, 0, chars, 0, source.charsLength);

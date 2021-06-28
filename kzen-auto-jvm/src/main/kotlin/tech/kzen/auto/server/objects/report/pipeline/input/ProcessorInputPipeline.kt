@@ -8,7 +8,6 @@ import com.lmax.disruptor.dsl.EventHandlerGroup
 import com.lmax.disruptor.dsl.ProducerType
 import com.lmax.disruptor.util.DaemonThreadFactory
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
@@ -18,6 +17,7 @@ import tech.kzen.auto.plugin.spec.DataEncodingSpec
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.event.output.DecoratorPipelineOutput
 import tech.kzen.auto.server.objects.report.pipeline.event.output.DisruptorPipelineOutput
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataInfo
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.instance.ProcessorDataInstance
 import tech.kzen.auto.server.objects.report.pipeline.input.model.instance.ProcessorSegmentInstance
@@ -34,7 +34,7 @@ class ProcessorInputPipeline<Output>(
     private val output: PipelineOutput<ProcessorOutputEvent<Output>>,
     private val processorDataInstance: ProcessorDataInstance<Output>,
     private val dataEncodingSpec: DataEncodingSpec,
-    private val headerListing: HeaderListing,
+    private val flatDataInfo: FlatDataInfo,
     private val streamProgressTracker: ReportProgressTracker.Buffer,
     private val taskHandle: TaskHandle
 ):
@@ -115,9 +115,11 @@ class ProcessorInputPipeline<Output>(
     private fun setupModelDisruptorChain(): List<Disruptor<*>> {
         val chain = mutableListOf<Disruptor<*>>()
 
-        val recordHeader = RecordHeader.of(headerListing)
+        val recordHeader = RecordHeader.of(flatDataInfo.headerListing)
         val resetDecorator =
             DecoratorPipelineOutput(output) {
+//                it.dataLocation = flatDataInfo.flatDataLocation.dataLocation
+                it.group = flatDataInfo.group
                 it.header.value = recordHeader
                 it.row.clear()
             }

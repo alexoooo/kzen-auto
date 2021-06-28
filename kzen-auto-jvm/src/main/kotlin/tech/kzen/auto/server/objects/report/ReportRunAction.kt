@@ -7,12 +7,12 @@ import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
+import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.ProcessorDatasetPipeline
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
-import tech.kzen.auto.server.util.AutoJvmUtils
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.DateTimeUtils
@@ -76,7 +76,7 @@ class ReportRunAction(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun outputPreview(
+    suspend fun outputInfo(
         objectLocation: ObjectLocation,
         runContext: ReportRunContext,
         runDir: Path,
@@ -89,8 +89,8 @@ class ReportRunAction(
             ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ProcessorDatasetPipeline }
 
         val outputInfo =
-            activeReportHandle?.outputPreview(runContext, outputSpec)
-                ?: ProcessorDatasetPipeline.passivePreview(runContext, runDir, outputSpec, reportWorkPool)
+            activeReportHandle?.activeOutputInfo(runContext, outputSpec)
+                ?: ProcessorDatasetPipeline.passiveOutputInfo(runContext, runDir, outputSpec, reportWorkPool)
 
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(outputInfo.toCollection()))
@@ -121,7 +121,7 @@ class ReportRunAction(
         outputSpec: OutputExploreSpec,
         mainLocation: ObjectLocation
     ): ExecutionDownloadResult {
-        val filenamePrefix = AutoJvmUtils.sanitizeFilename(mainLocation.documentPath.name.value)
+        val filenamePrefix = FormatUtils.sanitizeFilename(mainLocation.documentPath.name.value)
         val filenameSuffix = DateTimeUtils.filenameTimestamp()
         val filename = filenamePrefix + "_" + filenameSuffix + ".csv"
 

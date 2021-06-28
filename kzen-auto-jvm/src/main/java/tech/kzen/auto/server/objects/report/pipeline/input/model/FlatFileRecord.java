@@ -466,6 +466,36 @@ public class FlatFileRecord
     }
 
 
+    public void exchange(FlatFileRecord that) {
+        char[] tempFieldContents = that.fieldContents;
+        int[] tempFieldEnds = that.fieldEnds;
+        boolean tempHasCache = that.hasCache;
+        double[] tempDoublesCache = that.doublesCache;
+        long[] tempHashesCache = that.hashesCache;
+        int tempFieldCount = that.fieldCount;
+        int tempFieldContentLength = that.fieldContentLength;
+        boolean tempNonEmpty = that.nonEmpty;
+
+        that.fieldContents = fieldContents;
+        that.fieldEnds = fieldEnds;
+        that.hasCache = hasCache;
+        that.doublesCache = doublesCache;
+        that.hashesCache = hashesCache;
+        that.fieldCount = fieldCount;
+        that.fieldContentLength = fieldContentLength;
+        that.nonEmpty = nonEmpty;
+
+        fieldContents = tempFieldContents;
+        fieldEnds = tempFieldEnds;
+        hasCache = tempHasCache;
+        doublesCache = tempDoublesCache;
+        hashesCache = tempHashesCache;
+        fieldCount = tempFieldCount;
+        fieldContentLength = tempFieldContentLength;
+        nonEmpty = tempNonEmpty;
+    }
+
+
     public void clone(FlatFileRecord that) {
         fieldCount = that.fieldCount;
         fieldContentLength = that.fieldContentLength;

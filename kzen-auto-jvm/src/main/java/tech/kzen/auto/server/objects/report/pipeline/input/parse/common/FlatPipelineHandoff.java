@@ -42,7 +42,7 @@ public class FlatPipelineHandoff
         }
 
         FlatFileRecord flatFileRecord = nextEvent.modelOrInit(FlatFileRecord::new);
-        flatFileRecord.copy(model.model);
+        flatFileRecord.exchange(model.model);
 
         FlatFileRecord row = (FlatFileRecord) nextEvent.getRow();
         row.clone(flatFileRecord);

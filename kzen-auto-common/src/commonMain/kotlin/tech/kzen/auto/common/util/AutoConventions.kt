@@ -78,7 +78,7 @@ object AutoConventions {
 
 
     fun randomAnonymous(): ObjectName {
-        val prefix = AutoConventions.anonymousPrefix
+        val prefix = anonymousPrefix
         val timestampSuffix = DateTimeUtils.filenameTimestamp()
         return ObjectName("$prefix$timestampSuffix")
     }

@@ -136,7 +136,7 @@ class TsvLineParserTest {
 
     @Test
     fun simpleFourLineWithoutTrailer() {
-        val tsvLines = "foo\tbar\r\nhello\t1\r\nworld\t42\r\nworld\t420"
+        val tsvLines = "foo\tbar\r\nhello\t1\nworld\t42\r\nworld\t420"
         assertEquals(4, read(tsvLines).size)
         for (i in 1 .. 38) {
             assertEquals(4, read(tsvLines).size)
