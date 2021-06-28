@@ -639,7 +639,9 @@ class InputSelected(
                 styledTd {
                     css {
                         paddingLeft = 0.5.em
-//                        whiteSpace = WhiteSpace.nowrap
+                        paddingRight = 0.5.em
+//                        minWidth = 10.em
+                        whiteSpace = WhiteSpace.nowrap
                     }
 
                     +group.group!!

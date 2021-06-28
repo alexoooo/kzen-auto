@@ -5,7 +5,7 @@ const val springBootVersion = "2.5.2"
 const val dependencyManagementVersion = "1.0.11.RELEASE"
 
 
-const val kzenLibVersion = "0.23.0-SNAPSHOT"
+const val kzenLibVersion = "0.23.0"
 //const val kzenLibVersion = "0.22.1"
 
 
@@ -20,6 +20,7 @@ const val zeroAllocationHashingVersion = "0.12"
 const val disruptorVersion = "3.4.4"
 const val bloomFilterVersion = "0.9.0"
 const val commonsIoVersion = "2.8.0"
+const val migzVersion = "2.0.beta-1"
 
 
 const val reactVersion = "17.0.2"

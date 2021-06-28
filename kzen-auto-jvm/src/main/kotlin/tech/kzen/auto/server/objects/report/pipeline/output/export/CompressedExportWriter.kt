@@ -1,7 +1,8 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.export
 
-import com.lmax.disruptor.EventHandler
+import com.linkedin.migz.MiGzOutputStream
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import tech.kzen.auto.common.objects.document.report.output.OutputExportInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
@@ -10,6 +11,7 @@ import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.RecordDataBuffer
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
+import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.output.export.model.ExportCompression
 import tech.kzen.lib.common.model.document.DocumentName
@@ -30,13 +32,23 @@ class CompressedExportWriter(
     private val reportName: DocumentName,
     private val outputExportSpec: OutputExportSpec
 ):
-    EventHandler<ProcessorOutputEvent<*>>
+    ProcessorPipelineStage<ProcessorOutputEvent<*>>("export-write")
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+//        private const val migzThreads = 3
+//        private const val migzThreads = 5
+        private const val migzThreads = 7
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private var out: OutputStream? = null
     private var closer: Closeable? = null
 
     private var previousGroup: DataLocationGroup? = null
+    private var previousGroupStart: Instant = Instant.DISTANT_FUTURE
+    private var previousGroupResolvedPattern: String = ""
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -46,8 +58,7 @@ class CompressedExportWriter(
         }
 
         if (previousGroup != event.group) {
-            closeGroup()
-            openGroup(event.group)
+            openNextGroupIfRequired(event.group)
             previousGroup = event.group
         }
 
@@ -56,13 +67,28 @@ class CompressedExportWriter(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun openGroup(group: DataLocationGroup) {
-        val time = Clock.System.now()
-        val resolvedPattern = outputExportSpec.resolvePath(reportName, group, time)
-        val asPath = Paths.get(resolvedPattern)
+    private fun openNextGroupIfRequired(group: DataLocationGroup) {
+        if (previousGroup == null) {
+            openGroupAndTrackPrevious(group)
+        }
+        else {
+            val resolvedPattern = outputExportSpec.resolvePath(reportName, group, previousGroupStart)
+            if (resolvedPattern == previousGroupResolvedPattern) {
+                return
+            }
 
-        val resolvedInnerFilename = outputExportSpec.resolveInnerFilename(reportName, group, time)
+            closeGroup()
+            openGroupAndTrackPrevious(group)
+        }
+    }
 
+
+    private fun openGroupAndTrackPrevious(group: DataLocationGroup) {
+        previousGroupStart = Clock.System.now()
+        previousGroupResolvedPattern = outputExportSpec.resolvePath(reportName, group, previousGroupStart)
+
+        val asPath = Paths.get(previousGroupResolvedPattern)
+        val resolvedInnerFilename = outputExportSpec.resolveInnerFilename(reportName, group, previousGroupStart)
         openGroup(asPath, resolvedInnerFilename)
     }
 
@@ -91,12 +117,30 @@ class CompressedExportWriter(
             }
 
             ExportCompression.GZip -> {
-                out = GZIPOutputStream(Files.newOutputStream(file), 128 * 1024)
+                // https://stackoverflow.com/questions/1082320/what-order-should-i-use-gzipoutputstream-and-bufferedoutputstream
+                out =
+                    BufferedOutputStream(
+                        GZIPOutputStream(
+                            BufferedOutputStream(Files.newOutputStream(file), 128 * 1024),
+                        128 * 1024),
+                    128 * 1024)
+
+                out = MiGzOutputStream(
+                    Files.newOutputStream(file),
+                    migzThreads,
+                    MiGzOutputStream.DEFAULT_BLOCK_SIZE)
+//                out =
+//                    BufferedOutputStream(
+//                        MiGzOutputStream(
+//                            BufferedOutputStream(Files.newOutputStream(file), 128 * 1024),
+//                            migzThreads,
+//                            MiGzOutputStream.DEFAULT_BLOCK_SIZE),
+//                        128 * 1024)
+
                 closer = out
             }
         }
     }
-
 
 
     //-----------------------------------------------------------------------------------------------------------------

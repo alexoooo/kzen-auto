@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.export.format
 
-import com.lmax.disruptor.EventHandler
 import tech.kzen.auto.common.util.data.DataLocationGroup
+import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.output.export.model.ExportFormat
@@ -10,7 +10,7 @@ import tech.kzen.auto.server.objects.report.pipeline.output.export.model.ExportF
 class ExportFormatter(
     val format: ExportFormat
 ):
-    EventHandler<ProcessorOutputEvent<*>>
+    ProcessorPipelineStage<ProcessorOutputEvent<*>>("export-format")
 {
     //-----------------------------------------------------------------------------------------------------------------
     private var recordFormat = when (format) {

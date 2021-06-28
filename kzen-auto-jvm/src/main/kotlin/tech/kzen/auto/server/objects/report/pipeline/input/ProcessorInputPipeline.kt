@@ -14,6 +14,7 @@ import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.model.DataBlockBuffer
 import tech.kzen.auto.plugin.model.DataInputEvent
 import tech.kzen.auto.plugin.spec.DataEncodingSpec
+import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.event.output.DecoratorPipelineOutput
 import tech.kzen.auto.server.objects.report.pipeline.event.output.DisruptorPipelineOutput
@@ -158,7 +159,11 @@ class ProcessorInputPipeline<Output>(
 
         for (intermediateStage in segment.intermediateStages) {
             val handlers: List<EventHandler<Any>> = intermediateStage.map { step ->
-                EventHandler { event, sequence, _ -> step.process(event, sequence) }
+                object : ProcessorPipelineStage<Any>(step.javaClass.simpleName) {
+                    override fun onEvent(event: Any, sequence: Long, endOfBatch: Boolean) {
+                        step.process(event, sequence)
+                    }
+                }
             }
 
             eventHandlerGroup = DisruptorUtils.addHandlers(
@@ -166,9 +171,13 @@ class ProcessorInputPipeline<Output>(
         }
 
         val finalStage = segment.finalStage
-        DisruptorUtils.addHandlers(segmentDisruptor, eventHandlerGroup, { event, _, _ ->
-            finalStage.process(event, segmentOutput)
-        })
+        DisruptorUtils.addHandlers(segmentDisruptor, eventHandlerGroup,
+            object : ProcessorPipelineStage<Any>(finalStage.javaClass.simpleName) {
+                override fun onEvent(event: Any, sequence: Long, endOfBatch: Boolean) {
+                    finalStage.process(event, segmentOutput)
+                }
+            }
+        )
 
         segmentDisruptor.setDefaultExceptionHandler(
             loggingExceptionHandler("Segment ${index + 1}"))

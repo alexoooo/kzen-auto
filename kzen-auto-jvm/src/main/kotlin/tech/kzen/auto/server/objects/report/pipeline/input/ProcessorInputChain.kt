@@ -23,7 +23,7 @@ class ProcessorInputChain<T>(
     textCharset: Charset?,
     dataBlockSize: Int = DataBlockBuffer.defaultBytesSize
 ):
-        AutoCloseable
+    AutoCloseable
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

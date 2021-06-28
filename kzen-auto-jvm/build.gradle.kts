@@ -42,6 +42,7 @@ dependencies {
     implementation("com.lmax:disruptor:$disruptorVersion")
     implementation("com.sangupta:bloomfilter:$bloomFilterVersion")
     implementation("commons-io:commons-io:$commonsIoVersion")
+    implementation("com.linkedin.migz:migz:$migzVersion")
 
     testImplementation(kotlin("test"))
 }

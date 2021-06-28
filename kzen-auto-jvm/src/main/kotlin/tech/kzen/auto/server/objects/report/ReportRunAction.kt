@@ -10,6 +10,7 @@ import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.ProcessorDatasetPipeline
+import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
@@ -164,9 +165,14 @@ class ReportRunAction(
         val reportHandle = ProcessorDatasetPipeline(
             /*classLoaderHandle,*/ reportRunContext, runDir, reportWorkPool, taskHandle)
 
-        Thread {
-            processSync(
-                taskHandle, reportHandle, runDir)
+        val processorThreadName =
+            "processor_${reportRunContext.reportDocumentName.value}_${ProcessorPipelineStage.nextNumber()}"
+
+        object : Thread(processorThreadName) {
+            override fun run() {
+                processSync(
+                    taskHandle, reportHandle, runDir)
+            }
         }.start()
 
         logger.info("Started: {} | {}", runDir, reportRunContext)

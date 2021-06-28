@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.stages
 
-import com.lmax.disruptor.EventHandler
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
 import tech.kzen.auto.server.objects.report.pipeline.calc.CalculatedColumn
 import tech.kzen.auto.server.objects.report.pipeline.calc.CalculatedColumnEval
 import tech.kzen.auto.server.objects.report.pipeline.calc.ColumnValue
@@ -17,7 +17,7 @@ class ProcessorFormulaStage(
     private val classLoader: ClassLoader,
     private val calculatedColumnEval: CalculatedColumnEval
 ):
-    EventHandler<ProcessorOutputEvent<*>>
+    ProcessorPipelineStage<ProcessorOutputEvent<*>>("formula")
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val formulaCount = formulaSpec.formulas.size
