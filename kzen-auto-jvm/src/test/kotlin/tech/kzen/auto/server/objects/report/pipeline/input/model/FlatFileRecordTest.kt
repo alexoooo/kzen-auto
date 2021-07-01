@@ -50,7 +50,7 @@ class FlatFileRecordTest {
 
         for (i in 1 .. 1_000) {
             val value = rand.nextDouble(-100.0, 100.0)
-            testAddDouble(format.format(value), value, 3)
+            testAddDouble(format.format(value), value, 2)
         }
     }
 
