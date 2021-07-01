@@ -26,7 +26,7 @@ data class OutputInfo(
 
             @Suppress("UNCHECKED_CAST")
             val exportMap = collection[exportKey] as? Map<String, Any?>
-            val export = tableMap?.let {
+            val export = exportMap?.let {
                 OutputExportInfo.fromCollection(it)
             }
 

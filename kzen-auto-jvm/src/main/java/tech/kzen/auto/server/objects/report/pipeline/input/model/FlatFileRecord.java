@@ -325,14 +325,32 @@ public class FlatFileRecord
         double absolute = Math.abs(value);
         long wholeValue = (long) absolute;
         double factionValue = absolute - wholeValue;
+        boolean negative = value < 0.0;
 
         long fractionFactor = NumberParseUtils.decimalLongPowers[decimalPlaces];
         long fractionLong = Math.round(factionValue * fractionFactor);
 
+        if (fractionFactor == fractionLong) {
+            long adjustedWhole = (negative ? -1 : 1) * (wholeValue + 1);
+
+            int length = NumberParseUtils.stringSize(adjustedWhole);
+            int requiredContentLength = fieldContentLength + length + decimalPlaces + 1;
+            growFieldContentsIfRequired(requiredContentLength);
+            NumberParseUtils.toStringFromRight(adjustedWhole, fieldContentLength + length - 1, fieldContents);
+
+            fieldContents[fieldContentLength + length] = '.';
+            for (int i = 1; i <= decimalPlaces; i++) {
+                fieldContents[fieldContentLength + length + i] = '0';
+            }
+
+            fieldContentLength = requiredContentLength;
+            commitField();
+            return;
+        }
+
         int wholeLength = NumberParseUtils.stringSize(wholeValue);
         int length = wholeLength + decimalPlaces + 1;
 
-        boolean negative = value < 0.0;
         int minusLength = (negative ? 1 : 0);
 
         int requiredContentLength = fieldContentLength + length + minusLength;
