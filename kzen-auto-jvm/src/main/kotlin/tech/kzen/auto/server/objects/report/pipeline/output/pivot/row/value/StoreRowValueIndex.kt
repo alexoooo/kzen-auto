@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.value
 
 import net.openhft.hashing.LongTupleHashFunction
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
+import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.digest.DigestIndex
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.digest.DigestOrdinal
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.value.store.IndexedTextStore
@@ -42,7 +42,7 @@ class StoreRowValueIndex(
     }
 
 
-    override fun getOrAddIndex(value: RecordFieldFlyweight): DigestOrdinal {
+    override fun getOrAddIndex(value: FlatFileRecordField): DigestOrdinal {
         LongTupleHashFunction.murmur_3().hashChars(value, hashBuffer)
         val valueOrdinal = digestIndex.getOrAdd(hashBuffer[0], hashBuffer[1])
 

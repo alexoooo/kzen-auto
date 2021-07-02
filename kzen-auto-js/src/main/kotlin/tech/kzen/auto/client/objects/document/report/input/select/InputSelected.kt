@@ -582,7 +582,8 @@ class InputSelected(
                             .mapValues { it.value.single() }
 
                         for (inputDataInfo in selectedInfo.locations) {
-                            val inputDataSpec = inputDataSpecByPath[inputDataInfo.dataLocationInfo.path]!!
+                            val inputDataSpec = inputDataSpecByPath[inputDataInfo.dataLocationInfo.path]
+                                ?: continue
                             renderTableRow(inputDataSpec, inputDataInfo, reportProgress)
                         }
                     }

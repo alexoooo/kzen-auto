@@ -4,7 +4,7 @@ import tech.kzen.auto.plugin.api.PipelineTerminalStep
 import tech.kzen.auto.plugin.definition.ProcessorDataDefinition
 import tech.kzen.auto.plugin.helper.DataFrameFeeder
 import tech.kzen.auto.plugin.helper.ListPipelineOutput
-import tech.kzen.auto.plugin.model.DataBlockBuffer
+import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.plugin.model.DataInputEvent
 import tech.kzen.auto.plugin.model.ModelOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent

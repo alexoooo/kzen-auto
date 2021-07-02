@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.model
 
 import org.junit.Test
+import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import java.text.DecimalFormat
 import kotlin.random.Random
 import kotlin.test.assertEquals

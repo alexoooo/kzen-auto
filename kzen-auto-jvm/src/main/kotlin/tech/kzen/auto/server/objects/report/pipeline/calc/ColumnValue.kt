@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.calc
 
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils
+import tech.kzen.auto.plugin.util.NumberParseUtils
 import kotlin.math.abs
 
 

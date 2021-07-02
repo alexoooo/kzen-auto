@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.export
 
-import tech.kzen.auto.plugin.model.RecordDataBuffer
+import tech.kzen.auto.plugin.model.data.DataRecordBuffer
 import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import java.nio.charset.Charset
@@ -28,7 +28,7 @@ class CharsetExportEncoder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun encode(output: RecordDataBuffer) {
+    private fun encode(output: DataRecordBuffer) {
         val charsLength = output.charsLength
         val maxOutputLength = ceil(maxBytesPerChar * charsLength).toInt()
         output.ensureByteCapacity(maxOutputLength)

@@ -1,12 +1,15 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.model
 
 import org.junit.Test
+import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import kotlin.test.assertEquals
 
 
 class RecordFieldFlyweightTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val flyweight = RecordFieldFlyweight()
+    private val flyweight =
+        FlatFileRecordField()
 
 
     //-----------------------------------------------------------------------------------------------------------------

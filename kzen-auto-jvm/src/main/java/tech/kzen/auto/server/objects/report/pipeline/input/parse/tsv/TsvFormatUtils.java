@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse.tsv;
 
 
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord;
+import tech.kzen.auto.plugin.model.record.FlatFileRecord;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;

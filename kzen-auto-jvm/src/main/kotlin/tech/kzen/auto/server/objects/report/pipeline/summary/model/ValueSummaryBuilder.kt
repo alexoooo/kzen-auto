@@ -6,7 +6,7 @@ import tech.kzen.auto.common.objects.document.report.summary.ColumnSummary
 import tech.kzen.auto.common.objects.document.report.summary.NominalValueSummary
 import tech.kzen.auto.common.objects.document.report.summary.OpaqueValueSummary
 import tech.kzen.auto.common.objects.document.report.summary.StatisticValueSummary
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
+import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import kotlin.random.Random
 
 
@@ -102,14 +102,14 @@ class ValueSummaryBuilder {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(value: RecordFieldFlyweight) {
+    fun add(value: FlatFileRecordField) {
         valueCount++
 
         if (value.isEmpty()) {
             emptyCount++
 
             if (! histogramOverflow) {
-                addTextHistogramFlyweight(RecordFieldFlyweight.empty)
+                addTextHistogramFlyweight(FlatFileRecordField.empty)
             }
             return
         }
@@ -143,7 +143,7 @@ class ValueSummaryBuilder {
     }
 
 
-    private fun addTextHistogramFlyweight(value: RecordFieldFlyweight) {
+    private fun addTextHistogramFlyweight(value: FlatFileRecordField) {
         val signature = value.goodHash()
         val previousCount = textHistogram.addTo(signature, 1)
 
@@ -153,7 +153,7 @@ class ValueSummaryBuilder {
     }
 
 
-    private fun addSample(value: RecordFieldFlyweight) {
+    private fun addSample(value: FlatFileRecordField) {
         if (textSample.size < sampleThreshold) {
             textSample.add(value.toString())
         }

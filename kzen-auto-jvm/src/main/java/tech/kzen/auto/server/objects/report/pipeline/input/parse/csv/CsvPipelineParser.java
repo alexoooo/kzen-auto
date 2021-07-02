@@ -2,8 +2,8 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse.csv;
 
 
 import tech.kzen.auto.plugin.api.PipelineIntermediateStep;
-import tech.kzen.auto.plugin.model.RecordDataBuffer;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord;
+import tech.kzen.auto.plugin.model.data.DataRecordBuffer;
+import tech.kzen.auto.plugin.model.record.FlatFileRecord;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProcessorEvent;
 
 
@@ -18,7 +18,7 @@ public class CsvPipelineParser
             return;
         }
 
-        RecordDataBuffer data = model.getData();
+        DataRecordBuffer data = model.getData();
         FlatFileRecord flatFileRecord = model.model;
         flatFileRecord.clearCache();
 

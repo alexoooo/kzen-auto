@@ -2,8 +2,8 @@ package tech.kzen.auto.server.objects.report.pipeline.event
 
 import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.ModelOutputEvent
-import tech.kzen.auto.plugin.model.RecordDataBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
+import tech.kzen.auto.plugin.model.data.DataRecordBuffer
+import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderBuffer
 
 
@@ -16,5 +16,5 @@ class ProcessorOutputEvent<T>:
 
 //    var dataLocation = DataLocation.unknown
     var group = DataLocationGroup.empty
-    val exportData = RecordDataBuffer()
+    val exportData = DataRecordBuffer()
 }

@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.stages
 
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.helper.DataFrameFeeder
-import tech.kzen.auto.plugin.model.DataBlockBuffer
+import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.plugin.model.DataInputEvent
 import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker

@@ -5,8 +5,8 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterTyp
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
+import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
 
@@ -37,7 +37,7 @@ class ProcessorFilterStage(
     )
 
     private val columnFilterSpecTypes: List<ColumnFilterType>
-    private val columnFilterSpecValues: List<Set<RecordFieldFlyweight>>
+    private val columnFilterSpecValues: List<Set<FlatFileRecordField>>
 
     init {
         val columnFilterSpecs = nonEmptyFilterColumnNames
@@ -49,12 +49,13 @@ class ProcessorFilterStage(
             .map { columnFilterSpec ->
                 columnFilterSpec
                     .values
-                    .map { RecordFieldFlyweight.standalone(it) }
+                    .map { FlatFileRecordField.standalone(it) }
                     .toSet()
             }
     }
 
-    private val flyweight = RecordFieldFlyweight()
+    private val flyweight =
+        FlatFileRecordField()
 
 
     //-----------------------------------------------------------------------------------------------------------------

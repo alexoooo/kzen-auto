@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.stages
 
-import tech.kzen.auto.plugin.model.DataBlockBuffer
+import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatDataStream
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.InputStreamFlatDataStream
 import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker

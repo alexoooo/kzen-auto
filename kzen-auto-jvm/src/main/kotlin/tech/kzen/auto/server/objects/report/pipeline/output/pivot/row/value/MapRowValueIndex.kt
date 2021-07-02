@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.value
 
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
+import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.row.digest.DigestOrdinal
 
 
@@ -46,7 +46,7 @@ class MapRowValueIndex: RowValueIndex {
     }
 
 
-    override fun getOrAddIndex(value: RecordFieldFlyweight): DigestOrdinal {
+    override fun getOrAddIndex(value: FlatFileRecordField): DigestOrdinal {
         return getOrAddIndex(value.toString())
     }
 

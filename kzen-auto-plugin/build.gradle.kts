@@ -6,7 +6,9 @@ plugins {
 }
 
 
-dependencies {}
+dependencies {
+    api("net.openhft:zero-allocation-hashing:$zeroAllocationHashingVersion")
+}
 
 
 tasks.withType<KotlinCompile> {

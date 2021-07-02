@@ -38,7 +38,6 @@ dependencies {
     implementation("it.unimi.dsi:fastutil-core:$fastutilVersion")
     implementation("io.lacuna:bifurcan:$bifurcanVersion")
     implementation("com.h2database:h2:$h2Version")
-    implementation("net.openhft:zero-allocation-hashing:$zeroAllocationHashingVersion")
     implementation("com.lmax:disruptor:$disruptorVersion")
     implementation("com.sangupta:bloomfilter:$bloomFilterVersion")
     implementation("commons-io:commons-io:$commonsIoVersion")

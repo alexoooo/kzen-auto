@@ -1,4 +1,4 @@
-package tech.kzen.auto.plugin.model;
+package tech.kzen.auto.plugin.model.data;
 
 
 import java.nio.ByteBuffer;
@@ -6,7 +6,7 @@ import java.nio.CharBuffer;
 import java.util.Arrays;
 
 
-public class RecordDataBuffer {
+public class DataRecordBuffer {
     //-----------------------------------------------------------------------------------------------------------------
     private static final byte[] emptyBytes = new byte[0];
     private static final char[] emptyChars = new char[0];
@@ -125,7 +125,7 @@ public class RecordDataBuffer {
     }
 
 
-    public void copy(RecordDataBuffer source) {
+    public void copy(DataRecordBuffer source) {
         if (source.bytesLength != 0) {
             if (bytes.length < source.bytesLength) {
                 bytes = Arrays.copyOf(source.bytes, source.bytesLength);

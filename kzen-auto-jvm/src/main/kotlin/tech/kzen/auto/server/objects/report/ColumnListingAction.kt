@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.plugin.model.PluginCoordinate
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
+import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorHeaderReader

@@ -3,8 +3,8 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse.text;
 
 import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.plugin.api.DataFramer;
-import tech.kzen.auto.plugin.model.DataBlockBuffer;
-import tech.kzen.auto.plugin.model.DataFrameBuffer;
+import tech.kzen.auto.plugin.model.data.DataBlockBuffer;
+import tech.kzen.auto.plugin.model.data.DataFrameBuffer;
 
 import java.util.Objects;
 

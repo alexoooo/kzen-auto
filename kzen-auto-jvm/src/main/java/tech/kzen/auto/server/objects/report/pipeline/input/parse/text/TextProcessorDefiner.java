@@ -9,7 +9,7 @@ import tech.kzen.auto.plugin.model.PluginCoordinate;
 import tech.kzen.auto.plugin.spec.DataEncodingSpec;
 import tech.kzen.auto.plugin.spec.TextEncodingSpec;
 import tech.kzen.auto.server.objects.report.pipeline.input.ProcessorInputChain;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord;
+import tech.kzen.auto.plugin.model.record.FlatFileRecord;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatPipelineHandoff;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProcessorEvent;
 

@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.report.pipeline.input.parse;
+package tech.kzen.auto.plugin.util;
 
 
 // Similar to Java Util Lang, but more tolerant and specialized, also it normalizes -0 to 0

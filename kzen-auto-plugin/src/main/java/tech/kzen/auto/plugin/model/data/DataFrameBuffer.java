@@ -1,4 +1,4 @@
-package tech.kzen.auto.plugin.model;
+package tech.kzen.auto.plugin.model.data;
 
 
 import java.util.Arrays;
@@ -14,20 +14,9 @@ public class DataFrameBuffer {
     public int[] lengths = new int[initialSize];
     public boolean partialLast;
     public int count;
-//    public boolean endOfData;
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    public int offset(int index) {
-//        return frames[index * 2];
-//    }
-//
-//
-//    public int length(int index) {
-//        return frames[index * 2 + 1];
-//    }
-
-
     public boolean hasFull() {
         return count > 1 || ! partialLast;
     }
@@ -37,7 +26,6 @@ public class DataFrameBuffer {
     public void clear() {
         count = 0;
         partialLast = false;
-//        endOfData = false;
     }
 
 
@@ -61,9 +49,4 @@ public class DataFrameBuffer {
     public void clearPartialLast() {
         partialLast = false;
     }
-
-
-//    public void setEndOfData() {
-//        endOfData = true;
-//    }
 }

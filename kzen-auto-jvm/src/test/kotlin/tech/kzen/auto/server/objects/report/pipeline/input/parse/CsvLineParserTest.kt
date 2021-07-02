@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.parse
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
-import tech.kzen.auto.server.objects.report.pipeline.input.model.RecordFieldFlyweight
+import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -160,7 +160,7 @@ class CsvLineParserTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private val flyweight =
-        RecordFieldFlyweight()
+        FlatFileRecordField()
 
 
     //-----------------------------------------------------------------------------------------------------------------

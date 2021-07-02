@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse.text;
 
 
 import tech.kzen.auto.plugin.api.PipelineIntermediateStep;
-import tech.kzen.auto.plugin.model.RecordDataBuffer;
+import tech.kzen.auto.plugin.model.data.DataRecordBuffer;
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.common.FlatProcessorEvent;
 
 
@@ -16,7 +16,7 @@ public class TextPipelineLexer
             return;
         }
 
-        RecordDataBuffer data = model.getData();
+        DataRecordBuffer data = model.getData();
         int charsLength = data.charsLength;
 
         model.model.growTo(charsLength, 1);

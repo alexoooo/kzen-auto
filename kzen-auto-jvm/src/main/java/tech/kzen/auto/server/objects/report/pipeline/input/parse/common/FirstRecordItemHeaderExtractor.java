@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.parse.common;
 import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.plugin.api.HeaderExtractor;
 import tech.kzen.auto.plugin.api.managed.TraversableProcessorOutput;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord;
+import tech.kzen.auto.plugin.model.record.FlatFileRecord;
 
 import java.util.List;
 import java.util.Objects;

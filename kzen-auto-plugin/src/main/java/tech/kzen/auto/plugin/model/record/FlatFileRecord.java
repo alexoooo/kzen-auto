@@ -1,12 +1,9 @@
-package tech.kzen.auto.server.objects.report.pipeline.input.model;
+package tech.kzen.auto.plugin.model.record;
 
 
 import net.openhft.hashing.LongHashFunction;
 import org.jetbrains.annotations.NotNull;
-import tech.kzen.auto.plugin.api.managed.FlatRecordBuilder;
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.NumberParseUtils;
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvFormatUtils;
-import tech.kzen.lib.platform.ClassName;
+import tech.kzen.auto.plugin.util.NumberParseUtils;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -16,7 +13,7 @@ import java.util.List;
 
 
 public class FlatFileRecord
-        implements FlatRecordBuilder
+        //implements FlatRecordBuilder
 {
     //-----------------------------------------------------------------------------------------------------------------
     private static final double doubleCacheMissing = -0.0;
@@ -26,7 +23,7 @@ public class FlatFileRecord
         return Double.doubleToRawLongBits(value) == missingNumberBits;
     }
 
-    public static final ClassName className = new ClassName(FlatFileRecord.class.getName());
+//    public static final ClassName className = new ClassName(FlatFileRecord.class.getName());
 
 
     public static FlatFileRecord of(String... values) {
@@ -229,7 +226,7 @@ public class FlatFileRecord
 
         for (int i = 0; i < fieldCount; i++) {
             if (i != 0) {
-                out.write(CsvFormatUtils.delimiterInt);
+                out.write(',');
             }
 
             writeCsvField(i, out);
@@ -240,7 +237,34 @@ public class FlatFileRecord
     public void writeCsvField(int fieldIndex, Writer out) throws IOException {
         int startIndex = contentStart(fieldIndex);
         int endIndex = fieldEnds[fieldIndex];
-        CsvFormatUtils.writeCsv(fieldContents, startIndex, endIndex, out);
+
+        //CsvFormatUtils.writeCsv(fieldContents, startIndex, endIndex, out);
+        var containsSpecial = false;
+        for (int i = startIndex; i < endIndex; i++) {
+            char nextChar = fieldContents[i];
+            if (nextChar == ',' || nextChar == '"' || nextChar == '\r' || nextChar == '\n') {
+                containsSpecial = true;
+                break;
+            }
+        }
+
+        if (containsSpecial) {
+            out.write('"');
+            for (int i = startIndex; i < endIndex; i++) {
+                char nextChar = fieldContents[i];
+                if (nextChar == '"') {
+                    out.write('"');
+                    out.write('"');
+                }
+                else {
+                    out.write(nextChar);
+                }
+            }
+            out.write('"');
+        }
+        else {
+            out.write(fieldContents, startIndex, endIndex - startIndex);
+        }
     }
 
 
@@ -274,7 +298,7 @@ public class FlatFileRecord
     }
 
 
-    @Override
+//    @Override
     public void add(CharSequence value) {
         growFieldContentsIfRequired(fieldContentLength + value.length());
 
@@ -287,7 +311,7 @@ public class FlatFileRecord
     }
 
 
-    @Override
+//    @Override
     public void addAll(List<String> values) {
         for (String value : values) {
             add(value);
@@ -302,7 +326,7 @@ public class FlatFileRecord
     }
 
 
-    @Override
+//    @Override
     public void add(long value) {
         int length = NumberParseUtils.stringSize(value);
         int requiredContentLength = fieldContentLength + length;
@@ -315,7 +339,7 @@ public class FlatFileRecord
     }
 
 
-    @Override
+//    @Override
     public void add(double value, int decimalPlaces) {
         if (decimalPlaces == 0) {
             add(Math.round(value));
@@ -378,7 +402,7 @@ public class FlatFileRecord
     }
 
 
-    @Override
+//    @Override
     public void add(@NotNull char[] value, int offset, int length) {
         int requiredContentLength = fieldContentLength + length;
         growFieldContentsIfRequired(requiredContentLength);

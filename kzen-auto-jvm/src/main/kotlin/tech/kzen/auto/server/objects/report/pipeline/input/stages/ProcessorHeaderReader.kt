@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.stages
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.plugin.api.managed.TraversableProcessorOutput
-import tech.kzen.auto.plugin.model.DataBlockBuffer
+import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.plugin.model.ModelOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.input.ProcessorInputChain
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition

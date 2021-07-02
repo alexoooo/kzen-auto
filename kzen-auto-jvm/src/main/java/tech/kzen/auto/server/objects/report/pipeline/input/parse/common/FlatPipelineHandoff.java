@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.plugin.api.PipelineTerminalStep;
 import tech.kzen.auto.plugin.api.managed.PipelineOutput;
 import tech.kzen.auto.plugin.model.ModelOutputEvent;
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord;
+import tech.kzen.auto.plugin.model.record.FlatFileRecord;
 
 
 public class FlatPipelineHandoff

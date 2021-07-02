@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.report.pipeline.input.model;
+package tech.kzen.auto.plugin.model.record;
 
 
 import org.jetbrains.annotations.NotNull;
@@ -6,17 +6,17 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Arrays;
 
 
-public class RecordFieldFlyweight
+public class FlatFileRecordField
         implements CharSequence
 {
     //-----------------------------------------------------------------------------------------------------------------
-    public static final RecordFieldFlyweight empty = standalone("");
+    public static final FlatFileRecordField empty = standalone("");
 
 
-    public static RecordFieldFlyweight standalone(String value) {
+    public static FlatFileRecordField standalone(String value) {
         char[] chars = value.toCharArray();
         FlatFileRecord buffer = FlatFileRecord.ofSingle(chars, 0, chars.length);
-        RecordFieldFlyweight flyweight = new RecordFieldFlyweight();
+        FlatFileRecordField flyweight = new FlatFileRecordField();
         flyweight.selectHostValue(buffer,0, 0, chars.length);
         return flyweight;
     }
@@ -89,9 +89,9 @@ public class RecordFieldFlyweight
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    public RecordFieldFlyweight detach() {
+    public FlatFileRecordField detach() {
         FlatFileRecord buffer = FlatFileRecord.ofSingle(host.fieldContents, valueOffset, valueLength);
-        RecordFieldFlyweight detached = new RecordFieldFlyweight();
+        FlatFileRecordField detached = new FlatFileRecordField();
         detached.host = buffer;
         detached.valueOffset = 0;
         detached.valueLength = valueLength;
@@ -159,11 +159,11 @@ public class RecordFieldFlyweight
             return true;
         }
 
-        if (other.getClass() != RecordFieldFlyweight.class) {
+        if (other.getClass() != FlatFileRecordField.class) {
             return false;
         }
 
-        RecordFieldFlyweight that = (RecordFieldFlyweight) other;
+        FlatFileRecordField that = (FlatFileRecordField) other;
 
         int len = valueLength;
         if (len != that.valueLength) {

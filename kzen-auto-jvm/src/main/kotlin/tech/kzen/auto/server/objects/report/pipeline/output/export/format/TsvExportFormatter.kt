@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.export.format
 
-import tech.kzen.auto.plugin.model.RecordDataBuffer
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
+import tech.kzen.auto.plugin.model.data.DataRecordBuffer
+import tech.kzen.auto.plugin.model.record.FlatFileRecord
 
 
 class TsvExportFormatter:
@@ -15,7 +15,7 @@ class TsvExportFormatter:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun format(record: FlatFileRecord, output: RecordDataBuffer) {
+    override fun format(record: FlatFileRecord, output: DataRecordBuffer) {
         val fieldContents = record.fieldContentsUnsafe()
         val fieldEnds = record.fieldEndsUnsafe()
         val fieldCount = record.fieldCount()

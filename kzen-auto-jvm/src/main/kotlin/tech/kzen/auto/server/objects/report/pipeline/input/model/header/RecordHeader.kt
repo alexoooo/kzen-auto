@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.input.model.header
 import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap
 import it.unimi.dsi.fastutil.objects.Object2IntMap
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
-import tech.kzen.auto.server.objects.report.pipeline.input.model.FlatFileRecord
+import tech.kzen.auto.plugin.model.record.FlatFileRecord
 
 
 // TODO: better name

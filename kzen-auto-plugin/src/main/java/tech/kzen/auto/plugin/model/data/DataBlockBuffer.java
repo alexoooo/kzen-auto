@@ -1,4 +1,4 @@
-package tech.kzen.auto.plugin.model;
+package tech.kzen.auto.plugin.model.data;
 
 
 import org.jetbrains.annotations.NotNull;
@@ -79,9 +79,6 @@ public class DataBlockBuffer {
 
     //-----------------------------------------------------------------------------------------------------------------
     private DataBlockBuffer(int bytesSize, boolean text) {
-//        inputKey = URI.create("");
-//        innerExtension = "";
-
         bytes = new byte[bytesSize];
 
         frames = new DataFrameBuffer();
@@ -100,12 +97,6 @@ public class DataBlockBuffer {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    public void setInput(URI inputKey, String innerExtension) {
-//        this.inputKey = inputKey;
-//        this.innerExtension = innerExtension;
-//    }
-
-
     public void setEndOfData() {
         bytesLength = 0;
         endOfData = true;

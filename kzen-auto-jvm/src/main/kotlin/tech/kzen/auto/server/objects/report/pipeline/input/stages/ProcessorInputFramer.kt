@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.stages
 
 import tech.kzen.auto.plugin.api.DataFramer
-import tech.kzen.auto.plugin.model.DataBlockBuffer
+import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
 
 

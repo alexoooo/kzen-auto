@@ -8,7 +8,7 @@ import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
 import tech.kzen.auto.common.util.data.DataLocationGroup
-import tech.kzen.auto.plugin.model.RecordDataBuffer
+import tech.kzen.auto.plugin.model.data.DataRecordBuffer
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
@@ -144,7 +144,7 @@ class CompressedExportWriter(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun write(data: RecordDataBuffer) {
+    private fun write(data: DataRecordBuffer) {
         val bytes = data.bytes
         val length = data.bytesLength
 

@@ -1,16 +1,16 @@
 package tech.kzen.auto.plugin.helper
 
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
-import tech.kzen.auto.plugin.model.DataBlockBuffer
+import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.plugin.model.DataInputEvent
-import tech.kzen.auto.plugin.model.RecordDataBuffer
+import tech.kzen.auto.plugin.model.data.DataRecordBuffer
 
 
 class DataFrameFeeder(
     private val output: PipelineOutput<DataInputEvent>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    private val partialInput = RecordDataBuffer()
+    private val partialInput = DataRecordBuffer()
 
 
     //-----------------------------------------------------------------------------------------------------------------
