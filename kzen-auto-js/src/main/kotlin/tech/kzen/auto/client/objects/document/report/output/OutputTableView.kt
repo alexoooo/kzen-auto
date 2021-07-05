@@ -489,7 +489,7 @@ class OutputTableView(
                 maxHeight = 25.em
                 overflowY = Overflow.auto
                 marginTop = 1.em
-                borderWidth = 1.px
+                borderWidth = 2.px
                 borderStyle = BorderStyle.solid
                 borderColor = Color.lightGray
             }

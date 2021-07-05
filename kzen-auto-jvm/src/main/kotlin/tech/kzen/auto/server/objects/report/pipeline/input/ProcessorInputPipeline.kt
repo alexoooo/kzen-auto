@@ -11,8 +11,8 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
-import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.plugin.model.DataInputEvent
+import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.plugin.spec.DataEncodingSpec
 import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
@@ -119,10 +119,10 @@ class ProcessorInputPipeline<Output>(
         val recordHeader = RecordHeader.of(flatDataInfo.headerListing)
         val resetDecorator =
             DecoratorPipelineOutput(output) {
-//                it.dataLocation = flatDataInfo.flatDataLocation.dataLocation
                 it.group = flatDataInfo.group
                 it.header.value = recordHeader
                 it.row.clear()
+                it.skip = false
             }
 
         @Suppress("UNCHECKED_CAST")
