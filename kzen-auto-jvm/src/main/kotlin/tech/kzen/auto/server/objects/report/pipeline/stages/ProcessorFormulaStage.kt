@@ -61,10 +61,15 @@ class ProcessorFormulaStage(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onEvent(event: ProcessorOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
-        if (event.skip) {
-            return
+        if (! event.skip) {
+            processFormulas(event)
         }
 
+        event.model = null
+    }
+
+
+    private fun processFormulas(event: ProcessorOutputEvent<*>) {
         val row = event.row
         val headerBuffer = event.header
         val model = event.model ?: Unit
