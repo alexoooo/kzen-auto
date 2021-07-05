@@ -92,7 +92,7 @@ class ReportFilterList(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderHeader() {
-        val showRefresh = props.reportState.isTaskRunning()
+        val showRefresh = props.reportState.isTaskRunning() && props.reportState.previewFilteredSpec().enabled
 
         styledDiv {
             styledSpan {

@@ -312,10 +312,10 @@ object ReportReducer {
                 tableSummaryError = action.errorMessage)
 
             is SummaryLookupResult -> state.copy(
-                    tableSummaryLoading = false,
-                    tableSummaryLoaded = true,
-                    tableSummaryError = null,
-                    tableSummary = action.tableSummary)
+                tableSummaryLoading = false,
+                tableSummaryLoaded = true,
+                tableSummaryError = null,
+                tableSummary = action.tableSummary)
         }
     }
 

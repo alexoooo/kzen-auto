@@ -35,16 +35,14 @@ data class OutputExploreSpec(
                 ?.asString()
                 ?.replace(",", "")
                 ?.toLongOrNull()
-                ?: throw IllegalArgumentException(
-                    "'${ReportConventions.previewStartKey}' attribute notation not found: $notation")
+                ?: 1
 
             val previewCount = notation
                 .get(ReportConventions.previewRowCountKey)
                 ?.asString()
                 ?.replace(",", "")
                 ?.toIntOrNull()
-                ?: throw IllegalArgumentException(
-                    "'${ReportConventions.previewRowCountKey}' attribute notation not found: $notation")
+                ?: 0
 
             return OutputExploreSpec(workPath, savePath, previewStart, previewCount)
         }

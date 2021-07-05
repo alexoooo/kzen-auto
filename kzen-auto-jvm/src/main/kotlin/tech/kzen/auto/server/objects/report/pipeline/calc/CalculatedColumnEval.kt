@@ -16,7 +16,8 @@ class CalculatedColumnEval(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val packagePath = "eval"
+        private const val packagePath = ""
+//        private const val packagePath = "eval"
     }
 
 
@@ -95,7 +96,14 @@ class CalculatedColumnEval(
         val columnAccessors = generateColumnAccessors(columnNames)
 
         val code = """
-package $packagePath
+${
+    if (packagePath.isEmpty()) {
+        ""
+    }
+    else {
+        "package $packagePath"
+    }
+}
 
 $imports
 

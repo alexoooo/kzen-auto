@@ -13,11 +13,13 @@ import styled.styledTable
 import styled.styledTd
 import tech.kzen.auto.client.objects.document.report.state.*
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.FunctionWithDebounce
+import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.material.MaterialIconButton
 import tech.kzen.auto.client.wrap.material.MaterialTextField
 import tech.kzen.auto.client.wrap.material.NestedInputLabelProps
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 
 
@@ -109,7 +111,7 @@ class ReportFormulaItem(
             CompoundReportAction(
                 updateRequest,
                 FormulaValidationRequest,
-                ReportEffect.refreshView))
+                ReportEffect.refreshView(props.reportState)))
     }
 
 

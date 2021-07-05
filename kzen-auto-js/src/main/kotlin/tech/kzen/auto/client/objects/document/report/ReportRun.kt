@@ -7,8 +7,8 @@ import react.*
 import react.dom.attrs
 import react.dom.div
 import tech.kzen.auto.client.objects.document.report.state.*
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.*
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 
 
@@ -113,7 +113,7 @@ class ReportRun(
         val status =
             props.reportState.outputInfo?.status ?: OutputStatus.Missing
 
-//        +"status: $status"
+//        +"status: ${props.reportState.isInitiating()}"
 
         renderMainAction(readyToRun, status, inProgress)
     }

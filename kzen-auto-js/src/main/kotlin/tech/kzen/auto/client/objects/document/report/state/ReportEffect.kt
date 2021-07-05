@@ -36,8 +36,17 @@ import tech.kzen.lib.platform.ClassName
 
 object ReportEffect {
     //-----------------------------------------------------------------------------------------------------------------
-    val refreshView = CompoundReportAction(
-        ReportProgressReset, SummaryLookupRequest, OutputLookupRequest)
+    fun refreshView(state: ReportState): ReportAction {
+        return when {
+            state.previewFilteredSpec().enabled ->
+                CompoundReportAction(
+                    ReportProgressReset, SummaryLookupRequest, OutputLookupRequest)
+
+            else ->
+                CompoundReportAction(
+                    ReportProgressReset, OutputLookupRequest)
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -121,7 +130,7 @@ object ReportEffect {
                 loadTask(state)
 
             is ReportTaskLookupResponse ->
-                taskLoaded(action)
+                taskLoaded(state, action)
 
 
             SummaryLookupRequest ->
@@ -138,7 +147,7 @@ object ReportEffect {
                 refreshTask(action.taskId)
 
             is ReportTaskRefreshResponse ->
-                refreshTaskLoop(action)
+                refreshTaskLoop(state, action)
 
             is ReportTaskStopRequest ->
                 stopTask(action)
@@ -207,7 +216,7 @@ object ReportEffect {
             is ReportUpdateResult -> {
 //                console.log("%%%% ReportUpdateResult - $action")
                 if (action.errorMessage == null) {
-                    refreshView
+                    refreshView(state)
                 }
                 else {
                     null
@@ -504,11 +513,18 @@ object ReportEffect {
 
 
     private fun taskLoaded(
+        state: ReportState,
         action: ReportTaskLookupResponse
     ): ReportAction? {
         val taskModel = action.taskModel
-            ?: return CompoundReportAction.of(
-                SummaryLookupRequest, FormulaValidationRequest)
+            ?: return when {
+                state.previewFilteredSpec().enabled ->
+                    CompoundReportAction.of(
+                        SummaryLookupRequest, FormulaValidationRequest)
+
+                else ->
+                    FormulaValidationRequest
+            }
 
         val tableSummary =
             (taskModel.finalOrPartialResult() as? ExecutionSuccess)?.let {
@@ -516,7 +532,7 @@ object ReportEffect {
             }
 
         val firstAction =
-            if (tableSummary == null) {
+            if (tableSummary == null && state.previewFilteredSpec().enabled) {
                 SummaryLookupRequest
             }
             else {
@@ -533,6 +549,7 @@ object ReportEffect {
             }
 
         return CompoundReportAction.of(firstAction, FormulaValidationRequest, secondAction)
+
     }
 
 
@@ -545,6 +562,7 @@ object ReportEffect {
 
 
     private fun refreshTaskLoop(
+        state: ReportState,
         action: ReportTaskRefreshResponse
     ): ReportAction? {
         val taskModel = action.taskModel
@@ -555,9 +573,14 @@ object ReportEffect {
                 ReportTaskRefreshRequest(action.taskModel.taskId))
         }
 
-//        console.log("$%%$#%$# task done")
-        return CompoundReportAction(
-            SummaryLookupRequest, OutputLookupRequest)
+        return when {
+            state.previewFilteredSpec().enabled ->
+                CompoundReportAction(
+                    SummaryLookupRequest, OutputLookupRequest)
+
+            else ->
+                OutputLookupRequest
+        }
     }
 
 

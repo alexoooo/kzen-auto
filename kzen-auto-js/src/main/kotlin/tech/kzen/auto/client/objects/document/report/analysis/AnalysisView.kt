@@ -100,7 +100,7 @@ class AnalysisView(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderHeader() {
-//        val showRefresh = props.reportState.isTaskRunning()
+        val editDisabled = props.reportState.isTaskRunning() || props.reportState.isInitiating()
 
         styledDiv {
             styledSpan {
@@ -150,7 +150,7 @@ class AnalysisView(
                     child(MaterialToggleButton::class) {
                         attrs {
                             value = AnalysisType.FlatData.name
-//                            disabled = editDisabled
+                            disabled = editDisabled
                             size = "medium"
                             style = reactStyle {
                                 height = 34.px
@@ -174,7 +174,7 @@ class AnalysisView(
                     child(MaterialToggleButton::class) {
                         attrs {
                             value = AnalysisType.PivotTable.name
-//                            disabled = editDisabled
+                            disabled = editDisabled
                             size = "medium"
                             style = reactStyle {
                                 height = 34.px

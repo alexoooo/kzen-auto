@@ -122,7 +122,7 @@ data class ReportState(
 
         return ! taskLoaded ||
                 ! outputLoaded ||
-                ! tableSummaryLoaded
+                previewFilteredSpec().enabled && ! tableSummaryLoaded
     }
 
 

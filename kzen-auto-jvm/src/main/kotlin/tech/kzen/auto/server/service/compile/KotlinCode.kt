@@ -16,6 +16,12 @@ data class KotlinCode(
     }
 
     fun fullyQualifiedMainClass(): String {
-        return "$packagePath.$mainClassName"
+        return when {
+            packagePath.isEmpty() ->
+                mainClassName
+
+            else ->
+                "$packagePath.$mainClassName"
+        }
     }
 }

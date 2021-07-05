@@ -184,6 +184,8 @@ class ReportOutputView(
 
 
     private fun RBuilder.renderHeaderControls() {
+        val editDisabled = props.reportState.isTaskRunning() || props.reportState.isInitiating()
+
         child(MaterialToggleButtonGroup::class) {
             attrs {
                 value = props.reportState.outputSpec().type.name
@@ -201,7 +203,7 @@ class ReportOutputView(
             child(MaterialToggleButton::class) {
                 attrs {
                     value = OutputType.Explore.name
-//                    disabled = editDisabled
+                    disabled = editDisabled
                     size = "medium"
                     style = reactStyle {
                         height = 34.px
@@ -225,7 +227,7 @@ class ReportOutputView(
             child(MaterialToggleButton::class) {
                 attrs {
                     value = OutputType.Export.name
-//                    disabled = editDisabled
+                    disabled = editDisabled
                     size = "medium"
                     style = reactStyle {
                         height = 34.px
