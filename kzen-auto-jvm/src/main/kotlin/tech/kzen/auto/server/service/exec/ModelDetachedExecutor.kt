@@ -2,9 +2,9 @@ package tech.kzen.auto.server.service.exec
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
+import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.detached.service.DetachedExecutor
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
@@ -28,7 +28,7 @@ class ModelDetachedExecutor(
 
     override suspend fun execute(
             actionLocation: ObjectLocation,
-            request: DetachedRequest
+            request: ExecutionRequest
     ): ExecutionResult {
         val graphDefinition = graphStore
                 .graphDefinition()
@@ -56,7 +56,7 @@ class ModelDetachedExecutor(
 
     override suspend fun executeDownload(
         actionLocation: ObjectLocation,
-        request: DetachedRequest
+        request: ExecutionRequest
     ): ExecutionDownloadResult {
         val graphDefinition = graphStore
             .graphDefinition()

@@ -1,12 +1,12 @@
 
 
-#FilterController:
-#  is: DocumentController
-#  class: tech.kzen.auto.client.objects.document.filter.FilterController$Wrapper
-#  archetype: Filter
-
-
 ReportController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.report.ReportController$Wrapper
   archetype: Report
+
+
+PipelineController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.pipeline.PipelineController$Wrapper
+  archetype: Pipeline

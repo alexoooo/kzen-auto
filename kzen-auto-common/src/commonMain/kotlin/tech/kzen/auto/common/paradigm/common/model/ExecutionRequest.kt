@@ -1,11 +1,11 @@
-package tech.kzen.auto.common.paradigm.detached.model
+package tech.kzen.auto.common.paradigm.common.model
 
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.platform.IoUtils
 
 
-data class DetachedRequest(
+data class ExecutionRequest(
     val parameters: RequestParams,
     val body: ImmutableByteArray?
 ) {
@@ -14,10 +14,10 @@ data class DetachedRequest(
         private const val bodyKey = "body"
 
 
-        fun fromJsonCollection(collection: Map<String, String?>): DetachedRequest {
+        fun fromJsonCollection(collection: Map<String, String?>): ExecutionRequest {
             val parameters = RequestParams.parse(collection[parametersKey] as String)
             val body = collection[bodyKey]?.let { ImmutableByteArray.wrap(IoUtils.base64Decode(it)) }
-            return DetachedRequest(parameters, body)
+            return ExecutionRequest(parameters, body)
         }
     }
 

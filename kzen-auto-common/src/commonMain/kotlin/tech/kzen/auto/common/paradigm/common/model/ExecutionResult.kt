@@ -23,6 +23,21 @@ sealed class ExecutionResult
                 ExecutionFailure(error as String)
             }
         }
+
+
+        fun success(
+            value: ExecutionValue = NullExecutionValue,
+            detail: ExecutionValue = NullExecutionValue
+        ): ExecutionSuccess {
+            return ExecutionSuccess(value, detail)
+        }
+
+
+        fun failure(
+            message: String
+        ): ExecutionFailure {
+            return ExecutionFailure(message)
+        }
     }
 
 

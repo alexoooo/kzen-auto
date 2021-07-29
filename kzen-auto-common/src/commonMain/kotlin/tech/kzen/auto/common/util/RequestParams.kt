@@ -2,7 +2,7 @@ package tech.kzen.auto.common.util
 
 
 data class RequestParams(
-        val values: Map<String, List<String>>
+    val values: Map<String, List<String>>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

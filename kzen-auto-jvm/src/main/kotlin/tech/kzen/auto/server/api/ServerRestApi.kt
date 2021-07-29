@@ -51,6 +51,7 @@ class ServerRestApi(
 
         GET(CommonRestApi.commandBenchmark, counterHandler::benchmark)
 
+        // script
         GET(CommonRestApi.actionList, counterHandler::actionList)
         GET(CommonRestApi.actionModel, counterHandler::actionModel)
         GET(CommonRestApi.actionStart, counterHandler::actionStart)
@@ -58,21 +59,29 @@ class ServerRestApi(
         GET(CommonRestApi.actionReset, counterHandler::actionReset)
         GET(CommonRestApi.actionPerform, counterHandler::actionPerform)
 
+        // detached
         GET(CommonRestApi.actionDetached, counterHandler::actionDetachedByQuery)
         POST(CommonRestApi.actionDetached, counterHandler::actionDetachedByQuery)
         PUT(CommonRestApi.actionDetached, counterHandler::actionDetachedByForm)
         GET(CommonRestApi.actionDetachedDownload, counterHandler::actionDetachedDownload)
 
+        // dataflow
         GET(CommonRestApi.execModel, counterHandler::execModel)
         GET(CommonRestApi.execReset, counterHandler::execReset)
         GET(CommonRestApi.execPerform, counterHandler::execPerform)
 
+        // task (report)
         GET(CommonRestApi.taskSubmit, counterHandler::taskSubmit)
         GET(CommonRestApi.taskQuery, counterHandler::taskQuery)
         GET(CommonRestApi.taskCancel, counterHandler::taskCancel)
-//        GET(CommonRestApi.taskRequest, counterHandler::taskRequest)
-//        POST(CommonRestApi.taskRequest, counterHandler::taskRequest)
         GET(CommonRestApi.taskLookup, counterHandler::taskLookup)
+
+        // logic
+        GET(CommonRestApi.logicStatus, counterHandler::logicStatus)
+        GET(CommonRestApi.logicStart, counterHandler::logicStart)
+        GET(CommonRestApi.logicRequest, counterHandler::logicRequest)
+        GET(CommonRestApi.logicCancel, counterHandler::logicCancel)
+        GET(CommonRestApi.logicRun, counterHandler::logicRun)
 
         // provide value from client
 //        GET("/auto-jvm/submit", counterHandler::actionSubmit)

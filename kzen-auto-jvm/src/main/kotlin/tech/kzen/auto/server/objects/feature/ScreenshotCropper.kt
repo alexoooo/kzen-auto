@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.feature
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
+import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.toInputStream
 import java.io.ByteArrayOutputStream
@@ -13,7 +13,7 @@ import javax.imageio.ImageIO
 @Reflect
 class ScreenshotCropper: DetachedAction {
     override suspend fun execute(
-            request: DetachedRequest
+            request: ExecutionRequest
     ): ExecutionResult {
         val x = request.getInt(FeatureDocument.cropLeftParam)
                 ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropLeftParam}")

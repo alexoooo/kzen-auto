@@ -11,12 +11,8 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.task.api.ManagedTask
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
@@ -69,7 +65,7 @@ class ReportDocument(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun execute(request: DetachedRequest): ExecutionResult {
+    override suspend fun execute(request: ExecutionRequest): ExecutionResult {
         val action = request.parameters.get(ReportConventions.actionParameter)
             ?: return ExecutionFailure("'${ReportConventions.actionParameter}' expected")
 
@@ -113,7 +109,7 @@ class ReportDocument(
     }
 
 
-    override suspend fun executeDownload(request: DetachedRequest): ExecutionDownloadResult {
+    override suspend fun executeDownload(request: ExecutionRequest): ExecutionDownloadResult {
         return actionDownload()
     }
 
@@ -268,7 +264,7 @@ class ReportDocument(
     }
 
 
-    private fun actionDefaultFormat(request: DetachedRequest): ExecutionResult {
+    private fun actionDefaultFormat(request: ExecutionRequest): ExecutionResult {
         val filesParam = request.parameters.getAll(ReportConventions.filesParameter)
         val dataLocations = filesParam.map { DataLocation.of(it) }
 
@@ -376,7 +372,7 @@ class ReportDocument(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun start(request: DetachedRequest, handle: TaskHandle): TaskRun? {
+    override suspend fun start(request: ExecutionRequest, handle: TaskHandle): TaskRun? {
         val action = request.parameters.get(ReportConventions.actionParameter)
         if (action == null) {
             handle.complete(ExecutionFailure(

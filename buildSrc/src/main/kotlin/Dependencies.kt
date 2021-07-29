@@ -1,14 +1,14 @@
 // https://youtrack.jetbrains.com/issue/KT-47444
-const val kotlinVersion = "1.5.10"
-//const val kotlinVersion = "1.5.20"
+//const val kotlinVersion = "1.5.10"
+const val kotlinVersion = "1.5.21"
 const val jvmTargetVersion = "16"
 const val shadowVersion = "7.0.0"
 const val springBootVersion = "2.5.2"
 const val dependencyManagementVersion = "1.0.11.RELEASE"
 
 
-const val kzenLibVersion = "0.23.0"
-//const val kzenLibVersion = "0.22.1"
+//const val kzenLibVersion = "0.23.0"
+const val kzenLibVersion = "0.24.0-SNAPSHOT"
 
 
 const val logbackVersion = "1.2.3"
@@ -39,7 +39,7 @@ const val reactSelectVersion = "4.3.1"
 const val iconifyReactVersion = "1.1.4"
 const val iconifyIconsVaadinVersion = "1.1.0"
 
-const val wrapperKotlinVersion = "pre.213-kotlin-1.5.20"
+const val wrapperKotlinVersion = "pre.216-kotlin-1.5.20"
 const val kotlinReactVersion = "17.0.2-$wrapperKotlinVersion"
 const val kotlinReactDomVersion = "17.0.2-$wrapperKotlinVersion"
 const val kotlinStyledVersion = "5.3.0-$wrapperKotlinVersion"

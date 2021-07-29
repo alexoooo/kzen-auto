@@ -1,9 +1,9 @@
 package tech.kzen.auto.server.service.exec
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
+import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.task.api.ManagedTask
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
@@ -113,7 +113,7 @@ class ModelTaskRepository(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun submit(taskLocation: ObjectLocation, request: DetachedRequest): TaskModel {
+    override suspend fun submit(taskLocation: ObjectLocation, request: ExecutionRequest): TaskModel {
         val graphDefinition = graphStore
             .graphDefinition()
             .transitiveSuccessful()

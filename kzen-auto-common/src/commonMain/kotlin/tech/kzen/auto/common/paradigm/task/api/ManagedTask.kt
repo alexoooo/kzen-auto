@@ -1,11 +1,11 @@
 package tech.kzen.auto.common.paradigm.task.api
 
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
+import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 
 
 interface ManagedTask {
     suspend fun start(
-        request: DetachedRequest,
+        request: ExecutionRequest,
         handle: TaskHandle
     ): TaskRun?
 }

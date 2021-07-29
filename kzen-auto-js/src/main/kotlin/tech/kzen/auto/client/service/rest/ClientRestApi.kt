@@ -6,6 +6,10 @@ import tech.kzen.auto.client.util.httpPostBytes
 import tech.kzen.auto.client.util.httpPutForm
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunResponse
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicStatus
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
@@ -675,6 +679,72 @@ class ClientRestApi(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    suspend fun logicStatus(): LogicStatus {
+        val responseJson = getOrPutJson(CommonRestApi.logicStatus)
+
+        @Suppress("UNCHECKED_CAST")
+        val responseCollection = ClientJsonUtils.toMap(responseJson) as Map<String, Any>
+
+        return LogicStatus.ofCollection(responseCollection)
+    }
+
+
+    suspend fun logicStart(
+        objectLocation: ObjectLocation
+    ): LogicRunId? {
+        val response = getOrPut(
+            CommonRestApi.logicStart,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+
+        return when {
+            response.isEmpty() -> null
+            else -> LogicRunId(response)
+        }
+    }
+
+
+    suspend fun logicRequest(
+        runId: LogicRunId,
+        executionId: LogicExecutionId,
+        vararg parameters: Pair<String, String>
+    ): ExecutionResult {
+        val responseJson = getOrPutJson(
+            CommonRestApi.logicRequest,
+            CommonRestApi.paramRunId to runId.value,
+            CommonRestApi.paramExecutionId to executionId.value,
+            *parameters)
+
+        @Suppress("UNCHECKED_CAST")
+        val responseCollection = ClientJsonUtils.toMap(responseJson)
+
+        return ExecutionResult.fromJsonCollection(responseCollection)
+    }
+
+
+    suspend fun logicCancel(
+        runId: LogicRunId
+    ): LogicRunResponse {
+        val response = getOrPut(
+            CommonRestApi.logicCancel,
+            CommonRestApi.paramRunId to runId.value)
+
+        return LogicRunResponse.valueOf(response)
+    }
+
+
+    suspend fun logicRun(
+        runId: LogicRunId
+    ): LogicRunResponse {
+        val response = getOrPut(
+            CommonRestApi.logicCancel,
+            CommonRestApi.paramRunId to runId.value)
+
+        return LogicRunResponse.valueOf(response)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     // TODO: change to POST to better align with HTTP semantics?
     private suspend fun getOrPutDigest(
             commandPath: String,
@@ -737,7 +807,7 @@ class ClientRestApi(
                 httpGet(getUrl)
 
             else ->
-                httpPutForm(commandPath, *parameters)
+                httpPutForm(commandUrl(commandPath), *parameters)
         }
     }
 
@@ -755,8 +825,9 @@ class ClientRestApi(
         commandPath: String,
         vararg parameters: Pair<String, String>
     ): String {
+        val prefix = commandUrl(commandPath)
         val suffix = paramSuffix(*parameters)
-        return "$baseUrl$commandPath$suffix"
+        return "$prefix$suffix"
     }
 
 
@@ -765,8 +836,9 @@ class ClientRestApi(
             body: ByteArray,
             vararg parameters: Pair<String, String>
     ): String {
+        val prefix = commandUrl(commandPath)
         val suffix = paramSuffix(*parameters)
-        return httpPostBytes("$baseUrl$commandPath$suffix", body)
+        return httpPostBytes("$prefix$suffix", body)
     }
 
 
@@ -784,24 +856,9 @@ class ClientRestApi(
     }
 
 
-//    private suspend fun delete(
-//            commandPath: String,
-//            vararg parameters: Pair<String, String>
-//    ) {
-//        val suffix = paramSuffix(*parameters)
-//        httpDelete("$baseUrl$commandPath$suffix")
-//    }
-
-
-//    private fun paramJsonMultimap(vararg parameters: Pair<String, String>): Json {
-//        val builder = mutableMapOf<String, MutableList<String>>()
-//        for (param in parameters) {
-//            val values = builder.getOrPut(param.first) { mutableListOf() }
-//            values.add(param.second)
-//        }
-//        return json(*builder
-//            .entries
-//            .map { it.key to it.value.toTypedArray() }
-//            .toTypedArray())
-//    }
+    private fun commandUrl(
+        commandPath: String
+    ): String {
+        return "$baseUrl$commandPath"
+    }
 }

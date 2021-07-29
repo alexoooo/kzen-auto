@@ -2,16 +2,16 @@ package tech.kzen.auto.common.paradigm.task.model
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
+import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 data class TaskModel(
     val taskId: TaskId,
     val taskLocation: ObjectLocation,
-    val request: DetachedRequest,
+    val request: ExecutionRequest,
     val state: TaskState,
     val partialResult: ExecutionSuccess?,
     val finalResult: ExecutionResult?
@@ -31,7 +31,7 @@ data class TaskModel(
             return TaskModel(
                 TaskId(collection[idKey] as String),
                 ObjectLocation.parse(collection[locationKey] as String),
-                DetachedRequest.fromJsonCollection(collection[requestKey] as Map<String, String?>),
+                ExecutionRequest.fromJsonCollection(collection[requestKey] as Map<String, String?>),
                 TaskState.valueOf(collection[stateKey] as String),
                 collection[partialResultKey]?.let { ExecutionSuccess.fromJsonCollection(it as Map<String, Any?>) },
                 collection[finalResultKey]?.let { ExecutionResult.fromJsonCollection(it as Map<String, Any?>) }

@@ -5,7 +5,7 @@ import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
+import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.common.util.data.FilePathJvm.toPath
 import tech.kzen.auto.plugin.definition.ProcessorDefiner
@@ -150,7 +150,7 @@ class PluginDocument(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun execute(request: DetachedRequest): ExecutionResult {
+    override suspend fun execute(request: ExecutionRequest): ExecutionResult {
         val definerDetails = definerDetails()
             ?: return ExecutionFailure("Please provide a valid plugin jar path")
 

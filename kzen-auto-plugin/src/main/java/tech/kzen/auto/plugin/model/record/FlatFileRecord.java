@@ -13,7 +13,6 @@ import java.util.List;
 
 
 public class FlatFileRecord
-        //implements FlatRecordBuilder
 {
     //-----------------------------------------------------------------------------------------------------------------
     private static final double doubleCacheMissing = -0.0;
@@ -22,8 +21,6 @@ public class FlatFileRecord
     private static boolean isDoubleCacheMissing(double value) {
         return Double.doubleToRawLongBits(value) == missingNumberBits;
     }
-
-//    public static final ClassName className = new ClassName(FlatFileRecord.class.getName());
 
 
     public static FlatFileRecord of(String... values) {
@@ -298,7 +295,6 @@ public class FlatFileRecord
     }
 
 
-//    @Override
     public void add(CharSequence value) {
         growFieldContentsIfRequired(fieldContentLength + value.length());
 
@@ -311,7 +307,6 @@ public class FlatFileRecord
     }
 
 
-//    @Override
     public void addAll(List<String> values) {
         for (String value : values) {
             add(value);
@@ -326,7 +321,6 @@ public class FlatFileRecord
     }
 
 
-//    @Override
     public void add(long value) {
         int length = NumberParseUtils.stringSize(value);
         int requiredContentLength = fieldContentLength + length;
@@ -339,7 +333,6 @@ public class FlatFileRecord
     }
 
 
-//    @Override
     public void add(double value, int decimalPlaces) {
         if (decimalPlaces == 0) {
             add(Math.round(value));
@@ -402,7 +395,6 @@ public class FlatFileRecord
     }
 
 
-//    @Override
     public void add(@NotNull char[] value, int offset, int length) {
         int requiredContentLength = fieldContentLength + length;
         growFieldContentsIfRequired(requiredContentLength);

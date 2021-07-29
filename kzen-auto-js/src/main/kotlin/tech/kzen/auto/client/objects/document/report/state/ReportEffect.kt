@@ -23,7 +23,7 @@ import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
+import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskState
 import tech.kzen.auto.common.util.RequestParams
@@ -714,10 +714,11 @@ object ReportEffect {
 
         val result = ClientContext.clientRestTaskRepository.submit(
             state.mainLocation,
-            DetachedRequest(
+            ExecutionRequest(
                 RequestParams.of(
                     ReportConventions.actionParameter to action),
-                null))
+                null)
+        )
 
         return ReportTaskRunResponse(result)
     }

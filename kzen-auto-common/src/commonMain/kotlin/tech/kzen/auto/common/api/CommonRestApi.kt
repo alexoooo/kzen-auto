@@ -66,6 +66,8 @@ object CommonRestApi {
     const val paramAttributeCreateContainer = "create-ancestors"
     const val paramAttributeCleanupContainer = "cleanup-container"
     const val paramTaskId = "task"
+    const val paramRunId = "run"
+    const val paramExecutionId = "execution"
 
 
     private const val actionPrefix = "/action/"
@@ -77,6 +79,7 @@ object CommonRestApi {
     const val actionPerform = "${actionPrefix}perform"
     const val actionDetached = "${actionPrefix}detached"
     const val actionDetachedDownload = "${actionPrefix}download"
+    const val fieldDigest = "digest"
 
 
     private const val execPrefix = "/exec/"
@@ -91,5 +94,10 @@ object CommonRestApi {
     const val taskLookup = "${taskPrefix}lookup"
     const val taskQuery = "${taskPrefix}query"
 
-    const val fieldDigest = "digest"
+    private const val logicPrefix = "/logic/"
+    const val logicStatus = "${logicPrefix}status"
+    const val logicStart = "${logicPrefix}start"
+    const val logicRequest = "${logicPrefix}request"
+    const val logicCancel = "${logicPrefix}cancel"
+    const val logicRun = "${logicPrefix}run"
 }

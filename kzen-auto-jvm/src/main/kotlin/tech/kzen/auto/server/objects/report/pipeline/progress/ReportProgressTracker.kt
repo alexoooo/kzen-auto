@@ -42,10 +42,12 @@ class ReportProgressTracker(
         @Volatile var readBytes: Long = 0
         @Volatile var uncompressedBytes: Long = 0
         @Volatile var recentBytesPerSecond: Long = 0
+        @Volatile var recentRecordsPerSecond: Long = 0
 
         @Volatile var totalSize: Long = 0
         @Volatile var progressBytesRemaining: Long = 0
         @Volatile var previousUncompressedBytes: Long = 0
+        @Volatile var previousRecords: Long = 0
 
 
         fun startReading() {
@@ -87,8 +89,12 @@ class ReportProgressTracker(
 
                 val recentUncompressedBytes = uncompressedBytes - previousUncompressedBytes
                 previousUncompressedBytes = uncompressedBytes
-
                 recentBytesPerSecond = (1000.0 * recentUncompressedBytes / recentElapsedMillis).toLong()
+
+                val currentRecords = records
+                val recentRecords = currentRecords - previousRecords
+                previousRecords = currentRecords
+                recentRecordsPerSecond = (1000.0 * recentRecords / recentElapsedMillis).toLong()
 
                 innerStopwatch.reset().start()
 
@@ -105,7 +111,14 @@ class ReportProgressTracker(
         fun snapshot(): ReportFileProgress {
             val durationMillis = durationMillis()
             return ReportFileProgress(
-                running, finished, durationMillis, records, readBytes, uncompressedBytes, recentBytesPerSecond)
+                running,
+                finished,
+                durationMillis,
+                records,
+                readBytes,
+                uncompressedBytes,
+                recentBytesPerSecond,
+                recentRecordsPerSecond)
         }
 
 

@@ -24,6 +24,7 @@ import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.plugin.HostProcessorDefinitionRepository
 import tech.kzen.auto.server.service.plugin.MultiDefinitionRepository
 import tech.kzen.auto.server.service.plugin.ProcessorDefinitionRepository
+import tech.kzen.auto.server.service.v1.ServerLogicController
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
 import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
@@ -80,7 +81,7 @@ object ServerContext {
         graphStore, graphCreator)
 
     private val graphInstanceCreator = GraphInstanceCreator(
-            graphStore, graphCreator)
+        graphStore, graphCreator)
 
     private val dataflowMessageInspector = DataflowMessageInspector()
 
@@ -118,6 +119,10 @@ object ServerContext {
 
     val definitionRepository: ProcessorDefinitionRepository = MultiDefinitionRepository(listOf(
         basicDefinitionRepository, pluginProcessorDefinitionRepository))
+
+
+    val serverLogicController = ServerLogicController(
+        graphStore, graphCreator)
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -1,10 +1,10 @@
 package tech.kzen.auto.server.paradigm.detached
 
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
+import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 
 
 interface DetachedDownloadAction {
     suspend fun executeDownload(
-        request: DetachedRequest
+        request: ExecutionRequest
     ): ExecutionDownloadResult
 }

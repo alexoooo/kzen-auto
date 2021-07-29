@@ -14,11 +14,13 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
-import tech.kzen.auto.common.paradigm.detached.model.DetachedRequest
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
 import tech.kzen.auto.common.paradigm.task.model.TaskId
@@ -945,7 +947,7 @@ class RestHandler {
             .flatMap { optionalBody ->
                 val body = optionalBody.orElse(null)
 
-                val detachedRequest = DetachedRequest(RequestParams(detachedParams), body)
+                val detachedRequest = ExecutionRequest(RequestParams(detachedParams), body)
 
                 val execution: ExecutionResult = runBlocking {
                     ServerContext.detachedExecutor.execute(
@@ -986,13 +988,11 @@ class RestHandler {
                 .flatMap { optionalBody ->
                     val body = optionalBody.orElse(null)
 
-                    val detachedRequest = DetachedRequest(RequestParams(params), body)
+                    val detachedRequest = ExecutionRequest(RequestParams(params), body)
 
                     val execution: ExecutionDownloadResult = runBlocking {
                         ServerContext.detachedExecutor.executeDownload(
-                            objectLocation,
-                            detachedRequest
-                        )
+                            objectLocation, detachedRequest)
                     }
 
                     val contentType = MediaType.parseMediaType(execution.mimeType)
@@ -1040,8 +1040,7 @@ class RestHandler {
 
     fun execReset(serverRequest: ServerRequest): Mono<ServerResponse> {
         val documentPath: DocumentPath = serverRequest.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse
-        )
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
         val visualDataflowModel = runBlocking {
             ServerContext.visualDataflowRepository.reset(documentPath)
@@ -1098,13 +1097,12 @@ class RestHandler {
             .flatMap { optionalBody ->
                 val body = optionalBody.orElse(null)
 
-                val detachedRequest = DetachedRequest(RequestParams(params), body)
+                val detachedRequest = ExecutionRequest(RequestParams(params), body)
 
                 val execution: TaskModel = runBlocking {
                     ServerContext.modelTaskRepository.submit(
                         objectLocation,
-                        detachedRequest
-                    )
+                        detachedRequest)
                 }
 
                 ServerResponse
@@ -1148,46 +1146,12 @@ class RestHandler {
     }
 
 
-//    fun taskRequest(serverRequest: ServerRequest): Mono<ServerResponse> {
-//        val taskId: TaskId = serverRequest
-//            .getParam(CommonRestApi.paramTaskId) { TaskId(it) }
-//
-//        val params = mutableMapOf<String, List<String>>()
-//        for (e in serverRequest.queryParams()) {
-//            if (e.key == CommonRestApi.paramTaskId) {
-//                continue
-//            }
-//            params[e.key] = e.value
-//        }
-//
-//        return serverRequest
-//            .bodyToMono(ByteArray::class.java)
-//            .map { Optional.of(ImmutableByteArray.wrap(it)) }
-//            .defaultIfEmpty(Optional.empty())
-//            .flatMap { optionalBody ->
-//                val body = optionalBody.orElse(null)
-//
-//                val detachedRequest = DetachedRequest(RequestParams(params), body)
-//
-//                val execution: ExecutionResult = runBlocking {
-//                    ServerContext.modelTaskRepository.request(taskId, detachedRequest)
-//                } ?: ExecutionFailure("Task not found")
-//
-//                ServerResponse
-//                    .ok()
-//                    .body(Mono.just(execution.toJsonCollection()))
-//            }
-//    }
-
-
     fun taskLookup(serverRequest: ServerRequest): Mono<ServerResponse> {
         val documentPath: DocumentPath = serverRequest.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse
-        )
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
         val objectPath: ObjectPath = serverRequest.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse
-        )
+            CommonRestApi.paramObjectPath, ObjectPath::parse)
 
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
@@ -1200,6 +1164,110 @@ class RestHandler {
             .body(Mono.just(tasks.map { it.identifier }))
     }
 
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun logicStatus(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val status = ServerContext.serverLogicController.status()
+
+        return ServerResponse
+            .ok()
+            .body(Mono.just(status.toCollection()))
+    }
+
+
+    fun logicStart(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val documentPath: DocumentPath = serverRequest.getParam(
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+
+        val objectPath: ObjectPath = serverRequest.getParam(
+            CommonRestApi.paramObjectPath, ObjectPath::parse)
+
+        val objectLocation = ObjectLocation(documentPath, objectPath)
+
+        val logicRunId = runBlocking {
+            ServerContext.serverLogicController.start(objectLocation)
+        }
+
+        @Suppress("FoldInitializerAndIfToElvis")
+        if (logicRunId == null) {
+            return ServerResponse.badRequest().build()
+        }
+
+        return ServerResponse
+            .ok()
+            .body(Mono.just(logicRunId.value))
+    }
+
+
+    fun logicRequest(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val runId: LogicRunId = serverRequest.getParam(CommonRestApi.paramRunId) {
+            value -> LogicRunId(value)
+        }
+
+        val executionId: LogicExecutionId = serverRequest.getParam(CommonRestApi.paramExecutionId) {
+            value -> LogicExecutionId(value)
+        }
+
+        val params = mutableMapOf<String, List<String>>()
+        for (e in serverRequest.queryParams()) {
+            if (e.key == CommonRestApi.paramRunId ||
+                e.key == CommonRestApi.paramExecutionId) {
+                continue
+            }
+            params[e.key] = e.value
+        }
+
+        return serverRequest
+            .bodyToMono(ByteArray::class.java)
+            .map { Optional.of(ImmutableByteArray.wrap(it)) }
+            .defaultIfEmpty(Optional.empty())
+            .flatMap { optionalBody ->
+                val body = optionalBody.orElse(null)
+
+                val request = ExecutionRequest(RequestParams(params), body)
+
+                val result: ExecutionResult = runBlocking {
+                    ServerContext.serverLogicController.request(
+                        runId,
+                        executionId,
+                        request)
+                }
+
+                ServerResponse
+                    .ok()
+                    .body(Mono.just(result.toJsonCollection()))
+            }
+    }
+
+
+    fun logicCancel(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val runId: LogicRunId = serverRequest.getParam(CommonRestApi.paramRunId) {
+            value -> LogicRunId(value)
+        }
+
+        val response = runBlocking {
+            ServerContext.serverLogicController.cancel(runId)
+        }
+
+        return ServerResponse
+            .ok()
+            .body(Mono.just(response.name))
+    }
+
+
+    fun logicRun(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val runId: LogicRunId = serverRequest.getParam(CommonRestApi.paramRunId) {
+            value -> LogicRunId(value)
+        }
+
+        val response = runBlocking {
+            ServerContext.serverLogicController.run(runId)
+        }
+
+        return ServerResponse
+            .ok()
+            .body(Mono.just(response.name))
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
