@@ -363,4 +363,5 @@ external class MaterialLinearProgress: Component<ProgressProps, RState> {
 
 external interface ProgressProps: RProps {
     var style: Json
+    var classes: Json
 }

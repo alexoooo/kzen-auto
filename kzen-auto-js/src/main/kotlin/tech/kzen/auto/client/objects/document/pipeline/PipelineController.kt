@@ -1,8 +1,14 @@
 package tech.kzen.auto.client.objects.document.pipeline
 
+import kotlinx.css.em
+import kotlinx.css.padding
 import react.*
+import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.pipeline.input.PipelineInputController
+import tech.kzen.auto.client.objects.document.pipeline.model.PipelineState
+import tech.kzen.auto.client.objects.document.pipeline.model.PipelineStore
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -11,8 +17,8 @@ import tech.kzen.lib.common.reflect.Reflect
 class PipelineController(
     props: RProps
 ):
-    RPureComponent<RProps, PipelineController.State>(props)//,
-//    ReportStore.Subscriber
+    RPureComponent<RProps, PipelineController.State>(props),
+    PipelineStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
 //    companion object {
@@ -24,23 +30,22 @@ class PipelineController(
 
     //-----------------------------------------------------------------------------------------------------------------
     class State(
-//        var reportState: ReportState?
+        var pipelineState: PipelineState?
     ): RState
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-            private val archetype: ObjectLocation
+        private val archetype: ObjectLocation
     ):
-            DocumentController
+        DocumentController
     {
         override fun archetypeLocation(): ObjectLocation {
             return archetype
         }
 
         override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
-//        override fun child(input: RBuilder, handler: RHandler<DocumentControllerProps>): ReactElement {
             return input.child(PipelineController::class) {
                 handler()
             }
@@ -49,50 +54,44 @@ class PipelineController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private val store = ReportStore()
+    private val store = PipelineStore()
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: RProps) {
-//        reportState = null
+        pipelineState = null
     }
 
 
     override fun componentDidMount() {
-//        store.didMount(this)
+        store.didMount(this)
     }
 
 
     override fun componentWillUnmount() {
-//        store.willUnmount()
+        store.willUnmount()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    override fun onReportState(reportState: ReportState?) {
-////        console.log("^^^^^ onReportState!!")
-//
-//        setState {
-//            this.reportState = reportState
-//        }
-//    }
+    override fun onPipelineState(pipelineState: PipelineState/*, initial: Boolean*/) {
+        setState {
+            this.pipelineState = pipelineState
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        styledDiv {
-            +"hello"
-        }
-//        val processState = state.reportState
-//            ?: return
-//
+        val pipelineState = state.pipelineState
+            ?: return
+
 //        renderHeader(processState)
-//
-//        styledDiv {
-//            css {
-//                padding(3.em, 3.em, 7.em, 3.em)
-////                padding(0.em, 0.em, 7.em, 0.em)
-//            }
+
+        styledDiv {
+            css {
+                padding(3.em, 3.em, 7.em, 3.em)
+            }
 //
 ////            if (processState.nextErrorMessage() != null) {
 ////                styledDiv {
@@ -105,14 +104,14 @@ class PipelineController(
 ////                }
 ////            }
 //
-//            renderInput(processState)
+            renderInput(pipelineState)
 //            renderFormulas(processState)
 ////            renderPreview(processState, false)
 //            renderFilter(processState)
 //            renderPreview(processState, true)
 //            renderAnalysis(processState)
 //            renderOutput(processState)
-//        }
+        }
 //
 //        renderRun(processState)
     }
@@ -163,13 +162,19 @@ class PipelineController(
 
     //-----------------------------------------------------------------------------------------------------------------
 //    private fun RBuilder.renderInput(reportState: ReportState) {
-//        child(ReportInputView::class) {
-//            attrs {
+    private fun RBuilder.renderInput(pipelineState: PipelineState) {
+        child(PipelineInputController::class) {
+            attrs {
+                mainLocation = pipelineState.mainLocation
+                spec = pipelineState.inputSpec()
+                inputState = pipelineState.input
+                inputStore = store.input
 //                this.reportState = reportState
 //                dispatcher = store
-//            }
-//        }
-//    }
+            }
+        }
+    }
+
 //
 //
 //    private fun RBuilder.renderFormulas(reportState: ReportState) {

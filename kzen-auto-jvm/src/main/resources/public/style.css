@@ -36,7 +36,7 @@ body {
 
 
 .fade-in {
-   animation: fadeIn 5.0s ease forwards;
+    animation: fadeIn 5.0s ease forwards;
 }
 
 @keyframes fadeIn {

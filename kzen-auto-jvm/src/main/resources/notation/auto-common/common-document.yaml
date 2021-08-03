@@ -194,14 +194,14 @@ Pipeline:
   class: tech.kzen.auto.server.objects.pipeline.PipelineDocument
   title: "Pipeline"
   icon: TableChart
-#  input:
-#    browser:
-#      directory: ./
-#      filter: ""
-#    selection:
-#      dataType: tech.kzen.auto.plugin.model.record.FlatFileRecord
-#      groupBy: ""
-#      locations: []
+  input:
+    browser:
+      directory: ./
+      filter: ""
+    selection:
+      dataType: tech.kzen.auto.plugin.model.record.FlatFileRecord
+      groupBy: ""
+      locations: []
 #  formula: {}
 #  previewAll: false
 #  filter: {}
@@ -226,7 +226,7 @@ Pipeline:
 #      compression: none
 #      path: "../work/export/${report}_${group}_${time}.${extension}"
   meta:
-#    input: InputSpec
+    input: InputSpec
 #    formula: FormulaSpec
 #    previewAll: PreviewSpec
 #    filter: FilterSpec

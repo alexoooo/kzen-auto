@@ -164,8 +164,8 @@ data class ReportState(
 
 
     fun inputSpec(): InputSpec {
-        val formulaDefinition = reportDefinition().attributeDefinitions[ReportConventions.inputAttributeName]!!
-        return (formulaDefinition as ValueAttributeDefinition).value as InputSpec
+        val inputDefinition = reportDefinition().attributeDefinitions[ReportConventions.inputAttributeName]!!
+        return (inputDefinition as ValueAttributeDefinition).value as InputSpec
     }
 
 
