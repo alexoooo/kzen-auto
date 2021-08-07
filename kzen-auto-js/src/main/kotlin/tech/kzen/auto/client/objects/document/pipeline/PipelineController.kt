@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.pipeline
 
-import kotlinx.css.em
-import kotlinx.css.padding
+import kotlinx.css.*
 import react.*
 import styled.css
 import styled.styledDiv
@@ -92,18 +91,18 @@ class PipelineController(
             css {
                 padding(3.em, 3.em, 7.em, 3.em)
             }
-//
-////            if (processState.nextErrorMessage() != null) {
-////                styledDiv {
-////                    css {
-////                        margin(1.em)
-////                        color =  Color.crimson
-////                        fontWeight = FontWeight.bold
-////                    }
-////                    +"Error: ${processState.nextErrorMessage()}"
-////                }
-////            }
-//
+
+            if (pipelineState.notationError != null) {
+                styledDiv {
+                    css {
+                        margin(1.em)
+                        color =  Color.crimson
+                        fontWeight = FontWeight.bold
+                    }
+                    +"Error: ${pipelineState.notationError}"
+                }
+            }
+
             renderInput(pipelineState)
 //            renderFormulas(processState)
 ////            renderPreview(processState, false)

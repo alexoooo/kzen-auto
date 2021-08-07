@@ -14,7 +14,8 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 data class PipelineState(
     val mainLocation: ObjectLocation,
     val mainDefinition: ObjectDefinition,
-    val input: PipelineInputState
+    val input: PipelineInputState,
+    val notationError: String? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

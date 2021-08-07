@@ -82,7 +82,7 @@ class ReportDocument(
             ReportConventions.actionDefaultFormat ->
                 actionDefaultFormat(request)
 
-            ReportConventions.actionInputInfo ->
+            ReportConventions.actionInputSelectionInfo ->
                 actionInputInfo()
 
             ReportConventions.actionListColumns ->

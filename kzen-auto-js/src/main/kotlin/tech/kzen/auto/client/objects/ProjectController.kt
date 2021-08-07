@@ -55,10 +55,11 @@ class ProjectController(
 
 
     class State(
-            var structure: GraphStructure?,
-            var commandError: String?,
+        var structure: GraphStructure?,
+        var commandErrorMessage: String?,
+        var commandErrorRequest: NotationCommand?,
 
-            var headerHeight: Int?
+        var headerHeight: Int?
     ): RState
 
 
@@ -133,7 +134,7 @@ class ProjectController(
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         setState {
             structure = graphDefinition.graphStructure
-            commandError = null
+            commandErrorMessage = null
         }
     }
 
@@ -141,7 +142,8 @@ class ProjectController(
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {
 //        console.log("^^^ onCommandFailure", command.toString(), cause)
         setState {
-            commandError = "${cause.message}"
+            commandErrorRequest = command
+            commandErrorMessage = "${cause.message}"
         }
     }
 
@@ -237,8 +239,13 @@ class ProjectController(
 //                position = Position.relative
             }
 
-            if (state.commandError != null) {
-                +"!! ERROR: ${state.commandError}"
+            if (state.commandErrorMessage != null) {
+                styledDiv {
+                    css {
+                        color = Color.red
+                    }
+                    +"Command Error: ${state.commandErrorMessage} - ${state.commandErrorRequest}"
+                }
             }
 
             val context = StageController.CoordinateContext(

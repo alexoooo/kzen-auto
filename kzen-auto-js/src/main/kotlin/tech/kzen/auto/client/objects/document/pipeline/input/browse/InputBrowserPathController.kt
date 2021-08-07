@@ -2,6 +2,8 @@ package tech.kzen.auto.client.objects.document.pipeline.input.browse
 
 import kotlinx.css.*
 import kotlinx.html.js.onClickFunction
+import kotlinx.html.js.onMouseOutFunction
+import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
@@ -29,16 +31,13 @@ class InputBrowserPathController(
         var browseDir: DataLocation
         var errorMode: Boolean
         var inputStore: PipelineInputStore
-
-//        var dirChangeError: String?
-//        var onDirChange: (String?) -> Unit
     }
 
 
     interface State: RState {
         var textEdit: Boolean
         var editDir: String
-//        var error: String?
+        var hover: Boolean
     }
 
 
@@ -46,7 +45,7 @@ class InputBrowserPathController(
     override fun State.init(props: Props) {
         textEdit = false
         editDir = props.browseDir.asString()
-//        error = null
+        hover = false
     }
 
 
@@ -64,6 +63,20 @@ class InputBrowserPathController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onHoverIn() {
+        setState {
+            hover = true
+        }
+    }
+
+
+    private fun onHoverOut() {
+        setState {
+            hover = false
+        }
+    }
+
+
     private fun onEditToggle() {
         setState {
             textEdit = ! textEdit
@@ -90,17 +103,8 @@ class InputBrowserPathController(
 
 
     private fun onDirSelected(dir: DataLocation) {
-//        setState {
-//            editDir = dir.asString()
-//        }
-//        dirSelectedAsync(dir)
-        props.inputStore.browseDirSelectedAsync(dir)
+        props.inputStore.browserDirSelectedAsync(dir)
     }
-
-
-//    private fun dirSelectedAsync(dir: DataLocation) {
-//        InputBrowserEndpoint.selectDirAsync(props.mainLocation, dir, props.onDirChange)
-//    }
 
 
     private fun handleEnterAndEscape(event: KeyboardEvent) {
@@ -124,8 +128,13 @@ class InputBrowserPathController(
         val parts = props.browseDir.ancestors()
 
         styledDiv {
-            css {
-                position = Position.relative
+            attrs {
+                onMouseOverFunction = {
+                    onHoverIn()
+                }
+                onMouseOutFunction = {
+                    onHoverOut()
+                }
             }
 
             for ((index, part) in parts.withIndex()) {
@@ -175,26 +184,37 @@ class InputBrowserPathController(
 
             styledSpan {
                 css {
-                    position = Position.absolute
-                    top = 0.px
-                    right = 0.px
+                    position = Position.relative
+                    marginLeft = 0.5.em
+
+                    if (! state.hover) {
+                        display = Display.none
+                    }
                 }
 
-                child(MaterialIconButton::class) {
-                    attrs {
-                        style = reactStyle {
-                            marginTop = (-0.6).em
-                            zIndex = 1000
-                        }
-
-                        title = "Edit path"
-
-                        onClick = {
-                            onEditToggle()
-                        }
+                styledSpan {
+                    css {
+                        position = Position.absolute
+                        top = (-7).px
+                        left = 0.px
                     }
 
-                    child(EditIcon::class) {}
+                    child(MaterialIconButton::class) {
+                        attrs {
+                            style = reactStyle {
+                                zIndex = 1000
+                                size = "small"
+                            }
+
+                            title = "Edit path"
+
+                            onClick = {
+                                onEditToggle()
+                            }
+                        }
+
+                        child(EditIcon::class) {}
+                    }
                 }
             }
         }

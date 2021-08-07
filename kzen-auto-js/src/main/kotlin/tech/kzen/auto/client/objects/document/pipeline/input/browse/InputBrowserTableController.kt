@@ -2,7 +2,9 @@ package tech.kzen.auto.client.objects.document.pipeline.input.browse
 
 import kotlinx.css.*
 import kotlinx.css.properties.boxShadowInset
+import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
+import kotlinx.html.title
 import react.RBuilder
 import react.RProps
 import react.RPureComponent
@@ -10,11 +12,19 @@ import react.RState
 import react.dom.attrs
 import react.dom.td
 import styled.*
+import tech.kzen.auto.client.objects.document.pipeline.input.PipelineInputController
+import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
+import tech.kzen.auto.client.wrap.material.CheckIcon
+import tech.kzen.auto.client.wrap.material.FolderOpenIcon
+import tech.kzen.auto.client.wrap.material.MaterialCheckbox
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.platform.collect.persistentSetOf
+import tech.kzen.lib.platform.collect.toPersistentSet
 
 
 class InputBrowserTableController(
@@ -27,8 +37,9 @@ class InputBrowserTableController(
         var mainLocation: ObjectLocation
         var hasFilter: Boolean
         var dataLocationInfos: List<DataLocationInfo>
+        var selectedDataLocation: Set<DataLocation>
         var loading: Boolean
-//        var onDirChange: (String?) -> Unit
+        var inputState: PipelineInputState
         var inputStore: PipelineInputStore
     }
 
@@ -41,8 +52,41 @@ class InputBrowserTableController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun dirSelectedAsync(dir: DataLocation) {
-        props.inputStore.browseDirSelectedAsync(dir)
-//        InputBrowserEndpoint.selectDirAsync(props.mainLocation, dir, props.onDirChange)
+        props.inputStore.browserDirSelectedAsync(dir)
+    }
+
+
+    private fun onFileSelectedToggle(path: DataLocation) {
+        val selected = props.inputState.browserChecked
+        val previousChecked = selected.contains(path)
+        val nextSelected =
+            if (previousChecked) {
+                selected.remove(path)
+            }
+            else {
+                selected.add(path)
+            }
+
+        props.inputStore.browserSelectionUpdate(nextSelected)
+    }
+
+
+    private fun onFileSelectedAllToggle(allSelected: Boolean) {
+        val nextSelected =
+            if (allSelected) {
+                persistentSetOf()
+            }
+            else {
+                props
+                    .inputState
+                    .browserInfo!!
+                    .files
+                    .filter { ! it.directory }
+                    .map { it.path }
+                    .toPersistentSet()
+            }
+
+        props.inputStore.browserSelectionUpdate(nextSelected)
     }
 
 
@@ -74,7 +118,6 @@ class InputBrowserTableController(
             css {
                 maxHeight = 20.em
                 overflowY = Overflow.auto
-//                borderWidth = 1.px
                 borderWidth = 2.px
                 borderStyle = BorderStyle.solid
                 borderColor = Color.lightGray
@@ -86,16 +129,79 @@ class InputBrowserTableController(
                     width = 100.pct
                 }
 
-                renderTableHeader()
-                renderTableBody()
+                val (folders, files) = props.dataLocationInfos.partition { it.directory }
+                renderTableHeader(files)
+                renderTableBody(folders, files)
             }
         }
     }
 
 
-    private fun RBuilder.renderTableHeader() {
+    private fun RBuilder.renderTableHeader(files: List<DataLocationInfo>) {
+        val selected = props.inputState.browserChecked
+
         styledThead {
             styledTr {
+                styledTh {
+                    css {
+                        position = Position.sticky
+                        top = 0.px
+                        backgroundColor = Color.white
+                        zIndex = 999
+                        width = 2.em
+                        height = 2.em
+                        boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                    }
+
+                    var allSelected = false
+                    child(MaterialCheckbox::class) {
+                        attrs {
+                            style = reactStyle {
+                                marginTop = (-0.5).em
+                                marginBottom = (-0.5).em
+                                marginLeft = (-0.25).em
+                                marginRight = (-0.25).em
+                                backgroundColor = Color.transparent
+                                height = 0.px
+                                overflow = Overflow.visible
+                            }
+                            disableRipple = true
+
+                            if (files.isEmpty()) {
+                                disabled = true
+                                checked = false
+                                indeterminate = false
+                            }
+                            else {
+                                disabled = false
+                                if (selected.isNotEmpty()) {
+                                    if (selected.size == files.size) {
+                                        checked = true
+                                        indeterminate = false
+                                        allSelected = true
+                                    }
+                                    else {
+                                        checked = false
+                                        indeterminate = true
+                                    }
+                                }
+                                else {
+                                    checked = false
+                                    indeterminate = false
+                                }
+                            }
+                            onChange = { onFileSelectedAllToggle(allSelected) }
+                        }
+                    }
+
+                    attrs {
+                        title = when {
+                            files.isEmpty() ->"No files"
+                            allSelected -> "Un-select all"
+                            else -> "Select all"
+                        }
+                    }
+                }
 
                 styledTh {
                     css {
@@ -151,9 +257,7 @@ class InputBrowserTableController(
     }
 
 
-    private fun RBuilder.renderTableBody() {
-        val (folders, files) = props.dataLocationInfos.partition { it.directory }
-
+    private fun RBuilder.renderTableBody(folders: List<DataLocationInfo>, files: List<DataLocationInfo>) {
         styledTbody {
             css {
                 if (props.loading) {
@@ -185,23 +289,23 @@ class InputBrowserTableController(
                     }
                 }
 
-//                styledTd {
-//                    styledDiv {
-//                        css {
-//                            height = 1.em
-//                            overflow = Overflow.hidden
-//                        }
-//                        child(FolderOpenIcon::class) {
-//                            attrs {
-//                                style = reactStyle {
-//                                    marginTop = (-4).px
-//                                    marginLeft = 0.15.em
-//                                    marginRight = 0.15.em
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
+                styledTd {
+                    styledDiv {
+                        css {
+                            height = 1.em
+                            overflow = Overflow.hidden
+                        }
+                        child(FolderOpenIcon::class) {
+                            attrs {
+                                style = reactStyle {
+                                    marginTop = (-4).px
+                                    marginLeft = 0.15.em
+                                    marginRight = 0.15.em
+                                }
+                            }
+                        }
+                    }
+                }
 
                 td {
                     +folderInfo.name
@@ -226,48 +330,51 @@ class InputBrowserTableController(
 
     private fun RBuilder.renderFileRows(files: List<DataLocationInfo>) {
         for (fileInfo in files) {
+            val checked = fileInfo.path in props.inputState.browserChecked
+            val selected = fileInfo.path in props.selectedDataLocation
+
             styledTr {
                 key = fileInfo.path.asString()
 
                 css {
                     cursor = Cursor.pointer
-//                    hover {
-//                        backgroundColor =
-//                            if (checked) {
-//                                InputBrowser.selectedHoverRow
-//                            }
-//                            else {
-//                                InputBrowser.hoverRow
-//                            }
-//                    }
-//                    if (checked) {
-//                        backgroundColor = InputBrowser.selectedRow
-//                    }
+                    hover {
+                        backgroundColor =
+                            if (checked) {
+                                PipelineInputController.selectedHoverRow
+                            }
+                            else {
+                                PipelineInputController.hoverRow
+                            }
+                    }
+                    if (checked) {
+                        backgroundColor = PipelineInputController.selectedRow
+                    }
                 }
 
                 attrs {
                     onClickFunction = {
-//                        onFileSelectedToggle(fileInfo.path)
+                        onFileSelectedToggle(fileInfo.path)
                     }
                 }
 
-//                td {
-//                    styledInput(InputType.checkBox) {
-//                        css {
-//                            marginLeft = 0.5.em
-//                        }
-//
-//                        // https://github.com/JetBrains/kotlin-wrappers/issues/35#issuecomment-723471655
-//                        attrs["checked"] = checked
+                td {
+                    styledInput(InputType.checkBox) {
+                        css {
+                            marginLeft = 0.5.em
+                        }
+
+                        // https://github.com/JetBrains/kotlin-wrappers/issues/35#issuecomment-723471655
+                        attrs["checked"] = checked
 //                        attrs["disabled"] = props.editDisabled
-//                        attrs["onChange"] = {}
-//                    }
-//                }
+                        attrs["onChange"] = {}
+                    }
+                }
                 styledTd {
                     css {
-//                        if (selected) {
-//                            fontWeight = FontWeight.bold
-//                        }
+                        if (selected) {
+                            fontWeight = FontWeight.bold
+                        }
                     }
                     +fileInfo.name
                 }
@@ -276,16 +383,16 @@ class InputBrowserTableController(
                         paddingLeft = 0.5.em
                         whiteSpace = WhiteSpace.nowrap
                     }
-//                    if (selected) {
-//                        child(CheckIcon::class) {
-//                            attrs {
-//                                style = reactStyle {
-//                                    marginTop = (-0.2).em
-//                                    marginBottom = (-0.2).em
-//                                }
-//                            }
-//                        }
-//                    }
+                    if (selected) {
+                        child(CheckIcon::class) {
+                            attrs {
+                                style = reactStyle {
+                                    marginTop = (-0.2).em
+                                    marginBottom = (-0.2).em
+                                }
+                            }
+                        }
+                    }
                 }
                 styledTd {
                     css {

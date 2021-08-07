@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.report.spec.input
 
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
@@ -12,6 +13,7 @@ data class InputSelectionSpec(
     val groupBy: String,
     val locations: List<InputDataSpec>
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val dataTypeKey = AttributeSegment.ofKey("dataType")
         val dataTypeAttributePath = InputSpec.selectionAttributePath.nest(dataTypeKey)
@@ -41,5 +43,15 @@ data class InputSelectionSpec(
             return InputSelectionSpec(
                 dataType, groupBy, locations)
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private val dataLocationSet: Set<DataLocation> by lazy {
+        locations.map { it.location }.toSet()
+    }
+
+    fun dataLocationSet(): Set<DataLocation> {
+        return dataLocationSet
     }
 }

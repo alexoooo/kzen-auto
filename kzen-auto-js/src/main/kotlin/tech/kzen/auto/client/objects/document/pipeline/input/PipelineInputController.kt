@@ -10,12 +10,10 @@ import styled.styledSpan
 import tech.kzen.auto.client.objects.document.pipeline.input.browse.InputBrowserController
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
+import tech.kzen.auto.client.objects.document.pipeline.input.select.InputSelectionController
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
-import tech.kzen.auto.client.wrap.material.FolderOpenIcon
-import tech.kzen.auto.client.wrap.material.InputIcon
-import tech.kzen.auto.client.wrap.material.MaterialButton
-import tech.kzen.auto.client.wrap.material.MaterialCircularProgress
+import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
@@ -25,9 +23,16 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 class PipelineInputController(
     props: Props
 ):
-    RPureComponent<PipelineInputController.Props, PipelineInputController.State>(props)//,
-//    SessionGlobal.Observer
+    RPureComponent<PipelineInputController.Props, PipelineInputController.State>(props)
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        val hoverRow = Color("rgb(220, 220, 220)")
+        val selectedRow = Color("rgb(220, 220, 255)")
+        val selectedHoverRow = Color("rgb(190, 190, 240)")
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: RProps {
         var mainLocation: ObjectLocation
@@ -50,16 +55,6 @@ class PipelineInputController(
     }
 
 
-//    override fun componentDidMount() {
-//        ClientContext.sessionGlobal.observe(this)
-//    }
-//
-//
-//    override fun componentWillUnmount() {
-//        ClientContext.sessionGlobal.unobserve(this)
-//    }
-
-
     override fun componentDidUpdate(
         prevProps: Props,
         prevState: State,
@@ -71,16 +66,8 @@ class PipelineInputController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    override fun onClientState(clientState: SessionState) {
-//        clientState.
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private fun isBrowserForceOpen(): Boolean {
         return props.spec.selection.locations.isEmpty()
-//        val listingSelected = state.inputSelection
-//        return listingSelected != null && listingSelected.isEmpty()
     }
 
 
@@ -199,34 +186,32 @@ class PipelineInputController(
                 }
 
                 if (! isBrowserForceOpen()) {
-                    renderBrowserToggle()
+                    styledSpan {
+                        css {
+                            width = 2.em
+                            height = 2.em
+                            marginRight = 0.25.em
+                        }
+                        styledSpan {
+                            css {
+                                float = Float.left
+                            }
+                            renderBrowserToggle()
+                        }
+                    }
                 }
 
-                // TODO: phase in, see:
-                //  https://stackoverflow.com/questions/47929977/material-ui-linear-progress-animation-when-using-data
-                if (props.inputState.anyLoading()) {
+                child(MaterialFade::class) {
+                    attrs {
+                        `in` = props.inputState.anyLoading()
+                        timeout = FadeTimeout(appear = 500, enter = 5000)
+                    }
+
                     child(MaterialCircularProgress::class) {
                         attrs {
-//                            val rootClass = json()
-//                            rootClass["root"] = "fade-in"
-//                            classes = rootClass
-
                             style = reactStyle {
-//                                +"fade-in"
                                 width = 2.em
                                 height = 2.em
-
-//                                transition("opacity", duration = 5.0.s)
-//
-//                                opacity = if (props.inputState.anyLoading()) { 1 } else { 0 }
-//
-//                                display =
-//                                    if (props.inputState.anyLoading()) {
-//                                        Display.inline
-//                                    }
-//                                    else {
-//                                        Display.none
-//                                    }
                             }
                         }
                     }
@@ -251,6 +236,7 @@ class PipelineInputController(
                         backgroundColor = ReportController.selectedColor
                     }
                     borderWidth = 2.px
+                    marginTop = 0.px
                 }
 
                 title = when {
@@ -270,7 +256,7 @@ class PipelineInputController(
                 }
             }
 
-            +"Browse"
+            +"Browser"
         }
     }
 
@@ -281,6 +267,7 @@ class PipelineInputController(
             attrs {
                 mainLocation = props.mainLocation
                 spec = props.spec.browser
+                selectedDataLocation = props.spec.selection.dataLocationSet()
                 open = isBrowserOpen()
                 forceOpen = isBrowserForceOpen()
                 inputState = props.inputState
@@ -291,13 +278,14 @@ class PipelineInputController(
 
 
     private fun RBuilder.renderSelectedFiles(/*editDisabled: Boolean*/) {
-//        child(InputSelected::class) {
-//            attrs {
-//                reportState = props.reportState
-//                dispatcher = props.dispatcher
-//                this.editDisabled = editDisabled
-//                browserOpen = isBrowserOpen()
-//            }
-//        }
+        child(InputSelectionController::class) {
+            attrs {
+                mainLocation = props.mainLocation
+                spec = props.spec.selection
+                browserOpen = isBrowserOpen()
+                inputState = props.inputState
+                inputStore = props.inputStore
+            }
+        }
     }
 }

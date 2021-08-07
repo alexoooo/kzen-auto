@@ -23,6 +23,12 @@ class NestedInputLabelProps(
         val shrink: Boolean? = null
 )
 
+class FadeTimeout(
+        val appear: Int = 0,
+        val enter: Int = 0,
+        val exit: Int = 0
+)
+
 //class ButtonStyle(val backgroundColor: String, val color: String)
 //
 //fun RBuilder.materialTextField(handler: RHandler<MaterialTextFieldProps>) = child(MaterialTextField::class) {

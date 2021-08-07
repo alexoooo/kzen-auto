@@ -22,8 +22,8 @@ import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskState
 import tech.kzen.auto.common.util.RequestParams
@@ -262,7 +262,7 @@ object ReportEffect {
     ): ReportAction {
         val result = ClientContext.restClient.performDetached(
             state.mainLocation,
-            ReportConventions.actionParameter to ReportConventions.actionInputInfo)
+            ReportConventions.actionParameter to ReportConventions.actionInputSelectionInfo)
 
         return when (result) {
             is ExecutionSuccess -> {

@@ -16,6 +16,7 @@ import kotlin.js.Json
 // see: https://github.com/rivasdiaz/kotlin-rmwc
 // see: https://github.com/cfnz/muirwik
 
+//---------------------------------------------------------------------------------------------------------------------
 @JsName("Button")
 external class MaterialButton: Component<MaterialButtonProps, RState> {
     override fun render(): ReactElement?
@@ -53,7 +54,7 @@ external interface MaterialIconButtonProps: RProps {
 
     var disabled: Boolean
 
-//    var size: String
+    var size: String
     var color: String
     var style: Json
 
@@ -71,6 +72,7 @@ external class MaterialFab: Component<MaterialButtonProps, RState> {
 }
 
 
+//---------------------------------------------------------------------------------------------------------------------
 @JsName("Drawer")
 external class MaterialDrawer: Component<DrawerProps, RState> {
     override fun render(): ReactElement?
@@ -120,7 +122,6 @@ external interface TypographyProps: RProps {
 }
 
 
-
 @JsName("AppBar")
 external class MaterialAppBar: Component<AppBarProps, RState> {
     override fun render(): ReactElement?
@@ -139,13 +140,11 @@ external class MaterialToolbar: Component<RProps, RState> {
 }
 
 
-
-
+//---------------------------------------------------------------------------------------------------------------------
 @JsName("Card")
 external class MaterialCard: Component<CardProps, RState> {
     override fun render(): ReactElement?
 }
-
 
 
 external interface CardProps: RProps {
@@ -156,7 +155,6 @@ external interface CardProps: RProps {
 
     var raised: Boolean
 }
-
 
 
 @JsName("CardContent")
@@ -182,6 +180,7 @@ external interface PaperProps: RProps {
 }
 
 
+//---------------------------------------------------------------------------------------------------------------------
 @JsName("TextField")
 external class MaterialTextField: Component<TextFieldProps, RState> {
     override fun render(): ReactElement?
@@ -306,6 +305,7 @@ external interface MaterialSelectProps : RProps {
 }
 
 
+//---------------------------------------------------------------------------------------------------------------------
 @JsName("Menu")
 external class MaterialMenu: Component<MenuProps, RState> {
     override fun render(): ReactElement?
@@ -330,7 +330,7 @@ external interface MenuItemProps: RProps {
 }
 
 
-
+//---------------------------------------------------------------------------------------------------------------------
 @JsName("Checkbox")
 external class MaterialCheckbox: Component<CheckboxProps, RState> {
     override fun render(): ReactElement?
@@ -351,6 +351,7 @@ external interface CheckboxProps: RProps {
 }
 
 
+//---------------------------------------------------------------------------------------------------------------------
 @JsName("CircularProgress")
 external class MaterialCircularProgress: Component<ProgressProps, RState> {
     override fun render(): ReactElement?
@@ -365,3 +366,21 @@ external interface ProgressProps: RProps {
     var style: Json
     var classes: Json
 }
+
+
+//---------------------------------------------------------------------------------------------------------------------
+@JsName("Fade")
+external class MaterialFade: Component<FadeProps, RState> {
+    override fun render(): ReactElement?
+}
+
+external interface FadeProps: RProps {
+    var `in`: Boolean
+    var timeout: FadeTimeout
+}
+//
+//external interface FadeTimeout {
+//    var appear: Int
+//    var enter: Int
+//    var exit: Int
+//}

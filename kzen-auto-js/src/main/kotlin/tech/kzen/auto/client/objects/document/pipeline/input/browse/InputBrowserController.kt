@@ -4,17 +4,14 @@ import kotlinx.css.*
 import react.*
 import styled.css
 import styled.styledDiv
+import styled.styledSpan
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.report.ReportController
-import tech.kzen.auto.client.wrap.material.MaterialCircularProgress
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputBrowserSpec
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.platform.collect.PersistentSet
-import tech.kzen.lib.platform.collect.persistentSetOf
-import tech.kzen.lib.platform.collect.toPersistentSet
 
 
 class InputBrowserController(
@@ -23,17 +20,10 @@ class InputBrowserController(
     RPureComponent<InputBrowserController.Props, InputBrowserController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        val hoverRow = Color("rgb(220, 220, 220)")
-        private val selectedRow = Color("rgb(220, 220, 255)")
-        private val selectedHoverRow = Color("rgb(190, 190, 240)")
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     interface Props: RProps {
         var mainLocation: ObjectLocation
         var spec: InputBrowserSpec
+        var selectedDataLocation: Set<DataLocation>
         var open: Boolean
         var forceOpen: Boolean
         var inputState: PipelineInputState
@@ -42,31 +32,22 @@ class InputBrowserController(
 
 
     interface State: RState {
-//        var requestPending: Boolean
+        var requestPending: Boolean
 //        var inputBrowserInfo: InputBrowserInfo?
 //        var infoError: String?
 //        var infoLoading: Boolean
 //        var dirChangeError: String?
-        var selected: PersistentSet<DataLocation>
+//        var selected: PersistentSet<DataLocation>
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-//        requestPending = false
+        requestPending = false
 //        inputBrowserInfo = null
 //        infoLoading = false
-        selected = persistentSetOf()
+//        selected = persistentSetOf()
     }
-
-
-//    override fun componentDidMount() {
-//        if (props.open && ! state.requestPending && state.inputBrowserInfo == null) {
-//            setState {
-//                requestPending = true
-//            }
-//        }
-//    }
 
 
     override fun componentDidUpdate(
@@ -74,60 +55,16 @@ class InputBrowserController(
         prevState: State,
         snapshot: Any
     ) {
-//        println("componentDidUpdate")
-        if (! props.open) {
-            return
-        }
-
-//        if (! state.requestPending && state.inputBrowserInfo == null) {
-//            setState {
-//                requestPending = true
-//            }
-//        }
-//        else if (state.requestPending && ! prevState.requestPending) {
-//            browseRefreshAsync()
-//        }
-
-        if (props.inputState.inputBrowserInfo != prevProps.inputState.inputBrowserInfo &&
-                ! state.selected.isEmpty()
-        ) {
-            val available = props.inputState.inputBrowserInfo?.files?.map { it.path }?.toSet() ?: setOf()
+        if (props.open && props.inputState.browserInfo == null && ! state.requestPending) {
             setState {
-                selected = selected.filter { it in available }.toPersistentSet()
+                requestPending = true
             }
         }
+
+        if (state.requestPending && ! prevState.requestPending) {
+            props.inputStore.browserLoadInfoAsync()
+        }
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    private fun browseRefreshAsync() {
-//        setState {
-////            inputBrowserInfo = null
-//            infoLoading = true
-//            infoError = null
-//        }
-//
-//        async {
-//            val result = InputBrowserEndpoint.browse(props.mainLocation)
-//
-//            setState {
-//                infoLoading = false
-//                inputBrowserInfo = result.valueOrNull()
-//                infoError = result.errorOrNull()
-//            }
-//        }
-//    }
-
-
-//    private fun onDirChange(dirChangeError: String?) {
-//        setState {
-//            this.dirChangeError = dirChangeError
-//        }
-//
-//        if (dirChangeError == null) {
-//            browseRefreshAsync()
-//        }
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -151,8 +88,8 @@ class InputBrowserController(
             }
         }
 
-        val inputBrowserInfo = props.inputState.inputBrowserInfo
-        val infoError = props.inputState.infoError
+        val inputBrowserInfo = props.inputState.browserInfo
+        val infoError = props.inputState.browserInfoError
 
         when {
             infoError != null ->
@@ -192,16 +129,16 @@ class InputBrowserController(
 
             +props.spec.directory.asString()
         }
-
-//        +"Loading..."
     }
 
 
     private fun RBuilder.renderInfoLoaded(inputBrowserInfo: InputBrowserInfo) {
-        val dirChangeError = props.inputState.browserDirChangeError
-        if (dirChangeError != null) {
-            renderError(dirChangeError)
-        }
+//        val browserError = props.inputState.browserChangeError()
+//        if (browserError != null) {
+//            renderError(browserError)
+//        }
+
+        renderControls(inputBrowserInfo)
 
         styledDiv {
             css {
@@ -217,8 +154,39 @@ class InputBrowserController(
                 mainLocation = props.mainLocation
                 hasFilter = props.spec.filter.isNotBlank()
                 dataLocationInfos = inputBrowserInfo.files
-                loading = props.inputState.infoLoading
+                selectedDataLocation = props.selectedDataLocation
+                loading = props.inputState.browserInfoLoading
+                inputState = props.inputState
                 inputStore = props.inputStore
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderControls(inputBrowserInfo: InputBrowserInfo) {
+        styledDiv {
+            child(InputBrowserActionController::class) {
+                attrs {
+                    mainLocation = props.mainLocation
+//                    hasFilter = props.spec.filter.isNotBlank()
+                    dataLocationInfos = inputBrowserInfo.files
+                    selectedDataLocation = props.selectedDataLocation
+                    disabled = props.inputState.browserInfoLoading
+                    inputState = props.inputState
+                    inputStore = props.inputStore
+                }
+            }
+
+            styledSpan {
+                css {
+                    float = Float.right
+                }
+                child(InputBrowserFilterController::class) {
+                    attrs {
+                        spec = props.spec
+                        inputStore = props.inputStore
+                    }
+                }
             }
         }
     }

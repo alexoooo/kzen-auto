@@ -49,7 +49,7 @@ object ReportConventions {
 
     const val actionParameter = "action"
     const val actionBrowseFiles = "browse"
-    const val actionInputInfo = "files"
+    const val actionInputSelectionInfo = "files"
     const val actionDataTypes = "types"
     const val actionDefaultFormat = "defaultFormat"
     const val actionTypeFormats = "typeFormats"

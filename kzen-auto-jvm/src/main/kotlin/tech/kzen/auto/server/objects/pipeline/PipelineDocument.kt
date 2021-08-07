@@ -2,11 +2,16 @@ package tech.kzen.auto.server.objects.pipeline
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
+import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
+import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
+import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
+import tech.kzen.auto.server.objects.report.group.GroupPattern
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.Logic
 import tech.kzen.auto.server.service.v1.LogicControl
@@ -48,17 +53,19 @@ class PipelineDocument(
             PipelineConventions.actionBrowseFiles ->
                 actionBrowserInfo()
 
+            ReportConventions.actionDefaultFormat ->
+                actionDefaultFormat(request)
+
+            ReportConventions.actionInputSelectionInfo ->
+                actionInputSelectionInfo()
+
 //            ReportConventions.actionDataTypes ->
 //                actionDataTypes()
 //
 //            ReportConventions.actionTypeFormats ->
 //                actionTypeFormats()
 //
-//            ReportConventions.actionDefaultFormat ->
-//                actionDefaultFormat(request)
 //
-//            ReportConventions.actionInputInfo ->
-//                actionInputInfo()
 //
 //            ReportConventions.actionListColumns ->
 //                actionColumnListing()
@@ -96,6 +103,43 @@ class PipelineDocument(
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(inputInfo.asCollection()))
     }
+
+
+    private fun actionDefaultFormat(request: ExecutionRequest): ExecutionResult {
+        val filesParam = request.parameters.getAll(ReportConventions.filesParameter)
+        val dataLocations = filesParam.map { DataLocation.of(it) }
+        val dataType = input.selection.dataType
+
+        val inputDataSpecs = mutableListOf<InputDataSpec>()
+        for (dataLocation in dataLocations) {
+            val defaultCoordinate = ServerContext.definitionRepository
+                .find(dataType, dataLocation)
+                .map { it.coordinate }
+                .firstOrNull()
+                ?: return ExecutionFailure("Unknown: $dataType - $dataLocation")
+
+            val inputDataSpec = InputDataSpec(dataLocation, defaultCoordinate.asCommon())
+            inputDataSpecs.add(inputDataSpec)
+        }
+        val asCollection = inputDataSpecs.map { it.asCollection() }
+
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(asCollection))
+    }
+
+
+    private fun actionInputSelectionInfo(): ExecutionResult {
+        val groupPattern = GroupPattern.parse(input.selection.groupBy)
+            ?: return ExecutionFailure("Group By pattern error: ${input.selection.groupBy}")
+
+        val inputSelectionInfo = ServerContext.fileListingAction
+            .selectionInfo(input.selection, groupPattern)
+            .sorted()
+
+        return ExecutionSuccess.ofValue(ExecutionValue.of(
+            inputSelectionInfo.asCollection()))
+    }
+
 
 
     //-----------------------------------------------------------------------------------------------------------------
