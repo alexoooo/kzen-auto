@@ -5,7 +5,7 @@ import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
-import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
+import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
@@ -16,49 +16,6 @@ import tech.kzen.lib.common.service.store.MirroredGraphError
 
 
 object InputBrowserEndpoint {
-    //-----------------------------------------------------------------------------------------------------------------
-    suspend fun browserInfo(mainLocation: ObjectLocation): ClientResult<InputBrowserInfo> {
-        val result = ClientContext.restClient.performDetached(
-            mainLocation,
-            PipelineConventions.actionParameter to PipelineConventions.actionBrowseFiles)
-
-        return when (result) {
-            is ExecutionSuccess -> {
-                @Suppress("UNCHECKED_CAST")
-                val resultValue = result.value.get() as Map<String, Any>
-
-                val inputBrowserInfo = InputBrowserInfo.ofCollection(resultValue)
-                ClientResult.ofSuccess(inputBrowserInfo)
-            }
-
-            is ExecutionFailure ->
-                ClientResult.ofError(result.errorMessage)
-        }
-    }
-
-
-    suspend fun browserSelectDir(mainLocation: ObjectLocation, dir: DataLocation): String? {
-        val command = InputSpec.browseCommand(mainLocation, dir)
-
-        @Suppress("MoveVariableDeclarationIntoWhen")
-        val result = ClientContext.mirroredGraphStore.apply(command)
-
-        return (result as? MirroredGraphError)?.error?.message
-    }
-
-
-    suspend fun browserUpdateFilter(
-        mainLocation: ObjectLocation,
-        filter: String
-    ): String? {
-        val command = InputSpec.filterCommand(mainLocation, filter)
-
-        @Suppress("MoveVariableDeclarationIntoWhen")
-        val result = ClientContext.mirroredGraphStore.apply(command)
-
-        return (result as? MirroredGraphError)?.error?.message
-    }
-
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun selectionDefaultFormats(
@@ -114,7 +71,7 @@ object InputBrowserEndpoint {
 
     suspend fun selectionInfo(
         mainLocation: ObjectLocation
-    ): ClientResult<InputSelectionInfo> {
+    ): ClientResult<InputSelectedInfo> {
         val result = ClientContext.restClient.performDetached(
             mainLocation,
             ReportConventions.actionParameter to ReportConventions.actionInputSelectionInfo)
@@ -125,7 +82,7 @@ object InputBrowserEndpoint {
                 val resultValue = result.value.get() as List<Map<String, Any>>
 
                 ClientResult.ofSuccess(
-                    InputSelectionInfo.ofCollection(resultValue))
+                    InputSelectedInfo.ofCollection(resultValue))
             }
 
             is ExecutionFailure ->

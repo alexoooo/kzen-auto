@@ -1,6 +1,8 @@
 package tech.kzen.auto.client.objects.document.pipeline.model
 
+import tech.kzen.auto.client.objects.document.pipeline.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
+import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
@@ -57,5 +59,26 @@ data class PipelineState(
     fun inputSpec(): InputSpec {
         val inputDefinition = mainDefinition.attributeDefinitions[PipelineConventions.inputAttributeName]!!
         return (inputDefinition as ValueAttributeDefinition).value as InputSpec
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun withNotationError(notationError: String?): PipelineState {
+        return copy(
+            notationError = notationError)
+    }
+
+
+    fun withInputBrowser(updater: (InputBrowserState) -> InputBrowserState): PipelineState {
+        return copy(
+            input = input.copy(
+                browser = updater(input.browser)))
+    }
+
+
+    fun withInputSelected(updater: (InputSelectedState) -> InputSelectedState): PipelineState {
+        return copy(
+            input = input.copy(
+                selected = updater(input.selected)))
     }
 }

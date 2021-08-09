@@ -1,15 +1,15 @@
 package tech.kzen.auto.common.objects.document.report.listing
 
 
-data class InputSelectionInfo(
+data class InputSelectedInfo(
     val locations: List<InputDataInfo>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        fun ofCollection(collection: List<Map<String, Any>>): InputSelectionInfo {
+        fun ofCollection(collection: List<Map<String, Any>>): InputSelectedInfo {
 
             val locations = collection.map { InputDataInfo.ofCollection(it) }
-            return InputSelectionInfo(locations)
+            return InputSelectedInfo(locations)
         }
     }
 
@@ -20,8 +20,8 @@ data class InputSelectionInfo(
     }
 
 
-    fun sorted(): InputSelectionInfo {
-        return InputSelectionInfo(locations.sorted())
+    fun sorted(): InputSelectedInfo {
+        return InputSelectedInfo(locations.sorted())
     }
 
 

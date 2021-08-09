@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document.report.state
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
-import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
+import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
@@ -156,7 +156,7 @@ data class ListInputsBrowserResult(
 
 
 data class ListInputsSelectedResult(
-    val inputSelectionInfo: InputSelectionInfo
+    val inputSelectedInfo: InputSelectedInfo
 ): InputReportAction()
 
 

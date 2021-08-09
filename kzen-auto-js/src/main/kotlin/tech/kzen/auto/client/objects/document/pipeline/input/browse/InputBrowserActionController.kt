@@ -44,31 +44,31 @@ class InputBrowserActionController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onAddToSelection() {
         val addedPaths = checkedNotSelected()
-        props.inputStore.selectionAddAsync(addedPaths)
+        props.inputStore.selected.selectionAddAsync(addedPaths)
     }
 
 
     private fun onRemoveFromSelection() {
         val removedPaths = checkedAlreadySelected()
-        props.inputStore.selectionRemoveAsync(removedPaths)
+        props.inputStore.selected.selectionRemoveAsync(removedPaths)
     }
 
 
     private fun checkedNotSelected(): List<DataLocation> {
-        if (props.inputState.browserChecked.isEmpty()) {
+        if (props.inputState.browser.browserChecked.isEmpty()) {
             return listOf()
         }
 
-        return props.inputState.browserChecked.filter { it !in props.selectedDataLocation }
+        return props.inputState.browser.browserChecked.filter { it !in props.selectedDataLocation }
     }
 
 
     private fun checkedAlreadySelected(): List<DataLocation> {
-        if (props.inputState.browserChecked.isEmpty()) {
+        if (props.inputState.browser.browserChecked.isEmpty()) {
             return listOf()
         }
 
-        return props.inputState.browserChecked.filter { it in props.selectedDataLocation }
+        return props.inputState.browser.browserChecked.filter { it in props.selectedDataLocation }
     }
 
 
@@ -100,7 +100,7 @@ class InputBrowserActionController(
                     if (selectedAddCount == 0) {
                         disabled = true
                         title =
-                            if (props.inputState.browserChecked.isEmpty()) {
+                            if (props.inputState.browser.browserChecked.isEmpty()) {
                                 "No files selected"
                             }
                             else {
@@ -151,7 +151,7 @@ class InputBrowserActionController(
                     if (selectedRemoveCount == 0) {
                         disabled = true
                         title =
-                            if (props.inputState.browserChecked.isEmpty()) {
+                            if (props.inputState.browser.browserChecked.isEmpty()) {
                                 "No files selected"
                             }
                             else {

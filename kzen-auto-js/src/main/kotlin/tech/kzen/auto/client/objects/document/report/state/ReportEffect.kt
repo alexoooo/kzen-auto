@@ -5,7 +5,7 @@ import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinat
 import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
-import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
+import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
@@ -270,7 +270,7 @@ object ReportEffect {
                 val resultValue = result.value.get() as List<Map<String, Any>>
 
                 ListInputsSelectedResult(
-                    InputSelectionInfo.ofCollection(resultValue))
+                    InputSelectedInfo.ofCollection(resultValue))
             }
 
             is ExecutionFailure -> {

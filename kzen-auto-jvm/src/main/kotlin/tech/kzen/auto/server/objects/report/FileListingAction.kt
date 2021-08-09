@@ -4,7 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Instant
 import tech.kzen.auto.common.objects.document.report.listing.InputDataInfo
-import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
+import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
@@ -71,7 +71,7 @@ class FileListingAction {
     }
 
 
-    fun selectionInfo(inputSelectionSpec: InputSelectionSpec, groupPattern: GroupPattern): InputSelectionInfo {
+    fun selectionInfo(inputSelectionSpec: InputSelectionSpec, groupPattern: GroupPattern): InputSelectedInfo {
         val locations = mutableListOf<InputDataInfo>()
         for (inputDataSpec in inputSelectionSpec.locations) {
             val path = inputDataSpec.location.filePath!!.toPath()
@@ -98,7 +98,7 @@ class FileListingAction {
             ))
         }
 
-        return InputSelectionInfo(locations)
+        return InputSelectedInfo(locations)
     }
 
 

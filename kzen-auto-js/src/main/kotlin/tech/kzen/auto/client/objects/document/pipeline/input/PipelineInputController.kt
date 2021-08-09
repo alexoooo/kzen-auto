@@ -10,12 +10,12 @@ import styled.styledSpan
 import tech.kzen.auto.client.objects.document.pipeline.input.browse.InputBrowserController
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
-import tech.kzen.auto.client.objects.document.pipeline.input.select.InputSelectionController
+import tech.kzen.auto.client.objects.document.pipeline.input.select.InputSelectedController
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
+import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
@@ -44,7 +44,7 @@ class PipelineInputController(
 
     interface State: RState {
         var browserOpen: Boolean
-        var inputSelection: InputSelectionInfo?
+        var inputSelection: InputSelectedInfo?
     }
 
 
@@ -278,7 +278,7 @@ class PipelineInputController(
 
 
     private fun RBuilder.renderSelectedFiles(/*editDisabled: Boolean*/) {
-        child(InputSelectionController::class) {
+        child(InputSelectedController::class) {
             attrs {
                 mainLocation = props.mainLocation
                 spec = props.spec.selection

@@ -17,7 +17,7 @@ import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.listing.InputDataInfo
-import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
+import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.util.FormatUtils
@@ -408,7 +408,7 @@ class InputSelected(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderTable(
         selectionSpec: List<InputDataSpec>,
-        selectedInfo: InputSelectionInfo?,
+        selectedInfo: InputSelectedInfo?,
         reportProgress: ReportProgress?
     ) {
         val hasGroup = selectedInfo

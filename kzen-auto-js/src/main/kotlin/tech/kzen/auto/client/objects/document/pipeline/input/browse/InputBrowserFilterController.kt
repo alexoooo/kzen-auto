@@ -66,7 +66,7 @@ class InputBrowserFilterController(
             return
         }
 
-        props.inputStore.browserFilterUpdateAsync(state.filterText)
+        props.inputStore.browser.browserFilterUpdateAsync(state.filterText)
     }
 
 

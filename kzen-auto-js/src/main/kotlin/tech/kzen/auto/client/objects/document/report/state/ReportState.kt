@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document.report.state
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
-import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
+import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.progress.ReportProgress
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
@@ -27,7 +27,7 @@ data class ReportState(
 
     val inputLoaded: Boolean = false,
     val inputLoading: Boolean = false,
-    val inputSelection: InputSelectionInfo? = null,
+    val inputSelection: InputSelectedInfo? = null,
     val inputBrowser: List<DataLocationInfo>? = null,
     val inputBrowseDir: DataLocation? = null,
     val inputError: String? = null,

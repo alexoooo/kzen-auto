@@ -14,10 +14,10 @@ import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSp
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
-class InputSelectionController(
+class InputSelectedController(
     props: Props
 ):
-    RPureComponent<InputSelectionController.Props, InputSelectionController.State>(props)
+    RPureComponent<InputSelectedController.Props, InputSelectedController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: RProps {
@@ -57,17 +57,19 @@ class InputSelectionController(
 
         renderErrors()
 
-        child(InputSelectionTableController::class) {
+        child(InputSelectedTableController::class) {
             attrs {
+                showDetails = false
                 spec = props.spec
-                selectionInfo = props.inputState.selectionInfo
+                inputState = props.inputState
+                inputStore = props.inputStore
             }
         }
     }
 
 
     private fun RBuilder.renderErrors() {
-        val error = props.inputState.selectionError()
+        val error = props.inputState.selected.selectionError()
             ?: return
 
         styledDiv {

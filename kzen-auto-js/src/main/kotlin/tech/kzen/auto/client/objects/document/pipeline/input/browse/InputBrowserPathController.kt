@@ -103,7 +103,7 @@ class InputBrowserPathController(
 
 
     private fun onDirSelected(dir: DataLocation) {
-        props.inputStore.browserDirSelectedAsync(dir)
+        props.inputStore.browser.browserDirSelectedAsync(dir)
     }
 
 

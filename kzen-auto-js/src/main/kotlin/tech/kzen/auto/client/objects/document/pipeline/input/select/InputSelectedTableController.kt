@@ -11,48 +11,42 @@ import react.RState
 import react.dom.attrs
 import react.dom.td
 import styled.*
+import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
+import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.report.input.browse.InputBrowser
 import tech.kzen.auto.client.wrap.material.MaterialCheckbox
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.listing.InputDataInfo
-import tech.kzen.auto.common.objects.document.report.listing.InputSelectionInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
 import tech.kzen.auto.common.util.FormatUtils
-import tech.kzen.auto.common.util.data.DataLocation
-import tech.kzen.lib.platform.collect.PersistentSet
-import tech.kzen.lib.platform.collect.persistentSetOf
 
 
-class InputSelectionTableController(
+class InputSelectedTableController(
     props: Props
 ):
-    RPureComponent<InputSelectionTableController.Props, InputSelectionTableController.State>(props)
+    RPureComponent<InputSelectedTableController.Props, InputSelectedTableController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: RProps {
+        var showDetails: Boolean
         var spec: InputSelectionSpec
-        var selectionInfo: InputSelectionInfo?
-//        var reportState: ReportState
-//        var dispatcher: ReportDispatcher
-//        var editDisabled: Boolean
-//        var browserOpen: Boolean
+        var inputState: PipelineInputState
+        var inputStore: PipelineInputStore
     }
 
 
     interface State: RState {
-        var selected: PersistentSet<DataLocation>
-        var showDetails: Boolean
-//        var showGroupBy: Boolean
+//        var selected: PersistentSet<DataLocation>
+//        var showDetails: Boolean
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-        selected = persistentSetOf()
-        showDetails = false
+//    override fun State.init(props: Props) {
+//        selected = persistentSetOf()
 //        showGroupBy = false
-    }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -109,7 +103,7 @@ class InputSelectionTableController(
                             }
                             disableRipple = true
 
-                            if (state.selected.isNotEmpty()) {
+                            if (props.inputState.selected.selectedChecked.isNotEmpty()) {
 //                                if (state.selected.size == selectionSpec.size) {
 //                                    checked = true
 //                                    indeterminate = false
@@ -168,7 +162,7 @@ class InputSelectionTableController(
                     }
                     +"File"
                 }
-                if (state.showDetails) {
+                if (props.showDetails) {
                     styledTh {
                         css {
                             position = Position.sticky
@@ -220,9 +214,9 @@ class InputSelectionTableController(
                 cursor = Cursor.default
             }
 
-            val selectionInput = props.selectionInfo
+            val selectedInput = props.inputState.selected.selectedInfo
 
-            if (selectionInput == null) {
+            if (selectedInput == null) {
                 for (inputDataSpec in props.spec.locations) {
                     renderTableRow(inputDataSpec, null, /*reportProgress*/)
                 }
@@ -234,7 +228,7 @@ class InputSelectionTableController(
                     .groupBy { it.location }
                     .mapValues { it.value.single() }
 
-                for (inputDataInfo in selectionInput.locations) {
+                for (inputDataInfo in selectedInput.locations) {
                     val inputDataSpec = inputDataSpecByPath[inputDataInfo.dataLocationInfo.path]
                         ?: continue
                     renderTableRow(inputDataSpec, inputDataInfo, /*reportProgress*/)
@@ -253,7 +247,7 @@ class InputSelectionTableController(
 
         val fileInfo = inputDataInfo?.dataLocationInfo
 //        val fileProgress = reportProgress?.inputs?.get(dataLocation)
-        val checked = dataLocation in state.selected
+        val checked = dataLocation in props.inputState.selected.selectedChecked
         val missing = inputDataInfo?.dataLocationInfo?.isMissing() ?: false
         val processorInvalid = inputDataInfo?.invalidProcessor ?: false
         val group = inputDataInfo?.group
@@ -334,7 +328,7 @@ class InputSelectionTableController(
                         +dataLocation.fileName()
                 }
 
-                if (state.showDetails) {
+                if (props.showDetails) {
                     styledDiv {
                         css {
                             fontFamily = "monospace"
@@ -354,7 +348,7 @@ class InputSelectionTableController(
 //                }
             }
 
-            if (state.showDetails) {
+            if (props.showDetails) {
                 styledTd {
                     css {
                         paddingLeft = 0.5.em

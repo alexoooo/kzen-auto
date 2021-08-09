@@ -55,14 +55,14 @@ class InputBrowserController(
         prevState: State,
         snapshot: Any
     ) {
-        if (props.open && props.inputState.browserInfo == null && ! state.requestPending) {
+        if (props.open && props.inputState.browser.browserInfo == null && ! state.requestPending) {
             setState {
                 requestPending = true
             }
         }
 
         if (state.requestPending && ! prevState.requestPending) {
-            props.inputStore.browserLoadInfoAsync()
+            props.inputStore.browser.browserLoadInfoAsync()
         }
     }
 
@@ -88,8 +88,8 @@ class InputBrowserController(
             }
         }
 
-        val inputBrowserInfo = props.inputState.browserInfo
-        val infoError = props.inputState.browserInfoError
+        val inputBrowserInfo = props.inputState.browser.browserInfo
+        val infoError = props.inputState.browser.browserInfoError
 
         when {
             infoError != null ->
@@ -155,7 +155,7 @@ class InputBrowserController(
                 hasFilter = props.spec.filter.isNotBlank()
                 dataLocationInfos = inputBrowserInfo.files
                 selectedDataLocation = props.selectedDataLocation
-                loading = props.inputState.browserInfoLoading
+                loading = props.inputState.browser.browserInfoLoading
                 inputState = props.inputState
                 inputStore = props.inputStore
             }
@@ -171,7 +171,7 @@ class InputBrowserController(
 //                    hasFilter = props.spec.filter.isNotBlank()
                     dataLocationInfos = inputBrowserInfo.files
                     selectedDataLocation = props.selectedDataLocation
-                    disabled = props.inputState.browserInfoLoading
+                    disabled = props.inputState.browser.browserInfoLoading
                     inputState = props.inputState
                     inputStore = props.inputStore
                 }
@@ -196,7 +196,7 @@ class InputBrowserController(
         val errorMode = inputBrowserInfoOrNull == null
 
         val browserDir =
-            props.inputState.browserDirChangeRequest ?:
+            props.inputState.browser.browserDirChangeRequest ?:
             inputBrowserInfoOrNull?.browseDir ?:
             props.spec.directory
 

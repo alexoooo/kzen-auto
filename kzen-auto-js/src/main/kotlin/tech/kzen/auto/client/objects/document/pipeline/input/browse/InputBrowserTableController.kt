@@ -52,12 +52,12 @@ class InputBrowserTableController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun dirSelectedAsync(dir: DataLocation) {
-        props.inputStore.browserDirSelectedAsync(dir)
+        props.inputStore.browser.browserDirSelectedAsync(dir)
     }
 
 
     private fun onFileSelectedToggle(path: DataLocation) {
-        val selected = props.inputState.browserChecked
+        val selected = props.inputState.browser.browserChecked
         val previousChecked = selected.contains(path)
         val nextSelected =
             if (previousChecked) {
@@ -67,7 +67,7 @@ class InputBrowserTableController(
                 selected.add(path)
             }
 
-        props.inputStore.browserSelectionUpdate(nextSelected)
+        props.inputStore.browser.browserSelectionUpdate(nextSelected)
     }
 
 
@@ -79,6 +79,7 @@ class InputBrowserTableController(
             else {
                 props
                     .inputState
+                    .browser
                     .browserInfo!!
                     .files
                     .filter { ! it.directory }
@@ -86,7 +87,7 @@ class InputBrowserTableController(
                     .toPersistentSet()
             }
 
-        props.inputStore.browserSelectionUpdate(nextSelected)
+        props.inputStore.browser.browserSelectionUpdate(nextSelected)
     }
 
 
@@ -138,7 +139,7 @@ class InputBrowserTableController(
 
 
     private fun RBuilder.renderTableHeader(files: List<DataLocationInfo>) {
-        val selected = props.inputState.browserChecked
+        val selected = props.inputState.browser.browserChecked
 
         styledThead {
             styledTr {
@@ -330,7 +331,7 @@ class InputBrowserTableController(
 
     private fun RBuilder.renderFileRows(files: List<DataLocationInfo>) {
         for (fileInfo in files) {
-            val checked = fileInfo.path in props.inputState.browserChecked
+            val checked = fileInfo.path in props.inputState.browser.browserChecked
             val selected = fileInfo.path in props.selectedDataLocation
 
             styledTr {

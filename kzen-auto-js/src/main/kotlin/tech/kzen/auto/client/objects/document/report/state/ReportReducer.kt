@@ -103,7 +103,7 @@ object ReportReducer {
                 inputError = null)
 
             is ListInputsSelectedResult -> state.copy(
-                inputSelection = action.inputSelectionInfo,
+                inputSelection = action.inputSelectedInfo,
                 inputLoaded = true,
                 inputLoading = false,
                 columnListing = null,
