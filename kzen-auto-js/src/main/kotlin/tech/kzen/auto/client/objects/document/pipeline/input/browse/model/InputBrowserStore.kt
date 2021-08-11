@@ -100,7 +100,7 @@ class InputBrowserStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun browserSelectionUpdate(nextSelected: PersistentSet<DataLocation>) {
+    fun browserCheckedUpdate(nextSelected: PersistentSet<DataLocation>) {
         store.update { state -> state
             .withInputBrowser { it.copy(browserChecked = nextSelected) }
         }

@@ -67,7 +67,7 @@ class InputBrowserTableController(
                 selected.add(path)
             }
 
-        props.inputStore.browser.browserSelectionUpdate(nextSelected)
+        props.inputStore.browser.browserCheckedUpdate(nextSelected)
     }
 
 
@@ -87,7 +87,7 @@ class InputBrowserTableController(
                     .toPersistentSet()
             }
 
-        props.inputStore.browser.browserSelectionUpdate(nextSelected)
+        props.inputStore.browser.browserCheckedUpdate(nextSelected)
     }
 
 

@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.pipeline.input.select
 import kotlinx.css.*
 import kotlinx.css.properties.boxShadowInset
 import kotlinx.html.InputType
+import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import react.RBuilder
 import react.RProps
@@ -20,6 +21,9 @@ import tech.kzen.auto.common.objects.document.report.listing.InputDataInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
 import tech.kzen.auto.common.util.FormatUtils
+import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.lib.platform.collect.persistentSetOf
+import tech.kzen.lib.platform.collect.toPersistentSet
 
 
 class InputSelectedTableController(
@@ -47,6 +51,38 @@ class InputSelectedTableController(
 //        selected = persistentSetOf()
 //        showGroupBy = false
 //    }
+
+
+    private fun onFileSelectedToggle(dataLocation: DataLocation) {
+        val selectedChecked = props.inputState.selected.selectedChecked
+        val previousChecked = selectedChecked.contains(dataLocation)
+        val nextCheckedDataLocations =
+            if (previousChecked) {
+                selectedChecked.remove(dataLocation)
+            }
+            else {
+                selectedChecked.add(dataLocation)
+            }
+
+        props.inputStore.selected.checkedUpdate(nextCheckedDataLocations)
+    }
+
+
+    private fun onFileSelectedAllToggle(allSelected: Boolean) {
+        val nextCheckedDataLocations =
+            if (allSelected) {
+                persistentSetOf()
+            }
+            else {
+                props
+                    .spec
+                    .locations
+                    .map { it.location }
+                    .toPersistentSet()
+            }
+
+        props.inputStore.selected.checkedUpdate(nextCheckedDataLocations)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -104,22 +140,24 @@ class InputSelectedTableController(
                             disableRipple = true
 
                             if (props.inputState.selected.selectedChecked.isNotEmpty()) {
-//                                if (state.selected.size == selectionSpec.size) {
-//                                    checked = true
-//                                    indeterminate = false
-//                                    allSelected = true
-//                                }
-//                                else {
-//                                    checked = false
-//                                    indeterminate = true
-//                                }
+                                if (props.inputState.selected.selectedChecked.size ==
+                                        props.spec.locations.size
+                                ) {
+                                    checked = true
+                                    indeterminate = false
+                                    allSelected = true
+                                }
+                                else {
+                                    checked = false
+                                    indeterminate = true
+                                }
                             }
                             else {
                                 checked = false
                                 indeterminate = false
                             }
 
-//                            onChange = { onFileSelectedAllToggle(allSelected) }
+                            onChange = { onFileSelectedAllToggle(allSelected) }
                         }
                     }
 
@@ -263,9 +301,9 @@ class InputSelectedTableController(
             }
 
             attrs {
-//                onClickFunction = {
-//                    onFileSelectedToggle(dataLocation)
-//                }
+                onClickFunction = {
+                    onFileSelectedToggle(dataLocation)
+                }
             }
 
             styledTd {

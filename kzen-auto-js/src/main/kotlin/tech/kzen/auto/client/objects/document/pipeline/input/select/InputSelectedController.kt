@@ -7,6 +7,7 @@ import react.RPureComponent
 import react.RState
 import styled.css
 import styled.styledDiv
+import styled.styledSpan
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.report.ReportController
@@ -57,6 +58,8 @@ class InputSelectedController(
 
         renderErrors()
 
+        renderActions()
+
         child(InputSelectedTableController::class) {
             attrs {
                 showDetails = false
@@ -78,6 +81,24 @@ class InputSelectedController(
             }
 
             +"Error: $error"
+        }
+    }
+
+
+    private fun RBuilder.renderActions() {
+        styledDiv {
+            styledSpan {
+                child(InputSelectedRemoveController::class) {
+                    attrs {
+                        mainLocation = props.mainLocation
+
+                        disabled = false // TODO
+
+                        inputState = props.inputState
+                        inputStore = props.inputStore
+                    }
+                }
+            }
         }
     }
 }

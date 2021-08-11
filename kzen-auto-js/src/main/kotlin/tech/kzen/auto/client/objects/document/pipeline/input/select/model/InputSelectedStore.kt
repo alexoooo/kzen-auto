@@ -7,6 +7,7 @@ import tech.kzen.auto.client.util.ClientError
 import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.lib.platform.collect.PersistentSet
 
 
 class InputSelectedStore(
@@ -63,8 +64,8 @@ class InputSelectedStore(
     }
 
 
-    fun selectionRemoveAsync(dataLocations: List<DataLocation>) {
-        val dataLocationsSet = dataLocations.toSet()
+    fun selectionRemoveAsync(dataLocations: Collection<DataLocation>) {
+        val dataLocationsSet = (dataLocations as? Set) ?: dataLocations.toSet()
 
         val inputSelectionSpec = store.state().inputSpec().selection
         val removedSpecs = inputSelectionSpec.locations.filter { it.location in dataLocationsSet }
@@ -81,9 +82,20 @@ class InputSelectedStore(
 
             delay(10)
             store.update { state -> state
-                .withInputSelected { it.copy(selectedChangeLoading = false) }
+                .withInputSelected { it.copy(
+                    selectedChangeLoading = false,
+                    selectedChecked = it.selectedChecked.removeAll(dataLocations)
+                ) }
                 .withNotationError(error)
             }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun checkedUpdate(nextChecked: PersistentSet<DataLocation>) {
+        store.update { state -> state
+            .withInputSelected { it.copy(selectedChecked = nextChecked) }
         }
     }
 
