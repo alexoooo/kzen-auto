@@ -11,7 +11,6 @@ import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.util.data.DataLocation
-import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.platform.collect.PersistentSet
 import tech.kzen.lib.platform.collect.toPersistentSet
@@ -48,19 +47,21 @@ class InputBrowserStore(
 
 
     private suspend fun browserPerformLoadInfo() {
-        store.updateAsync { state ->
-            val result = browserInfo(state.mainLocation)
+        val state = store.state()
 
-            val available = result.valueOrNull()?.files?.map { it.path }?.toSet() ?: setOf()
-            val selectedAvailable = state.input.browser.browserChecked.filter { it in available }.toPersistentSet()
+        val result = browserInfo()
 
-            state.withInputBrowser { it.copy(
-                browserInfoLoading = false,
-                browserInfoError = result.errorOrNull(),
-                browserInfo = result.valueOrNull(),
-                browserChecked = selectedAvailable
-            ) }
-        }
+        val available = result.valueOrNull()?.files?.map { it.path }?.toSet() ?: setOf()
+        val selectedAvailable = state.input.browser.browserChecked.filter { it in available }.toPersistentSet()
+
+        val nextState = state.withInputBrowser { it.copy(
+            browserInfoLoading = false,
+            browserInfoError = result.errorOrNull(),
+            browserInfo = result.valueOrNull(),
+            browserChecked = selectedAvailable
+        ) }
+
+        store.update(nextState)
     }
 
 
@@ -80,7 +81,7 @@ class InputBrowserStore(
             browserBeforeLoadInfo()
 
             delay(10)
-            val error = browserSelectDir(store.mainLocation(), dir)
+            val error = browserSelectDir(dir)
 
             if (error != null) {
                 browserLoadInfoAborted(error)
@@ -113,7 +114,7 @@ class InputBrowserStore(
 
         async {
             delay(1)
-            val updateError = browserUpdateFilter(store.mainLocation(), nextFilter)
+            val updateError = browserUpdateFilter(nextFilter)
 
             if (updateError != null) {
                 browserLoadInfoAborted(updateError)
@@ -127,9 +128,9 @@ class InputBrowserStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun browserInfo(mainLocation: ObjectLocation): ClientResult<InputBrowserInfo> {
+    private suspend fun browserInfo(): ClientResult<InputBrowserInfo> {
         val result = ClientContext.restClient.performDetached(
-            mainLocation,
+            store.mainLocation(),
             PipelineConventions.actionParameter to PipelineConventions.actionBrowseFiles)
 
         return when (result) {
@@ -147,8 +148,8 @@ class InputBrowserStore(
     }
 
 
-    private suspend fun browserSelectDir(mainLocation: ObjectLocation, dir: DataLocation): String? {
-        val command = InputSpec.browseCommand(mainLocation, dir)
+    private suspend fun browserSelectDir(dir: DataLocation): String? {
+        val command = InputSpec.browseCommand(store.mainLocation(), dir)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
         val result = ClientContext.mirroredGraphStore.apply(command)
@@ -158,10 +159,9 @@ class InputBrowserStore(
 
 
     private suspend fun browserUpdateFilter(
-        mainLocation: ObjectLocation,
         filter: String
     ): String? {
-        val command = InputSpec.filterCommand(mainLocation, filter)
+        val command = InputSpec.filterCommand(store.mainLocation(), filter)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
         val result = ClientContext.mirroredGraphStore.apply(command)

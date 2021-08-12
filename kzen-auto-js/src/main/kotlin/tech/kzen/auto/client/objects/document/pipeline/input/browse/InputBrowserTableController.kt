@@ -13,7 +13,7 @@ import react.dom.attrs
 import react.dom.td
 import styled.*
 import tech.kzen.auto.client.objects.document.pipeline.input.PipelineInputController
-import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
+import tech.kzen.auto.client.objects.document.pipeline.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.wrap.material.CheckIcon
 import tech.kzen.auto.client.wrap.material.FolderOpenIcon
@@ -38,8 +38,8 @@ class InputBrowserTableController(
         var hasFilter: Boolean
         var dataLocationInfos: List<DataLocationInfo>
         var selectedDataLocation: Set<DataLocation>
-        var loading: Boolean
-        var inputState: PipelineInputState
+//        var loading: Boolean
+        var inputBrowserState: InputBrowserState
         var inputStore: PipelineInputStore
     }
 
@@ -57,7 +57,7 @@ class InputBrowserTableController(
 
 
     private fun onFileSelectedToggle(path: DataLocation) {
-        val selected = props.inputState.browser.browserChecked
+        val selected = props.inputBrowserState.browserChecked
         val previousChecked = selected.contains(path)
         val nextSelected =
             if (previousChecked) {
@@ -78,8 +78,7 @@ class InputBrowserTableController(
             }
             else {
                 props
-                    .inputState
-                    .browser
+                    .inputBrowserState
                     .browserInfo!!
                     .files
                     .filter { ! it.directory }
@@ -139,7 +138,7 @@ class InputBrowserTableController(
 
 
     private fun RBuilder.renderTableHeader(files: List<DataLocationInfo>) {
-        val selected = props.inputState.browser.browserChecked
+        val selected = props.inputBrowserState.browserChecked
 
         styledThead {
             styledTr {
@@ -261,7 +260,7 @@ class InputBrowserTableController(
     private fun RBuilder.renderTableBody(folders: List<DataLocationInfo>, files: List<DataLocationInfo>) {
         styledTbody {
             css {
-                if (props.loading) {
+                if (props.inputBrowserState.browserInfoLoading) {
                     opacity = 0.5
                 }
             }
@@ -331,7 +330,7 @@ class InputBrowserTableController(
 
     private fun RBuilder.renderFileRows(files: List<DataLocationInfo>) {
         for (fileInfo in files) {
-            val checked = fileInfo.path in props.inputState.browser.browserChecked
+            val checked = fileInfo.path in props.inputBrowserState.browserChecked
             val selected = fileInfo.path in props.selectedDataLocation
 
             styledTr {

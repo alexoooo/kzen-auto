@@ -7,7 +7,7 @@ import react.RPureComponent
 import react.RState
 import styled.css
 import styled.styledDiv
-import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
+import tech.kzen.auto.client.objects.document.pipeline.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.material.MaterialButton
@@ -29,8 +29,8 @@ class InputBrowserActionController(
 //        var hasFilter: Boolean
         var dataLocationInfos: List<DataLocationInfo>
         var selectedDataLocation: Set<DataLocation>
-        var disabled: Boolean
-        var inputState: PipelineInputState
+//        var disabled: Boolean
+        var inputBrowserState: InputBrowserState
         var inputStore: PipelineInputStore
     }
 
@@ -55,20 +55,20 @@ class InputBrowserActionController(
 
 
     private fun checkedNotSelected(): List<DataLocation> {
-        if (props.inputState.browser.browserChecked.isEmpty()) {
+        if (props.inputBrowserState.browserChecked.isEmpty()) {
             return listOf()
         }
 
-        return props.inputState.browser.browserChecked.filter { it !in props.selectedDataLocation }
+        return props.inputBrowserState.browserChecked.filter { it !in props.selectedDataLocation }
     }
 
 
     private fun checkedAlreadySelected(): List<DataLocation> {
-        if (props.inputState.browser.browserChecked.isEmpty()) {
+        if (props.inputBrowserState.browserChecked.isEmpty()) {
             return listOf()
         }
 
-        return props.inputState.browser.browserChecked.filter { it in props.selectedDataLocation }
+        return props.inputBrowserState.browserChecked.filter { it in props.selectedDataLocation }
     }
 
 
@@ -100,14 +100,14 @@ class InputBrowserActionController(
                     if (selectedAddCount == 0) {
                         disabled = true
                         title =
-                            if (props.inputState.browser.browserChecked.isEmpty()) {
+                            if (props.inputBrowserState.browserChecked.isEmpty()) {
                                 "No files selected"
                             }
                             else {
                                 "No new files selected"
                             }
                     }
-                    else if (props.disabled) {
+                    else if (props.inputBrowserState.browserInfoLoading) {
                         disabled = true
                         title = "Disabled while running"
                     }
@@ -151,14 +151,14 @@ class InputBrowserActionController(
                     if (selectedRemoveCount == 0) {
                         disabled = true
                         title =
-                            if (props.inputState.browser.browserChecked.isEmpty()) {
+                            if (props.inputBrowserState.browserChecked.isEmpty()) {
                                 "No files selected"
                             }
                             else {
                                 "No existing files selected"
                             }
                     }
-                    else if (props.disabled) {
+                    else if (props.inputBrowserState.browserInfoLoading) {
                         disabled = true
                         title = "Disabled while running"
                     }

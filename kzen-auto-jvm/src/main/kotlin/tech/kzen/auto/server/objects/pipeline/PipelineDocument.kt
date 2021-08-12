@@ -34,12 +34,12 @@ class PipelineDocument(
 {
     //-----------------------------------------------------------------------------------------------------------------
     private class Execution: LogicExecution {
-        override fun next(arguments: TupleValue): LogicResult {
-            return LogicResultSuccess(TupleValue.ofMain("foo"))
+        override fun next(arguments: TupleValue)/*: LogicResult*/ {
+//            return LogicResultSuccess(TupleValue.ofMain("foo"))
         }
 
         override fun run(control: LogicControl): LogicResult {
-            throw IllegalStateException()
+            return LogicResultSuccess(TupleValue.ofMain("foo"))
         }
     }
 
@@ -53,19 +53,18 @@ class PipelineDocument(
             PipelineConventions.actionBrowseFiles ->
                 actionBrowserInfo()
 
-            ReportConventions.actionDefaultFormat ->
+            PipelineConventions.actionDefaultFormat ->
                 actionDefaultFormat(request)
 
-            ReportConventions.actionInputSelectionInfo ->
+            PipelineConventions.actionInputInfo ->
                 actionInputSelectionInfo()
 
-//            ReportConventions.actionDataTypes ->
-//                actionDataTypes()
-//
-//            ReportConventions.actionTypeFormats ->
-//                actionTypeFormats()
-//
-//
+            PipelineConventions.actionDataTypes ->
+                actionDataTypes()
+
+            PipelineConventions.actionTypeFormats ->
+                actionTypeFormats()
+
 //
 //            ReportConventions.actionListColumns ->
 //                actionColumnListing()
@@ -140,6 +139,31 @@ class PipelineDocument(
             inputSelectionInfo.asCollection()))
     }
 
+
+    private fun actionDataTypes(): ExecutionResult {
+        val dataTypes = ServerContext.definitionRepository
+            .listMetadata()
+            .map { it.payloadType }
+            .toSet()
+            .map { it.toString() }
+
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(dataTypes))
+    }
+
+
+    private fun actionTypeFormats(): ExecutionResult {
+        val dataType = input.selection.dataType
+
+        val processorDefinerDetails = ServerContext.definitionRepository
+            .listMetadata()
+            .filter { it.payloadType == dataType }
+            .map { it.toProcessorDefinerDetail() }
+
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(
+                processorDefinerDetails.map { it.asCollection() }))
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

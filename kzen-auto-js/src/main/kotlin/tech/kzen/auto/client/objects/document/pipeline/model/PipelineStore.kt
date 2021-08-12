@@ -113,19 +113,6 @@ class PipelineStore: SessionGlobal.Observer {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun updateAsync(updater: suspend (PipelineState) -> PipelineState) {
-        val initializedState = state
-            ?: throw IllegalStateException("Update before initialized")
-
-        val updated = updater(initializedState)
-
-        if (state != updated) {
-            state = updated
-            observer?.onPipelineState(updated/*, false*/)
-        }
-    }
-
-
     fun update(updater: (PipelineState) -> PipelineState) {
         val initializedState = state
             ?: throw IllegalStateException("Update before initialized")

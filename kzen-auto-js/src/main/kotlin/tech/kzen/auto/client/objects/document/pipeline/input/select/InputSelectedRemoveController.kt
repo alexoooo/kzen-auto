@@ -7,8 +7,8 @@ import react.RPureComponent
 import react.RState
 import styled.css
 import styled.styledDiv
-import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
+import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
 import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.RemoveCircleOutlineIcon
 import tech.kzen.auto.client.wrap.reactStyle
@@ -24,7 +24,7 @@ class InputSelectedRemoveController(
     interface Props: RProps {
         var mainLocation: ObjectLocation
         var disabled: Boolean
-        var inputState: PipelineInputState
+        var inputSelectedState: InputSelectedState
         var inputStore: PipelineInputStore
     }
 
@@ -34,7 +34,7 @@ class InputSelectedRemoveController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRemoveFromSelection() {
-        val removedPaths = props.inputState.selected.selectedChecked
+        val removedPaths = props.inputSelectedState.selectedChecked
         props.inputStore.selected.selectionRemoveAsync(removedPaths)
     }
 
@@ -50,7 +50,7 @@ class InputSelectedRemoveController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val selectedRemoveCount = props.inputState.selected.selectedChecked.size
+        val selectedRemoveCount = props.inputSelectedState.selectedChecked.size
 
         styledDiv {
             css {
@@ -73,7 +73,7 @@ class InputSelectedRemoveController(
                     if (selectedRemoveCount == 0) {
                         disabled = true
                         title =
-                            if (props.inputState.selected.selectedChecked.isEmpty()) {
+                            if (props.inputSelectedState.selectedChecked.isEmpty()) {
                                 "No files selected"
                             }
                             else {

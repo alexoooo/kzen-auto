@@ -12,8 +12,8 @@ import react.RState
 import react.dom.attrs
 import react.dom.td
 import styled.*
-import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
+import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
 import tech.kzen.auto.client.objects.document.report.input.browse.InputBrowser
 import tech.kzen.auto.client.wrap.material.MaterialCheckbox
 import tech.kzen.auto.client.wrap.reactStyle
@@ -35,7 +35,7 @@ class InputSelectedTableController(
     interface Props: RProps {
         var showDetails: Boolean
         var spec: InputSelectionSpec
-        var inputState: PipelineInputState
+        var inputSelectedState: InputSelectedState
         var inputStore: PipelineInputStore
     }
 
@@ -54,7 +54,7 @@ class InputSelectedTableController(
 
 
     private fun onFileSelectedToggle(dataLocation: DataLocation) {
-        val selectedChecked = props.inputState.selected.selectedChecked
+        val selectedChecked = props.inputSelectedState.selectedChecked
         val previousChecked = selectedChecked.contains(dataLocation)
         val nextCheckedDataLocations =
             if (previousChecked) {
@@ -91,7 +91,6 @@ class InputSelectedTableController(
             css {
                 maxHeight = 20.em
                 overflowY = Overflow.auto
-//                borderWidth = 1.px
                 borderWidth = 2.px
                 borderStyle = BorderStyle.solid
                 borderColor = Color.lightGray
@@ -112,6 +111,8 @@ class InputSelectedTableController(
 
 
     private fun RBuilder.renderHeader() {
+        val hasGroup = props.spec.groupBy.isNotBlank()
+
         styledThead {
             styledTr {
                 styledTh {
@@ -139,8 +140,8 @@ class InputSelectedTableController(
                             }
                             disableRipple = true
 
-                            if (props.inputState.selected.selectedChecked.isNotEmpty()) {
-                                if (props.inputState.selected.selectedChecked.size ==
+                            if (props.inputSelectedState.selectedChecked.isNotEmpty()) {
+                                if (props.inputSelectedState.selectedChecked.size ==
                                         props.spec.locations.size
                                 ) {
                                     checked = true
@@ -172,21 +173,21 @@ class InputSelectedTableController(
                     }
                 }
 
-//                if (hasGroup) {
-//                    styledTh {
-//                        css {
-//                            position = Position.sticky
-//                            top = 0.px
-//                            backgroundColor = Color.white
-//                            zIndex = 999
-//                            textAlign = TextAlign.left
-//                            paddingLeft = 0.5.em
-//                            paddingRight = 0.5.em
-//                            boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
-//                        }
-//                        +"Group"
-//                    }
-//                }
+                if (hasGroup) {
+                    styledTh {
+                        css {
+                            position = Position.sticky
+                            top = 0.px
+                            backgroundColor = Color.white
+                            zIndex = 999
+                            textAlign = TextAlign.left
+                            paddingLeft = 0.5.em
+                            paddingRight = 0.5.em
+                            boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                        }
+                        +"Group"
+                    }
+                }
 
                 styledTh {
                     css {
@@ -252,7 +253,7 @@ class InputSelectedTableController(
                 cursor = Cursor.default
             }
 
-            val selectedInput = props.inputState.selected.selectedInfo
+            val selectedInput = props.inputSelectedState.selectedInfo
 
             if (selectedInput == null) {
                 for (inputDataSpec in props.spec.locations) {
@@ -285,7 +286,7 @@ class InputSelectedTableController(
 
         val fileInfo = inputDataInfo?.dataLocationInfo
 //        val fileProgress = reportProgress?.inputs?.get(dataLocation)
-        val checked = dataLocation in props.inputState.selected.selectedChecked
+        val checked = dataLocation in props.inputSelectedState.selectedChecked
         val missing = inputDataInfo?.dataLocationInfo?.isMissing() ?: false
         val processorInvalid = inputDataInfo?.invalidProcessor ?: false
         val group = inputDataInfo?.group

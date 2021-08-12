@@ -5,7 +5,7 @@ import react.*
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
-import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
+import tech.kzen.auto.client.objects.document.pipeline.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
@@ -26,7 +26,8 @@ class InputBrowserController(
         var selectedDataLocation: Set<DataLocation>
         var open: Boolean
         var forceOpen: Boolean
-        var inputState: PipelineInputState
+//        var inputState: PipelineInputState
+        var inputBrowserState: InputBrowserState
         var inputStore: PipelineInputStore
     }
 
@@ -55,7 +56,7 @@ class InputBrowserController(
         prevState: State,
         snapshot: Any
     ) {
-        if (props.open && props.inputState.browser.browserInfo == null && ! state.requestPending) {
+        if (props.open && props.inputBrowserState.browserInfo == null && ! state.requestPending) {
             setState {
                 requestPending = true
             }
@@ -88,8 +89,8 @@ class InputBrowserController(
             }
         }
 
-        val inputBrowserInfo = props.inputState.browser.browserInfo
-        val infoError = props.inputState.browser.browserInfoError
+        val inputBrowserInfo = props.inputBrowserState.browserInfo
+        val infoError = props.inputBrowserState.browserInfoError
 
         when {
             infoError != null ->
@@ -155,8 +156,7 @@ class InputBrowserController(
                 hasFilter = props.spec.filter.isNotBlank()
                 dataLocationInfos = inputBrowserInfo.files
                 selectedDataLocation = props.selectedDataLocation
-                loading = props.inputState.browser.browserInfoLoading
-                inputState = props.inputState
+                inputBrowserState = props.inputBrowserState
                 inputStore = props.inputStore
             }
         }
@@ -168,11 +168,9 @@ class InputBrowserController(
             child(InputBrowserActionController::class) {
                 attrs {
                     mainLocation = props.mainLocation
-//                    hasFilter = props.spec.filter.isNotBlank()
                     dataLocationInfos = inputBrowserInfo.files
                     selectedDataLocation = props.selectedDataLocation
-                    disabled = props.inputState.browser.browserInfoLoading
-                    inputState = props.inputState
+                    inputBrowserState = props.inputBrowserState
                     inputStore = props.inputStore
                 }
             }
@@ -196,7 +194,7 @@ class InputBrowserController(
         val errorMode = inputBrowserInfoOrNull == null
 
         val browserDir =
-            props.inputState.browser.browserDirChangeRequest ?:
+            props.inputBrowserState.browserDirChangeRequest ?:
             inputBrowserInfoOrNull?.browseDir ?:
             props.spec.directory
 

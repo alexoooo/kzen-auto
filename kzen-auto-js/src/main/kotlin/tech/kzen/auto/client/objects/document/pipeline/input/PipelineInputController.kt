@@ -270,7 +270,7 @@ class PipelineInputController(
                 selectedDataLocation = props.spec.selection.dataLocationSet()
                 open = isBrowserOpen()
                 forceOpen = isBrowserForceOpen()
-                inputState = props.inputState
+                inputBrowserState = props.inputState.browser
                 inputStore = props.inputStore
             }
         }
@@ -283,7 +283,7 @@ class PipelineInputController(
                 mainLocation = props.mainLocation
                 spec = props.spec.selection
                 browserOpen = isBrowserOpen()
-                inputState = props.inputState
+                inputSelectedState = props.inputState.selected
                 inputStore = props.inputStore
             }
         }
