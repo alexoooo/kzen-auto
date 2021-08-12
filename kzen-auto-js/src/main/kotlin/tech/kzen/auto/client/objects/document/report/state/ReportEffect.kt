@@ -405,12 +405,12 @@ object ReportEffect {
     }
 
 
-    private suspend fun setGroupBy(
+    private suspend fun selectMultiFormat(
         state: ReportState,
-        groupBy: String
+        locationFormats: Map<DataLocation, CommonPluginCoordinate>
     ): ReportAction {
-        val command = InputSpec.setGroupByCommand(
-            state.mainLocation, groupBy)
+        val command = InputSpec.selectMultiFormatCommand(
+            state.mainLocation, state.inputSpec().selection, locationFormats)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
         val result = ClientContext.mirroredGraphStore.apply(command)
@@ -426,12 +426,12 @@ object ReportEffect {
     }
 
 
-    private suspend fun selectMultiFormat(
+    private suspend fun setGroupBy(
         state: ReportState,
-        locationFormats: Map<DataLocation, CommonPluginCoordinate>
+        groupBy: String
     ): ReportAction {
-        val command = InputSpec.selectMultiFormatCommand(
-            state.mainLocation, state.inputSpec().selection, locationFormats)
+        val command = InputSpec.setGroupByCommand(
+            state.mainLocation, groupBy)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
         val result = ClientContext.mirroredGraphStore.apply(command)

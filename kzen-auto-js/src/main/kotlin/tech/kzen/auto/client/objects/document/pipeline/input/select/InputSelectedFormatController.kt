@@ -13,7 +13,6 @@ import react.dom.attrs
 import react.dom.span
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
-import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.material.MaterialInputLabel
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.client.wrap.select.ReactSelect
@@ -89,53 +88,7 @@ class InputSelectedFormatController(
         val selectedCoordinate = CommonPluginCoordinate.ofString(coordinateValue)
         val selectedSpecs = props.spec.locations.filter { it.location in selected }
 
-        if (selectedCoordinate.isDefault()) {
-            val selectedLocations = selectedSpecs.map { it.location }
-
-            async {
-                val result = props.inputStore.selected.defaultFormats(selectedLocations)
-                    ?: return@async
-
-                val defaultCoordinateSet = result.map { it.processorDefinitionCoordinate }.toSet()
-
-                if (defaultCoordinateSet.size == 1) {
-                    val defaultCoordinate = defaultCoordinateSet.single()
-
-                    val changedLocations = selectedSpecs
-                        .filter { it.processorDefinitionCoordinate != defaultCoordinate }
-                        .map { it.location }
-
-                    if (changedLocations.isEmpty()) {
-                        return@async
-                    }
-
-//                    console.log("^%$^%$^%$ InputsSelectionFormatRequest - $defaultCoordinate - $changedLocations")
-//                    props.dispatcher.dispatch(InputsSelectionFormatRequest(
-//                        defaultCoordinate, changedLocations))
-                }
-                else {
-                    val locationFormats = result.associate {
-                        it.location to it.processorDefinitionCoordinate
-                    }
-
-////                    console.log("^%$^%$^%$ InputsSelectionMultiFormatRequest - $locationFormats")
-//                    props.dispatcher.dispatch(InputsSelectionMultiFormatRequest(
-//                        locationFormats))
-                }
-            }
-        }
-        else {
-            val changedLocations = selectedSpecs
-                .filter { it.processorDefinitionCoordinate != selectedCoordinate }
-                .map { it.location }
-
-            if (changedLocations.isEmpty()) {
-                return
-            }
-
-//            props.dispatcher.dispatchAsync(InputsSelectionFormatRequest(
-//                selectedCoordinate, changedLocations))
-        }
+        props.inputStore.selected.setFormatAsync(selectedCoordinate, selectedSpecs)
     }
 
 
