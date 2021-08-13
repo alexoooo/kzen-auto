@@ -1,21 +1,31 @@
 package tech.kzen.auto.server.service.v1.model
 
 
-sealed class LogicResult
+sealed class LogicResult {
+    abstract fun isTerminal(): Boolean
+}
 
 
-object LogicResultPaused: LogicResult()
+object LogicResultPaused: LogicResult() {
+    override fun isTerminal() = false
+}
 
 
-object LogicResultCancelled: LogicResult()
+object LogicResultCancelled: LogicResult() {
+    override fun isTerminal() = true
+}
 
 
 data class LogicResultFailed(
     val message: String
-): LogicResult()
+): LogicResult() {
+    override fun isTerminal() = true
+}
 
 
 data class LogicResultSuccess(
     val value: TupleValue
-): LogicResult()
+): LogicResult() {
+    override fun isTerminal() = true
+}
 

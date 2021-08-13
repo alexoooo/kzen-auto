@@ -35,10 +35,12 @@ class PipelineDocument(
     //-----------------------------------------------------------------------------------------------------------------
     private class Execution: LogicExecution {
         override fun next(arguments: TupleValue)/*: LogicResult*/ {
+            println("&&&&& next")
 //            return LogicResultSuccess(TupleValue.ofMain("foo"))
         }
 
         override fun run(control: LogicControl): LogicResult {
+            println("^^^^^^ foo")
             return LogicResultSuccess(TupleValue.ofMain("foo"))
         }
     }

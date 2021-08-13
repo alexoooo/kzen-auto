@@ -737,7 +737,7 @@ class ClientRestApi(
         runId: LogicRunId
     ): LogicRunResponse {
         val response = getOrPut(
-            CommonRestApi.logicCancel,
+            CommonRestApi.logicRun,
             CommonRestApi.paramRunId to runId.value)
 
         return LogicRunResponse.valueOf(response)

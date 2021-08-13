@@ -111,8 +111,8 @@ class PipelineController(
 //            renderAnalysis(processState)
 //            renderOutput(processState)
         }
-//
-//        renderRun(processState)
+
+        renderRun(pipelineState)
     }
 
 
@@ -235,24 +235,24 @@ class PipelineController(
 //            }
 //        }
 //    }
-//
-//
-//    private fun RBuilder.renderRun(reportState: ReportState) {
-//        styledDiv {
-//            css {
-//                position = Position.fixed
-//                bottom = 0.px
-//                right = 0.px
-//                marginRight = 2.em
-//                marginBottom = 2.em
-//            }
-//
-//            child(ReportRun::class) {
-//                attrs {
-//                    this.reportState = reportState
-//                    dispatcher = store
-//                }
-//            }
-//        }
-//    }
+
+
+    private fun RBuilder.renderRun(pipelineState: PipelineState) {
+        styledDiv {
+            css {
+                position = Position.fixed
+                bottom = 0.px
+                right = 0.px
+                marginRight = 2.em
+                marginBottom = 2.em
+            }
+
+            child(PipelineRunController::class) {
+                attrs {
+                    this.pipelineState = pipelineState
+                    this.pipelineStore = store
+                }
+            }
+        }
+    }
 }

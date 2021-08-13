@@ -114,7 +114,7 @@ class ServerLogicController(
                 objectStableMapper.objectStableId(root),
                 executionId,
                 execution,
-                LogicRunFrameState.Sleep,
+                LogicRunFrameState.Ready,
                 listOf(),
                 MutableLogicControl()
             ),
@@ -174,9 +174,19 @@ class ServerLogicController(
         }
 
         Thread {
-            state.frame.execution.run(state.frame.control)
+            val result = state.frame.execution.run(state.frame.control)
+
+            if (result.isTerminal()) {
+                clearState()
+            }
         }.start()
 
         return LogicRunResponse.Submitted
+    }
+
+
+    @Synchronized
+    private fun clearState() {
+        stateOrNull = null
     }
 }
