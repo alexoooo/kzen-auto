@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.v1.LogicController
 import tech.kzen.auto.common.paradigm.common.v1.model.*
+import tech.kzen.auto.server.service.v1.model.TupleValue
 import tech.kzen.auto.server.service.v1.model.context.LogicFrame
 import tech.kzen.auto.server.service.v1.model.context.MutableLogicControl
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -171,6 +172,11 @@ class ServerLogicController(
 
         if (state.runId != runId) {
             return LogicRunResponse.Rejected
+        }
+
+        val ready = state.frame.execution.next(TupleValue.empty)
+        if (! ready) {
+            return LogicRunResponse.Aborted
         }
 
         Thread {

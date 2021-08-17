@@ -14,12 +14,12 @@ class PipelineInputStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun initAsync() {
+    suspend fun init() {
         if (store.state().inputSpec().selection.locations.isEmpty()) {
-            browser.browserLoadInfoAsync()
+            browser.init()
         }
         else {
-            selected.selectionLoadInfoAsync()
+            selected.init()
         }
     }
 }

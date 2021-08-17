@@ -6,9 +6,9 @@ import tech.kzen.auto.server.service.v1.model.TupleValue
 
 interface LogicExecution {
     /**
-     * Initialize for next execution
+     * Initialize for next execution, return false if something went wrong
      */
-    fun next(arguments: TupleValue)//: LogicResult
+    fun next(arguments: TupleValue): Boolean
 
 
     /**

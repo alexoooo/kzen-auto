@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.pipeline.model
 import tech.kzen.auto.client.objects.document.pipeline.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
+import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunState
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
@@ -16,7 +17,8 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 data class PipelineState(
     val mainLocation: ObjectLocation,
     val mainDefinition: ObjectDefinition,
-    val input: PipelineInputState,
+    val input: PipelineInputState = PipelineInputState(),
+    val run: PipelineRunState = PipelineRunState(),
     val notationError: String? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -62,6 +64,11 @@ data class PipelineState(
     }
 
 
+//    fun isRunning(): Boolean {
+//        return run.logicStatus?.active != null
+//    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun withNotationError(notationError: String?): PipelineState {
         return copy(
@@ -80,5 +87,11 @@ data class PipelineState(
         return copy(
             input = input.copy(
                 selected = updater(input.selected)))
+    }
+
+
+    fun withRun(updater: (PipelineRunState) -> PipelineRunState): PipelineState {
+        return copy(
+            run = updater(run))
     }
 }

@@ -22,7 +22,7 @@ data class LogicRunFrameInfo(
             return LogicRunFrameInfo(
                 ObjectLocation.parse(collection[locationKey] as String),
                 LogicExecutionId(collection[executionKey] as String),
-                LogicRunFrameState.valueOf(collection[executionKey] as String),
+                LogicRunFrameState.valueOf(collection[stateKey] as String),
                 dependenciesValue.map { ofCollection(it) }
             )
         }

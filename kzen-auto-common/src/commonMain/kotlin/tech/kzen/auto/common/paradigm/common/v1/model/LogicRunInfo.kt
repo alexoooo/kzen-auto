@@ -4,7 +4,6 @@ package tech.kzen.auto.common.paradigm.common.v1.model
 data class LogicRunInfo(
     val id: LogicRunId,
 
-//    val root: ObjectLocation,
     val frame: LogicRunFrameInfo,
 
     val state: LogicRunState
@@ -16,7 +15,8 @@ data class LogicRunInfo(
 
         fun ofCollection(collection: Map<String, Any>): LogicRunInfo {
             @Suppress("UNCHECKED_CAST")
-            val frame = LogicRunFrameInfo.ofCollection(collection[frameKey] as Map<String, Any>)
+            val frame = LogicRunFrameInfo.ofCollection(
+                collection[frameKey] as Map<String, Any>)
 
             return LogicRunInfo(
                 LogicRunId(collection[idKey] as String),

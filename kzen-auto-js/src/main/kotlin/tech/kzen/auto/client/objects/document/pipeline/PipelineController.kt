@@ -8,6 +8,7 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.pipeline.input.PipelineInputController
 import tech.kzen.auto.client.objects.document.pipeline.model.PipelineState
 import tech.kzen.auto.client.objects.document.pipeline.model.PipelineStore
+import tech.kzen.auto.client.objects.document.pipeline.run.PipelineRunController
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 

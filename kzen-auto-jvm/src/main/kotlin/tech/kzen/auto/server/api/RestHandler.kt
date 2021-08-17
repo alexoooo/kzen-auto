@@ -18,6 +18,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunResponse
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
@@ -1190,6 +1191,14 @@ class RestHandler {
 
         @Suppress("FoldInitializerAndIfToElvis")
         if (logicRunId == null) {
+            return ServerResponse.badRequest().build()
+        }
+
+        val response = runBlocking {
+            ServerContext.serverLogicController.run(logicRunId)
+        }
+
+        if (response != LogicRunResponse.Submitted) {
             return ServerResponse.badRequest().build()
         }
 

@@ -1,16 +1,28 @@
 package tech.kzen.auto.client.objects.document.pipeline.model
 
-import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
+import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
+import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunStore
+import tech.kzen.auto.client.objects.document.report.state.ReportStore
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.client.wrap.FunctionWithDebounce
+import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 class PipelineStore: SessionGlobal.Observer {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        const val debounceMillis = 1_500
+//        const val debounceMillis = 2_500
+//        const val debounceMillis = 5_000
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         fun onPipelineState(pipelineState: PipelineState/*, initial: Boolean*/)
@@ -23,7 +35,18 @@ class PipelineStore: SessionGlobal.Observer {
     private var state: PipelineState? = null
 
 
+    private var refreshPending: Boolean = false
+    private val refreshDebounce: FunctionWithDebounce = lodash.debounce({
+        refreshPending = false
+        async {
+            refresh()
+            scheduleRefresh()
+        }
+    }, ReportStore.debounceMillis)
+
+
     val input = PipelineInputStore(this)
+    val run = PipelineRunStore(this)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -43,6 +66,7 @@ class PipelineStore: SessionGlobal.Observer {
         state = null
 
         ClientContext.sessionGlobal.unobserve(this)
+        cancelRefresh()
     }
 
 
@@ -52,25 +76,20 @@ class PipelineStore: SessionGlobal.Observer {
             return
         }
 
-//        println("got client state")
         val pipelineMainLocation = PipelineState.tryMainLocation(clientState)
             ?: return
-//        println("pipelineMainLocation: $pipelineMainLocation")
 
         val pipelineMainDefinition = mainDefinition(clientState, pipelineMainLocation)
 
         val previousState = state
         val nextState = when {
-            previousState == null || pipelineMainLocation != previousState.mainLocation -> {
+            previousState == null || pipelineMainLocation != previousState.mainLocation ->
                 PipelineState(
                     pipelineMainLocation,
-                    pipelineMainDefinition,
-                    PipelineInputState())
-            }
+                    pipelineMainDefinition)
 
-            else -> {
+            else ->
                 previousState.copy(mainDefinition = pipelineMainDefinition)
-            }
         }
 
         val initial =
@@ -83,13 +102,9 @@ class PipelineStore: SessionGlobal.Observer {
         }
 
         if (initial) {
+            cancelRefresh()
             initAsync()
         }
-    }
-
-
-    private fun initAsync() {
-        input.initAsync()
     }
 
 
@@ -97,6 +112,25 @@ class PipelineStore: SessionGlobal.Observer {
         return clientState
             .graphDefinitionAttempt
             .objectDefinitions[mainLocation]!!
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun initAsync() {
+        async {
+            delay(10)
+            if (state == null) {
+                return@async
+            }
+
+            input.init()
+            run.init()
+        }
+    }
+
+
+    private suspend fun refresh() {
+        run.lookupStatus()
     }
 
 
@@ -122,6 +156,7 @@ class PipelineStore: SessionGlobal.Observer {
         if (state != updated) {
             state = updated
             observer?.onPipelineState(updated/*, false*/)
+            scheduleRefresh()
         }
     }
 
@@ -130,6 +165,32 @@ class PipelineStore: SessionGlobal.Observer {
         if (this.state != state) {
             this.state = state
             observer?.onPipelineState(state/*, false*/)
+            scheduleRefresh()
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun scheduleRefresh() {
+        val running = state?.run?.logicStatus?.active != null
+//        console.log("^^^^ scheduleRefresh: $running - $refreshPending")
+
+        if (refreshPending) {
+            return
+        }
+
+        if (running) {
+            refreshPending = true
+            refreshDebounce.apply()
+        }
+        else {
+            cancelRefresh()
+        }
+    }
+
+
+    private fun cancelRefresh() {
+        refreshDebounce.cancel()
+        refreshPending = false
     }
 }

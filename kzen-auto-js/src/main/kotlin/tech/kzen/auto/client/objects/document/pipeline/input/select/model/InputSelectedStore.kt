@@ -25,6 +25,15 @@ class InputSelectedStore(
     private val store: PipelineStore
 ) {
     //-----------------------------------------------------------------------------------------------------------------
+    suspend fun init() {
+        selectionBeforeLoadInfo()
+
+        delay(10)
+        selectionPerformLoadInfo()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun beforeNotationChange() {
         store.update { state -> state
             .withInputSelected { it.copy(selectedRequestLoading = true) }

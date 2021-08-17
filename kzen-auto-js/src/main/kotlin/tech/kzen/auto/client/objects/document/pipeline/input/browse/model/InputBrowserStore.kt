@@ -20,6 +20,15 @@ class InputBrowserStore(
     private val store: PipelineStore
 ) {
     //-----------------------------------------------------------------------------------------------------------------
+    suspend fun init() {
+        browserBeforeLoadInfo()
+
+        delay(10)
+        browserPerformLoadInfo()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun browserLoadInfoAsync() {
         browserBeforeLoadInfo()
         async {

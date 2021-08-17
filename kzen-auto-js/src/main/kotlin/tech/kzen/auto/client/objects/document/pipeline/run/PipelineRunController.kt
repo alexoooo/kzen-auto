@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.pipeline
+package tech.kzen.auto.client.objects.document.pipeline.run
 
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
@@ -8,13 +8,12 @@ import react.dom.attrs
 import react.dom.div
 import tech.kzen.auto.client.objects.document.pipeline.model.PipelineState
 import tech.kzen.auto.client.objects.document.pipeline.model.PipelineStore
-import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.material.MaterialCircularProgress
 import tech.kzen.auto.client.wrap.material.MaterialFab
 import tech.kzen.auto.client.wrap.material.PauseIcon
 import tech.kzen.auto.client.wrap.material.PlayArrowIcon
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicStatus
 
 
 class PipelineRunController(
@@ -56,18 +55,8 @@ class PipelineRunController(
 
 
     private fun onRunMain(/*readyToRun: Boolean, status: OutputStatus, inProgress: Boolean*/) {
-        async {
-            val logicRunId = ClientContext.restClient.logicStart(
-                props.pipelineState.mainLocation)
-            console.log("logicRunId: $logicRunId")
+        props.pipelineStore.run.startAndRunAsync()
 
-            if (logicRunId == null) {
-                return@async
-            }
-
-            val logicRunResponse = ClientContext.restClient.logicRun(logicRunId)
-            console.log("logicRunResponse: $logicRunResponse")
-        }
 
 //        val result = ClientContext.restClient.performDetached(
 //            store.mainLocation(),
@@ -119,6 +108,9 @@ class PipelineRunController(
 
 
     private fun RBuilder.renderInner() {
+        val logicStatus = props.pipelineState.run.logicStatus
+            ?: return
+
 //        val readyToRun =
 //            ! props.reportState.isInitiating() &&
 //            ! props.reportState.isLoadingError() &&
@@ -131,26 +123,29 @@ class PipelineRunController(
 //        val status =
 //            props.reportState.outputInfo?.status ?: OutputStatus.Missing
 
-//        +"status: ${props.reportState.isInitiating()}"
+//        +"status: ${logicStatus.active != null}"
 
-        renderMainAction(/*readyToRun, status, inProgress*/)
+        renderMainAction(logicStatus)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderMainAction(
-//        readyToRun: Boolean, status: OutputStatus, inProgress: Boolean
+        logicStatus: LogicStatus
     ) {
+        val running = logicStatus.active != null
+        val inProgress = props.pipelineState.run.starting
+
         child(MaterialFab::class) {
             attrs {
                 style = reactStyle {
-//                    backgroundColor =
-//                        if (readyToRun && ! status.isTerminal()) {
-//                            Color.gold
-//                        }
-//                        else {
-//                            Color.white
-//                        }
+                    backgroundColor =
+                        if (running || inProgress) {
+                            Color.gold
+                        }
+                        else {
+                            Color.white
+                        }
 
                     width = 5.em
                     height = 5.em
@@ -168,8 +163,8 @@ class PipelineRunController(
 //                        props.reportState.isLoadingError() || ! readyToRun ->
 //                            "Please specify valid input"
 //
-//                        props.reportState.taskRunning ->
-//                            "Cancel"
+                        running ->
+                            "Cancel"
 //
 //                        status.isTerminal() ->
 //                            "Reset"
@@ -205,9 +200,8 @@ class PipelineRunController(
 //                    }
 //                }
 
-//                props.reportState.isTaskRunning() -> {
-//                    renderProgressWithPause(inProgress)
-//                }
+                running ->
+                    renderProgressWithPause(inProgress)
 
 //                status.isTerminal() -> {
 //                    child(ReplayIcon::class) {
