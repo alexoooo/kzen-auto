@@ -1,9 +1,10 @@
 
-
+# NB: referenced in FeatureDocument
 ScreenshotTaker:
   class: tech.kzen.auto.server.objects.feature.ScreenshotTaker
 
 
+# NB: referenced in FeatureDocument
 ScreenshotCropper:
   class: tech.kzen.auto.server.objects.feature.ScreenshotCropper
 

@@ -8,7 +8,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 interface LogicHandle {
     interface Execution {
         fun next(arguments: TupleValue): LogicResult
-        fun run(): LogicResult
+        fun stepOrRun(): LogicResult
     }
 
     fun start(originalObjectLocation: ObjectLocation): Execution

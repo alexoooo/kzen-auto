@@ -169,6 +169,7 @@ class PipelineController(
                 spec = pipelineState.inputSpec()
                 inputState = pipelineState.input
                 inputStore = store.input
+                progress = pipelineState.run.progress
 //                this.reportState = reportState
 //                dispatcher = store
             }

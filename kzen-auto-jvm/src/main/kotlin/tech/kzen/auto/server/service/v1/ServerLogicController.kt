@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.v1.LogicController
 import tech.kzen.auto.common.paradigm.common.v1.model.*
+import tech.kzen.auto.server.objects.logic.LogicTraceStore
 import tech.kzen.auto.server.service.v1.model.TupleValue
 import tech.kzen.auto.server.service.v1.model.context.LogicFrame
 import tech.kzen.auto.server.service.v1.model.context.MutableLogicControl
@@ -106,8 +107,10 @@ class ServerLogicController(
             }
         }
 
+        val logicTraceHandle = LogicTraceStore.handle(runId, executionId)
+
         val logic = rootInstance as Logic
-        val execution = logic.execute(logicHandle)
+        val execution = logic.execute(logicHandle, logicTraceHandle)
 
         stateOrNull = LogicState(
             runId,

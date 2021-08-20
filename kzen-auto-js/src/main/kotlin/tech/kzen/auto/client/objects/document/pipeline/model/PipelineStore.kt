@@ -130,7 +130,7 @@ class PipelineStore: SessionGlobal.Observer {
 
 
     private suspend fun refresh() {
-        run.lookupStatus()
+        run.refresh()
     }
 
 

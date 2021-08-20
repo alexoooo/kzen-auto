@@ -11,6 +11,7 @@ import tech.kzen.auto.client.objects.document.pipeline.input.browse.InputBrowser
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.pipeline.input.select.InputSelectedController
+import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunProgress
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.wrap.material.*
@@ -39,6 +40,7 @@ class PipelineInputController(
         var spec: InputSpec
         var inputState: PipelineInputState
         var inputStore: PipelineInputStore
+        var progress: PipelineRunProgress?
     }
 
 
@@ -284,6 +286,7 @@ class PipelineInputController(
                 spec = props.spec.selection
                 browserOpen = isBrowserOpen()
                 inputSelectedState = props.inputState.selected
+                progress = props.progress
                 inputStore = props.inputStore
             }
         }

@@ -6,6 +6,7 @@ import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
+import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunProgress
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.wrap.material.GroupWorkIcon
 import tech.kzen.auto.client.wrap.material.MaterialButton
@@ -26,6 +27,7 @@ class InputSelectedController(
         var spec: InputSelectionSpec
         var browserOpen: Boolean
         var inputSelectedState: InputSelectedState
+        var progress: PipelineRunProgress?
         var inputStore: PipelineInputStore
     }
 
@@ -81,6 +83,10 @@ class InputSelectedController(
         }
 
         renderErrors()
+
+        styledDiv {
+            +"Progress: ${props.progress?.message}"
+        }
 
         // TODO
         val runningOrLoading = false

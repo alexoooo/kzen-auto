@@ -3,7 +3,19 @@ package tech.kzen.auto.client.objects.document.pipeline.run.model
 import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.pipeline.model.PipelineStore
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.util.ClientError
+import tech.kzen.auto.client.util.ClientResult
+import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicConventions
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunResponse
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceQuery
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceSnapshot
 
 
 class PipelineRunStore(
@@ -11,11 +23,17 @@ class PipelineRunStore(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun init() {
-        lookupStatus()
+        refresh()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    suspend fun refresh() {
+        lookupStatus()
+        lookupProgress()
+    }
+
+
     suspend fun lookupStatus() {
         val status = ClientContext.restClient.logicStatus()
 
@@ -56,6 +74,98 @@ class PipelineRunStore(
                 delay(10)
                 lookupStatus()
             }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun cancelAsync() {
+        val logicRunId = store.state().run.logicStatus?.active?.id
+            ?: return
+
+        store.update { state -> state
+            .withRun { it.copy(
+                cancelling = true,
+                runError = null
+            ) }
+        }
+
+        async {
+            delay(1)
+            val response = ClientContext.restClient.logicCancel(logicRunId)
+
+            if (response != LogicRunResponse.Submitted) {
+                store.update { state -> state
+                    .withRun { it.copy(
+                        cancelling = false,
+                        runError = "Unable to cancel"
+                    ) }
+                }
+            }
+            else {
+                delay(10)
+                store.update { state -> state
+                    .withRun { it.copy(cancelling = false) }
+                }
+
+                delay(10)
+                lookupStatus()
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun lookupProgress() {
+        val activeInfo = store.state().run.logicStatus?.active
+            ?: return
+
+        val logicTraceQuery = LogicTraceQuery(LogicTracePath.root)
+
+        @Suppress("MoveVariableDeclarationIntoWhen")
+        val result = progressQuery(activeInfo.id, activeInfo.frame.executionId, logicTraceQuery)
+
+        when (result) {
+            is ClientError ->
+                store.update { state -> state
+                    .withRun { it.copy(runError = result.message) }
+                }
+
+            is ClientSuccess ->
+                store.update { state -> state
+                    .withRun {
+                        it.copy(
+                            progress = PipelineRunProgress(result.value.values.toString()),
+                            runError = null
+                        ) }
+                }
+        }
+    }
+
+
+    private suspend fun progressQuery(
+        logicRunId: LogicRunId,
+        logicExecutionId: LogicExecutionId,
+        logicTraceQuery: LogicTraceQuery
+    ): ClientResult<LogicTraceSnapshot> {
+        val result = ClientContext.restClient.performDetached(
+            LogicConventions.logicTraceStoreLocation,
+            LogicConventions.runIdKey to logicRunId.value,
+            LogicConventions.executionIdKey to logicExecutionId.value,
+            LogicConventions.queryKey to logicTraceQuery.asString()
+        )
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val resultValue = result.value.get() as Map<String, Map<String, Any>>
+
+                val inputBrowserInfo = LogicTraceSnapshot.ofCollection(resultValue)
+                ClientResult.ofSuccess(inputBrowserInfo)
+            }
+
+            is ExecutionFailure ->
+                ClientResult.ofError(result.errorMessage)
         }
     }
 }

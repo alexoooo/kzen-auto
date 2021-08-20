@@ -54,9 +54,13 @@ class PipelineRunController(
     }
 
 
-    private fun onRunMain(/*readyToRun: Boolean, status: OutputStatus, inProgress: Boolean*/) {
-        props.pipelineStore.run.startAndRunAsync()
-
+    private fun onRunMain(running: Boolean) {
+        if (! running) {
+            props.pipelineStore.run.startAndRunAsync()
+        }
+        else {
+            props.pipelineStore.run.cancelAsync()
+        }
 
 //        val result = ClientContext.restClient.performDetached(
 //            store.mainLocation(),
@@ -134,7 +138,7 @@ class PipelineRunController(
         logicStatus: LogicStatus
     ) {
         val running = logicStatus.active != null
-        val inProgress = props.pipelineState.run.starting
+        val inProgress = props.pipelineState.run.submitting()
 
         child(MaterialFab::class) {
             attrs {
@@ -152,7 +156,7 @@ class PipelineRunController(
                 }
 
                 onClick = {
-                    onRunMain(/*readyToRun, status, inProgress*/)
+                    onRunMain(running)
                 }
 
                 title =

@@ -13,13 +13,13 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.cropper.CropperDetail
 import tech.kzen.auto.client.wrap.cropper.CropperWrapper
 import tech.kzen.auto.client.wrap.material.CameraAltIcon
 import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.RefreshIcon
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -28,9 +28,6 @@ import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ResourceLocation
-import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.obj.ObjectNesting
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.model.structure.resource.ResourceName
@@ -51,22 +48,6 @@ class FeatureController(
         NavigationGlobal.Observer,
         LocalGraphStore.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val featureJvmPath = DocumentPath.parse("auto-jvm/feature/feature-jvm.yaml")
-
-
-        val screenshotTakerLocation = ObjectLocation(
-                featureJvmPath,
-                ObjectPath(ObjectName("ScreenshotTaker"), ObjectNesting.root))
-
-
-        val screenshotCropperLocation = ObjectLocation(
-                featureJvmPath,
-                ObjectPath(ObjectName("ScreenshotCropper"), ObjectNesting.root))
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     class Props: RProps
 
@@ -197,7 +178,7 @@ class FeatureController(
         async {
 //            console.log("doRequestScreenshot", screenshotTakerLocation.toString())
             val result = ClientContext.restClient.performDetached(
-                    screenshotTakerLocation)
+                FeatureDocument.screenshotTakerLocation)
 
             if (result is ExecutionSuccess) {
                 val screenshotPng = result.value as BinaryExecutionValue
@@ -218,12 +199,12 @@ class FeatureController(
     private fun doCropAndSave(detail: CropperDetail) {
         async {
             val result = ClientContext.restClient.performDetached(
-                    screenshotCropperLocation,
-                    screenshotBytes!!,
-                    FeatureDocument.cropTopParam to detail.y.toInt().toString(),
-                    FeatureDocument.cropLeftParam to detail.x.toInt().toString(),
-                    FeatureDocument.cropWidthParam to detail.width.toInt().toString(),
-                    FeatureDocument.cropHeightParam to detail.height.toInt().toString())
+                FeatureDocument.screenshotCropperLocation,
+                screenshotBytes!!,
+                FeatureDocument.cropTopParam to detail.y.toInt().toString(),
+                FeatureDocument.cropLeftParam to detail.x.toInt().toString(),
+                FeatureDocument.cropWidthParam to detail.width.toInt().toString(),
+                FeatureDocument.cropHeightParam to detail.height.toInt().toString())
 
             if (result !is ExecutionSuccess) {
                 return@async
@@ -231,14 +212,12 @@ class FeatureController(
             val cropPng = result.value as BinaryExecutionValue
 
             ClientContext.mirroredGraphStore.apply(AddResourceCommand(
-                    ResourceLocation(
-                            state.documentPath!!,
-                            ResourcePath(
-                                    ResourceName(DateTimeUtils.filenameTimestamp() + ".png"),
-                                    ResourceNesting.empty
-                            )
-                    ),
-                    ImmutableByteArray.wrap(cropPng.value)
+                ResourceLocation(
+                    state.documentPath!!,
+                    ResourcePath(
+                        ResourceName(DateTimeUtils.filenameTimestamp() + ".png"),
+                        ResourceNesting.empty)),
+                ImmutableByteArray.wrap(cropPng.value)
             ))
 
             onRefresh()
@@ -303,10 +282,9 @@ class FeatureController(
     private fun onRemove(resourcePath: ResourcePath) {
         async {
             ClientContext.mirroredGraphStore.apply(RemoveResourceCommand(
-                    ResourceLocation(
-                            state.documentPath!!,
-                            resourcePath
-                    )
+                ResourceLocation(
+                    state.documentPath!!,
+                    resourcePath)
             ))
         }
     }
@@ -350,10 +328,10 @@ class FeatureController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val documentPath = state.documentPath
-                ?: return
+            ?: return
 
         val graphStructure = state.graphStructure
-                ?: return
+            ?: return
 
         val documentNotation = graphStructure.graphNotation.documents[documentPath]!!
         val resources = documentNotation.resources!!

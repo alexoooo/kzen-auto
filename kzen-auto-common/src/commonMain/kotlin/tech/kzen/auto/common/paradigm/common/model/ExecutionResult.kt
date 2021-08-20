@@ -69,7 +69,7 @@ sealed class ExecutionResult
 
 
 data class ExecutionFailure(
-        val errorMessage: String
+    val errorMessage: String
 ): ExecutionResult() {
     companion object {
         fun ofException(throwable: Throwable): ExecutionFailure {
@@ -105,15 +105,15 @@ data class ExecutionFailure(
 
     override fun toJsonCollection(): Map<String, Any?> {
         return mapOf(
-                errorKey to errorMessage
+            errorKey to errorMessage
         )
     }
 }
 
 
 data class ExecutionSuccess(
-        val value: ExecutionValue,
-        val detail: ExecutionValue
+    val value: ExecutionValue,
+    val detail: ExecutionValue
 ): ExecutionResult() {
     companion object {
         val empty = ExecutionSuccess(NullExecutionValue, NullExecutionValue)

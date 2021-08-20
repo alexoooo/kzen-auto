@@ -10,6 +10,7 @@ import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
+import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.report.group.GroupPattern
 import tech.kzen.auto.server.service.ServerContext
@@ -177,7 +178,7 @@ class PipelineDocument(
     }
 
 
-    override fun execute(handle: LogicHandle): LogicExecution {
-        return PipelineExecution(input)
+    override fun execute(handle: LogicHandle, logicTraceHandle: LogicTraceHandle): LogicExecution {
+        return PipelineExecution(input, logicTraceHandle)
     }
 }

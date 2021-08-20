@@ -1,8 +1,11 @@
 package tech.kzen.auto.server.objects.pipeline
 
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
+import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
+import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 import tech.kzen.auto.server.objects.report.ReportUtils
@@ -16,11 +19,14 @@ import tech.kzen.auto.server.service.v1.model.*
 
 
 class PipelineExecution(
-    private val input: InputSpec
+    private val input: InputSpec,
+    private val trace: LogicTraceHandle
 ): LogicExecution {
+    //-----------------------------------------------------------------------------------------------------------------
     private var nextDatasetInfo: DatasetInfo? = null
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override fun next(arguments: TupleValue): Boolean {
         if (nextDatasetInfo != null) {
 //            return "Already ran"
@@ -118,6 +124,7 @@ class PipelineExecution(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override fun run(control: LogicControl): LogicResult {
         val datasetInfo = nextDatasetInfo
             ?: return LogicResultFailed("Not initialized")
@@ -133,17 +140,21 @@ class PipelineExecution(
 
                 val buffer = ByteArray(1024)
 
+                var totalBytes = 0L
+
                 for (flatDataContentDefinition in datasetDefinition.items) {
                     val flatDataStream = flatDataContentDefinition.open()
 
                     while (true) {
                         val result = flatDataStream.read(buffer)
                         println("result: $result")
+                        trace.set(LogicTracePath.root, ExecutionValue.of(totalBytes))
 
                         if (result.isEndOfData()) {
                             flatDataStream.close()
                             break
                         }
+                        totalBytes += result.byteCount()
 
                         if (control.pollCommand() == LogicCommand.Cancel) {
                             cancelled = true

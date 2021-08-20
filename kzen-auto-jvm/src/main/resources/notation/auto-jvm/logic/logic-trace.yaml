@@ -1,0 +1,5 @@
+
+# NB: referenced in LogicConventions
+LogicTraceStore:
+  class: tech.kzen.auto.server.objects.logic.LogicTraceStore
+
