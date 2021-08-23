@@ -204,12 +204,12 @@ class InputSelectedStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun selectionLoadInfoAsync() {
-        selectionBeforeLoadInfo()
-        async {
-            selectionPerformLoadInfo()
-        }
-    }
+//    fun selectionLoadInfoAsync() {
+//        selectionBeforeLoadInfo()
+//        async {
+//            selectionPerformLoadInfo()
+//        }
+//    }
 
 
     private fun selectionBeforeLoadInfo() {
@@ -232,6 +232,8 @@ class InputSelectedStore(
                 selectedInfo = result.valueOrNull()
             ) }
         }
+
+        store.input.listColumns()
     }
 
 

@@ -201,9 +201,10 @@ class InputBrowserPathController(
 
                     child(MaterialIconButton::class) {
                         attrs {
+                            size = "small"
+
                             style = reactStyle {
                                 zIndex = 1000
-                                size = "small"
                             }
 
                             title = "Edit path"

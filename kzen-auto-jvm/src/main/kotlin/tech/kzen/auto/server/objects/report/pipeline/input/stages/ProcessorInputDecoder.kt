@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.stages
 
 import tech.kzen.auto.plugin.model.data.DataBlockBuffer
-import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
+import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
@@ -13,7 +13,7 @@ import java.nio.charset.Charset
 class ProcessorInputDecoder(
     val charset: Charset
 ):
-    ProcessorPipelineStage<DataBlockBuffer>("input-decode")
+    PipelineProcessorStage<DataBlockBuffer>("input-decode")
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val decoder = charset.newDecoder()

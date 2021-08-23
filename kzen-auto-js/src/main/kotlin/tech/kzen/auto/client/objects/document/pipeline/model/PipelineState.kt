@@ -6,7 +6,11 @@ import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputS
 import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunState
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -64,9 +68,36 @@ data class PipelineState(
     }
 
 
-//    fun isRunning(): Boolean {
-//        return run.logicStatus?.active != null
-//    }
+    fun formulaSpec(): FormulaSpec {
+        val inputDefinition = mainDefinition.attributeDefinitions[PipelineConventions.formulaAttributeName]!!
+        return (inputDefinition as ValueAttributeDefinition).value as FormulaSpec
+    }
+
+
+    fun analysisSpec(): AnalysisSpec {
+        val inputDefinition = mainDefinition.attributeDefinitions[PipelineConventions.analysisAttributeName]!!
+        return (inputDefinition as ValueAttributeDefinition).value as AnalysisSpec
+    }
+
+
+    fun outputSpec(): OutputSpec {
+        val inputDefinition = mainDefinition.attributeDefinitions[PipelineConventions.outputAttributeName]!!
+        return (inputDefinition as ValueAttributeDefinition).value as OutputSpec
+    }
+
+
+    fun isRunningOrLoading(): Boolean {
+        return run.logicStatus?.active != null
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun inputAndCalculatedColumns(): HeaderListing? {
+        if (input.column.columnListing == null) {
+            return null
+        }
+        return HeaderListing(input.column.columnListing + formulaSpec().formulas.keys)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -1,7 +1,7 @@
-package tech.kzen.auto.server.objects.report.pipeline.stages
+package tech.kzen.auto.server.objects.pipeline.exec.stages
 
 import com.lmax.disruptor.EventHandler
-import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
+import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 
 
@@ -9,7 +9,7 @@ class ProcessorPreCacheStage(
     private val partitionNumber: Long,
     private val partitionCount: Long
 ):
-    ProcessorPipelineStage<ProcessorOutputEvent<*>>("cache")
+    PipelineProcessorStage<ProcessorOutputEvent<*>>("cache")
 {
     companion object {
         fun partitions(partitionCount: Int): Array<EventHandler<ProcessorOutputEvent<*>>> {

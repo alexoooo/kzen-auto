@@ -1,12 +1,12 @@
-package tech.kzen.auto.server.objects.report.pipeline.stages
+package tech.kzen.auto.server.objects.pipeline.exec.stages
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
-import tech.kzen.auto.server.objects.report.model.ReportRunContext
-import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
+import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
+import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
+import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
 
@@ -14,7 +14,7 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHe
 class ProcessorFilterStage(
     reportRunContext: ReportRunContext
 ):
-    ProcessorPipelineStage<ProcessorOutputEvent<*>>("filter")
+    PipelineProcessorStage<ProcessorOutputEvent<*>>("filter")
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val filterColumnNames = reportRunContext

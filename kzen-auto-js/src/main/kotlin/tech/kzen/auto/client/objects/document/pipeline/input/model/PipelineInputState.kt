@@ -6,15 +6,12 @@ import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputS
 
 data class PipelineInputState(
     val browser: InputBrowserState = InputBrowserState(),
-    val selected: InputSelectedState = InputSelectedState()
-
-//    val columnListingLoaded: Boolean = false,
-//    val columnListingLoading: Boolean = false,
-//    val columnListing: List<String>? = null,
-//    val columnListingError: String? = null,
+    val selected: InputSelectedState = InputSelectedState(),
+    val column: InputColumnState = InputColumnState()
 ) {
     fun anyLoading(): Boolean {
         return browser.anyLoading() ||
-                selected.anyLoading()
+                selected.anyLoading() ||
+                column.columnListingLoading
     }
 }

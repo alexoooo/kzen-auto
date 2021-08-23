@@ -1,15 +1,15 @@
 package tech.kzen.auto.server.objects.report.pipeline.input.stages
 
 import tech.kzen.auto.plugin.model.data.DataBlockBuffer
+import tech.kzen.auto.server.objects.pipeline.exec.PipelineTrace
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.FlatDataStream
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.InputStreamFlatDataStream
-import tech.kzen.auto.server.objects.report.pipeline.progress.ReportProgressTracker
 
 
 @Suppress("UnstableApiUsage")
 class ProcessorInputReader(
     private val input: FlatDataStream,
-    private val progress: ReportProgressTracker.Buffer? = null
+    private val progress: PipelineTrace? = null
 ):
     AutoCloseable
 {
@@ -18,7 +18,7 @@ class ProcessorInputReader(
         fun ofLiteral(textBytes: ByteArray): ProcessorInputReader {
             return ProcessorInputReader(
                 InputStreamFlatDataStream.ofLiteral(textBytes),
-                null)
+                /*null*/)
         }
     }
 
@@ -29,7 +29,7 @@ class ProcessorInputReader(
 
     //-----------------------------------------------------------------------------------------------------------------
     /**
-     * @return true if has next
+     * @return ReadResult
      */
     fun poll(buffer: DataBlockBuffer): Boolean {
         check(! endOfData)

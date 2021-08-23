@@ -202,37 +202,37 @@ Pipeline:
       dataType: tech.kzen.auto.plugin.model.record.FlatFileRecord
       groupBy: ""
       locations: []
-#  formula: {}
-#  previewAll: false
-#  filter: {}
-#  previewFiltered: false
-#  analysis:
-#    type: FlatData
-#    flat:
-#      type: RequireAny
-#      values: []
-#    pivot:
-#      rows: []
-#      values: {}
-#  output:
-#    type: Explore
-#    explore:
-#      work: "report" # NB: referenced in OutputSpec
-#      save: ""
-#      start: 1
-#      count: 50
-#    export:
-#      format: csv
-#      compression: none
-#      path: "../work/export/${report}_${group}_${time}.${extension}"
+  formula: {}
+  previewAll: false
+  filter: {}
+  previewFiltered: false
+  analysis:
+    type: FlatData
+    flat:
+      type: RequireAny
+      values: []
+    pivot:
+      rows: []
+      values: {}
+  output:
+    type: Explore
+    explore:
+      work: "report" # NB: referenced in OutputSpec
+      save: ""
+      start: 1
+      count: 50
+    export:
+      format: csv
+      compression: none
+      path: "../work/export/${report}_${group}_${time}.${extension}"
   meta:
     input: InputSpec
-#    formula: FormulaSpec
-#    previewAll: PreviewSpec
-#    filter: FilterSpec
-#    previewFiltered: PreviewSpec
-#    analysis: AnalysisSpec
-#    output: OutputSpec
+    formula: FormulaSpec
+    previewAll: PreviewSpec
+    filter: FilterSpec
+    previewFiltered: PreviewSpec
+    analysis: AnalysisSpec
+    output: OutputSpec
     selfLocation: SelfLocation
 
 

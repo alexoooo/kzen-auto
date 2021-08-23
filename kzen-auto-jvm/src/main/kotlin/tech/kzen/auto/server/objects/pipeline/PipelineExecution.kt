@@ -1,82 +1,114 @@
 package tech.kzen.auto.server.objects.pipeline
 
-import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
+import com.lmax.disruptor.ExceptionHandler
+import com.lmax.disruptor.dsl.Disruptor
+import com.lmax.disruptor.dsl.ProducerType
+import com.lmax.disruptor.util.DaemonThreadFactory
+import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
+import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
-import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
+import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessor
+import tech.kzen.auto.server.objects.pipeline.exec.PipelineTrace
+import tech.kzen.auto.server.objects.pipeline.exec.stages.ProcessorFilterStage
+import tech.kzen.auto.server.objects.pipeline.exec.stages.ProcessorFormulaStage
+import tech.kzen.auto.server.objects.pipeline.exec.stages.ProcessorOutputTableStage
+import tech.kzen.auto.server.objects.pipeline.exec.stages.ProcessorPreCacheStage
+import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
-import tech.kzen.auto.server.objects.report.ReportUtils
-import tech.kzen.auto.server.objects.report.group.GroupPattern
+import tech.kzen.auto.server.objects.report.ReportWorkPool
+import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.report.pipeline.event.output.DisruptorPipelineOutput
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.file.FileFlatDataSource
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.*
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetDefinition
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataContentDefinition
+import tech.kzen.auto.server.objects.report.pipeline.input.model.instance.ProcessorDataInstance
+import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
+import tech.kzen.auto.server.objects.report.pipeline.output.export.CharsetExportEncoder
+import tech.kzen.auto.server.objects.report.pipeline.output.export.CompressedExportWriter
+import tech.kzen.auto.server.objects.report.pipeline.output.export.format.ExportFormatter
+import tech.kzen.auto.server.objects.report.pipeline.output.export.model.ExportFormat
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.auto.server.service.v1.model.*
+import tech.kzen.auto.server.util.DisruptorUtils
+import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicBoolean
 
 
 class PipelineExecution(
-    private val input: InputSpec,
+//    private val input: InputSpec,
+
+    private val initialReportRunContext: ReportRunContext,
+    private val reportWorkPool: ReportWorkPool,
+    runDir: Path,
     private val trace: LogicTraceHandle
 ): LogicExecution {
     //-----------------------------------------------------------------------------------------------------------------
-    private var nextDatasetInfo: DatasetInfo? = null
+    companion object {
+        private val logger = LoggerFactory.getLogger(PipelineExecution::class.java)
+
+
+//        private const val preCachePartitionCount = 0
+        private const val preCachePartitionCount = 1
+//        private const val preCachePartitionCount = 2
+//        private const val preCachePartitionCount = 3
+//        private const val preCachePartitionCount = 4
+
+//        private const val recordDisruptorBufferSize = 16 * 1024
+        private const val recordDisruptorBufferSize = 32 * 1024
+//        private const val recordDisruptorBufferSize = 64 * 1024
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+//    private var nextDatasetInfo: DatasetInfo? = null
+
+
+    private val failed = AtomicBoolean(false)
+
+    @Volatile
+    private var cancelled = false
+
+    private val preCachePartitions = ProcessorPreCacheStage.partitions(preCachePartitionCount)
+
+//    private val summary = ProcessorSummaryStage(
+//        ReportSummary(initialReportRunContext, runDir, taskHandle))
+
+    private var tableOutput: ProcessorOutputTableStage? = null
+    private var exportWriter: CompressedExportWriter? = null
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        if (initialReportRunContext.output.type == OutputType.Explore) {
+//            tableOutput = ProcessorOutputTableStage(
+//                TableReportOutput(initialReportRunContext, runDir, taskHandle, progressTracker),
+//                reportWorkPool)
+        }
+        else {
+            exportWriter = CompressedExportWriter(
+                runDir,
+                initialReportRunContext.reportDocumentName,
+                initialReportRunContext.output.export)
+        }
+    }
+
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun next(arguments: TupleValue): Boolean {
-        if (nextDatasetInfo != null) {
-//            return "Already ran"
-            return false
-        }
-
-        val groupPattern = GroupPattern.parse(input.selection.groupBy)
-            ?: GroupPattern.empty
-
-        val items = mutableListOf<FlatDataInfo>()
-        for (inputDataSpec in input.selection.locations) {
-            val dataLocation = inputDataSpec.location
-
-            val pluginCoordinate = inputDataSpec.processorDefinitionCoordinate.asPluginCoordinate()
-            val processorDefinitionMetadata = ServerContext.definitionRepository.metadata(pluginCoordinate)
-//                ?: return "Not found: $pluginCoordinate"
-                ?: return false
-
-            val dataEncoding = ReportUtils.encodingWithMetadata(inputDataSpec, processorDefinitionMetadata)
-
-            val flatDataLocation = FlatDataLocation(
-                dataLocation, dataEncoding)
-
-            val cachedHeaderListing = ServerContext.columnListingAction.cachedHeaderListing(
-                dataLocation, pluginCoordinate)
-
-            val headerListing = cachedHeaderListing
-                ?: run {
-                    val classLoaderHandle = ServerContext.definitionRepository
-                        .classLoaderHandle(setOf(pluginCoordinate), ClassLoader.getSystemClassLoader())
-
-                    classLoaderHandle.use {
-                        val processorDefinition = ServerContext.definitionRepository.define(
-                            pluginCoordinate, it)
-
-                        ServerContext.columnListingAction.headerListing(
-                            FlatDataHeaderDefinition(
-                                flatDataLocation,
-                                FileFlatDataSource(),
-                                processorDefinition),
-                            pluginCoordinate
-                        )
-                    }
-                }
-
-            val fileGroup = groupPattern.extract(flatDataLocation.dataLocation.fileName())
-
-            items.add(FlatDataInfo(flatDataLocation, headerListing, pluginCoordinate, fileGroup))
-        }
-        nextDatasetInfo = DatasetInfo(items.sorted())
+//        if (nextDatasetInfo != null) {
+//            return false
+//        }
+//
+////        nextDatasetInfo = datasetInfo()
+//        nextDatasetInfo = initialReportRunContext.datasetInfo
+//            ?: return false
 
         return true
     }
@@ -126,53 +158,207 @@ class PipelineExecution(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun run(control: LogicControl): LogicResult {
-        val datasetInfo = nextDatasetInfo
-            ?: return LogicResultFailed("Not initialized")
-
-        var cancelled = false
+        val datasetInfo = initialReportRunContext.datasetInfo
+//            ?: return LogicResultFailed("Not initialized")
 
         datasetDefinition<Any>(datasetInfo).use { datasetDefinition ->
-//            val recordDisruptor = setupRecordDisruptor(datasetDefinition.classLoaderHandle)
-//            recordDisruptor.start()
+            val recordDisruptor = setupRecordDisruptor(
+                datasetDefinition.classLoaderHandle/*, control*/)
+            recordDisruptor.start()
 
             try {
-//                val recordDisruptorInput = DisruptorPipelineOutput(recordDisruptor.ringBuffer)
-
-                val buffer = ByteArray(1024)
-
-                var totalBytes = 0L
+                val recordDisruptorInput = DisruptorPipelineOutput(recordDisruptor.ringBuffer)
 
                 for (flatDataContentDefinition in datasetDefinition.items) {
-                    val flatDataStream = flatDataContentDefinition.open()
+                    runFlatData(recordDisruptorInput, flatDataContentDefinition, control)
 
-                    while (true) {
-                        val result = flatDataStream.read(buffer)
-                        println("result: $result")
-                        trace.set(LogicTracePath.root, ExecutionValue.of(totalBytes))
-
-                        if (result.isEndOfData()) {
-                            flatDataStream.close()
-                            break
-                        }
-                        totalBytes += result.byteCount()
-
-                        if (control.pollCommand() == LogicCommand.Cancel) {
-                            cancelled = true
-                            flatDataStream.close()
-                            break
-                        }
+                    if (failed.get()) {
+                        break
                     }
+
+//                    val flatDataStream = flatDataContentDefinition.open()
+//
+//                    while (true) {
+//                        val result = flatDataStream.read(buffer)
+//                        println("result: $result")
+//                        trace.set(LogicTracePath.root, ExecutionValue.of(totalBytes))
+//
+//                        totalBytes += result.byteCount()
+//
+//                        if (result.isEndOfData() || failed) {
+//                            flatDataStream.close()
+//                            break
+//                        }
+//
+//                        if (control.pollCommand() == LogicCommand.Cancel) {
+//                            cancelled = true
+//                            flatDataStream.close()
+//                            break
+//                        }
+//                    }
                 }
             }
             finally {
-//                recordDisruptor.shutdown()
+                recordDisruptor.shutdown()
 //                progressTracker.finish()
             }
         }
 
         return when {
+            failed.get() -> LogicResultFailed("error")
             cancelled -> LogicResultCancelled
             else -> LogicResultSuccess(TupleValue.empty)
+        }
+    }
+
+
+    private fun <T> runFlatData(
+        recordDisruptorInput: PipelineOutput<ProcessorOutputEvent<T>>,
+        flatDataContentDefinition: FlatDataContentDefinition<T>,
+        control: LogicControl
+    ) {
+        val flatDataStream = flatDataContentDefinition.open()
+        val totalSize = flatDataContentDefinition.size()
+
+        val flatDataLocation = flatDataContentDefinition.flatDataInfo.flatDataLocation
+        val pipelineTrace = PipelineTrace(trace, flatDataLocation.dataLocation, totalSize)
+
+//        val streamProgressTracker = progressTracker.getInitial(flatDataLocation.dataLocation, totalSize)
+
+        val processorInputReader = ProcessorInputReader(flatDataStream)
+
+        val processorDataInstance = ProcessorDataInstance(
+            flatDataContentDefinition.processorDefinition.processorDataDefinition)
+
+        val processorInputPipeline = PipelineProcessor(
+            processorInputReader,
+            recordDisruptorInput,
+            processorDataInstance,
+            flatDataLocation.dataEncoding,
+            flatDataContentDefinition.flatDataInfo,
+            pipelineTrace,
+            failed)
+
+        processorInputPipeline.start()
+        try {
+            pipelineTrace.startReading()
+
+            while (! failed.get()) {
+                if (control.pollCommand() == LogicCommand.Cancel) {
+                    cancelled = true
+                }
+
+                val hasNext = processorInputPipeline.poll()
+
+                if (! hasNext) {
+                    break
+                }
+            }
+        }
+        finally {
+            processorInputPipeline.close()
+            pipelineTrace.finishParsing()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun setupRecordDisruptor(
+        classLoaderHandle: ClassLoaderHandle,
+//        control: LogicControl
+    ): Disruptor<ProcessorOutputEvent<Any>> {
+        val recordDisruptor = Disruptor(
+            { ProcessorOutputEvent<Any>() },
+            recordDisruptorBufferSize,
+            DaemonThreadFactory.INSTANCE,
+            ProducerType.SINGLE,
+            DisruptorUtils.newWaitStrategy()
+        )
+
+        val formulas = ProcessorFormulaStage(
+            initialReportRunContext.dataType,
+            initialReportRunContext.formula,
+            classLoaderHandle.classLoader,
+            ServerContext.calculatedColumnEval)
+
+        var builder = recordDisruptor.handleEventsWith(formulas)
+
+        val filter = ProcessorFilterStage(initialReportRunContext)
+        if (! filter.isEmpty()) {
+            builder = builder.then(filter)
+        }
+
+        if (initialReportRunContext.previewAll.enabled) {
+            TODO("Preview All not implemented (yet)")
+        }
+        val filterEnabled = initialReportRunContext.previewFiltered.enabled
+
+        val startOfOutput =
+//            if (tableOutput != null) {
+//                tableOutput
+//            }
+//            else {
+                ExportFormatter(ExportFormat.byName(
+                    initialReportRunContext.output.export.format))
+//            }
+//
+        builder =
+//            if (filterEnabled) {
+//                builder
+//                    .then(*preCachePartitions)
+//                    .then(summary, startOfOutput)
+//            }
+//            else {
+                builder
+                    .then(startOfOutput)
+//            }
+
+        if (exportWriter != null) {
+            builder
+                .then(CharsetExportEncoder(Charsets.UTF_8))
+                .then(exportWriter)
+        }
+
+        val recordExceptionHandler = recordExceptionHandler(/*control*/)
+        recordDisruptor.setDefaultExceptionHandler(recordExceptionHandler)
+
+        return recordDisruptor
+    }
+
+
+    private fun recordExceptionHandler(
+//        control: LogicControl
+    ): ExceptionHandler<ProcessorOutputEvent<*>> {
+        return object : ExceptionHandler<ProcessorOutputEvent<*>> {
+            override fun handleEventException(ex: Throwable, sequence: Long, event: ProcessorOutputEvent<*>) {
+                if (failed.get()) {
+                    return
+                }
+//
+                logger.error("Record event - {}", event.row, ex)
+                failed.set(true)
+//                taskHandle?.terminalFailure(ExecutionFailure.ofException("Processing: ${event.row} - ", ex))
+            }
+
+            override fun handleOnStartException(ex: Throwable) {
+                if (failed.get()) {
+                    return
+                }
+
+                logger.error("Record start", ex)
+                failed.set(true)
+//                taskHandle?.terminalFailure(ExecutionFailure.ofException("Startup - ", ex))
+            }
+//
+            override fun handleOnShutdownException(ex: Throwable) {
+                if (failed.get()) {
+                    return
+                }
+
+                logger.error("Record shutdown", ex)
+                failed.set(true)
+//                taskHandle?.terminalFailure(ExecutionFailure.ofException("Shutdown - ", ex))
+            }
         }
     }
 }

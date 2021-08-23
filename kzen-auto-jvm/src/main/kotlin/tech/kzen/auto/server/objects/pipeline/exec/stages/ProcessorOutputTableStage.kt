@@ -1,7 +1,7 @@
-package tech.kzen.auto.server.objects.report.pipeline.stages
+package tech.kzen.auto.server.objects.pipeline.exec.stages
 
+import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
 import tech.kzen.auto.server.objects.report.ReportWorkPool
-import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.output.TableReportOutput
 
@@ -10,7 +10,7 @@ class ProcessorOutputTableStage(
     val tableReportOutput: TableReportOutput,
     private val reportWorkPool: ReportWorkPool
 ):
-    ProcessorPipelineStage<ProcessorOutputEvent<*>>("output")
+    PipelineProcessorStage<ProcessorOutputEvent<*>>("output")
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun onEvent(event: ProcessorOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {

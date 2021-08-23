@@ -1,22 +1,19 @@
 package tech.kzen.auto.server.objects.report
 
+//import tech.kzen.auto.server.objects.report.pipeline.ProcessorDatasetPipeline
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
-import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
-import tech.kzen.auto.common.paradigm.common.model.*
-import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.common.util.FormatUtils
-import tech.kzen.auto.server.objects.report.model.ReportRunContext
-import tech.kzen.auto.server.objects.report.pipeline.ProcessorDatasetPipeline
-import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
-import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
+import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.platform.ClassName
-import tech.kzen.lib.platform.DateTimeUtils
 import java.nio.file.Path
 
 
@@ -61,18 +58,19 @@ class ReportRunAction(
         reportRunContext: ReportRunContext,
         runDir: Path
     ): ExecutionResult {
-        val activeReportHandle = ServerContext
-            .modelTaskRepository
-            .lookupActive(objectLocation)
-            .singleOrNull()
-            ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ProcessorDatasetPipeline }
-
-        val tableSummary =
-            activeReportHandle?.summaryView()
-                ?: ReportSummary(reportRunContext, runDir, null).view()
-
-        return ExecutionSuccess.ofValue(
-            ExecutionValue.of(tableSummary.toCollection()))
+//        val activeReportHandle = ServerContext
+//            .modelTaskRepository
+//            .lookupActive(objectLocation)
+//            .singleOrNull()
+//            ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ProcessorDatasetPipeline }
+//
+//        val tableSummary =
+//            activeReportHandle?.summaryView()
+//                ?: ReportSummary(reportRunContext, runDir, null).view()
+//
+//        return ExecutionSuccess.ofValue(
+//            ExecutionValue.of(tableSummary.toCollection()))
+        TODO()
     }
 
 
@@ -83,18 +81,20 @@ class ReportRunAction(
         runDir: Path,
         outputSpec: OutputExploreSpec
     ): ExecutionResult {
-        val activeReportHandle = ServerContext
-            .modelTaskRepository
-            .lookupActive(objectLocation)
-            .singleOrNull()
-            ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ProcessorDatasetPipeline }
+//        val activeReportHandle = ServerContext
+//            .modelTaskRepository
+//            .lookupActive(objectLocation)
+//            .singleOrNull()
+//            ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ProcessorDatasetPipeline }
+//
+//        val outputInfo =
+//            activeReportHandle?.activeOutputInfo(runContext, outputSpec)
+//                ?: ProcessorDatasetPipeline.passiveOutputInfo(runContext, runDir, outputSpec, reportWorkPool)
+//
+//        return ExecutionSuccess.ofValue(
+//            ExecutionValue.of(outputInfo.toCollection()))
 
-        val outputInfo =
-            activeReportHandle?.activeOutputInfo(runContext, outputSpec)
-                ?: ProcessorDatasetPipeline.passiveOutputInfo(runContext, runDir, outputSpec, reportWorkPool)
-
-        return ExecutionSuccess.ofValue(
-            ExecutionValue.of(outputInfo.toCollection()))
+        TODO()
     }
 
 
@@ -104,15 +104,17 @@ class ReportRunAction(
         runDir: Path,
         outputSpec: OutputExploreSpec
     ): ExecutionResult {
-        return try {
-            val outPath = ProcessorDatasetPipeline.passiveSave(runContext, runDir, outputSpec, reportWorkPool)
-            ExecutionSuccess(
-                ExecutionValue.of(outPath.toString()),
-                NullExecutionValue)
-        }
-        catch (e: Exception) {
-            ExecutionFailure("Not found: $runDir")
-        }
+//        return try {
+//            val outPath = ProcessorDatasetPipeline.passiveSave(runContext, runDir, outputSpec, reportWorkPool)
+//            ExecutionSuccess(
+//                ExecutionValue.of(outPath.toString()),
+//                NullExecutionValue)
+//        }
+//        catch (e: Exception) {
+//            ExecutionFailure("Not found: $runDir")
+//        }
+
+        TODO()
     }
 
 
@@ -122,16 +124,18 @@ class ReportRunAction(
         outputSpec: OutputExploreSpec,
         mainLocation: ObjectLocation
     ): ExecutionDownloadResult {
-        val filenamePrefix = FormatUtils.sanitizeFilename(mainLocation.documentPath.name.value)
-        val filenameSuffix = DateTimeUtils.filenameTimestamp()
-        val filename = filenamePrefix + "_" + filenameSuffix + ".csv"
+//        val filenamePrefix = FormatUtils.sanitizeFilename(mainLocation.documentPath.name.value)
+//        val filenameSuffix = DateTimeUtils.filenameTimestamp()
+//        val filename = filenamePrefix + "_" + filenameSuffix + ".csv"
+//
+//        val inputStream = ProcessorDatasetPipeline.passiveDownload(runContext, runDir, outputSpec, reportWorkPool)
+//        return ExecutionDownloadResult(
+//            inputStream,
+//            filename,
+//            mimeTypeCsv
+//        )
 
-        val inputStream = ProcessorDatasetPipeline.passiveDownload(runContext, runDir, outputSpec, reportWorkPool)
-        return ExecutionDownloadResult(
-            inputStream,
-            filename,
-            mimeTypeCsv
-        )
+        TODO()
     }
 
 
@@ -150,64 +154,64 @@ class ReportRunAction(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun startReport(
-//        classLoaderHandle: ClassLoaderHandle,
-        reportRunContext: ReportRunContext,
-        runDir: Path,
-        taskHandle: TaskHandle
-    ): ProcessorDatasetPipeline {
-        logger.info("Starting: $runDir | $reportRunContext")
-
-        val outputValue = ExecutionValue.of(runDir.toString())
-
-        taskHandle.update(ExecutionSuccess.ofValue(outputValue))
-
-        val reportHandle = ProcessorDatasetPipeline(
-            /*classLoaderHandle,*/ reportRunContext, runDir, reportWorkPool, taskHandle)
-
-        val processorThreadName =
-            "processor_${reportRunContext.reportDocumentName.value}_${ProcessorPipelineStage.nextNumber()}"
-
-        object : Thread(processorThreadName) {
-            override fun run() {
-                processSync(
-                    taskHandle, reportHandle, runDir)
-            }
-        }.start()
-
-        logger.info("Started: {} | {}", runDir, reportRunContext)
-
-        return reportHandle
-    }
+//    fun startReport(
+////        classLoaderHandle: ClassLoaderHandle,
+//        reportRunContext: ReportRunContext,
+//        runDir: Path,
+//        taskHandle: TaskHandle
+//    ): ProcessorDatasetPipeline {
+//        logger.info("Starting: $runDir | $reportRunContext")
+//
+//        val outputValue = ExecutionValue.of(runDir.toString())
+//
+//        taskHandle.update(ExecutionSuccess.ofValue(outputValue))
+//
+//        val reportHandle = ProcessorDatasetPipeline(
+//            /*classLoaderHandle,*/ reportRunContext, runDir, reportWorkPool, taskHandle)
+//
+//        val processorThreadName =
+//            "processor_${reportRunContext.reportDocumentName.value}_${PipelineProcessorStage.nextNumber()}"
+//
+//        object : Thread(processorThreadName) {
+//            override fun run() {
+//                processSync(
+//                    taskHandle, reportHandle, runDir)
+//            }
+//        }.start()
+//
+//        logger.info("Started: {} | {}", runDir, reportRunContext)
+//
+//        return reportHandle
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun processSync(
-        taskHandle: TaskHandle,
-        reportHandle: ProcessorDatasetPipeline,
-        runDir: Path
-    ) {
-        try {
-            reportHandle.run()
-
-            if (taskHandle.stopRequested()) {
-                reportWorkPool.updateRunStatus(runDir, OutputStatus.Cancelled)
-            }
-            else {
-                reportWorkPool.updateRunStatus(runDir, OutputStatus.Done)
-            }
-
-            taskHandle.completeWithPartialResult()
-        }
-        catch (e: Throwable) {
-            logger.warn("Data processing failed", e)
-
-            reportWorkPool.updateRunStatus(runDir, OutputStatus.Failed)
-
-            taskHandle.terminalFailure(ExecutionFailure.ofException(
-                "Unable to process - ", e))
-
-            taskHandle.completeWithPartialResult()
-        }
-    }
+//    private fun processSync(
+//        taskHandle: TaskHandle,
+//        reportHandle: ProcessorDatasetPipeline,
+//        runDir: Path
+//    ) {
+//        try {
+//            reportHandle.run()
+//
+//            if (taskHandle.stopRequested()) {
+//                reportWorkPool.updateRunStatus(runDir, OutputStatus.Cancelled)
+//            }
+//            else {
+//                reportWorkPool.updateRunStatus(runDir, OutputStatus.Done)
+//            }
+//
+//            taskHandle.completeWithPartialResult()
+//        }
+//        catch (e: Throwable) {
+//            logger.warn("Data processing failed", e)
+//
+//            reportWorkPool.updateRunStatus(runDir, OutputStatus.Failed)
+//
+//            taskHandle.terminalFailure(ExecutionFailure.ofException(
+//                "Unable to process - ", e))
+//
+//            taskHandle.completeWithPartialResult()
+//        }
+//    }
 }

@@ -1,6 +1,8 @@
 package tech.kzen.auto.common.objects.document.pipeline
 
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -60,4 +62,13 @@ object PipelineConventions {
     const val actionValidateFormulas = "formulas"
 
     const val filesParameter = "files"
+
+
+    private val traceInputPrefix = "input"
+
+
+    fun inputTracePath(dataLocation: DataLocation): LogicTracePath {
+        return LogicTracePath(listOf(
+            traceInputPrefix, dataLocation.digest().asString()))
+    }
 }

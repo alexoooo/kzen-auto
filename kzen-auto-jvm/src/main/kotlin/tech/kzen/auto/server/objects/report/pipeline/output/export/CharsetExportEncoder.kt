@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.pipeline.output.export
 
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer
-import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
+import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import java.nio.charset.Charset
 import kotlin.math.ceil
@@ -10,7 +10,7 @@ import kotlin.math.ceil
 class CharsetExportEncoder(
     val charset: Charset
 ):
-    ProcessorPipelineStage<ProcessorOutputEvent<*>>("export-encode")
+    PipelineProcessorStage<ProcessorOutputEvent<*>>("export-encode")
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val encoder = charset.newEncoder()

@@ -6,9 +6,9 @@ import kotlinx.coroutines.withContext
 import tech.kzen.auto.common.objects.document.report.summary.*
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.util.FormatUtils
-import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
+import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner

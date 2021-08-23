@@ -4,15 +4,29 @@ import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
+import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
+import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
+import tech.kzen.auto.server.objects.pipeline.model.GroupPattern
+import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
-import tech.kzen.auto.server.objects.report.group.GroupPattern
+import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
+import tech.kzen.auto.server.objects.report.ReportUtils
+import tech.kzen.auto.server.objects.report.ReportWorkPool
+import tech.kzen.auto.server.objects.report.pipeline.input.connect.file.FileFlatDataSource
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataInfo
+import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataLocation
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.Logic
 import tech.kzen.auto.server.service.v1.LogicExecution
@@ -22,11 +36,20 @@ import tech.kzen.auto.server.service.v1.model.LogicType
 import tech.kzen.auto.server.service.v1.model.TupleDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import java.awt.geom.IllegalPathStateException
+import java.nio.file.Path
+import java.nio.file.Paths
 
 
 @Reflect
 class PipelineDocument(
     private val input: InputSpec,
+    private val formula: FormulaSpec,
+    private val previewAll: PreviewSpec,
+    private val filter: FilterSpec,
+    private val previewFiltered: PreviewSpec,
+    private val analysis: AnalysisSpec,
+    private val output: OutputSpec,
 
     private val selfLocation: ObjectLocation
 ):
@@ -69,10 +92,9 @@ class PipelineDocument(
             PipelineConventions.actionTypeFormats ->
                 actionTypeFormats()
 
-//
-//            ReportConventions.actionListColumns ->
-//                actionColumnListing()
-//
+            PipelineConventions.actionListColumns ->
+                actionColumnListing()
+
 //            ReportConventions.actionValidateFormulas ->
 //                actionValidateFormulas()
 //
@@ -170,6 +192,16 @@ class PipelineDocument(
     }
 
 
+    private fun actionColumnListing(): ExecutionResult {
+        val inputPaths = datasetInfo()
+            ?: return ExecutionFailure("Please provide a valid inputs")
+
+        val columnNames = inputPaths.headerSuperset().values
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(columnNames))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun define(): LogicDefinition {
         return LogicDefinition(
@@ -179,6 +211,93 @@ class PipelineDocument(
 
 
     override fun execute(handle: LogicHandle, logicTraceHandle: LogicTraceHandle): LogicExecution {
-        return PipelineExecution(input, logicTraceHandle)
+        val reportRunContext = reportRunContext()
+            ?: throw IllegalStateException("Unable to create context")
+
+        val runDir = runDir(reportRunContext)
+
+        return PipelineExecution(
+            reportRunContext, ServerContext.reportWorkPool, runDir, logicTraceHandle)
+    }
+
+
+    private fun runDir(runContext: ReportRunContext): Path {
+        val reportDir =
+            try {
+                Paths.get(output.explore.workPath)
+            }
+            catch (e: IllegalPathStateException) {
+                ReportWorkPool.defaultReportDir
+            }
+
+        val runSignature = runContext.toSignature()
+        return ServerContext.reportWorkPool.resolveRunDir(runSignature, reportDir)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun reportRunContext(): ReportRunContext? {
+        val datasetInfo = datasetInfo()
+            ?: return null
+
+        val dataType = input.selection.dataType
+
+        return ReportRunContext(
+            selfLocation.documentPath.name,
+            dataType,
+            datasetInfo,
+            formula,
+            previewAll,
+            filter,
+            previewFiltered,
+            analysis,
+            output)
+    }
+
+
+    private fun datasetInfo(): DatasetInfo? {
+        val groupPattern = GroupPattern.parse(input.selection.groupBy)
+            ?: GroupPattern.empty
+
+        val items = mutableListOf<FlatDataInfo>()
+        for (inputDataSpec in input.selection.locations) {
+            val dataLocation = inputDataSpec.location
+
+            val pluginCoordinate = inputDataSpec.processorDefinitionCoordinate.asPluginCoordinate()
+            val processorDefinitionMetadata = ServerContext.definitionRepository.metadata(pluginCoordinate)
+                ?: return null
+
+            val dataEncoding = ReportUtils.encodingWithMetadata(inputDataSpec, processorDefinitionMetadata)
+
+            val flatDataLocation = FlatDataLocation(
+                dataLocation, dataEncoding)
+
+            val cachedHeaderListing = ServerContext.columnListingAction.cachedHeaderListing(
+                dataLocation, pluginCoordinate)
+
+            val headerListing = cachedHeaderListing
+                ?: run {
+                    val classLoaderHandle = ServerContext.definitionRepository
+                        .classLoaderHandle(setOf(pluginCoordinate), ClassLoader.getSystemClassLoader())
+
+                    classLoaderHandle.use {
+                        val processorDefinition = ServerContext.definitionRepository.define(
+                            pluginCoordinate, it)
+
+                        ServerContext.columnListingAction.headerListing(
+                            FlatDataHeaderDefinition(
+                                flatDataLocation,
+                                FileFlatDataSource(),
+                                processorDefinition),
+                            pluginCoordinate
+                        )
+                    }
+                }
+
+            val fileGroup = groupPattern.extract(flatDataLocation.dataLocation.fileName())
+
+            items.add(FlatDataInfo(flatDataLocation, headerListing, pluginCoordinate, fileGroup))
+        }
+        return DatasetInfo(items.sorted())
     }
 }

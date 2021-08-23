@@ -7,10 +7,10 @@ import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.output.OutputTableInfo
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
-import tech.kzen.auto.server.objects.report.ReportWorkPool
-import tech.kzen.auto.server.objects.report.model.ReportRunContext
-import tech.kzen.auto.server.objects.report.model.ReportRunSignature
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
+import tech.kzen.auto.server.objects.pipeline.model.ReportRunSignature
+import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.pipeline.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.report.pipeline.output.pivot.PivotBuilder

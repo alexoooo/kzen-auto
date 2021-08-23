@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.report.pipeline
+package tech.kzen.auto.server.objects.pipeline.exec
 
 import com.lmax.disruptor.EventHandler
 import com.lmax.disruptor.LifecycleAware
@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 
 // https://groups.google.com/g/lmax-disruptor/c/C5dACGttjNc
-abstract class ProcessorPipelineStage<T>(
+abstract class PipelineProcessorStage<T>(
     private val name: String
 ):
     EventHandler<T>,

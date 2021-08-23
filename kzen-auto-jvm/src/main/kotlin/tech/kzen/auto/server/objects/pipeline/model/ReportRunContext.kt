@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.report.model
+package tech.kzen.auto.server.objects.pipeline.model
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec

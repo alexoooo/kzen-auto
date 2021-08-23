@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.report.group
+package tech.kzen.auto.server.objects.pipeline.model
 
 import tech.kzen.auto.common.util.data.DataLocationGroup
 import java.util.regex.Pattern

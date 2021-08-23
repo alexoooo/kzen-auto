@@ -5,9 +5,11 @@ import react.*
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.pipeline.analysis.PipelineAnalysisController
 import tech.kzen.auto.client.objects.document.pipeline.input.PipelineInputController
 import tech.kzen.auto.client.objects.document.pipeline.model.PipelineState
 import tech.kzen.auto.client.objects.document.pipeline.model.PipelineStore
+import tech.kzen.auto.client.objects.document.pipeline.output.PipelineOutputController
 import tech.kzen.auto.client.objects.document.pipeline.run.PipelineRunController
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -21,11 +23,11 @@ class PipelineController(
     PipelineStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-//    companion object {
-//        val separatorWidth = 2.px
-//        val separatorColor = Color("#c3c3c3")
-//        val selectedColor = Color("#e0e0e0")
-//    }
+    companion object {
+        val separatorWidth = 2.px
+        val separatorColor = Color("#c3c3c3")
+        val selectedColor = Color("#e0e0e0")
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -109,8 +111,8 @@ class PipelineController(
 ////            renderPreview(processState, false)
 //            renderFilter(processState)
 //            renderPreview(processState, true)
-//            renderAnalysis(processState)
-//            renderOutput(processState)
+            renderAnalysis(pipelineState)
+            renderOutput(pipelineState)
         }
 
         renderRun(pipelineState)
@@ -217,26 +219,31 @@ class PipelineController(
 ////            }
 ////        }
 ////    }
-//
-//
-//    private fun RBuilder.renderAnalysis(reportState: ReportState) {
-//        child(AnalysisView::class) {
-//            attrs {
+
+
+    private fun RBuilder.renderAnalysis(pipelineState: PipelineState) {
+        child(PipelineAnalysisController::class) {
+            attrs {
+                spec = pipelineState.analysisSpec()
+                inputAndCalculatedColumns = pipelineState.inputAndCalculatedColumns()
+                runningOrLoading = pipelineState.isRunningOrLoading()
+                analysisStore = store.analysis
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderOutput(pipelineState: PipelineState) {
+        child(PipelineOutputController::class) {
+            attrs {
+                this.spec = pipelineState.outputSpec()
+                this.outputStore = store.output
+
 //                this.reportState = reportState
 //                this.dispatcher = store
-//            }
-//        }
-//    }
-//
-//
-//    private fun RBuilder.renderOutput(reportState: ReportState) {
-//        child(ReportOutputView::class) {
-//            attrs {
-//                this.reportState = reportState
-//                this.dispatcher = store
-//            }
-//        }
-//    }
+            }
+        }
+    }
 
 
     private fun RBuilder.renderRun(pipelineState: PipelineState) {

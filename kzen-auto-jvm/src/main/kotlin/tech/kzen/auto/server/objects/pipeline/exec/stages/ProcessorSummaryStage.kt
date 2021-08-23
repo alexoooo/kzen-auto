@@ -1,6 +1,6 @@
-package tech.kzen.auto.server.objects.report.pipeline.stages
+package tech.kzen.auto.server.objects.pipeline.exec.stages
 
-import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
+import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 
@@ -8,7 +8,7 @@ import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 class ProcessorSummaryStage(
     val reportSummary: ReportSummary
 ):
-    ProcessorPipelineStage<ProcessorOutputEvent<*>>("summary"),
+    PipelineProcessorStage<ProcessorOutputEvent<*>>("summary"),
     AutoCloseable
 {
     //-----------------------------------------------------------------------------------------------------------------

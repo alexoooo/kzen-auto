@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.report.pipeline.input
+package tech.kzen.auto.server.objects.pipeline.exec
 
 import com.lmax.disruptor.EventHandler
 import com.lmax.disruptor.ExceptionHandler
@@ -8,14 +8,10 @@ import com.lmax.disruptor.dsl.EventHandlerGroup
 import com.lmax.disruptor.dsl.ProducerType
 import com.lmax.disruptor.util.DaemonThreadFactory
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.model.DataInputEvent
 import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.plugin.spec.DataEncodingSpec
-import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
-import tech.kzen.auto.server.objects.pipeline.exec.PipelineTrace
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.event.output.DecoratorPipelineOutput
 import tech.kzen.auto.server.objects.report.pipeline.event.output.DisruptorPipelineOutput
@@ -28,22 +24,25 @@ import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInput
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputFramer
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
 import tech.kzen.auto.server.util.DisruptorUtils
+import java.util.concurrent.atomic.AtomicBoolean
 
 
-class ProcessorInputPipeline<Output>(
+class PipelineProcessor<Output>(
     private val input: ProcessorInputReader,
     private val output: PipelineOutput<ProcessorOutputEvent<Output>>,
     private val processorDataInstance: ProcessorDataInstance<Output>,
     private val dataEncodingSpec: DataEncodingSpec,
     private val flatDataInfo: FlatDataInfo,
-    private val streamProgressTracker: PipelineTrace?,
-    private val taskHandle: TaskHandle
+//    private val streamProgressTracker: ReportProgressTracker.Buffer?,
+//    private val taskHandle: TaskHandle,
+    private val trace: PipelineTrace,
+    private val failed: AtomicBoolean
 ):
     AutoCloseable
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val logger = LoggerFactory.getLogger(ProcessorInputPipeline::class.java)
+        private val logger = LoggerFactory.getLogger(PipelineProcessor::class.java)
 
 //        private const val binaryDisruptorBufferSize = 128
         private const val binaryDisruptorBufferSize = 256
@@ -102,7 +101,8 @@ class ProcessorInputPipeline<Output>(
         eventHandlerGroup = DisruptorUtils.addHandlers(binaryDisruptor, eventHandlerGroup, framer)
 
         val output = DisruptorPipelineOutput(recordRingBuffer)
-        val feeder = ProcessorFrameFeeder(output, streamProgressTracker)
+//        val feeder = ProcessorFrameFeeder(output, streamProgressTracker)
+        val feeder = ProcessorFrameFeeder(output, trace)
         eventHandlerGroup.handleEventsWith(feeder)
 
         binaryDisruptor.setDefaultExceptionHandler(
@@ -190,33 +190,30 @@ class ProcessorInputPipeline<Output>(
     private fun <T> loggingExceptionHandler(name: String): ExceptionHandler<T> {
         return object : ExceptionHandler<T> {
             override fun handleEventException(ex: Throwable, sequence: Long, event: T) {
-                if (taskHandle.isFailed()) {
+                if (failed.get()) {
                     return
                 }
 
                 logger.error("{} event - {}", name, event, ex)
-                taskHandle.terminalFailure(ExecutionFailure.ofException(
-                    "$name event - $event - ", ex))
+                failed.set(true)
             }
 
             override fun handleOnStartException(ex: Throwable) {
-                if (taskHandle.isFailed()) {
+                if (failed.get()) {
                     return
                 }
 
                 logger.error("{} start", name, ex)
-                taskHandle.terminalFailure(ExecutionFailure.ofException(
-                    "$name start - ", ex))
+                failed.set(true)
             }
 
             override fun handleOnShutdownException(ex: Throwable) {
-                if (taskHandle.isFailed()) {
+                if (failed.get()) {
                     return
                 }
 
                 logger.error("{} shutdown", name, ex)
-                taskHandle.terminalFailure(ExecutionFailure.ofException(
-                    "$name shutdown - ", ex))
+                failed.set(true)
             }
         }
     }

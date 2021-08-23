@@ -18,10 +18,10 @@ import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
+import tech.kzen.auto.server.objects.pipeline.model.GroupPattern
+import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
-import tech.kzen.auto.server.objects.report.group.GroupPattern
-import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.input.connect.file.FileFlatDataSource
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
@@ -420,7 +420,8 @@ class ReportDocument(
 
 //        val dataTypeProvider = dataTypeProvider()
 
-        return ServerContext.reportRunAction.startReport(
-            /*dataTypeProvider,*/ runContext, runDir, handle)
+//        return ServerContext.reportRunAction.startReport(
+//            /*dataTypeProvider,*/ runContext, runDir, handle)
+        TODO()
     }
 }

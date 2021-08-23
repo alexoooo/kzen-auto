@@ -38,7 +38,6 @@ class InputSelectedController(
     }
 
 
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
         showDetails = false

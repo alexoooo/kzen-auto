@@ -8,7 +8,9 @@ import tech.kzen.lib.common.util.Digestible
 data class DataLocation(
     val filePath: FilePath?,
     val url: Url?
-): Digestible {
+):
+    Digestible
+{
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val unknownLocation = "unknown"
@@ -49,6 +51,10 @@ data class DataLocation(
             return DataLocation(null, url)
         }
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private var digestCache: Digest?  = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -189,9 +195,24 @@ data class DataLocation(
     }
 
 
-    override fun digest(builder: Digest.Builder) {
+    override fun digest(): Digest {
+        val existing = digestCache
+        if (existing != null) {
+            return existing
+        }
+
+        val builder = Digest.Builder()
         builder.addDigestibleNullable(filePath)
         builder.addDigestibleNullable(url)
+        val computed = builder.digest()
+
+        digestCache = computed
+        return computed
+    }
+
+
+    override fun digest(builder: Digest.Builder) {
+        builder.addDigest(digest())
     }
 
 

@@ -10,8 +10,8 @@ import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpe
 import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer
 import tech.kzen.auto.server.objects.report.ReportWorkPool
-import tech.kzen.auto.server.objects.report.model.ReportRunContext
-import tech.kzen.auto.server.objects.report.pipeline.ProcessorPipelineStage
+import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
+import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.output.export.model.ExportCompression
 import tech.kzen.lib.common.model.document.DocumentName
@@ -32,7 +32,7 @@ class CompressedExportWriter(
     private val reportName: DocumentName,
     private val outputExportSpec: OutputExportSpec
 ):
-    ProcessorPipelineStage<ProcessorOutputEvent<*>>("export-write")
+    PipelineProcessorStage<ProcessorOutputEvent<*>>("export-write")
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
