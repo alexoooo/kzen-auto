@@ -2,12 +2,10 @@ package tech.kzen.auto.client.wrap.material
 
 import react.Component
 import react.RBuilder
-import react.RState
-import react.ReactElement
 import kotlin.reflect.KClass
 
 
-fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
+fun iconClassForName(name: String): KClass<out Component<IconProps, react.State>> {
     // TODO: is there a way to do this without manually writing these out?
     //  e.g. <Icon>edit_icon</Icon> in https://codesandbox.io/s/9yp4yk6qno
 
@@ -63,6 +61,6 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, RState>> {
 }
 
 
-fun RBuilder.iconByName(name: String): ReactElement? {
-    return child(iconClassForName(name)) {}
+fun RBuilder.iconByName(name: String)/*: ReactElement?*/ {
+    child(iconClassForName(name)) {}
 }

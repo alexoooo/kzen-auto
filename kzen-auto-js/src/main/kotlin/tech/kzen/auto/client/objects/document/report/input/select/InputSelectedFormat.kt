@@ -28,7 +28,7 @@ class InputSelectedFormat(
     RPureComponent<InputSelectedFormat.Props, InputSelectedFormat.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var editDisabled: Boolean
@@ -36,7 +36,7 @@ class InputSelectedFormat(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var loadedFormats: List<ProcessorDefinerDetail>?
     }
 

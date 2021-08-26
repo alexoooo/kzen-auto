@@ -49,7 +49,7 @@ class DefaultStepDisplay(
 
     class State(
 //            var hoverCard: Boolean
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -60,8 +60,8 @@ class DefaultStepDisplay(
     ):
             StepDisplayWrapper(objectLocation)
     {
-        override fun child(input: RBuilder, handler: RHandler<StepDisplayProps>): ReactElement {
-            return input.child(DefaultStepDisplay::class) {
+        override fun child(input: RBuilder, handler: RHandler<StepDisplayProps>)/*: ReactElement*/ {
+            input.child(DefaultStepDisplay::class) {
                 attrs {
                     this.attributeController = this@Wrapper.attributeController
                 }

@@ -47,10 +47,10 @@ class DefaultAttributeEditor(
     )
 
 
-    class State: RState
+    class State: react.State
 
 
-    private var attributePathValueEditor: AttributePathValueEditor? = null
+    private var attributePathValueEditor: RefObject<AttributePathValueEditor> = createRef()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -60,8 +60,8 @@ class DefaultAttributeEditor(
     ):
             AttributeEditorWrapper(objectLocation)
     {
-        override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>): ReactElement {
-            return input.child(DefaultAttributeEditor::class) {
+        override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>)/*: ReactElement*/ {
+            input.child(DefaultAttributeEditor::class) {
                 handler()
             }
         }
@@ -95,7 +95,7 @@ class DefaultAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
-        attributePathValueEditor?.flush()
+        attributePathValueEditor.current?.flush()
     }
 
 
@@ -178,9 +178,7 @@ class DefaultAttributeEditor(
                 }
             }
 
-            ref {
-                attributePathValueEditor = it as? AttributePathValueEditor
-            }
+            ref = attributePathValueEditor
         }
     }
 }

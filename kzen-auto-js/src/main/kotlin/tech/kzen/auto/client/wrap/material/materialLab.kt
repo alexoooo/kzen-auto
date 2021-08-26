@@ -4,18 +4,16 @@ package tech.kzen.auto.client.wrap.material
 
 import org.w3c.dom.events.Event
 import react.Component
-import react.RProps
-import react.RState
 import react.ReactElement
 import kotlin.js.Json
 
 
 @JsName("ToggleButton")
-external class MaterialToggleButton: Component<ToggleButtonProps, RState> {
+external class MaterialToggleButton: Component<ToggleButtonProps, react.State> {
     override fun render(): ReactElement?
 }
 
-external interface ToggleButtonProps: RProps {
+external interface ToggleButtonProps: react.Props {
     var value: String
     var disabled: Boolean
     var size: String
@@ -24,11 +22,11 @@ external interface ToggleButtonProps: RProps {
 
 
 @JsName("ToggleButtonGroup")
-external class MaterialToggleButtonGroup: Component<ToggleButtonGroupProps, RState> {
+external class MaterialToggleButtonGroup: Component<ToggleButtonGroupProps, react.State> {
     override fun render(): ReactElement?
 }
 
-external interface ToggleButtonGroupProps: RProps {
+external interface ToggleButtonGroupProps: react.Props {
     var value: String
     var exclusive: Boolean
     var onChange: (e: Event, v: Any?) -> Unit
@@ -38,11 +36,11 @@ external interface ToggleButtonGroupProps: RProps {
 
 
 @JsName("ToggleButtonGroup")
-external class MaterialToggleButtonMultiGroup: Component<ToggleButtonGroupMultiProps, RState> {
+external class MaterialToggleButtonMultiGroup: Component<ToggleButtonGroupMultiProps, react.State> {
     override fun render(): ReactElement?
 }
 
-external interface ToggleButtonGroupMultiProps: RProps {
+external interface ToggleButtonGroupMultiProps: react.Props {
     var value: Array<String>
     var exclusive: Boolean
     var onChange: (e: Event, v: Array<String>) -> Unit

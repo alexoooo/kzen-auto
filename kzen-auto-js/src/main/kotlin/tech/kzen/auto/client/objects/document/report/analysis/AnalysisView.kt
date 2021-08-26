@@ -2,9 +2,7 @@ package tech.kzen.auto.client.objects.document.report.analysis
 
 import kotlinx.css.*
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import react.dom.span
 import styled.css
 import styled.styledDiv
@@ -30,13 +28,13 @@ class AnalysisView(
     RPureComponent<AnalysisView.Props, AnalysisView.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
     }
 
 
-    interface State: RState {
+    interface State: react.State {
 //        var analysisType: AnalysisType
     }
 

@@ -2,9 +2,7 @@ package tech.kzen.auto.client.objects.document.pipeline.input.select
 
 import kotlinx.css.*
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
@@ -21,7 +19,7 @@ class InputSelectedRemoveController(
     RPureComponent<InputSelectedRemoveController.Props, InputSelectedRemoveController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var mainLocation: ObjectLocation
         var disabled: Boolean
         var inputSelectedState: InputSelectedState
@@ -29,7 +27,7 @@ class InputSelectedRemoveController(
     }
 
 
-    interface State: RState
+    interface State: react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -74,7 +74,7 @@ class VertexController(
         var visualDataflowModel: VisualDataflowModel,
         var dataflowMatrix: DataflowMatrix,
         var dataflowDag: DataflowDag
-    ): RProps
+    ): react.Props
 
 
     class State(
@@ -83,12 +83,11 @@ class VertexController(
             var intentToRun: Boolean,
 
             var optionsOpen: Boolean
-    ) : RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var menuAnchorRef: HTMLElement? = null
-//    private var mainDocumentsCache: List<DocumentPath>? = null
+    private var menuAnchorRef: RefObject<HTMLElement> = createRef()
 
     // NB: workaround for open options icon remaining after click with drag away from item
     private var processingOption: Boolean = false
@@ -603,9 +602,7 @@ class VertexController(
                     top = 0.px
                 }
 
-                ref {
-                    this@VertexController.menuAnchorRef = it as? HTMLElement
-                }
+                ref = this@VertexController.menuAnchorRef
 
                 renderOptionsMenu()
             }
@@ -650,7 +647,7 @@ class VertexController(
 
                 onClose = ::onOptionsCancel
 
-                anchorEl = menuAnchorRef
+                anchorEl = menuAnchorRef.current
             }
 
             renderMenuItems()

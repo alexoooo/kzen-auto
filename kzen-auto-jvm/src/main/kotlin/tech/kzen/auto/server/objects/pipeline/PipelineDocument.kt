@@ -37,8 +37,8 @@ import tech.kzen.auto.server.service.v1.model.TupleDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import java.awt.geom.IllegalPathStateException
-import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.Path
 
 
 @Reflect
@@ -95,14 +95,15 @@ class PipelineDocument(
             PipelineConventions.actionListColumns ->
                 actionColumnListing()
 
+            PipelineConventions.actionOutputInfo ->
+                actionOutputInfo()
+
 //            ReportConventions.actionValidateFormulas ->
 //                actionValidateFormulas()
 //
 //            ReportConventions.actionSummaryLookup ->
 //                actionColumnSummaryLookup()
 //
-//            ReportConventions.actionLookupOutput ->
-//                actionOutputInfo()
 //
 //            ReportConventions.actionSave ->
 //                actionSave()
@@ -202,6 +203,19 @@ class PipelineDocument(
     }
 
 
+    private fun actionOutputInfo(): ExecutionResult {
+        val reportRunContext = reportRunContext()
+            ?: return ExecutionFailure("Missing run")
+
+        val outputInfo = PipelineExecution.outputInfoOffline(
+            reportRunContext,
+            ServerContext.reportWorkPool)
+
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(outputInfo.toCollection()))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun define(): LogicDefinition {
         return LogicDefinition(
@@ -214,24 +228,8 @@ class PipelineDocument(
         val reportRunContext = reportRunContext()
             ?: throw IllegalStateException("Unable to create context")
 
-        val runDir = runDir(reportRunContext)
-
         return PipelineExecution(
-            reportRunContext, ServerContext.reportWorkPool, runDir, logicTraceHandle)
-    }
-
-
-    private fun runDir(runContext: ReportRunContext): Path {
-        val reportDir =
-            try {
-                Paths.get(output.explore.workPath)
-            }
-            catch (e: IllegalPathStateException) {
-                ReportWorkPool.defaultReportDir
-            }
-
-        val runSignature = runContext.toSignature()
-        return ServerContext.reportWorkPool.resolveRunDir(runSignature, reportDir)
+            reportRunContext, logicTraceHandle)
     }
 
 
@@ -242,7 +240,16 @@ class PipelineDocument(
 
         val dataType = input.selection.dataType
 
-        return ReportRunContext(
+        val reportDir =
+            try {
+                Paths.get(output.explore.workPath)
+            }
+            catch (e: IllegalPathStateException) {
+                ReportWorkPool.defaultReportDir
+            }
+
+        val withoutRunDir = ReportRunContext(
+            Path("."),
             selfLocation.documentPath.name,
             dataType,
             datasetInfo,
@@ -252,6 +259,12 @@ class PipelineDocument(
             previewFiltered,
             analysis,
             output)
+        val reportRunSignature = withoutRunDir.toSignature()
+
+        val runDir = ServerContext.reportWorkPool.resolveRunDir(reportRunSignature, reportDir)
+
+        return withoutRunDir.copy(
+            runDir = runDir.toAbsolutePath().normalize())
     }
 
 

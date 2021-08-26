@@ -2,9 +2,7 @@ package tech.kzen.auto.client.objects.document.pipeline.analysis.pivot
 
 import kotlinx.css.*
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.*
 import tech.kzen.auto.client.objects.document.pipeline.PipelineController
 import tech.kzen.auto.client.objects.document.pipeline.analysis.model.PipelineAnalysisStore
@@ -15,10 +13,10 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSp
 class AnalysisPivotValueListController(
     props: Props
 ):
-    RPureComponent<AnalysisPivotValueListController.Props, RState>(props)
+    RPureComponent<AnalysisPivotValueListController.Props, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var spec: PivotSpec
         var inputAndCalculatedColumns: HeaderListing?
         var analysisStore: PipelineAnalysisStore

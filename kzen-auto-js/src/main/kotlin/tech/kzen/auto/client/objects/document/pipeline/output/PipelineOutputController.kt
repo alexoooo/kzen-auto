@@ -12,6 +12,7 @@ import tech.kzen.auto.client.wrap.iconify.vaadinIconTable
 import tech.kzen.auto.client.wrap.iconify.vaadinIconUploadAlt
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 
@@ -28,16 +29,15 @@ class PipelineOutputController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var spec: OutputSpec
+        var inputAndCalculatedColumns: HeaderListing?
+        var runningOrLoading: Boolean
         var outputStore: PipelineOutputStore
-
-//        var reportState: ReportState
-//        var dispatcher: ReportDispatcher
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var settingsOpen: Boolean
     }
 
@@ -101,9 +101,9 @@ class PipelineOutputController(
     private fun RBuilder.renderContent() {
         renderHeader()
 
-//        if (! props.reportState.columnListing.isNullOrEmpty()) {
-//            renderOutput()
-//        }
+        if (! props.inputAndCalculatedColumns?.values.isNullOrEmpty()) {
+            renderOutput()
+        }
     }
 
 
@@ -280,40 +280,42 @@ class PipelineOutputController(
 //        val outputInfo = props.reportState.outputInfo
 ////        val outputPreview = outputInfo?.preview
 //
-//        styledDiv {
+        styledDiv {
 //            renderInfo(error, outputInfo)
 //            renderSettings(outputInfo)
 //
 //            if (outputInfo != null) {
-//                renderOutputType()
-//            }
-//        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderOutputType() {
-//        val type = props.reportState.outputSpec().type
-
-        styledDiv {
-//            when (type) {
-//                OutputType.Explore ->
-//                    renderTable()
-//
-//                OutputType.Export ->
-//                    renderExport()
+                renderOutputType()
 //            }
         }
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderOutputType() {
+        val type = props.spec.type
+
+        styledDiv {
+            when (type) {
+                OutputType.Explore ->
+                    renderTable()
+
+                OutputType.Export ->
+                    renderExport()
+            }
+        }
+    }
+
+
     private fun RBuilder.renderTable() {
-//        child(OutputTableView::class) {
-//            attrs {
-//                reportState = props.reportState
-//                dispatcher = props.dispatcher
-//            }
-//        }
+        child(OutputTableController::class) {
+            attrs {
+                spec = props.spec
+                inputAndCalculatedColumns = props.inputAndCalculatedColumns
+                runningOrLoading = props.runningOrLoading
+                outputStore = props.outputStore
+            }
+        }
     }
 
 

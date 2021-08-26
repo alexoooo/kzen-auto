@@ -22,7 +22,7 @@ class InputSelectedController(
     RPureComponent<InputSelectedController.Props, InputSelectedController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var mainLocation: ObjectLocation
         var spec: InputSelectionSpec
         var browserOpen: Boolean
@@ -32,7 +32,7 @@ class InputSelectedController(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var showDetails: Boolean
         var showGroupBy: Boolean
     }

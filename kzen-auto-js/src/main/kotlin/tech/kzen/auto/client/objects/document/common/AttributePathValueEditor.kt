@@ -8,10 +8,12 @@ import react.*
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.FunctionWithDebounce
+import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.material.MaterialInputLabel
 import tech.kzen.auto.client.wrap.material.MaterialSwitch
 import tech.kzen.auto.client.wrap.material.MaterialTextField
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -67,7 +69,7 @@ class AttributePathValueEditor(
         var attributePath: AttributePath,
 
         var valueType: TypeMetadata
-    ): RProps
+    ): react.Props
 
 
     private fun Props.valuesAttribute(): AttributeNotation {
@@ -96,7 +98,7 @@ class AttributePathValueEditor(
         var values: List<String>?,
 
         var pending: Boolean
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

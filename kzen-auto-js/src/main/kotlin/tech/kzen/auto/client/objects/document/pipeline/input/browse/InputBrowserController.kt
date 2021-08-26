@@ -20,7 +20,7 @@ class InputBrowserController(
     RPureComponent<InputBrowserController.Props, InputBrowserController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var mainLocation: ObjectLocation
         var spec: InputBrowserSpec
         var selectedDataLocation: Set<DataLocation>
@@ -32,7 +32,7 @@ class InputBrowserController(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var requestPending: Boolean
 //        var inputBrowserInfo: InputBrowserInfo?
 //        var infoError: String?

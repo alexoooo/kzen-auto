@@ -29,13 +29,13 @@ class ReportFormulaAdd(
         var reportState: ReportState,
         var dispatcher: ReportDispatcher,
         var formulaSpec: FormulaSpec
-    ): RProps
+    ): react.Props
 
 
     class State(
         var adding: Boolean,
         var selectedColumn: String?
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

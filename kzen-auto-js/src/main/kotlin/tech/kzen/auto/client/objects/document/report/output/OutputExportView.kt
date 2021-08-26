@@ -3,9 +3,7 @@ package tech.kzen.auto.client.objects.document.report.output
 import kotlinx.browser.document
 import kotlinx.css.*
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.report.state.ExportCompressionRequest
@@ -27,13 +25,13 @@ class OutputExportView(
     RPureComponent<OutputExportView.Props, OutputExportView.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
     }
 
 
-    interface State: RState
+    interface State: react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

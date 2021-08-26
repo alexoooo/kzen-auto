@@ -25,12 +25,12 @@ class PipelineRunController(
     class Props(
         var pipelineState: PipelineState,
         var pipelineStore: PipelineStore
-    ): RProps
+    ): react.Props
 
 
     class State(
         var fabHover: Boolean
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

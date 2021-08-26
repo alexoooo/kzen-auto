@@ -17,9 +17,9 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Suppress("unused")
 class PipelineController(
-    props: RProps
+    props: react.Props
 ):
-    RPureComponent<RProps, PipelineController.State>(props),
+    RPureComponent<react.Props, PipelineController.State>(props),
     PipelineStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -33,7 +33,7 @@ class PipelineController(
     //-----------------------------------------------------------------------------------------------------------------
     class State(
         var pipelineState: PipelineState?
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -47,8 +47,8 @@ class PipelineController(
             return archetype
         }
 
-        override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
-            return input.child(PipelineController::class) {
+        override fun child(input: RBuilder, handler: RHandler<react.Props>)/*: ReactElement*/ {
+            input.child(PipelineController::class) {
                 handler()
             }
         }
@@ -60,7 +60,7 @@ class PipelineController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: RProps) {
+    override fun State.init(props: react.Props) {
         pipelineState = null
     }
 
@@ -209,16 +209,6 @@ class PipelineController(
 //            }
 //        }
 //    }
-//
-//
-////    private fun RBuilder.renderPivot(reportState: ReportState) {
-////        child(ReportPivot::class) {
-////            attrs {
-////                this.reportState = reportState
-////                this.dispatcher = store
-////            }
-////        }
-////    }
 
 
     private fun RBuilder.renderAnalysis(pipelineState: PipelineState) {
@@ -236,11 +226,10 @@ class PipelineController(
     private fun RBuilder.renderOutput(pipelineState: PipelineState) {
         child(PipelineOutputController::class) {
             attrs {
-                this.spec = pipelineState.outputSpec()
-                this.outputStore = store.output
-
-//                this.reportState = reportState
-//                this.dispatcher = store
+                spec = pipelineState.outputSpec()
+                inputAndCalculatedColumns = pipelineState.inputAndCalculatedColumns()
+                runningOrLoading = pipelineState.isRunningOrLoading()
+                outputStore = store.output
             }
         }
     }

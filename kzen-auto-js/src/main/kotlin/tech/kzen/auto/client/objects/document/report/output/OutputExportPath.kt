@@ -27,14 +27,14 @@ class OutputExportPath(
     RPureComponent<OutputExportPath.Props, OutputExportPath.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var editDisabled: Boolean
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var pathText: String
 //        var browserOpen: Boolean
 //        var selected: PersistentSet<String>
@@ -95,14 +95,15 @@ class OutputExportPath(
 
                 size = "medium"
 
-                InputProps = object : RProps {
+                InputProps = object : react.Props {
                     @Suppress("unused")
-                    var startAdornment = child(MaterialInputAdornment::class) {
-                        attrs {
-                            position = "start"
+                    var startAdornment = buildElement {
+                        child(MaterialInputAdornment::class) {
+                            attrs {
+                                position = "start"
+                            }
+                            iconify(vaadinIconFile)
                         }
-//                        child(SearchIcon::class) {}
-                        iconify(vaadinIconFile)
                     }
                 }
 

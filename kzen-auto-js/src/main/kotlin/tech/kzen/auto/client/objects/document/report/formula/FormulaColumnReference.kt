@@ -24,7 +24,7 @@ class FormulaColumnReference(
     RPureComponent<FormulaColumnReference.Props, FormulaColumnReference.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var columnNames: List<String>
         var editDisabled: Boolean
         var onAdded: (String) -> Unit
@@ -33,7 +33,7 @@ class FormulaColumnReference(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var adding: Boolean
         var selectedColumn: String?
     }

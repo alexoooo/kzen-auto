@@ -14,7 +14,7 @@ abstract class AttributeEditorWrapper(
 //            var attributeName: AttributeName,
 //            var attributeMetadata: AttributeMetadata,
 //            var attributeNotation: AttributeNotation?
-//    ): RProps
+//    ): react.Props
 
 
     //-----------------------------------------------------------------------------------------------------------------

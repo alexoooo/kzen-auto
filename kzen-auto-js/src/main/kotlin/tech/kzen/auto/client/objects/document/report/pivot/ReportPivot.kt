@@ -5,9 +5,7 @@ import kotlinx.css.fontSize
 import kotlinx.css.marginBottom
 import kotlinx.css.marginRight
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -21,13 +19,13 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSp
 class ReportPivot(
     props: Props
 ):
-    RPureComponent<ReportPivot.Props, RState>(props)
+    RPureComponent<ReportPivot.Props, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var reportState: ReportState,
         var dispatcher: ReportDispatcher
-    ): RProps
+    ): react.Props
 
 
     //-----------------------------------------------------------------------------------------------------------------

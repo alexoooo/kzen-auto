@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.pipeline.model
 import tech.kzen.auto.client.objects.document.pipeline.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
+import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputState
 import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunState
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
@@ -22,6 +23,7 @@ data class PipelineState(
     val mainLocation: ObjectLocation,
     val mainDefinition: ObjectDefinition,
     val input: PipelineInputState = PipelineInputState(),
+    val output: PipelineOutputState = PipelineOutputState(),
     val run: PipelineRunState = PipelineRunState(),
     val notationError: String? = null
 ) {
@@ -92,6 +94,9 @@ data class PipelineState(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    /**
+     * @return null if there is no column listing, otherwise input columns + calculated columns
+     */
     fun inputAndCalculatedColumns(): HeaderListing? {
         if (input.column.columnListing == null) {
             return null
@@ -118,6 +123,12 @@ data class PipelineState(
         return copy(
             input = input.copy(
                 selected = updater(input.selected)))
+    }
+
+
+    fun withOutput(updater: (PipelineOutputState) -> PipelineOutputState): PipelineState {
+        return copy(
+            output = updater(output))
     }
 
 

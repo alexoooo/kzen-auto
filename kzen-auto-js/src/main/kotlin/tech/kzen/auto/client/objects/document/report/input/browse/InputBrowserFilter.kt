@@ -10,10 +10,12 @@ import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.FunctionWithDebounce
+import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.material.MaterialInputAdornment
 import tech.kzen.auto.client.wrap.material.MaterialTextField
 import tech.kzen.auto.client.wrap.material.SearchIcon
+import tech.kzen.auto.client.wrap.reactStyle
 
 
 class InputBrowserFilter(
@@ -22,14 +24,14 @@ class InputBrowserFilter(
     RPureComponent<InputBrowserFilter.Props, InputBrowserFilter.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var editDisabled: Boolean
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var filterText: String
 //        var browserOpen: Boolean
 //        var selected: PersistentSet<String>
@@ -87,13 +89,15 @@ class InputBrowserFilter(
 
                 size = "small"
 
-                InputProps = object : RProps {
+                InputProps = object : react.Props {
                     @Suppress("unused")
-                    var startAdornment = child(MaterialInputAdornment::class) {
-                        attrs {
-                            position = "start"
+                    var startAdornment = buildElement {
+                        child(MaterialInputAdornment::class) {
+                            attrs {
+                                position = "start"
+                            }
+                            child(SearchIcon::class) {}
                         }
-                        child(SearchIcon::class) {}
                     }
                 }
 

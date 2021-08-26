@@ -6,9 +6,7 @@ import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import react.dom.attrs
 import react.dom.td
 import styled.*
@@ -33,7 +31,7 @@ class InputBrowserTableController(
     RPureComponent<InputBrowserTableController.Props, InputBrowserTableController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var mainLocation: ObjectLocation
         var hasFilter: Boolean
         var dataLocationInfos: List<DataLocationInfo>
@@ -44,7 +42,7 @@ class InputBrowserTableController(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
 //        var textEdit: Boolean
 //        var editDir: String
     }

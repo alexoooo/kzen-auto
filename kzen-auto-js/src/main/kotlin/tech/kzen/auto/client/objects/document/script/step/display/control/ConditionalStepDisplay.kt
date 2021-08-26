@@ -31,7 +31,7 @@ import tech.kzen.lib.common.reflect.Reflect
 class ConditionalStepDisplay(
         props: Props
 ):
-        RPureComponent<ConditionalStepDisplay.Props, RState>(props)
+        RPureComponent<ConditionalStepDisplay.Props, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -70,8 +70,8 @@ class ConditionalStepDisplay(
         override fun child(
                 input: RBuilder,
                 handler: RHandler<StepDisplayProps>
-        ): ReactElement {
-            return input.child(ConditionalStepDisplay::class) {
+        )/*: ReactElement*/ {
+            input.child(ConditionalStepDisplay::class) {
                 attrs {
                     attributeController = this@Wrapper.attributeController
                     scriptCommander = this@Wrapper.scriptCommander

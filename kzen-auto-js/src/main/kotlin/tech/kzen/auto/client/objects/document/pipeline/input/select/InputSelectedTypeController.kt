@@ -5,9 +5,7 @@ import kotlinx.css.em
 import kotlinx.css.fontSize
 import kotlinx.css.width
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
 import tech.kzen.auto.client.wrap.material.MaterialInputLabel
@@ -27,7 +25,7 @@ class InputSelectedTypeController(
     RPureComponent<InputSelectedTypeController.Props, InputSelectedTypeController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var spec: InputSelectionSpec
 
 //        var reportState: ReportState
@@ -40,7 +38,7 @@ class InputSelectedTypeController(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
 //        var loadedDataTypes: List<ClassName>?
     }
 

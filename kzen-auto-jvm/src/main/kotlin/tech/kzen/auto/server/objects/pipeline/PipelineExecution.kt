@@ -5,6 +5,8 @@ import com.lmax.disruptor.dsl.Disruptor
 import com.lmax.disruptor.dsl.ProducerType
 import com.lmax.disruptor.util.DaemonThreadFactory
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.report.output.OutputInfo
+import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
@@ -12,10 +14,7 @@ import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessor
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineTrace
-import tech.kzen.auto.server.objects.pipeline.exec.stages.ProcessorFilterStage
-import tech.kzen.auto.server.objects.pipeline.exec.stages.ProcessorFormulaStage
-import tech.kzen.auto.server.objects.pipeline.exec.stages.ProcessorOutputTableStage
-import tech.kzen.auto.server.objects.pipeline.exec.stages.ProcessorPreCacheStage
+import tech.kzen.auto.server.objects.pipeline.exec.stages.*
 import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 import tech.kzen.auto.server.objects.report.ReportWorkPool
@@ -27,25 +26,23 @@ import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInf
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataContentDefinition
 import tech.kzen.auto.server.objects.report.pipeline.input.model.instance.ProcessorDataInstance
 import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
+import tech.kzen.auto.server.objects.report.pipeline.output.TableReportOutput
 import tech.kzen.auto.server.objects.report.pipeline.output.export.CharsetExportEncoder
 import tech.kzen.auto.server.objects.report.pipeline.output.export.CompressedExportWriter
 import tech.kzen.auto.server.objects.report.pipeline.output.export.format.ExportFormatter
 import tech.kzen.auto.server.objects.report.pipeline.output.export.model.ExportFormat
+import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.util.DisruptorUtils
-import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 
 
 class PipelineExecution(
-//    private val input: InputSpec,
-
     private val initialReportRunContext: ReportRunContext,
-    private val reportWorkPool: ReportWorkPool,
-    runDir: Path,
+//    private val reportWorkPool: ReportWorkPool,
     private val trace: LogicTraceHandle
 ): LogicExecution {
     //-----------------------------------------------------------------------------------------------------------------
@@ -62,6 +59,40 @@ class PipelineExecution(
 //        private const val recordDisruptorBufferSize = 16 * 1024
         private const val recordDisruptorBufferSize = 32 * 1024
 //        private const val recordDisruptorBufferSize = 64 * 1024
+
+
+        fun outputInfoOffline(
+            reportRunContext: ReportRunContext,
+            reportWorkPool: ReportWorkPool
+        ): OutputInfo {
+            val status = reportWorkPool.readRunStatus(reportRunContext.toSignature())
+
+            val withoutPreview = OutputInfo(
+                reportRunContext.runDir.toString(),
+                null,
+                null,
+                status)
+
+            val withPreview =
+                if (reportRunContext.output.type == OutputType.Explore) {
+                    val outputTableInfo = TableReportOutput.outputInfoOffline(
+                        reportRunContext, reportRunContext.output.explore)
+
+                    if (outputTableInfo == null) {
+                        withoutPreview.copy(
+                            status = OutputStatus.Failed)
+                    }
+                    else {
+                        withoutPreview.copy(
+                            table = outputTableInfo)
+                    }
+                }
+                else {
+                    withoutPreview
+                }
+
+            return withPreview
+        }
     }
 
 
@@ -76,8 +107,8 @@ class PipelineExecution(
 
     private val preCachePartitions = ProcessorPreCacheStage.partitions(preCachePartitionCount)
 
-//    private val summary = ProcessorSummaryStage(
-//        ReportSummary(initialReportRunContext, runDir, taskHandle))
+    private val summary = ProcessorSummaryStage(
+        ReportSummary(initialReportRunContext, initialReportRunContext.runDir, null))
 
     private var tableOutput: ProcessorOutputTableStage? = null
     private var exportWriter: CompressedExportWriter? = null
@@ -86,18 +117,17 @@ class PipelineExecution(
     //-----------------------------------------------------------------------------------------------------------------
     init {
         if (initialReportRunContext.output.type == OutputType.Explore) {
-//            tableOutput = ProcessorOutputTableStage(
-//                TableReportOutput(initialReportRunContext, runDir, taskHandle, progressTracker),
-//                reportWorkPool)
+            tableOutput = ProcessorOutputTableStage(
+                TableReportOutput(initialReportRunContext, null),
+                /*reportWorkPool*/)
         }
         else {
             exportWriter = CompressedExportWriter(
-                runDir,
+                initialReportRunContext.runDir,
                 initialReportRunContext.reportDocumentName,
                 initialReportRunContext.output.export)
         }
     }
-
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -294,24 +324,24 @@ class PipelineExecution(
         val filterEnabled = initialReportRunContext.previewFiltered.enabled
 
         val startOfOutput =
-//            if (tableOutput != null) {
-//                tableOutput
-//            }
-//            else {
+            if (tableOutput != null) {
+                tableOutput
+            }
+            else {
                 ExportFormatter(ExportFormat.byName(
                     initialReportRunContext.output.export.format))
-//            }
-//
+            }
+
         builder =
-//            if (filterEnabled) {
-//                builder
-//                    .then(*preCachePartitions)
-//                    .then(summary, startOfOutput)
-//            }
-//            else {
+            if (filterEnabled) {
+                builder
+                    .then(*preCachePartitions)
+                    .then(summary, startOfOutput)
+            }
+            else {
                 builder
                     .then(startOfOutput)
-//            }
+            }
 
         if (exportWriter != null) {
             builder
@@ -360,5 +390,11 @@ class PipelineExecution(
 //                taskHandle?.terminalFailure(ExecutionFailure.ofException("Shutdown - ", ex))
             }
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun preview() {
+
     }
 }

@@ -51,7 +51,7 @@ object ServerContext {
 
     private val bootMedia = BootNotationMedia()
 
-    val notationMedia: NotationMedia = MultiNotationMedia(listOf(
+    val notationMedia: NotationMedia = MultiNotationMedia(listOf<NotationMedia>(
             fileMedia, bootMedia))
 
     val yamlParser = YamlNotationParser()

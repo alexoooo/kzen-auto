@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.wrap.material
 
-import react.RProps
 import react.ReactElement
 import kotlin.js.Json
 
@@ -13,7 +12,7 @@ import kotlin.js.Json
 //}
 
 
-interface NestedInputProps: RProps {
+interface NestedInputProps: react.Props {
 //        val startAdornment: MaterialInputAdornment
         val startAdornment: ReactElement
 }

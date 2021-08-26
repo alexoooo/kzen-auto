@@ -21,12 +21,12 @@ class ReportRun(
     class Props(
         var reportState: ReportState,
         var dispatcher: ReportDispatcher
-    ): RProps
+    ): react.Props
 
 
     class State(
         var fabHover: Boolean
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

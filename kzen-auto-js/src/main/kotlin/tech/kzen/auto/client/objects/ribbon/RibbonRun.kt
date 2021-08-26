@@ -14,11 +14,11 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.NavigationRoute
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.MaterialIconButton
 import tech.kzen.auto.client.wrap.material.MaterialMenu
 import tech.kzen.auto.client.wrap.material.MaterialMenuItem
 import tech.kzen.auto.client.wrap.material.PlayArrowIcon
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -46,7 +46,7 @@ class RibbonRun (
 //            var parameters: RequestParams,
 //
 //            var notation: GraphNotation
-    ): RProps
+    ): react.Props
 
 
     class State(
@@ -57,11 +57,11 @@ class RibbonRun (
             var clientState: SessionState?,
 
             var dropdownOpen: Boolean
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var dropdownAnchorRef: HTMLElement? = null
+    private var dropdownAnchorRef: RefObject<HTMLElement> = createRef()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -212,9 +212,10 @@ class RibbonRun (
         val selectedFramePaths = clientState.imperativeModel?.frames?.map { it.path } ?: listOf()
 
         styledDiv {
-            ref {
-                dropdownAnchorRef = it as? HTMLElement
-            }
+            ref = dropdownAnchorRef
+//            ref {
+//                dropdownAnchorRef = it as? HTMLElement
+//            }
 
 //            +"[Run]"
 
@@ -245,7 +246,7 @@ class RibbonRun (
 //                onClose = ::onOptionsCancel
                 onClose = ::onOptionsClose
 
-                anchorEl = dropdownAnchorRef
+                anchorEl = dropdownAnchorRef.current
             }
 
             styledDiv {

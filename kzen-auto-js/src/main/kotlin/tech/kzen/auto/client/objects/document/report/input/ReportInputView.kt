@@ -27,13 +27,13 @@ class ReportInputView(
     RPureComponent<ReportInputView.Props, ReportInputView.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var browserOpen: Boolean
     }
 

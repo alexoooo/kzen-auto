@@ -49,7 +49,7 @@ class FeatureController(
         LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    class Props: RProps
+    class Props: react.Props
 
 
     class State(
@@ -60,22 +60,22 @@ class FeatureController(
         var screenshotDataUrl: String?,
         var capturedDataUrl: String?,
         var requestingScreenshot: Boolean?
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-            private val archetype: ObjectLocation
+        private val archetype: ObjectLocation
     ):
-            DocumentController
+        DocumentController
     {
         override fun archetypeLocation(): ObjectLocation {
             return archetype
         }
 
-        override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
-            return input.child(FeatureController::class) {
+        override fun child(input: RBuilder, handler: RHandler<react.Props>)/*: ReactElement*/ {
+            input.child(FeatureController::class) {
 //                attrs {
 //                    this.attributeController = this@Wrapper.attributeController
 //                }
@@ -87,7 +87,7 @@ class FeatureController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var cropperWrapper: CropperWrapper? = null
+    private var cropperWrapper: RefObject<CropperWrapper> = createRef()
     private var screenshotBytes: ByteArray? = null
 
 
@@ -304,7 +304,7 @@ class FeatureController(
 
 //        console.log("detail", detail)
 
-        val canvas = cropperWrapper!!.getCroppedCanvas()
+        val canvas = cropperWrapper.current!!.getCroppedCanvas()
 
 //        console.log("canvas", canvas)
 
@@ -557,9 +557,10 @@ class FeatureController(
                     }
                 }
 
-                ref {
-                    cropperWrapper = it as? CropperWrapper
-                }
+                ref = cropperWrapper
+//                ref {
+//                    cropperWrapper = it as? CropperWrapper
+//                }
             }
         }
     }

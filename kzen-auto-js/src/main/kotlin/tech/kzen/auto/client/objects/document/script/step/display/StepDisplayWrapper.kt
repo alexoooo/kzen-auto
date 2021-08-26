@@ -14,7 +14,7 @@ abstract class StepDisplayWrapper(
 //            var attributeName: AttributeName,
 //            var attributeMetadata: AttributeMetadata,
 //            var attributeNotation: AttributeNotation?
-//    ): RProps
+//    ): react.Props
 
 
     //-----------------------------------------------------------------------------------------------------------------

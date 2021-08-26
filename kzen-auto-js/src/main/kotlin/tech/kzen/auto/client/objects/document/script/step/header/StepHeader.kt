@@ -12,8 +12,8 @@ import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.*
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -60,7 +60,7 @@ class StepHeader(
             var managed: Boolean = false,
             var first: Boolean = false,
             var last: Boolean = false
-    ): RProps
+    ): react.Props
 
 
     class State(
@@ -69,7 +69,7 @@ class StepHeader(
             var intentToRun: Boolean,
 
             var optionsOpen: Boolean
-    ): RState
+    ): react.State
 
 
     class HoverSignal {
@@ -102,7 +102,7 @@ class StepHeader(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var editSignal = StepNameEditor.EditSignal()
-    private var menuAnchorRef: HTMLElement? = null
+    private var menuAnchorRef: RefObject<HTMLElement> = createRef()
 
     private var processingOption: Boolean = false
     private var optionCompletedTime: Double? = null
@@ -358,10 +358,8 @@ class StepHeader(
                     top = (-16).px
                     right = 9.px
                 }
-                
-                ref {
-                    this@StepHeader.menuAnchorRef = it as? HTMLElement
-                }
+
+                ref = this@StepHeader.menuAnchorRef
 
                 renderOptionsMenu()
             }
@@ -479,7 +477,7 @@ class StepHeader(
 
                 onClose = ::onOptionsCancel
 
-                anchorEl = menuAnchorRef
+                anchorEl = menuAnchorRef.current
             }
 
             renderMenuItems()

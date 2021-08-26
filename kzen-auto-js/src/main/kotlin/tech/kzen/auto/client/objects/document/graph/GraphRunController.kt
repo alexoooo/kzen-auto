@@ -8,8 +8,8 @@ import react.dom.attrs
 import react.dom.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.*
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -27,12 +27,12 @@ class GraphRunController(
             var documentPath: DocumentPath?,
             var graphStructure: GraphStructure?,
             var visualDataflowModel: VisualDataflowModel?
-    ): RProps
+    ): react.Props
 
 
     class State(
             var fabHover: Boolean
-    ): RState
+    ): react.State
 
 
     private enum class Phase {
@@ -321,7 +321,7 @@ class GraphRunController(
                 }
             }
 
-            val icon: KClass<out Component<IconProps, RState>> = when {
+            val icon: KClass<out Component<IconProps, react.State>> = when {
                 hasMoreToRun ->
                     PlayArrowIcon::class
 

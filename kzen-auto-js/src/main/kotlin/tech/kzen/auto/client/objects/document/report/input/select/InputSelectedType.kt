@@ -23,14 +23,14 @@ class InputSelectedType(
     RPureComponent<InputSelectedType.Props, InputSelectedType.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var editDisabled: Boolean
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var loadedDataTypes: List<ClassName>?
     }
 

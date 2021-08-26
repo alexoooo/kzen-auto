@@ -3,9 +3,7 @@ package tech.kzen.auto.client.objects.document.pipeline.analysis.pivot
 import kotlinx.css.FontWeight
 import kotlinx.css.fontWeight
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.pipeline.analysis.model.PipelineAnalysisStore
@@ -18,10 +16,10 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotVa
 class AnalysisPivotValueTypeController(
     props: Props
 ):
-    RPureComponent<AnalysisPivotValueTypeController.Props, RState>(props)
+    RPureComponent<AnalysisPivotValueTypeController.Props, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var columnName: String
         var pivotValueSpec: PivotValueColumnSpec
         var analysisStore: PipelineAnalysisStore

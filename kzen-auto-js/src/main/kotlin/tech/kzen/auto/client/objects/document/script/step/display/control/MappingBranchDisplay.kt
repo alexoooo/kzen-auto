@@ -72,12 +72,12 @@ class MappingBranchDisplay(
         var clientState: SessionState,
         var objectLocation: ObjectLocation,
         var imperativeModel: ImperativeModel
-    ): RProps
+    ): react.Props
 
 
     class State(
             var creating: Boolean
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

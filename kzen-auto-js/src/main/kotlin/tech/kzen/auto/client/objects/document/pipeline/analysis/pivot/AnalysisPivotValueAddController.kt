@@ -28,14 +28,14 @@ class AnalysisPivotValueAddController(
     RPureComponent<AnalysisPivotValueAddController.Props, AnalysisPivotValueAddController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var spec: PivotSpec
         var inputAndCalculatedColumns: HeaderListing?
         var analysisStore: PipelineAnalysisStore
         var runningOrLoading: Boolean
     }
 
-    interface State: RState {
+    interface State: react.State {
         var adding: Boolean
         var selectedColumn: String?
     }

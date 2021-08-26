@@ -13,7 +13,7 @@ import tech.kzen.lib.common.reflect.Reflect
 class StepController(
         props: Props
 ):
-        RPureComponent<StepController.Props, RState>(props)
+        RPureComponent<StepController.Props, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -26,7 +26,7 @@ class StepController(
             var stepDisplays: List<StepDisplayWrapper>,
 
             var common: StepDisplayProps.Common
-    ): RProps
+    ): react.Props
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -41,8 +41,8 @@ class StepController(
             handle.wrapper = this
         }
 
-        override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
-            return input.child(StepController::class) {
+        override fun child(input: RBuilder, handler: RHandler<Props>)/*: ReactElement*/ {
+            input.child(StepController::class) {
                 attrs {
                     this.stepDisplays = this@Wrapper.stepDisplays
                 }

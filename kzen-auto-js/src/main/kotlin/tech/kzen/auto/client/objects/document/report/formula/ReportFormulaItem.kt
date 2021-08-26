@@ -57,7 +57,7 @@ class ReportFormulaItem(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var formulaSpec: FormulaSpec
@@ -65,7 +65,7 @@ class ReportFormulaItem(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
 //        var open: Boolean
         var removeError: String?
         var updateError: String?

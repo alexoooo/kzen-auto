@@ -37,7 +37,7 @@ import tech.kzen.lib.common.reflect.Reflect
 class MappingStepDisplay(
         props: Props
 ):
-        RPureComponent<MappingStepDisplay.Props, RState>(props)
+        RPureComponent<MappingStepDisplay.Props, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -71,8 +71,8 @@ class MappingStepDisplay(
         override fun child(
                 input: RBuilder,
                 handler: RHandler<StepDisplayProps>
-        ): ReactElement {
-            return input.child(MappingStepDisplay::class) {
+        )/*: ReactElement*/ {
+            input.child(MappingStepDisplay::class) {
                 attrs {
                     attributeController = this@Wrapper.attributeController
                     scriptCommander = this@Wrapper.scriptCommander

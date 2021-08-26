@@ -51,12 +51,12 @@ class EdgeController(
             var visualDataflowModel: VisualDataflowModel,
             var dataflowMatrix: DataflowMatrix,
             var dataflowDag: DataflowDag
-    ): RProps
+    ): react.Props
 
 
     class State(
             var edgeHover: Boolean
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

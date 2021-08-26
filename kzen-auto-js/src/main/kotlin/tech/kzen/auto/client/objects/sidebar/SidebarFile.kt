@@ -16,8 +16,8 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.*
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.common.util.RequestParams
@@ -48,7 +48,7 @@ class SidebarFile(
             var structure: GraphStructure,
             var documentPath: DocumentPath,
             var selected: Boolean
-    ): RProps
+    ): react.Props
 
 
     // TODO: centralize menu logic with SidebarFolder / ActionController
@@ -58,12 +58,12 @@ class SidebarFile(
             var optionsOpen: Boolean,
             var editing: Boolean,
             var parameters: RequestParams
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var menuAnchorRef: HTMLElement? = null
-    private var nameEditorRef: DocumentNameEditor? = null
+    private var menuAnchorRef: RefObject<HTMLElement> = createRef()
+    private var nameEditorRef: RefObject<DocumentNameEditor> = createRef()
 
     private var processingOption: Boolean = false
     private var optionCompletedTime: Double? = null
@@ -169,7 +169,7 @@ class SidebarFile(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRename() {
         performOption {
-            nameEditorRef?.onEdit()
+            nameEditorRef.current?.onEdit()
         }
     }
 
@@ -252,9 +252,7 @@ class SidebarFile(
                     right = 0.px
                 }
 
-                ref {
-                    this@SidebarFile.menuAnchorRef = it as? HTMLElement
-                }
+                ref = this@SidebarFile.menuAnchorRef
 
                 renderOptionsMenu()
             }
@@ -302,9 +300,10 @@ class SidebarFile(
 
             child(DocumentNameEditor::class) {
                 attrs {
-                    ref<DocumentNameEditor> {
-                        nameEditorRef = it
-                    }
+                    ref = nameEditorRef
+//                    ref<DocumentNameEditor> {
+//                        nameEditorRef = it
+//                    }
 
                     this.documentPath = props.documentPath
 
@@ -364,7 +363,7 @@ class SidebarFile(
 
                 onClose = ::onOptionsCancel
 
-                anchorEl = menuAnchorRef
+                anchorEl = menuAnchorRef.current
             }
 
             renderMenuItems()

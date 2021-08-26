@@ -59,7 +59,7 @@ class GraphController:
 
     class Props(
             var attributeController: AttributeController.Wrapper
-    ): RProps
+    ): react.Props
 
 
     class State(
@@ -69,7 +69,7 @@ class GraphController:
             var creating: Boolean,
 
             var visualDataflowModel: VisualDataflowModel?
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -84,8 +84,8 @@ class GraphController:
             return archetype
         }
 
-        override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
-            return input.child(GraphController::class) {
+        override fun child(input: RBuilder, handler: RHandler<react.Props>)/*: ReactElement*/ {
+            input.child(GraphController::class) {
                 attrs {
                     this.attributeController = this@Wrapper.attributeController
                 }

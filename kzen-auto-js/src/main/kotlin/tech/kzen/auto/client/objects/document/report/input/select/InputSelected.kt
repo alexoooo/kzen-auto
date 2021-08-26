@@ -33,7 +33,7 @@ class InputSelected(
     RPureComponent<InputSelected.Props, InputSelected.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var editDisabled: Boolean
@@ -41,7 +41,7 @@ class InputSelected(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var selected: PersistentSet<DataLocation>
         var showDetails: Boolean
         var showGroupBy: Boolean

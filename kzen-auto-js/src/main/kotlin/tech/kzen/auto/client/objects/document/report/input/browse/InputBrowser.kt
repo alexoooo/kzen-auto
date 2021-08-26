@@ -36,7 +36,7 @@ class InputBrowser(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var editDisabled: Boolean
@@ -44,7 +44,7 @@ class InputBrowser(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
 //        var browserOpen: Boolean
         var requestedInitial: Boolean
         var selected: PersistentSet<DataLocation>

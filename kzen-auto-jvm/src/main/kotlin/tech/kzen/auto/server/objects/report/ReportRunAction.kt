@@ -78,7 +78,6 @@ class ReportRunAction(
     suspend fun outputInfo(
         objectLocation: ObjectLocation,
         runContext: ReportRunContext,
-        runDir: Path,
         outputSpec: OutputExploreSpec
     ): ExecutionResult {
 //        val activeReportHandle = ServerContext

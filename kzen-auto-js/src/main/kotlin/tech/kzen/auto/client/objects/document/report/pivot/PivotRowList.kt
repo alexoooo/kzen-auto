@@ -3,9 +3,7 @@ package tech.kzen.auto.client.objects.document.report.pivot
 import kotlinx.browser.document
 import kotlinx.css.*
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -21,14 +19,14 @@ import kotlin.js.json
 class PivotRowList(
     props: Props
 ):
-    RPureComponent<PivotRowList.Props, RState>(props)
+    RPureComponent<PivotRowList.Props, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var pivotSpec: PivotSpec,
         var reportState: ReportState,
         var dispatcher: ReportDispatcher
-    ): RProps
+    ): react.Props
 
 
     //-----------------------------------------------------------------------------------------------------------------

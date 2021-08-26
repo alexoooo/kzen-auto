@@ -44,7 +44,7 @@ class CellController(
             var visualDataflowModel: VisualDataflowModel,
             var dataflowMatrix: DataflowMatrix,
             var dataflowDag: DataflowDag
-    ): RProps
+    ): react.Props
 
 
     class State(
@@ -53,7 +53,7 @@ class CellController(
             var intentToRun: Boolean,
 
             var optionsOpen: Boolean
-    ): RState
+    ): react.State
 
 
     private fun Props.vertexLocation() =

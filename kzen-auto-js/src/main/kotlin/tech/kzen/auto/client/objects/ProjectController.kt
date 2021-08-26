@@ -29,11 +29,11 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 
 @Suppress("unused")
 class ProjectController(
-        props: Props
+    props: Props
 ):
-        RPureComponent<ProjectController.Props, ProjectController.State>(props),
-        LocalGraphStore.Observer,
-        NavigationGlobal.Observer
+    RPureComponent<ProjectController.Props, ProjectController.State>(props),
+    LocalGraphStore.Observer,
+    NavigationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -43,35 +43,46 @@ class ProjectController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var headerElement: HTMLElement? = null
+//    private var headerElement: HTMLElement? = null
+    private var headerElement: RefObject<HTMLElement> = createRef()
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var sidebarController: SidebarController.Wrapper,
-            var ribbonController: RibbonController.Wrapper,
-            var stageController: StageController.Wrapper
-    ): RProps
+    interface Props: react.Props {
+        var sidebarController: SidebarController.Wrapper
+        var ribbonController: RibbonController.Wrapper
+        var stageController: StageController.Wrapper
+    }
 
 
-    class State(
-        var structure: GraphStructure?,
-        var commandErrorMessage: String?,
-        var commandErrorRequest: NotationCommand?,
+    interface State: react.State {
+        var structure: GraphStructure?
+        var commandErrorMessage: String?
+        var commandErrorRequest: NotationCommand?
 
         var headerHeight: Int?
-    ): RState
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-            private val sidebarController: SidebarController.Wrapper,
-            private val ribbonController: RibbonController.Wrapper,
-            private val stageController: StageController.Wrapper
+        private val sidebarController: SidebarController.Wrapper,
+        private val ribbonController: RibbonController.Wrapper,
+        private val stageController: StageController.Wrapper
     ): ReactWrapper<Props> {
-        override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
-            return input.child(ProjectController::class) {
+        override fun child(input: RBuilder, handler: RHandler<Props>)/*: ReactElement*/ {
+//            return input.child(ProjectController::class) {
+//                attrs {
+//                    ribbonController = this@Wrapper.ribbonController
+//                    sidebarController = this@Wrapper.sidebarController
+//                    stageController = this@Wrapper.stageController
+//                }
+//
+//                handler()
+//            }
+
+            input.child(ProjectController::class) {
                 attrs {
                     ribbonController = this@Wrapper.ribbonController
                     sidebarController = this@Wrapper.sidebarController
@@ -86,7 +97,7 @@ class ProjectController(
 
     // TODO: is there a way to directly observe the headerElement height change?
     private val handleResize: (Event?) -> Unit = { _ ->
-        val height = headerElement?.clientHeight ?: 0
+        val height = headerElement.current?.clientHeight ?: 0
         if (state.headerHeight != height) {
             setState {
                 headerHeight = height
@@ -120,7 +131,7 @@ class ProjectController(
             prevState: State,
             snapshot: Any
     ) {
-        val height = headerElement?.clientHeight ?: 0
+        val height = headerElement.current?.clientHeight ?: 0
 
         if (height != prevState.headerHeight) {
             setState {
@@ -202,9 +213,10 @@ class ProjectController(
                 }
 
                 div {
-                    ref {
-                        headerElement = it as? HTMLElement
-                    }
+                    ref = headerElement
+//                    ref {
+//                        headerElement = it as? HTMLElement
+//                    }
 
                     props.ribbonController.child(this) {
                         attrs {

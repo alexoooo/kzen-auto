@@ -4,13 +4,9 @@ import com.linkedin.migz.MiGzOutputStream
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import tech.kzen.auto.common.objects.document.report.output.OutputExportInfo
-import tech.kzen.auto.common.objects.document.report.output.OutputInfo
-import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
 import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer
-import tech.kzen.auto.server.objects.report.ReportWorkPool
-import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.output.export.model.ExportCompression
@@ -129,13 +125,6 @@ class CompressedExportWriter(
                     Files.newOutputStream(file),
                     migzThreads,
                     MiGzOutputStream.DEFAULT_BLOCK_SIZE)
-//                out =
-//                    BufferedOutputStream(
-//                        MiGzOutputStream(
-//                            BufferedOutputStream(Files.newOutputStream(file), 128 * 1024),
-//                            migzThreads,
-//                            MiGzOutputStream.DEFAULT_BLOCK_SIZE),
-//                        128 * 1024)
 
                 closer = out
             }
@@ -161,26 +150,12 @@ class CompressedExportWriter(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun preview(
-        reportRunContext: ReportRunContext,
-//        outputSpec: OutputExploreSpec,
-        reportWorkPool: ReportWorkPool
-    ): OutputInfo {
+    fun preview(): OutputExportInfo? {
         if (! Files.exists(runDir)) {
-            return OutputInfo(
-                runDir.toAbsolutePath().normalize().toString(),
-                null,
-                null,
-                OutputStatus.Missing
-            )
+            return null
         }
 
-        val status = reportWorkPool.readRunStatus(reportRunContext.toSignature())
-        return OutputInfo(
-            runDir.toAbsolutePath().normalize().toString(),
-            null,
-            OutputExportInfo("hello"),
-            status)
+        return OutputExportInfo("hello")
     }
 
 

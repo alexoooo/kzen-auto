@@ -30,13 +30,13 @@ class SidebarController(
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var archetypeLocations: List<ObjectLocation>
-    ): RProps
+    ): react.Props
 
 
     class State(
             var structure: GraphStructure?,
             var documentPath: DocumentPath?
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -44,8 +44,8 @@ class SidebarController(
     class Wrapper(
             private val archetypes: List<ObjectLocation>
     ): ReactWrapper<Props> {
-        override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
-            return input.child(SidebarController::class) {
+        override fun child(input: RBuilder, handler: RHandler<Props>)/*: ReactElement*/ {
+            input.child(SidebarController::class) {
                 attrs {
                     archetypeLocations = this@Wrapper.archetypes
                 }

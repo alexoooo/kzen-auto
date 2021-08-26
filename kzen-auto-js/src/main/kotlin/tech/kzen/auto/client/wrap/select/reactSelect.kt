@@ -3,20 +3,18 @@ package tech.kzen.auto.client.wrap.select
 
 import org.w3c.dom.HTMLElement
 import react.Component
-import react.RProps
-import react.RState
 import react.ReactElement
 import kotlin.js.Json
 
 
 // see: https://codesandbox.io/s/ly87zo23kl
 @JsName("default")
-external class ReactSelect: Component<ReactSelectProps, RState> {
+external class ReactSelect: Component<ReactSelectProps, react.State> {
     override fun render(): ReactElement?
 }
 
 
-external interface ReactSelectProps: RProps {
+external interface ReactSelectProps: react.Props {
     var id: String
     var value: ReactSelectOption?
     var options: Array<ReactSelectOption>
@@ -42,12 +40,12 @@ external interface ReactSelectProps: RProps {
 
 
 @JsName("default")
-external class ReactSelectMulti: Component<ReactSelectMultiProps, RState> {
+external class ReactSelectMulti: Component<ReactSelectMultiProps, react.State> {
     override fun render(): ReactElement?
 }
 
 
-external interface ReactSelectMultiProps: RProps {
+external interface ReactSelectMultiProps: react.Props {
     var id: String
 
     var value: Array<ReactSelectOption>

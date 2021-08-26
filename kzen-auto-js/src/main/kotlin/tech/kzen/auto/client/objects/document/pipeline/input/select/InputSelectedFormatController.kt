@@ -6,9 +6,7 @@ import kotlinx.css.fontSize
 import kotlinx.css.width
 import kotlinx.html.title
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import react.dom.attrs
 import react.dom.span
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
@@ -30,7 +28,7 @@ class InputSelectedFormatController(
     RPureComponent<InputSelectedFormatController.Props, InputSelectedFormatController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
 //        var reportState: ReportState
 //        var dispatcher: ReportDispatcher
         var spec: InputSelectionSpec
@@ -42,7 +40,7 @@ class InputSelectedFormatController(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
 //        var loadedFormats: List<ProcessorDefinerDetail>?
     }
 

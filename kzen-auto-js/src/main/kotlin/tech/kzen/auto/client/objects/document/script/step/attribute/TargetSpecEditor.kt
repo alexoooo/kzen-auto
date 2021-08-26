@@ -10,10 +10,12 @@ import tech.kzen.auto.client.objects.document.common.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.FunctionWithDebounce
+import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.material.MaterialMenuItem
 import tech.kzen.auto.client.wrap.material.MaterialSelect
 import tech.kzen.auto.client.wrap.material.MaterialTextField
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
@@ -58,7 +60,7 @@ class TargetSpecEditor(
 
             var targetLocation: ObjectLocation?,
             var targetRenaming: Boolean
-    ) : RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -68,8 +70,8 @@ class TargetSpecEditor(
     ):
             AttributeEditorWrapper(objectLocation)
     {
-        override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>): ReactElement {
-            return input.child(TargetSpecEditor::class) {
+        override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>)/*: ReactElement*/ {
+            input.child(TargetSpecEditor::class) {
                 handler()
             }
         }

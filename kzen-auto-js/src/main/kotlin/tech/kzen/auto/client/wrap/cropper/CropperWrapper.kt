@@ -5,9 +5,9 @@ import org.w3c.dom.CustomEvent
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLImageElement
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
+import react.RefObject
+import react.createRef
 import react.dom.attrs
 import styled.css
 import styled.styledDiv
@@ -16,17 +16,17 @@ import kotlin.js.json
 
 
 class CropperWrapper:
-        RPureComponent<CropperWrapper.Props, RState>()
+        RPureComponent<CropperWrapper.Props, react.State>()
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var src: String?,
             var crop: (event: CustomEvent) -> Unit
-    ): RProps
+    ): react.Props
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var imageElement: HTMLImageElement? = null
+    private var imageElement: RefObject<HTMLImageElement> = createRef()
     private var cropper: Cropper? = null
 
 
@@ -40,14 +40,14 @@ class CropperWrapper:
         options["autoCropArea"] = 0.05
         options["crop"] = props.crop
 
-        cropper = Cropper(imageElement!!, options)
+        cropper = Cropper(imageElement.current!!, options)
     }
 
 
     override fun componentWillUnmount() {
         cropper?.destroy()
         cropper = null
-        imageElement = null
+//        imageElement.current = null
     }
 
 
@@ -84,9 +84,10 @@ class CropperWrapper:
                     src = props.src ?: "Screenshot"
                 }
 
-                ref {
-                    imageElement = it as? HTMLImageElement
-                }
+                ref = imageElement
+//                ref {
+//                    imageElement = it as? HTMLImageElement
+//                }
             }
         }
     }

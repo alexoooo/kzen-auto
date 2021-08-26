@@ -9,9 +9,11 @@ import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.platform.ClassName
+import java.nio.file.Path
 
 
 data class ReportRunContext(
+    val runDir: Path,
     val reportDocumentName: DocumentName,
     val dataType: ClassName,
     val datasetInfo: DatasetInfo,

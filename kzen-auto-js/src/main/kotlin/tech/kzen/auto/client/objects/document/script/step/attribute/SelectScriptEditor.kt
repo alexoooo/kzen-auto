@@ -9,9 +9,9 @@ import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.material.MaterialInputLabel
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
-import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -40,7 +40,7 @@ class SelectScriptEditor(
     class State(
             var value: ObjectLocation?,
             var renaming: Boolean
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -50,8 +50,8 @@ class SelectScriptEditor(
     ):
             AttributeEditorWrapper(objectLocation)
     {
-        override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>): ReactElement {
-            return input.child(SelectScriptEditor::class) {
+        override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>)/*: ReactElement*/ {
+            input.child(SelectScriptEditor::class) {
                 handler()
             }
         }

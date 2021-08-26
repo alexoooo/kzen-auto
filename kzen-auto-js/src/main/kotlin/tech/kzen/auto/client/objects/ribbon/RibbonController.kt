@@ -39,7 +39,7 @@ class RibbonController(
             var ribbonGroups: List<RibbonGroup>,
 
             var notation: GraphNotation
-    ): RProps
+    ): react.Props
 
 
     class State(
@@ -51,7 +51,7 @@ class RibbonController(
         var tabIndex: Int = 0,
 
         var currentRibbonGroups: List<RibbonGroup>
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -60,8 +60,8 @@ class RibbonController(
             private val actionTypes: List<ObjectLocation>,
             private val ribbonGroups: List<RibbonGroup>
     ): ReactWrapper<Props> {
-        override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
-            return input.child(RibbonController::class) {
+        override fun child(input: RBuilder, handler: RHandler<Props>)/*: ReactElement*/ {
+            input.child(RibbonController::class) {
                 attrs {
                     actionTypes = this@Wrapper.actionTypes
                     ribbonGroups = this@Wrapper.ribbonGroups

@@ -2,9 +2,7 @@ package tech.kzen.auto.client.objects.document.pipeline.analysis
 
 import kotlinx.css.*
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -29,7 +27,7 @@ class PipelineAnalysisController(
     RPureComponent<PipelineAnalysisController.Props, PipelineAnalysisController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
 //        var reportState: ReportState
 //        var dispatcher: ReportDispatcher
         var spec: AnalysisSpec
@@ -39,7 +37,7 @@ class PipelineAnalysisController(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
 //        var analysisType: AnalysisType
     }
 

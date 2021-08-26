@@ -11,8 +11,8 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.*
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentName
@@ -45,7 +45,7 @@ class SidebarFolder(
             var graphStructure: GraphStructure,
             var selectedDocumentPath: DocumentPath?,
             var archetypeLocations: List<ObjectLocation>
-    ): RProps
+    ): react.Props
 
 
     class State(
@@ -53,11 +53,11 @@ class SidebarFolder(
             var hoverOptions: Boolean,
             var optionsOpen: Boolean,
             var mainDocuments: List<DocumentPath>
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var menuAnchorRef: HTMLElement? = null
+    private var menuAnchorRef: RefObject<HTMLElement> = createRef()
 
     // NB: workaround for open options icon remaining after click with drag away from item
     private var processingOption: Boolean = false
@@ -337,9 +337,10 @@ class SidebarFolder(
 //                    backgroundColor = Color.blue
                 }
 
-                ref {
-                    this@SidebarFolder.menuAnchorRef = it as? HTMLElement
-                }
+                ref = this@SidebarFolder.menuAnchorRef
+//                ref {
+//                    this@SidebarFolder.menuAnchorRef = it as? HTMLElement
+//                }
 
                 renderOptionsMenu()
             }
@@ -416,7 +417,7 @@ class SidebarFolder(
 
                 onClose = ::onOptionsCancel
 
-                anchorEl = menuAnchorRef
+                anchorEl = menuAnchorRef.current
             }
 
             renderMenuItems()

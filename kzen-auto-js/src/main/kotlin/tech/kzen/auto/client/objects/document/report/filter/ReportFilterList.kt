@@ -2,9 +2,7 @@ package tech.kzen.auto.client.objects.document.report.filter
 
 import kotlinx.css.*
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -28,12 +26,12 @@ class ReportFilterList(
     class Props(
         var reportState: ReportState,
         var dispatcher: ReportDispatcher
-    ): RProps
+    ): react.Props
 
 
     class State(
 //        var adding: Boolean
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

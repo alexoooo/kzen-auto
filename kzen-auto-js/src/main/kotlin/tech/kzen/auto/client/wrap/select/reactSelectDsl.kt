@@ -6,11 +6,11 @@ class ReactSelectOption(
         val label: String)
 
 
-//fun RBuilder.materialReactSelectController(props: RProps): ReactElement =
+//fun RBuilder.materialReactSelectController(props: react.Props): ReactElement =
 //        child(MaterialTextField::class) {
 //            attrs.name = name
 //        }
 //
-//class MaterialReactSelect : Component<ReactSelectProps, RState> {
+//class MaterialReactSelect : Component<ReactSelectProps, react.State> {
 //    override fun render(): ReactElement?
 //}

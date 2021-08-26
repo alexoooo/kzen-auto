@@ -23,7 +23,7 @@ class InputBrowserFilterController(
     RPureComponent<InputBrowserFilterController.Props, InputBrowserFilterController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var spec: InputBrowserSpec
         var inputStore: PipelineInputStore
 
@@ -33,7 +33,7 @@ class InputBrowserFilterController(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var filterText: String
     }
 
@@ -88,13 +88,15 @@ class InputBrowserFilterController(
 
                 size = "small"
 
-                InputProps = object : RProps {
+                InputProps = object : react.Props {
                     @Suppress("unused")
-                    var startAdornment = child(MaterialInputAdornment::class) {
-                        attrs {
-                            position = "start"
+                    var startAdornment = buildElement {
+                        child(MaterialInputAdornment::class) {
+                            attrs {
+                                position = "start"
+                            }
+                            child(SearchIcon::class) {}
                         }
-                        child(SearchIcon::class) {}
                     }
                 }
 

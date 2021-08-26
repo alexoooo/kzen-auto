@@ -24,9 +24,9 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Suppress("unused")
 class PluginController(
-    props: RProps
+    props: react.Props
 ):
-    RPureComponent<RProps, PluginController.State>(props),
+    RPureComponent<react.Props, PluginController.State>(props),
     SessionGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -56,7 +56,7 @@ class PluginController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    interface State: RState {
+    interface State: react.State {
         var clientState: SessionState?
         var detailList: List<ProcessorDefinerDetail>?
         var listingError: String?
@@ -75,8 +75,8 @@ class PluginController(
             return archetype
         }
 
-        override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
-            return input.child(PluginController::class) {
+        override fun child(input: RBuilder, handler: RHandler<react.Props>)/*: ReactElement*/ {
+            input.child(PluginController::class) {
                 handler()
             }
         }
@@ -84,7 +84,7 @@ class PluginController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: RProps) {
+    override fun State.init(props: react.Props) {
         clientState = null
         detailList = null
         listingError = null
@@ -103,7 +103,7 @@ class PluginController(
     }
 
 
-    override fun componentDidUpdate(prevProps: RProps, prevState: State, snapshot: Any) {
+    override fun componentDidUpdate(prevProps: react.Props, prevState: State, snapshot: Any) {
         val clientState = state.clientState
             ?: return
 

@@ -21,9 +21,9 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Suppress("unused")
 class ReportController(
-    props: RProps
+    props: react.Props
 ):
-    RPureComponent<RProps, ReportController.State>(props),
+    RPureComponent<react.Props, ReportController.State>(props),
     ReportStore.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -37,7 +37,7 @@ class ReportController(
     //-----------------------------------------------------------------------------------------------------------------
     class State(
         var reportState: ReportState?
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -51,9 +51,8 @@ class ReportController(
             return archetype
         }
 
-        override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
-//        override fun child(input: RBuilder, handler: RHandler<DocumentControllerProps>): ReactElement {
-            return input.child(ReportController::class) {
+        override fun child(input: RBuilder, handler: RHandler<react.Props>)/*: ReactElement*/ {
+            input.child(ReportController::class) {
                 handler()
             }
         }
@@ -65,7 +64,7 @@ class ReportController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: RProps) {
+    override fun State.init(props: react.Props) {
         reportState = null
     }
 

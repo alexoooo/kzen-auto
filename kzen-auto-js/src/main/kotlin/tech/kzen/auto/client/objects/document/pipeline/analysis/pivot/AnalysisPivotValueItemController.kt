@@ -2,9 +2,7 @@ package tech.kzen.auto.client.objects.document.pipeline.analysis.pivot
 
 import kotlinx.css.*
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.pipeline.analysis.model.PipelineAnalysisStore
@@ -19,14 +17,14 @@ class AnalysisPivotValueItemController(
     RPureComponent<AnalysisPivotValueItemController.Props, AnalysisPivotValueItemController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var columnName: String
         var analysisStore: PipelineAnalysisStore
         var runningOrLoading: Boolean
     }
 
 
-    interface State: RState {
+    interface State: react.State {
 //        var hover: Boolean
     }
 

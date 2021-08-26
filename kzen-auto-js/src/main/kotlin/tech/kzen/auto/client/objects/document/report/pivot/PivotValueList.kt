@@ -2,9 +2,7 @@ package tech.kzen.auto.client.objects.document.report.pivot
 
 import kotlinx.css.*
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.*
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
@@ -15,14 +13,14 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSp
 class PivotValueList(
     props: Props
 ):
-    RPureComponent<PivotValueList.Props, RState>(props)
+    RPureComponent<PivotValueList.Props, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
         var pivotSpec: PivotSpec,
         var reportState: ReportState,
         var dispatcher: ReportDispatcher
-    ): RProps
+    ): react.Props
 
 
     //-----------------------------------------------------------------------------------------------------------------

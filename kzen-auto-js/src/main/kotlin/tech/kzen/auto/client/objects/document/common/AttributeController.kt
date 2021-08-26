@@ -14,7 +14,7 @@ import tech.kzen.lib.common.reflect.Reflect
 class AttributeController(
         props: Props
 ):
-        RPureComponent<AttributeController.Props, RState>(props)
+        RPureComponent<AttributeController.Props, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -38,12 +38,12 @@ class AttributeController(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-            private val attributeEditors: List<AttributeEditorWrapper>
+        private val attributeEditors: List<AttributeEditorWrapper>
     ):
-            ReactWrapper<Props>
+        ReactWrapper<Props>
     {
-        override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
-            return input.child(AttributeController::class) {
+        override fun child(input: RBuilder, handler: RHandler<Props>)/*: ReactElement*/ {
+            input.child(AttributeController::class) {
                 attrs {
                     this.attributeEditors = this@Wrapper.attributeEditors
                 }

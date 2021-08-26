@@ -2,25 +2,23 @@
 package tech.kzen.auto.client.wrap.iconify
 
 import react.Component
-import react.RProps
-import react.RState
 import react.ReactElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
 @JsName("Icon")
-external class IconifyIcon: Component<IconifyProps, RState> {
+external class IconifyIcon: Component<IconifyProps, react.State> {
     override fun render(): ReactElement?
 }
 
 
 //@JsName("InlineIcon")
-//external class IconifyInlineIcon: Component<IconifyProps, RState> {
+//external class IconifyInlineIcon: Component<IconifyProps, react.State> {
 //    override fun render(): ReactElement?
 //}
 
 
-external interface IconifyProps: RProps {
+external interface IconifyProps: react.Props {
     var icon: IconifyIconData
 
 //    var title: String

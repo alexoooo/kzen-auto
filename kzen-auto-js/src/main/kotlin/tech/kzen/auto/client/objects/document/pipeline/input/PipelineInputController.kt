@@ -35,7 +35,7 @@ class PipelineInputController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var mainLocation: ObjectLocation
         var spec: InputSpec
         var inputState: PipelineInputState
@@ -44,7 +44,7 @@ class PipelineInputController(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var browserOpen: Boolean
         var inputSelection: InputSelectedInfo?
     }

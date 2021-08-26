@@ -2,9 +2,7 @@ package tech.kzen.auto.client.objects.document.pipeline.input.browse
 
 import kotlinx.css.*
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.pipeline.input.browse.model.InputBrowserState
@@ -24,7 +22,7 @@ class InputBrowserActionController(
     RPureComponent<InputBrowserActionController.Props, InputBrowserActionController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var mainLocation: ObjectLocation
 //        var hasFilter: Boolean
         var dataLocationInfos: List<DataLocationInfo>
@@ -35,7 +33,7 @@ class InputBrowserActionController(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
 //        var textEdit: Boolean
 //        var editDir: String
     }

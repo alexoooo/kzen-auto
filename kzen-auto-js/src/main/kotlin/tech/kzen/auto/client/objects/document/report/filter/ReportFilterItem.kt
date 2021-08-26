@@ -59,14 +59,14 @@ class ReportFilterItem(
         var dispatcher: ReportDispatcher,
         var filterSpec: FilterSpec,
         var columnName: String
-    ): RProps
+    ): react.Props
 
 
     class State(
         var open: Boolean,
         var removeError: String?,
         var updateError: String?
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

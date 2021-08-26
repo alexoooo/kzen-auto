@@ -3,9 +3,7 @@ package tech.kzen.auto.client.objects.document.report.pivot
 import kotlinx.css.FontWeight
 import kotlinx.css.fontWeight
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.report.state.PivotValueTypeAddRequest
@@ -22,7 +20,7 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotVa
 class PivotValueTypes(
     props: Props
 ):
-    RPureComponent<PivotValueTypes.Props, RState>(props)
+    RPureComponent<PivotValueTypes.Props, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
@@ -32,7 +30,7 @@ class PivotValueTypes(
         var pivotSpec: PivotSpec,
         var reportState: ReportState,
         var dispatcher: ReportDispatcher
-    ): RProps
+    ): react.Props
 
 
     //-----------------------------------------------------------------------------------------------------------------

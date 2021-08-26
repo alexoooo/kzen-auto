@@ -2,9 +2,7 @@ package tech.kzen.auto.client.objects.document.report.pivot
 
 import kotlinx.css.*
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.report.state.PivotValueRemoveRequest
@@ -30,12 +28,12 @@ class PivotValueItem(
         var pivotSpec: PivotSpec,
         var reportState: ReportState,
         var dispatcher: ReportDispatcher
-    ): RProps
+    ): react.Props
 
 
     class State(
 //        var hover: Boolean
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

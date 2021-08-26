@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.report.output
+package tech.kzen.auto.client.objects.document.pipeline.output
 
 import kotlinx.css.*
 import kotlinx.css.properties.TextDecoration
@@ -10,32 +10,33 @@ import react.dom.thead
 import react.dom.tr
 import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
+import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
 import tech.kzen.auto.client.objects.document.report.ReportController
-import tech.kzen.auto.client.objects.document.report.state.OutputLookupRequest
-import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
-import tech.kzen.auto.client.objects.document.report.state.ReportSaveAction
-import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
 
-class OutputTableView(
+class OutputTableController(
     props: Props
 ):
-    RPureComponent<OutputTableView.Props, OutputTableView.State>(props)
+    RPureComponent<OutputTableController.Props, OutputTableController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: react.Props {
-        var reportState: ReportState
-        var dispatcher: ReportDispatcher
+        var spec: OutputSpec
+        var inputAndCalculatedColumns: HeaderListing?
+        var runningOrLoading: Boolean
+        var outputStore: PipelineOutputStore
     }
 
 
@@ -48,7 +49,7 @@ class OutputTableView(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        settingsOpen = ! props.reportState.outputSpec().explore.isDefaultWorkPath()
+        settingsOpen = ! props.spec.explore.isDefaultWorkPath()
         savingOpen = false
         savingLoading = false
     }
@@ -56,21 +57,14 @@ class OutputTableView(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onPreviewRefresh() {
-        props.dispatcher.dispatchAsync(OutputLookupRequest)
+//        props.dispatcher.dispatchAsync(OutputLookupRequest)
     }
 
 
     private fun abbreviate(value: String): String {
-//        if (value.isEmpty()) {
-//            // NB: get cell to show
-//            return "."
-//        }
-
         if (value.length < 50) {
             return value
         }
-
-//        console.log("^^^^ abbreviating: $value")
         return value.substring(0, 47) + "..."
     }
 
@@ -101,8 +95,8 @@ class OutputTableView(
         }
 
         async {
-            props.dispatcher.dispatch(
-                ReportSaveAction)
+//            props.dispatcher.dispatch(
+//                ReportSaveAction)
 
             setState {
                 savingLoading = false
@@ -122,8 +116,7 @@ class OutputTableView(
             renderHeaderControls()
         }
 
-//        +"props.reportState.columnListing: ${props.reportState.columnListing}"
-        if (! props.reportState.columnListing.isNullOrEmpty()) {
+        if (! props.inputAndCalculatedColumns?.values.isNullOrEmpty()) {
             renderOutput()
         }
     }
@@ -131,8 +124,9 @@ class OutputTableView(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderHeaderControls() {
-        val showRefresh = props.reportState.isTaskRunning()
-        val showSave = (props.reportState.outputInfo?.status ?: OutputStatus.Missing) != OutputStatus.Missing
+        val showRefresh = props.runningOrLoading
+//        val showSave = (props.reportState.outputInfo?.status ?: OutputStatus.Missing) != OutputStatus.Missing
+        val showSave = true
 
         if (showRefresh) {
             child(MaterialButton::class) {
@@ -162,7 +156,7 @@ class OutputTableView(
         }
         else if (showSave) {
             val linkAddress = ClientContext.restClient.linkDetachedDownload(
-                props.reportState.mainLocation)
+                props.outputStore.mainLocation())
 
             styledA {
                 css {
@@ -230,20 +224,19 @@ class OutputTableView(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderOutput() {
-        val error = props.reportState.outputError
-        val outputInfo = props.reportState.outputInfo
-        val outputPreview = outputInfo?.table?.preview
+//        val error = props.reportState.outputError
+//        val outputInfo = props.reportState.outputInfo
+//        val outputPreview = outputInfo?.table?.preview
 
         styledDiv {
-//            +"outputPreview $outputPreview"
+            +"[${props.inputAndCalculatedColumns?.values}]"
 
-            renderInfo(error, outputInfo)
-//            renderSettings(outputInfo)
-            renderSave(outputInfo)
-
-            if (outputPreview != null) {
-                renderPreview(outputInfo, outputPreview)
-            }
+//            renderInfo(error, outputInfo)
+//            renderSave(outputInfo)
+//
+//            if (outputPreview != null) {
+//                renderPreview(outputInfo, outputPreview)
+//            }
         }
     }
 
@@ -274,43 +267,6 @@ class OutputTableView(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderSettings(outputInfo: OutputInfo?) {
-        if (! state.settingsOpen || outputInfo == null) {
-            return
-        }
-
-        styledDiv {
-            css {
-                marginBottom = 1.em
-                width = 100.pct
-                paddingBottom = 1.em
-                borderBottomWidth = 2.px
-                borderBottomStyle = BorderStyle.solid
-                borderBottomColor = Color.lightGray
-            }
-
-            child(AttributePathValueEditor::class) {
-                attrs {
-                    labelOverride = "Report Work Folder"
-
-                    clientState = props.reportState.clientState
-                    objectLocation = props.reportState.mainLocation
-                    attributePath = ReportConventions.workDirPath
-
-                    valueType = TypeMetadata.string
-
-                    onChange = {
-                        onPreviewRefresh()
-                    }
-                }
-            }
-
-            +"Absolute path: ${outputInfo.runDir}"
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderSave(outputInfo: OutputInfo?) {
         if (! state.savingOpen || outputInfo == null || outputInfo.status == OutputStatus.Missing) {
             return
@@ -325,11 +281,6 @@ class OutputTableView(
                 borderBottomWidth = 2.px
                 borderBottomStyle = BorderStyle.solid
                 borderBottomColor = Color.lightGray
-
-//                paddingTop = 1.em
-//                borderTopWidth = 2.px
-//                borderTopStyle = BorderStyle.solid
-//                borderTopColor = Color.lightGray
             }
 
             styledDiv {
@@ -342,8 +293,8 @@ class OutputTableView(
                     attrs {
                         labelOverride = "Save File Path"
 
-                        clientState = props.reportState.clientState
-                        objectLocation = props.reportState.mainLocation
+//                        clientState = props.reportState.clientState
+                        objectLocation = props.outputStore.mainLocation()
                         attributePath = ReportConventions.saveFilePath
 
                         valueType = TypeMetadata.string
@@ -425,8 +376,8 @@ class OutputTableView(
                     attrs {
                         labelOverride = "Preview Start Row"
 
-                        clientState = props.reportState.clientState
-                        objectLocation = props.reportState.mainLocation
+//                        clientState = props.reportState.clientState
+                        objectLocation = props.outputStore.mainLocation()
                         attributePath = ReportConventions.previewStartPath
 
                         valueType = TypeMetadata.long
@@ -450,8 +401,8 @@ class OutputTableView(
                     attrs {
                         labelOverride = "Preview Row Count"
 
-                        clientState = props.reportState.clientState
-                        objectLocation = props.reportState.mainLocation
+//                        clientState = props.reportState.clientState
+                        objectLocation = props.outputStore.mainLocation()
                         attributePath = ReportConventions.previewCountPath
 
                         valueType = TypeMetadata.int
@@ -476,7 +427,8 @@ class OutputTableView(
                         marginLeft = 1.em
                     }
 
-                    +"Total rows: ${FormatUtils.decimalSeparator(props.reportState.outputCount())}"
+//                    +"Total rows: ${FormatUtils.decimalSeparator(props.reportState.outputCount())}"
+                    +"[total rows]"
                 }
             }
         }
@@ -558,16 +510,12 @@ class OutputTableView(
                                 css {
                                     position = Position.sticky
                                     left = 0.px
-//                                    top = 0.px
                                     backgroundColor = Color.white
                                     zIndex = 999
 
-//                                    borderTopStyle = BorderStyle.solid
-//                                    borderTopColor = Color.lightGray
                                     paddingLeft = 0.5.em
                                     paddingRight = 0.5.em
                                     boxShadowInset(Color.lightGray, (-2).px, 0.px, 0.px, 0.px)
-//                                    boxShadow(Color.lightGray, 2.px, 2.px, 2.px, 0.px)
 
                                     if (row.index != 0) {
                                         borderTopWidth = 1.px
@@ -583,8 +531,6 @@ class OutputTableView(
                             for (value in row.value.withIndex()) {
                                 styledTd {
                                     css {
-//                                        borderTopStyle = BorderStyle.solid
-//                                        borderTopColor = Color.lightGray
                                         paddingLeft = 0.5.em
                                         paddingRight = 0.5.em
 

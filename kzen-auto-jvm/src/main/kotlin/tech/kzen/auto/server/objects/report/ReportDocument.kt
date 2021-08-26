@@ -169,16 +169,17 @@ class ReportDocument(
 
         val dataType = input.selection.dataType
 
-        return ReportRunContext(
-            selfLocation.documentPath.name,
-            dataType,
-            datasetInfo,
-            formula,
-            previewAll,
-            filter,
-            previewFiltered,
-            analysis,
-            output)
+//        return ReportRunContext(
+//            selfLocation.documentPath.name,
+//            dataType,
+//            datasetInfo,
+//            formula,
+//            previewAll,
+//            filter,
+//            previewFiltered,
+//            analysis,
+//            output)
+        TODO()
     }
 
 
@@ -332,10 +333,8 @@ class ReportDocument(
         val runSpec = runContext()
             ?: return ExecutionFailure("Missing run")
 
-        val runDir = runDir(runSpec)
-
         return ServerContext.reportRunAction.outputInfo(
-            selfLocation, runSpec, runDir, output.explore)
+            selfLocation, runSpec, output.explore)
     }
 
 

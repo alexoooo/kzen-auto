@@ -3,9 +3,7 @@ package tech.kzen.auto.client.objects.document.report.preview
 import kotlinx.css.*
 import org.w3c.dom.HTMLInputElement
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -25,14 +23,14 @@ class PreviewView(
     RPureComponent<PreviewView.Props, PreviewView.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var afterFilter: Boolean
     }
 
 
-    interface State: RState {
+    interface State: react.State {
 //        var adding: Boolean
     }
 

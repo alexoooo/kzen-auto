@@ -22,14 +22,14 @@ class InputSelectedGroup(
     RPureComponent<InputSelectedGroup.Props, InputSelectedGroup.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var editDisabled: Boolean
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var groupByText: String
     }
 

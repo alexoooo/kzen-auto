@@ -21,7 +21,7 @@ class InputSelectedGroupController(
     RPureComponent<InputSelectedGroupController.Props, InputSelectedGroupController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var spec: InputSelectionSpec
 //        var reportState: ReportState
 //        var dispatcher: ReportDispatcher
@@ -30,7 +30,7 @@ class InputSelectedGroupController(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var groupByText: String
     }
 

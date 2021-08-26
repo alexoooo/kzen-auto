@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.script.step.display
 
-import react.RProps
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.lib.common.model.attribute.AttributeNesting
@@ -9,7 +8,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 open class StepDisplayProps(
         var common: Common
-): RProps {
+): react.Props {
     data class Common(
         var clientState: SessionState,
 //        var graphStructure: GraphStructure,

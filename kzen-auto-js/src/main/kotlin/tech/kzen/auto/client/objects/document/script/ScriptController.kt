@@ -68,13 +68,13 @@ class ScriptController:
     class Props(
             var stepController: StepController.Wrapper,
             var scriptCommander: ScriptCommander
-    ): RProps
+    ): react.Props
 
 
     class State(
             var clientState: SessionState?,
             var creating: Boolean
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -90,8 +90,8 @@ class ScriptController:
             return archetype
         }
 
-        override fun child(input: RBuilder, handler: RHandler<RProps>): ReactElement {
-            return input.child(ScriptController::class) {
+        override fun child(input: RBuilder, handler: RHandler<react.Props>)/*: ReactElement*/ {
+            input.child(ScriptController::class) {
                 attrs {
                     this.stepController = this@Wrapper.stepController
                     this.scriptCommander = this@Wrapper.scriptCommander

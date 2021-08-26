@@ -25,7 +25,7 @@ class InputBrowserDir(
     RPureComponent<InputBrowserDir.Props, InputBrowserDir.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var reportState: ReportState
         var dispatcher: ReportDispatcher
         var editDisabled: Boolean
@@ -34,7 +34,7 @@ class InputBrowserDir(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var textEdit: Boolean
         var editDir: String
     }

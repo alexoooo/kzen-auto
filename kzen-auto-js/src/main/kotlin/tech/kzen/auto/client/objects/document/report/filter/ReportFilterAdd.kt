@@ -10,11 +10,11 @@ import styled.styledDiv
 import tech.kzen.auto.client.objects.document.report.state.FilterAddRequest
 import tech.kzen.auto.client.objects.document.report.state.ReportDispatcher
 import tech.kzen.auto.client.objects.document.report.state.ReportState
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.material.CancelIcon
 import tech.kzen.auto.client.wrap.material.MaterialIconButton
 import tech.kzen.auto.client.wrap.material.MaterialInputLabel
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import kotlin.js.Json
@@ -30,13 +30,13 @@ class ReportFilterAdd(
     class Props(
         var reportState: ReportState,
         var dispatcher: ReportDispatcher
-    ): RProps
+    ): react.Props
 
 
     class State(
         var adding: Boolean,
         var selectedColumn: String?
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

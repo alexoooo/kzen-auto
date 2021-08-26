@@ -45,12 +45,12 @@ class StageController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var documentControllers: List<DocumentController>
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var structure: GraphStructure?
         var documentPath: DocumentPath?
         var transition: Boolean
@@ -62,8 +62,8 @@ class StageController(
     class Wrapper(
             private val documentControllers: List<DocumentController>
     ): ReactWrapper<Props> {
-        override fun child(input: RBuilder, handler: RHandler<Props>): ReactElement {
-            return input.child(StageController::class) {
+        override fun child(input: RBuilder, handler: RHandler<Props>)/*: ReactElement*/ {
+            input.child(StageController::class) {
                 attrs {
                     documentControllers = this@Wrapper.documentControllers
                 }

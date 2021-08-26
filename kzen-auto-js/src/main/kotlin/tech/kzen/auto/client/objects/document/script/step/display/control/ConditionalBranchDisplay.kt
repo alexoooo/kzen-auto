@@ -15,11 +15,11 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.material.ArrowDownwardIcon
 import tech.kzen.auto.client.wrap.material.MaterialIconButton
 import tech.kzen.auto.client.wrap.material.SubdirectoryArrowLeftIcon
+import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -73,12 +73,12 @@ class ConditionalBranchDisplay(
 //        var graphStructure: GraphStructure,
         var objectLocation: ObjectLocation,
         var imperativeModel: ImperativeModel
-    ): RProps
+    ): react.Props
 
 
     class State(
             var creating: Boolean
-    ): RState
+    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

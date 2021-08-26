@@ -6,9 +6,7 @@ import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import react.dom.attrs
 import react.dom.td
 import styled.*
@@ -32,7 +30,7 @@ class InputSelectedTableController(
     RPureComponent<InputSelectedTableController.Props, InputSelectedTableController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var showDetails: Boolean
         var spec: InputSelectionSpec
         var inputSelectedState: InputSelectedState
@@ -40,7 +38,7 @@ class InputSelectedTableController(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
 //        var selected: PersistentSet<DataLocation>
 //        var showDetails: Boolean
     }

@@ -2,9 +2,7 @@ package tech.kzen.auto.client.objects.document.pipeline.analysis
 
 import kotlinx.css.*
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import react.dom.span
 import styled.css
 import styled.styledDiv
@@ -18,13 +16,13 @@ class AnalysisFlatController(
     RPureComponent<AnalysisFlatController.Props, AnalysisFlatController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var inputAndCalculatedColumns: HeaderListing?
 //        var runningOrLoading: Boolean
     }
 
 
-    interface State: RState {
+    interface State: react.State {
 //        var analysisType: AnalysisType
     }
 

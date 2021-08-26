@@ -5,9 +5,7 @@ import kotlinx.css.properties.borderLeft
 import kotlinx.css.properties.borderRight
 import kotlinx.css.properties.borderTop
 import react.RBuilder
-import react.RProps
 import react.RPureComponent
-import react.RState
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.graph.CellController
@@ -18,14 +16,14 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 class TopIngress(
         props: Props
 ):
-        RPureComponent<TopIngress.Props, RState>(props)
+        RPureComponent<TopIngress.Props, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
             var attributeName: AttributeName?,
             var ingressColor: Color,
             var parentWidth: LinearDimension?
-    ): RProps
+    ): react.Props
 
 
     //-----------------------------------------------------------------------------------------------------------------

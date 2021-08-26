@@ -26,7 +26,7 @@ class InputBrowserPathController(
     RPureComponent<InputBrowserPathController.Props, InputBrowserPathController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: RProps {
+    interface Props: react.Props {
         var mainLocation: ObjectLocation
         var browseDir: DataLocation
         var errorMode: Boolean
@@ -34,7 +34,7 @@ class InputBrowserPathController(
     }
 
 
-    interface State: RState {
+    interface State: react.State {
         var textEdit: Boolean
         var editDir: String
         var hover: Boolean
