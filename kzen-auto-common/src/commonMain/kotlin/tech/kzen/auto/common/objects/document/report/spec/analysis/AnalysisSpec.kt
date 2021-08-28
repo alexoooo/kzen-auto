@@ -109,7 +109,7 @@ data class AnalysisSpec(
                 AnalysisSpec(type, flat, PivotSpec.empty)
 
             AnalysisType.PivotTable ->
-                AnalysisSpec(type, flat, PivotSpec.empty)
+                AnalysisSpec(type, AnalysisFlatDataSpec.empty, pivot)
         }
     }
 

@@ -55,7 +55,7 @@ class ReportWorkPool(
 
     fun resolveRunDir(
         reportRunSignature: ReportRunSignature,
-        reportDir: Path = defaultReportDir
+        reportDir: Path
     ): Path {
         val workDir =
             if (reportDir.isAbsolute) {
@@ -88,9 +88,9 @@ class ReportWorkPool(
     }
 
 
-    fun readRunStatus(reportRunSignature: ReportRunSignature): OutputStatus {
-        val dir = resolveRunDir(reportRunSignature)
-        val infoFile = dir.resolve(reportInfoFile)
+    fun readRunStatus(runDir: Path): OutputStatus {
+//        val dir = resolveRunDir(reportRunSignature)
+        val infoFile = runDir.resolve(reportInfoFile)
         if (! Files.exists(infoFile)) {
             return OutputStatus.Corrupt
         }

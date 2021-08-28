@@ -107,9 +107,9 @@ class PipelineDocument(
 //
 //            ReportConventions.actionSave ->
 //                actionSave()
-//
-//            ReportConventions.actionReset ->
-//                actionReset()
+
+            PipelineConventions.actionReset ->
+                actionOutputReset()
 
             else ->
                 return ExecutionFailure("Unknown action: $action")
@@ -216,6 +216,14 @@ class PipelineDocument(
     }
 
 
+    private fun actionOutputReset(): ExecutionResult {
+        val reportRunContext = reportRunContext()
+            ?: return ExecutionFailure("Missing run")
+
+        return ServerContext.reportRunAction.delete(reportRunContext.runDir)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun define(): LogicDefinition {
         return LogicDefinition(
@@ -228,8 +236,10 @@ class PipelineDocument(
         val reportRunContext = reportRunContext()
             ?: throw IllegalStateException("Unable to create context")
 
+        ServerContext.reportWorkPool.prepareRunDir(reportRunContext.runDir)
+
         return PipelineExecution(
-            reportRunContext, logicTraceHandle)
+            reportRunContext, ServerContext.reportWorkPool, logicTraceHandle)
     }
 
 

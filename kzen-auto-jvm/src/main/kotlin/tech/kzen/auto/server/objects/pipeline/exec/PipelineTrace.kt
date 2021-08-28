@@ -160,7 +160,7 @@ class PipelineTrace(
 
     private fun publishUpdate(): ReportFileProgress {
         val snapshot = snapshot()
-        logicTraceHandle.set(logicTracePath, ExecutionValue.fromJsonCollection(
+        logicTraceHandle.set(logicTracePath, ExecutionValue.of(
             snapshot.toCollection()
         ))
         return snapshot

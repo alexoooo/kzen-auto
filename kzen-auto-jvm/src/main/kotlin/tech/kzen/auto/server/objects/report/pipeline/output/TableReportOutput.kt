@@ -302,7 +302,7 @@ class TableReportOutput(
 
         val saveInfo = saveInfo(initialReportRunContext.runDir, outputSpec)
 
-        val status = reportWorkPool.readRunStatus(reportRunSignature)
+        val status = reportWorkPool.readRunStatus(reportRunContext.runDir)
 
         return OutputInfo(
             initialReportRunContext.runDir.toString(),

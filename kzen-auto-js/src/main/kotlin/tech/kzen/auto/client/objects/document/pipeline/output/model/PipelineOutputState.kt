@@ -4,5 +4,6 @@ import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 
 
 data class PipelineOutputState(
-    val outputInfo: OutputInfo? = null
+    val outputInfo: OutputInfo? = null,
+    val outputInfoError: String? = null
 )

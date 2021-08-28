@@ -3,18 +3,24 @@ package tech.kzen.auto.client.util
 
 sealed class ClientResult<T> {
     companion object {
+        val emptySuccess = ofSuccess(Unit)
+
+
         fun <T> ofSuccess(value: T): ClientSuccess<T> {
             return ClientSuccess(value)
         }
+
 
         fun <T> ofError(message: String): ClientError<T> {
             return ClientError(message)
         }
     }
 
+
     fun valueOrNull(): T? {
         return (this as? ClientSuccess)?.value
     }
+
 
     fun errorOrNull(): String? {
         return (this as? ClientError)?.message

@@ -6,13 +6,11 @@ import kotlinx.html.js.onMouseOverFunction
 import react.*
 import react.dom.attrs
 import react.dom.div
-import tech.kzen.auto.client.objects.document.pipeline.model.PipelineState
 import tech.kzen.auto.client.objects.document.pipeline.model.PipelineStore
-import tech.kzen.auto.client.wrap.material.MaterialCircularProgress
-import tech.kzen.auto.client.wrap.material.MaterialFab
-import tech.kzen.auto.client.wrap.material.PauseIcon
-import tech.kzen.auto.client.wrap.material.PlayArrowIcon
+import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunState
+import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicStatus
 
 
@@ -23,7 +21,9 @@ class PipelineRunController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-        var pipelineState: PipelineState,
+//        var pipelineState: PipelineState,
+        var runState: PipelineRunState,
+        var outputStatus: OutputStatus,
         var pipelineStore: PipelineStore
     ): react.Props
 
@@ -54,12 +54,15 @@ class PipelineRunController(
     }
 
 
-    private fun onRunMain(running: Boolean) {
-        if (! running) {
-            props.pipelineStore.run.startAndRunAsync()
+    private fun onRunMain(running: Boolean, terminal: Boolean) {
+        if (running) {
+            props.pipelineStore.run.cancelAsync()
+        }
+        else if (terminal) {
+            props.pipelineStore.output.resetAsync()
         }
         else {
-            props.pipelineStore.run.cancelAsync()
+            props.pipelineStore.run.startAndRunAsync()
         }
 
 //        val result = ClientContext.restClient.performDetached(
@@ -112,7 +115,7 @@ class PipelineRunController(
 
 
     private fun RBuilder.renderInner() {
-        val logicStatus = props.pipelineState.run.logicStatus
+        val logicStatus = props.runState.logicStatus
             ?: return
 
 //        val readyToRun =
@@ -123,11 +126,6 @@ class PipelineRunController(
 //        val inProgress =
 //            props.reportState.taskStarting ||
 //            props.reportState.taskStopping
-//
-//        val status =
-//            props.reportState.outputInfo?.status ?: OutputStatus.Missing
-
-//        +"status: ${logicStatus.active != null}"
 
         renderMainAction(logicStatus)
     }
@@ -138,7 +136,10 @@ class PipelineRunController(
         logicStatus: LogicStatus
     ) {
         val running = logicStatus.active != null
-        val inProgress = props.pipelineState.run.submitting()
+        val terminal = props.outputStatus.isTerminal()
+        val inProgress = props.runState.submitting()
+
+        console.log("#@#@#@! props.outputStatus - ${props.outputStatus} - $running - $terminal")
 
         child(MaterialFab::class) {
             attrs {
@@ -156,7 +157,7 @@ class PipelineRunController(
                 }
 
                 onClick = {
-                    onRunMain(running)
+                    onRunMain(running, terminal)
                 }
 
                 title =
@@ -169,12 +170,11 @@ class PipelineRunController(
 //
                         running ->
                             "Cancel"
-//
-//                        status.isTerminal() ->
-//                            "Reset"
+
+                        terminal ->
+                            "Reset"
 
                         else ->
-//                            "Play"
                             "Run"
                     }
             }
@@ -207,15 +207,15 @@ class PipelineRunController(
                 running ->
                     renderProgressWithPause(inProgress)
 
-//                status.isTerminal() -> {
-//                    child(ReplayIcon::class) {
-//                        attrs {
-//                            style = reactStyle {
-//                                fontSize = 3.em
-//                            }
-//                        }
-//                    }
-//                }
+                terminal -> {
+                    child(ReplayIcon::class) {
+                        attrs {
+                            style = reactStyle {
+                                fontSize = 3.em
+                            }
+                        }
+                    }
+                }
 
                 else -> {
                     child(PlayArrowIcon::class) {

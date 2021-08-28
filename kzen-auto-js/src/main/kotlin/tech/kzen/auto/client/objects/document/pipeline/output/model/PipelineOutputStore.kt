@@ -19,6 +19,12 @@ class PipelineOutputStore(
     private val store: PipelineStore
 ) {
     //-----------------------------------------------------------------------------------------------------------------
+    suspend fun init() {
+        lookupOutputWithFallback()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun mainLocation(): ObjectLocation {
         return store.mainLocation()
     }
@@ -66,9 +72,30 @@ class PipelineOutputStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun lookupOutput(
-//        state: ReportState
-    ): ClientResult<OutputInfo> {
+    fun lookupOutputWithFallbackAsync() {
+        async {
+            lookupOutputWithFallback()
+        }
+    }
+
+
+    suspend fun lookupOutputWithFallback() {
+        if (store.state().isRunningOrLoading()) {
+            return
+        }
+
+        val result = lookupOutputOffline()
+
+        store.update { state -> state.withOutput {
+            it.copy(
+                outputInfo = result.valueOrNull(),
+                outputInfoError = result.errorOrNull()
+            )
+        } }
+    }
+
+
+    private suspend fun lookupOutputOffline(): ClientResult<OutputInfo> {
 //        if (state.columnListing.isNullOrEmpty()) {
 //            return ClientResult.ofError("")
 //        }
@@ -84,6 +111,44 @@ class PipelineOutputStore(
                 val outputInfo = OutputInfo.fromCollection(resultValue)
 
                 ClientResult.ofSuccess(outputInfo)
+            }
+
+            is ExecutionFailure -> {
+                ClientResult.ofError(result.errorMessage)
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun resetAsync() {
+        if (store.state().isRunningOrLoading()) {
+            return
+        }
+
+        async {
+            delay(1)
+            val result = resetRequest()
+
+            delay(10)
+            store.update { state -> state.withOutput {
+                it.copy(
+                    outputInfo = null,
+                    outputInfoError = result.errorOrNull()
+                )
+            } }
+        }
+    }
+
+
+    private suspend fun resetRequest(): ClientResult<Unit> {
+        val result = ClientContext.restClient.performDetached(
+            store.mainLocation(),
+            PipelineConventions.actionParameter to PipelineConventions.actionReset)
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                ClientResult.emptySuccess
             }
 
             is ExecutionFailure -> {

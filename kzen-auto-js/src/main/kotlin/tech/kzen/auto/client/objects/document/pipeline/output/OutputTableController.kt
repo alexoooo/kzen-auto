@@ -10,6 +10,7 @@ import react.dom.thead
 import react.dom.tr
 import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
+import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputState
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.service.ClientContext
@@ -36,6 +37,7 @@ class OutputTableController(
         var spec: OutputSpec
         var inputAndCalculatedColumns: HeaderListing?
         var runningOrLoading: Boolean
+        var outputState: PipelineOutputState
         var outputStore: PipelineOutputStore
     }
 
@@ -57,7 +59,7 @@ class OutputTableController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onPreviewRefresh() {
-//        props.dispatcher.dispatchAsync(OutputLookupRequest)
+        props.outputStore.lookupOutputWithFallbackAsync()
     }
 
 
@@ -125,8 +127,7 @@ class OutputTableController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderHeaderControls() {
         val showRefresh = props.runningOrLoading
-//        val showSave = (props.reportState.outputInfo?.status ?: OutputStatus.Missing) != OutputStatus.Missing
-        val showSave = true
+        val showSave = (props.outputState.outputInfo?.status ?: OutputStatus.Missing) != OutputStatus.Missing
 
         if (showRefresh) {
             child(MaterialButton::class) {
@@ -224,19 +225,19 @@ class OutputTableController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderOutput() {
-//        val error = props.reportState.outputError
-//        val outputInfo = props.reportState.outputInfo
-//        val outputPreview = outputInfo?.table?.preview
+        val error = props.outputState.outputInfoError
+        val outputInfo = props.outputState.outputInfo
+        val outputPreview = outputInfo?.table?.preview
 
         styledDiv {
             +"[${props.inputAndCalculatedColumns?.values}]"
 
-//            renderInfo(error, outputInfo)
+            renderInfo(error, outputInfo)
 //            renderSave(outputInfo)
-//
-//            if (outputPreview != null) {
-//                renderPreview(outputInfo, outputPreview)
-//            }
+
+            if (outputPreview != null) {
+                renderPreview(outputInfo, outputPreview)
+            }
         }
     }
 
@@ -352,7 +353,7 @@ class OutputTableController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderPreview(outputInfo: OutputInfo, outputPreview: OutputPreview) {
-        renderPreviewHeader(outputInfo)
+//        renderPreviewHeader(outputInfo)
         renderPreviewTable(outputPreview)
     }
 

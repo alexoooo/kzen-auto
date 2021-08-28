@@ -37,14 +37,17 @@ import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.util.DisruptorUtils
+import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean
 
 
 class PipelineExecution(
     private val initialReportRunContext: ReportRunContext,
-//    private val reportWorkPool: ReportWorkPool,
+    private val reportWorkPool: ReportWorkPool,
     private val trace: LogicTraceHandle
-): LogicExecution {
+):
+    LogicExecution
+{
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val logger = LoggerFactory.getLogger(PipelineExecution::class.java)
@@ -65,7 +68,16 @@ class PipelineExecution(
             reportRunContext: ReportRunContext,
             reportWorkPool: ReportWorkPool
         ): OutputInfo {
-            val status = reportWorkPool.readRunStatus(reportRunContext.toSignature())
+            val isMissing = ! Files.exists(reportRunContext.runDir)
+            if (isMissing) {
+                return OutputInfo(
+                    reportRunContext.runDir.toString(),
+                    null,
+                    null,
+                    OutputStatus.Missing)
+            }
+
+            val status = reportWorkPool.readRunStatus(reportRunContext.runDir)
 
             val withoutPreview = OutputInfo(
                 reportRunContext.runDir.toString(),
@@ -205,27 +217,6 @@ class PipelineExecution(
                     if (failed.get()) {
                         break
                     }
-
-//                    val flatDataStream = flatDataContentDefinition.open()
-//
-//                    while (true) {
-//                        val result = flatDataStream.read(buffer)
-//                        println("result: $result")
-//                        trace.set(LogicTracePath.root, ExecutionValue.of(totalBytes))
-//
-//                        totalBytes += result.byteCount()
-//
-//                        if (result.isEndOfData() || failed) {
-//                            flatDataStream.close()
-//                            break
-//                        }
-//
-//                        if (control.pollCommand() == LogicCommand.Cancel) {
-//                            cancelled = true
-//                            flatDataStream.close()
-//                            break
-//                        }
-//                    }
                 }
             }
             finally {
@@ -235,9 +226,20 @@ class PipelineExecution(
         }
 
         return when {
-            failed.get() -> LogicResultFailed("error")
-            cancelled -> LogicResultCancelled
-            else -> LogicResultSuccess(TupleValue.empty)
+            failed.get() -> {
+                reportWorkPool.updateRunStatus(initialReportRunContext.runDir, OutputStatus.Failed)
+                LogicResultFailed("error")
+            }
+
+            cancelled -> {
+                reportWorkPool.updateRunStatus(initialReportRunContext.runDir, OutputStatus.Cancelled)
+                LogicResultCancelled
+            }
+
+            else -> {
+                reportWorkPool.updateRunStatus(initialReportRunContext.runDir, OutputStatus.Done)
+                LogicResultSuccess(TupleValue.empty)
+            }
         }
     }
 
@@ -253,9 +255,7 @@ class PipelineExecution(
         val flatDataLocation = flatDataContentDefinition.flatDataInfo.flatDataLocation
         val pipelineTrace = PipelineTrace(trace, flatDataLocation.dataLocation, totalSize)
 
-//        val streamProgressTracker = progressTracker.getInitial(flatDataLocation.dataLocation, totalSize)
-
-        val processorInputReader = ProcessorInputReader(flatDataStream)
+        val processorInputReader = ProcessorInputReader(flatDataStream, pipelineTrace)
 
         val processorDataInstance = ProcessorDataInstance(
             flatDataContentDefinition.processorDefinition.processorDataDefinition)
@@ -394,7 +394,13 @@ class PipelineExecution(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun preview() {
+    override fun close(error: Boolean) {
+        summary.close()
+        tableOutput?.close(error)
+        exportWriter?.close(error)
 
+        if (error) {
+            reportWorkPool.updateRunStatus(initialReportRunContext.runDir, OutputStatus.Failed)
+        }
     }
 }

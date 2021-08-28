@@ -86,7 +86,7 @@ data class ReportFileProgress(
 
             else -> {
                 val percent = ((readBytes.toDouble() / totalSize.coerceAtLeast(1)) * 100)
-                val percentFormat = percent.toInt().toString() + "." + percent * 10 % 10
+                val percentFormat = percent.toInt().toString() + "." + (percent * 10 % 10).toInt()
 
                 val recentRecordsSpeed = FormatUtils.decimalSeparator(
                     1000L * recentRecordsPerSecond / adjustedDurationMillis)

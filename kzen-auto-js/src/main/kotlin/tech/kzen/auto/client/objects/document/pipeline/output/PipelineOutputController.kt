@@ -5,6 +5,7 @@ import react.*
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputState
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.wrap.iconify.iconify
@@ -13,6 +14,7 @@ import tech.kzen.auto.client.wrap.iconify.vaadinIconUploadAlt
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 
@@ -33,6 +35,7 @@ class PipelineOutputController(
         var spec: OutputSpec
         var inputAndCalculatedColumns: HeaderListing?
         var runningOrLoading: Boolean
+        var outputState: PipelineOutputState
         var outputStore: PipelineOutputStore
     }
 
@@ -97,7 +100,7 @@ class PipelineOutputController(
     }
 
 
-//    //-----------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderContent() {
         renderHeader()
 
@@ -127,7 +130,6 @@ class PipelineOutputController(
                         style = reactStyle {
                             position = Position.absolute
                             fontSize = 2.5.em
-//                            width = 2.5.em
                             top = (-0.5).em
                             left = (-3.5).px
                         }
@@ -152,18 +154,18 @@ class PipelineOutputController(
                     fontStyle = FontStyle.italic
                 }
 
-//                val status = props.reportState.outputInfo?.status ?: OutputStatus.Missing
-//                if (status == OutputStatus.Missing) {
-//                    if (props.reportState.columnListing.isNullOrEmpty()) {
-//                        +"Select input (top of page)"
-//                    }
-//                    else {
-//                        +"Run report (bottom right)"
-//                    }
-//                }
-//                else {
-//                    +"Status: ${status.name}"
-//                }
+                val status = props.outputState.outputInfo?.status ?: OutputStatus.Missing
+                if (status == OutputStatus.Missing) {
+                    if (props.inputAndCalculatedColumns?.values.isNullOrEmpty()) {
+                        +"Select input (top of page)"
+                    }
+                    else {
+                        +"Run report (bottom right)"
+                    }
+                }
+                else {
+                    +"Status: ${status.name}"
+                }
             }
 
             styledSpan {
@@ -313,6 +315,7 @@ class PipelineOutputController(
                 spec = props.spec
                 inputAndCalculatedColumns = props.inputAndCalculatedColumns
                 runningOrLoading = props.runningOrLoading
+                outputState = props.outputState
                 outputStore = props.outputStore
             }
         }

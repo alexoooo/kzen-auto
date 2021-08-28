@@ -23,4 +23,7 @@ interface LogicExecution {
     fun step(control: LogicControl): LogicResult {
         return run(control)
     }
+
+
+    fun close(error: Boolean)
 }

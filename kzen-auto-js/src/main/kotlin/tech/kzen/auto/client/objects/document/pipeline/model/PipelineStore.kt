@@ -38,6 +38,7 @@ class PipelineStore: SessionGlobal.Observer {
 
 
     private var refreshPending: Boolean = false
+    private var previousRunning: Boolean = false
     private val refreshDebounce: FunctionWithDebounce = lodash.debounce({
         refreshPending = false
         async {
@@ -129,6 +130,7 @@ class PipelineStore: SessionGlobal.Observer {
 
             input.init()
             run.init()
+            output.init()
         }
     }
 
@@ -187,9 +189,11 @@ class PipelineStore: SessionGlobal.Observer {
             refreshPending = true
             refreshDebounce.apply()
         }
-        else {
+        else if (previousRunning) {
             cancelRefresh()
+            output.lookupOutputWithFallbackAsync()
         }
+        previousRunning = running
     }
 
 

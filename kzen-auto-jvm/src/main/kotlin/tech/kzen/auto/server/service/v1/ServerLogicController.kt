@@ -6,6 +6,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.v1.LogicController
 import tech.kzen.auto.common.paradigm.common.v1.model.*
 import tech.kzen.auto.server.objects.logic.LogicTraceStore
+import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.TupleValue
 import tech.kzen.auto.server.service.v1.model.context.LogicFrame
 import tech.kzen.auto.server.service.v1.model.context.MutableLogicControl
@@ -186,6 +187,7 @@ class ServerLogicController(
             val result = state.frame.execution.run(state.frame.control)
 
             if (result.isTerminal()) {
+                state.frame.execution.close(result is LogicResultFailed)
                 clearState()
             }
         }.start()

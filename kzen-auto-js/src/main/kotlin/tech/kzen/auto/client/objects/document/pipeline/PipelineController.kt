@@ -11,6 +11,7 @@ import tech.kzen.auto.client.objects.document.pipeline.model.PipelineState
 import tech.kzen.auto.client.objects.document.pipeline.model.PipelineStore
 import tech.kzen.auto.client.objects.document.pipeline.output.PipelineOutputController
 import tech.kzen.auto.client.objects.document.pipeline.run.PipelineRunController
+import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -229,6 +230,7 @@ class PipelineController(
                 spec = pipelineState.outputSpec()
                 inputAndCalculatedColumns = pipelineState.inputAndCalculatedColumns()
                 runningOrLoading = pipelineState.isRunningOrLoading()
+                outputState = pipelineState.output
                 outputStore = store.output
             }
         }
@@ -247,7 +249,9 @@ class PipelineController(
 
             child(PipelineRunController::class) {
                 attrs {
-                    this.pipelineState = pipelineState
+//                    this.pipelineState = pipelineState
+                    this.runState = pipelineState.run
+                    this.outputStatus = pipelineState.output.outputInfo?.status ?: OutputStatus.Missing
                     this.pipelineStore = store
                 }
             }

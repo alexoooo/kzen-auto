@@ -35,7 +35,7 @@ class PipelineAnalysisStore(
         val command = PivotSpec.clearRowCommand(
             store.mainLocation())
 
-        applyCommandAsync(command)
+        applyCommandAsync(command, true)
     }
 
 
@@ -43,7 +43,7 @@ class PipelineAnalysisStore(
         val command = PivotSpec.addRowCommand(
             store.mainLocation(), columnName)
 
-        applyCommandAsync(command)
+        applyCommandAsync(command, true)
     }
 
 
@@ -51,7 +51,7 @@ class PipelineAnalysisStore(
         val command = PivotSpec.removeRowCommand(
             store.mainLocation(), columnName)
 
-        applyCommandAsync(command)
+        applyCommandAsync(command, true)
     }
 
 
@@ -76,7 +76,7 @@ class PipelineAnalysisStore(
         val command = PivotSpec.addValueCommand(
             store.mainLocation(), columnName)
 
-        applyCommand(command)
+        applyCommand(command, true)
     }
 
 
@@ -84,7 +84,7 @@ class PipelineAnalysisStore(
         val command = PivotSpec.removeValueCommand(
             store.mainLocation(), columnName)
 
-        applyCommandAsync(command)
+        applyCommandAsync(command, true)
     }
 
 
@@ -93,29 +93,25 @@ class PipelineAnalysisStore(
         val command = AnalysisSpec.changeTypeCommand(
             store.mainLocation(), analysisType)
 
-        applyCommandAsync(command)
+        applyCommandAsync(command, true)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun applyCommandAsync(command: NotationCommand) {
-        beforeNotationChange()
-
+    private fun applyCommandAsync(
+        command: NotationCommand,
+        refreshOutput: Boolean = false
+    ) {
         async {
-            delay(1)
-
-            @Suppress("MoveVariableDeclarationIntoWhen")
-            val result = ClientContext.mirroredGraphStore.apply(command)
-
-            val notationError = (result as? MirroredGraphError)?.error?.message
-
-            delay(10)
-            afterNotationChange(notationError)
+            applyCommand(command, refreshOutput)
         }
     }
 
 
-    private suspend fun applyCommand(command: NotationCommand) {
+    private suspend fun applyCommand(
+        command: NotationCommand,
+        refreshOutput: Boolean = false
+    ) {
         delay(1)
         beforeNotationChange()
 
@@ -126,5 +122,9 @@ class PipelineAnalysisStore(
 
         delay(10)
         afterNotationChange(notationError)
+
+        if (notationError == null && refreshOutput) {
+            store.output.lookupOutputWithFallback()
+        }
     }
 }

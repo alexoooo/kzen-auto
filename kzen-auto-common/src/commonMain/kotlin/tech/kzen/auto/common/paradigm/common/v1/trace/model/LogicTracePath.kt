@@ -43,4 +43,9 @@ data class LogicTracePath(
 
         return prefix.segments == segments.subList(0, prefix.segments.size)
     }
+
+
+    override fun toString(): String {
+        return asString()
+    }
 }

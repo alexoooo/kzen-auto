@@ -328,7 +328,7 @@ sealed class ExecutionValue
 //---------------------------------------------------------------------------------------------------------------------
 object NullExecutionValue: ExecutionValue() {
     override fun toString(): String {
-        return "Null"
+        return "null"
     }
 }
 
@@ -339,22 +339,38 @@ sealed class ScalarExecutionValue: ExecutionValue()
 
 data class TextExecutionValue(
         val value: String
-): ScalarExecutionValue()
+): ScalarExecutionValue() {
+    override fun toString(): String {
+        return "\"${value.replace("\"", "\\\"")}\""
+    }
+}
 
 
 data class BooleanExecutionValue(
         val value: Boolean
-): ScalarExecutionValue()
+): ScalarExecutionValue() {
+    override fun toString(): String {
+        return value.toString()
+    }
+}
 
 
 data class NumberExecutionValue(
         val value: Double
-): ScalarExecutionValue()
+): ScalarExecutionValue() {
+    override fun toString(): String {
+        return value.toString()
+    }
+}
 
 
 data class LongExecutionValue(
         val value: Long
-): ScalarExecutionValue()
+): ScalarExecutionValue() {
+    override fun toString(): String {
+        return value.toString()
+    }
+}
 
 
 data class BinaryExecutionValue(
@@ -381,6 +397,11 @@ data class BinaryExecutionValue(
     }
 
 
+    override fun toString(): String {
+        return asBase64()
+    }
+
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || this::class != other::class) return false
@@ -403,9 +424,17 @@ sealed class StructuredExecutionValue: ExecutionValue()
 
 data class ListExecutionValue(
         val values: List<ExecutionValue>
-): StructuredExecutionValue()
+): StructuredExecutionValue() {
+    override fun toString(): String {
+        return values.toString()
+    }
+}
 
 
 data class MapExecutionValue(
         val values: Map<String, ExecutionValue>
-): StructuredExecutionValue()
+): StructuredExecutionValue() {
+    override fun toString(): String {
+        return values.toString()
+    }
+}
