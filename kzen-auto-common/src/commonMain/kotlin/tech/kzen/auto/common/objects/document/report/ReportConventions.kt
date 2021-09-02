@@ -41,10 +41,8 @@ object ReportConventions {
     const val previewRowCountKey = "count"
     val previewCountPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewRowCountKey))
 
-    const val saveFileKey = "save"
-    val saveFilePath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(saveFileKey))
-
-//    const val previewPivotValuesKey = "values"
+//    const val saveFileKey = "save"
+//    val saveFilePath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(saveFileKey))
 
 
     const val actionParameter = "action"

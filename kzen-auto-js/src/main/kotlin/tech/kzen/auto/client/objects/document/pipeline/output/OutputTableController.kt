@@ -12,10 +12,10 @@ import styled.*
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputState
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
-import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.material.*
+import tech.kzen.auto.client.wrap.material.CloudDownloadIcon
+import tech.kzen.auto.client.wrap.material.MaterialButton
+import tech.kzen.auto.client.wrap.material.RefreshIcon
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
@@ -44,16 +44,16 @@ class OutputTableController(
 
     interface State: react.State {
         var settingsOpen: Boolean
-        var savingOpen: Boolean
-        var savingLoading: Boolean
+//        var savingOpen: Boolean
+//        var savingLoading: Boolean
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
         settingsOpen = ! props.spec.explore.isDefaultWorkPath()
-        savingOpen = false
-        savingLoading = false
+//        savingOpen = false
+//        savingLoading = false
     }
 
 
@@ -80,36 +80,6 @@ class OutputTableController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onSaveToggle() {
-        setState {
-            savingOpen = ! savingOpen
-        }
-    }
-
-
-    private fun onSaveAction() {
-        if (state.savingLoading) {
-            return
-        }
-
-        setState {
-            savingLoading = true
-        }
-
-        async {
-//            props.dispatcher.dispatch(
-//                ReportSaveAction)
-
-            setState {
-                savingLoading = false
-            }
-
-            onPreviewRefresh()
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         styledDiv {
             css {
@@ -127,7 +97,7 @@ class OutputTableController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderHeaderControls() {
         val showRefresh = props.runningOrLoading
-        val showSave = (props.outputState.outputInfo?.status ?: OutputStatus.Missing) != OutputStatus.Missing
+        val showDownload = (props.outputState.outputInfo?.status ?: OutputStatus.Missing) != OutputStatus.Missing
 
         if (showRefresh) {
             child(MaterialButton::class) {
@@ -155,7 +125,7 @@ class OutputTableController(
                 +"Refresh"
             }
         }
-        else if (showSave) {
+        else if (showDownload) {
             val linkAddress = ClientContext.restClient.linkDetachedDownload(
                 props.outputStore.mainLocation())
 
@@ -188,36 +158,6 @@ class OutputTableController(
 
                     +"Download"
                 }
-            }
-
-            child(MaterialButton::class) {
-                attrs {
-                    variant = "outlined"
-                    size = "small"
-
-                    onClick = {
-                        onSaveToggle()
-                    }
-
-                    style = reactStyle {
-                        marginLeft = 1.em
-                        borderWidth = 2.px
-
-                        if (state.savingOpen) {
-                            backgroundColor = ReportController.selectedColor
-                        }
-                    }
-                }
-
-                child(SaveIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            marginRight = 0.25.em
-                        }
-                    }
-                }
-
-                +"Save"
             }
         }
     }
@@ -268,92 +208,8 @@ class OutputTableController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderSave(outputInfo: OutputInfo?) {
-        if (! state.savingOpen || outputInfo == null || outputInfo.status == OutputStatus.Missing) {
-            return
-        }
-
-        styledDiv {
-            css {
-                marginBottom = 1.em
-                width = 100.pct
-
-                paddingBottom = 1.em
-                borderBottomWidth = 2.px
-                borderBottomStyle = BorderStyle.solid
-                borderBottomColor = Color.lightGray
-            }
-
-            styledDiv {
-                css {
-                    width = 100.pct.minus(11.em)
-                    display = Display.inlineBlock
-                }
-
-                child(AttributePathValueEditor::class) {
-                    attrs {
-                        labelOverride = "Save File Path"
-
-//                        clientState = props.reportState.clientState
-                        objectLocation = props.outputStore.mainLocation()
-                        attributePath = ReportConventions.saveFilePath
-
-                        valueType = TypeMetadata.string
-
-                        onChange = {
-                            onPreviewRefresh()
-                        }
-                    }
-
-                    key = "save-file"
-                }
-
-                +(outputInfo.table?.saveMessage ?: "")
-            }
-
-            styledDiv {
-                css {
-                    float = Float.right
-                }
-
-                child(MaterialButton::class) {
-                    attrs {
-                        variant = "outlined"
-                        size = "small"
-
-                        onClick = {
-//                            console.log("^$%^$%^$%^ writing")
-                            onSaveAction()
-                        }
-
-                        style = reactStyle {
-                            borderWidth = 2.px
-                        }
-                    }
-
-                    if (state.savingLoading) {
-                        child(MaterialCircularProgress::class) {}
-                    }
-                    else {
-                        child(SaveIcon::class) {
-                            attrs {
-                                style = reactStyle {
-                                    marginRight = 0.25.em
-                                }
-                            }
-                        }
-                    }
-
-                    +"Write"
-                }
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderPreview(outputInfo: OutputInfo, outputPreview: OutputPreview) {
-//        renderPreviewHeader(outputInfo)
+        renderPreviewHeader(outputInfo)
         renderPreviewTable(outputPreview)
     }
 

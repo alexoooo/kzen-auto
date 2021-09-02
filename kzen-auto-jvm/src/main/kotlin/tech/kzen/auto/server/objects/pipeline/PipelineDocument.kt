@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.pipeline
 
+import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.ReportConventions
@@ -12,7 +13,10 @@ import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.paradigm.common.model.*
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
+import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
@@ -95,8 +99,11 @@ class PipelineDocument(
             PipelineConventions.actionListColumns ->
                 actionColumnListing()
 
-            PipelineConventions.actionOutputInfo ->
-                actionOutputInfo()
+            PipelineConventions.actionOutputInfoOffline ->
+                actionOutputInfoOffline()
+
+            PipelineConventions.actionOutputInfoOnline ->
+                actionOutputInfoOnline(request)
 
 //            ReportConventions.actionValidateFormulas ->
 //                actionValidateFormulas()
@@ -203,7 +210,16 @@ class PipelineDocument(
     }
 
 
-    private fun actionOutputInfo(): ExecutionResult {
+    private fun actionOutputReset(): ExecutionResult {
+        val reportRunContext = reportRunContext()
+            ?: return ExecutionFailure("Missing run")
+
+        return ServerContext.reportRunAction.delete(reportRunContext.runDir)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun actionOutputInfoOffline(): ExecutionResult {
         val reportRunContext = reportRunContext()
             ?: return ExecutionFailure("Missing run")
 
@@ -216,11 +232,32 @@ class PipelineDocument(
     }
 
 
-    private fun actionOutputReset(): ExecutionResult {
-        val reportRunContext = reportRunContext()
-            ?: return ExecutionFailure("Missing run")
+    private fun actionOutputInfoOnline(request: ExecutionRequest): ExecutionResult {
+        val runId: LogicRunId = request
+            .getSingle(CommonRestApi.paramRunId)
+            ?.let { LogicRunId(it) }
+            ?: return ExecutionResult.failure("Not found: ${CommonRestApi.paramRunId}")
 
-        return ServerContext.reportRunAction.delete(reportRunContext.runDir)
+        val executionId: LogicExecutionId = request
+            .getSingle(CommonRestApi.paramExecutionId)
+            ?.let { LogicExecutionId(it) }
+            ?: return ExecutionResult.failure("Not found: ${CommonRestApi.paramExecutionId}")
+
+        val runExecutionParams = RequestParams.of(
+            CommonRestApi.paramRunId to runId.value,
+            CommonRestApi.paramExecutionId to executionId.value,
+            PipelineConventions.previewStartKey to output.explore.previewStartZeroBased().toString(),
+            PipelineConventions.previewRowCountKey to output.explore.previewCount.toString(),
+        )
+
+        val pivotValueParams = analysis.pivot.values.asRequest()
+
+        val combinedParams = runExecutionParams.addAll(pivotValueParams)
+
+        return ServerContext.serverLogicController.request(
+            runId,
+            executionId,
+            ExecutionRequest(combinedParams, null))
     }
 
 

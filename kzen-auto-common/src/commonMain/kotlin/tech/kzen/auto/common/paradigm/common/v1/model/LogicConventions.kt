@@ -23,4 +23,30 @@ object LogicConventions {
     val runIdKey = "run"
     val executionIdKey = "execution"
     val queryKey = "query"
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun notRunningError(): String {
+        return "Not running"
+    }
+
+    fun wrongRunningError(runId: LogicRunId, actualRunId: LogicRunId): String {
+        return "Expected runId '${runId.value}' but was '${actualRunId.value}'"
+    }
+
+
+    fun missingExecution(executionId: LogicExecutionId, runId: LogicRunId): String {
+        return "Execution '${executionId.value}' not found in run '${runId.value}'"
+    }
+
+
+    fun isMissingError(
+        errorMessage: String,
+        runId: LogicRunId,
+        executionId: LogicExecutionId
+    ): Boolean {
+        return errorMessage == notRunningError() ||
+                errorMessage.contains("'${runId.value}' but was") ||
+                errorMessage.contains("'${executionId.value}' not found")
+    }
 }

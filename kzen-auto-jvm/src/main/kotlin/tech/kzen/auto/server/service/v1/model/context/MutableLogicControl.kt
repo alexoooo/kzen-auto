@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.service.v1.model.context
 
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.server.service.v1.LogicControl
@@ -62,9 +63,13 @@ class MutableLogicControl(
         val nextRequestPromise = requests.poll()
             ?: return
 
-        val value = observer(nextRequestPromise.request)
-
-        nextRequestPromise.promise.complete(value)
+        try {
+            val value = observer(nextRequestPromise.request)
+            nextRequestPromise.promise.complete(value)
+        }
+        catch (e: Throwable) {
+            nextRequestPromise.promise.complete(ExecutionFailure.ofException(e))
+        }
     }
 
 

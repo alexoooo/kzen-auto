@@ -2,13 +2,13 @@ package tech.kzen.auto.common.objects.document.report.output
 
 
 data class OutputTableInfo(
-    val saveMessage: String,
+//    val saveMessage: String,
     val rowCount: Long,
     val preview: OutputPreview?
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val saveMessageKey = "message"
+//        private const val saveMessageKey = "message"
         private const val countKey = "count"
         private const val previewKey = "preview"
 
@@ -25,7 +25,7 @@ data class OutputTableInfo(
                     ?.let { OutputPreview.fromCollection(it) }
 
             return OutputTableInfo(
-                collection[saveMessageKey] as String,
+//                collection[saveMessageKey] as String,
                 (collection[countKey] as String).toLong(),
                 outputPreview)
         }
@@ -35,7 +35,7 @@ data class OutputTableInfo(
     //-----------------------------------------------------------------------------------------------------------------
     fun toCollection(): Map<String, Any?> {
         return mapOf(
-            saveMessageKey to saveMessage,
+//            saveMessageKey to saveMessage,
             countKey to rowCount.toString(),
             previewKey to preview?.toCollection())
     }

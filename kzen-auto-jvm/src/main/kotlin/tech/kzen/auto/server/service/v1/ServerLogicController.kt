@@ -137,16 +137,16 @@ class ServerLogicController(
         request: ExecutionRequest
     ): ExecutionResult {
         val state = stateOrNull
-            ?: return ExecutionResult.failure("Not running")
+            ?: return ExecutionResult.failure(LogicConventions.notRunningError())
 
         if (state.runId != runId) {
             return ExecutionResult.failure(
-                "Expected runId '$runId' but was '${state.runId}'")
+                LogicConventions.wrongRunningError(runId, state.runId))
         }
 
         val frame = state.frame.find(executionId)
             ?: return ExecutionResult.failure(
-                "Execution '$executionId' not found in run '$runId'")
+                LogicConventions.missingExecution(executionId, runId))
 
         val resultPromise = frame.control.addRequest(request)
 

@@ -70,6 +70,18 @@ data class RequestParams(
     }
 
 
+    fun addAll(addend: RequestParams): RequestParams {
+        val buffer = values.mapValues { it.value.toMutableList() }.toMutableMap()
+
+        for (e in addend.values) {
+            val valueBuffer = buffer.getOrPut(e.key) { mutableListOf() }
+            valueBuffer.addAll(e.value)
+        }
+
+        return RequestParams(buffer)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun asString(): String {
         val entries = mutableListOf<String>()

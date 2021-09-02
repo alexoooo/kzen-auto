@@ -17,7 +17,10 @@ import tech.kzen.auto.client.objects.document.report.state.ReportSaveAction
 import tech.kzen.auto.client.objects.document.report.state.ReportState
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.material.*
+import tech.kzen.auto.client.wrap.material.CloudDownloadIcon
+import tech.kzen.auto.client.wrap.material.MaterialButton
+import tech.kzen.auto.client.wrap.material.RefreshIcon
+import tech.kzen.auto.client.wrap.material.SaveIcon
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
@@ -238,8 +241,8 @@ class OutputTableView(
 //            +"outputPreview $outputPreview"
 
             renderInfo(error, outputInfo)
-//            renderSettings(outputInfo)
-            renderSave(outputInfo)
+            renderSettings(outputInfo)
+//            renderSave(outputInfo)
 
             if (outputPreview != null) {
                 renderPreview(outputInfo, outputPreview)
@@ -311,92 +314,92 @@ class OutputTableView(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderSave(outputInfo: OutputInfo?) {
-        if (! state.savingOpen || outputInfo == null || outputInfo.status == OutputStatus.Missing) {
-            return
-        }
-
-        styledDiv {
-            css {
-                marginBottom = 1.em
-                width = 100.pct
-
-                paddingBottom = 1.em
-                borderBottomWidth = 2.px
-                borderBottomStyle = BorderStyle.solid
-                borderBottomColor = Color.lightGray
-
-//                paddingTop = 1.em
-//                borderTopWidth = 2.px
-//                borderTopStyle = BorderStyle.solid
-//                borderTopColor = Color.lightGray
-            }
-
-            styledDiv {
-                css {
-                    width = 100.pct.minus(11.em)
-                    display = Display.inlineBlock
-                }
-
-                child(AttributePathValueEditor::class) {
-                    attrs {
-                        labelOverride = "Save File Path"
-
-                        clientState = props.reportState.clientState
-                        objectLocation = props.reportState.mainLocation
-                        attributePath = ReportConventions.saveFilePath
-
-                        valueType = TypeMetadata.string
-
-                        onChange = {
-                            onPreviewRefresh()
-                        }
-                    }
-
-                    key = "save-file"
-                }
-
-                +(outputInfo.table?.saveMessage ?: "")
-            }
-
-            styledDiv {
-                css {
-                    float = Float.right
-                }
-
-                child(MaterialButton::class) {
-                    attrs {
-                        variant = "outlined"
-                        size = "small"
-
-                        onClick = {
-//                            console.log("^$%^$%^$%^ writing")
-                            onSaveAction()
-                        }
-
-                        style = reactStyle {
-                            borderWidth = 2.px
-                        }
-                    }
-
-                    if (state.savingLoading) {
-                        child(MaterialCircularProgress::class) {}
-                    }
-                    else {
-                        child(SaveIcon::class) {
-                            attrs {
-                                style = reactStyle {
-                                    marginRight = 0.25.em
-                                }
-                            }
-                        }
-                    }
-
-                    +"Write"
-                }
-            }
-        }
-    }
+//    private fun RBuilder.renderSave(outputInfo: OutputInfo?) {
+//        if (! state.savingOpen || outputInfo == null || outputInfo.status == OutputStatus.Missing) {
+//            return
+//        }
+//
+//        styledDiv {
+//            css {
+//                marginBottom = 1.em
+//                width = 100.pct
+//
+//                paddingBottom = 1.em
+//                borderBottomWidth = 2.px
+//                borderBottomStyle = BorderStyle.solid
+//                borderBottomColor = Color.lightGray
+//
+////                paddingTop = 1.em
+////                borderTopWidth = 2.px
+////                borderTopStyle = BorderStyle.solid
+////                borderTopColor = Color.lightGray
+//            }
+//
+//            styledDiv {
+//                css {
+//                    width = 100.pct.minus(11.em)
+//                    display = Display.inlineBlock
+//                }
+//
+//                child(AttributePathValueEditor::class) {
+//                    attrs {
+//                        labelOverride = "Save File Path"
+//
+//                        clientState = props.reportState.clientState
+//                        objectLocation = props.reportState.mainLocation
+//                        attributePath = ReportConventions.saveFilePath
+//
+//                        valueType = TypeMetadata.string
+//
+//                        onChange = {
+//                            onPreviewRefresh()
+//                        }
+//                    }
+//
+//                    key = "save-file"
+//                }
+//
+//                +(outputInfo.table?.saveMessage ?: "")
+//            }
+//
+//            styledDiv {
+//                css {
+//                    float = Float.right
+//                }
+//
+//                child(MaterialButton::class) {
+//                    attrs {
+//                        variant = "outlined"
+//                        size = "small"
+//
+//                        onClick = {
+////                            console.log("^$%^$%^$%^ writing")
+//                            onSaveAction()
+//                        }
+//
+//                        style = reactStyle {
+//                            borderWidth = 2.px
+//                        }
+//                    }
+//
+//                    if (state.savingLoading) {
+//                        child(MaterialCircularProgress::class) {}
+//                    }
+//                    else {
+//                        child(SaveIcon::class) {
+//                            attrs {
+//                                style = reactStyle {
+//                                    marginRight = 0.25.em
+//                                }
+//                            }
+//                        }
+//                    }
+//
+//                    +"Write"
+//                }
+//            }
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

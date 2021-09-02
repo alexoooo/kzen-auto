@@ -25,7 +25,8 @@ data class PipelineState(
     val input: PipelineInputState = PipelineInputState(),
     val output: PipelineOutputState = PipelineOutputState(),
     val run: PipelineRunState = PipelineRunState(),
-    val notationError: String? = null
+    val notationError: String? = null,
+    val _cache: PipelineStateCache = PipelineStateCache()
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -98,10 +99,7 @@ data class PipelineState(
      * @return null if there is no column listing, otherwise input columns + calculated columns
      */
     fun inputAndCalculatedColumns(): HeaderListing? {
-        if (input.column.columnListing == null) {
-            return null
-        }
-        return HeaderListing(input.column.columnListing + formulaSpec().formulas.keys)
+        return _cache.inputAndCalculatedColumns(this)
     }
 
 

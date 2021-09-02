@@ -139,8 +139,6 @@ class PipelineRunController(
         val terminal = props.outputStatus.isTerminal()
         val inProgress = props.runState.submitting()
 
-        console.log("#@#@#@! props.outputStatus - ${props.outputStatus} - $running - $terminal")
-
         child(MaterialFab::class) {
             attrs {
                 style = reactStyle {

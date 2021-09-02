@@ -6,7 +6,7 @@ import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 
 data class OutputExploreSpec(
     val workPath: String,
-    val savePath: String,
+//    val savePath: String,
     val previewStart: Long,
     val previewCount: Int
 ) {
@@ -26,9 +26,9 @@ data class OutputExploreSpec(
                 .get(ReportConventions.workDirKey)
                 ?.asString()!!
 
-            val savePath = notation
-                .get(ReportConventions.saveFileKey)
-                ?.asString()!!
+//            val savePath = notation
+//                .get(ReportConventions.saveFileKey)
+//                ?.asString()!!
 
             val previewStart = notation
                 .get(ReportConventions.previewStartKey)
@@ -44,7 +44,7 @@ data class OutputExploreSpec(
                 ?.toIntOrNull()
                 ?: 0
 
-            return OutputExploreSpec(workPath, savePath, previewStart, previewCount)
+            return OutputExploreSpec(workPath, /*savePath,*/ previewStart, previewCount)
         }
     }
 

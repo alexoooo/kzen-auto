@@ -44,7 +44,7 @@ object PipelineConventions {
     const val saveFileKey = "save"
     val saveFilePath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(saveFileKey))
 
-//    const val previewPivotValuesKey = "values"
+    const val previewPivotValuesKey = "values"
 
 
     const val actionParameter = "action"
@@ -54,7 +54,8 @@ object PipelineConventions {
     const val actionDefaultFormat = "defaultFormat"
     const val actionTypeFormats = "typeFormats"
     const val actionListColumns = "columns"
-    const val actionOutputInfo = "output"
+    const val actionOutputInfoOffline = "output-offline"
+    const val actionOutputInfoOnline = "output-online"
     const val actionSummaryLookup = "summary-lookup"
 //    const val actionRunTask = "run"
     const val actionSave = "save"

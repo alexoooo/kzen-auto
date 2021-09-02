@@ -5,9 +5,14 @@ import com.lmax.disruptor.dsl.Disruptor
 import com.lmax.disruptor.dsl.ProducerType
 import com.lmax.disruptor.util.DaemonThreadFactory
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
+import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
+import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
+import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
@@ -276,7 +281,10 @@ class PipelineExecution(
             while (! failed.get()) {
                 if (control.pollCommand() == LogicCommand.Cancel) {
                     cancelled = true
+                    break
                 }
+
+                control.pollRequest(::pollRequest)
 
                 val hasNext = processorInputPipeline.poll()
 
@@ -289,6 +297,39 @@ class PipelineExecution(
             processorInputPipeline.close()
             pipelineTrace.finishParsing()
         }
+    }
+
+
+    private fun pollRequest(executionRequest: ExecutionRequest): ExecutionResult {
+        val withoutPreview = OutputInfo(
+            initialReportRunContext.runDir.toString(),
+            null,
+            null,
+            OutputStatus.Running)
+
+        val pivotValueTableSpec = PivotValueTableSpec.ofRequest(executionRequest.parameters)
+        val start = executionRequest.getLong(PipelineConventions.previewStartKey)!!
+        val count = executionRequest.getInt(PipelineConventions.previewRowCountKey)!!
+
+        val withPreview =
+            if (tableOutput != null) {
+                val outputTableInfo = tableOutput!!.preview(pivotValueTableSpec, start, count)
+
+                if (outputTableInfo == null) {
+                    withoutPreview.copy(
+                        status = OutputStatus.Failed)
+                }
+                else {
+                    withoutPreview.copy(
+                        table = outputTableInfo)
+                }
+            }
+            else {
+                withoutPreview
+            }
+
+        return ExecutionResult.success(ExecutionValue.of(
+            withPreview.toCollection()))
     }
 
 

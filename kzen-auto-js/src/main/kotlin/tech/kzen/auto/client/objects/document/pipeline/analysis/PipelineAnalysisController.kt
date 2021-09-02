@@ -28,8 +28,6 @@ class PipelineAnalysisController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: react.Props {
-//        var reportState: ReportState
-//        var dispatcher: ReportDispatcher
         var spec: AnalysisSpec
         var inputAndCalculatedColumns: HeaderListing?
         var runningOrLoading: Boolean
@@ -50,7 +48,6 @@ class PipelineAnalysisController(
 
     private fun onTypeChange(analysisType: AnalysisType) {
         props.analysisStore.setAnalysisTypeAsync(analysisType)
-//        props.dispatcher.dispatchAsync(AnalysisChangeTypeRequest(analysisType))
     }
 
 
