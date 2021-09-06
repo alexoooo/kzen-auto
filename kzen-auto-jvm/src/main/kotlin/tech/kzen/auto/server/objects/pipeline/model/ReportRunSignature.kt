@@ -5,7 +5,7 @@ import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.DatasetInfo
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
 

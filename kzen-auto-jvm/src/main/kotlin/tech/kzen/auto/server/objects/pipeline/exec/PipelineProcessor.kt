@@ -12,17 +12,18 @@ import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.model.DataInputEvent
 import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.plugin.spec.DataEncodingSpec
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.FlatDataInfo
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeader
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.instance.ProcessorDataInstance
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.instance.ProcessorSegmentInstance
+import tech.kzen.auto.server.objects.pipeline.exec.input.stages.ProcessorFrameFeeder
+import tech.kzen.auto.server.objects.pipeline.exec.input.stages.ProcessorInputDecoder
+import tech.kzen.auto.server.objects.pipeline.exec.input.stages.ProcessorInputFramer
+import tech.kzen.auto.server.objects.pipeline.exec.input.stages.ProcessorInputReader
+import tech.kzen.auto.server.objects.pipeline.exec.trace.PipelineInputTrace
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.event.output.DecoratorPipelineOutput
 import tech.kzen.auto.server.objects.report.pipeline.event.output.DisruptorPipelineOutput
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataInfo
-import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.instance.ProcessorDataInstance
-import tech.kzen.auto.server.objects.report.pipeline.input.model.instance.ProcessorSegmentInstance
-import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorFrameFeeder
-import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputDecoder
-import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputFramer
-import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
 import tech.kzen.auto.server.util.DisruptorUtils
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -35,7 +36,7 @@ class PipelineProcessor<Output>(
     private val flatDataInfo: FlatDataInfo,
 //    private val streamProgressTracker: ReportProgressTracker.Buffer?,
 //    private val taskHandle: TaskHandle,
-    private val trace: PipelineTrace,
+    private val trace: PipelineInputTrace,
     private val failed: AtomicBoolean
 ):
     AutoCloseable

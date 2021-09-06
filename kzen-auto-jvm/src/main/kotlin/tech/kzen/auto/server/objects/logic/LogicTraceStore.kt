@@ -6,6 +6,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicConventions
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
 import tech.kzen.auto.common.paradigm.common.v1.trace.LogicTrace
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
@@ -14,6 +15,7 @@ import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceSnapshot
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.lib.common.reflect.Reflect
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 
 @Reflect
@@ -23,13 +25,13 @@ object LogicTraceStore:
 {
     //-----------------------------------------------------------------------------------------------------------------
     private data class RunExecution(
-        val logicRunId: LogicRunId,
-        val logicExecutionId: LogicExecutionId
+        val runExecutionId: LogicRunExecutionId
     )
 
 
     private class TraceBuffer {
         val values = ConcurrentHashMap<LogicTracePath, ExecutionValue>()
+        val callbacks = CopyOnWriteArrayList<(LogicTraceQuery) -> Unit>()
     }
 
 
@@ -39,12 +41,18 @@ object LogicTraceStore:
 
     //-----------------------------------------------------------------------------------------------------------------
     fun handle(
-        logicRunId: LogicRunId,
-        logicExecutionId: LogicExecutionId
+        runExecutionId: LogicRunExecutionId
     ): LogicTraceHandle {
-        val buffer = getOrCreateBuffer(logicRunId, logicExecutionId)
+        val buffer = getOrCreateBuffer(runExecutionId)
 
         return object : LogicTraceHandle {
+            override fun register(callback: (LogicTraceQuery) -> Unit): AutoCloseable {
+                buffer.callbacks.add(callback)
+                return AutoCloseable {
+                    buffer.callbacks.remove(callback)
+                }
+            }
+
             override fun set(logicTracePath: LogicTracePath, executionValue: ExecutionValue) {
                 buffer.values[logicTracePath] = executionValue
             }
@@ -53,10 +61,9 @@ object LogicTraceStore:
 
 
     private fun getOrCreateBuffer(
-        logicRunId: LogicRunId,
-        logicExecutionId: LogicExecutionId
+        runExecutionId: LogicRunExecutionId
     ): TraceBuffer {
-        val runExecution = RunExecution(logicRunId, logicExecutionId)
+        val runExecution = RunExecution(runExecutionId)
         return history.getOrPut(runExecution) { TraceBuffer() }
     }
 
@@ -72,7 +79,8 @@ object LogicTraceStore:
         val logicTraceQuery = request.getSingle(LogicConventions.queryKey)?.let { LogicTraceQuery.parse(it) }
             ?: return ExecutionResult.failure("Logic Trade Query missing")
 
-        val snapshot = lookup(logicRunId, logicExecutionId, logicTraceQuery)
+        val runExecutionId = LogicRunExecutionId(logicRunId, logicExecutionId)
+        val snapshot = lookup(runExecutionId, logicTraceQuery)
             ?: return ExecutionResult.failure(
                 "Logic Trace not found: $logicRunId / $logicExecutionId / $logicTraceQuery")
 
@@ -82,16 +90,17 @@ object LogicTraceStore:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun lookup(
-        logicRunId: LogicRunId,
-        logicExecutionId: LogicExecutionId,
+        logicRunExecutionId: LogicRunExecutionId,
         logicTraceQuery: LogicTraceQuery
     ):
         LogicTraceSnapshot?
     {
-        val runExecution = RunExecution(logicRunId, logicExecutionId)
+        val runExecution = RunExecution(logicRunExecutionId)
 
         val buffer = history[runExecution]
             ?: return null
+
+        buffer.callbacks.forEach { it(logicTraceQuery) }
 
         val matchingValues = buffer
             .values

@@ -118,6 +118,10 @@ class PipelineOutputStore(
                 outputInfoError = offlineResult.errorOrNull()
             )
         } }
+
+        if (offlineResult.errorOrNull() == null) {
+            store.run.lookupProgressOffline()
+        }
     }
 
 
@@ -180,12 +184,15 @@ class PipelineOutputStore(
             val result = resetRequest()
 
             delay(10)
-            store.update { state -> state.withOutput {
-                it.copy(
-                    outputInfo = null,
-                    outputInfoError = result.errorOrNull()
-                )
-            } }
+            store.update { state -> state
+                .withOutput {
+                    it.copy(
+                        outputInfo = null,
+                        outputInfoError = result.errorOrNull()
+                    )
+                }
+                .withRun { it.copy(progress = null) }
+            }
         }
     }
 

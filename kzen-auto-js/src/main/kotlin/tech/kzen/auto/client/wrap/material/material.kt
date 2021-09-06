@@ -209,6 +209,7 @@ external interface TextFieldProps: react.Props {
     var margin: String
     var disabled: Boolean
     var error: Boolean
+    var type: String
 }
 
 

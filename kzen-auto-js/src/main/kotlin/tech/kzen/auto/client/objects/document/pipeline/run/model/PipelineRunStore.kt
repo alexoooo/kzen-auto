@@ -9,10 +9,7 @@ import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicConventions
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunResponse
+import tech.kzen.auto.common.paradigm.common.v1.model.*
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceQuery
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceSnapshot
@@ -30,7 +27,7 @@ class PipelineRunStore(
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun refresh() {
         lookupStatus()
-        lookupProgress()
+        lookupProgressActive()
     }
 
 
@@ -116,14 +113,35 @@ class PipelineRunStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun lookupProgress() {
+//    fun lookupProgressOfflineAsync() {
+//        async {
+//            lookupProgressOffline()
+//        }
+//    }
+
+
+    suspend fun lookupProgressOffline() {
+        val runExecutionId = store.state().output.outputInfo?.runExecutionId
+            ?: return
+
+        lookupProgress(runExecutionId)
+    }
+
+
+    suspend fun lookupProgressActive() {
         val activeInfo = store.state().run.logicStatus?.active
             ?: return
 
+        lookupProgress(LogicRunExecutionId(
+            activeInfo.id, activeInfo.frame.executionId))
+    }
+
+
+    suspend fun lookupProgress(runExecutionId: LogicRunExecutionId) {
         val logicTraceQuery = LogicTraceQuery(LogicTracePath.root)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val result = progressQuery(activeInfo.id, activeInfo.frame.executionId, logicTraceQuery)
+        val result = progressQuery(runExecutionId.logicRunId, runExecutionId.logicExecutionId, logicTraceQuery)
 
         when (result) {
             is ClientError ->
@@ -135,7 +153,7 @@ class PipelineRunStore(
                 store.update { state -> state
                     .withRun {
                         it.copy(
-                            progress = PipelineRunProgress(result.value.values.toString()),
+                            progress = PipelineRunProgress(result.value),
                             runError = null
                         ) }
                 }

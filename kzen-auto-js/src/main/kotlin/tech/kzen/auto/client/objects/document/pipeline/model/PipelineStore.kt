@@ -192,6 +192,7 @@ class PipelineStore: SessionGlobal.Observer {
         else if (previousRunning) {
             cancelRefresh()
             output.lookupOutputWithFallbackAsync()
+//            run.lookupProgressOfflineAsync()
         }
         previousRunning = running
     }

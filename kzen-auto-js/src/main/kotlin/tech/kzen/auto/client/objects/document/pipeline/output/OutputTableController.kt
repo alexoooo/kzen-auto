@@ -9,7 +9,7 @@ import react.dom.tbody
 import react.dom.thead
 import react.dom.tr
 import styled.*
-import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
+import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputState
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
 import tech.kzen.auto.client.service.ClientContext
@@ -24,7 +24,6 @@ import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.util.FormatUtils
-import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
 
 class OutputTableController(
@@ -170,7 +169,7 @@ class OutputTableController(
         val outputPreview = outputInfo?.table?.preview
 
         styledDiv {
-            +"[${props.inputAndCalculatedColumns?.values}]"
+//            +"[${props.inputAndCalculatedColumns?.values}]"
 
             renderInfo(error, outputInfo)
 //            renderSave(outputInfo)
@@ -229,15 +228,15 @@ class OutputTableController(
                     display = Display.inlineBlock
                 }
 
-                child(AttributePathValueEditor::class) {
+                child(TextAttributeEditor::class) {
                     attrs {
-                        labelOverride = "Preview Start Row"
-
-//                        clientState = props.reportState.clientState
                         objectLocation = props.outputStore.mainLocation()
                         attributePath = ReportConventions.previewStartPath
 
-                        valueType = TypeMetadata.long
+                        value = props.spec.explore.previewStart
+                        type = TextAttributeEditor.Type.Number
+
+                        labelOverride = "Preview Start Row"
 
                         onChange = {
                             onPreviewRefresh()
@@ -254,15 +253,15 @@ class OutputTableController(
                     marginLeft = 1.em
                 }
 
-                child(AttributePathValueEditor::class) {
+                child(TextAttributeEditor::class) {
                     attrs {
-                        labelOverride = "Preview Row Count"
-
-//                        clientState = props.reportState.clientState
                         objectLocation = props.outputStore.mainLocation()
                         attributePath = ReportConventions.previewCountPath
 
-                        valueType = TypeMetadata.int
+                        value = props.spec.explore.previewCount
+                        type = TextAttributeEditor.Type.Number
+
+                        labelOverride = "Preview Row Count"
 
                         onChange = {
                             onPreviewRefresh()

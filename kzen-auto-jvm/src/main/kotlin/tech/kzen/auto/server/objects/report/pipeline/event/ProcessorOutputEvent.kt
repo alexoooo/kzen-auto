@@ -4,7 +4,7 @@ import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.ModelOutputEvent
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
-import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderBuffer
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeaderBuffer
 
 
 class ProcessorOutputEvent<T>:

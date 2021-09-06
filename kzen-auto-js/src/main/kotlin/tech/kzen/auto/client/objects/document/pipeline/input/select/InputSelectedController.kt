@@ -83,9 +83,9 @@ class InputSelectedController(
 
         renderErrors()
 
-        styledDiv {
-            +"Progress: ${props.progress?.message}"
-        }
+//        styledDiv {
+//            +"Progress: ${props.progress?.message}"
+//        }
 
         // TODO
         val runningOrLoading = false
@@ -99,6 +99,7 @@ class InputSelectedController(
                 showDetails = state.showDetails
                 spec = props.spec
                 inputSelectedState = props.inputSelectedState
+                progress = props.progress
                 inputStore = props.inputStore
             }
         }

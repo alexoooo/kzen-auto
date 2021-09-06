@@ -13,29 +13,31 @@ import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.definition.ProcessorDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessor
-import tech.kzen.auto.server.objects.pipeline.exec.PipelineTrace
+import tech.kzen.auto.server.objects.pipeline.exec.input.connect.file.FileFlatDataSource
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.DatasetDefinition
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.DatasetInfo
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.FlatDataContentDefinition
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.instance.ProcessorDataInstance
+import tech.kzen.auto.server.objects.pipeline.exec.input.stages.ProcessorInputReader
+import tech.kzen.auto.server.objects.pipeline.exec.output.TableReportOutput
+import tech.kzen.auto.server.objects.pipeline.exec.output.export.CharsetExportEncoder
+import tech.kzen.auto.server.objects.pipeline.exec.output.export.CompressedExportWriter
+import tech.kzen.auto.server.objects.pipeline.exec.output.export.format.ExportFormatter
+import tech.kzen.auto.server.objects.pipeline.exec.output.export.model.ExportFormat
 import tech.kzen.auto.server.objects.pipeline.exec.stages.*
+import tech.kzen.auto.server.objects.pipeline.exec.trace.PipelineInputTrace
+import tech.kzen.auto.server.objects.pipeline.exec.trace.PipelineOutputTrace
 import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.pipeline.event.output.DisruptorPipelineOutput
-import tech.kzen.auto.server.objects.report.pipeline.input.connect.file.FileFlatDataSource
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetDefinition
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataContentDefinition
-import tech.kzen.auto.server.objects.report.pipeline.input.model.instance.ProcessorDataInstance
-import tech.kzen.auto.server.objects.report.pipeline.input.stages.ProcessorInputReader
-import tech.kzen.auto.server.objects.report.pipeline.output.TableReportOutput
-import tech.kzen.auto.server.objects.report.pipeline.output.export.CharsetExportEncoder
-import tech.kzen.auto.server.objects.report.pipeline.output.export.CompressedExportWriter
-import tech.kzen.auto.server.objects.report.pipeline.output.export.format.ExportFormatter
-import tech.kzen.auto.server.objects.report.pipeline.output.export.model.ExportFormat
 import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.LogicControl
@@ -49,7 +51,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 class PipelineExecution(
     private val initialReportRunContext: ReportRunContext,
     private val reportWorkPool: ReportWorkPool,
-    private val trace: LogicTraceHandle
+    private val trace: LogicTraceHandle,
+    private val runExecutionId: LogicRunExecutionId
 ):
     LogicExecution
 {
@@ -79,16 +82,19 @@ class PipelineExecution(
                     reportRunContext.runDir.toString(),
                     null,
                     null,
-                    OutputStatus.Missing)
+                    OutputStatus.Missing,
+                null)
             }
 
             val status = reportWorkPool.readRunStatus(reportRunContext.runDir)
+            val runExecutionId = reportWorkPool.readRunExecutionId(reportRunContext.runDir)
 
             val withoutPreview = OutputInfo(
                 reportRunContext.runDir.toString(),
                 null,
                 null,
-                status)
+                status,
+                runExecutionId)
 
             val withPreview =
                 if (reportRunContext.output.type == OutputType.Explore) {
@@ -135,8 +141,9 @@ class PipelineExecution(
     init {
         if (initialReportRunContext.output.type == OutputType.Explore) {
             tableOutput = ProcessorOutputTableStage(
-                TableReportOutput(initialReportRunContext, null),
-                /*reportWorkPool*/)
+                TableReportOutput(
+                    initialReportRunContext,
+                    PipelineOutputTrace(trace)))
         }
         else {
             exportWriter = CompressedExportWriter(
@@ -219,7 +226,7 @@ class PipelineExecution(
                 for (flatDataContentDefinition in datasetDefinition.items) {
                     runFlatData(recordDisruptorInput, flatDataContentDefinition, control)
 
-                    if (failed.get()) {
+                    if (failed.get() || cancelled) {
                         break
                     }
                 }
@@ -258,9 +265,9 @@ class PipelineExecution(
         val totalSize = flatDataContentDefinition.size()
 
         val flatDataLocation = flatDataContentDefinition.flatDataInfo.flatDataLocation
-        val pipelineTrace = PipelineTrace(trace, flatDataLocation.dataLocation, totalSize)
+        val pipelineInputTrace = PipelineInputTrace(trace, flatDataLocation.dataLocation, totalSize)
 
-        val processorInputReader = ProcessorInputReader(flatDataStream, pipelineTrace)
+        val processorInputReader = ProcessorInputReader(flatDataStream, pipelineInputTrace)
 
         val processorDataInstance = ProcessorDataInstance(
             flatDataContentDefinition.processorDefinition.processorDataDefinition)
@@ -271,12 +278,12 @@ class PipelineExecution(
             processorDataInstance,
             flatDataLocation.dataEncoding,
             flatDataContentDefinition.flatDataInfo,
-            pipelineTrace,
+            pipelineInputTrace,
             failed)
 
         processorInputPipeline.start()
         try {
-            pipelineTrace.startReading()
+            pipelineInputTrace.startReading()
 
             while (! failed.get()) {
                 if (control.pollCommand() == LogicCommand.Cancel) {
@@ -295,7 +302,9 @@ class PipelineExecution(
         }
         finally {
             processorInputPipeline.close()
-            pipelineTrace.finishParsing()
+
+            val reachedEnd = ! failed.get() && ! cancelled
+            pipelineInputTrace.finishParsing(reachedEnd)
         }
     }
 
@@ -305,7 +314,8 @@ class PipelineExecution(
             initialReportRunContext.runDir.toString(),
             null,
             null,
-            OutputStatus.Running)
+            OutputStatus.Running,
+            runExecutionId)
 
         val pivotValueTableSpec = PivotValueTableSpec.ofRequest(executionRequest.parameters)
         val start = executionRequest.getLong(PipelineConventions.previewStartKey)!!

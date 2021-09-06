@@ -9,9 +9,9 @@ import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
-import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
-import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.input.parse.csv.CsvProcessorDefiner
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeader
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeaderIndex
+import tech.kzen.auto.server.objects.pipeline.exec.input.parse.csv.CsvProcessorDefiner
 import tech.kzen.auto.server.objects.report.pipeline.summary.model.ValueSummaryBuilder
 import java.nio.file.Files
 import java.nio.file.Path

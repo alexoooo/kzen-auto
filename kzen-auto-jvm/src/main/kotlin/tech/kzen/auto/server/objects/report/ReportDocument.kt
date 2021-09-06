@@ -18,15 +18,15 @@ import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
+import tech.kzen.auto.server.objects.pipeline.exec.input.connect.file.FileFlatDataSource
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.DatasetInfo
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.FlatDataHeaderDefinition
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.FlatDataInfo
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.FlatDataLocation
 import tech.kzen.auto.server.objects.pipeline.model.GroupPattern
 import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
-import tech.kzen.auto.server.objects.report.pipeline.input.connect.file.FileFlatDataSource
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataHeaderDefinition
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataInfo
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.FlatDataLocation
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
@@ -415,7 +415,7 @@ class ReportDocument(
     ): TaskRun {
         val runDir = runDir(runContext)
 
-        ServerContext.reportWorkPool.prepareRunDir(runDir)
+//        ServerContext.reportWorkPool.prepareRunDir(runDir)
 
 //        val dataTypeProvider = dataTypeProvider()
 

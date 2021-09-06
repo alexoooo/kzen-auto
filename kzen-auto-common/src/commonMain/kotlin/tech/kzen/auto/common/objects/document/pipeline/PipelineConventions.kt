@@ -67,6 +67,8 @@ object PipelineConventions {
 
     private val traceInputPrefix = "input"
 
+    val outputTracePath = LogicTracePath(listOf("output"))
+
 
     fun inputTracePath(dataLocation: DataLocation): LogicTracePath {
         return LogicTracePath(listOf(

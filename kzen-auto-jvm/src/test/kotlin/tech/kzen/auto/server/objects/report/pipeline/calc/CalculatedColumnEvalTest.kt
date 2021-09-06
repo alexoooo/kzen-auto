@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.pipeline.calc
 import org.junit.Test
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
-import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
 import tech.kzen.auto.server.util.WorkUtils

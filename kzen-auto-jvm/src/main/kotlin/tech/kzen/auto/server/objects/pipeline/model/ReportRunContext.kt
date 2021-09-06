@@ -6,7 +6,7 @@ import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
-import tech.kzen.auto.server.objects.report.pipeline.input.model.data.DatasetInfo
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.DatasetInfo
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.platform.ClassName
 import java.nio.file.Path

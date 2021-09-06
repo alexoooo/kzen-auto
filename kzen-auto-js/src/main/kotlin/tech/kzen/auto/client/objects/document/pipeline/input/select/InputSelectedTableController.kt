@@ -12,10 +12,13 @@ import react.dom.td
 import styled.*
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
+import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunProgress
 import tech.kzen.auto.client.objects.document.report.input.browse.InputBrowser
 import tech.kzen.auto.client.wrap.material.MaterialCheckbox
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.listing.InputDataInfo
+import tech.kzen.auto.common.objects.document.report.progress.ReportFileProgress
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
 import tech.kzen.auto.common.util.FormatUtils
@@ -34,6 +37,7 @@ class InputSelectedTableController(
         var showDetails: Boolean
         var spec: InputSelectionSpec
         var inputSelectedState: InputSelectedState
+        var progress: PipelineRunProgress?
         var inputStore: PipelineInputStore
     }
 
@@ -283,7 +287,19 @@ class InputSelectedTableController(
         val dataLocation = inputDataSpec.location
 
         val fileInfo = inputDataInfo?.dataLocationInfo
+
 //        val fileProgress = reportProgress?.inputs?.get(dataLocation)
+        val fileProgress = props
+            .progress
+            ?.snapshot
+            ?.values
+            ?.get(PipelineConventions.inputTracePath(dataLocation))
+            ?.get()
+            ?.let {
+                @Suppress("UNCHECKED_CAST")
+                ReportFileProgress.fromCollection(it as Map<String, Any>)
+            }
+
         val checked = dataLocation in props.inputSelectedState.selectedChecked
         val missing = inputDataInfo?.dataLocationInfo?.isMissing() ?: false
         val processorInvalid = inputDataInfo?.invalidProcessor ?: false
@@ -347,19 +363,19 @@ class InputSelectedTableController(
                             +" ($reason)"
                         }
 
-//                    fileProgress != null ->
-//                        styledDiv {
-//                            css {
-//                                if (fileProgress.running) {
-//                                    fontWeight = FontWeight.bold
-//                                }
-//                                else if (fileProgress.finished) {
-//                                    color = Color.darkGreen
-//                                }
-//                            }
-//
-//                            +dataLocation.fileName()
-//                        }
+                    fileProgress != null ->
+                        styledDiv {
+                            css {
+                                if (fileProgress.running) {
+                                    fontWeight = FontWeight.bold
+                                }
+                                else if (fileProgress.finished) {
+                                    color = Color.darkGreen
+                                }
+                            }
+
+                            +dataLocation.fileName()
+                        }
 
                     else ->
                         +dataLocation.fileName()
@@ -374,15 +390,15 @@ class InputSelectedTableController(
                     }
                 }
 
-//                if (fileProgress != null && fileInfo != null) {
-//                    styledDiv {
-//                        css {
-//                            fontStyle = FontStyle.italic
-//                            marginBottom = 0.25.em
-//                        }
-//                        +fileProgress.toMessage(fileInfo.size)
-//                    }
-//                }
+                if (fileProgress != null && fileInfo != null) {
+                    styledDiv {
+                        css {
+                            fontStyle = FontStyle.italic
+                            marginBottom = 0.25.em
+                        }
+                        +fileProgress.toMessage(fileInfo.size)
+                    }
+                }
             }
 
             if (props.showDetails) {

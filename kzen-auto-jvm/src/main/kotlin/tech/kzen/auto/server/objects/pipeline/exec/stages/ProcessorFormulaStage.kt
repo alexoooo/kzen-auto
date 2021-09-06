@@ -7,7 +7,7 @@ import tech.kzen.auto.server.objects.report.pipeline.calc.CalculatedColumnEval
 import tech.kzen.auto.server.objects.report.pipeline.calc.ColumnValue
 import tech.kzen.auto.server.objects.report.pipeline.calc.ConstantCalculatedColumn
 import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
-import tech.kzen.auto.server.objects.report.pipeline.input.model.header.RecordHeader
+import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeader
 import tech.kzen.lib.platform.ClassName
 
 

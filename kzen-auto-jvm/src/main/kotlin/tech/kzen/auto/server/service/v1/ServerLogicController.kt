@@ -72,6 +72,7 @@ class ServerLogicController(
 
         val runId = LogicRunId(Clock.System.now().toString())
         val executionId = LogicExecutionId(runId.value)
+        val runExecutionId = LogicRunExecutionId(runId, executionId)
 
         val objectStableMapper = ObjectStableMapper()
 
@@ -108,10 +109,10 @@ class ServerLogicController(
             }
         }
 
-        val logicTraceHandle = LogicTraceStore.handle(runId, executionId)
+        val logicTraceHandle = LogicTraceStore.handle(runExecutionId)
 
         val logic = rootInstance as Logic
-        val execution = logic.execute(logicHandle, logicTraceHandle)
+        val execution = logic.execute(logicHandle, logicTraceHandle, runExecutionId)
 
         stateOrNull = LogicState(
             runId,

@@ -2,6 +2,9 @@ package tech.kzen.auto.server.objects.report
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
 import tech.kzen.auto.server.objects.pipeline.model.ReportRunSignature
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.util.yaml.YamlMap
@@ -25,6 +28,8 @@ class ReportWorkPool(
 
         private val processSignatureKey = "process-signature"
         private val statusKey = "status"
+        private val logicRunIdKey = "run-id"
+        private val logicExecutionIdKey = "execution-id"
 
 
         fun deleteDir(tempDir: Path) {
@@ -121,13 +126,43 @@ class ReportWorkPool(
     }
 
 
-    fun prepareRunDir(dir: Path) {
+    fun readRunExecutionId(runDir: Path): LogicRunExecutionId? {
+        val infoFile = runDir.resolve(reportInfoFile)
+        if (! Files.exists(infoFile)) {
+            return null
+        }
+
+        val infoText = Files.readString(infoFile)
+        val infoYaml = YamlParser.parse(infoText) as YamlMap
+
+        val logicRunIdNode = infoYaml.values[logicRunIdKey]
+            ?: error("Missing: $logicRunIdKey")
+
+        val logicExecutionIdNode = infoYaml.values[logicExecutionIdKey]
+            ?: error("Missing: $logicExecutionIdKey")
+
+        val logicRunIdText = logicRunIdNode.toObject() as String
+        val logicRunId = LogicRunId(logicRunIdText)
+
+        val logicExecutionIdText = logicExecutionIdNode.toObject() as String
+        val logicExecutionId = LogicExecutionId(logicExecutionIdText)
+
+        return LogicRunExecutionId(logicRunId, logicExecutionId)
+    }
+
+
+    fun prepareRunDir(
+        dir: Path,
+        logicRunExecutionId: LogicRunExecutionId
+    ) {
         check(! Files.exists(dir)) { "Already exists: $dir" }
         Files.createDirectories(dir)
 
         val initialInfoYaml = """
             process-signature: "${WorkUtils.processSignature}"
             status: Running
+            run-id: "${logicRunExecutionId.logicRunId.value}"
+            execution-id: "${logicRunExecutionId.logicExecutionId.value}"
         """.trimIndent()
 
         Files.write(
