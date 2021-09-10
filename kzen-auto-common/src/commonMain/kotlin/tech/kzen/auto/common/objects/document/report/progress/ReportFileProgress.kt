@@ -54,9 +54,9 @@ data class ReportFileProgress(
 
 
     fun toMessage(totalSize: Long): String {
-        if (! running && ! finished) {
-            return ""
-        }
+//        if (! running && ! finished) {
+//            return ""
+//        }
 
         val recordsFormat = FormatUtils.decimalSeparator(records)
 

@@ -228,8 +228,10 @@ class PipelineController(
         child(PipelineOutputController::class) {
             attrs {
                 spec = pipelineState.outputSpec()
+                analysisSpec = pipelineState.analysisSpec()
                 inputAndCalculatedColumns = pipelineState.inputAndCalculatedColumns()
                 runningOrLoading = pipelineState.isRunningOrLoading()
+                progress = pipelineState.run.progress
                 outputState = pipelineState.output
                 outputStore = store.output
             }

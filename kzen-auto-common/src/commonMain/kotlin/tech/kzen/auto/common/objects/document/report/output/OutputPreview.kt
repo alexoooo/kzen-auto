@@ -1,6 +1,8 @@
 package tech.kzen.auto.common.objects.document.report.output
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 
 
 data class OutputPreview(
@@ -21,6 +23,36 @@ data class OutputPreview(
                 collection[rowsKey] as List<List<String>>,
                 (collection[startKey] as String).toLong())
         }
+
+
+        fun emptyHeaderListing(
+            inputAndCalculatedColumns: HeaderListing,
+            analysisSpec: AnalysisSpec
+        ): HeaderListing {
+            return when (analysisSpec.type) {
+                AnalysisType.PivotTable ->
+                    analysisSpec.pivot.rows.append(
+                        analysisSpec.pivot.values.headerListing())
+
+                else -> inputAndCalculatedColumns
+            }
+        }
+
+
+//        private fun headerNames(reportRunContext: ReportRunContext): HeaderListing {
+//            val runSignature = reportRunContext.toSignature()
+//
+//            return when {
+//                runSignature.hasPivot() ->
+//                    PivotBuilder.ExportSignature.of(
+//                        reportRunContext.analysis.pivot.rows,
+//                        reportRunContext.analysis.pivot.values
+//                    ).header
+//
+//                else ->
+//                    runSignature.inputAndFormulaColumns
+//            }
+//        }
     }
 
 

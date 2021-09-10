@@ -39,22 +39,6 @@ class TableReportOutput(
 //        private val modifiedFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
 
-//        private fun headerNames(reportRunContext: ReportRunContext): HeaderListing {
-//            val runSignature = reportRunContext.toSignature()
-//
-//            return when {
-//                runSignature.hasPivot() ->
-//                    PivotBuilder.ExportSignature.of(
-//                        reportRunContext.analysis.pivot.rows,
-//                        reportRunContext.analysis.pivot.values
-//                    ).header
-//
-//                else ->
-//                    runSignature.inputAndFormulaColumns
-//            }
-//        }
-
-
 //        private fun missingOutputInfo(reportRunContext: ReportRunContext): OutputInfo {
 //            val header = headerNames(reportRunContext)
 //            val runDir = reportRunContext.runDir

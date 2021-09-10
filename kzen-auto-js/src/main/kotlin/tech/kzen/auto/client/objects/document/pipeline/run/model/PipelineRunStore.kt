@@ -28,6 +28,13 @@ class PipelineRunStore(
     suspend fun refresh() {
         lookupStatus()
         lookupProgressActive()
+
+//        if (store.state().run.logicStatus?.active != null &&
+//                store.state().output.outputInfo == null
+//        ) {
+//            console.log("Refresh with outputInfo = null")
+//            store.output.lookupOutputWithFallback()
+//        }
     }
 
 
@@ -70,6 +77,9 @@ class PipelineRunStore(
 
                 delay(10)
                 lookupStatus()
+
+                delay(10)
+                store.output.lookupOutputWithFallback()
             }
         }
     }

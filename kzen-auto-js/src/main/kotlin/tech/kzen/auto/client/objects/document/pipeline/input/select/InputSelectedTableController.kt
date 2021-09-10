@@ -281,14 +281,12 @@ class InputSelectedTableController(
 
     private fun RBuilder.renderTableRow(
         inputDataSpec: InputDataSpec,
-        inputDataInfo: InputDataInfo?,
-//        reportProgress: ReportProgress?
+        inputDataInfo: InputDataInfo?
     ) {
         val dataLocation = inputDataSpec.location
 
         val fileInfo = inputDataInfo?.dataLocationInfo
 
-//        val fileProgress = reportProgress?.inputs?.get(dataLocation)
         val fileProgress = props
             .progress
             ?.snapshot
@@ -371,6 +369,9 @@ class InputSelectedTableController(
                                 }
                                 else if (fileProgress.finished) {
                                     color = Color.darkGreen
+                                }
+                                else {
+                                    color = Color.brown
                                 }
                             }
 

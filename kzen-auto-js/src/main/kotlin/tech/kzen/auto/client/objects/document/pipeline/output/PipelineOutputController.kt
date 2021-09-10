@@ -7,6 +7,7 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputState
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
+import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunProgress
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconTable
@@ -15,6 +16,7 @@ import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 
@@ -33,8 +35,10 @@ class PipelineOutputController(
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: react.Props {
         var spec: OutputSpec
+        var analysisSpec: AnalysisSpec
         var inputAndCalculatedColumns: HeaderListing?
         var runningOrLoading: Boolean
+        var progress: PipelineRunProgress?
         var outputState: PipelineOutputState
         var outputStore: PipelineOutputStore
     }
@@ -313,8 +317,10 @@ class PipelineOutputController(
         child(OutputTableController::class) {
             attrs {
                 spec = props.spec
+                analysisSpec = props.analysisSpec
                 inputAndCalculatedColumns = props.inputAndCalculatedColumns
                 runningOrLoading = props.runningOrLoading
+                progress = props.progress
                 outputState = props.outputState
                 outputStore = props.outputStore
             }

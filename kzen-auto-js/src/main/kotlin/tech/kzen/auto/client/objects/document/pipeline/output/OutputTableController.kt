@@ -12,16 +12,19 @@ import styled.*
 import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputState
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
+import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunProgress
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.wrap.material.CloudDownloadIcon
 import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.RefreshIcon
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.util.FormatUtils
 
@@ -34,8 +37,10 @@ class OutputTableController(
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: react.Props {
         var spec: OutputSpec
+        var analysisSpec: AnalysisSpec
         var inputAndCalculatedColumns: HeaderListing?
         var runningOrLoading: Boolean
+        var progress: PipelineRunProgress?
         var outputState: PipelineOutputState
         var outputStore: PipelineOutputStore
     }
@@ -169,20 +174,26 @@ class OutputTableController(
         val outputPreview = outputInfo?.table?.preview
 
         styledDiv {
-//            +"[${props.inputAndCalculatedColumns?.values}]"
-
-            renderInfo(error, outputInfo)
+            renderError(error)
 //            renderSave(outputInfo)
 
-            if (outputPreview != null) {
-                renderPreview(outputInfo, outputPreview)
+            if (outputPreview != null && outputPreview.rows.isNotEmpty()) {
+                renderPreviewHeader(outputInfo)
+                renderPreviewTable(outputPreview)
+            }
+            else if (outputInfo != null) {
+                renderPreviewHeader(outputInfo)
+                renderPreviewTablePlaceholder()
+            }
+            else {
+                renderPreviewTablePlaceholder()
             }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderInfo(error: String?, outputInfo: OutputInfo?) {
+    private fun RBuilder.renderError(error: String?) {
         if (error != null) {
             styledDiv {
                 css {
@@ -196,27 +207,22 @@ class OutputTableController(
                 +"Error: $error"
             }
         }
-        else {
-            styledDiv {
-                if (outputInfo == null) {
-                    +"..."
-                }
-            }
-        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderPreview(outputInfo: OutputInfo, outputPreview: OutputPreview) {
-        renderPreviewHeader(outputInfo)
-        renderPreviewTable(outputPreview)
-    }
-
-
     private fun RBuilder.renderPreviewHeader(outputInfo: OutputInfo) {
         if (outputInfo.status == OutputStatus.Missing) {
             return
         }
+
+        val outputCount = props
+            .progress
+            ?.snapshot
+            ?.values
+            ?.get(PipelineConventions.outputTracePath)
+            ?.get()
+            ?.let { it as Long }
 
         styledDiv {
             css {
@@ -272,19 +278,20 @@ class OutputTableController(
                 }
             }
 
-            styledDiv {
-                css {
-                    float = Float.right
-                }
-
+            if (outputCount != null) {
                 styledDiv {
                     css {
-                        display = Display.inlineBlock
-                        marginLeft = 1.em
+                        float = Float.right
                     }
 
-//                    +"Total rows: ${FormatUtils.decimalSeparator(props.reportState.outputCount())}"
-                    +"[total rows]"
+                    styledDiv {
+                        css {
+                            display = Display.inlineBlock
+                            marginLeft = 1.em
+                        }
+
+                        +"Total rows: ${FormatUtils.decimalSeparator(outputCount)}"
+                    }
                 }
             }
         }
@@ -321,8 +328,6 @@ class OutputTableController(
                                 height = 2.em
                                 textAlign = TextAlign.left
                                 boxShadowInset(Color.lightGray, (-2).px, (-2).px, 0.px, 0.px)
-//                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
-//                                boxShadow(Color.lightGray, 2.px, 2.px, 2.px, 0.px)
                                 paddingLeft = 0.5.em
                                 paddingRight = 0.5.em
                             }
@@ -334,10 +339,8 @@ class OutputTableController(
                                 css {
                                     position = Position.sticky
                                     top = 0.px
-//                                    backgroundColor = Color("rgba(255, 255, 255, 0.9)")
                                     backgroundColor = Color.white
                                     zIndex = 999
-//                                    boxShadow(Color.lightGray, 0.px, 2.px, 2.px, 0.px)
                                     paddingLeft = 0.5.em
                                     paddingRight = 0.5.em
                                     textAlign = TextAlign.left
@@ -356,7 +359,6 @@ class OutputTableController(
                             key = row.index.toString()
 
                             css {
-//                                backgroundColor = Color.white
                                 hover {
                                     backgroundColor = Color.lightGrey
                                 }
@@ -401,6 +403,55 @@ class OutputTableController(
                                     +abbreviate(value.value)
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderPreviewTablePlaceholder() {
+        val inputAndCalculatedColumns = props.inputAndCalculatedColumns
+            ?: return
+
+        val headerListing = OutputPreview.emptyHeaderListing(
+            inputAndCalculatedColumns, props.analysisSpec)
+
+        styledTable {
+            css {
+                borderCollapse = BorderCollapse.collapse
+                minWidth = 100.pct
+                borderWidth = 2.px
+                borderStyle = BorderStyle.solid
+                borderColor = Color.lightGray
+            }
+
+            thead {
+                tr {
+                    styledTh {
+                        css {
+                            width = 2.em
+                            height = 2.em
+                            textAlign = TextAlign.left
+                            paddingLeft = 0.5.em
+                            paddingRight = 0.5.em
+                        }
+                        +"Row Number"
+                    }
+
+                    for (header in headerListing.values) {
+                        styledTh {
+                            css {
+                                paddingLeft = 0.5.em
+                                paddingRight = 0.5.em
+                                textAlign = TextAlign.left
+//                                borderLeftWidth = 2.px
+//                                borderLeftStyle = BorderStyle.solid
+//                                borderLeftColor = Color.lightGray
+                            }
+                            key = header
+                            +header
                         }
                     }
                 }
