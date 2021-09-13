@@ -4,6 +4,7 @@ package tech.kzen.auto.client.objects.document.common
 import react.*
 import react.dom.br
 import react.dom.div
+import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
@@ -104,20 +105,9 @@ class DefaultAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun formattedLabel(): String {
-        val labelOverride = props.labelOverride
-        if (labelOverride != null) {
-            return labelOverride
-        }
-
-        val upperCamelCase = props
-            .attributeName
-            .value
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-
-        val results = Regex("[A-Z][a-z]*").findAll(upperCamelCase)
-        val words = results.map { it.groups[0]!!.value }
-
-        return words.joinToString(" ")
+        return CommonEditUtils.formattedLabel(
+            AttributePath.ofName(props.attributeName),
+            props.labelOverride)
     }
 
 

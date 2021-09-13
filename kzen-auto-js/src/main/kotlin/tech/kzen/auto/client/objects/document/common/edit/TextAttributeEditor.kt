@@ -38,6 +38,8 @@ class TextAttributeEditor(
         var type: Type?
 
         var labelOverride: String?
+        var InputProps: react.Props?
+
         var disabled: Boolean
         var invalid: Boolean
 
@@ -130,26 +132,7 @@ class TextAttributeEditor(
 
 
     private fun formattedLabel(): String {
-        val labelOverride = props.labelOverride
-        if (labelOverride != null) {
-            return labelOverride
-        }
-
-        val defaultLabel =
-            if (props.attributePath.nesting.segments.isEmpty()) {
-                props.attributePath.attribute.value
-            }
-            else {
-                props.attributePath.nesting.segments.last().asString()
-            }
-
-        val upperCamelCase = defaultLabel
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-
-        val results = Regex("\\w+").findAll(upperCamelCase)
-        val words = results.map { it.groups[0]!!.value }
-
-        return words.joinToString(" ")
+        return CommonEditUtils.formattedLabel(props.attributePath, props.labelOverride)
     }
 
 
@@ -190,6 +173,10 @@ class TextAttributeEditor(
 
                 disabled = props.disabled
                 error = props.invalid
+
+                if (props.InputProps != null) {
+                    InputProps = props.InputProps!!
+                }
             }
         }
     }

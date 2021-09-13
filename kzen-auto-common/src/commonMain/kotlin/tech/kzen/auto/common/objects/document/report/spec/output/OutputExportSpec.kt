@@ -22,21 +22,23 @@ data class OutputExportSpec(
         const val formatCsvName = "csv"
         const val formatTsvName = "tsv"
         val formatOptions = listOf(formatCsvName, formatTsvName)
+        val formatOptionLabels = formatOptions.associateWith { it }
 
         const val compressionNoneName = "none"
         const val compressionZipName = "zip"
         const val compressionGzName = "gz"
         val compressionOptions = listOf("none", "zip", "gz")
+        val compressionOptionLabels = compressionOptions.associateWith { it }
 
 
         private const val formatKey = "format"
-        private val formatAttributePath = OutputSpec.exportAttributePath.nest(AttributeSegment.ofKey(formatKey))
+        val formatAttributePath = OutputSpec.exportAttributePath.nest(AttributeSegment.ofKey(formatKey))
 
         private const val compressionKey = "compression"
-        private val compressionAttributePath = OutputSpec.exportAttributePath.nest(AttributeSegment.ofKey(compressionKey))
+        val compressionAttributePath = OutputSpec.exportAttributePath.nest(AttributeSegment.ofKey(compressionKey))
 
         private const val pathPatterKey = "path"
-        private val pathAttributePath = OutputSpec.exportAttributePath.nest(AttributeSegment.ofKey(pathPatterKey))
+        val pathAttributePath = OutputSpec.exportAttributePath.nest(AttributeSegment.ofKey(pathPatterKey))
 
 
         fun ofNotation(attributeNotation: MapAttributeNotation): OutputExportSpec {

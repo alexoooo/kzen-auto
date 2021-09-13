@@ -29,7 +29,7 @@ import kotlin.random.Random
 class SidebarFolder(
         props: Props
 ):
-        RPureComponent<SidebarFolder.Props, SidebarFolder.State>(props)
+        RComponent<SidebarFolder.Props, SidebarFolder.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -81,6 +81,26 @@ class SidebarFolder(
                 mainDocuments = mainDocuments(props.graphStructure)
             }
         }
+    }
+
+
+    override fun shouldComponentUpdate(nextProps: Props, nextState: State): Boolean {
+        if (state.hoverItem != nextState.hoverItem ||
+                state.hoverOptions != nextState.hoverOptions ||
+                state.optionsOpen != nextState.optionsOpen ||
+                state.mainDocuments != nextState.mainDocuments
+        ) {
+            return true
+        }
+
+        if (props.selectedDocumentPath != nextProps.selectedDocumentPath ||
+                props.archetypeLocations != nextProps.archetypeLocations
+        ) {
+            return true
+        }
+
+        return props.graphStructure.graphNotation.documents.values.keys !=
+                nextProps.graphStructure.graphNotation.documents.values.keys
     }
 
 

@@ -343,15 +343,13 @@ class PipelineOutputController(
 
 
     private fun RBuilder.renderExport() {
-        +"[Export]"
-//        child(OutputExportView::class) {
-//            attrs {
-//                reportState = props.reportState
-//                dispatcher = props.dispatcher
-//            }
-//        }
+        child(OutputExportController::class) {
+            attrs {
+                outputExportSpec = props.spec.export
+                outputStore = props.outputStore
+            }
+        }
     }
-
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -389,23 +387,6 @@ class PipelineOutputController(
                     }
                 }
             }
-//            val logicRunInfo = store.state().run.logicStatus?.active
-
-//            child(AttributePathValueEditor::class) {
-//                attrs {
-//                    labelOverride = "Report Work Folder"
-//
-//                    clientState = props.reportState.clientState
-//                    objectLocation = props.reportState.mainLocation
-//                    attributePath = ReportConventions.workDirPath
-//
-//                    valueType = TypeMetadata.string
-//
-//                    onChange = {
-//                        onRefresh()
-//                    }
-//                }
-//            }
 
             +"Absolute path: ${outputInfo.runDir}"
         }

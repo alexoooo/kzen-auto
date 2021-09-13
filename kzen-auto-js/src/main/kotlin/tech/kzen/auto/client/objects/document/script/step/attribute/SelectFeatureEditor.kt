@@ -6,6 +6,7 @@ import kotlinx.css.fontSize
 import react.*
 import tech.kzen.auto.client.objects.document.common.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
+import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.material.MaterialInputLabel
@@ -13,6 +14,7 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.locate.ObjectReference
@@ -244,14 +246,6 @@ class SelectFeatureEditor(
 
 
     private fun formattedLabel(): String {
-        val upperCamelCase = props
-            .attributeName
-            .value
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-
-        val results = Regex("[A-Z][a-z]*").findAll(upperCamelCase)
-        val words = results.map { it.groups[0]!!.value }
-
-        return words.joinToString(" ")
+        return CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))
     }
 }

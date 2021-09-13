@@ -5,6 +5,7 @@ import kotlinx.css.fontSize
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLTextAreaElement
 import react.*
+import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
@@ -247,26 +248,7 @@ class AttributePathValueEditor(
 
 
     private fun formattedLabel(): String {
-        val labelOverride = props.labelOverride
-        if (labelOverride != null) {
-            return labelOverride
-        }
-
-        val defaultLabel =
-            if (props.attributePath.nesting.segments.isEmpty()) {
-                props.attributePath.attribute.value
-            }
-            else {
-                props.attributePath.nesting.segments.last().asString()
-            }
-
-        val upperCamelCase = defaultLabel
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-
-        val results = Regex("\\w+").findAll(upperCamelCase)
-        val words = results.map { it.groups[0]!!.value }
-
-        return words.joinToString(" ")
+        return CommonEditUtils.formattedLabel(props.attributePath, props.labelOverride)
     }
 
 

@@ -107,10 +107,6 @@ class OutputExportView(
                         onFormatChange(it.value)
                     }
 
-//                onMenuOpen = {
-//                    loadIfRequired()
-//                }
-
 //                isDisabled = props.editDisabled
 
                     // https://stackoverflow.com/a/51844542/1941359
