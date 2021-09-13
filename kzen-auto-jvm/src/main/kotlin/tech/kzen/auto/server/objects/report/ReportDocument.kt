@@ -186,7 +186,7 @@ class ReportDocument(
     private fun runDir(runContext: ReportRunContext): Path {
         val reportDir =
             try {
-                Paths.get(output.explore.workPath)
+                Paths.get(output.workPath)
             }
             catch (e: IllegalPathStateException) {
                 ReportWorkPool.defaultReportDir

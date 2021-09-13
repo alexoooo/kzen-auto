@@ -5,10 +5,10 @@ import com.lmax.disruptor.dsl.Disruptor
 import com.lmax.disruptor.dsl.ProducerType
 import com.lmax.disruptor.util.DaemonThreadFactory
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
@@ -138,7 +138,7 @@ class PipelineExecution(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    init {
+    fun init(logicControl: LogicControl) {
         if (initialReportRunContext.output.type == OutputType.Explore) {
             tableOutput = ProcessorOutputTableStage(
                 TableReportOutput(
@@ -151,6 +151,8 @@ class PipelineExecution(
                 initialReportRunContext.reportDocumentName,
                 initialReportRunContext.output.export)
         }
+
+        logicControl.subscribeRequest(::pollRequest)
     }
 
 
@@ -291,8 +293,6 @@ class PipelineExecution(
                     break
                 }
 
-                control.pollRequest(::pollRequest)
-
                 val hasNext = processorInputPipeline.poll()
 
                 if (! hasNext) {
@@ -318,8 +318,8 @@ class PipelineExecution(
             runExecutionId)
 
         val pivotValueTableSpec = PivotValueTableSpec.ofRequest(executionRequest.parameters)
-        val start = executionRequest.getLong(PipelineConventions.previewStartKey)!!
-        val count = executionRequest.getInt(PipelineConventions.previewRowCountKey)!!
+        val start = executionRequest.getLong(OutputExploreSpec.previewStartKey)!!
+        val count = executionRequest.getInt(OutputExploreSpec.previewRowCountKey)!!
 
         val withPreview =
             if (tableOutput != null) {

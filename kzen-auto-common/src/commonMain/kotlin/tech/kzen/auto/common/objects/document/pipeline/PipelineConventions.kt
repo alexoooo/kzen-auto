@@ -1,6 +1,5 @@
 package tech.kzen.auto.common.objects.document.pipeline
 
-import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -32,17 +31,17 @@ object PipelineConventions {
     val outputAttributeName = AttributeName("output")
     val outputAttributePath = AttributePath.ofName(outputAttributeName)
 
-    const val workDirKey = "work"
-    val workDirPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(workDirKey))
+//    const val workDirKey = "work"
+//    val workDirPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(workDirKey))
+//
+//    const val previewStartKey = "start"
+//    val previewStartPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewStartKey))
+//
+//    const val previewRowCountKey = "count"
+//    val previewCountPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewRowCountKey))
 
-    const val previewStartKey = "start"
-    val previewStartPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewStartKey))
-
-    const val previewRowCountKey = "count"
-    val previewCountPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewRowCountKey))
-
-    const val saveFileKey = "save"
-    val saveFilePath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(saveFileKey))
+//    const val saveFileKey = "save"
+//    val saveFilePath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(saveFileKey))
 
     const val previewPivotValuesKey = "values"
 
@@ -58,7 +57,7 @@ object PipelineConventions {
     const val actionOutputInfoOnline = "output-online"
     const val actionSummaryLookup = "summary-lookup"
 //    const val actionRunTask = "run"
-    const val actionSave = "save"
+//    const val actionSave = "save"
     const val actionReset = "reset"
     const val actionValidateFormulas = "formulas"
 

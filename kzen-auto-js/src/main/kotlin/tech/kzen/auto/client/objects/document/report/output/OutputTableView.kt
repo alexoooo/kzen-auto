@@ -22,10 +22,11 @@ import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.RefreshIcon
 import tech.kzen.auto.client.wrap.material.SaveIcon
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
@@ -51,7 +52,7 @@ class OutputTableView(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        settingsOpen = ! props.reportState.outputSpec().explore.isDefaultWorkPath()
+        settingsOpen = ! props.reportState.outputSpec().isDefaultWorkPath()
         savingOpen = false
         savingLoading = false
     }
@@ -298,7 +299,7 @@ class OutputTableView(
 
                     clientState = props.reportState.clientState
                     objectLocation = props.reportState.mainLocation
-                    attributePath = ReportConventions.workDirPath
+                    attributePath = OutputSpec.workDirPath
 
                     valueType = TypeMetadata.string
 
@@ -430,7 +431,7 @@ class OutputTableView(
 
                         clientState = props.reportState.clientState
                         objectLocation = props.reportState.mainLocation
-                        attributePath = ReportConventions.previewStartPath
+                        attributePath = OutputExploreSpec.previewStartPath
 
                         valueType = TypeMetadata.long
 
@@ -455,7 +456,7 @@ class OutputTableView(
 
                         clientState = props.reportState.clientState
                         objectLocation = props.reportState.mainLocation
-                        attributePath = ReportConventions.previewCountPath
+                        attributePath = OutputExploreSpec.previewCountPath
 
                         valueType = TypeMetadata.int
 

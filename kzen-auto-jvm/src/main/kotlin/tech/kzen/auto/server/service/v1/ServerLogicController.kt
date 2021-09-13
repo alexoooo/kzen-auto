@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.service.v1
 
 import kotlinx.datetime.Clock
+import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.v1.LogicController
@@ -20,6 +21,12 @@ class ServerLogicController(
     private val graphStore: LocalGraphStore,
     private val graphCreator: GraphCreator
 ): LogicController {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val logger = LoggerFactory.getLogger(ServerLogicController::class.java)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private data class LogicState(
         val runId: LogicRunId,
@@ -80,8 +87,16 @@ class ServerLogicController(
             .graphDefinition()
             .successful()
 
-        val rootGraphInstance = graphCreator.createGraph(
-            successfulGraphDefinition.filterTransitive(root))
+        val transitiveDefinition = successfulGraphDefinition.filterTransitive(root)
+
+        val rootGraphInstance =
+            try {
+                graphCreator.createGraph(transitiveDefinition)
+            }
+            catch (e: Exception) {
+                logger.info("Unable to create: {}", root, e)
+                return null
+            }
 
         val rootInstance = rootGraphInstance.objectInstances[root]?.reference
             ?: return null
@@ -111,8 +126,17 @@ class ServerLogicController(
 
         val logicTraceHandle = LogicTraceStore.handle(runExecutionId)
 
+        val mutableLogicControl = MutableLogicControl()
+
         val logic = rootInstance as Logic
-        val execution = logic.execute(logicHandle, logicTraceHandle, runExecutionId)
+        val execution =
+            try {
+                logic.execute(logicHandle, logicTraceHandle, runExecutionId, mutableLogicControl)
+            }
+            catch (e: Exception) {
+                logger.warn("Execution error: {}", root, e)
+                return null
+            }
 
         stateOrNull = LogicState(
             runId,
@@ -122,7 +146,7 @@ class ServerLogicController(
                 execution,
                 LogicRunFrameState.Ready,
                 listOf(),
-                MutableLogicControl()
+                mutableLogicControl
             ),
             objectStableMapper
         )
@@ -149,9 +173,15 @@ class ServerLogicController(
             ?: return ExecutionResult.failure(
                 LogicConventions.missingExecution(executionId, runId))
 
-        val resultPromise = frame.control.addRequest(request)
-
-        return resultPromise.get()
+        return frame.control.publishRequest(request)
+//        val resultPromise = frame.control.publishRequest(request)
+//
+//        return try {
+//            resultPromise.get()
+//        }
+//        catch (e: Exception) {
+//            ExecutionFailure.ofException(e)
+//        }
     }
 
 
@@ -199,6 +229,11 @@ class ServerLogicController(
 
     @Synchronized
     private fun clearState() {
+        val state = stateOrNull
+            ?: return
+
+        state.frame.control.close()
+
         stateOrNull = null
     }
 }

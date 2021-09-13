@@ -1,6 +1,5 @@
 package tech.kzen.auto.common.objects.document.report
 
-import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -32,17 +31,14 @@ object ReportConventions {
     val outputAttributeName = AttributeName("output")
     val outputAttributePath = AttributePath.ofName(outputAttributeName)
 
-    const val workDirKey = "work"
-    val workDirPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(workDirKey))
-
-    const val previewStartKey = "start"
-    val previewStartPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewStartKey))
-
-    const val previewRowCountKey = "count"
-    val previewCountPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewRowCountKey))
-
-//    const val saveFileKey = "save"
-//    val saveFilePath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(saveFileKey))
+//    const val workDirKey = "work"
+//    val workDirPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(workDirKey))
+//
+//    const val previewStartKey = "start"
+//    val previewStartPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewStartKey))
+//
+//    const val previewRowCountKey = "count"
+//    val previewCountPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewRowCountKey))
 
 
     const val actionParameter = "action"

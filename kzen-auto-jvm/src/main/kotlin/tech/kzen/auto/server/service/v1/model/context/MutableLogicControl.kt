@@ -5,9 +5,6 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.model.LogicCommand
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentLinkedDeque
-import java.util.concurrent.Future
 import java.util.concurrent.atomic.AtomicReference
 
 
@@ -18,15 +15,16 @@ class MutableLogicControl(
     AutoCloseable
 {
     //-----------------------------------------------------------------------------------------------------------------
-    private class RequestPromise(
-        val request: ExecutionRequest,
-        val promise: CompletableFuture<ExecutionResult>
-    )
+//    private class RequestPromise(
+//        val request: ExecutionRequest,
+//        val promise: CompletableFuture<ExecutionResult>
+//    )
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private val command = AtomicReference(LogicCommand.None)
-    private val requests = ConcurrentLinkedDeque<RequestPromise>()
+//    private val requests = ConcurrentLinkedDeque<RequestPromise>()
+    private val requestSubscriber = AtomicReference<(ExecutionRequest) -> ExecutionResult>()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -40,11 +38,23 @@ class MutableLogicControl(
     }
 
 
-    fun addRequest(request: ExecutionRequest): Future<ExecutionResult> {
-        val promise = CompletableFuture<ExecutionResult>()
-        val requestPromise = RequestPromise(request, promise)
-        requests.add(requestPromise)
-        return promise
+//    fun publishRequest(request: ExecutionRequest): Future<ExecutionResult> {
+    fun publishRequest(request: ExecutionRequest): ExecutionResult {
+        val subscriber = requestSubscriber.get()
+            ?: return ExecutionResult.failure("No request listener")
+
+        return try {
+            subscriber(request)
+        }
+        catch (e: Throwable) {
+            return ExecutionFailure.ofException(e)
+        }
+
+//        val promise = CompletableFuture<ExecutionResult>()
+//        val requestPromise = RequestPromise(request, promise)
+//        requests.add(requestPromise)
+//        return promise
+//        return response
     }
 
 
@@ -59,27 +69,30 @@ class MutableLogicControl(
     }
 
 
-    override fun pollRequest(observer: (ExecutionRequest) -> ExecutionResult) {
-        val nextRequestPromise = requests.poll()
-            ?: return
+    override fun subscribeRequest(subscriber: (ExecutionRequest) -> ExecutionResult) {
+        val wasSet = requestSubscriber.compareAndSet(null, subscriber)
+        check(wasSet) { "Already subscribed" }
 
-        try {
-            val value = observer(nextRequestPromise.request)
-            nextRequestPromise.promise.complete(value)
-        }
-        catch (e: Throwable) {
-            nextRequestPromise.promise.complete(ExecutionFailure.ofException(e))
-        }
+//        val nextRequestPromise = requests.poll()
+//            ?: return
+//
+//        try {
+//            val value = observer(nextRequestPromise.request)
+//            nextRequestPromise.promise.complete(value)
+//        }
+//        catch (e: Throwable) {
+//            nextRequestPromise.promise.complete(ExecutionFailure.ofException(e))
+//        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        while (true) {
-            val next = requests.poll()
-                ?: return
-
-            next.promise.cancel(true)
-        }
+//        while (true) {
+//            val next = requests.poll()
+//                ?: return
+//
+//            next.promise.cancel(true)
+//        }
     }
 }

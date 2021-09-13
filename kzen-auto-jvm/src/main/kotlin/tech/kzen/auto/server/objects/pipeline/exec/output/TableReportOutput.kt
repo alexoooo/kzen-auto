@@ -487,7 +487,6 @@ class TableReportOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Synchronized
     fun close(error: Boolean) {
         previewResponse?.complete(PreviewResponse.failed)
         indexedCsvTable?.close(error)

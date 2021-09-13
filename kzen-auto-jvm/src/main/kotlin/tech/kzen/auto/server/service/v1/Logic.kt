@@ -11,6 +11,7 @@ interface Logic {
     fun execute(
         handle: LogicHandle,
         logicTraceHandle: LogicTraceHandle,
-        logicRunExecutionId: LogicRunExecutionId
+        logicRunExecutionId: LogicRunExecutionId,
+        logicControl: LogicControl
     ): LogicExecution
 }

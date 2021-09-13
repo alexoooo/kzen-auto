@@ -19,12 +19,12 @@ import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.RefreshIcon
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
-import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.util.FormatUtils
 
@@ -47,18 +47,14 @@ class OutputTableController(
 
 
     interface State: react.State {
-        var settingsOpen: Boolean
-//        var savingOpen: Boolean
-//        var savingLoading: Boolean
+//        var settingsOpen: Boolean
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-        settingsOpen = ! props.spec.explore.isDefaultWorkPath()
-//        savingOpen = false
-//        savingLoading = false
-    }
+//    override fun State.init(props: Props) {
+//        settingsOpen = ! props.spec.explore.isDefaultWorkPath()
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -76,11 +72,11 @@ class OutputTableController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onSettingsToggle() {
-        setState {
-            settingsOpen = ! settingsOpen
-        }
-    }
+//    private fun onSettingsToggle() {
+//        setState {
+//            settingsOpen = ! settingsOpen
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -169,12 +165,11 @@ class OutputTableController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderOutput() {
-        val error = props.outputState.outputInfoError
+//        val error = props.outputState.outputInfoError
         val outputInfo = props.outputState.outputInfo
         val outputPreview = outputInfo?.table?.preview
 
         styledDiv {
-            renderError(error)
 //            renderSave(outputInfo)
 
             if (outputPreview != null && outputPreview.rows.isNotEmpty()) {
@@ -187,24 +182,6 @@ class OutputTableController(
             }
             else {
                 renderPreviewTablePlaceholder()
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderError(error: String?) {
-        if (error != null) {
-            styledDiv {
-                css {
-                    marginBottom = 1.em
-                    width = 100.pct
-                    paddingBottom = 1.em
-                    borderBottomWidth = 2.px
-                    borderBottomStyle = BorderStyle.solid
-                    borderBottomColor = Color.lightGray
-                }
-                +"Error: $error"
             }
         }
     }
@@ -237,7 +214,7 @@ class OutputTableController(
                 child(TextAttributeEditor::class) {
                     attrs {
                         objectLocation = props.outputStore.mainLocation()
-                        attributePath = ReportConventions.previewStartPath
+                        attributePath = OutputExploreSpec.previewStartPath
 
                         value = props.spec.explore.previewStart
                         type = TextAttributeEditor.Type.Number
@@ -262,7 +239,7 @@ class OutputTableController(
                 child(TextAttributeEditor::class) {
                     attrs {
                         objectLocation = props.outputStore.mainLocation()
-                        attributePath = ReportConventions.previewCountPath
+                        attributePath = OutputExploreSpec.previewCountPath
 
                         value = props.spec.explore.previewCount
                         type = TextAttributeEditor.Type.Number
@@ -312,7 +289,7 @@ class OutputTableController(
             styledTable {
                 css {
                     borderCollapse = BorderCollapse.collapse
-                    minWidth = 100.pct
+                    width = 100.pct
                 }
 
                 thead {
@@ -418,40 +395,44 @@ class OutputTableController(
         val headerListing = OutputPreview.emptyHeaderListing(
             inputAndCalculatedColumns, props.analysisSpec)
 
-        styledTable {
+        styledDiv {
             css {
-                borderCollapse = BorderCollapse.collapse
-                minWidth = 100.pct
+                marginTop = 1.em
+                overflowX = Overflow.auto
                 borderWidth = 2.px
                 borderStyle = BorderStyle.solid
                 borderColor = Color.lightGray
             }
 
-            thead {
-                tr {
-                    styledTh {
-                        css {
-                            width = 2.em
-                            height = 2.em
-                            textAlign = TextAlign.left
-                            paddingLeft = 0.5.em
-                            paddingRight = 0.5.em
-                        }
-                        +"Row Number"
-                    }
+            styledTable {
+                css {
+                    borderCollapse = BorderCollapse.collapse
+                    width = 100.pct
+                }
 
-                    for (header in headerListing.values) {
+                thead {
+                    tr {
                         styledTh {
                             css {
+                                width = 2.em
+                                height = 2.em
+                                textAlign = TextAlign.left
                                 paddingLeft = 0.5.em
                                 paddingRight = 0.5.em
-                                textAlign = TextAlign.left
-//                                borderLeftWidth = 2.px
-//                                borderLeftStyle = BorderStyle.solid
-//                                borderLeftColor = Color.lightGray
                             }
-                            key = header
-                            +header
+                            +"Row Number"
+                        }
+
+                        for (header in headerListing.values) {
+                            styledTh {
+                                css {
+                                    paddingLeft = 0.5.em
+                                    paddingRight = 0.5.em
+                                    textAlign = TextAlign.left
+                                }
+                                key = header
+                                +header
+                            }
                         }
                     }
                 }

@@ -1,50 +1,38 @@
 package tech.kzen.auto.common.objects.document.report.spec.output
 
-import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 
 
 data class OutputExploreSpec(
-    val workPath: String,
-//    val savePath: String,
     val previewStart: Long,
     val previewCount: Int
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val defaultWorkPath = "report"
+        const val previewStartKey = "start"
+        val previewStartPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewStartKey))
 
-//        fun ofPreviewRequest(request: DetachedRequest): OutputSpec {
-//            val savePath = request.getSingle(ReportConventions.saveFileKey)!!
-//            val startRow = request.getLong(ReportConventions.previewStartKey)!!
-//            val rowCount = request.getInt(ReportConventions.previewRowCountKey)!!
-//            return OutputSpec(savePath, startRow, rowCount)
-//        }
+        const val previewRowCountKey = "count"
+        val previewCountPath = OutputSpec.exploreAttributePath.nest(AttributeSegment.ofKey(previewRowCountKey))
+
 
         fun ofNotation(notation: MapAttributeNotation): OutputExploreSpec {
-            val workPath = notation
-                .get(ReportConventions.workDirKey)
-                ?.asString()!!
-
-//            val savePath = notation
-//                .get(ReportConventions.saveFileKey)
-//                ?.asString()!!
-
             val previewStart = notation
-                .get(ReportConventions.previewStartKey)
+                .get(previewStartKey)
                 ?.asString()
                 ?.replace(",", "")
                 ?.toLongOrNull()
                 ?: 1
 
             val previewCount = notation
-                .get(ReportConventions.previewRowCountKey)
+                .get(previewRowCountKey)
                 ?.asString()
                 ?.replace(",", "")
                 ?.toIntOrNull()
                 ?: 0
 
-            return OutputExploreSpec(workPath, /*savePath,*/ previewStart, previewCount)
+            return OutputExploreSpec(previewStart, previewCount)
         }
     }
 
@@ -53,21 +41,4 @@ data class OutputExploreSpec(
     fun previewStartZeroBased(): Long {
         return previewStart - 1
     }
-
-
-    fun isDefaultWorkPath(): Boolean {
-        return workPath == defaultWorkPath
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    fun toPreviewRequest(): DetachedRequest {
-//        return DetachedRequest(
-//            RequestParams.of(
-//                ReportConventions.workDirKey to workPath,
-//                ReportConventions.saveFileKey to savePath,
-//                ReportConventions.previewStartKey to previewStart.toString(),
-//                ReportConventions.previewRowCountKey to previewCount.toString()
-//            ), null)
-//    }
 }

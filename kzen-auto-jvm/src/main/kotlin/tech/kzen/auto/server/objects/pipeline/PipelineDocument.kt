@@ -11,6 +11,7 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
@@ -34,6 +35,7 @@ import tech.kzen.auto.server.objects.report.ReportUtils
 import tech.kzen.auto.server.objects.report.ReportWorkPool
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.Logic
+import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.auto.server.service.v1.LogicHandle
 import tech.kzen.auto.server.service.v1.model.LogicDefinition
@@ -247,8 +249,8 @@ class PipelineDocument(
         val runExecutionParams = RequestParams.of(
             CommonRestApi.paramRunId to runId.value,
             CommonRestApi.paramExecutionId to executionId.value,
-            PipelineConventions.previewStartKey to output.explore.previewStartZeroBased().toString(),
-            PipelineConventions.previewRowCountKey to output.explore.previewCount.toString(),
+            OutputExploreSpec.previewStartKey to output.explore.previewStartZeroBased().toString(),
+            OutputExploreSpec.previewRowCountKey to output.explore.previewCount.toString(),
         )
 
         val pivotValueParams = analysis.pivot.values.asRequest()
@@ -273,15 +275,20 @@ class PipelineDocument(
     override fun execute(
         handle: LogicHandle,
         logicTraceHandle: LogicTraceHandle,
-        logicRunExecutionId: LogicRunExecutionId
+        logicRunExecutionId: LogicRunExecutionId,
+        logicControl: LogicControl
     ): LogicExecution {
         val reportRunContext = reportRunContext()
             ?: throw IllegalStateException("Unable to create context")
 
         ServerContext.reportWorkPool.prepareRunDir(reportRunContext.runDir, logicRunExecutionId)
 
-        return PipelineExecution(
+        val pipelineExecution = PipelineExecution(
             reportRunContext, ServerContext.reportWorkPool, logicTraceHandle, logicRunExecutionId)
+
+        pipelineExecution.init(logicControl)
+
+        return pipelineExecution
     }
 
 
@@ -294,7 +301,7 @@ class PipelineDocument(
 
         val reportDir =
             try {
-                Paths.get(output.explore.workPath)
+                Paths.get(output.workPath)
             }
             catch (e: IllegalPathStateException) {
                 ReportWorkPool.defaultReportDir

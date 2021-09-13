@@ -12,5 +12,5 @@ interface LogicControl {
     fun pollCommand(): LogicCommand
 
 
-    fun pollRequest(observer: (ExecutionRequest) -> ExecutionResult)
+    fun subscribeRequest(subscriber: (ExecutionRequest) -> ExecutionResult)
 }

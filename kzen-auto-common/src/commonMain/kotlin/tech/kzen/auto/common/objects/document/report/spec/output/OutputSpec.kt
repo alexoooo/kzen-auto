@@ -20,10 +20,13 @@ import tech.kzen.lib.common.reflect.Reflect
 data class OutputSpec(
     val type: OutputType,
     val explore: OutputExploreSpec,
-    val export: OutputExportSpec
+    val export: OutputExportSpec,
+    val workPath: String
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        private const val defaultWorkPath = "report"
+
         private val typeKey = AttributeSegment.ofKey("type")
         val typeAttributePath = ReportConventions.outputAttributePath.nest(typeKey)
 
@@ -32,6 +35,9 @@ data class OutputSpec(
 
         private val exportKey = AttributeSegment.ofKey("export")
         val exportAttributePath = ReportConventions.outputAttributePath.nest(exportKey)
+
+        private val workDirKey = AttributeSegment.ofKey("work")
+        val workDirPath = ReportConventions.outputAttributePath.nest(workDirKey)
 
         fun changeTypeCommand(mainLocation: ObjectLocation, type: OutputType): NotationCommand {
             return UpdateInAttributeCommand(
@@ -80,11 +86,25 @@ data class OutputSpec(
                             " $objectLocation - $attributeName")
             val export = OutputExportSpec.ofNotation(exportNotation)
 
+            val workPathNotation = graphStructure
+                .graphNotation
+                .firstAttribute(objectLocation, workDirPath) as? ScalarAttributeNotation
+                ?: return AttributeDefinitionAttempt.failure(
+                    "'${workDirPath}' attribute notation not found:" +
+                            " $objectLocation - $attributeName")
+            val workPath = workPathNotation.asString()
+
             val spec = OutputSpec(
-                outputType, explore, export)
+                outputType, explore, export, workPath)
 
             return AttributeDefinitionAttempt.success(
                 ValueAttributeDefinition(spec))
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun isDefaultWorkPath(): Boolean {
+        return workPath == defaultWorkPath
     }
 }

@@ -16,9 +16,9 @@ import tech.kzen.auto.client.wrap.iconify.vaadinIconTable
 import tech.kzen.auto.client.wrap.iconify.vaadinIconUploadAlt
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
+import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
@@ -48,7 +48,7 @@ class ReportOutputView(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        settingsOpen = ! props.reportState.outputSpec().explore.isDefaultWorkPath()
+        settingsOpen = ! props.reportState.outputSpec().isDefaultWorkPath()
     }
 
 
@@ -381,7 +381,7 @@ class ReportOutputView(
 
                     clientState = props.reportState.clientState
                     objectLocation = props.reportState.mainLocation
-                    attributePath = ReportConventions.workDirPath
+                    attributePath = OutputSpec.workDirPath
 
                     valueType = TypeMetadata.string
 

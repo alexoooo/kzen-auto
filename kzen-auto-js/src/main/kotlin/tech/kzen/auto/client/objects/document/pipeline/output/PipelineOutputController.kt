@@ -5,6 +5,7 @@ import react.*
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputState
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
 import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunProgress
@@ -51,7 +52,7 @@ class PipelineOutputController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        settingsOpen = ! props.spec.explore.isDefaultWorkPath()
+        settingsOpen = ! props.spec.isDefaultWorkPath()
     }
 
 
@@ -64,13 +65,12 @@ class PipelineOutputController(
 
 
     private fun onRefresh() {
-//        props.dispatcher.dispatchAsync(OutputLookupRequest)
+        props.outputStore.lookupOutputWithFallbackAsync()
     }
 
 
     private fun onTypeChange(outputType: OutputType) {
         props.outputStore.setOutputTypeAsync(outputType)
-//        props.dispatcher.dispatchAsync(OutputChangeTypeRequest(outputType))
     }
 
 
@@ -83,7 +83,6 @@ class PipelineOutputController(
                 height = 100.pct
                 marginTop = 5.px
             }
-
 
             styledDiv {
                 css {
@@ -282,17 +281,32 @@ class PipelineOutputController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderOutput() {
-//        val error = props.reportState.outputError
-//        val outputInfo = props.reportState.outputInfo
-////        val outputPreview = outputInfo?.preview
-//
+        val error = props.outputState.outputInfoError
+
+        renderError(error)
+
+        renderSettings()
+
+        renderOutputType()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderError(error: String?) {
+        if (error == null) {
+            return
+        }
+
         styledDiv {
-//            renderInfo(error, outputInfo)
-//            renderSettings(outputInfo)
-//
-//            if (outputInfo != null) {
-                renderOutputType()
-//            }
+            css {
+                marginBottom = 1.em
+                width = 100.pct
+                paddingBottom = 1.em
+                borderBottomWidth = 2.px
+                borderBottomStyle = BorderStyle.solid
+                borderBottomColor = Color.lightGray
+            }
+            +"Error: $error"
         }
     }
 
@@ -329,6 +343,7 @@ class PipelineOutputController(
 
 
     private fun RBuilder.renderExport() {
+        +"[Export]"
 //        child(OutputExportView::class) {
 //            attrs {
 //                reportState = props.reportState
@@ -338,45 +353,44 @@ class PipelineOutputController(
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-//    private fun RBuilder.renderInfo(error: String?, outputInfo: OutputInfo?) {
-//        if (error != null) {
-//            styledDiv {
-//                css {
-//                    marginBottom = 1.em
-//                    width = 100.pct
-//                    paddingBottom = 1.em
-//                    borderBottomWidth = 2.px
-//                    borderBottomStyle = BorderStyle.solid
-//                    borderBottomColor = Color.lightGray
-//                }
-//                +"Error: $error"
-//            }
-//        }
-//        else if (outputInfo == null) {
-//            styledDiv {
-//                +"..."
-//            }
-//        }
-//    }
-
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private fun RBuilder.renderSettings(outputInfo: OutputInfo?) {
-//        if (! state.settingsOpen || outputInfo == null) {
-//            return
-//        }
-//
-//        styledDiv {
-//            css {
-//                marginBottom = 1.em
-//                width = 100.pct
-//                paddingBottom = 1.em
-//                borderBottomWidth = 2.px
-//                borderBottomStyle = BorderStyle.solid
-//                borderBottomColor = Color.lightGray
-//            }
-//
+    private fun RBuilder.renderSettings() {
+        if (! state.settingsOpen) {
+            return
+        }
+
+        val outputInfo = props.outputState.outputInfo
+            ?: return
+
+        styledDiv {
+            css {
+                marginBottom = 1.em
+                width = 100.pct
+                paddingBottom = 1.em
+                borderBottomWidth = 2.px
+                borderBottomStyle = BorderStyle.solid
+                borderBottomColor = Color.lightGray
+            }
+
+
+            child(TextAttributeEditor::class) {
+                attrs {
+                    labelOverride = "Report Work Folder"
+
+                    objectLocation = props.outputStore.mainLocation()
+                    attributePath = OutputSpec.workDirPath
+
+                    value = props.spec.workPath
+                    type = TextAttributeEditor.Type.PlainText
+
+                    onChange = {
+                        onRefresh()
+                    }
+                }
+            }
+//            val logicRunInfo = store.state().run.logicStatus?.active
+
 //            child(AttributePathValueEditor::class) {
 //                attrs {
 //                    labelOverride = "Report Work Folder"
@@ -392,8 +406,8 @@ class PipelineOutputController(
 //                    }
 //                }
 //            }
-//
-//            +"Absolute path: ${outputInfo.runDir}"
-//        }
-//    }
+
+            +"Absolute path: ${outputInfo.runDir}"
+        }
+    }
 }
