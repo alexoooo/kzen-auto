@@ -80,20 +80,7 @@ class ReportRunAction(
         runContext: ReportRunContext,
         outputSpec: OutputExploreSpec
     ): ExecutionResult {
-//        val activeReportHandle = ServerContext
-//            .modelTaskRepository
-//            .lookupActive(objectLocation)
-//            .singleOrNull()
-//            ?.let { ServerContext.modelTaskRepository.queryRun(it) as? ProcessorDatasetPipeline }
-//
-//        val outputInfo =
-//            activeReportHandle?.activeOutputInfo(runContext, outputSpec)
-//                ?: ProcessorDatasetPipeline.passiveOutputInfo(runContext, runDir, outputSpec, reportWorkPool)
-//
-//        return ExecutionSuccess.ofValue(
-//            ExecutionValue.of(outputInfo.toCollection()))
-
-        TODO()
+        error("")
     }
 
 
@@ -103,17 +90,7 @@ class ReportRunAction(
         runDir: Path,
         outputSpec: OutputExploreSpec
     ): ExecutionResult {
-//        return try {
-//            val outPath = ProcessorDatasetPipeline.passiveSave(runContext, runDir, outputSpec, reportWorkPool)
-//            ExecutionSuccess(
-//                ExecutionValue.of(outPath.toString()),
-//                NullExecutionValue)
-//        }
-//        catch (e: Exception) {
-//            ExecutionFailure("Not found: $runDir")
-//        }
-
-        TODO()
+        error("")
     }
 
 

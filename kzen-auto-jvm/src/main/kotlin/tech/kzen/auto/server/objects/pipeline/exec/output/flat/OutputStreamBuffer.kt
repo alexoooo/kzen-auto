@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets
 import java.util.*
 
 
-// based on ByteArrayOutputStream, but un-synchronized and writes to RandomAccessFile
+// based on ByteArrayOutputStream, but un-synchronized with reset and writes to RandomAccessFile
 class OutputStreamBuffer: OutputStream() {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -31,6 +31,7 @@ class OutputStreamBuffer: OutputStream() {
         buf[count] = b.toByte()
         count += 1
     }
+
 
     override fun write(b: ByteArray, off: Int, len: Int) {
         Objects.checkFromIndexSize(off, len, b.size)

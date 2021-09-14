@@ -18,6 +18,7 @@ import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
+import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
@@ -27,12 +28,15 @@ import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.DatasetInfo
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.FlatDataHeaderDefinition
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.FlatDataInfo
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.FlatDataLocation
+import tech.kzen.auto.server.objects.pipeline.exec.output.TableReportOutput
 import tech.kzen.auto.server.objects.pipeline.model.GroupPattern
 import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
 import tech.kzen.auto.server.objects.report.ReportUtils
 import tech.kzen.auto.server.objects.report.ReportWorkPool
+import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
+import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.Logic
 import tech.kzen.auto.server.service.v1.LogicControl
@@ -43,6 +47,7 @@ import tech.kzen.auto.server.service.v1.model.LogicType
 import tech.kzen.auto.server.service.v1.model.TupleDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.platform.DateTimeUtils
 import java.awt.geom.IllegalPathStateException
 import java.nio.file.Paths
 import kotlin.io.path.Path
@@ -62,20 +67,13 @@ class PipelineDocument(
 ):
     DocumentArchetype(),
     DetachedAction,
+    DetachedDownloadAction,
     Logic
 {
     //-----------------------------------------------------------------------------------------------------------------
-//    private class Execution: LogicExecution {
-//        override fun next(arguments: TupleValue)/*: LogicResult*/ {
-//            println("&&&&& next")
-////            return LogicResultSuccess(TupleValue.ofMain("foo"))
-//        }
-//
-//        override fun run(control: LogicControl): LogicResult {
-//            println("^^^^^^ foo")
-//            return LogicResultSuccess(TupleValue.ofMain("foo"))
-//        }
-//    }
+    companion object {
+        private val mimeTypeCsv = "text/csv"
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -113,10 +111,7 @@ class PipelineDocument(
 //
 //            ReportConventions.actionSummaryLookup ->
 //                actionColumnSummaryLookup()
-//
-//
-//            ReportConventions.actionSave ->
-//                actionSave()
+
 
             PipelineConventions.actionReset ->
                 actionOutputReset()
@@ -124,6 +119,22 @@ class PipelineDocument(
             else ->
                 return ExecutionFailure("Unknown action: $action")
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun executeDownload(request: ExecutionRequest): ExecutionDownloadResult {
+        val reportRunContext = reportRunContext()
+            ?: throw IllegalStateException("Missing run")
+
+        val filenamePrefix = FormatUtils.sanitizeFilename(selfLocation.documentPath.name.value)
+        val filenameSuffix = DateTimeUtils.filenameTimestamp()
+        val filename = filenamePrefix + "_" + filenameSuffix + ".csv"
+        
+        return ExecutionDownloadResult(
+            TableReportOutput.downloadCsvOffline(reportRunContext),
+            filename,
+            mimeTypeCsv)
     }
 
 

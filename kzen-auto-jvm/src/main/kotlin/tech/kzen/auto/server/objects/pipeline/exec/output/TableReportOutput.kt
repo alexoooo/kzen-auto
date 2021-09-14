@@ -3,27 +3,17 @@ package tech.kzen.auto.server.objects.pipeline.exec.output
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.output.OutputTableInfo
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.pipeline.exec.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.PivotBuilder
-import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.RowIndex
-import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.digest.H2DigestIndex
-import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.signature.StoreRowSignatureIndex
-import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.signature.store.BufferedIndexedSignatureStore
-import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.signature.store.FileIndexedSignatureStore
-import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.value.StoreRowValueIndex
-import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.value.store.BufferedIndexedTextStore
-import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.value.store.FileIndexedTextStore
-import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.stats.BufferedValueStatistics
-import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.stats.store.FileValueStatisticsStore
-import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.store.BufferedOffsetStore
-import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.store.FileOffsetStore
 import tech.kzen.auto.server.objects.pipeline.exec.trace.PipelineOutputTrace
 import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.objects.pipeline.model.ReportRunSignature
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -54,50 +44,6 @@ class TableReportOutput(
 //        }
 
 
-        private fun filePivot(
-            rows: HeaderListing,
-            values: HeaderListing,
-            pivotDir: Path
-        ): PivotBuilder {
-            val rowTextContentFile = pivotDir.resolve("row-text-value.bin")
-            val rowTextIndexFile= pivotDir.resolve("row-text-index.bin")
-            val rowSignatureFile = pivotDir.resolve("row-signature.bin")
-            val valueStatisticsFile = pivotDir.resolve("value-statistics.bin")
-            val rowValueDigestDir = pivotDir.resolve("row-text-digest")
-            val rowSignatureDigestDir = pivotDir.resolve("row-signature-digest")
-
-            val rowValueDigestIndex =
-                H2DigestIndex(rowValueDigestDir)
-
-            val textOffsetStore = BufferedOffsetStore(
-                FileOffsetStore(rowTextIndexFile))
-
-            val indexedTextStore = BufferedIndexedTextStore(
-                FileIndexedTextStore(rowTextContentFile, textOffsetStore))
-
-            val rowValueIndex = StoreRowValueIndex(
-                rowValueDigestIndex, indexedTextStore)
-
-            val rowSignatureDigestIndex =
-                H2DigestIndex(rowSignatureDigestDir)
-
-            val indexedSignatureStore = BufferedIndexedSignatureStore(
-                FileIndexedSignatureStore(rowSignatureFile, rows.values.size))
-
-            val rowSignatureIndex = StoreRowSignatureIndex(
-                rowSignatureDigestIndex, indexedSignatureStore)
-
-            val valueStatistics = BufferedValueStatistics(
-                FileValueStatisticsStore(valueStatisticsFile, values.values.size))
-
-            return PivotBuilder(
-                rows,
-                values,
-                RowIndex(rowValueIndex, rowSignatureIndex),
-                valueStatistics)
-        }
-
-
         private fun <T> usePassive(
             reportRunContext: ReportRunContext,
             user: (TableReportOutput) -> T
@@ -124,6 +70,19 @@ class TableReportOutput(
                     reportRunContext.analysis.pivot.values,
                     outputSpec.previewStartZeroBased(),
                     outputSpec.previewCount)
+            }
+        }
+
+
+        fun downloadCsvOffline(
+            reportRunContext: ReportRunContext
+        ): InputStream {
+            return when (reportRunContext.analysis.type) {
+                AnalysisType.FlatData ->
+                    IndexedCsvTable.downloadCsvOffline(reportRunContext.runDir)
+
+                AnalysisType.PivotTable ->
+                    PivotBuilder.downloadCsvOffline(reportRunContext)
             }
         }
     }
@@ -185,7 +144,7 @@ class TableReportOutput(
                 indexedCsvTable = null
 
                 val pivotSpec = initialReportRunContext.analysis.pivot
-                pivotBuilder = filePivot(
+                pivotBuilder = PivotBuilder.create(
                     pivotSpec.rows,
                     HeaderListing(pivotSpec.values.columns.keys.toList()),
                     initialReportRunContext.runDir)
@@ -301,12 +260,9 @@ class TableReportOutput(
 
     private fun previewInCurrentThread(
         pivotValueTableSpec: PivotValueTableSpec,
-//        outputSpec: OutputExploreSpec
         start: Long,
         count: Int
     ): OutputTableInfo? {
-//        val zeroBasedPreview = outputSpec.previewStartZeroBased()
-
         val rowCount: Long
         val preview: OutputPreview?
 
@@ -327,134 +283,10 @@ class TableReportOutput(
             return null
         }
 
-//        val saveInfo = saveInfo(initialReportRunContext.runDir, outputSpec)
-
         return OutputTableInfo(
-//            saveInfo.message,
             rowCount,
             preview)
     }
-
-
-//    fun save(reportRunContext: ReportRunContext, outputSpec: OutputExploreSpec): Path {
-////        check(taskHandle == null)
-//        check(Files.exists(initialReportRunContext.runDir))
-//
-//        val saveInfo = saveInfo(initialReportRunContext.runDir, outputSpec)
-//        val outputPath = saveInfo.path
-//
-//        save(reportRunContext, outputSpec, saveInfo.path)
-//
-//        return outputPath
-//    }
-
-
-//    private fun save(reportRunContext: ReportRunContext, outputSpec: OutputExploreSpec, path: Path) {
-//        val runSignature = reportRunContext.toSignature()
-//        val saveInfo = saveInfo(initialReportRunContext.runDir, outputSpec)
-//
-//        if (! runSignature.hasPivot() &&
-//            path.toAbsolutePath().normalize() ==
-//                saveInfo.defaultPath.toAbsolutePath().normalize())
-//        {
-//            return
-//        }
-//
-//        // TODO: optimize to be GC-free
-//        Files.newBufferedWriter(path).use { output ->
-//            val record = FlatFileRecord()
-//
-//            if (indexedCsvTable != null) {
-//                indexedCsvTable.traverseWithHeader { row ->
-//                    record.clearWithoutCache()
-//                    record.addAll(row)
-//                    record.writeCsv(output)
-//                    output.write("\r\n")
-//                }
-//            }
-//            else {
-//                check(pivotBuilder != null)
-//                pivotBuilder.traverseWithHeader(reportRunContext.analysis.pivot.values) { row ->
-//                    record.clearWithoutCache()
-//                    record.addAll(row)
-//                    record.writeCsv(output)
-//                    output.write("\r\n")
-//                }
-//            }
-//        }
-//    }
-//
-//
-//    fun download(reportRunContext: ReportRunContext, outputSpec: OutputExploreSpec): InputStream {
-////        check(taskHandle == null)
-//        check(Files.exists(initialReportRunContext.runDir))
-//
-////        val saveInfo = saveInfo(initialReportRunContext.runDir, outputSpec)
-//
-////        val dataPath = initialReportRunContext.runDir.resolve(IndexedCsvTable.tableFile)
-////        save(reportRunContext, outputSpec, dataPath)
-//
-//        return Files.newInputStream(dataPath)
-//    }
-
-
-//    private fun formatTime(instant: Instant): String {
-//        return instant
-//            .atZone(ZoneId.systemDefault())
-//            .toLocalDateTime()
-//            .format(modifiedFormatter)
-//    }
-
-
-//    private fun saveInfo(runDir: Path, outputSpec: OutputExploreSpec): SaveInfo {
-//        val defaultPath = runDir.resolve(IndexedCsvTable.tableFile)
-//
-//        val customPath: Path?
-//        val customInvalid: Boolean
-//        if (outputSpec.savePath.isBlank()) {
-//            customPath = null
-//            customInvalid = false
-//        }
-//        else {
-//            customPath = try {
-//                Paths.get(outputSpec.savePath)
-//            } catch (e: InvalidPathException) {
-//                null
-//            }
-//            customInvalid = customPath == null
-//        }
-//
-//        val pathWithFallback = customPath ?: defaultPath
-//
-//        val existsMessage =
-//            if (Files.exists(pathWithFallback)) {
-//                "already exists"
-//            }
-//            else {
-//                "does not exist (will create)"
-//            }
-//
-//        val typeMessage = when {
-//            customInvalid ->
-//                "Invalid path provided (using default)"
-//
-//            customPath == null ->
-//                "Using default path"
-//
-//            else ->
-//                "Using custom path"
-//        }
-//
-//        val message = "$typeMessage, $existsMessage: ${pathWithFallback.toAbsolutePath().normalize()}"
-//
-//        return SaveInfo(
-//            pathWithFallback,
-//            defaultPath,
-//            customPath != null || customInvalid,
-//            customInvalid,
-//            message
-//        )
-//    }
 
 
     fun handlePreviewRequest(/*reportWorkPool: ReportWorkPool*/) {

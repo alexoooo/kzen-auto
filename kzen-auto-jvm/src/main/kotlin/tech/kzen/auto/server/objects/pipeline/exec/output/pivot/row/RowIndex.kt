@@ -99,6 +99,21 @@ class RowIndex(
     }
 
 
+    fun rowValuesInto(rowIndex: Long, output: MutableList<String?>) {
+        if (singletonSignature) {
+            output.add(rowValueIndex.getValue(rowIndex))
+            return
+        }
+
+        val rowValueIndexList = rowSignatureIndex.getSignature(rowIndex)
+
+        for (valueIndex in rowValueIndexList.valueIndexes) {
+            val rowValue = rowValueIndex.getValue(valueIndex)
+            output.add(rowValue)
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
         rowValueIndex.close()

@@ -13,6 +13,7 @@ import tech.kzen.auto.server.objects.pipeline.exec.input.stages.ProcessorInputRe
 import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.store.FileOffsetStore
 import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.store.StoreUtils
+import java.io.InputStream
 import java.io.OutputStreamWriter
 import java.io.RandomAccessFile
 import java.nio.channels.Channels
@@ -33,7 +34,12 @@ class IndexedCsvTable(
         private val offsetFile = Path.of("index.bin")
 
         private val lineBreak = "\r\n".toCharArray()
-//        private val format = CSVFormat.DEFAULT
+
+
+        fun downloadCsvOffline(dir: Path): InputStream {
+            val tablePath = dir.resolve(tableFile)
+            return Files.newInputStream(tablePath)
+        }
     }
 
 
@@ -56,20 +62,15 @@ class IndexedCsvTable(
     private val handle: RandomAccessFile =
         RandomAccessFile(tablePath.toFile(), "rw")
 
-//    private val pending = mutableListOf<Iterable<String>>()
     private val pending = OutputStreamBuffer()
     private val buffer = OutputStreamBuffer()
     private val bufferWriter = OutputStreamWriter(buffer, Charsets.UTF_8)
-//    private val bufferPrinter = PrintWriter(bufferWriter)
-//    private val bufferPrinter = CSVPrinter(bufferWriter, format)
 
     private var previousPosition = 0L
-//    private var previousModified = Instant.now()
 
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-//        logger.info("Open {}", tablePath, RuntimeException())
         logger.info("Open {}", tablePath)
 
         if (offsetStore.size() == 0L) {

@@ -4,13 +4,32 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
-import tech.kzen.auto.server.objects.report.pipeline.calc.ColumnValueUtils
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeaderIndex
+import tech.kzen.auto.server.objects.pipeline.exec.input.parse.csv.CsvFormatUtils
 import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.RowIndex
+import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.digest.H2DigestIndex
+import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.signature.StoreRowSignatureIndex
+import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.signature.store.BufferedIndexedSignatureStore
+import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.signature.store.FileIndexedSignatureStore
+import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.value.StoreRowValueIndex
+import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.value.store.BufferedIndexedTextStore
+import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.row.value.store.FileIndexedTextStore
+import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.stats.BufferedValueStatistics
 import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.stats.ValueStatistics
+import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.stats.store.FileValueStatisticsStore
+import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.store.BufferedOffsetStore
+import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.store.FileOffsetStore
+import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
+import tech.kzen.auto.server.objects.report.pipeline.calc.ColumnValueUtils
+import java.io.InputStream
+import java.io.OutputStreamWriter
+import java.io.PipedInputStream
+import java.io.PipedOutputStream
+import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 
 
 class PivotBuilder(
@@ -25,6 +44,129 @@ class PivotBuilder(
     companion object {
         private const val missingRowCellValue = "<missing>"
         private const val missingStatisticCellValue = ""
+
+
+        fun downloadCsvOffline(reportRunContext: ReportRunContext): InputStream {
+            val pivotSpec = reportRunContext.analysis.pivot
+            val pivotBuilder = create(
+                pivotSpec.rows,
+                HeaderListing(pivotSpec.values.columns.keys.toList()),
+                reportRunContext.runDir)
+
+            val input = PipedInputStream()
+            val output = PipedOutputStream(input)
+            val writer = OutputStreamWriter(output, StandardCharsets.UTF_8)
+
+            Thread {
+                pivotBuilder.use { pivotBuilder ->
+                    val exportSignature = ExportSignature.of(pivotSpec.rows, reportRunContext.analysis.pivot.values)
+                    val valueTypes = exportSignature.valueTypes
+
+                    val headerValues = exportSignature.header.values
+                    val flatFileRecord = FlatFileRecord(
+                        headerValues.sumOf { it.length },
+                        headerValues.size)
+                    flatFileRecord.addAll(headerValues)
+                    flatFileRecord.writeCsv(writer)
+
+                    val rowIndex = pivotBuilder.rowIndex
+                    val size = rowIndex.size()
+                    val valueStatistics = pivotBuilder.valueStatistics
+                    val valueBuffer = ArrayList<String?>()
+
+                    for (rowNumber in 0 until size) {
+                        writer.write(CsvFormatUtils.lineFeedInt)
+
+                        flatFileRecord.clear()
+                        valueBuffer.clear()
+
+                        rowIndex.rowValuesInto(rowNumber, valueBuffer)
+
+                        for (i in 0 until valueBuffer.size) {
+                            flatFileRecord.add(valueBuffer[i] ?: missingRowCellValue)
+                        }
+
+                        val statisticValues = valueStatistics.get(rowNumber, valueTypes)
+                        @Suppress("ReplaceManualRangeWithIndicesCalls")
+                        for (i in 0 until valueTypes.size) {
+                            val value = statisticValues[i]
+                            val type = valueTypes[i].value
+
+                            val asString = formatStatistic(value, type)
+                            flatFileRecord.add(asString)
+                        }
+
+                        flatFileRecord.writeCsv(writer)
+                    }
+
+                    writer.flush()
+                    output.close()
+                }
+            }.start()
+
+            return input
+        }
+
+
+        fun create(
+            rows: HeaderListing,
+            values: HeaderListing,
+            pivotDir: Path
+        ): PivotBuilder {
+            val rowTextContentFile = pivotDir.resolve("row-text-value.bin")
+            val rowTextIndexFile= pivotDir.resolve("row-text-index.bin")
+            val rowSignatureFile = pivotDir.resolve("row-signature.bin")
+            val valueStatisticsFile = pivotDir.resolve("value-statistics.bin")
+            val rowValueDigestDir = pivotDir.resolve("row-text-digest")
+            val rowSignatureDigestDir = pivotDir.resolve("row-signature-digest")
+
+            val rowValueDigestIndex =
+                H2DigestIndex(rowValueDigestDir)
+
+            val textOffsetStore = BufferedOffsetStore(
+                FileOffsetStore(rowTextIndexFile))
+
+            val indexedTextStore = BufferedIndexedTextStore(
+                FileIndexedTextStore(rowTextContentFile, textOffsetStore))
+
+            val rowValueIndex = StoreRowValueIndex(
+                rowValueDigestIndex, indexedTextStore)
+
+            val rowSignatureDigestIndex =
+                H2DigestIndex(rowSignatureDigestDir)
+
+            val indexedSignatureStore = BufferedIndexedSignatureStore(
+                FileIndexedSignatureStore(rowSignatureFile, rows.values.size))
+
+            val rowSignatureIndex = StoreRowSignatureIndex(
+                rowSignatureDigestIndex, indexedSignatureStore)
+
+            val valueStatistics = BufferedValueStatistics(
+                FileValueStatisticsStore(valueStatisticsFile, values.values.size))
+
+            return PivotBuilder(
+                rows,
+                values,
+                RowIndex(rowValueIndex, rowSignatureIndex),
+                valueStatistics)
+        }
+
+
+        private fun formatStatistic(value: Double, type: PivotValueType): String {
+            return when {
+                ValueStatistics.isMissing(value) -> {
+                    missingStatisticCellValue
+                }
+
+                type == PivotValueType.Count -> {
+                    value.toLong().toString()
+                }
+
+                else -> {
+                    ColumnValueUtils.formatDecimal(value)
+                }
+            }
+        }
     }
 
 
@@ -197,20 +339,7 @@ class PivotBuilder(
                 val value = statisticValues[i]
                 val type = exportSignature.valueTypes[i].value
 
-                val asString = when {
-                        ValueStatistics.isMissing(value) -> {
-                            missingStatisticCellValue
-                        }
-
-                        type == PivotValueType.Count -> {
-                            value.toLong().toString()
-                        }
-
-                        else -> {
-                            ColumnValueUtils.formatDecimal(value)
-                        }
-                    }
-
+                val asString = formatStatistic(value, type)
                 row.add(asString)
             }
 

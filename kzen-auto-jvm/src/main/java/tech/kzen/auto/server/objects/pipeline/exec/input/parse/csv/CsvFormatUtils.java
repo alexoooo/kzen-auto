@@ -22,6 +22,7 @@ public enum CsvFormatUtils
     public static final char lineFeed = '\n';
 
     public static final int delimiterInt = delimiter;
+    public static final int lineFeedInt = lineFeed;
 
 
     //-----------------------------------------------------------------------------------------------------------------

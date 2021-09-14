@@ -70,7 +70,7 @@ class ModelDetachedExecutor(
             ?: error("Not found: $actionLocation")
 
         val action = instance as? DetachedDownloadAction
-            ?: error("Not DetachedAAction: $actionLocation - $instance")
+            ?: error("Not DetachedDownloadAction: $actionLocation - $instance")
 
         return action.executeDownload(request)
     }
