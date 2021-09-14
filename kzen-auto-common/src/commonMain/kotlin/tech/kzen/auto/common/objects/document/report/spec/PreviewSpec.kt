@@ -23,6 +23,16 @@ data class PreviewSpec(
 ): Digestible {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        fun enabledAttributePath(filtered: Boolean): AttributePath {
+            val attributeName = when (filtered) {
+                false -> ReportConventions.previewAllAttributeName
+                true -> ReportConventions.previewFilteredAttributeName
+            }
+
+            return AttributePath.ofName(attributeName)
+        }
+
+
         fun changeEnabledCommand(mainLocation: ObjectLocation, filtered: Boolean, enabled: Boolean): NotationCommand {
             val attributeName = when (filtered) {
                 false -> ReportConventions.previewAllAttributeName

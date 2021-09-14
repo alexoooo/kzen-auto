@@ -1,9 +1,37 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
 import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.structure.notation.AttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.StructuralNotationCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 
 
 object CommonEditUtils {
+    fun editCommand(
+        objectLocation: ObjectLocation,
+        attributePath: AttributePath,
+        attributeNotation: AttributeNotation
+    ):
+            StructuralNotationCommand
+    {
+        return when {
+            attributePath.nesting.segments.isEmpty() ->
+                UpsertAttributeCommand(
+                    objectLocation,
+                    attributePath.attribute,
+                    attributeNotation)
+
+            else ->
+                UpdateInAttributeCommand(
+                    objectLocation,
+                    attributePath,
+                    attributeNotation)
+        }
+    }
+
+
     fun formattedLabel(
         attributePath: AttributePath,
         labelOverride: String? = null

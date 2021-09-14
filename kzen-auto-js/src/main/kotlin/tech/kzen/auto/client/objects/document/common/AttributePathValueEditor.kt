@@ -22,8 +22,6 @@ import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.collect.toPersistentList
 
@@ -222,19 +220,8 @@ class AttributePathValueEditor(
                     .toPersistentList())
             }
 
-        val command =
-            if (props.attributePath.nesting.segments.isEmpty()) {
-                UpsertAttributeCommand(
-                    props.objectLocation,
-                    props.attributePath.attribute,
-                    attributeNotation)
-            }
-            else {
-                UpdateInAttributeCommand(
-                    props.objectLocation,
-                    props.attributePath,
-                    attributeNotation)
-            }
+        val command = CommonEditUtils.editCommand(
+            props.objectLocation, props.attributePath, attributeNotation)
 
         // TODO: handle error
         ClientContext.mirroredGraphStore.apply(command)

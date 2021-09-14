@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.pipeline.input
 
 import kotlinx.css.*
+import kotlinx.html.title
 import react.*
 import react.dom.attrs
 import react.dom.div
@@ -38,6 +39,7 @@ class PipelineInputController(
     interface Props: react.Props {
         var mainLocation: ObjectLocation
         var spec: InputSpec
+        var runningOrLoading: Boolean
         var inputState: PipelineInputState
         var inputStore: PipelineInputStore
         var progress: PipelineRunProgress?
@@ -128,17 +130,11 @@ class PipelineInputController(
     private fun RBuilder.renderContent() {
         renderHeader()
 
-//        val editDisabled =
-//            props.reportState.isInitiating() ||
-//                    props.reportState.isTaskRunning()
-
         div {
             attrs {
-//                if (editDisabled) {
-//                    if (props.reportState.isInitiating()) {
-//                        title = "Disabled while loading"
-//                    }
-//                }
+                if (props.runningOrLoading) {
+                    title = "Disabled while running"
+                }
             }
 
             renderBrowseFiles()
@@ -264,7 +260,7 @@ class PipelineInputController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderBrowseFiles(/*editDisabled: Boolean*/) {
+    private fun RBuilder.renderBrowseFiles() {
         child(InputBrowserController::class) {
             attrs {
                 mainLocation = props.mainLocation
@@ -279,12 +275,13 @@ class PipelineInputController(
     }
 
 
-    private fun RBuilder.renderSelectedFiles(/*editDisabled: Boolean*/) {
+    private fun RBuilder.renderSelectedFiles() {
         child(InputSelectedController::class) {
             attrs {
                 mainLocation = props.mainLocation
                 spec = props.spec.selection
                 browserOpen = isBrowserOpen()
+                runningOrLoading = props.runningOrLoading
                 inputSelectedState = props.inputState.selected
                 progress = props.progress
                 inputStore = props.inputStore

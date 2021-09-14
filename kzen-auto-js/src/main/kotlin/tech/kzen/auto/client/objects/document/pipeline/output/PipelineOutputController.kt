@@ -108,7 +108,7 @@ class PipelineOutputController(
         renderHeader()
 
         if (! props.inputAndCalculatedColumns?.values.isNullOrEmpty()) {
-            renderOutput()
+            renderBody()
         }
     }
 
@@ -199,7 +199,7 @@ class PipelineOutputController(
             child(MaterialToggleButton::class) {
                 attrs {
                     value = OutputType.Explore.name
-//                    disabled = editDisabled
+                    disabled = props.runningOrLoading
                     size = "medium"
                     style = reactStyle {
                         height = 34.px
@@ -223,7 +223,7 @@ class PipelineOutputController(
             child(MaterialToggleButton::class) {
                 attrs {
                     value = OutputType.Export.name
-//                    disabled = editDisabled
+                    disabled = props.runningOrLoading
                     size = "medium"
                     style = reactStyle {
                         height = 34.px
@@ -236,7 +236,6 @@ class PipelineOutputController(
                     css {
                         fontSize = 1.5.em
                         marginRight = 0.25.em
-//                        marginBottom = (-0.25).em
                     }
                     iconify(vaadinIconUploadAlt)
                 }
@@ -266,21 +265,13 @@ class PipelineOutputController(
                 }
             }
 
-            child(SettingsIcon::class) {
-                attrs {
-                    style = reactStyle {
-//                        marginRight = 0.25.em
-                    }
-                }
-            }
-
-//            +"Settings"
+            child(SettingsIcon::class) {}
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderOutput() {
+    private fun RBuilder.renderBody() {
         val error = props.outputState.outputInfoError
 
         renderError(error)
@@ -346,6 +337,7 @@ class PipelineOutputController(
         child(OutputExportController::class) {
             attrs {
                 outputExportSpec = props.spec.export
+                runningOrLoading = props.runningOrLoading
                 outputStore = props.outputStore
             }
         }
@@ -385,6 +377,8 @@ class PipelineOutputController(
                     onChange = {
                         onRefresh()
                     }
+
+                    disabled = props.runningOrLoading
                 }
             }
 

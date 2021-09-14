@@ -12,8 +12,6 @@ import tech.kzen.auto.client.wrap.material.MaterialTextField
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 
 
 class TextAttributeEditor(
@@ -106,19 +104,8 @@ class TextAttributeEditor(
     private suspend fun submitEdit() {
         val attributeNotation = ScalarAttributeNotation(state.value)
 
-        val command =
-            if (props.attributePath.nesting.segments.isEmpty()) {
-                UpsertAttributeCommand(
-                    props.objectLocation,
-                    props.attributePath.attribute,
-                    attributeNotation)
-            }
-            else {
-                UpdateInAttributeCommand(
-                    props.objectLocation,
-                    props.attributePath,
-                    attributeNotation)
-            }
+        val command = CommonEditUtils.editCommand(
+            props.objectLocation, props.attributePath, attributeNotation)
 
         // TODO: handle error
         ClientContext.mirroredGraphStore.apply(command)

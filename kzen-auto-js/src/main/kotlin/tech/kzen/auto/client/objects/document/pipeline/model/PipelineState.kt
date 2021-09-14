@@ -9,7 +9,9 @@ import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
+import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.lib.common.model.definition.ObjectDefinition
@@ -66,26 +68,52 @@ data class PipelineState(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun inputSpec(): InputSpec {
-        val inputDefinition = mainDefinition.attributeDefinitions[PipelineConventions.inputAttributeName]!!
-        return (inputDefinition as ValueAttributeDefinition).value as InputSpec
+        val definition = mainDefinition.attributeDefinitions[PipelineConventions.inputAttributeName]!!
+        return (definition as ValueAttributeDefinition).value as InputSpec
     }
 
 
     fun formulaSpec(): FormulaSpec {
-        val inputDefinition = mainDefinition.attributeDefinitions[PipelineConventions.formulaAttributeName]!!
-        return (inputDefinition as ValueAttributeDefinition).value as FormulaSpec
+        val definition = mainDefinition.attributeDefinitions[PipelineConventions.formulaAttributeName]!!
+        return (definition as ValueAttributeDefinition).value as FormulaSpec
+    }
+
+
+    fun filterSpec(): FilterSpec {
+        val definition = mainDefinition.attributeDefinitions[PipelineConventions.filterAttributeName]!!
+        return (definition as ValueAttributeDefinition).value as FilterSpec
+    }
+
+
+    fun previewSpec(filtered: Boolean): PreviewSpec {
+        return when (filtered) {
+            true -> previewFilteredSpec()
+            false -> previewAllSpec()
+        }
+    }
+
+
+    fun previewAllSpec(): PreviewSpec {
+        val definition = mainDefinition.attributeDefinitions[PipelineConventions.previewFilteredAttributeName]!!
+        return (definition as ValueAttributeDefinition).value as PreviewSpec
+    }
+
+
+    fun previewFilteredSpec(): PreviewSpec {
+        val definition = mainDefinition.attributeDefinitions[PipelineConventions.previewFilteredAttributeName]!!
+        return (definition as ValueAttributeDefinition).value as PreviewSpec
     }
 
 
     fun analysisSpec(): AnalysisSpec {
-        val inputDefinition = mainDefinition.attributeDefinitions[PipelineConventions.analysisAttributeName]!!
-        return (inputDefinition as ValueAttributeDefinition).value as AnalysisSpec
+        val definition = mainDefinition.attributeDefinitions[PipelineConventions.analysisAttributeName]!!
+        return (definition as ValueAttributeDefinition).value as AnalysisSpec
     }
 
 
     fun outputSpec(): OutputSpec {
-        val inputDefinition = mainDefinition.attributeDefinitions[PipelineConventions.outputAttributeName]!!
-        return (inputDefinition as ValueAttributeDefinition).value as OutputSpec
+        val definition = mainDefinition.attributeDefinitions[PipelineConventions.outputAttributeName]!!
+        return (definition as ValueAttributeDefinition).value as OutputSpec
     }
 
 

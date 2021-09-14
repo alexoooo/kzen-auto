@@ -23,11 +23,7 @@ class OutputExportController(
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: react.Props {
         var outputExportSpec: OutputExportSpec
-//        var analysisSpec: AnalysisSpec
-//        var inputAndCalculatedColumns: HeaderListing?
-//        var runningOrLoading: Boolean
-//        var progress: PipelineRunProgress?
-//        var outputState: PipelineOutputState
+        var runningOrLoading: Boolean
         var outputStore: PipelineOutputStore
     }
 
@@ -85,6 +81,7 @@ class OutputExportController(
                     attributePath = OutputExportSpec.formatAttributePath
 
                     value = props.outputExportSpec.format
+                    disabled = props.runningOrLoading
                 }
             }
         }
@@ -109,6 +106,7 @@ class OutputExportController(
                     attributePath = OutputExportSpec.compressionAttributePath
 
                     value = props.outputExportSpec.compression
+                    disabled = props.runningOrLoading
                 }
             }
         }
@@ -144,6 +142,7 @@ class OutputExportController(
 
                     value = props.outputExportSpec.pathPattern
                     type = TextAttributeEditor.Type.PlainText
+                    disabled = props.runningOrLoading
                 }
             }
         }

@@ -26,6 +26,7 @@ class InputSelectedController(
         var mainLocation: ObjectLocation
         var spec: InputSelectionSpec
         var browserOpen: Boolean
+        var runningOrLoading: Boolean
         var inputSelectedState: InputSelectedState
         var progress: PipelineRunProgress?
         var inputStore: PipelineInputStore
@@ -82,17 +83,8 @@ class InputSelectedController(
         }
 
         renderErrors()
-
-//        styledDiv {
-//            +"Progress: ${props.progress?.message}"
-//        }
-
-        // TODO
-        val runningOrLoading = false
-
-        renderActions(runningOrLoading)
-
-        renderGroupBy(runningOrLoading)
+        renderActions()
+        renderGroupBy()
 
         child(InputSelectedTableController::class) {
             attrs {
@@ -120,7 +112,7 @@ class InputSelectedController(
     }
 
 
-    private fun RBuilder.renderActions(runningOrLoading: Boolean) {
+    private fun RBuilder.renderActions() {
         styledDiv {
             css {
                 width = 100.pct
@@ -135,7 +127,7 @@ class InputSelectedController(
                 child(InputSelectedRemoveController::class) {
                     attrs {
                         mainLocation = props.mainLocation
-                        disabled = runningOrLoading
+                        disabled = props.runningOrLoading
                         inputSelectedState = props.inputSelectedState
                         inputStore = props.inputStore
                     }
@@ -150,7 +142,7 @@ class InputSelectedController(
                 child(InputSelectedTypeController::class) {
                     attrs {
                         spec = props.spec
-                        editDisabled = runningOrLoading
+                        editDisabled = props.runningOrLoading
                         inputSelectedState = props.inputSelectedState
                         inputStore = props.inputStore
                     }
@@ -164,7 +156,7 @@ class InputSelectedController(
                 child(InputSelectedFormatController::class) {
                     attrs {
                         spec = props.spec
-                        editDisabled = runningOrLoading
+                        editDisabled = props.runningOrLoading
                         inputSelectedState = props.inputSelectedState
                         inputStore = props.inputStore
                     }
@@ -263,7 +255,7 @@ class InputSelectedController(
     }
 
 
-    private fun RBuilder.renderGroupBy(runningOrLoading: Boolean) {
+    private fun RBuilder.renderGroupBy() {
         if (! state.showGroupBy) {
             return
         }
@@ -271,7 +263,7 @@ class InputSelectedController(
         child(InputSelectedGroupController::class) {
             attrs {
                 spec = props.spec
-                editDisabled = runningOrLoading
+                editDisabled = props.runningOrLoading
                 inputStore = props.inputStore
             }
         }

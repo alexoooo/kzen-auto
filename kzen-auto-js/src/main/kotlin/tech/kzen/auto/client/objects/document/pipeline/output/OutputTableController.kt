@@ -193,13 +193,13 @@ class OutputTableController(
             return
         }
 
-        val outputCount = props
-            .progress
-            ?.snapshot
-            ?.values
-            ?.get(PipelineConventions.outputTracePath)
-            ?.get()
-            ?.let { it as Long }
+        val outputCount =
+            if (props.runningOrLoading) {
+                props.progress?.snapshot?.values?.get(PipelineConventions.outputTracePath)?.get()?.let { it as Long }
+            }
+            else {
+                props.outputState.outputInfo?.table?.rowCount
+            }
 
         styledDiv {
             css {

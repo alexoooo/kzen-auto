@@ -6,10 +6,13 @@ import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.pipeline.analysis.PipelineAnalysisController
+import tech.kzen.auto.client.objects.document.pipeline.filter.PipelineFilterController
+import tech.kzen.auto.client.objects.document.pipeline.formula.PipelineFormulaController
 import tech.kzen.auto.client.objects.document.pipeline.input.PipelineInputController
 import tech.kzen.auto.client.objects.document.pipeline.model.PipelineState
 import tech.kzen.auto.client.objects.document.pipeline.model.PipelineStore
 import tech.kzen.auto.client.objects.document.pipeline.output.PipelineOutputController
+import tech.kzen.auto.client.objects.document.pipeline.preview.PipelinePreviewController
 import tech.kzen.auto.client.objects.document.pipeline.run.PipelineRunController
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -108,10 +111,10 @@ class PipelineController(
             }
 
             renderInput(pipelineState)
-//            renderFormulas(processState)
-////            renderPreview(processState, false)
-//            renderFilter(processState)
-//            renderPreview(processState, true)
+            renderFormulas(pipelineState)
+//            renderPreview(processState, false)
+            renderFilter(pipelineState)
+            renderPreview(pipelineState, true)
             renderAnalysis(pipelineState)
             renderOutput(pipelineState)
         }
@@ -164,52 +167,50 @@ class PipelineController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private fun RBuilder.renderInput(reportState: ReportState) {
     private fun RBuilder.renderInput(pipelineState: PipelineState) {
         child(PipelineInputController::class) {
             attrs {
                 mainLocation = pipelineState.mainLocation
                 spec = pipelineState.inputSpec()
+                runningOrLoading = pipelineState.isRunningOrLoading()
                 inputState = pipelineState.input
                 inputStore = store.input
                 progress = pipelineState.run.progress
-//                this.reportState = reportState
-//                dispatcher = store
             }
         }
     }
 
-//
-//
-//    private fun RBuilder.renderFormulas(reportState: ReportState) {
-//        child(ReportFormulaList::class) {
-//            attrs {
-//                this.reportState = reportState
-//                this.dispatcher = store
-//            }
-//        }
-//    }
-//
-//
-//    private fun RBuilder.renderFilter(reportState: ReportState) {
-//        child(ReportFilterList::class) {
-//            attrs {
-//                this.reportState = reportState
-//                this.dispatcher = store
-//            }
-//        }
-//    }
-//
-//
-//    private fun RBuilder.renderPreview(reportState: ReportState, afterFilter: Boolean) {
-//        child(PreviewView::class) {
-//            attrs {
-//                this.reportState = reportState
-//                this.dispatcher = store
-//                this.afterFilter = afterFilter
-//            }
-//        }
-//    }
+
+
+    private fun RBuilder.renderFormulas(pipelineState: PipelineState) {
+        child(PipelineFormulaController::class) {
+            attrs {
+                this.formulaSpec = pipelineState.formulaSpec()
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderFilter(pipelineState: PipelineState) {
+        child(PipelineFilterController::class) {
+            attrs {
+                filterSpec = pipelineState.filterSpec()
+                runningOrLoading = pipelineState.isRunningOrLoading()
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderPreview(pipelineState: PipelineState, afterFilter: Boolean) {
+        child(PipelinePreviewController::class) {
+            attrs {
+                previewSpec = pipelineState.previewSpec(afterFilter)
+                runningOrLoading = pipelineState.isRunningOrLoading()
+                this.afterFilter = afterFilter
+                mainLocation = pipelineState.mainLocation
+            }
+        }
+    }
 
 
     private fun RBuilder.renderAnalysis(pipelineState: PipelineState) {
@@ -251,7 +252,6 @@ class PipelineController(
 
             child(PipelineRunController::class) {
                 attrs {
-//                    this.pipelineState = pipelineState
                     this.runState = pipelineState.run
                     this.outputStatus = pipelineState.output.outputInfo?.status ?: OutputStatus.Missing
                     this.pipelineStore = store
