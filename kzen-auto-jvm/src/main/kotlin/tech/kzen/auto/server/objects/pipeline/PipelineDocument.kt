@@ -72,7 +72,7 @@ class PipelineDocument(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val mimeTypeCsv = "text/csv"
+        private const val mimeTypeCsv = "text/csv"
     }
 
 
@@ -106,8 +106,8 @@ class PipelineDocument(
             PipelineConventions.actionOutputInfoOnline ->
                 actionOutputInfoOnline(request)
 
-//            ReportConventions.actionValidateFormulas ->
-//                actionValidateFormulas()
+            PipelineConventions.actionValidateFormulas ->
+                actionValidateFormulas()
 //
 //            ReportConventions.actionSummaryLookup ->
 //                actionColumnSummaryLookup()
@@ -130,7 +130,7 @@ class PipelineDocument(
         val filenamePrefix = FormatUtils.sanitizeFilename(selfLocation.documentPath.name.value)
         val filenameSuffix = DateTimeUtils.filenameTimestamp()
         val filename = filenamePrefix + "_" + filenameSuffix + ".csv"
-        
+
         return ExecutionDownloadResult(
             TableReportOutput.downloadCsvOffline(reportRunContext),
             filename,
@@ -228,7 +228,13 @@ class PipelineDocument(
         val reportRunContext = reportRunContext()
             ?: return ExecutionFailure("Missing run")
 
-        return ServerContext.reportRunAction.delete(reportRunContext.runDir)
+        return try {
+            ReportWorkPool.deleteDir(reportRunContext.runDir)
+            ExecutionSuccess.empty
+        }
+        catch (e: Exception) {
+            ExecutionFailure.ofException(e)
+        }
     }
 
 
@@ -272,6 +278,38 @@ class PipelineDocument(
             runId,
             executionId,
             ExecutionRequest(combinedParams, null))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun actionValidateFormulas(): ExecutionResult {
+        val reportRunContext = reportRunContext()
+            ?: return ExecutionFailure("Missing run")
+
+        val pluginCoordinates = reportRunContext.datasetInfo.items.map { it.processorPluginCoordinate }.toSet()
+        val classLoaderHandle = ServerContext.definitionRepository
+            .classLoaderHandle(pluginCoordinates, ClassLoader.getSystemClassLoader())
+
+        val dataType = input.selection.dataType
+        val flatHeaderListing = reportRunContext.datasetInfo.headerSuperset()
+
+        return classLoaderHandle.use {
+            val errors: Map<String, String> = reportRunContext.formula
+                .formulas
+                .mapValues { formula ->
+                    ServerContext.calculatedColumnEval.validate(
+                        formula.key,
+                        formula.value,
+                        flatHeaderListing,
+                        dataType,
+                        it.classLoader)
+                }
+                .filterValues { error -> error != null }
+                .mapValues { e -> e.value!! }
+
+            ExecutionSuccess.ofValue(
+                ExecutionValue.of(errors))
+        }
     }
 
 

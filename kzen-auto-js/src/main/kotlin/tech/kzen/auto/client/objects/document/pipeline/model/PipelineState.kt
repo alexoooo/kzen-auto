@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.pipeline.model
 
+import tech.kzen.auto.client.objects.document.pipeline.formula.model.PipelineFormulaState
 import tech.kzen.auto.client.objects.document.pipeline.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
@@ -25,6 +26,7 @@ data class PipelineState(
     val mainLocation: ObjectLocation,
     val mainDefinition: ObjectDefinition,
     val input: PipelineInputState = PipelineInputState(),
+    val formula: PipelineFormulaState = PipelineFormulaState(),
     val output: PipelineOutputState = PipelineOutputState(),
     val run: PipelineRunState = PipelineRunState(),
     val notationError: String? = null,
@@ -149,6 +151,12 @@ data class PipelineState(
         return copy(
             input = input.copy(
                 selected = updater(input.selected)))
+    }
+
+
+    fun withFormula(updater: (PipelineFormulaState) -> PipelineFormulaState): PipelineState {
+        return copy(
+            formula = updater(formula))
     }
 
 

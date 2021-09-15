@@ -35,9 +35,9 @@ class PipelineController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class State(
+    interface State: react.State {
         var pipelineState: PipelineState?
-    ): react.State
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -181,11 +181,16 @@ class PipelineController(
     }
 
 
-
     private fun RBuilder.renderFormulas(pipelineState: PipelineState) {
+        pipelineState.inputAndCalculatedColumns()
+
         child(PipelineFormulaController::class) {
             attrs {
-                this.formulaSpec = pipelineState.formulaSpec()
+                formulaSpec = pipelineState.formulaSpec()
+                formulaState = pipelineState.formula
+                columnListing = pipelineState.input.column.columnListing
+                runningOrLoading = pipelineState.isRunningOrLoading()
+                formulaStore = store.formula
             }
         }
     }

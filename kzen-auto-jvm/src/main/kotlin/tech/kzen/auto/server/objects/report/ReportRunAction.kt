@@ -24,7 +24,7 @@ class ReportRunAction(
 ){
     //-----------------------------------------------------------------------------------------------------------------
     private val logger = LoggerFactory.getLogger(ReportRunAction::class.java)
-    private val mimeTypeCsv = "text/csv"
+//    private val mimeTypeCsv = "text/csv"
 
 
     //-----------------------------------------------------------------------------------------------------------------

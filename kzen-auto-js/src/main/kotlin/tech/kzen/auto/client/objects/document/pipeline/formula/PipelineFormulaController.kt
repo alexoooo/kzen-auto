@@ -6,8 +6,11 @@ import react.RPureComponent
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.pipeline.formula.model.PipelineFormulaState
+import tech.kzen.auto.client.objects.document.pipeline.formula.model.PipelineFormulaStore
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.wrap.material.FunctionsIcon
+import tech.kzen.auto.client.wrap.material.MaterialCircularProgress
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 
@@ -20,14 +23,16 @@ class PipelineFormulaController(
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: react.Props {
         var formulaSpec: FormulaSpec
-//        var reportState: ReportState,
+        var formulaState: PipelineFormulaState
+        var columnListing: List<String>?
+        var runningOrLoading: Boolean
+        var formulaStore: PipelineFormulaStore
+
 //        var dispatcher: ReportDispatcher
     }
 
 
-    interface State: react.State {
-//        var adding: Boolean
-    }
+    interface State: react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -108,9 +113,9 @@ class PipelineFormulaController(
                     float = Float.right
                 }
 
-//                if (props.reportState.formulaLoading) {
-//                    child(MaterialCircularProgress::class) {}
-//                }
+                if (props.formulaState.formulaLoading) {
+                    child(MaterialCircularProgress::class) {}
+                }
             }
         }
     }
@@ -139,15 +144,15 @@ class PipelineFormulaController(
                         }
                     }
 
-                    +"[Formula Item]"
-//                    child(ReportFormulaItem::class) {
-//                        attrs {
-//                            reportState = props.reportState
-//                            dispatcher = props.dispatcher
-//                            this.formulaSpec = formulaSpec
-//                            this.columnName = columnName
-//                        }
-//                    }
+                    child(FormulaItemController::class) {
+                        attrs {
+                            formulaState = props.formulaState
+                            formulaSpec = props.formulaSpec
+                            runningOrLoading = props.runningOrLoading
+                            this.columnName = columnName
+                            formulaStore = props.formulaStore
+                        }
+                    }
                 }
             }
         }
@@ -155,13 +160,14 @@ class PipelineFormulaController(
 
 
     private fun RBuilder.renderFormulaAdd() {
-        +"[+]"
-//        child(ReportFormulaAdd::class) {
-//            attrs {
-//                reportState = props.reportState
-//                dispatcher = props.dispatcher
-//                this.formulaSpec = formulaSpec
-//            }
-//        }
+        child(FormulaAddController::class) {
+            attrs {
+                formulaSpec = props.formulaSpec
+                formulaState = props.formulaState
+                columnListing = props.columnListing
+                runningOrLoading = props.runningOrLoading
+                formulaStore = props.formulaStore
+            }
+        }
     }
 }
