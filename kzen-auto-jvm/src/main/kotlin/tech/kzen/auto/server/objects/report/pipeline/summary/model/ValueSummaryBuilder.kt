@@ -197,7 +197,7 @@ class ValueSummaryBuilder {
         if (histogramValues.size == 1) {
             val only = histogramValues.values.first()
             return NominalValueSummary(
-                mapOf(only to textHistogram.size.toLong()))
+                mapOf(only to textHistogram.values.first()))
         }
 
         val builder = mutableMapOf<String, Long>()

@@ -169,95 +169,6 @@ class TableReportOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    @Synchronized
-//    fun preview(
-//        reportRunContext: ReportRunContext,
-//        outputSpec: OutputExploreSpec,
-//        reportWorkPool: ReportWorkPool
-//    ): OutputInfo {
-//        if (! Files.exists(initialReportRunContext.runDir)) {
-//            return missingOutputInfo(reportRunContext)
-//        }
-//
-//        return if (taskHandle == null) {
-//            previewInCurrentThread(reportRunContext, outputSpec, reportWorkPool)
-//        }
-//        else {
-//            val requestHandle = PreviewRequest(reportRunContext, outputSpec)
-//
-//            previewRequest = requestHandle
-//
-//            var response: OutputInfo? = null
-//            while (response == null) {
-//                response =
-//                    try {
-//                        previewResponse.get(1, TimeUnit.SECONDS)
-//                    }
-//                    catch (e: TimeoutException) {
-//                        if (taskHandle.isTerminated()) {
-//                            usePassive(reportRunContext) {
-//                                it.previewInCurrentThread(reportRunContext, outputSpec, reportWorkPool)
-//                            }
-//                        }
-//                        else {
-//                            continue
-//                        }
-//                    }
-//            }
-//
-//            previewResponse = CompletableFuture()
-//
-//            response
-//        }
-//    }
-
-
-//    private fun previewInCurrentThread(
-//        reportRunContext: ReportRunContext,
-//        outputSpec: OutputExploreSpec,
-//        reportWorkPool: ReportWorkPool
-//    ): OutputTableInfo? {
-//        val zeroBasedPreview = outputSpec.previewStartZeroBased()
-//
-//        var rowCount: Long = -1
-//        var preview: OutputPreview? = null
-//        var statusOverride: OutputStatus? = null
-//
-//        try {
-//            if (indexedCsvTable != null) {
-//                rowCount = indexedCsvTable.rowCount()
-//                preview = indexedCsvTable.preview(
-//                    zeroBasedPreview, outputSpec.previewCount)
-//            }
-//            else {
-//                check(pivotBuilder != null)
-//                rowCount = pivotBuilder.rowCount()
-//                preview = pivotBuilder.preview(
-//                    reportRunContext.analysis.pivot.values, zeroBasedPreview, outputSpec.previewCount)
-//            }
-//        }
-//        catch (e: Exception) {
-//            if (rowCount == -1L) {
-//                rowCount = 0
-//            }
-//            if (preview == null) {
-//                preview =
-//                    indexedCsvTable?.corruptPreview(zeroBasedPreview)
-//                        ?: pivotBuilder!!.corruptPreview(reportRunContext.analysis.pivot.values, zeroBasedPreview)
-//            }
-//
-//            statusOverride = OutputStatus.Failed
-//        }
-//
-//        val saveInfo = saveInfo(initialReportRunContext.runDir, outputSpec)
-//
-//        return OutputTableInfo(
-////            saveInfo.message,
-//            rowCount,
-//            preview)
-//    }
-
-
     private fun previewInCurrentThread(
         pivotValueTableSpec: PivotValueTableSpec,
         start: Long,
@@ -289,7 +200,7 @@ class TableReportOutput(
     }
 
 
-    fun handlePreviewRequest(/*reportWorkPool: ReportWorkPool*/) {
+    fun handlePreviewRequest() {
         val request = previewRequest
             ?: return
 

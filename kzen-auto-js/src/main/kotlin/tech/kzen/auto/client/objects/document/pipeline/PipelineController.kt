@@ -207,10 +207,15 @@ class PipelineController(
 
 
     private fun RBuilder.renderPreview(pipelineState: PipelineState, afterFilter: Boolean) {
+        check(afterFilter) { TODO("pipelineState.previewAll") }
+
         child(PipelinePreviewController::class) {
             attrs {
                 previewSpec = pipelineState.previewSpec(afterFilter)
+                previewState = pipelineState.previewFiltered
+                previewStore = store.previewFiltered
                 runningOrLoading = pipelineState.isRunningOrLoading()
+                running = pipelineState.isRunning()
                 this.afterFilter = afterFilter
                 mainLocation = pipelineState.mainLocation
             }

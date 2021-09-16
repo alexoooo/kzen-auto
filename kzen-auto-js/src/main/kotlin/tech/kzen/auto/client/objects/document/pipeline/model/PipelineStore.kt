@@ -5,6 +5,7 @@ import tech.kzen.auto.client.objects.document.pipeline.analysis.model.PipelineAn
 import tech.kzen.auto.client.objects.document.pipeline.formula.model.PipelineFormulaStore
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
+import tech.kzen.auto.client.objects.document.pipeline.preview.model.PipelinePreviewStore
 import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunStore
 import tech.kzen.auto.client.objects.document.report.state.ReportStore
 import tech.kzen.auto.client.service.ClientContext
@@ -52,6 +53,7 @@ class PipelineStore: SessionGlobal.Observer {
     val input = PipelineInputStore(this)
     val formula = PipelineFormulaStore(this)
     val analysis = PipelineAnalysisStore(this)
+    val previewFiltered = PipelinePreviewStore(this)
     val output = PipelineOutputStore(this)
     val run = PipelineRunStore(this)
 
@@ -134,6 +136,7 @@ class PipelineStore: SessionGlobal.Observer {
             input.init()
             output.init()
             formula.validateAsync()
+            previewFiltered.init()
         }
     }
 

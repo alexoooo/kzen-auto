@@ -80,6 +80,9 @@ class PipelineRunStore(
 
                 delay(10)
                 store.output.lookupOutputWithFallback()
+
+                delay(10)
+                store.previewFiltered.lookupSummaryWithFallback()
             }
         }
     }

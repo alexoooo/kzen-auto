@@ -185,13 +185,17 @@ class PipelineOutputStore(
 
             delay(10)
             store.update { state -> state
-                .withOutput {
-                    it.copy(
-                        outputInfo = null,
-                        outputInfoError = result.errorOrNull()
-                    )
-                }
-                .withRun { it.copy(progress = null) }
+                .withOutput { it.copy(
+                    outputInfo = null,
+                    outputInfoError = result.errorOrNull()
+                ) }
+                .withRun { it.copy(
+                    progress = null
+                ) }
+                .withPreviewFiltered { it.copy(
+                    tableSummary = null,
+                    previewError = null
+                ) }
             }
         }
     }

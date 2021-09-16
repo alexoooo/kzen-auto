@@ -35,6 +35,7 @@ import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
 import tech.kzen.auto.server.objects.report.ReportUtils
 import tech.kzen.auto.server.objects.report.ReportWorkPool
+import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
@@ -108,10 +109,12 @@ class PipelineDocument(
 
             PipelineConventions.actionValidateFormulas ->
                 actionValidateFormulas()
-//
-//            ReportConventions.actionSummaryLookup ->
-//                actionColumnSummaryLookup()
 
+            PipelineConventions.actionSummaryOffline ->
+                actionSummaryOffline()
+
+            PipelineConventions.actionSummaryOnline ->
+                actionSummaryOnline(request)
 
             PipelineConventions.actionReset ->
                 actionOutputReset()
@@ -264,6 +267,7 @@ class PipelineDocument(
             ?: return ExecutionResult.failure("Not found: ${CommonRestApi.paramExecutionId}")
 
         val runExecutionParams = RequestParams.of(
+            PipelineConventions.actionParameter to PipelineConventions.actionOutputInfoOnline,
             CommonRestApi.paramRunId to runId.value,
             CommonRestApi.paramExecutionId to executionId.value,
             OutputExploreSpec.previewStartKey to output.explore.previewStartZeroBased().toString(),
@@ -310,6 +314,43 @@ class PipelineDocument(
             ExecutionSuccess.ofValue(
                 ExecutionValue.of(errors))
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun actionSummaryOffline(): ExecutionResult {
+        val reportRunContext = reportRunContext()
+            ?: return ExecutionFailure("Missing run")
+
+        val response = ReportSummary.tableSummaryOffline(reportRunContext)
+            ?: return ExecutionFailure("Missing summary")
+
+        return ExecutionSuccess.ofValue(
+            ExecutionValue.of(response.toCollection()))
+    }
+
+
+    private fun actionSummaryOnline(request: ExecutionRequest): ExecutionResult {
+        val runId: LogicRunId = request
+            .getSingle(CommonRestApi.paramRunId)
+            ?.let { LogicRunId(it) }
+            ?: return ExecutionResult.failure("Not found: ${CommonRestApi.paramRunId}")
+
+        val executionId: LogicExecutionId = request
+            .getSingle(CommonRestApi.paramExecutionId)
+            ?.let { LogicExecutionId(it) }
+            ?: return ExecutionResult.failure("Not found: ${CommonRestApi.paramExecutionId}")
+
+        val runExecutionParams = RequestParams.of(
+            PipelineConventions.actionParameter to PipelineConventions.actionSummaryOnline,
+            CommonRestApi.paramRunId to runId.value,
+            CommonRestApi.paramExecutionId to executionId.value
+        )
+
+        return ServerContext.serverLogicController.request(
+            runId,
+            executionId,
+            ExecutionRequest(runExecutionParams, null))
     }
 
 

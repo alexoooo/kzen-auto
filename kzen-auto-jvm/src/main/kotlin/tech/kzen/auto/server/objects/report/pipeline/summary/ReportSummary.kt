@@ -1,29 +1,22 @@
 package tech.kzen.auto.server.objects.report.pipeline.summary
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import tech.kzen.auto.common.objects.document.report.summary.*
-import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
-import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.pipeline.exec.input.parse.csv.CsvProcessorDefiner
+import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.pipeline.summary.model.ValueSummaryBuilder
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 
 class ReportSummary(
     initialReportRunContext: ReportRunContext,
-    runDir: Path,
-    private val taskHandle: TaskHandle?
+    runDir: Path
 ):
     AutoCloseable
 {
@@ -49,6 +42,114 @@ class ReportSummary(
                 .literal(csv)
                 .map { it.toList() }
         }
+
+
+        private fun columnDir(summaryDir: Path, columnName: String): Path {
+            val columnDirName = FormatUtils.sanitizeFilename(columnName)
+            return summaryDir.resolve(columnDirName)
+        }
+
+
+        //-------------------------------------------------------------------------------------------------------------
+        fun tableSummaryOffline(
+            reportRunContext: ReportRunContext
+        ): TableSummary? {
+            val summaryDir = reportRunContext.runDir.resolve(summaryDirName)
+            if (! Files.exists(summaryDir)) {
+                return null
+            }
+
+            val builder = mutableMapOf<String, ColumnSummary>()
+
+            for (columnName in reportRunContext.inputAndFormulaColumns.values) {
+                val columnDir = columnDir(summaryDir, columnName)
+
+                if (! Files.exists(columnDir)) {
+                    continue
+                }
+
+                val columnSummary = loadValueSummary(columnDir)
+                val cumulative = builder.getOrDefault(columnName, ColumnSummary.empty)
+                builder[columnName] = ValueSummaryBuilder.merge(cumulative, columnSummary)
+            }
+
+            return TableSummary(builder)
+        }
+
+
+        private  fun loadValueSummary(columnDir: Path): ColumnSummary {
+            val count = loadSummary(columnDir)
+
+            val nominalValueSummary = loadNominal(columnDir)
+            val numericValueSummary = loadNumeric(columnDir)
+            val opaqueValueSummary = loadOpaque(columnDir)
+
+            return ColumnSummary(
+                count,
+                nominalValueSummary,
+                numericValueSummary,
+                opaqueValueSummary)
+        }
+
+
+        private fun loadSummary(
+            columnDir: Path
+        ): Long {
+            val summaryFile = columnDir.resolve(summaryCsvFilename)
+            val summaryFileContent = Files.readString(summaryFile)
+
+            @Suppress("UnnecessaryVariable")
+            val count = summaryFileContent
+                .split("\n")
+                .last()
+                .split(",")
+                .last()
+                .toLong()
+
+            return count
+        }
+
+
+        private fun loadNominal(
+            columnDir: Path
+        ): NominalValueSummary {
+            val nominalFile = columnDir.resolve(nominalCsvFilename)
+            if (! Files.exists(nominalFile)) {
+                return NominalValueSummary.empty
+            }
+
+            val nominalFileContent = Files.readString(nominalFile)
+            val nominalFileCsv = fromCsv(nominalFileContent)
+            return NominalValueSummary.fromCsv(nominalFileCsv)
+        }
+
+
+        private fun loadNumeric(
+            columnDir: Path
+        ): StatisticValueSummary {
+            val numericFile = columnDir.resolve(numericCsvFilename)
+            if (! Files.exists(numericFile)) {
+                return StatisticValueSummary.empty
+            }
+
+            val numericFileContent = Files.readString(numericFile)
+            val numericFileCsv = fromCsv(numericFileContent)
+            return StatisticValueSummary.ofCsv(numericFileCsv)
+        }
+
+
+        private fun loadOpaque(
+            columnDir: Path
+        ): OpaqueValueSummary {
+            val opaqueFile = columnDir.resolve(opaqueCsvFilename)
+            if (! Files.exists(opaqueFile)) {
+                return OpaqueValueSummary.empty
+            }
+
+            val opaqueFileContent = Files.readString(opaqueFile)
+            val opaqueFileCsv = fromCsv(opaqueFileContent)
+            return OpaqueValueSummary.fromCsv(opaqueFileCsv)
+        }
     }
 
 
@@ -57,10 +158,7 @@ class ReportSummary(
 
 
     @Volatile
-    private var viewRequested: Boolean = false
-
-    @Volatile
-    private var viewResponse = CompletableFuture<TableSummary>()
+    private var viewResponse: CompletableFuture<TableSummary>? = null
 
 
     private val headerIndex = RecordHeaderIndex(
@@ -75,54 +173,10 @@ class ReportSummary(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun columnDir(columnName: String): Path {
-        val columnDirName = FormatUtils.sanitizeFilename(columnName)
-        return summaryDir.resolve(columnDirName)
-    }
-
-
-    private suspend fun load(): TableSummary? {
-        if (! Files.exists(summaryDir)) {
-            return null
-        }
-
-        val builder = mutableMapOf<String, ColumnSummary>()
-
-        for (columnName in headerIndex.columnHeaders.values) {
-            val columnDir = columnDir(columnName)
-
-            if (! Files.exists(columnDir)) {
-                continue
-            }
-
-            val columnSummary = loadValueSummary(columnDir)
-            val cumulative = builder.getOrDefault(columnName, ColumnSummary.empty)
-            builder[columnName] = ValueSummaryBuilder.merge(cumulative, columnSummary)
-        }
-
-        return TableSummary(builder)
-    }
-
-
-    private suspend fun loadValueSummary(columnDir: Path): ColumnSummary {
-        val count = loadSummary(columnDir)
-
-        val nominalValueSummary = loadNominal(columnDir)
-        val numericValueSummary = loadNumeric(columnDir)
-        val opaqueValueSummary = loadOpaque(columnDir)
-
-        return ColumnSummary(
-            count,
-            nominalValueSummary,
-            numericValueSummary,
-            opaqueValueSummary)
-    }
-
-
     private fun save() {
         for (i in headerIndex.columnHeaders.values.indices) {
             val columnName = headerIndex.columnHeaders.values[i]
-            val columnDir = columnDir(columnName)
+            val columnDir = columnDir(summaryDir, columnName)
 
             val columnBuilder = builders[i]
             val columnSummary = columnBuilder.build()
@@ -161,25 +215,6 @@ class ReportSummary(
     }
 
 
-    private suspend fun loadNominal(
-        columnDir: Path
-    ): NominalValueSummary {
-        val nominalFile = columnDir.resolve(nominalCsvFilename)
-
-        if (! Files.exists(nominalFile)) {
-            return NominalValueSummary.empty
-        }
-
-        val nominalFileContent = withContext(Dispatchers.IO) {
-            Files.readString(nominalFile)
-        }
-
-        val nominalFileCsv = fromCsv(nominalFileContent)
-        return NominalValueSummary.fromCsv(nominalFileCsv)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private fun saveNumeric(
         valueSummary: ColumnSummary,
         columnDir: Path
@@ -196,26 +231,6 @@ class ReportSummary(
     }
 
 
-    private suspend fun loadNumeric(
-        columnDir: Path
-    ): StatisticValueSummary {
-        val numericFile = columnDir.resolve(numericCsvFilename)
-
-        if (! Files.exists(numericFile)) {
-//            return NumericValueSummary.empty
-            return StatisticValueSummary.empty
-        }
-
-        val numericFileContent = withContext(Dispatchers.IO) {
-            Files.readString(numericFile)
-        }
-
-        val numericFileCsv = fromCsv(numericFileContent)
-        return StatisticValueSummary.ofCsv(numericFileCsv)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private fun saveSummary(
         valueSummary: ColumnSummary,
         columnDir: Path
@@ -230,28 +245,6 @@ class ReportSummary(
     }
 
 
-    private suspend fun loadSummary(
-        columnDir: Path
-    ): Long {
-        val summaryFile = columnDir.resolve(summaryCsvFilename)
-
-        val summaryFileContent = withContext(Dispatchers.IO) {
-            Files.readString(summaryFile)
-        }
-
-        @Suppress("UnnecessaryVariable")
-        val count = summaryFileContent
-            .split("\n")
-            .last()
-            .split(",")
-            .last()
-            .toLong()
-
-        return count
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private fun saveOpaque(
         valueSummary: ColumnSummary,
         columnDir: Path
@@ -268,66 +261,26 @@ class ReportSummary(
     }
 
 
-    private suspend fun loadOpaque(
-        columnDir: Path
-    ): OpaqueValueSummary {
-        val opaqueFile = columnDir.resolve(opaqueCsvFilename)
-
-        if (! Files.exists(opaqueFile)) {
-            return OpaqueValueSummary.empty
-        }
-
-        val opaqueFileContent = withContext(Dispatchers.IO) {
-            Files.readString(opaqueFile)
-        }
-
-        val opaqueFileCsv = fromCsv(opaqueFileContent)
-        return OpaqueValueSummary.fromCsv(opaqueFileCsv)
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     @Synchronized
-    fun view(): TableSummary {
-        if (taskHandle == null) {
-            return viewInCurrentThread()
+    fun previewFromOtherThread(): TableSummary? {
+        check(viewResponse == null)
+
+        val response = CompletableFuture<TableSummary>()
+        viewResponse = response
+
+        val value = response.get()
+
+        if (value.isEmpty()) {
+            return null
         }
-
-        viewRequested = true
-
-        var response: TableSummary? = null
-        while (response == null) {
-            response =
-                try {
-                    viewResponse.get(1, TimeUnit.SECONDS)
-                }
-                catch (e: TimeoutException) {
-                    if (taskHandle.isTerminated()) {
-                        viewInCurrentThread()
-                    }
-                    else {
-                        continue
-                    }
-                }
-        }
-
-        viewResponse = CompletableFuture()
-
-        return response
-    }
-
-
-    private fun viewInCurrentThread(): TableSummary {
-        return runBlocking {
-            load() ?: TableSummary.empty
-        }
+        return value
     }
 
 
     fun handleViewRequest() {
-        if (! viewRequested) {
-            return
-        }
+        val response = viewResponse
+            ?: return
 
         val tableSummary = TableSummary(
             headerIndex
@@ -336,8 +289,8 @@ class ReportSummary(
                 .withIndex()
                 .associate { it.value to builders[it.index].build() })
 
-        viewResponse.complete(tableSummary)
-        viewRequested = false
+        response.complete(tableSummary)
+        viewResponse = null
     }
 
 
@@ -360,8 +313,7 @@ class ReportSummary(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        if (taskHandle != null) {
-            save()
-        }
+        viewResponse?.complete(TableSummary.empty)
+        save()
     }
 }

@@ -68,6 +68,7 @@ object CommonRestApi {
     const val paramTaskId = "task"
     const val paramRunId = "run"
     const val paramExecutionId = "execution"
+//    const val paramAction = "action"
 
 
     private const val actionPrefix = "/action/"

@@ -150,6 +150,7 @@ class PipelineFormulaController(
                             formulaSpec = props.formulaSpec
                             runningOrLoading = props.runningOrLoading
                             this.columnName = columnName
+                            columnListing = props.columnListing
                             formulaStore = props.formulaStore
                         }
                     }

@@ -5,6 +5,7 @@ import com.lmax.disruptor.dsl.Disruptor
 import com.lmax.disruptor.dsl.ProducerType
 import com.lmax.disruptor.util.DaemonThreadFactory
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
@@ -120,9 +121,6 @@ class PipelineExecution(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private var nextDatasetInfo: DatasetInfo? = null
-
-
     private val failed = AtomicBoolean(false)
 
     @Volatile
@@ -131,7 +129,7 @@ class PipelineExecution(
     private val preCachePartitions = ProcessorPreCacheStage.partitions(preCachePartitionCount)
 
     private val summary = ProcessorSummaryStage(
-        ReportSummary(initialReportRunContext, initialReportRunContext.runDir, null))
+        ReportSummary(initialReportRunContext, initialReportRunContext.runDir))
 
     private var tableOutput: ProcessorOutputTableStage? = null
     private var exportWriter: CompressedExportWriter? = null
@@ -310,6 +308,23 @@ class PipelineExecution(
 
 
     private fun pollRequest(executionRequest: ExecutionRequest): ExecutionResult {
+        val action = executionRequest.getSingle(PipelineConventions.actionParameter)
+            ?: return ExecutionResult.failure("Missing action")
+
+        return when (action) {
+            PipelineConventions.actionOutputInfoOnline ->
+                pollOutputInfoRequest(executionRequest)
+
+            PipelineConventions.actionSummaryOnline ->
+                pollSummaryRequest()
+
+            else ->
+                ExecutionResult.failure("Unknown action: $action")
+        }
+    }
+
+
+    private fun pollOutputInfoRequest(executionRequest: ExecutionRequest): ExecutionResult {
         val withoutPreview = OutputInfo(
             initialReportRunContext.runDir.toString(),
             null,
@@ -340,6 +355,15 @@ class PipelineExecution(
 
         return ExecutionResult.success(ExecutionValue.of(
             withPreview.toCollection()))
+    }
+
+
+    private fun pollSummaryRequest(): ExecutionResult {
+        val response = summary.reportSummary.previewFromOtherThread()
+            ?: return ExecutionResult.failure("Summary failed")
+
+        return ExecutionResult.success(ExecutionValue.of(
+            response.toCollection()))
     }
 
 

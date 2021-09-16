@@ -64,6 +64,7 @@ class FormulaItemController(
         var formulaState: PipelineFormulaState
         var formulaSpec: FormulaSpec
         var runningOrLoading: Boolean
+        var columnListing: List<String>?
         var columnName: String
         var formulaStore: PipelineFormulaStore
     }
@@ -218,20 +219,19 @@ class FormulaItemController(
                     }
 
                     td {
-                        +"[ref]"
-//                        child(FormulaColumnReference::class) {
-//                            attrs {
-//                                this.columnNames = props.reportState.columnListing ?: listOf()
-//                                this.editDisabled = editDisabled
-//
-//                                addLabel = "Column reference"
-//                                addIcon = "CallReceived"
-//
-//                                onAdded = { columnName ->
-//                                    onInsertColumn(columnName)
-//                                }
-//                            }
-//                        }
+                        child(FormulaReferenceController::class) {
+                            attrs {
+                                this.columnNames = props.columnListing ?: listOf()
+                                this.editDisabled = props.runningOrLoading
+
+                                addLabel = "Column reference"
+                                addIcon = "CallReceived"
+
+                                onAdded = { columnName ->
+                                    onInsertColumn(columnName)
+                                }
+                            }
+                        }
                     }
                 }
             }

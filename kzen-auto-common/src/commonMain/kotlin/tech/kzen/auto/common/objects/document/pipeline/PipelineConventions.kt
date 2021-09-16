@@ -55,9 +55,8 @@ object PipelineConventions {
     const val actionListColumns = "columns"
     const val actionOutputInfoOffline = "output-offline"
     const val actionOutputInfoOnline = "output-online"
-    const val actionSummaryLookup = "summary-lookup"
-//    const val actionRunTask = "run"
-//    const val actionSave = "save"
+    const val actionSummaryOffline = "summary-offline"
+    const val actionSummaryOnline = "summary-online"
     const val actionReset = "reset"
     const val actionValidateFormulas = "formulas"
 

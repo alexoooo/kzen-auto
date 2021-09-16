@@ -5,6 +5,7 @@ import tech.kzen.auto.client.objects.document.pipeline.input.browse.model.InputB
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputState
+import tech.kzen.auto.client.objects.document.pipeline.preview.model.PipelinePreviewState
 import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunState
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
@@ -27,6 +28,7 @@ data class PipelineState(
     val mainDefinition: ObjectDefinition,
     val input: PipelineInputState = PipelineInputState(),
     val formula: PipelineFormulaState = PipelineFormulaState(),
+    val previewFiltered: PipelinePreviewState = PipelinePreviewState(),
     val output: PipelineOutputState = PipelineOutputState(),
     val run: PipelineRunState = PipelineRunState(),
     val notationError: String? = null,
@@ -120,6 +122,11 @@ data class PipelineState(
 
 
     fun isRunningOrLoading(): Boolean {
+        return isRunning()
+    }
+
+
+    fun isRunning(): Boolean {
         return run.logicStatus?.active != null
     }
 
@@ -157,6 +164,12 @@ data class PipelineState(
     fun withFormula(updater: (PipelineFormulaState) -> PipelineFormulaState): PipelineState {
         return copy(
             formula = updater(formula))
+    }
+
+
+    fun withPreviewFiltered(updater: (PipelinePreviewState) -> PipelinePreviewState): PipelineState {
+        return copy(
+            previewFiltered = updater(previewFiltered))
     }
 
 
