@@ -110,6 +110,10 @@ class PipelineOutputStore(
             }
         }
 
+        if (store.state().output.outputInfo?.status?.isTerminal() == true) {
+            return
+        }
+
         val offlineResult = outputInfoOffline()
 
         store.update { state -> state.withOutput {
@@ -119,9 +123,9 @@ class PipelineOutputStore(
             )
         } }
 
-        if (offlineResult.errorOrNull() == null) {
-            store.run.lookupProgressOffline()
-        }
+//        if (offlineResult.errorOrNull() == null) {
+//            store.run.lookupProgressOffline()
+//        }
     }
 
 

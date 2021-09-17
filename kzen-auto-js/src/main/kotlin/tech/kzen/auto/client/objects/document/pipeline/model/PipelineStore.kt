@@ -132,9 +132,9 @@ class PipelineStore: SessionGlobal.Observer {
                 return@async
             }
 
+            output.init()
             run.init()
             input.init()
-            output.init()
             formula.validateAsync()
             previewFiltered.init()
         }
@@ -198,7 +198,8 @@ class PipelineStore: SessionGlobal.Observer {
         else if (previousRunning) {
             cancelRefresh()
             output.lookupOutputWithFallbackAsync()
-//            run.lookupProgressOfflineAsync()
+            run.lookupProgressOfflineAsync()
+            previewFiltered.lookupSummaryWithFallbackAsync()
         }
         previousRunning = running
     }

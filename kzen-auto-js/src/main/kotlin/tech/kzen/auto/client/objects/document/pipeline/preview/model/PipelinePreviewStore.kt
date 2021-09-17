@@ -79,10 +79,6 @@ class PipelinePreviewStore(
                 previewError = offlineResult.errorOrNull()
             )
         } }
-
-        if (offlineResult.errorOrNull() == null) {
-            store.run.lookupProgressOffline()
-        }
     }
 
 

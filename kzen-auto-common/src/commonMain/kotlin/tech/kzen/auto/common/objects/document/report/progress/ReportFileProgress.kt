@@ -71,7 +71,6 @@ data class ReportFileProgress(
         val adjustedDurationMillis = durationMillis.coerceAtLeast(1)
         val durationSeconds = adjustedDurationMillis / 1000
 
-
         return when {
             finished -> {
                 val overallRecordsSpeed = FormatUtils.decimalSeparator(
@@ -88,9 +87,7 @@ data class ReportFileProgress(
                 val percent = ((readBytes.toDouble() / totalSize.coerceAtLeast(1)) * 100)
                 val percentFormat = percent.toInt().toString() + "." + (percent * 10 % 10).toInt()
 
-                val recentRecordsSpeed = FormatUtils.decimalSeparator(
-                    1000L * recentRecordsPerSecond / adjustedDurationMillis)
-
+                val recentRecordsSpeed = FormatUtils.decimalSeparator(recentRecordsPerSecond)
                 val recentDataSpeed = FormatUtils.readableFileSize(recentBytesPerSecond)
 
                 "$percentFormat%: $recordsFormat records (${readFormat}) for ${durationSeconds}s " +

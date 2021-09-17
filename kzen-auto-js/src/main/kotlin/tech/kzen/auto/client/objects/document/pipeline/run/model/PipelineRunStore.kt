@@ -20,8 +20,34 @@ class PipelineRunStore(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun init() {
-        refresh()
+        lookupStatus()
+
+        val activeInfo = store.state().run.logicStatus?.active
+        if (activeInfo != null) {
+            lookupProgress(LogicRunExecutionId(
+                activeInfo.id, activeInfo.frame.executionId))
+        }
+        else {
+            lookupProgressOffline()
+        }
     }
+
+
+//    suspend fun lookupProgressOffline() {
+//        val runExecutionId = store.state().output.outputInfo?.runExecutionId
+//            ?: return
+//
+//        lookupProgress(runExecutionId)
+//    }
+//
+//
+//    suspend fun lookupProgressActive() {
+//        val activeInfo = store.state().run.logicStatus?.active
+//            ?: return
+//
+//        lookupProgress(LogicRunExecutionId(
+//            activeInfo.id, activeInfo.frame.executionId))
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -75,16 +101,21 @@ class PipelineRunStore(
                     .withRun { it.copy(starting = false) }
                 }
 
-                delay(10)
-                lookupStatus()
-
-                delay(10)
-                store.output.lookupOutputWithFallback()
-
-                delay(10)
-                store.previewFiltered.lookupSummaryWithFallback()
+                refreshAll()
             }
         }
+    }
+
+
+    private suspend fun refreshAll() {
+        delay(10)
+        lookupStatus()
+
+        delay(10)
+        store.output.lookupOutputWithFallback()
+
+        delay(10)
+        store.previewFiltered.lookupSummaryWithFallback()
     }
 
 
@@ -118,19 +149,18 @@ class PipelineRunStore(
                     .withRun { it.copy(cancelling = false) }
                 }
 
-                delay(10)
-                lookupStatus()
+                refreshAll()
             }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    fun lookupProgressOfflineAsync() {
-//        async {
-//            lookupProgressOffline()
-//        }
-//    }
+    fun lookupProgressOfflineAsync() {
+        async {
+            lookupProgressOffline()
+        }
+    }
 
 
     suspend fun lookupProgressOffline() {
