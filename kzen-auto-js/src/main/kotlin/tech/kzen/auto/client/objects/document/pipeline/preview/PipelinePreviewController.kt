@@ -12,6 +12,8 @@ import tech.kzen.auto.client.objects.document.common.edit.BooleanAttributeEditor
 import tech.kzen.auto.client.objects.document.pipeline.preview.model.PipelinePreviewState
 import tech.kzen.auto.client.objects.document.pipeline.preview.model.PipelinePreviewStore
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
+import tech.kzen.auto.client.wrap.iconify.iconify
+import tech.kzen.auto.client.wrap.iconify.vaadinIconInfoCircleO
 import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.RefreshIcon
 import tech.kzen.auto.client.wrap.material.VisibilityIcon
@@ -247,14 +249,25 @@ class PipelinePreviewController(
 
 
     private fun RBuilder.renderInfo() {
-        styledDiv {
-            //child(InfoIcon::class) {}
+        if (props.previewSpec.enabled) {
+            return
+        }
 
+        styledDiv {
             styledSpan {
                 css {
                     fontSize = 1.25.em
                     fontStyle = FontStyle.italic
+                    color = Color.darkGray
                 }
+
+                styledSpan {
+                    css {
+                        marginRight = 0.25.em
+                    }
+                    iconify(vaadinIconInfoCircleO)
+                }
+
                 +"Must be enabled for suggestions to appear in Filter"
             }
         }

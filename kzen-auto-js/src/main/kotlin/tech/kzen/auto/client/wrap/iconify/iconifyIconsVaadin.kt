@@ -19,3 +19,6 @@ external val vaadinIconUploadAlt: IconifyIconModule
 @JsModule("@iconify/icons-vaadin/file")
 external val vaadinIconFile: IconifyIconModule
 
+@JsModule("@iconify/icons-vaadin/info-circle-o")
+external val vaadinIconInfoCircleO: IconifyIconModule
+
