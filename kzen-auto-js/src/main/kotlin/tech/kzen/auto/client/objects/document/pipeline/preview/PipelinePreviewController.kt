@@ -47,6 +47,32 @@ class PipelinePreviewController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun CssBuilder.commonThCss() {
+        position = Position.sticky
+        top = 0.px
+        backgroundColor = Color.white
+        zIndex = 999
+        textAlign = TextAlign.left
+//        boxShadowInset(Color.lightGray, (-2).px, (-2).px, 0.px, 0.px)
+        boxShadowInset(Color.lightGray, 0.px, (-2).px, 0.px, 0.px)
+        paddingLeft = 0.5.em
+        paddingRight = 0.5.em
+    }
+
+
+    private fun CssBuilder.commonTdCss(isFirst: Boolean) {
+        paddingLeft = 0.5.em
+        paddingRight = 0.5.em
+
+        if (! isFirst) {
+            borderTopWidth = 1.px
+            borderTopStyle = BorderStyle.solid
+            borderTopColor = Color.lightGray
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         styledDiv {
             css {
@@ -250,82 +276,60 @@ class PipelinePreviewController(
             }
 
             styledTable {
+                css {
+                    borderCollapse = BorderCollapse.collapse
+                    width = 100.pct
+                }
+
                 thead {
                     tr {
                         styledTh {
                             css {
                                 position = Position.sticky
+                                left = 0.px
                                 top = 0.px
                                 backgroundColor = Color.white
-                                zIndex = 999
+                                zIndex = 1000
                                 textAlign = TextAlign.left
-                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                boxShadowInset(Color.lightGray, (-2).px, (-2).px, 0.px, 0.px)
+                                paddingLeft = 0.5.em
+                                paddingRight = 0.5.em
                             }
                             +"Column"
                         }
                         styledTh {
                             css {
-                                position = Position.sticky
-                                top = 0.px
-                                backgroundColor = Color.white
-                                zIndex = 999
-                                textAlign = TextAlign.left
-                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                commonThCss()
                             }
                             +"Non-empty Count"
                         }
                         styledTh {
                             css {
-                                position = Position.sticky
-                                top = 0.px
-                                backgroundColor = Color.white
-                                zIndex = 999
-                                textAlign = TextAlign.left
-                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                commonThCss()
                             }
                             +"Number Count"
                         }
                         styledTh {
                             css {
-                                position = Position.sticky
-                                top = 0.px
-                                backgroundColor = Color.white
-                                zIndex = 999
-                                textAlign = TextAlign.left
-                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                commonThCss()
                             }
                             +"Sum"
                         }
                         styledTh {
                             css {
-                                position = Position.sticky
-                                top = 0.px
-                                backgroundColor = Color.white
-                                zIndex = 999
-                                textAlign = TextAlign.left
-                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                commonThCss()
                             }
                             +"Min"
                         }
                         styledTh {
                             css {
-                                position = Position.sticky
-                                top = 0.px
-                                backgroundColor = Color.white
-                                zIndex = 999
-                                textAlign = TextAlign.left
-                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                commonThCss()
                             }
                             +"Max"
                         }
                         styledTh {
                             css {
-                                position = Position.sticky
-                                top = 0.px
-                                backgroundColor = Color.white
-                                zIndex = 999
-                                textAlign = TextAlign.left
-                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                commonThCss()
                             }
                             styledDiv {
                                 css {
@@ -336,12 +340,7 @@ class PipelinePreviewController(
                         }
                         styledTh {
                             css {
-                                position = Position.sticky
-                                top = 0.px
-                                backgroundColor = Color.white
-                                zIndex = 999
-                                textAlign = TextAlign.left
-                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                commonThCss()
                             }
                             styledDiv {
                                 css {
@@ -353,22 +352,32 @@ class PipelinePreviewController(
                     }
                 }
                 tbody {
+                    var isFirst = true
                     for ((columnName, columnSummary) in tableSummary.columnSummaries) {
-                        tr {
+                        styledTr {
                             key = columnName
+
+                            css {
+                                hover {
+                                    backgroundColor = Color.lightGrey
+                                }
+                            }
 
                             styledTd {
                                 css {
-                                    paddingLeft = 0.5.em
-                                    paddingRight = 0.5.em
+                                    position = Position.sticky
+                                    left = 0.px
+                                    backgroundColor = Color.white
+                                    zIndex = 999
+                                    boxShadowInset(Color.lightGray, (-2).px, 0.px, 0.px, 0.px)
+                                    commonTdCss(isFirst)
                                 }
                                 +columnName
                             }
 
                             styledTd {
                                 css {
-                                    paddingLeft = 0.5.em
-                                    paddingRight = 0.5.em
+                                    commonTdCss(isFirst)
                                 }
                                 if (! columnSummary.isEmpty()) {
                                     +"${columnSummary.count}"
@@ -377,8 +386,7 @@ class PipelinePreviewController(
 
                             styledTd {
                                 css {
-                                    paddingLeft = 0.5.em
-                                    paddingRight = 0.5.em
+                                    commonTdCss(isFirst)
                                 }
                                 if (columnSummary.numericValueSummary.count > 0) {
                                     +"${columnSummary.numericValueSummary.count}"
@@ -386,8 +394,7 @@ class PipelinePreviewController(
                             }
                             styledTd {
                                 css {
-                                    paddingLeft = 0.5.em
-                                    paddingRight = 0.5.em
+                                    commonTdCss(isFirst)
                                 }
                                 if (columnSummary.numericValueSummary.count > 0) {
                                     +"${columnSummary.numericValueSummary.sum}"
@@ -395,8 +402,7 @@ class PipelinePreviewController(
                             }
                             styledTd {
                                 css {
-                                    paddingLeft = 0.5.em
-                                    paddingRight = 0.5.em
+                                    commonTdCss(isFirst)
                                 }
                                 if (columnSummary.numericValueSummary.count > 0) {
                                     +"${columnSummary.numericValueSummary.min}"
@@ -404,8 +410,7 @@ class PipelinePreviewController(
                             }
                             styledTd {
                                 css {
-                                    paddingLeft = 0.5.em
-                                    paddingRight = 0.5.em
+                                    commonTdCss(isFirst)
                                 }
                                 if (columnSummary.numericValueSummary.count > 0) {
                                     +"${columnSummary.numericValueSummary.max}"
@@ -414,8 +419,7 @@ class PipelinePreviewController(
 
                             styledTd {
                                 css {
-                                    paddingLeft = 0.5.em
-                                    paddingRight = 0.5.em
+                                    commonTdCss(isFirst)
                                 }
                                 if (! columnSummary.nominalValueSummary.isEmpty()) {
                                     if (columnSummary.nominalValueSummary.histogram.size > 5) {
@@ -440,8 +444,7 @@ class PipelinePreviewController(
 
                             styledTd {
                                 css {
-                                    paddingLeft = 0.5.em
-                                    paddingRight = 0.5.em
+                                    commonTdCss(isFirst)
                                 }
                                 if (! columnSummary.opaqueValueSummary.isEmpty()) {
                                     +columnSummary
@@ -452,6 +455,8 @@ class PipelinePreviewController(
                                 }
                             }
                         }
+
+                        isFirst = false
                     }
                 }
             }
