@@ -110,7 +110,12 @@ class PipelineOutputStore(
             }
         }
 
-        if (store.state().output.outputInfo?.status?.isTerminal() == true) {
+        if (store.state().output.outputInfo?.status?.isTerminal() == true &&
+                store.state().outputSpec().explore.previewStartZeroBased() ==
+                    store.state().output.outputInfo?.table?.preview?.startRow &&
+                store.state().outputSpec().explore.previewCount ==
+                    store.state().output.outputInfo?.table?.preview?.rows?.size
+        ) {
             return
         }
 
