@@ -6,13 +6,17 @@ import react.RPureComponent
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.pipeline.filter.model.PipelineFilterState
+import tech.kzen.auto.client.objects.document.pipeline.filter.model.PipelineFilterStore
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconFilter
 import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.RefreshIcon
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
+import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 
 
 class PipelineFilterController(
@@ -24,8 +28,10 @@ class PipelineFilterController(
     interface Props: react.Props {
         var filterSpec: FilterSpec
         var runningOrLoading: Boolean
-//        var reportState: ReportState,
-//        var dispatcher: ReportDispatcher
+        var filterStore: PipelineFilterStore
+        var filterState: PipelineFilterState
+        var inputAndCalculatedColumns: HeaderListing?
+        var tableSummary: TableSummary?
     }
 
 
@@ -162,38 +168,44 @@ class PipelineFilterController(
 
 
     private fun RBuilder.renderFilterList() {
-//        val filterSpec = props.reportState.filterSpec()
+        val filterSpec = props.filterSpec
         styledDiv {
-//            for ((index, columnName) in filterSpec.columns.keys.withIndex()) {
-//                styledDiv {
-//                    key = columnName
-//
-//                    if (index < filterSpec.columns.size - 1) {
-//                        css {
-//                            marginBottom = 1.em
-//                        }
-//                    }
-//
-//                    child(ReportFilterItem::class) {
-//                        attrs {
+            for ((index, columnName) in filterSpec.columns.keys.withIndex()) {
+                styledDiv {
+                    key = columnName
+
+                    if (index < filterSpec.columns.size - 1) {
+                        css {
+                            marginBottom = 1.em
+                        }
+                    }
+
+                    child(FilterItemController::class) {
+                        attrs {
 //                            reportState = props.reportState
 //                            dispatcher = props.dispatcher
-//                            this.filterSpec = filterSpec
-//                            this.columnName = columnName
-//                        }
-//                    }
-//                }
-//            }
+                            this.filterSpec = filterSpec
+                            this.columnName = columnName
+                            runningOrLoading = props.runningOrLoading
+                            inputAndCalculatedColumns = props.inputAndCalculatedColumns
+                            tableSummary = props.tableSummary
+                            filterStore = props.filterStore
+                        }
+                    }
+                }
+            }
         }
     }
 
 
     private fun RBuilder.renderFilterAdd() {
-//        child(ReportFilterAdd::class) {
-//            attrs {
-//                reportState = props.reportState
-//                dispatcher = props.dispatcher
-//            }
-//        }
+        child(FilterAddController::class) {
+            attrs {
+                filterStore = props.filterStore
+                filterState = props.filterState
+                filterSpec = props.filterSpec
+                inputAndCalculatedColumns = props.inputAndCalculatedColumns
+            }
+        }
     }
 }

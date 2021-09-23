@@ -128,9 +128,19 @@ class PipelineOutputStore(
             )
         } }
 
-//        if (offlineResult.errorOrNull() == null) {
-//            store.run.lookupProgressOffline()
-//        }
+        lookupOutputOffline()
+    }
+
+
+    suspend fun lookupOutputOffline() {
+        val offlineResult = outputInfoOffline()
+
+        store.update { state -> state.withOutput {
+            it.copy(
+                outputInfo = offlineResult.valueOrNull(),
+                outputInfoError = offlineResult.errorOrNull()
+            )
+        } }
     }
 
 

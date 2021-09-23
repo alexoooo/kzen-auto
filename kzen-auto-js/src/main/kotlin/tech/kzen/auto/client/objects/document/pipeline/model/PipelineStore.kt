@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.pipeline.model
 
 import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.pipeline.analysis.model.PipelineAnalysisStore
+import tech.kzen.auto.client.objects.document.pipeline.filter.model.PipelineFilterStore
 import tech.kzen.auto.client.objects.document.pipeline.formula.model.PipelineFormulaStore
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
@@ -52,6 +53,7 @@ class PipelineStore: SessionGlobal.Observer {
 
     val input = PipelineInputStore(this)
     val formula = PipelineFormulaStore(this)
+    val filter = PipelineFilterStore(this)
     val analysis = PipelineAnalysisStore(this)
     val previewFiltered = PipelinePreviewStore(this)
     val output = PipelineOutputStore(this)

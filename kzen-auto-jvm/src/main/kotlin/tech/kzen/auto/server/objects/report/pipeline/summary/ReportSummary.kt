@@ -160,6 +160,9 @@ class ReportSummary(
     @Volatile
     private var viewResponse: CompletableFuture<TableSummary>? = null
 
+    @Volatile
+    private var closed: Boolean = false
+
 
     private val headerIndex = RecordHeaderIndex(
         initialReportRunContext.inputAndFormulaColumns)
@@ -266,6 +269,10 @@ class ReportSummary(
     fun previewFromOtherThread(): TableSummary? {
         check(viewResponse == null)
 
+        if (closed) {
+            return null
+        }
+
         val response = CompletableFuture<TableSummary>()
         viewResponse = response
 
@@ -312,7 +319,9 @@ class ReportSummary(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+//    @Synchronized
     override fun close() {
+        closed = true
         viewResponse?.complete(TableSummary.empty)
         save()
     }

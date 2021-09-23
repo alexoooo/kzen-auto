@@ -174,14 +174,6 @@ class ServerLogicController(
                 LogicConventions.missingExecution(executionId, runId))
 
         return frame.control.publishRequest(request)
-//        val resultPromise = frame.control.publishRequest(request)
-//
-//        return try {
-//            resultPromise.get()
-//        }
-//        catch (e: Exception) {
-//            ExecutionFailure.ofException(e)
-//        }
     }
 
 

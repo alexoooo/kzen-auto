@@ -201,6 +201,11 @@ class PipelineController(
             attrs {
                 filterSpec = pipelineState.filterSpec()
                 runningOrLoading = pipelineState.isRunningOrLoading()
+                filterStore = store.filter
+                filterState = pipelineState.filter
+                runningOrLoading = pipelineState.isRunningOrLoading()
+                inputAndCalculatedColumns = pipelineState.inputAndCalculatedColumns()
+                tableSummary = pipelineState.previewFiltered.tableSummary
             }
         }
     }

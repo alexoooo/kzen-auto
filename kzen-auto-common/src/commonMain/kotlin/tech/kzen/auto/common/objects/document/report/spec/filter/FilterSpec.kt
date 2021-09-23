@@ -135,7 +135,7 @@ data class FilterSpec(
     //-----------------------------------------------------------------------------------------------------------------
     fun toRunSignature(): FilterSpec {
         return FilterSpec(
-            columns.filterValues { it.values.isNotEmpty() })
+            columns.filterValues { ! it.isEmpty() })
     }
 
 

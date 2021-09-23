@@ -38,7 +38,6 @@ class MutableLogicControl(
     }
 
 
-//    fun publishRequest(request: ExecutionRequest): Future<ExecutionResult> {
     fun publishRequest(request: ExecutionRequest): ExecutionResult {
         val subscriber = requestSubscriber.get()
             ?: return ExecutionResult.failure("No request listener")
@@ -49,12 +48,6 @@ class MutableLogicControl(
         catch (e: Throwable) {
             return ExecutionFailure.ofException(e)
         }
-
-//        val promise = CompletableFuture<ExecutionResult>()
-//        val requestPromise = RequestPromise(request, promise)
-//        requests.add(requestPromise)
-//        return promise
-//        return response
     }
 
 
@@ -72,17 +65,6 @@ class MutableLogicControl(
     override fun subscribeRequest(subscriber: (ExecutionRequest) -> ExecutionResult) {
         val wasSet = requestSubscriber.compareAndSet(null, subscriber)
         check(wasSet) { "Already subscribed" }
-
-//        val nextRequestPromise = requests.poll()
-//            ?: return
-//
-//        try {
-//            val value = observer(nextRequestPromise.request)
-//            nextRequestPromise.promise.complete(value)
-//        }
-//        catch (e: Throwable) {
-//            nextRequestPromise.promise.complete(ExecutionFailure.ofException(e))
-//        }
     }
 
 

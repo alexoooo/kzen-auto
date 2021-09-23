@@ -48,6 +48,12 @@ data class ColumnFilterSpec(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun isEmpty(): Boolean {
+        return values.isEmpty()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun digest(builder: Digest.Builder) {
         builder.addInt(type.ordinal)
         builder.addDigestibleUnorderedList(values.map { Digest.ofUtf8(it) })
