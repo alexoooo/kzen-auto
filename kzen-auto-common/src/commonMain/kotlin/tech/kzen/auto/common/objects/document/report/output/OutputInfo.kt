@@ -23,8 +23,6 @@ data class OutputInfo(
 
 
         fun fromCollection(collection: Map<String, Any?>): OutputInfo {
-//            println("^^^ OutputInfo ## fromCollection - $collection")
-
             @Suppress("UNCHECKED_CAST")
             val tableMap = collection[tableKey] as? Map<String, Any?>
             val table = tableMap?.let {

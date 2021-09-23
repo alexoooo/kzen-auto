@@ -89,15 +89,7 @@ class PipelinePreviewStore(
         val result = ClientContext.restClient.logicRequest(
             logicRunId,
             logicExecutionId,
-            PipelineConventions.actionParameter to PipelineConventions.actionSummaryOnline
-        )
-
-//        val result = ClientContext.restClient.performDetached(
-//            store.mainLocation(),
-//            PipelineConventions.actionParameter to PipelineConventions.actionSummaryOnline,
-//            LogicConventions.runIdKey to logicRunId.value,
-//            LogicConventions.executionIdKey to logicExecutionId.value,
-//        )
+            PipelineConventions.actionParameter to PipelineConventions.actionSummaryOnline)
 
         return when (result) {
             is ExecutionSuccess -> {

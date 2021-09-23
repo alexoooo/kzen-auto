@@ -110,23 +110,15 @@ class PipelineOutputStore(
             }
         }
 
-        if (store.state().output.outputInfo?.status?.isTerminal() == true &&
-                store.state().outputSpec().explore.previewStartZeroBased() ==
-                    store.state().output.outputInfo?.table?.preview?.startRow &&
-                store.state().outputSpec().explore.previewCount ==
-                    store.state().output.outputInfo?.table?.preview?.rows?.size
-        ) {
-            return
-        }
-
-        val offlineResult = outputInfoOffline()
-
-        store.update { state -> state.withOutput {
-            it.copy(
-                outputInfo = offlineResult.valueOrNull(),
-                outputInfoError = offlineResult.errorOrNull()
-            )
-        } }
+        // TODO: include signature to avoid refresh
+//        if (store.state().output.outputInfo?.status?.isTerminal() == true &&
+//                store.state().outputSpec().explore.previewStartZeroBased() ==
+//                    store.state().output.outputInfo?.table?.preview?.startRow &&
+//                store.state().outputSpec().explore.previewCount ==
+//                    store.state().output.outputInfo?.table?.preview?.rows?.size
+//        ) {
+//            return
+//        }
 
         lookupOutputOffline()
     }

@@ -46,15 +46,7 @@ class OutputTableController(
     }
 
 
-    interface State: react.State {
-//        var settingsOpen: Boolean
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    override fun State.init(props: Props) {
-//        settingsOpen = ! props.spec.explore.isDefaultWorkPath()
-//    }
+    interface State: react.State {}
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -69,14 +61,6 @@ class OutputTableController(
         }
         return value.substring(0, 47) + "..."
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    private fun onSettingsToggle() {
-//        setState {
-//            settingsOpen = ! settingsOpen
-//        }
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -165,13 +149,10 @@ class OutputTableController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun RBuilder.renderOutput() {
-//        val error = props.outputState.outputInfoError
         val outputInfo = props.outputState.outputInfo
         val outputPreview = outputInfo?.table?.preview
 
         styledDiv {
-//            renderSave(outputInfo)
-
             if (outputPreview != null && outputPreview.rows.isNotEmpty()) {
                 renderPreviewHeader(outputInfo)
                 renderPreviewTable(outputPreview)

@@ -59,7 +59,7 @@ class PipelineAnalysisStore(
         val command = PivotSpec.addValueTypeCommand(
             store.mainLocation(), columnName, valueType)
 
-        applyCommandAsync(command)
+        applyCommandAsync(command, true)
     }
 
 
@@ -67,7 +67,7 @@ class PipelineAnalysisStore(
         val command = PivotSpec.removeValueTypeCommand(
             store.mainLocation(), columnName, valueType)
 
-        applyCommandAsync(command)
+        applyCommandAsync(command, true)
     }
 
 
@@ -100,7 +100,7 @@ class PipelineAnalysisStore(
     //-----------------------------------------------------------------------------------------------------------------
     private fun applyCommandAsync(
         command: NotationCommand,
-        refreshOutput: Boolean = false
+        refreshOutput: Boolean
     ) {
         async {
             applyCommand(command, refreshOutput)

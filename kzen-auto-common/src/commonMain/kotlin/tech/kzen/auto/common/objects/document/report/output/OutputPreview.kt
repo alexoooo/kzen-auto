@@ -31,28 +31,11 @@ data class OutputPreview(
         ): HeaderListing {
             return when (analysisSpec.type) {
                 AnalysisType.PivotTable ->
-                    analysisSpec.pivot.rows.append(
-                        analysisSpec.pivot.values.headerListing())
+                    OutputPivotExportSignature.of(analysisSpec.pivot).header
 
                 else -> inputAndCalculatedColumns
             }
         }
-
-
-//        private fun headerNames(reportRunContext: ReportRunContext): HeaderListing {
-//            val runSignature = reportRunContext.toSignature()
-//
-//            return when {
-//                runSignature.hasPivot() ->
-//                    PivotBuilder.ExportSignature.of(
-//                        reportRunContext.analysis.pivot.rows,
-//                        reportRunContext.analysis.pivot.values
-//                    ).header
-//
-//                else ->
-//                    runSignature.inputAndFormulaColumns
-//            }
-//        }
     }
 
 

@@ -339,17 +339,29 @@ class RestHandler {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun upsertAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val documentPath: DocumentPath = serverRequest.getParam(
+    fun upsertAttributeGet(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return upsertAttributeImpl(serverRequest.queryParams())
+    }
+
+
+    fun upsertAttributePut(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return serverRequest.formData().flatMap { body ->
+            upsertAttributeImpl(body)
+        }
+    }
+
+
+    private fun upsertAttributeImpl(params: MultiValueMap<String, String>): Mono<ServerResponse> {
+        val documentPath: DocumentPath = params.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
-        val objectPath: ObjectPath = serverRequest.getParam(
+        val objectPath: ObjectPath = params.getParam(
             CommonRestApi.paramObjectPath, ObjectPath::parse)
 
-        val attributeName: AttributeName = serverRequest.getParam(
+        val attributeName: AttributeName = params.getParam(
             CommonRestApi.paramAttributeName, AttributeName::parse)
 
-        val attributeNotation: AttributeNotation = serverRequest.getParam(
+        val attributeNotation: AttributeNotation = params.getParam(
             CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
 
         return applyAndDigest(
@@ -360,17 +372,29 @@ class RestHandler {
     }
 
 
-    fun updateInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val documentPath: DocumentPath = serverRequest.getParam(
+    fun updateInAttributeGet(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return updateInAttributeImpl(serverRequest.queryParams())
+    }
+
+
+    fun updateInAttributePut(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return serverRequest.formData().flatMap { body ->
+            updateInAttributeImpl(body)
+        }
+    }
+
+
+    private fun updateInAttributeImpl(params: MultiValueMap<String, String>): Mono<ServerResponse> {
+        val documentPath: DocumentPath = params.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
-        val objectPath: ObjectPath = serverRequest.getParam(
+        val objectPath: ObjectPath = params.getParam(
             CommonRestApi.paramObjectPath, ObjectPath::parse)
 
-        val attributePath: AttributePath = serverRequest.getParam(
+        val attributePath: AttributePath = params.getParam(
             CommonRestApi.paramAttributePath, AttributePath::parse)
 
-        val attributeNotation: AttributeNotation = serverRequest.getParam(
+        val attributeNotation: AttributeNotation = params.getParam(
             CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
 
         return applyAndDigest(
@@ -458,20 +482,32 @@ class RestHandler {
     }
 
 
-    fun insertListItemInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val documentPath: DocumentPath = serverRequest.getParam(
+
+    fun insertListItemInAttributeGet(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return insertListItemInAttributeImpl(serverRequest.queryParams())
+    }
+
+
+    fun insertListItemInAttributePut(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return serverRequest.formData().flatMap { body ->
+            insertListItemInAttributeImpl(body)
+        }
+    }
+
+    private fun insertListItemInAttributeImpl(params: MultiValueMap<String, String>): Mono<ServerResponse> {
+        val documentPath: DocumentPath = params.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
-        val objectPath: ObjectPath = serverRequest.getParam(
+        val objectPath: ObjectPath = params.getParam(
             CommonRestApi.paramObjectPath, ObjectPath::parse)
 
-        val containingList: AttributePath = serverRequest.getParam(
+        val containingList: AttributePath = params.getParam(
             CommonRestApi.paramAttributePath, AttributePath::parse)
 
-        val indexInList: PositionRelation = serverRequest.getParam(
+        val indexInList: PositionRelation = params.getParam(
             CommonRestApi.paramPositionIndex, PositionRelation::parse)
 
-        val itemNotation: AttributeNotation = serverRequest.getParam(
+        val itemNotation: AttributeNotation = params.getParam(
             CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
 
         return applyAndDigest(
@@ -520,26 +556,38 @@ class RestHandler {
     }
 
 
-    fun insertMapEntryInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val documentPath: DocumentPath = serverRequest.getParam(
+
+    fun insertMapEntryInAttributeGet(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return insertMapEntryInAttributeImpl(serverRequest.queryParams())
+    }
+
+
+    fun insertMapEntryInAttributePut(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return serverRequest.formData().flatMap { body ->
+            insertMapEntryInAttributeImpl(body)
+        }
+    }
+
+    private fun insertMapEntryInAttributeImpl(params: MultiValueMap<String, String>): Mono<ServerResponse> {
+        val documentPath: DocumentPath = params.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
-        val objectPath: ObjectPath = serverRequest.getParam(
+        val objectPath: ObjectPath = params.getParam(
             CommonRestApi.paramObjectPath, ObjectPath::parse)
 
-        val containingMap: AttributePath = serverRequest.getParam(
+        val containingMap: AttributePath = params.getParam(
             CommonRestApi.paramAttributePath, AttributePath::parse)
 
-        val indexInMap: PositionRelation = serverRequest.getParam(
+        val indexInMap: PositionRelation = params.getParam(
             CommonRestApi.paramPositionIndex, PositionRelation::parse)
 
-        val mapKey: AttributeSegment = serverRequest.getParam(
+        val mapKey: AttributeSegment = params.getParam(
             CommonRestApi.paramAttributeKey, AttributeSegment::parse)
 
-        val valueNotation: AttributeNotation = serverRequest.getParam(
+        val valueNotation: AttributeNotation = params.getParam(
             CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
 
-        val createAncestorsIfAbsent: Boolean = serverRequest
+        val createAncestorsIfAbsent: Boolean = params
             .tryGetParam(CommonRestApi.paramAttributeCreateContainer) { value -> value == "true" }
             ?: false
 
@@ -578,20 +626,32 @@ class RestHandler {
     }
 
 
-    fun removeListItemInAttribute(serverRequest: ServerRequest): Mono<ServerResponse> {
-        val documentPath: DocumentPath = serverRequest.getParam(
+    fun removeListItemInAttributeGet(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return removeListItemInAttributeImpl(serverRequest.queryParams())
+    }
+
+
+    fun removeListItemInAttributePut(serverRequest: ServerRequest): Mono<ServerResponse> {
+        return serverRequest.formData().flatMap { body ->
+            removeListItemInAttributeImpl(body)
+        }
+    }
+
+
+    private fun removeListItemInAttributeImpl(params: MultiValueMap<String, String>): Mono<ServerResponse> {
+        val documentPath: DocumentPath = params.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
-        val objectPath: ObjectPath = serverRequest.getParam(
+        val objectPath: ObjectPath = params.getParam(
             CommonRestApi.paramObjectPath, ObjectPath::parse)
 
-        val attributePath: AttributePath = serverRequest.getParam(
+        val attributePath: AttributePath = params.getParam(
             CommonRestApi.paramAttributePath, AttributePath::parse)
 
-        val itemNotation: AttributeNotation = serverRequest.getParam(
+        val itemNotation: AttributeNotation = params.getParam(
             CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
 
-        val removeContainerIfEmpty: Boolean = serverRequest
+        val removeContainerIfEmpty: Boolean = params
             .tryGetParam(CommonRestApi.paramAttributeCleanupContainer) { i -> i == "true"}
             ?: false
 

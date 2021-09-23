@@ -96,13 +96,6 @@ data class AnalysisSpec(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    fun isEmpty(): Boolean {
-//        return rows.values.isEmpty() &&
-//                values.isEmpty()
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     fun toRunSignature(): AnalysisSpec {
         return when (type) {
             AnalysisType.FlatData ->
