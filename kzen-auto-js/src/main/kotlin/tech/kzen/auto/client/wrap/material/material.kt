@@ -204,6 +204,7 @@ external interface TextFieldProps: react.Props {
     var label: String
     var size: String
     var rows: Int
+    var maxRows: Int
     var multiline: Boolean
     var fullWidth: Boolean
     var margin: String

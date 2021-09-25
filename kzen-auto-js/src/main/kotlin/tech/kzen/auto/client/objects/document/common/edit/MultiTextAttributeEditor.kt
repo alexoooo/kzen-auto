@@ -12,6 +12,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.platform.collect.toPersistentList
+import kotlin.js.Json
 
 
 class MultiTextAttributeEditor(
@@ -37,6 +38,9 @@ class MultiTextAttributeEditor(
 
         var labelOverride: String?
         var InputProps: react.Props?
+        var style: Json?
+        var rows: Int?
+        var maxRows: Int?
 
         var disabled: Boolean
         var invalid: Boolean
@@ -187,6 +191,16 @@ class MultiTextAttributeEditor(
 
                 if (props.InputProps != null) {
                     InputProps = props.InputProps!!
+                }
+
+                if (props.style != null) {
+                    style = props.style!!
+                }
+                if (props.rows != null) {
+                    rows = props.rows!!
+                }
+                if (props.maxRows != null) {
+                    maxRows = props.maxRows!!
                 }
             }
         }

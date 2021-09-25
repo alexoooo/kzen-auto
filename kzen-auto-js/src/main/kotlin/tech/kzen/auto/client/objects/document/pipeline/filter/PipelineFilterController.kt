@@ -129,7 +129,7 @@ class PipelineFilterController(
 
             styledSpan {
                 css {
-                    float = kotlinx.css.Float.right
+                    float = Float.right
                 }
 
                 if (showRefresh) {
@@ -182,8 +182,6 @@ class PipelineFilterController(
 
                     child(FilterItemController::class) {
                         attrs {
-//                            reportState = props.reportState
-//                            dispatcher = props.dispatcher
                             this.filterSpec = filterSpec
                             this.columnName = columnName
                             runningOrLoading = props.runningOrLoading

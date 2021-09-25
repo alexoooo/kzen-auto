@@ -298,7 +298,6 @@ class FilterItemController(
         renderEditCriteria(columnFilterSpec, editDisabled)
 
         if (columnSummary == null) {
-            +"[-no summary-]"
             return
         }
 
@@ -386,6 +385,7 @@ class FilterItemController(
             attrs {
                 labelOverride = "Filter values"
                 disabled = editDisabled
+                maxRows = 10
 
                 objectLocation = props.filterStore.mainLocation()
                 attributePath = FilterSpec.columnValuesAttributePath(props.columnName)
@@ -556,7 +556,7 @@ class FilterItemController(
     private fun RBuilder.renderSample(opaque: OpaqueValueSummary) {
         styledDiv {
             css {
-                maxHeight = 20.em
+                maxHeight = 10.em
                 overflowY = Overflow.auto
                 marginTop = 0.5.em
             }
