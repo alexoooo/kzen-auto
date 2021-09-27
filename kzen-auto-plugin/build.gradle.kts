@@ -6,6 +6,13 @@ plugins {
 }
 
 
+kotlin {
+    jvmToolchain {
+        (this as JavaToolchainSpec).languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion))
+    }
+}
+
+
 dependencies {
     api("net.openhft:zero-allocation-hashing:$zeroAllocationHashingVersion")
 }

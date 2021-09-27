@@ -5,6 +5,10 @@ plugins {
 
 
 kotlin {
+    jvmToolchain {
+        (this as JavaToolchainSpec).languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion))
+    }
+
     jvm {
         @Suppress("UNUSED_VARIABLE")
         val main by compilations.getting {

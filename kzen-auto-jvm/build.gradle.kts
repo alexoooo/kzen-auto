@@ -16,6 +16,13 @@ plugins {
 }
 
 
+kotlin {
+    jvmToolchain {
+        (this as JavaToolchainSpec).languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion))
+    }
+}
+
+
 dependencies {
     implementation(project(":kzen-auto-common"))
     api(project(":kzen-auto-plugin"))
@@ -23,7 +30,6 @@ dependencies {
 //    implementation("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
     api("tech.kzen.lib:kzen-lib-jvm:$kzenLibVersion")
 
-//    implementation("org.springframework.boot:spring-boot-starter-webflux")
     api("org.springframework.boot:spring-boot-starter-webflux")
 
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
