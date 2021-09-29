@@ -237,6 +237,7 @@ class PipelineController(
                 runningOrLoading = pipelineState.isRunningOrLoading()
                 analysisStore = store.analysis
                 inputStore = store.input
+                outputStore = store.output
             }
         }
     }
@@ -247,7 +248,7 @@ class PipelineController(
             attrs {
                 spec = pipelineState.outputSpec()
                 analysisSpec = pipelineState.analysisSpec()
-                inputAndCalculatedColumns = pipelineState.inputAndCalculatedColumns()
+                filteredColumns = pipelineState.filteredColumns()
                 runningOrLoading = pipelineState.isRunningOrLoading()
                 progress = pipelineState.run.progress
                 outputState = pipelineState.output

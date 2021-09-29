@@ -22,8 +22,6 @@ data class ReportRunSignature(
     //-----------------------------------------------------------------------------------------------------------------
     fun hasPivot(): Boolean {
         return analysisSignature.type == AnalysisType.PivotTable
-//        return pivotRows.values.isNotEmpty() ||
-//                pivotValues.values.isNotEmpty()
     }
 
 

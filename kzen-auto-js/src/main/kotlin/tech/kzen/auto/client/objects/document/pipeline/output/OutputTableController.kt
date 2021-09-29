@@ -38,7 +38,7 @@ class OutputTableController(
     interface Props: react.Props {
         var spec: OutputSpec
         var analysisSpec: AnalysisSpec
-        var inputAndCalculatedColumns: HeaderListing?
+        var filteredColumns: HeaderListing?
         var runningOrLoading: Boolean
         var progress: PipelineRunProgress?
         var outputState: PipelineOutputState
@@ -72,7 +72,7 @@ class OutputTableController(
             renderHeaderControls()
         }
 
-        if (! props.inputAndCalculatedColumns?.values.isNullOrEmpty()) {
+        if (! props.filteredColumns?.values.isNullOrEmpty()) {
             renderOutput()
         }
     }
@@ -370,11 +370,11 @@ class OutputTableController(
 
 
     private fun RBuilder.renderPreviewTablePlaceholder() {
-        val inputAndCalculatedColumns = props.inputAndCalculatedColumns
+        val filteredColumns = props.filteredColumns
             ?: return
 
         val headerListing = OutputPreview.emptyHeaderListing(
-            inputAndCalculatedColumns, props.analysisSpec)
+            filteredColumns, props.analysisSpec)
 
         styledDiv {
             css {

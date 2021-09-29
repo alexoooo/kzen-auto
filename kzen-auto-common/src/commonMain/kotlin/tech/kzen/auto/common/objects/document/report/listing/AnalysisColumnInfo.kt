@@ -2,7 +2,7 @@ package tech.kzen.auto.common.objects.document.report.listing
 
 
 data class AnalysisColumnInfo(
-    val inputColumns: Map<String, Boolean>,
+    val inputAndCalculatedColumns: Map<String, Boolean>,
     val allowPatternError: String?,
     val excludePatternError: String?
 ) {
@@ -27,7 +27,7 @@ data class AnalysisColumnInfo(
     fun asCollection(): Map<String, Any> {
         val builder = mutableMapOf<String, Any>()
 
-        builder[inputColumnsKey] = inputColumns
+        builder[inputColumnsKey] = inputAndCalculatedColumns
 
         if (allowPatternError != null) {
             builder[allowPatternErrorKey] = allowPatternError

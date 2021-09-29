@@ -55,7 +55,6 @@ class PipelinePreviewController(
         backgroundColor = Color.white
         zIndex = 999
         textAlign = TextAlign.left
-//        boxShadowInset(Color.lightGray, (-2).px, (-2).px, 0.px, 0.px)
         boxShadowInset(Color.lightGray, 0.px, (-2).px, 0.px, 0.px)
         paddingLeft = 0.5.em
         paddingRight = 0.5.em
@@ -249,7 +248,10 @@ class PipelinePreviewController(
 
 
     private fun RBuilder.renderInfo() {
-        if (props.previewSpec.enabled) {
+        val enabled = props.previewSpec.enabled
+        val present = props.previewState.tableSummary != null
+
+        if (enabled && present) {
             return
         }
 
@@ -268,7 +270,12 @@ class PipelinePreviewController(
                     iconify(vaadinIconInfoCircleO)
                 }
 
-                +"Must be enabled for suggestions to appear in Filter"
+                if (! enabled) {
+                    +"Enable for suggestions to appear in Filter"
+                }
+                else {
+                    +"Run to populate preview data"
+                }
             }
         }
     }

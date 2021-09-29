@@ -124,6 +124,22 @@ class PipelineOutputStore(
     }
 
 
+    suspend fun lookupOutputOfflineIfTable() {
+        if (store.state().outputSpec().type != OutputType.Explore) {
+            return
+        }
+        lookupOutputOffline()
+    }
+
+    fun lookupOutputOfflineIfTableAsync() {
+        if (store.state().outputSpec().type != OutputType.Explore) {
+            return
+        }
+        async {
+            lookupOutputOffline()
+        }
+    }
+
     suspend fun lookupOutputOffline() {
         val offlineResult = outputInfoOffline()
 

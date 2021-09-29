@@ -7,6 +7,7 @@ import react.RPureComponent
 import styled.*
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
+import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
 import tech.kzen.auto.client.wrap.material.CheckIcon
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
@@ -31,6 +32,7 @@ class AnalysisFlatController(
         var analysisColumnInfo: AnalysisColumnInfo?
         var spec: AnalysisFlatDataSpec
         var pipelineInputStore: PipelineInputStore
+        var pipelineOutputStore: PipelineOutputStore
     }
 
 
@@ -40,6 +42,33 @@ class AnalysisFlatController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onChangedByEdit() {
         props.pipelineInputStore.listColumnsAsync()
+        props.pipelineOutputStore.lookupOutputOfflineIfTableAsync()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun CssBuilder.commonThCss() {
+        position = Position.sticky
+        top = 0.px
+        backgroundColor = Color.white
+        zIndex = 999
+        textAlign = TextAlign.left
+//        boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+        boxShadowInset(Color.lightGray, 0.px, (-2).px, 0.px, 0.px)
+        paddingLeft = 0.5.em
+        paddingRight = 0.5.em
+    }
+
+
+    private fun CssBuilder.commonTdCss(isFirst: Boolean) {
+        paddingLeft = 0.5.em
+        paddingRight = 0.5.em
+
+        if (! isFirst) {
+            borderTopWidth = 1.px
+            borderTopStyle = BorderStyle.solid
+            borderTopColor = Color.lightGray
+        }
     }
 
 
@@ -99,35 +128,20 @@ class AnalysisFlatController(
                     styledTr {
                         styledTh {
                             css {
-                                position = Position.sticky
-                                top = 0.px
-                                backgroundColor = Color.white
-                                zIndex = 999
-                                textAlign = TextAlign.left
-                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                commonThCss()
                             }
                             +"Column Number"
                         }
                         styledTh {
                             css {
-                                position = Position.sticky
-                                top = 0.px
-                                backgroundColor = Color.white
-                                zIndex = 999
-                                textAlign = TextAlign.left
-                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                commonThCss()
                                 width = 100.pct
                             }
                             +"Column Name"
                         }
                         styledTh {
                             css {
-                                position = Position.sticky
-                                top = 0.px
-                                backgroundColor = Color.white
-                                zIndex = 999
-                                textAlign = TextAlign.left
-                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                commonThCss()
                             }
                             +"Included"
                         }
@@ -135,18 +149,29 @@ class AnalysisFlatController(
                 }
 
                 styledTbody {
-                    for ((index, e) in analysisColumnInfo.inputColumns.entries.withIndex()) {
+                    for ((index, e) in analysisColumnInfo.inputAndCalculatedColumns.entries.withIndex()) {
                         val included = e.value
+                        val isFirst = index == 0
 
                         styledTr {
                             key = e.key
 
+                            css {
+                                hover {
+                                    backgroundColor = Color.lightGrey
+                                }
+                            }
+
                             styledTd {
+                                css {
+                                    commonTdCss(isFirst)
+                                }
                                 +"${index + 1}"
                             }
 
                             styledTd {
                                 css {
+                                    commonTdCss(isFirst)
                                     if (included) {
                                         fontWeight = FontWeight.bold
                                     }
@@ -155,6 +180,9 @@ class AnalysisFlatController(
                             }
 
                             styledTd {
+                                css {
+                                    commonTdCss(isFirst)
+                                }
                                 if (included) {
                                     child(CheckIcon::class) {
                                         attrs {

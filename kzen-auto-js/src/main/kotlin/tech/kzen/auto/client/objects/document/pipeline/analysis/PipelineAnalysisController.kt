@@ -9,6 +9,7 @@ import styled.styledSpan
 import tech.kzen.auto.client.objects.document.pipeline.analysis.model.PipelineAnalysisStore
 import tech.kzen.auto.client.objects.document.pipeline.analysis.pivot.AnalysisPivotController
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
+import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconLayout
@@ -36,6 +37,7 @@ class PipelineAnalysisController(
         var runningOrLoading: Boolean
         var analysisStore: PipelineAnalysisStore
         var inputStore: PipelineInputStore
+        var outputStore: PipelineOutputStore
     }
 
 
@@ -221,6 +223,7 @@ class PipelineAnalysisController(
                 analysisColumnInfo = props.analysisColumnInfo
                 spec = props.spec.flat
                 pipelineInputStore = props.inputStore
+                pipelineOutputStore = props.outputStore
             }
         }
     }

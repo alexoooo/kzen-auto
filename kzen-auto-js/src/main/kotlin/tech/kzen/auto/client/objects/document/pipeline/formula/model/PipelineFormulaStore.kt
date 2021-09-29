@@ -59,6 +59,9 @@ class PipelineFormulaStore(
             delay(1)
             val error = submitFormulaAdd(columnName)
             validateAfterNotationChange(error)
+
+            store.input.listColumnsIfFlat()
+            store.output.lookupOutputOfflineIfTable()
         }
     }
 
@@ -70,6 +73,9 @@ class PipelineFormulaStore(
             delay(1)
             val error = submitFormulaRemove(columnName)
             validateAfterNotationChange(error)
+
+            store.input.listColumnsIfFlat()
+            store.output.lookupOutputOfflineIfTable()
         }
     }
 

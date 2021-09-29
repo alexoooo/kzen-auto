@@ -37,7 +37,7 @@ class PipelineOutputController(
     interface Props: react.Props {
         var spec: OutputSpec
         var analysisSpec: AnalysisSpec
-        var inputAndCalculatedColumns: HeaderListing?
+        var filteredColumns: HeaderListing?
         var runningOrLoading: Boolean
         var progress: PipelineRunProgress?
         var outputState: PipelineOutputState
@@ -107,7 +107,7 @@ class PipelineOutputController(
     private fun RBuilder.renderContent() {
         renderHeader()
 
-        if (! props.inputAndCalculatedColumns?.values.isNullOrEmpty()) {
+        if (! props.filteredColumns?.values.isNullOrEmpty()) {
             renderBody()
         }
     }
@@ -159,7 +159,7 @@ class PipelineOutputController(
 
                 val status = props.outputState.outputInfo?.status ?: OutputStatus.Missing
                 if (status == OutputStatus.Missing) {
-                    if (props.inputAndCalculatedColumns?.values.isNullOrEmpty()) {
+                    if (props.filteredColumns?.values.isNullOrEmpty()) {
                         +"Select input (top of page)"
                     }
                     else {
@@ -323,7 +323,7 @@ class PipelineOutputController(
             attrs {
                 spec = props.spec
                 analysisSpec = props.analysisSpec
-                inputAndCalculatedColumns = props.inputAndCalculatedColumns
+                filteredColumns = props.filteredColumns
                 runningOrLoading = props.runningOrLoading
                 progress = props.progress
                 outputState = props.outputState

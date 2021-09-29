@@ -6,12 +6,12 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 
 class PipelineStateCache {
     //-----------------------------------------------------------------------------------------------------------------
-    private var cachedColumnListing: AnalysisColumnInfo? = null
+    private var cachedAnalysisColumnInfo: AnalysisColumnInfo? = null
     private var cachedFormulaKeys: Set<String>? = null
 
     private var inputColumnNamesCache: List<String>? = null
-//    private var filteredColumnsCache: List<String>? = null
     private var inputAndCalculatedColumnsCache: HeaderListing? = null
+    private var filteredColumnsCache: HeaderListing? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -27,32 +27,44 @@ class PipelineStateCache {
     }
 
 
+    fun filteredColumns(state: PipelineState): HeaderListing? {
+        update(state)
+        return filteredColumnsCache
+    }
+
+
     fun analysisColumnInfo(state: PipelineState): AnalysisColumnInfo? {
         update(state)
-        return cachedColumnListing
+        return cachedAnalysisColumnInfo
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun update(state: PipelineState) {
-        val columnListing = state.input.column.columnListing
+        val analysisColumnInfo = state.input.column.analysisColumnInfo
         val formulaKeys = state.formulaSpec().formulas.keys
 
-        if (columnListing === cachedColumnListing && formulaKeys === cachedFormulaKeys) {
+        if (analysisColumnInfo === cachedAnalysisColumnInfo && formulaKeys === cachedFormulaKeys) {
             return
         }
 
-        cachedColumnListing = columnListing
+        cachedAnalysisColumnInfo = analysisColumnInfo
         cachedFormulaKeys = formulaKeys
 
-        if (columnListing == null) {
+        if (analysisColumnInfo == null) {
             inputColumnNamesCache = null
             inputAndCalculatedColumnsCache = null
+            filteredColumnsCache = null
             return
         }
 
-        val allColumns = columnListing.inputColumns.keys.toList()
-        inputColumnNamesCache = allColumns
-        inputAndCalculatedColumnsCache = HeaderListing(allColumns + formulaKeys)
+        val inputAndCalculatedColumnNames = analysisColumnInfo.inputAndCalculatedColumns.keys.toList()
+        inputAndCalculatedColumnsCache = HeaderListing(inputAndCalculatedColumnNames)
+
+        val inputColumnNames = inputAndCalculatedColumnNames.filterNot { it in formulaKeys }
+        inputColumnNamesCache = inputColumnNames
+
+        val filteredColumnNames = analysisColumnInfo.inputAndCalculatedColumns.filter { it.value }.keys.toList()
+        filteredColumnsCache = HeaderListing(filteredColumnNames)
     }
 }

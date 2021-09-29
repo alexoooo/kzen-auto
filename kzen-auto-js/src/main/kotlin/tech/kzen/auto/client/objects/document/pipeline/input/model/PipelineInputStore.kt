@@ -9,6 +9,7 @@ import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 
@@ -62,6 +63,16 @@ class PipelineInputStore(
     }
 
 
+
+    suspend fun listColumnsIfFlat() {
+        if (store.state().analysisSpec().type != AnalysisType.FlatData) {
+            return
+        }
+
+        listColumns()
+    }
+
+
     suspend fun listColumns() {
         delay(1)
         beforeColumnListing()
@@ -91,7 +102,7 @@ class PipelineInputStore(
                 column = state.input.column.copy(
                     columnListingLoading = false,
                     columnListingLoaded = true,
-                    columnListing = result.valueOrNull(),
+                    analysisColumnInfo = result.valueOrNull(),
                     columnListingError = result.errorOrNull()
                 )
             )

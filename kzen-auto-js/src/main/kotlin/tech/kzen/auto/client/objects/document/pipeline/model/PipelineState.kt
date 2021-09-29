@@ -135,16 +135,18 @@ data class PipelineState(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    /**
-     * @return null if there is no column listing, otherwise input columns + calculated columns
-     */
+    fun inputColumnNames(): List<String>? {
+        return _cache.inputColumnNames(this)
+    }
+
+
     fun inputAndCalculatedColumns(): HeaderListing? {
         return _cache.inputAndCalculatedColumns(this)
     }
 
 
-    fun inputColumnNames(): List<String>? {
-        return _cache.inputColumnNames(this)
+    fun filteredColumns(): HeaderListing? {
+        return _cache.filteredColumns(this)
     }
 
 

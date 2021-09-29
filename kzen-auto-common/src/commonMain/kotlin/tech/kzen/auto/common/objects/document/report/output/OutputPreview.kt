@@ -26,14 +26,14 @@ data class OutputPreview(
 
 
         fun emptyHeaderListing(
-            inputAndCalculatedColumns: HeaderListing,
+            filteredColumns: HeaderListing,
             analysisSpec: AnalysisSpec
         ): HeaderListing {
             return when (analysisSpec.type) {
                 AnalysisType.PivotTable ->
                     OutputPivotExportSignature.of(analysisSpec.pivot).header
 
-                else -> inputAndCalculatedColumns
+                else -> filteredColumns
             }
         }
     }

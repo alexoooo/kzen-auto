@@ -230,17 +230,20 @@ class PipelineDocument(
             ?: return ExecutionFailure("Please provide a valid inputs")
 
         val inputColumnNames = datasetInfo.headerSuperset().values
-        val analysisColumnInfo = analysisColumnInfo(inputColumnNames)
+        val calculatedColumnNames = formula.formulas.keys.toList()
+        val inputAndCalculatedColumnNames = inputColumnNames + calculatedColumnNames
+
+        val analysisColumnInfo = analysisColumnInfo(inputAndCalculatedColumnNames)
 
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(analysisColumnInfo.asCollection()))
     }
 
 
-    private fun analysisColumnInfo(inputColumnNames: List<String>): AnalysisColumnInfo {
+    private fun analysisColumnInfo(inputAndCalculatedColumnNames: List<String>): AnalysisColumnInfo {
         if (analysis.type != AnalysisType.FlatData) {
             return AnalysisColumnInfo(
-                inputColumnNames.associateWith { true },
+                inputAndCalculatedColumnNames.associateWith { true },
                 null,
                 null)
         }
@@ -267,12 +270,12 @@ class PipelineDocument(
             }
         }
 
-        val inputColumns = inputColumnNames.associateWith { inputColumnName ->
+        val inputColumns = inputAndCalculatedColumnNames.associateWith { columnName ->
             val allow = allowPatterns.isEmpty() ||
-                    allowPatterns.any { it.matcher(inputColumnName).matches() }
+                    allowPatterns.any { it.matcher(columnName).matches() }
 
             val exclude = excludePatterns.isNotEmpty() &&
-                    excludePatterns.any { it.matcher(inputColumnName).matches() }
+                    excludePatterns.any { it.matcher(columnName).matches() }
 
             allow && ! exclude
         }
