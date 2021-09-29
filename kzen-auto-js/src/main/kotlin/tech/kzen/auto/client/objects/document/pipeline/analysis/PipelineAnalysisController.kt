@@ -8,6 +8,7 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.pipeline.analysis.model.PipelineAnalysisStore
 import tech.kzen.auto.client.objects.document.pipeline.analysis.pivot.AnalysisPivotController
+import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconLayout
@@ -16,6 +17,7 @@ import tech.kzen.auto.client.wrap.material.MaterialToggleButton
 import tech.kzen.auto.client.wrap.material.MaterialToggleButtonGroup
 import tech.kzen.auto.client.wrap.material.TableChartIcon
 import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
@@ -30,9 +32,10 @@ class PipelineAnalysisController(
     interface Props: react.Props {
         var spec: AnalysisSpec
         var inputAndCalculatedColumns: HeaderListing?
-        var filteredColumnNames: Map<String, Boolean>?
+        var analysisColumnInfo: AnalysisColumnInfo?
         var runningOrLoading: Boolean
         var analysisStore: PipelineAnalysisStore
+        var inputStore: PipelineInputStore
     }
 
 
@@ -214,7 +217,10 @@ class PipelineAnalysisController(
     private fun RBuilder.renderFlat() {
         child(AnalysisFlatController::class) {
             attrs {
-                filteredColumnNames = props.filteredColumnNames
+                mainLocation = props.analysisStore.mainLocation()
+                analysisColumnInfo = props.analysisColumnInfo
+                spec = props.spec.flat
+                pipelineInputStore = props.inputStore
             }
         }
     }

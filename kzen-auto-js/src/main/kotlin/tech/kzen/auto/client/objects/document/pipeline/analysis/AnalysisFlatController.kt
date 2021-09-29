@@ -1,12 +1,17 @@
 package tech.kzen.auto.client.objects.document.pipeline.analysis
 
 import kotlinx.css.*
+import kotlinx.css.properties.boxShadowInset
 import react.RBuilder
 import react.RPureComponent
-import react.dom.span
-import styled.css
-import styled.styledDiv
-import styled.styledSpan
+import styled.*
+import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
+import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
+import tech.kzen.auto.client.wrap.material.CheckIcon
+import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisFlatDataSpec
+import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 class AnalysisFlatController(
@@ -15,9 +20,17 @@ class AnalysisFlatController(
     RPureComponent<AnalysisFlatController.Props, AnalysisFlatController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val editorWidth = 18.em
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     interface Props: react.Props {
-        var filteredColumnNames: Map<String, Boolean>?
-//        var inputAndCalculatedColumns: HeaderListing?
+        var mainLocation: ObjectLocation
+        var analysisColumnInfo: AnalysisColumnInfo?
+        var spec: AnalysisFlatDataSpec
+        var pipelineInputStore: PipelineInputStore
     }
 
 
@@ -25,57 +38,215 @@ class AnalysisFlatController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onChangedByEdit() {
+        props.pipelineInputStore.listColumnsAsync()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val filteredColumnNames = props.filteredColumnNames
+        val analysisColumnInfo = props.analysisColumnInfo
             ?: return
 
         styledDiv {
             css {
-                maxHeight = 10.em
-                overflowY = Overflow.auto
+                width = 100.pct
+                marginTop = 0.5.em
             }
 
-            +"Columns: "
+            styledDiv {
+                css {
+                    width = 100.pct.minus(editorWidth).minus(1.em)
+                    display = Display.inlineBlock
+                }
+                renderTable(analysisColumnInfo)
+            }
 
-            for ((index, e) in filteredColumnNames.entries.withIndex()) {
-                span {
-                    key = e.key
 
-                    styledDiv {
-                        css {
-                            display = Display.inlineBlock
-                            whiteSpace = WhiteSpace.nowrap
-                            borderStyle = BorderStyle.solid
-                            borderWidth = 1.px
-                            borderColor = Color.lightGray
-                            marginLeft = 0.5.em
-                            marginRight = 0.5.em
-                            marginTop = 0.25.em
-                            marginBottom = 0.25.em
-                            padding(0.25.em)
-                        }
+            styledDiv {
+                css {
+                    width = editorWidth
+                    display = Display.inlineBlock
+                    verticalAlign = VerticalAlign.top
+                    marginLeft = 1.em
+                }
 
-                        +"${index + 1}"
+                renderEditAllow(analysisColumnInfo)
+                renderEditExclude(analysisColumnInfo)
+            }
+        }
+    }
 
-                        styledSpan {
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderTable(analysisColumnInfo: AnalysisColumnInfo) {
+        styledDiv {
+            css {
+                maxHeight = 20.em
+                overflowY = Overflow.auto
+                borderWidth = 2.px
+                borderStyle = BorderStyle.solid
+                borderColor = Color.lightGray
+            }
+
+            styledTable {
+                css {
+                    borderCollapse = BorderCollapse.collapse
+                    width = 100.pct
+                }
+
+                styledThead {
+                    styledTr {
+                        styledTh {
                             css {
-                                fontFamily = "monospace"
-                                whiteSpace = WhiteSpace.nowrap
-                                marginLeft = 1.em
+                                position = Position.sticky
+                                top = 0.px
+                                backgroundColor = Color.white
+                                zIndex = 999
+                                textAlign = TextAlign.left
+                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                            }
+                            +"Column Number"
+                        }
+                        styledTh {
+                            css {
+                                position = Position.sticky
+                                top = 0.px
+                                backgroundColor = Color.white
+                                zIndex = 999
+                                textAlign = TextAlign.left
+                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                                width = 100.pct
+                            }
+                            +"Column Name"
+                        }
+                        styledTh {
+                            css {
+                                position = Position.sticky
+                                top = 0.px
+                                backgroundColor = Color.white
+                                zIndex = 999
+                                textAlign = TextAlign.left
+                                boxShadowInset(Color.lightGray, 0.px, (-1).px, 0.px, 0.px)
+                            }
+                            +"Included"
+                        }
+                    }
+                }
+
+                styledTbody {
+                    for ((index, e) in analysisColumnInfo.inputColumns.entries.withIndex()) {
+                        val included = e.value
+
+                        styledTr {
+                            key = e.key
+
+                            styledTd {
+                                +"${index + 1}"
                             }
 
-                            +e.key
-
-                            if (e.value) {
-                                +"[+]"
+                            styledTd {
+                                css {
+                                    if (included) {
+                                        fontWeight = FontWeight.bold
+                                    }
+                                }
+                                +e.key
                             }
-                            else {
-                                +"[-]"
+
+                            styledTd {
+                                if (included) {
+                                    child(CheckIcon::class) {
+                                        attrs {
+                                            style = reactStyle {
+                                                marginTop = (-0.2).em
+                                                marginBottom = (-0.2).em
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
+                }
+            }
+        }
+    }
 
-                    +" "
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderEditAllow(analysisColumnInfo: AnalysisColumnInfo) {
+        styledDiv {
+//            css {
+//                marginTop = 1.em
+//            }
+
+            val allowPatternError = analysisColumnInfo.allowPatternError
+
+            child(MultiTextAttributeEditor::class) {
+                attrs {
+                    labelOverride = "Allow Patterns"
+                    maxRows = 5
+
+                    objectLocation = props.mainLocation
+                    attributePath = AnalysisFlatDataSpec.allowAttributePath
+
+                    value = props.spec.allowPatterns
+                    unique = true
+
+                    onChange = {
+                        onChangedByEdit()
+                    }
+
+                    invalid = allowPatternError != null
+                }
+            }
+
+            if (allowPatternError != null) {
+                styledDiv {
+                    css {
+                        color = Color.red
+                    }
+                    +allowPatternError
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderEditExclude(analysisColumnInfo: AnalysisColumnInfo) {
+        styledDiv {
+            css {
+                marginTop = 2.em
+            }
+
+            val excludePatternError = analysisColumnInfo.excludePatternError
+
+            child(MultiTextAttributeEditor::class) {
+                attrs {
+                    labelOverride = "Exclude Patterns"
+                    maxRows = 5
+
+                    objectLocation = props.mainLocation
+                    attributePath = AnalysisFlatDataSpec.excludeAttributePath
+
+                    value = props.spec.excludePatterns
+                    unique = true
+
+                    onChange = {
+                        onChangedByEdit()
+                    }
+
+                    invalid = excludePatternError != null
+                }
+            }
+
+            if (excludePatternError != null) {
+                styledDiv {
+                    css {
+                        color = Color.red
+                    }
+                    +excludePatternError
                 }
             }
         }

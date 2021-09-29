@@ -17,9 +17,11 @@ data class AnalysisFlatDataSpec(
 
         private const val allowKey = "allow"
         private val allowSegment = AttributeSegment.ofKey(allowKey)
+        val allowAttributePath = AnalysisSpec.flatAttributePath.nest(allowSegment)
 
         private const val excludeKey = "exclude"
         private val excludeSegment = AttributeSegment.ofKey(excludeKey)
+        val excludeAttributePath = AnalysisSpec.flatAttributePath.nest(excludeSegment)
 
 
         fun ofNotation(attributeNotation: MapAttributeNotation): AnalysisFlatDataSpec {

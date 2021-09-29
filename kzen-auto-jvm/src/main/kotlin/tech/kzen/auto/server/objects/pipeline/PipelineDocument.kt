@@ -79,8 +79,9 @@ class PipelineDocument(
     companion object {
         private const val mimeTypeCsv = "text/csv"
 
-        private fun patternErrorOrNull(errors: List<String>): String? =
-            if (errors.isEmpty()) { null } else { errors.joinToString() }
+        private fun patternErrorOrNull(errors: List<String>): String? {
+            return errors.firstOrNull()
+        }
     }
 
 
@@ -246,23 +247,23 @@ class PipelineDocument(
 
         val allowErrors = mutableListOf<String>()
         val allowPatterns = mutableListOf<Pattern>()
-        for (allowPattern in analysis.flat.allowPatterns) {
+        for (allowPattern in analysis.flat.allowPatterns.withIndex()) {
             try {
-                allowPatterns.add(Pattern.compile(allowPattern))
+                allowPatterns.add(Pattern.compile(allowPattern.value))
             }
             catch (e: PatternSyntaxException) {
-                allowErrors.add(e.message!!)
+                allowErrors.add("${allowPattern.index + 1}: ${e.message}")
             }
         }
 
         val excludeErrors = mutableListOf<String>()
         val excludePatterns = mutableListOf<Pattern>()
-        for (excludePattern in analysis.flat.excludePatterns) {
+        for (excludePattern in analysis.flat.excludePatterns.withIndex()) {
             try {
-                excludePatterns.add(Pattern.compile(excludePattern))
+                excludePatterns.add(Pattern.compile(excludePattern.value))
             }
             catch (e: PatternSyntaxException) {
-                excludeErrors.add(e.message!!)
+                excludeErrors.add("${excludePattern.index + 1}: ${e.message}")
             }
         }
 

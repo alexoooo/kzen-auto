@@ -6,6 +6,7 @@ import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputS
 import tech.kzen.auto.client.objects.document.pipeline.model.PipelineStore
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientResult
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
@@ -46,6 +47,19 @@ class PipelineInputStore(
 //            afterColumnListing(response)
 //        }
 //    }
+
+
+    fun listColumnsAsync() {
+        beforeColumnListing()
+
+        async {
+            delay(1)
+            val response = listColumnsRequest()
+
+            delay(10)
+            afterColumnListing(response)
+        }
+    }
 
 
     suspend fun listColumns() {

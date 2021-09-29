@@ -27,9 +27,9 @@ class PipelineStateCache {
     }
 
 
-    fun filteredColumns(state: PipelineState): Map<String, Boolean>? {
+    fun analysisColumnInfo(state: PipelineState): AnalysisColumnInfo? {
         update(state)
-        return cachedColumnListing?.inputColumns
+        return cachedColumnListing
     }
 
 

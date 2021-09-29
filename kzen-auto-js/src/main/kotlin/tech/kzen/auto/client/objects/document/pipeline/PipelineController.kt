@@ -232,10 +232,11 @@ class PipelineController(
         child(PipelineAnalysisController::class) {
             attrs {
                 spec = pipelineState.analysisSpec()
-                filteredColumnNames = pipelineState.filteredColumns()
+                analysisColumnInfo = pipelineState.analysisColumnInfo()
                 inputAndCalculatedColumns = pipelineState.inputAndCalculatedColumns()
                 runningOrLoading = pipelineState.isRunningOrLoading()
                 analysisStore = store.analysis
+                inputStore = store.input
             }
         }
     }

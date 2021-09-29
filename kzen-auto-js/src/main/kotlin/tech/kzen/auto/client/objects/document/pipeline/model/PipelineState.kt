@@ -10,6 +10,7 @@ import tech.kzen.auto.client.objects.document.pipeline.preview.model.PipelinePre
 import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunState
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
+import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
@@ -147,8 +148,8 @@ data class PipelineState(
     }
 
 
-    fun filteredColumns(): Map<String, Boolean>? {
-        return _cache.filteredColumns(this)
+    fun analysisColumnInfo(): AnalysisColumnInfo? {
+        return _cache.analysisColumnInfo(this)
     }
 
 

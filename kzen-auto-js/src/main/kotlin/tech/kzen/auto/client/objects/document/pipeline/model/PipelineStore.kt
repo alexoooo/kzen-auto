@@ -163,7 +163,8 @@ class PipelineStore: SessionGlobal.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     fun update(updater: (PipelineState) -> PipelineState) {
         val initializedState = state
-            ?: throw IllegalStateException("Update before initialized")
+//            ?: throw IllegalStateException("Update before initialized")
+            ?: return
 
         val updated = updater(initializedState)
 
