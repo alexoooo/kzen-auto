@@ -7,7 +7,6 @@ import react.dom.span
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 
 
 class AnalysisFlatController(
@@ -17,19 +16,17 @@ class AnalysisFlatController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: react.Props {
-        var inputAndCalculatedColumns: HeaderListing?
-//        var runningOrLoading: Boolean
+        var filteredColumnNames: Map<String, Boolean>?
+//        var inputAndCalculatedColumns: HeaderListing?
     }
 
 
-    interface State: react.State {
-//        var analysisType: AnalysisType
-    }
+    interface State: react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val header = props.inputAndCalculatedColumns
+        val filteredColumnNames = props.filteredColumnNames
             ?: return
 
         styledDiv {
@@ -40,9 +37,9 @@ class AnalysisFlatController(
 
             +"Columns: "
 
-            for (i in header.values.withIndex()) {
+            for ((index, e) in filteredColumnNames.entries.withIndex()) {
                 span {
-                    key = i.value
+                    key = e.key
 
                     styledDiv {
                         css {
@@ -58,7 +55,7 @@ class AnalysisFlatController(
                             padding(0.25.em)
                         }
 
-                        +"${i.index + 1}"
+                        +"${index + 1}"
 
                         styledSpan {
                             css {
@@ -67,7 +64,14 @@ class AnalysisFlatController(
                                 marginLeft = 1.em
                             }
 
-                            +i.value
+                            +e.key
+
+                            if (e.value) {
+                                +"[+]"
+                            }
+                            else {
+                                +"[-]"
+                            }
                         }
                     }
 

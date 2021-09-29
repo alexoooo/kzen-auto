@@ -15,8 +15,8 @@ data class FlatDataLocation(
     }
 
 
-    override fun digest(builder: Digest.Builder) {
-        builder.addDigestible(dataLocation)
-        builder.addUtf8Nullable(dataEncoding.textEncoding?.charset?.displayName())
+    override fun digest(sink: Digest.Sink) {
+        sink.addDigestible(dataLocation)
+        sink.addUtf8Nullable(dataEncoding.textEncoding?.charset?.displayName())
     }
 }

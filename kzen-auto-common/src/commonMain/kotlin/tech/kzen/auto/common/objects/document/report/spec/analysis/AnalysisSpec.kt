@@ -107,9 +107,9 @@ data class AnalysisSpec(
     }
 
 
-    override fun digest(builder: Digest.Builder) {
-        builder.addInt(type.ordinal)
-        builder.addDigestible(flat)
-        builder.addDigestible(pivot)
+    override fun digest(sink: Digest.Sink) {
+        sink.addInt(type.ordinal)
+        sink.addDigestible(flat)
+        sink.addDigestible(pivot)
     }
 }

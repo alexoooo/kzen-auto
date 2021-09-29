@@ -7,6 +7,7 @@ import tech.kzen.auto.client.objects.document.pipeline.model.PipelineStore
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
+import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 
@@ -70,7 +71,7 @@ class PipelineInputStore(
     }
 
 
-    private fun afterColumnListing(result: ClientResult<List<String>>) {
+    private fun afterColumnListing(result: ClientResult<AnalysisColumnInfo>) {
         store.update { state -> state.copy(
             input = state.input.copy(
                 column = state.input.column.copy(
@@ -84,7 +85,7 @@ class PipelineInputStore(
     }
 
 
-    private suspend fun listColumnsRequest(): ClientResult<List<String>> {
+    private suspend fun listColumnsRequest(): ClientResult<AnalysisColumnInfo> {
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
             PipelineConventions.actionParameter to PipelineConventions.actionListColumns)
@@ -92,8 +93,8 @@ class PipelineInputStore(
         return when (result) {
             is ExecutionSuccess -> {
                 @Suppress("UNCHECKED_CAST")
-                val resultValue = result.value.get() as List<String>
-
+                val resultCollection = result.value.get() as Map<String, Any>
+                val resultValue = AnalysisColumnInfo.ofCollection(resultCollection)
                 ClientResult.ofSuccess(resultValue)
             }
 

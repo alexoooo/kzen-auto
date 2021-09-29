@@ -24,11 +24,9 @@ class PipelineFormulaController(
     interface Props: react.Props {
         var formulaSpec: FormulaSpec
         var formulaState: PipelineFormulaState
-        var columnListing: List<String>?
+        var inputColumns: List<String>?
         var runningOrLoading: Boolean
         var formulaStore: PipelineFormulaStore
-
-//        var dispatcher: ReportDispatcher
     }
 
 
@@ -150,7 +148,7 @@ class PipelineFormulaController(
                             formulaSpec = props.formulaSpec
                             runningOrLoading = props.runningOrLoading
                             this.columnName = columnName
-                            columnListing = props.columnListing
+                            inputColumns = props.inputColumns
                             formulaStore = props.formulaStore
                         }
                     }
@@ -165,7 +163,7 @@ class PipelineFormulaController(
             attrs {
                 formulaSpec = props.formulaSpec
                 formulaState = props.formulaState
-                columnListing = props.columnListing
+                inputColumns = props.inputColumns
                 runningOrLoading = props.runningOrLoading
                 formulaStore = props.formulaStore
             }

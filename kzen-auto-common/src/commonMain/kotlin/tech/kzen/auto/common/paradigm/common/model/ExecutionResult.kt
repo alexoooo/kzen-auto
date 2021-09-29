@@ -51,17 +51,17 @@ sealed class ExecutionResult
     }
 
 
-    override fun digest(builder: Digest.Builder) {
+    override fun digest(sink: Digest.Sink) {
         when (this) {
             is ExecutionFailure -> {
-                builder.addBoolean(false)
-                builder.addUtf8(errorMessage)
+                sink.addBoolean(false)
+                sink.addUtf8(errorMessage)
             }
 
             is ExecutionSuccess -> {
-                builder.addBoolean(true)
-                value.digest(builder)
-                detail.digest(builder)
+                sink.addBoolean(true)
+                sink.addDigestible(value)
+                sink.addDigestible(detail)
             }
         }
     }

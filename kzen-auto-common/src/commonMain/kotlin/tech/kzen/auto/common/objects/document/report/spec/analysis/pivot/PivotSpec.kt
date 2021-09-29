@@ -135,8 +135,8 @@ data class PivotSpec(
     }
 
 
-    override fun digest(builder: Digest.Builder) {
-        builder.addDigestible(rows)
-        builder.addDigestible(values)
+    override fun digest(sink: Digest.Sink) {
+        sink.addDigestible(rows)
+        sink.addDigestible(values)
     }
 }

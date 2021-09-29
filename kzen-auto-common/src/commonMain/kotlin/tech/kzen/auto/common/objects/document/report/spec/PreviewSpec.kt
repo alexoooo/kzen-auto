@@ -72,20 +72,8 @@ data class PreviewSpec(
     }
 
 
-//    //-----------------------------------------------------------------------------------------------------------------
-//    fun headerListing(): HeaderListing {
-//        return HeaderListing(formulas.keys.toList())
-//    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
-    override fun digest(builder: Digest.Builder) {
-        builder.addBoolean(enabled)
-//        builder.addDigestibleUnorderedMap(
-//            formulas
-//                .map {
-//                    Digest.ofUtf8(it.key) to Digest.ofUtf8(it.value)
-//                }
-//                .toMap())
+    override fun digest(sink: Digest.Sink) {
+        sink.addBoolean(enabled)
     }
 }

@@ -30,6 +30,7 @@ class PipelineAnalysisController(
     interface Props: react.Props {
         var spec: AnalysisSpec
         var inputAndCalculatedColumns: HeaderListing?
+        var filteredColumnNames: Map<String, Boolean>?
         var runningOrLoading: Boolean
         var analysisStore: PipelineAnalysisStore
     }
@@ -213,8 +214,7 @@ class PipelineAnalysisController(
     private fun RBuilder.renderFlat() {
         child(AnalysisFlatController::class) {
             attrs {
-                inputAndCalculatedColumns = props.inputAndCalculatedColumns
-//                runningOrLoading = props.runningOrLoading
+                filteredColumnNames = props.filteredColumnNames
             }
         }
     }

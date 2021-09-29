@@ -188,7 +188,7 @@ class PipelineController(
             attrs {
                 formulaSpec = pipelineState.formulaSpec()
                 formulaState = pipelineState.formula
-                columnListing = pipelineState.input.column.columnListing
+                inputColumns = pipelineState.inputColumnNames()
                 runningOrLoading = pipelineState.isRunningOrLoading()
                 formulaStore = store.formula
             }
@@ -232,6 +232,7 @@ class PipelineController(
         child(PipelineAnalysisController::class) {
             attrs {
                 spec = pipelineState.analysisSpec()
+                filteredColumnNames = pipelineState.filteredColumns()
                 inputAndCalculatedColumns = pipelineState.inputAndCalculatedColumns()
                 runningOrLoading = pipelineState.isRunningOrLoading()
                 analysisStore = store.analysis

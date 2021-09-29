@@ -29,7 +29,7 @@ class FormulaAddController(
     interface Props: react.Props {
         var formulaSpec: FormulaSpec
         var formulaState: PipelineFormulaState
-        var columnListing: List<String>?
+        var inputColumns: List<String>?
         var runningOrLoading: Boolean
         var formulaStore: PipelineFormulaStore
     }
@@ -193,7 +193,7 @@ class FormulaAddController(
                 }
 
                 disabled = props.runningOrLoading
-                error = (props.columnListing?.contains(state.selectedColumn) ?: false)
+                error = (props.inputColumns?.contains(state.selectedColumn) ?: false)
 
                 onKeyDown = ::handleEnterAndEscape
             }

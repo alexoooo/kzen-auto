@@ -27,7 +27,7 @@ class FormulaReferenceController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: react.Props {
-        var columnNames: List<String>
+        var inputColumns: List<String>
         var editDisabled: Boolean
         var onAdded: (String) -> Unit
         var addLabel: String
@@ -166,7 +166,7 @@ class FormulaReferenceController(
         }
 
         val selectOptions = props
-            .columnNames
+            .inputColumns
             .map { ReactSelectOption(it, it) }
             .toTypedArray()
 

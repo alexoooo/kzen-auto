@@ -25,8 +25,8 @@ data class CommonPluginCoordinate(
     }
 
 
-    override fun digest(builder: Digest.Builder) {
-        builder.addUtf8(name)
+    override fun digest(sink: Digest.Sink) {
+        sink.addUtf8(name)
     }
 
 

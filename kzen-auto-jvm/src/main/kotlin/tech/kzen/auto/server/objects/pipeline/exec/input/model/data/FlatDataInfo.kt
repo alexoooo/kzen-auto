@@ -17,11 +17,11 @@ data class FlatDataInfo(
     Digestible,
     Comparable<FlatDataInfo>
 {
-    override fun digest(builder: Digest.Builder) {
-        builder.addDigestible(flatDataLocation)
-        builder.addDigestible(headerListing)
-        PluginUtils.digestPluginCoordinate(processorPluginCoordinate, builder)
-        builder.addUtf8Nullable(group.group)
+    override fun digest(sink: Digest.Sink) {
+        sink.addDigestible(flatDataLocation)
+        sink.addDigestible(headerListing)
+        PluginUtils.digestPluginCoordinate(processorPluginCoordinate, sink)
+        sink.addUtf8Nullable(group.group)
     }
 
 

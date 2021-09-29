@@ -142,6 +142,16 @@ data class PipelineState(
     }
 
 
+    fun inputColumnNames(): List<String>? {
+        return _cache.inputColumnNames(this)
+    }
+
+
+    fun filteredColumns(): Map<String, Boolean>? {
+        return _cache.filteredColumns(this)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun withNotationError(notationError: String?): PipelineState {
         return copy(

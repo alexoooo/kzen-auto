@@ -93,8 +93,8 @@ Report:
   analysis:
     type: FlatData
     flat:
-      type: RequireAny
-      values: []
+      allow: []
+      exclude: []
     pivot:
       rows: []
       values: {}
@@ -209,8 +209,8 @@ Pipeline:
   analysis:
     type: FlatData
     flat:
-      type: RequireAny
-      values: []
+      allow: []
+      exclude: []
     pivot:
       rows: []
       values: {}

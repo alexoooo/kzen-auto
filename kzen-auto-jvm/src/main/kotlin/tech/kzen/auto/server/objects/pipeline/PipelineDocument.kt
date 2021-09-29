@@ -4,10 +4,12 @@ import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
+import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
@@ -51,6 +53,8 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.DateTimeUtils
 import java.awt.geom.IllegalPathStateException
 import java.nio.file.Paths
+import java.util.regex.Pattern
+import java.util.regex.PatternSyntaxException
 import kotlin.io.path.Path
 
 
@@ -74,6 +78,9 @@ class PipelineDocument(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val mimeTypeCsv = "text/csv"
+
+        private fun patternErrorOrNull(errors: List<String>): String? =
+            if (errors.isEmpty()) { null } else { errors.joinToString() }
     }
 
 
@@ -218,12 +225,61 @@ class PipelineDocument(
 
 
     private fun actionColumnListing(): ExecutionResult {
-        val inputPaths = datasetInfo()
+        val datasetInfo = datasetInfo()
             ?: return ExecutionFailure("Please provide a valid inputs")
 
-        val columnNames = inputPaths.headerSuperset().values
+        val inputColumnNames = datasetInfo.headerSuperset().values
+        val analysisColumnInfo = analysisColumnInfo(inputColumnNames)
+
         return ExecutionSuccess.ofValue(
-            ExecutionValue.of(columnNames))
+            ExecutionValue.of(analysisColumnInfo.asCollection()))
+    }
+
+
+    private fun analysisColumnInfo(inputColumnNames: List<String>): AnalysisColumnInfo {
+        if (analysis.type != AnalysisType.FlatData) {
+            return AnalysisColumnInfo(
+                inputColumnNames.associateWith { true },
+                null,
+                null)
+        }
+
+        val allowErrors = mutableListOf<String>()
+        val allowPatterns = mutableListOf<Pattern>()
+        for (allowPattern in analysis.flat.allowPatterns) {
+            try {
+                allowPatterns.add(Pattern.compile(allowPattern))
+            }
+            catch (e: PatternSyntaxException) {
+                allowErrors.add(e.message!!)
+            }
+        }
+
+        val excludeErrors = mutableListOf<String>()
+        val excludePatterns = mutableListOf<Pattern>()
+        for (excludePattern in analysis.flat.excludePatterns) {
+            try {
+                excludePatterns.add(Pattern.compile(excludePattern))
+            }
+            catch (e: PatternSyntaxException) {
+                excludeErrors.add(e.message!!)
+            }
+        }
+
+        val inputColumns = inputColumnNames.associateWith { inputColumnName ->
+            val allow = allowPatterns.isEmpty() ||
+                    allowPatterns.any { it.matcher(inputColumnName).matches() }
+
+            val exclude = excludePatterns.isNotEmpty() &&
+                    excludePatterns.any { it.matcher(inputColumnName).matches() }
+
+            allow && ! exclude
+        }
+
+        return AnalysisColumnInfo(
+            inputColumns,
+            patternErrorOrNull(allowErrors),
+            patternErrorOrNull(excludeErrors))
     }
 
 

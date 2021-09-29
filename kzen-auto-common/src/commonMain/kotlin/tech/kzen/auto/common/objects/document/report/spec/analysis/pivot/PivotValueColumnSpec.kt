@@ -22,7 +22,7 @@ data class PivotValueColumnSpec(
     }
 
 
-    override fun digest(builder: Digest.Builder) {
-        builder.addDigestibleUnorderedList(types.map { Digest.ofInt(it.ordinal) })
+    override fun digest(sink: Digest.Sink) {
+        sink.addUnorderedCollection(types) { addInt(it.ordinal) }
     }
 }

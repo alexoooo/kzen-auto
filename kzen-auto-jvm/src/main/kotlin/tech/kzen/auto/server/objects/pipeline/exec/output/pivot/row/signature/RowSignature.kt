@@ -14,10 +14,10 @@ data class RowSignature(
     }
 
 
-    override fun digest(builder: Digest.Builder) {
-        builder.addInt(valueIndexes.size)
+    override fun digest(sink: Digest.Sink) {
+        sink.addInt(valueIndexes.size)
         for (valueIndex in valueIndexes) {
-            builder.addLong(valueIndex)
+            sink.addLong(valueIndex)
         }
     }
 

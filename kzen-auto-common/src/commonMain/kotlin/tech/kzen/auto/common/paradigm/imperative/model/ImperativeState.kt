@@ -67,8 +67,8 @@ data class ImperativeState(
     }
 
 
-    override fun digest(builder: Digest.Builder) {
-        builder.addDigestibleNullable(previous)
-        builder.addDigestibleNullable(controlState)
+    override fun digest(sink: Digest.Sink) {
+        sink.addDigestibleNullable(previous)
+        sink.addDigestibleNullable(controlState)
     }
 }

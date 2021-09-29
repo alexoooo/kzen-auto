@@ -19,7 +19,7 @@ data class DatasetInfo(
     }
 
 
-    override fun digest(builder: Digest.Builder) {
-        builder.addDigestibleUnorderedList(items)
+    override fun digest(sink: Digest.Sink) {
+        sink.addDigestibleUnorderedList(items)
     }
 }

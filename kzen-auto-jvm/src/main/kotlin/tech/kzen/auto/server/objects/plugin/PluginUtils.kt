@@ -6,8 +6,8 @@ import tech.kzen.lib.common.util.Digest
 
 
 object PluginUtils {
-    fun digestPluginCoordinate(pluginCoordinate: PluginCoordinate, builder: Digest.Builder) {
-        builder.addUtf8(pluginCoordinate.name)
+    fun digestPluginCoordinate(pluginCoordinate: PluginCoordinate, sink: Digest.Sink) {
+        sink.addUtf8(pluginCoordinate.name)
     }
 
 

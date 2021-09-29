@@ -226,7 +226,7 @@ data class ImperativeModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun digest(builder: Digest.Builder) {
-        builder.addDigestibleList(frames)
+    override fun digest(sink: Digest.Sink) {
+        sink.addDigestibleList(frames)
     }
 }

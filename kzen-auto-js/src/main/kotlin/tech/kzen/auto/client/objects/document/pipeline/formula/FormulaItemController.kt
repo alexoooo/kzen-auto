@@ -64,16 +64,13 @@ class FormulaItemController(
         var formulaState: PipelineFormulaState
         var formulaSpec: FormulaSpec
         var runningOrLoading: Boolean
-        var columnListing: List<String>?
+        var inputColumns: List<String>?
         var columnName: String
         var formulaStore: PipelineFormulaStore
     }
 
 
     interface State: react.State {
-//        var open: Boolean
-//        var removeError: String?
-//        var updateError: String?
         var value: String
     }
 
@@ -221,7 +218,7 @@ class FormulaItemController(
                     td {
                         child(FormulaReferenceController::class) {
                             attrs {
-                                this.columnNames = props.columnListing ?: listOf()
+                                this.inputColumns = props.inputColumns ?: listOf()
                                 this.editDisabled = props.runningOrLoading
 
                                 addLabel = "Column reference"

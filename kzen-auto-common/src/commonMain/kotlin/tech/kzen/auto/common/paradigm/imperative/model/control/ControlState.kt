@@ -78,25 +78,25 @@ sealed class ControlState
     }
 
 
-    override fun digest(builder: Digest.Builder) {
+    override fun digest(sink: Digest.Sink) {
         when (this) {
             is InitialControlState -> {
-                builder.addInt(0)
+                sink.addInt(0)
             }
 
             is FinalControlState -> {
-                builder.addInt(1)
-                value.digest(builder)
+                sink.addInt(1)
+                value.digest(sink)
             }
 
             is InternalControlState -> {
-                builder.addInt(2)
-                builder.addInt(branchIndex)
-                value.digest(builder)
+                sink.addInt(2)
+                sink.addInt(branchIndex)
+                value.digest(sink)
             }
 
             is InvokeControlState -> {
-                builder.addInt(3)
+                sink.addInt(3)
             }
         }
     }

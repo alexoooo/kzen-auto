@@ -277,47 +277,47 @@ sealed class ExecutionValue
     }
 
 
-    override fun digest(builder: Digest.Builder) {
+    override fun digest(sink: Digest.Sink) {
         when (this) {
             NullExecutionValue ->
-                builder.addInt(0)
+                sink.addInt(0)
 
             is TextExecutionValue -> {
-                builder.addInt(1)
-                builder.addUtf8(value)
+                sink.addInt(1)
+                sink.addUtf8(value)
             }
 
             is BooleanExecutionValue -> {
-                builder.addInt(2)
-                builder.addBoolean(value)
+                sink.addInt(2)
+                sink.addBoolean(value)
             }
 
             is NumberExecutionValue -> {
-                builder.addInt(3)
-                builder.addDouble(value)
+                sink.addInt(3)
+                sink.addDouble(value)
             }
 
             is LongExecutionValue -> {
-                builder.addInt(4)
-                builder.addLong(value)
+                sink.addInt(4)
+                sink.addLong(value)
             }
 
             is BinaryExecutionValue -> {
-                builder.addInt(5)
-                builder.addBytes(value)
+                sink.addInt(5)
+                sink.addBytes(value)
             }
 
             is ListExecutionValue -> {
-                builder.addInt(6)
-                builder.addDigestibleList(values)
+                sink.addInt(6)
+                sink.addDigestibleList(values)
             }
 
             is MapExecutionValue -> {
-                builder.addInt(7)
-                builder.addInt(values.size)
-                values.forEach {
-                    builder.addUtf8(it.key)
-                    it.value.digest(builder)
+                sink.addInt(7)
+                sink.addInt(values.size)
+                sink.addCollection(values.entries) {
+                    addUtf8(it.key)
+                    addDigestible(it.value)
                 }
             }
         }

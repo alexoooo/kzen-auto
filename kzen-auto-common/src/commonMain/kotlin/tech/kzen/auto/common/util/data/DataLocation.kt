@@ -211,8 +211,8 @@ data class DataLocation(
     }
 
 
-    override fun digest(builder: Digest.Builder) {
-        builder.addDigest(digest())
+    override fun digest(sink: Digest.Sink) {
+        sink.addDigest(digest())
     }
 
 

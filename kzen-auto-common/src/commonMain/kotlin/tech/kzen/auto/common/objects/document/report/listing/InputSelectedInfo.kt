@@ -7,7 +7,6 @@ data class InputSelectedInfo(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         fun ofCollection(collection: List<Map<String, Any>>): InputSelectedInfo {
-
             val locations = collection.map { InputDataInfo.ofCollection(it) }
             return InputSelectedInfo(locations)
         }

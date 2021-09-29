@@ -27,11 +27,11 @@ data class ReportRunSignature(
     }
 
 
-    override fun digest(builder: Digest.Builder) {
-        builder.addDigestible(datasetInfo)
+    override fun digest(sink: Digest.Sink) {
+        sink.addDigestible(datasetInfo)
 
-        builder.addDigestible(formula)
-        builder.addDigestible(filterSignature)
-        builder.addDigestible(analysisSignature)
+        sink.addDigestible(formula)
+        sink.addDigestible(filterSignature)
+        sink.addDigestible(analysisSignature)
     }
 }

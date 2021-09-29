@@ -122,8 +122,8 @@ data class ImperativeFrame(
     }
 
 
-    override fun digest(builder: Digest.Builder) {
-        path.digest(builder)
-        builder.addDigestibleUnorderedMap(states)
+    override fun digest(sink: Digest.Sink) {
+        sink.addDigestible(path)
+        sink.addDigestibleUnorderedMap(states)
     }
 }

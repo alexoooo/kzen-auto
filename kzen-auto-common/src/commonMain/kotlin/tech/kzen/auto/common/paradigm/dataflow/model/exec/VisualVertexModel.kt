@@ -109,12 +109,12 @@ data class VisualVertexModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun digest(builder: Digest.Builder) {
-        builder.addBoolean(running)
+    override fun digest(sink: Digest.Sink) {
+        sink.addBoolean(running)
 
-        builder.addDigestibleNullable(state)
-        builder.addDigestibleNullable(message)
-        builder.addBoolean(hasNext)
-        builder.addInt(epoch)
+        sink.addDigestibleNullable(state)
+        sink.addDigestibleNullable(message)
+        sink.addBoolean(hasNext)
+        sink.addInt(epoch)
     }
 }

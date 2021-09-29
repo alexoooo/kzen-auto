@@ -54,8 +54,8 @@ data class ColumnFilterSpec(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun digest(builder: Digest.Builder) {
-        builder.addInt(type.ordinal)
-        builder.addDigestibleUnorderedList(values.map { Digest.ofUtf8(it) })
+    override fun digest(sink: Digest.Sink) {
+        sink.addInt(type.ordinal)
+        sink.addUnorderedCollection(values) { addUtf8(it) }
     }
 }

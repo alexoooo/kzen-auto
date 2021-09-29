@@ -140,7 +140,10 @@ data class FilterSpec(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun digest(builder: Digest.Builder) {
-        builder.addDigestibleUnorderedMap(columns.mapKeys { Digest.ofUtf8(it.key) })
+    override fun digest(sink: Digest.Sink) {
+        sink.addUnorderedCollection(columns.entries) {
+            addUtf8(it.key)
+            addDigestible(it.value)
+        }
     }
 }

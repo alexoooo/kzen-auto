@@ -170,8 +170,8 @@ class FilePath private constructor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun digest(builder: Digest.Builder) {
-        builder.addUtf8(location)
+    override fun digest(sink: Digest.Sink) {
+        sink.addUtf8(location)
     }
 
 
