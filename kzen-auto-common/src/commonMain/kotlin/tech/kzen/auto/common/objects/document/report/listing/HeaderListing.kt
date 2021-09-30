@@ -14,6 +14,10 @@ data class HeaderListing(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var digestCache: Digest? = null
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     init {
         val duplicates = values.groupBy { it }.filterValues { it.size > 1 }.keys
         require(duplicates.isEmpty()) {
@@ -29,7 +33,37 @@ data class HeaderListing(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun digest(): Digest {
+        val existing = digestCache
+        if (existing != null) {
+            return existing
+        }
+
+        val computed = Digest.build {
+            addCollection(values) { addUtf8(it) }
+        }
+
+        digestCache = computed
+        return computed
+    }
+
+
     override fun digest(sink: Digest.Sink) {
-        sink.addUnorderedCollection(values) { addUtf8(it) }
+        sink.addDigest(digest())
+    }
+
+
+    override fun hashCode(): Int {
+        return digest().hashCode()
+    }
+
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+
+        other as HeaderListing
+
+        return digest() == other.digest()
     }
 }

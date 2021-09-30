@@ -2,8 +2,10 @@ package tech.kzen.auto.client.objects.document.pipeline.analysis
 
 import kotlinx.css.*
 import kotlinx.css.properties.boxShadowInset
+import kotlinx.html.title
 import react.RBuilder
 import react.RPureComponent
+import react.dom.attrs
 import styled.*
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
@@ -33,6 +35,7 @@ class AnalysisFlatController(
         var spec: AnalysisFlatDataSpec
         var pipelineInputStore: PipelineInputStore
         var pipelineOutputStore: PipelineOutputStore
+        var runningOrLoading: Boolean
     }
 
 
@@ -98,6 +101,12 @@ class AnalysisFlatController(
                     display = Display.inlineBlock
                     verticalAlign = VerticalAlign.top
                     marginLeft = 1.em
+                }
+
+                if (props.runningOrLoading) {
+                    attrs {
+                        title = "Disabled while running"
+                    }
                 }
 
                 renderEditAllow(analysisColumnInfo)
@@ -227,6 +236,7 @@ class AnalysisFlatController(
                     }
 
                     invalid = allowPatternError != null
+                    disabled = props.runningOrLoading
                 }
             }
 
@@ -266,6 +276,7 @@ class AnalysisFlatController(
                     }
 
                     invalid = excludePatternError != null
+                    disabled = props.runningOrLoading
                 }
             }
 

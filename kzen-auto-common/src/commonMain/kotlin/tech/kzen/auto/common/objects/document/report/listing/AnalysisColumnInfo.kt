@@ -6,6 +6,7 @@ data class AnalysisColumnInfo(
     val allowPatternError: String?,
     val excludePatternError: String?
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val inputColumnsKey = "columns"
         private const val allowPatternErrorKey = "allow-error"
@@ -24,6 +25,14 @@ data class AnalysisColumnInfo(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    fun filteredColumns(): HeaderListing {
+        val filteredColumnNames = inputAndCalculatedColumns.filter { it.value }.keys.toList()
+        return HeaderListing(filteredColumnNames)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun asCollection(): Map<String, Any> {
         val builder = mutableMapOf<String, Any>()
 

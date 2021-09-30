@@ -11,6 +11,7 @@ class ProcessorOutputEvent<T>:
     ModelOutputEvent<T>()
 {
     override val row = FlatFileRecord()
+    val normalizedRow = FlatFileRecord()
 
     val header = RecordHeaderBuffer()
 

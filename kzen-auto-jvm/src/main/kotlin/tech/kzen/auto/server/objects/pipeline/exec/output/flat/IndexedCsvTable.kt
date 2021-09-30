@@ -143,9 +143,9 @@ class IndexedCsvTable(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun corruptPreview(start: Long): OutputPreview {
-        return OutputPreview(header, listOf(), start)
-    }
+//    fun corruptPreview(start: Long): OutputPreview {
+//        return OutputPreview(header, listOf(), start)
+//    }
 
 
     fun preview(start: Long, count: Int): OutputPreview {
@@ -157,12 +157,12 @@ class IndexedCsvTable(
     }
 
 
-    fun traverseWithHeader(visitor: (List<String>) -> Unit) {
-        visitor.invoke(header.values)
-        traverseWithoutHeader(0, rowCount()) {
-            visitor.invoke(it)
-        }
-    }
+//    fun traverseWithHeader(visitor: (List<String>) -> Unit) {
+//        visitor.invoke(header.values)
+//        traverseWithoutHeader(0, rowCount()) {
+//            visitor.invoke(it)
+//        }
+//    }
 
 
     private fun traverseWithoutHeader(start: Long, count: Long, visitor: (List<String>) -> Unit) {

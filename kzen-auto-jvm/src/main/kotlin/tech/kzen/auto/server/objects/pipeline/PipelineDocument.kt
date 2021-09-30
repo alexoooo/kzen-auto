@@ -6,6 +6,7 @@ import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
+import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
@@ -229,61 +230,10 @@ class PipelineDocument(
         val datasetInfo = datasetInfo()
             ?: return ExecutionFailure("Please provide a valid inputs")
 
-        val inputColumnNames = datasetInfo.headerSuperset().values
-        val calculatedColumnNames = formula.formulas.keys.toList()
-        val inputAndCalculatedColumnNames = inputColumnNames + calculatedColumnNames
-
-        val analysisColumnInfo = analysisColumnInfo(inputAndCalculatedColumnNames)
+        val analysisColumnInfo = analysisColumnInfo(datasetInfo)
 
         return ExecutionSuccess.ofValue(
             ExecutionValue.of(analysisColumnInfo.asCollection()))
-    }
-
-
-    private fun analysisColumnInfo(inputAndCalculatedColumnNames: List<String>): AnalysisColumnInfo {
-        if (analysis.type != AnalysisType.FlatData) {
-            return AnalysisColumnInfo(
-                inputAndCalculatedColumnNames.associateWith { true },
-                null,
-                null)
-        }
-
-        val allowErrors = mutableListOf<String>()
-        val allowPatterns = mutableListOf<Pattern>()
-        for (allowPattern in analysis.flat.allowPatterns.withIndex()) {
-            try {
-                allowPatterns.add(Pattern.compile(allowPattern.value))
-            }
-            catch (e: PatternSyntaxException) {
-                allowErrors.add("${allowPattern.index + 1}: ${e.message}")
-            }
-        }
-
-        val excludeErrors = mutableListOf<String>()
-        val excludePatterns = mutableListOf<Pattern>()
-        for (excludePattern in analysis.flat.excludePatterns.withIndex()) {
-            try {
-                excludePatterns.add(Pattern.compile(excludePattern.value))
-            }
-            catch (e: PatternSyntaxException) {
-                excludeErrors.add("${excludePattern.index + 1}: ${e.message}")
-            }
-        }
-
-        val inputColumns = inputAndCalculatedColumnNames.associateWith { columnName ->
-            val allow = allowPatterns.isEmpty() ||
-                    allowPatterns.any { it.matcher(columnName).matches() }
-
-            val exclude = excludePatterns.isNotEmpty() &&
-                    excludePatterns.any { it.matcher(columnName).matches() }
-
-            allow && ! exclude
-        }
-
-        return AnalysisColumnInfo(
-            inputColumns,
-            patternErrorOrNull(allowErrors),
-            patternErrorOrNull(excludeErrors))
     }
 
 
@@ -433,12 +383,21 @@ class PipelineDocument(
 
         ServerContext.reportWorkPool.prepareRunDir(reportRunContext.runDir, logicRunExecutionId)
 
-        val pipelineExecution = PipelineExecution(
-            reportRunContext, ServerContext.reportWorkPool, logicTraceHandle, logicRunExecutionId)
+        var success = false
+        try {
+            val pipelineExecution = PipelineExecution(
+                reportRunContext, ServerContext.reportWorkPool, logicTraceHandle, logicRunExecutionId)
 
-        pipelineExecution.init(logicControl)
+            pipelineExecution.init(logicControl)
 
-        return pipelineExecution
+            success = true
+            return pipelineExecution
+        }
+        finally {
+            if (! success) {
+                ServerContext.reportWorkPool.updateRunStatus(reportRunContext.runDir, OutputStatus.Failed)
+            }
+        }
     }
 
 
@@ -457,11 +416,14 @@ class PipelineDocument(
                 ReportWorkPool.defaultReportDir
             }
 
+        val analysisColumnInfo = analysisColumnInfo(datasetInfo)
+
         val withoutRunDir = ReportRunContext(
             Path("."),
             selfLocation.documentPath.name,
             dataType,
             datasetInfo,
+            analysisColumnInfo,
             formula,
             previewAll,
             filter,
@@ -521,5 +483,56 @@ class PipelineDocument(
             items.add(FlatDataInfo(flatDataLocation, headerListing, pluginCoordinate, fileGroup))
         }
         return DatasetInfo(items.sorted())
+    }
+
+
+    private fun analysisColumnInfo(datasetInfo: DatasetInfo): AnalysisColumnInfo {
+        val inputColumnNames = datasetInfo.headerSuperset().values
+        val calculatedColumnNames = formula.formulas.keys.toList()
+        val inputAndCalculatedColumnNames = inputColumnNames + calculatedColumnNames
+
+        if (analysis.type != AnalysisType.FlatData) {
+            return AnalysisColumnInfo(
+                inputAndCalculatedColumnNames.associateWith { true },
+                null,
+                null)
+        }
+
+        val allowErrors = mutableListOf<String>()
+        val allowPatterns = mutableListOf<Pattern>()
+        for (allowPattern in analysis.flat.allowPatterns.withIndex()) {
+            try {
+                allowPatterns.add(Pattern.compile(allowPattern.value))
+            }
+            catch (e: PatternSyntaxException) {
+                allowErrors.add("${allowPattern.index + 1}: ${e.message}")
+            }
+        }
+
+        val excludeErrors = mutableListOf<String>()
+        val excludePatterns = mutableListOf<Pattern>()
+        for (excludePattern in analysis.flat.excludePatterns.withIndex()) {
+            try {
+                excludePatterns.add(Pattern.compile(excludePattern.value))
+            }
+            catch (e: PatternSyntaxException) {
+                excludeErrors.add("${excludePattern.index + 1}: ${e.message}")
+            }
+        }
+
+        val inputColumns = inputAndCalculatedColumnNames.associateWith { columnName ->
+            val allow = allowPatterns.isEmpty() ||
+                    allowPatterns.any { it.matcher(columnName).matches() }
+
+            val exclude = excludePatterns.isNotEmpty() &&
+                    excludePatterns.any { it.matcher(columnName).matches() }
+
+            allow && ! exclude
+        }
+
+        return AnalysisColumnInfo(
+            inputColumns,
+            patternErrorOrNull(allowErrors),
+            patternErrorOrNull(excludeErrors))
     }
 }

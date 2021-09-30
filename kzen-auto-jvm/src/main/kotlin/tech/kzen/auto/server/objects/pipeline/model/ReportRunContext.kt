@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.pipeline.model
 
+import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
@@ -17,6 +18,7 @@ data class ReportRunContext(
     val reportDocumentName: DocumentName,
     val dataType: ClassName,
     val datasetInfo: DatasetInfo,
+    val analysisColumnInfo: AnalysisColumnInfo,
     val formula: FormulaSpec,
     val previewAll: PreviewSpec,
     val filter: FilterSpec,
@@ -32,16 +34,9 @@ data class ReportRunContext(
     fun toSignature(): ReportRunSignature {
         return ReportRunSignature(
             datasetInfo,
-            inputAndFormulaColumns,
             formula,
             filter.toRunSignature(),
             analysis.toRunSignature()
         )
     }
-
-
-//    fun toFormulaSignature(): ReportFormulaSignature {
-//        return ReportFormulaSignature(
-//            datasetInfo.headerSuperset(), formula, dataType)
-//    }
 }

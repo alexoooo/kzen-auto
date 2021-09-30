@@ -29,6 +29,7 @@ import tech.kzen.auto.server.objects.pipeline.exec.input.stages.ProcessorInputRe
 import tech.kzen.auto.server.objects.pipeline.exec.output.TableReportOutput
 import tech.kzen.auto.server.objects.pipeline.exec.output.export.CharsetExportEncoder
 import tech.kzen.auto.server.objects.pipeline.exec.output.export.CompressedExportWriter
+import tech.kzen.auto.server.objects.pipeline.exec.output.export.ExportColumnNormalizer
 import tech.kzen.auto.server.objects.pipeline.exec.output.export.format.ExportFormatter
 import tech.kzen.auto.server.objects.pipeline.exec.output.export.model.ExportFormat
 import tech.kzen.auto.server.objects.pipeline.exec.stages.*
@@ -145,7 +146,6 @@ class PipelineExecution(
         }
         else {
             exportWriter = CompressedExportWriter(
-                initialReportRunContext.runDir,
                 initialReportRunContext.reportDocumentName,
                 initialReportRunContext.output.export)
         }
@@ -403,8 +403,8 @@ class PipelineExecution(
                 tableOutput
             }
             else {
-                ExportFormatter(ExportFormat.byName(
-                    initialReportRunContext.output.export.format))
+                ExportColumnNormalizer(
+                    initialReportRunContext.analysisColumnInfo.filteredColumns())
             }
 
         builder =
@@ -420,6 +420,10 @@ class PipelineExecution(
 
         if (exportWriter != null) {
             builder
+                .then(ExportFormatter(
+                    ExportFormat.byName(initialReportRunContext.output.export.format),
+                    initialReportRunContext.analysisColumnInfo.filteredColumns()
+                ))
                 .then(CharsetExportEncoder(Charsets.UTF_8))
                 .then(exportWriter)
         }

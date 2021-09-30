@@ -12,38 +12,18 @@ import tech.kzen.auto.server.objects.pipeline.exec.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.pipeline.exec.output.pivot.PivotBuilder
 import tech.kzen.auto.server.objects.pipeline.exec.trace.PipelineOutputTrace
 import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
-import tech.kzen.auto.server.objects.pipeline.model.ReportRunSignature
 import java.io.InputStream
 import java.nio.file.Files
-import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 
 
 // TODO: optimize save csv generation
 class TableReportOutput(
-    initialReportRunContext: ReportRunContext,
+    private val initialReportRunContext: ReportRunContext,
     private val progress: PipelineOutputTrace?
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        private val modifiedFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-
-
-//        private fun missingOutputInfo(reportRunContext: ReportRunContext): OutputInfo {
-//            val header = headerNames(reportRunContext)
-//            val runDir = reportRunContext.runDir
-//            return OutputInfo(
-//                runDir.toAbsolutePath().normalize().toString(),
-//                OutputTableInfo(
-//                    "Missing, will be created: $runDir",
-//                    0L,
-//                    OutputPreview(header, listOf(), 0L)),
-//                null,
-//                OutputStatus.Missing
-//            )
-//        }
-
-
         private fun <T> usePassive(
             reportRunContext: ReportRunContext,
             user: (TableReportOutput) -> T
@@ -89,15 +69,6 @@ class TableReportOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private data class SaveInfo(
-        val path: Path,
-        val defaultPath: Path,
-        val custom: Boolean,
-        val customInvalid: Boolean,
-        val message: String
-    )
-
-
     private data class PreviewResponse(
         val outputTableInfo: OutputTableInfo?
     ) {
@@ -115,7 +86,7 @@ class TableReportOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val reportRunSignature: ReportRunSignature = initialReportRunContext.toSignature()
+//    private val reportRunSignature: ReportRunSignature = initialReportRunContext.toSignature()
 
     private val indexedCsvTable: IndexedCsvTable?
     private val pivotBuilder: PivotBuilder?
@@ -135,9 +106,10 @@ class TableReportOutput(
             indexedCsvTable = null
         }
         else {
-            if (! reportRunSignature.hasPivot()) {
+            if (initialReportRunContext.analysis.type == AnalysisType.FlatData) {
                 indexedCsvTable = IndexedCsvTable(
-                    reportRunSignature.inputAndFormulaColumns, initialReportRunContext.runDir)
+                    initialReportRunContext.analysisColumnInfo.filteredColumns(),
+                    initialReportRunContext.runDir)
                 pivotBuilder = null
             }
             else {

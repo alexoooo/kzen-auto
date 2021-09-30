@@ -24,6 +24,7 @@ public class FlatFileRecordField
 
     //-----------------------------------------------------------------------------------------------------------------
     private FlatFileRecord host;
+    private int[] fieldEnds;
 
     // NB: not part of equality or hash code, used for accessing doubleOrNan cache in host
     private int fieldIndex = -1;
@@ -35,6 +36,8 @@ public class FlatFileRecordField
     //-----------------------------------------------------------------------------------------------------------------
     public void selectHost(FlatFileRecord host) {
         this.host = host;
+        fieldEnds = host.fieldEnds;
+
         fieldIndex = -1;
         valueOffset = -1;
         valueLength = -1;
@@ -43,12 +46,16 @@ public class FlatFileRecordField
 
     public void selectHostValue(FlatFileRecord host, int fieldIndex, int valueOffset, int valueLength) {
         this.host = host;
+        fieldEnds = host.fieldEnds;
+
         selectField(fieldIndex, valueOffset, valueLength);
     }
 
 
     public void selectHostField(FlatFileRecord host, int fieldIndex) {
         this.host = host;
+        fieldEnds = host.fieldEnds;
+
         selectField(fieldIndex);
     }
 
@@ -56,9 +63,10 @@ public class FlatFileRecordField
     public void selectField(int fieldIndex) {
         this.fieldIndex = fieldIndex;
 
-        int startIndex = host.contentStart(fieldIndex);
+//        int startIndex = host.contentStart(fieldIndex);
+        int startIndex = fieldIndex == 0 ? 0 : fieldEnds[fieldIndex - 1];
         valueOffset = startIndex;
-        valueLength = host.fieldEnds[fieldIndex] - startIndex;
+        valueLength = fieldEnds[fieldIndex] - startIndex;
     }
 
 
@@ -128,13 +136,11 @@ public class FlatFileRecordField
 
 
     public double toDoubleOrNan() {
-//        return host.doublesCache[fieldIndex];
         return host.cachedDoubleOrNan(fieldIndex);
     }
 
 
     public long goodHash() {
-//        return host.hashesCache[fieldIndex];
         return host.cachedHash(fieldIndex);
     }
 

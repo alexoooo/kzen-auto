@@ -224,6 +224,7 @@ class PipelineAnalysisController(
                 spec = props.spec.flat
                 pipelineInputStore = props.inputStore
                 pipelineOutputStore = props.outputStore
+                runningOrLoading = props.runningOrLoading
             }
         }
     }

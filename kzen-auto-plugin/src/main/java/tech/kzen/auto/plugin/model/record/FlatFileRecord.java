@@ -272,17 +272,19 @@ public class FlatFileRecord
 
 
     public void addToField(char nextChar) {
-        growFieldContentsIfRequired(fieldContentLength + 1);
-        fieldContents[fieldContentLength] = nextChar;
-        fieldContentLength++;
+        int startingFieldContentLength = fieldContentLength;
+        char[] augmentedFieldContents = growFieldContentsIfRequired(startingFieldContentLength + 1);
+        augmentedFieldContents[startingFieldContentLength] = nextChar;
+        fieldContentLength = startingFieldContentLength + 1;
     }
 
 
     public void addToField(char[] chars, int offset, int length) {
         if (length != 0) {
-            growFieldContentsIfRequired(fieldContentLength + length);
-            System.arraycopy(chars, offset, fieldContents, fieldContentLength, length);
-            fieldContentLength += length;
+            int startingFieldContentLength = fieldContentLength;
+            char[] augmentedFieldContents = growFieldContentsIfRequired(startingFieldContentLength + length);
+            System.arraycopy(chars, offset, augmentedFieldContents, startingFieldContentLength, length);
+            fieldContentLength = startingFieldContentLength + length;
         }
     }
 
@@ -296,12 +298,16 @@ public class FlatFileRecord
 
 
     public void add(CharSequence value) {
-        growFieldContentsIfRequired(fieldContentLength + value.length());
+        int startingFieldContentLength = fieldContentLength;
+        char[] augmentedFieldContents = growFieldContentsIfRequired(startingFieldContentLength + value.length());
 
+        int nextFieldContentLength = startingFieldContentLength;
         // see: https://stackoverflow.com/questions/8894258/fastest-way-to-iterate-over-all-the-chars-in-a-string
         for (int i = 0; i < value.length(); i++) {
-            fieldContents[fieldContentLength++] = value.charAt(i);
+            augmentedFieldContents[nextFieldContentLength++] = value.charAt(i);
         }
+
+        fieldContentLength = nextFieldContentLength;
 
         commitField();
     }
@@ -325,8 +331,8 @@ public class FlatFileRecord
         int length = NumberParseUtils.stringSize(value);
         int requiredContentLength = fieldContentLength + length;
 
-        growFieldContentsIfRequired(requiredContentLength);
-        NumberParseUtils.toStringFromRight(value, requiredContentLength - 1, fieldContents);
+        char[] augmentedFieldContents = growFieldContentsIfRequired(requiredContentLength);
+        NumberParseUtils.toStringFromRight(value, requiredContentLength - 1, augmentedFieldContents);
 
         fieldContentLength = requiredContentLength;
         commitField();
@@ -339,6 +345,7 @@ public class FlatFileRecord
             return;
         }
 
+        int startingFieldContentLength = fieldContentLength;
         double absolute = Math.abs(value);
         long wholeValue = (long) absolute;
         double factionValue = absolute - wholeValue;
@@ -351,13 +358,15 @@ public class FlatFileRecord
             long adjustedWhole = (negative ? -1 : 1) * (wholeValue + 1);
 
             int length = NumberParseUtils.stringSize(adjustedWhole);
-            int requiredContentLength = fieldContentLength + length + decimalPlaces + 1;
-            growFieldContentsIfRequired(requiredContentLength);
-            NumberParseUtils.toStringFromRight(adjustedWhole, fieldContentLength + length - 1, fieldContents);
+            int requiredContentLength = startingFieldContentLength + length + decimalPlaces + 1;
+            char[] augmentedFieldContents = growFieldContentsIfRequired(requiredContentLength);
 
-            fieldContents[fieldContentLength + length] = '.';
+            NumberParseUtils.toStringFromRight(
+                    adjustedWhole, startingFieldContentLength + length - 1, augmentedFieldContents);
+
+            augmentedFieldContents[startingFieldContentLength + length] = '.';
             for (int i = 1; i <= decimalPlaces; i++) {
-                fieldContents[fieldContentLength + length + i] = '0';
+                augmentedFieldContents[startingFieldContentLength + length + i] = '0';
             }
 
             fieldContentLength = requiredContentLength;
@@ -370,24 +379,24 @@ public class FlatFileRecord
 
         int minusLength = (negative ? 1 : 0);
 
-        int requiredContentLength = fieldContentLength + length + minusLength;
-        growFieldContentsIfRequired(requiredContentLength);
+        int requiredContentLength = startingFieldContentLength + length + minusLength;
+        char[] augmentedFieldContents = growFieldContentsIfRequired(requiredContentLength);
 
-        int endOfWhole = fieldContentLength + wholeLength + minusLength - 1;
-        NumberParseUtils.toStringFromRight(wholeValue, endOfWhole, fieldContents);
+        int endOfWhole = startingFieldContentLength + wholeLength + minusLength - 1;
+        NumberParseUtils.toStringFromRight(wholeValue, endOfWhole, augmentedFieldContents);
 
-        fieldContents[endOfWhole + 1] = '.';
+        augmentedFieldContents[endOfWhole + 1] = '.';
 
-        NumberParseUtils.toStringFromRight(fractionLong, requiredContentLength - 1, fieldContents);
+        NumberParseUtils.toStringFromRight(fractionLong, requiredContentLength - 1, augmentedFieldContents);
 
         int fractionLength = NumberParseUtils.stringSize(fractionLong);
         int fractionLeadingZeroes = decimalPlaces - fractionLength;
         for (int i = 0; i < fractionLeadingZeroes; i++) {
-            fieldContents[endOfWhole + i + 2] = '0';
+            augmentedFieldContents[endOfWhole + i + 2] = '0';
         }
 
         if (negative) {
-            fieldContents[fieldContentLength] = '-';
+            augmentedFieldContents[startingFieldContentLength] = '-';
         }
 
         fieldContentLength = requiredContentLength;
@@ -396,10 +405,11 @@ public class FlatFileRecord
 
 
     public void add(@NotNull char[] value, int offset, int length) {
-        int requiredContentLength = fieldContentLength + length;
-        growFieldContentsIfRequired(requiredContentLength);
+        int startingFieldContentLength = fieldContentLength;
+        int requiredContentLength = startingFieldContentLength + length;
+        char[] augmentedFieldContents = growFieldContentsIfRequired(requiredContentLength);
 
-        System.arraycopy(value, offset, fieldContents, fieldContentLength, length);
+        System.arraycopy(value, offset, augmentedFieldContents, startingFieldContentLength, length);
 
         fieldContentLength = requiredContentLength;
         commitField();
@@ -470,10 +480,13 @@ public class FlatFileRecord
 
 
     public void addToFieldAndCommitUnsafe(char[] chars, int offset, int length) {
-        System.arraycopy(chars, offset, fieldContents, fieldContentLength, length);
-        fieldContentLength += length;
+        int startingFieldContentLength = fieldContentLength;
+        System.arraycopy(chars, offset, fieldContents, startingFieldContentLength, length);
 
-        fieldEnds[fieldCount] = fieldContentLength;
+        int augmentedFieldContentLength = startingFieldContentLength + length;
+        fieldContentLength = augmentedFieldContentLength;
+
+        fieldEnds[fieldCount] = augmentedFieldContentLength;
         fieldCount++;
     }
 
@@ -564,24 +577,33 @@ public class FlatFileRecord
     }
 
 
-    private void growFieldContentsIfRequired(int required) {
-        if (fieldContents.length < required) {
-            int nextSize = Math.max((int) (fieldContents.length * 1.2), required);
-            fieldContents = Arrays.copyOf(fieldContents, nextSize);
+    private char[] growFieldContentsIfRequired(int required) {
+        char[] previousFieldContents = fieldContents;
+        if (previousFieldContents.length >= required) {
+            return previousFieldContents;
         }
+
+        int nextSize = Math.max((int) (previousFieldContents.length * 1.2), required);
+        char[] nextFieldContents = Arrays.copyOf(previousFieldContents, nextSize);
+        fieldContents = nextFieldContents;
+        return nextFieldContents;
     }
 
 
     private void growFieldEndsIfRequired(int required) {
-        if (fieldEnds.length < required) {
-            int size = fieldEnds.length;
-            int nextSize = Math.max((int) (size * 1.2 + 1), required);
-            fieldEnds = Arrays.copyOf(fieldEnds, nextSize);
-
-            doublesCache = Arrays.copyOf(doublesCache, nextSize);
-            hashesCache = Arrays.copyOf(hashesCache, nextSize);
-            Arrays.fill(doublesCache, size, nextSize, doubleCacheMissing);
+        int[] previousFieldEnds = fieldEnds;
+        int size = previousFieldEnds.length;
+        if (size >= required) {
+            return;
         }
+
+        int nextSize = Math.max((int) (size * 1.2 + 1), required);
+        fieldEnds = Arrays.copyOf(previousFieldEnds, nextSize);
+
+        double[] nextDoublesCache = Arrays.copyOf(doublesCache, nextSize);
+        Arrays.fill(nextDoublesCache, size, nextSize, doubleCacheMissing);
+        doublesCache = nextDoublesCache;
+        hashesCache = Arrays.copyOf(hashesCache, nextSize);
     }
 
 

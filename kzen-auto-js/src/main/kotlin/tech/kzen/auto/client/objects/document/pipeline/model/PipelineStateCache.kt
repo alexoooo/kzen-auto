@@ -64,7 +64,6 @@ class PipelineStateCache {
         val inputColumnNames = inputAndCalculatedColumnNames.filterNot { it in formulaKeys }
         inputColumnNamesCache = inputColumnNames
 
-        val filteredColumnNames = analysisColumnInfo.inputAndCalculatedColumns.filter { it.value }.keys.toList()
-        filteredColumnsCache = HeaderListing(filteredColumnNames)
+        filteredColumnsCache = analysisColumnInfo.filteredColumns()
     }
 }

@@ -87,6 +87,8 @@ class PipelineFormulaStore(
             delay(1)
             val error = submitFormulaUpdate(columnName, formula)
             validateAfterNotationChange(error)
+
+            store.output.lookupOutputOfflineIfTable()
         }
     }
 

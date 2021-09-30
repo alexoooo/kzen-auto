@@ -5,10 +5,10 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterTyp
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
-import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeaderIndex
+import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
+import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 
 
 class ProcessorFilterStage(
@@ -33,8 +33,7 @@ class ProcessorFilterStage(
 
 
     private val recordHeaderIndex = RecordHeaderIndex(
-        HeaderListing(nonEmptyFilterColumnNames)
-    )
+        HeaderListing(nonEmptyFilterColumnNames))
 
     private val columnFilterSpecTypes: List<ColumnFilterType>
     private val columnFilterSpecValues: List<Set<FlatFileRecordField>>
@@ -79,7 +78,7 @@ class ProcessorFilterStage(
 
 
     private fun test(row: FlatFileRecord, header: RecordHeader): Boolean {
-        val itemIndices = recordHeaderIndex.indices(header)
+        val columnIndices = recordHeaderIndex.indices(header)
 
         flyweight.selectHost(row)
 
@@ -87,14 +86,14 @@ class ProcessorFilterStage(
             val columnCriteriaType = columnFilterSpecTypes[i]
             val columnCriteriaSpecValues = columnFilterSpecValues[i]
 
-            val indexInItem = itemIndices[i]
-            if (indexInItem == -1) {
+            val indexInRow = columnIndices[i]
+            if (indexInRow == -1) {
                 if (columnCriteriaType == ColumnFilterType.RequireAny) {
                     return false
                 }
             }
             else {
-                flyweight.selectField(indexInItem)
+                flyweight.selectField(indexInRow)
                 val present = columnCriteriaSpecValues.contains(flyweight)
 
                 val reject = columnCriteriaType.reject(present)

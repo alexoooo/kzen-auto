@@ -1,14 +1,16 @@
 package tech.kzen.auto.server.objects.pipeline.exec.output.export.format
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.util.data.DataLocationGroup
-import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
 import tech.kzen.auto.server.objects.pipeline.exec.output.export.model.ExportFormat
+import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 
 
 class ExportFormatter(
-    val format: ExportFormat
+    format: ExportFormat,
+    private val filteredColumns: HeaderListing
 ):
     PipelineProcessorStage<ProcessorOutputEvent<*>>("export-format")
 {
@@ -32,12 +34,12 @@ class ExportFormatter(
 
         if (previousGroup != event.group) {
             recordFormat.format(
-                FlatFileRecord.of(event.header.value.headerNames.values),
+                FlatFileRecord.of(filteredColumns.values),
                 exportData)
 
             previousGroup = event.group
         }
 
-        recordFormat.format(event.row, exportData)
+        recordFormat.format(event.normalizedRow, exportData)
     }
 }

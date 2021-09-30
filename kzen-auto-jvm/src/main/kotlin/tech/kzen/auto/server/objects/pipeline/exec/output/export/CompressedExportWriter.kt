@@ -3,13 +3,12 @@ package tech.kzen.auto.server.objects.pipeline.exec.output.export
 import com.linkedin.migz.MiGzOutputStream
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import tech.kzen.auto.common.objects.document.report.output.OutputExportInfo
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
 import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.pipeline.exec.output.export.model.ExportCompression
+import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.lib.common.model.document.DocumentName
 import java.io.BufferedOutputStream
 import java.io.Closeable
@@ -24,7 +23,6 @@ import kotlin.io.path.absolute
 
 
 class CompressedExportWriter(
-    private val runDir: Path,
     private val reportName: DocumentName,
     private val outputExportSpec: OutputExportSpec
 ):
@@ -65,7 +63,7 @@ class CompressedExportWriter(
     //-----------------------------------------------------------------------------------------------------------------
     private fun openNextGroupIfRequired(group: DataLocationGroup) {
         if (previousGroup == null) {
-            openGroupAndTrackPrevious(group)
+            openGroupAndRememberPrevious(group)
         }
         else {
             val resolvedPattern = outputExportSpec.resolvePath(reportName, group, previousGroupStart)
@@ -74,12 +72,12 @@ class CompressedExportWriter(
             }
 
             closeGroup()
-            openGroupAndTrackPrevious(group)
+            openGroupAndRememberPrevious(group)
         }
     }
 
 
-    private fun openGroupAndTrackPrevious(group: DataLocationGroup) {
+    private fun openGroupAndRememberPrevious(group: DataLocationGroup) {
         previousGroupStart = Clock.System.now()
         previousGroupResolvedPattern = outputExportSpec.resolvePath(reportName, group, previousGroupStart)
 
@@ -137,7 +135,7 @@ class CompressedExportWriter(
         val bytes = data.bytes
         val length = data.bytesLength
 
-        out?.write(bytes, 0, length)
+        out!!.write(bytes, 0, length)
     }
 
 
@@ -146,16 +144,6 @@ class CompressedExportWriter(
         closer?.close()
         out = null
         closer = null
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    fun preview(): OutputExportInfo? {
-        if (! Files.exists(runDir)) {
-            return null
-        }
-
-        return OutputExportInfo("hello")
     }
 
 

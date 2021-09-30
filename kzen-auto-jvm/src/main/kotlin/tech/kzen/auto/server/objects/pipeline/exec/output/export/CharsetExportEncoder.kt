@@ -8,7 +8,7 @@ import kotlin.math.ceil
 
 
 class CharsetExportEncoder(
-    val charset: Charset
+    charset: Charset
 ):
     PipelineProcessorStage<ProcessorOutputEvent<*>>("export-encode")
 {
