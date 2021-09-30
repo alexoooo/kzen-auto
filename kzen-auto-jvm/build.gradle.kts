@@ -48,6 +48,7 @@ dependencies {
     implementation("com.sangupta:bloomfilter:$bloomFilterVersion")
     implementation("commons-io:commons-io:$commonsIoVersion")
     implementation("com.linkedin.migz:migz:$migzVersion")
+//    implementation("ch.randelshofer:fastdoubleparser:$fastDoubleParserVersion")
 
     testImplementation(kotlin("test"))
 }

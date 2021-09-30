@@ -79,6 +79,28 @@ class RecordFieldFlyweightTest {
     }
 
 
+    @Test
+    fun scientificNotationSmall() {
+        checkToDouble("1.2E2", 120.0)
+    }
+
+    @Test
+    fun scientificNotationBig() {
+        checkToDouble("1.033811826923076E-4")
+        checkToDouble("1.2572920405982926E-5")
+        checkToDouble("3.632478632478633E-6")
+        checkToDouble("6.843413435657128E-7")
+        checkToDouble("2.89384079327889E-8")
+        checkToDouble("6.245749074647463E-9")
+
+        checkToDouble("5.461420422967089E-10")
+        checkToDouble("1.2854501085642218E-13")
+
+        checkToDouble("6.245749074647463E9")
+        checkToDouble("6.245749074647463e+9")
+    }
+
+
     private fun checkToDouble(value: String) {
         checkToDouble(value, value.toDouble())
     }

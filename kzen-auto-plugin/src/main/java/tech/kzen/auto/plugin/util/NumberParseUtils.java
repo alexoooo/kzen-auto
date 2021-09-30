@@ -60,201 +60,238 @@ public enum NumberParseUtils {;
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private static double normalizeNegativeZero(double value) {
+        return value == -0.0 ? 0 : value;
+    }
+
     public static double toDoubleOrNan(char[] contents, int offset, int length) {
-        if (length == 0) {
-            return Double.NaN;
-        }
-        char firstChar = contents[offset];
+        double value = FastDoubleParserFromCharArray.parseDoubleOrNan(contents, offset, length);
+        return normalizeNegativeZero(value);
 
-        int leadingZeroes = 0;
-        int pointIndex = -1;
-        for (int i = 0; i < length; i++) {
-            char nextChar = contents[offset + i];
-            if (nextChar == '.') {
-                if (pointIndex != -1 ||
-                        length == 1 ||
-                        length == 2 && (firstChar == '+' || firstChar == '-')
-                ) {
-                    return Double.NaN;
-                }
-                else {
-                    pointIndex = i;
-                }
-            }
-            else if (nextChar == '+' || nextChar == '-') {
-                if (i != 0 || length == 1) {
-                    return Double.NaN;
-                }
-            }
-            else if (! ('0' <= nextChar && nextChar <= '9')) {
-                return Double.NaN;
-            }
-            else if (nextChar == '0' && leadingZeroes == i) {
-                leadingZeroes++;
-            }
-        }
-
-        if (pointIndex == -1) {
-            if (length - leadingZeroes > maxLongDecimalLength) {
-                return Double.NaN;
-            }
-            return (double) toLong(contents, offset, length);
-        }
-        else if (pointIndex == length - 1) {
-            if (length - leadingZeroes - 1 > maxLongDecimalLength) {
-                return Double.NaN;
-            }
-            return (double) toLong(contents, offset, length - 1);
-        }
-
-        long wholePart;
-        if (pointIndex == 0 ||
-                pointIndex == 1 && (firstChar == '+' || firstChar == '-')) {
-            wholePart = 0;
-        }
-        else if (pointIndex - leadingZeroes > maxLongDecimalLength) {
-            return Double.NaN;
-        }
-        else {
-            wholePart = Math.abs(toLong(contents, offset, pointIndex));
-        }
-
-        int fractionDigits = length - pointIndex - 1;
-        int fractionLeadingZeroes = 0;
-        for (int i = 1; i <= fractionDigits; i++) {
-            if (contents[offset + pointIndex + i] != '0') {
-                break;
-            }
-            fractionLeadingZeroes++;
-        }
-
-        int fractionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes;
-        long fractionAsLongWithoutLeadingZeroes;
-        if (fractionDigitsWithoutLeadingZeroes == 0) {
-            fractionAsLongWithoutLeadingZeroes = 0;
-        }
-        else if (fractionDigitsWithoutLeadingZeroes > maxLongDecimalLength) {
-            return Double.NaN;
-        }
-        else {
-            fractionAsLongWithoutLeadingZeroes = toLong(
-                    contents,
-                    offset + pointIndex + fractionLeadingZeroes + 1,
-                    fractionDigitsWithoutLeadingZeroes);
-        }
-
-        double fractionalPartWithoutLeadingZeroes =
-                (double) fractionAsLongWithoutLeadingZeroes / decimalLongPowers[fractionDigitsWithoutLeadingZeroes];
-
-        double fractionalPart =
-                fractionLeadingZeroes == 0
-                ? fractionalPartWithoutLeadingZeroes
-                : fractionalPartWithoutLeadingZeroes / decimalLongPowers[fractionLeadingZeroes];
-
-        double value = wholePart + fractionalPart;
-        return firstChar == '-' && value != 0.0 ? -value : value;
+//        if (length == 0) {
+//            return Double.NaN;
+//        }
+//        char firstChar = contents[offset];
+//
+//        int leadingZeroes = 0;
+//        int pointIndex = -1;
+//        int exponentIndex = -1;
+//        for (int i = 0; i < length; i++) {
+//            char nextChar = contents[offset + i];
+//            if (nextChar == '.') {
+//                if (pointIndex != -1 ||
+//                        length == 1 ||
+//                        length == 2 && (firstChar == '+' || firstChar == '-')
+//                ) {
+//                    return Double.NaN;
+//                }
+//                else {
+//                    pointIndex = i;
+//                }
+//            }
+//            else if (nextChar == '+' || nextChar == '-') {
+//                if (i != 0 && exponentIndex != (i - 1) || length == 1) {
+//                    return Double.NaN;
+//                }
+//            }
+//            else if (nextChar == 'e' || nextChar == 'E') {
+//                if (exponentIndex != -1) {
+//                    return Double.NaN;
+//                }
+//                exponentIndex = i;
+//            }
+//            else if (! ('0' <= nextChar && nextChar <= '9')) {
+//                return Double.NaN;
+//            }
+//            else if (nextChar == '0' && leadingZeroes == i) {
+//                leadingZeroes++;
+//            }
+//        }
+//
+//        if (pointIndex == -1) {
+//            if (length - leadingZeroes > maxLongDecimalLength) {
+//                return Double.NaN;
+//            }
+//            return (double) toLong(contents, offset, length);
+//        }
+//        else if (pointIndex == length - 1) {
+//            if (length - leadingZeroes - 1 > maxLongDecimalLength) {
+//                return Double.NaN;
+//            }
+//            return (double) toLong(contents, offset, length - 1);
+//        }
+//
+//        long wholePart;
+//        if (pointIndex == 0 ||
+//                pointIndex == 1 && (firstChar == '+' || firstChar == '-')) {
+//            wholePart = 0;
+//        }
+//        else if (pointIndex - leadingZeroes > maxLongDecimalLength) {
+//            return Double.NaN;
+//        }
+//        else {
+//            wholePart = Math.abs(toLong(contents, offset, pointIndex));
+//        }
+//
+//        int fractionDigits =
+//                exponentIndex == -1
+//                ? length - pointIndex - 1
+//                : exponentIndex - pointIndex - 1;
+//        int fractionLeadingZeroes = 0;
+//        for (int i = 1; i <= fractionDigits; i++) {
+//            if (contents[offset + pointIndex + i] != '0') {
+//                break;
+//            }
+//            fractionLeadingZeroes++;
+//        }
+//
+//        int fractionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes;
+//        long fractionAsLongWithoutLeadingZeroes;
+//        if (fractionDigitsWithoutLeadingZeroes == 0) {
+//            fractionAsLongWithoutLeadingZeroes = 0;
+//        }
+//        else if (fractionDigitsWithoutLeadingZeroes > maxLongDecimalLength) {
+//            return Double.NaN;
+//        }
+//        else {
+//            fractionAsLongWithoutLeadingZeroes = toLong(
+//                    contents,
+//                    offset + pointIndex + fractionLeadingZeroes + 1,
+//                    fractionDigitsWithoutLeadingZeroes);
+//        }
+//
+//        double fractionalPartWithoutLeadingZeroes =
+//                (double) fractionAsLongWithoutLeadingZeroes / decimalLongPowers[fractionDigitsWithoutLeadingZeroes];
+//
+//        double fractionalPart =
+//                fractionLeadingZeroes == 0
+//                ? fractionalPartWithoutLeadingZeroes
+//                : fractionalPartWithoutLeadingZeroes / decimalLongPowers[fractionLeadingZeroes];
+//
+//        double value = wholePart + fractionalPart;
+//
+//        double scientificNotationValue;
+//        if (exponentIndex == -1) {
+//            scientificNotationValue = value;
+//        }
+//        else {
+//            long exponent = toLong(contents, exponentIndex + 1, length - exponentIndex - 1);
+////            Double.doubleToRawLongBits(value)
+//
+//            scientificNotationValue =
+//                    exponent >= 0
+//                    ? value * decimalLongPowers[(int) exponent]
+//                    : value / decimalLongPowers[(int) -exponent];
+//        }
+//
+//        return firstChar == '-' && scientificNotationValue != 0.0
+//                ? -scientificNotationValue
+//                : scientificNotationValue;
     }
 
 
-    public static double toDoubleOrNan(String contents) {
+    public static double toDoubleOrNan(CharSequence contents) {
         return toDoubleOrNan(contents, 0, contents.length());
     }
 
 
-    public static double toDoubleOrNan(String contents, int offset, int length) {
-        if (length == 0) {
-            return Double.NaN;
-        }
+    public static double toDoubleOrNan(CharSequence contents, int offset, int length) {
+        double value = FastDoubleParserFromCharSequence.parseDoubleOrNan(contents, offset, length);
+        return normalizeNegativeZero(value);
 
-        char firstChar = contents.charAt(offset);
-
-        int leadingZeroes = 0;
-        int pointIndex = -1;
-        for (int i = 0; i < length; i++) {
-            char nextChar = contents.charAt(offset + i);
-            if (nextChar == '.') {
-                if (pointIndex != -1 ||
-                        length == 1 ||
-                        length == 2 && (firstChar == '+' || firstChar == '-')
-                ) {
-                    return Double.NaN;
-                }
-                else {
-                    pointIndex = i;
-                }
-            }
-            else if (nextChar == '+' || nextChar == '-') {
-                if (i != 0 || length == 1) {
-                    return Double.NaN;
-                }
-            }
-            else if (! ('0' <= nextChar && nextChar <= '9')) {
-                return Double.NaN;
-            }
-            else if (nextChar == '0' && leadingZeroes == i) {
-                leadingZeroes++;
-            }
-        }
-
-        if (pointIndex == -1) {
-            if (length - leadingZeroes > maxLongDecimalLength) {
-                return Double.NaN;
-            }
-            return (double) toLong(contents, offset, length);
-        }
-        else if (pointIndex == length - 1) {
-            if (length - leadingZeroes - 1 > maxLongDecimalLength) {
-                return Double.NaN;
-            }
-            return (double) toLong(contents, offset, length - 1);
-        }
-
-        long wholePart;
-        if (pointIndex == 0 ||
-                pointIndex == 1 && (firstChar == '+' || firstChar == '-')) {
-            wholePart = 0;
-        }
-        else if (pointIndex - leadingZeroes > maxLongDecimalLength) {
-            return Double.NaN;
-        }
-        else {
-            wholePart = Math.abs(toLong(contents, offset, pointIndex));
-        }
-
-        int fractionDigits = length - pointIndex - 1;
-        int fractionLeadingZeroes = 0;
-        for (int i = 1; i <= fractionDigits; i++) {
-            if (contents.charAt(offset + pointIndex + i) != '0') {
-                break;
-            }
-            fractionLeadingZeroes++;
-        }
-
-        int fractionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes;
-        long fractionAsLongWithoutLeadingZeroes;
-        if (fractionDigitsWithoutLeadingZeroes == 0) {
-            fractionAsLongWithoutLeadingZeroes = 0;
-        }
-        else if (fractionDigitsWithoutLeadingZeroes > maxLongDecimalLength) {
-            return Double.NaN;
-        }
-        else {
-            fractionAsLongWithoutLeadingZeroes = toLong(
-                    contents,
-                    offset + pointIndex + fractionLeadingZeroes + 1,
-                    fractionDigitsWithoutLeadingZeroes);
-        }
-
-        double fractionalPartWithoutLeadingZeroes =
-                (double) fractionAsLongWithoutLeadingZeroes / decimalLongPowers[fractionDigitsWithoutLeadingZeroes];
-
-        double fractionalPart =
-                fractionLeadingZeroes == 0
-                ? fractionalPartWithoutLeadingZeroes
-                : fractionalPartWithoutLeadingZeroes / decimalLongPowers[fractionLeadingZeroes];
-
-        double value = wholePart + fractionalPart;
-        return firstChar == '-' && value != 0.0 ? -value : value;
+//        if (length == 0) {
+//            return Double.NaN;
+//        }
+//
+//        char firstChar = contents.charAt(offset);
+//
+//        int leadingZeroes = 0;
+//        int pointIndex = -1;
+//        for (int i = 0; i < length; i++) {
+//            char nextChar = contents.charAt(offset + i);
+//            if (nextChar == '.') {
+//                if (pointIndex != -1 ||
+//                        length == 1 ||
+//                        length == 2 && (firstChar == '+' || firstChar == '-')
+//                ) {
+//                    return Double.NaN;
+//                }
+//                else {
+//                    pointIndex = i;
+//                }
+//            }
+//            else if (nextChar == '+' || nextChar == '-') {
+//                if (i != 0 || length == 1) {
+//                    return Double.NaN;
+//                }
+//            }
+//            else if (! ('0' <= nextChar && nextChar <= '9')) {
+//                return Double.NaN;
+//            }
+//            else if (nextChar == '0' && leadingZeroes == i) {
+//                leadingZeroes++;
+//            }
+//        }
+//
+//        if (pointIndex == -1) {
+//            if (length - leadingZeroes > maxLongDecimalLength) {
+//                return Double.NaN;
+//            }
+//            return (double) toLong(contents, offset, length);
+//        }
+//        else if (pointIndex == length - 1) {
+//            if (length - leadingZeroes - 1 > maxLongDecimalLength) {
+//                return Double.NaN;
+//            }
+//            return (double) toLong(contents, offset, length - 1);
+//        }
+//
+//        long wholePart;
+//        if (pointIndex == 0 ||
+//                pointIndex == 1 && (firstChar == '+' || firstChar == '-')) {
+//            wholePart = 0;
+//        }
+//        else if (pointIndex - leadingZeroes > maxLongDecimalLength) {
+//            return Double.NaN;
+//        }
+//        else {
+//            wholePart = Math.abs(toLong(contents, offset, pointIndex));
+//        }
+//
+//        int fractionDigits = length - pointIndex - 1;
+//        int fractionLeadingZeroes = 0;
+//        for (int i = 1; i <= fractionDigits; i++) {
+//            if (contents.charAt(offset + pointIndex + i) != '0') {
+//                break;
+//            }
+//            fractionLeadingZeroes++;
+//        }
+//
+//        int fractionDigitsWithoutLeadingZeroes = fractionDigits - fractionLeadingZeroes;
+//        long fractionAsLongWithoutLeadingZeroes;
+//        if (fractionDigitsWithoutLeadingZeroes == 0) {
+//            fractionAsLongWithoutLeadingZeroes = 0;
+//        }
+//        else if (fractionDigitsWithoutLeadingZeroes > maxLongDecimalLength) {
+//            return Double.NaN;
+//        }
+//        else {
+//            fractionAsLongWithoutLeadingZeroes = toLong(
+//                    contents,
+//                    offset + pointIndex + fractionLeadingZeroes + 1,
+//                    fractionDigitsWithoutLeadingZeroes);
+//        }
+//
+//        double fractionalPartWithoutLeadingZeroes =
+//                (double) fractionAsLongWithoutLeadingZeroes / decimalLongPowers[fractionDigitsWithoutLeadingZeroes];
+//
+//        double fractionalPart =
+//                fractionLeadingZeroes == 0
+//                ? fractionalPartWithoutLeadingZeroes
+//                : fractionalPartWithoutLeadingZeroes / decimalLongPowers[fractionLeadingZeroes];
+//
+//        double value = wholePart + fractionalPart;
+//        return firstChar == '-' && value != 0.0 ? -value : value;
     }
 
 
