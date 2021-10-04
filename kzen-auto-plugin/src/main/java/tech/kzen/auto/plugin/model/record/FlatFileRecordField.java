@@ -25,6 +25,7 @@ public class FlatFileRecordField
     //-----------------------------------------------------------------------------------------------------------------
     private FlatFileRecord host;
     private int[] fieldEnds;
+    private final long[] i128 = new long[2];
 
     // NB: not part of equality or hash code, used for accessing doubleOrNan cache in host
     private int fieldIndex = -1;
@@ -136,12 +137,12 @@ public class FlatFileRecordField
 
 
     public double toDoubleOrNan() {
-        return host.cachedDoubleOrNan(fieldIndex);
+        return host.cachedDoubleOrNan(fieldIndex, i128);
     }
 
 
     public long goodHash() {
-        return host.cachedHash(fieldIndex);
+        return host.cachedHash(fieldIndex, i128);
     }
 
 

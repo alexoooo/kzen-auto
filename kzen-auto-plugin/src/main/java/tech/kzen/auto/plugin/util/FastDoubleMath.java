@@ -705,7 +705,17 @@ class FastDoubleMath {
 
     }
 
-    static double decFloatLiteralToDouble(int index, boolean isNegative, long digits, int exponent, int virtualIndexOfPoint, long exp_number, boolean isDigitsTruncated, int skipCountInTruncatedDigits) {
+    static double decFloatLiteralToDouble(
+            int index,
+            boolean isNegative,
+            long digits,
+            int exponent,
+            int virtualIndexOfPoint,
+            long exp_number,
+            boolean isDigitsTruncated,
+            int skipCountInTruncatedDigits,
+            long[] i128
+    ) {
         if (digits == 0) {
             return isNegative ? -0.0 : 0.0;
         }
@@ -719,8 +729,10 @@ class FastDoubleMath {
             // There are cases, in which rounding has no effect.
             if (FASTFLOAT_DEC_SMALLEST_POWER <= exponentOfTruncatedDigits
                     && exponentOfTruncatedDigits <= FASTFLOAT_DEC_LARGEST_POWER) {
-                double withoutRounding = tryDecToDoubleWithFastAlgorithm(isNegative, digits, (int) exponentOfTruncatedDigits);
-                double roundedUp = tryDecToDoubleWithFastAlgorithm(isNegative, digits + 1, (int) exponentOfTruncatedDigits);
+                double withoutRounding = tryDecToDoubleWithFastAlgorithm(
+                        isNegative, digits, (int) exponentOfTruncatedDigits, i128);
+                double roundedUp = tryDecToDoubleWithFastAlgorithm(
+                        isNegative, digits + 1, (int) exponentOfTruncatedDigits, i128);
                 if (!Double.isNaN(withoutRounding) && Objects.equals(roundedUp, withoutRounding)) {
                     return withoutRounding;
                 }
@@ -731,7 +743,7 @@ class FastDoubleMath {
             outDouble = Double.NaN;
 
         } else if (FASTFLOAT_DEC_SMALLEST_POWER <= exponent && exponent <= FASTFLOAT_DEC_LARGEST_POWER) {
-            outDouble = tryDecToDoubleWithFastAlgorithm(isNegative, digits, exponent);
+            outDouble = tryDecToDoubleWithFastAlgorithm(isNegative, digits, exponent, i128);
         } else {
             outDouble = Double.NaN;
         }
@@ -750,9 +762,10 @@ class FastDoubleMath {
      *
      * @param x uint64 factor x
      * @param y uint64 factor y
-     * @return uint128 product of x and y
+//     * @return uint128 product of x and y
      */
-    private static Value128 fullMultiplication(long x, long y) {
+//    private static Value128 fullMultiplication(long x, long y) {
+    private static void fullMultiplication(long x, long y, long[] i128) {
         long x0 = x & 0xffffffffL, x1 = x >>> 32;
         long y0 = y & 0xffffffffL, y1 = y >>> 32;
         long p11 = x1 * y1, p01 = x0 * y1;
@@ -760,11 +773,13 @@ class FastDoubleMath {
 
         // 64-bit product + two 32-bit values
         long middle = p10 + (p00 >>> 32) + (p01 & 0xffffffffL);
-        return new Value128(
-                // 64-bit product + two 32-bit values
-                p11 + (middle >>> 32) + (p01 >>> 32),
-                // Add LOW PART and lower half of MIDDLE PART
-                (middle << 32) | (p00 & 0xffffffffL));
+//        return new Value128(
+//                // 64-bit product + two 32-bit values
+//                p11 + (middle >>> 32) + (p01 >>> 32),
+//                // Add LOW PART and lower half of MIDDLE PART
+//                (middle << 32) | (p00 & 0xffffffffL));
+        i128[0] = p11 + (middle >>> 32) + (p01 >>> 32);
+        i128[1] = (middle << 32) | (p00 & 0xffffffffL);
     }
 
     static double hexFloatLiteralToDouble(int index, boolean isNegative, long digits, long exponent, int virtualIndexOfPoint, long exp_number, boolean isDigitsTruncated, int skipCountInTruncatedDigits) {
@@ -813,7 +828,7 @@ class FastDoubleMath {
      * @param power      int32 the exponent of the number
      * @return the computed double on success, {@link Double#NaN} on failure
      */
-    static double tryDecToDoubleWithFastAlgorithm(boolean isNegative, long digits, int power) {
+    static double tryDecToDoubleWithFastAlgorithm(boolean isNegative, long digits, int power, long[] i128) {
         if (digits == 0 || power < -380 - 19) {
             return isNegative ? -0.0 : 0.0;
         }
@@ -845,7 +860,6 @@ class FastDoubleMath {
             return (isNegative) ? -d : d;
         }
 
-
         // The fast path has now failed, so we are falling back on the slower path.
 
         // We are going to need to do some 64-bit arithmetic to get a more precise product.
@@ -856,7 +870,6 @@ class FastDoubleMath {
         // We recover the mantissa of the power, it has a leading 1. It is always
         // rounded down.
         long factor_mantissa = MANTISSA_64[power - FASTFLOAT_DEC_SMALLEST_POWER];
-
 
         // The exponent is 1024 + 63 + power
         //     + floor(log(5**power)/log(2)).
@@ -892,9 +905,13 @@ class FastDoubleMath {
         // We want the most significant 64 bits of the product. We know
         // this will be non-zero because the most significant bit of i is
         // 1.
-        Value128 product = fullMultiplication(digits, factor_mantissa);
-        long lower = product.low;
-        long upper = product.high;
+//        Value128 product = fullMultiplication(digits, factor_mantissa);
+        long[] i128OrNew = i128 == null ? new long[2] : i128;
+        fullMultiplication(digits, factor_mantissa, i128OrNew);
+//        long lower = product.low;
+//        long upper = product.high;
+        long lower = i128OrNew[1];
+        long upper = i128OrNew[0];
         // We know that upper has at most one leading zero because
         // both i and  factor_mantissa have a leading one. This means
         // that the result is at least as large as ((1<<63)*(1<<63))/(1<<64).
@@ -914,16 +931,17 @@ class FastDoubleMath {
                     MANTISSA_128[power - FASTFLOAT_DEC_SMALLEST_POWER];
             // next, we compute the 64-bit x 128-bit multiplication, getting a 192-bit
             // result (three 64-bit values)
-            product = fullMultiplication(digits, factor_mantissa_low);
-            long product_low = product.low;
-            long product_middle2 = product.high;
-            long product_middle1 = lower;
+//            product = fullMultiplication(digits, factor_mantissa_low);
+            fullMultiplication(digits, factor_mantissa_low, i128OrNew);
+//            long product_low = product.low;
+//            long product_middle2 = product.high;
+            long product_low = i128OrNew[1];
+            long product_middle2 = i128OrNew[0];
             long product_high = upper;
-            long product_middle = product_middle1 + product_middle2;
-            if (Long.compareUnsigned(product_middle, product_middle1) < 0) {
+            long product_middle = lower + product_middle2;
+            if (Long.compareUnsigned(product_middle, lower) < 0) {
                 product_high++; // overflow carry
             }
-
 
             // we want to check whether mantissa *i + i would affect our result
             // This does happen, e.g. with 7.3177701707893310e+15
@@ -1038,13 +1056,14 @@ class FastDoubleMath {
         return Double.NaN;
     }
 
-    private static class Value128{
 
-        final long high, low;
-
-        private Value128(long high, long low) {
-            this.high = high;
-            this.low = low;
-        }
-    }
+    //-----------------------------------------------------------------------------------------------------------------
+//    private static class Value128 {
+//        final long high, low;
+//
+//        private Value128(long high, long low) {
+//            this.high = high;
+//            this.low = low;
+//        }
+//    }
 }

@@ -179,6 +179,8 @@ class InputSelectedStore(
                 ) }
                 .withNotationError(error)
             }
+
+            store.input.listColumns()
         }
     }
 

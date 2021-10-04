@@ -63,7 +63,7 @@ class FastDoubleParserFromCharSequence {
 //    }
 
 
-    public static double parseDoubleOrNan(CharSequence str, int offset, int length) {
+    public static double parseDoubleOrNan(CharSequence str, int offset, int length, long[] i128) {
 //        final int endIndex = str.length();
         final int endIndex = offset + length;
 
@@ -102,11 +102,11 @@ class FastDoubleParserFromCharSequence {
         if (hasLeadingZero) {
             ch = ++index < endIndex ? str.charAt(index) : 0;
             if (ch == 'x' || ch == 'X') {
-                return parseRestOfHexFloatingPointLiteral(str, index + 1, endIndex, isNegative);
+                return parseRestOfHexFloatingPointLiteral(str, index + 1, endIndex, isNegative, offset);
             }
         }
 
-        return parseRestOfDecimalFloatLiteral(str, endIndex, index, isNegative, hasLeadingZero);
+        return parseRestOfDecimalFloatLiteral(str, endIndex, index, isNegative, hasLeadingZero, offset, i128);
     }
 
     private static double parseInfinity(CharSequence str, int index, int endIndex, boolean negative) {
@@ -168,7 +168,9 @@ class FastDoubleParserFromCharSequence {
      * @param hasLeadingZero if the digit '0' has been consumed
      * @return a double representation
      */
-    private static double parseRestOfDecimalFloatLiteral(CharSequence str, int endIndex, int index, boolean isNegative, boolean hasLeadingZero) {
+    private static double parseRestOfDecimalFloatLiteral(
+            CharSequence str, int endIndex, int index, boolean isNegative, boolean hasLeadingZero, int offset, long[] i128
+    ) {
         // Parse digits
         // ------------
         // Note: a multiplication by a constant is cheaper than an
@@ -262,8 +264,8 @@ class FastDoubleParserFromCharSequence {
             isDigitsTruncated = false;
         }
         double result = FastDoubleMath.decFloatLiteralToDouble(
-                index, isNegative, digits, exponent, virtualIndexOfPoint, exp_number, isDigitsTruncated, skipCountInTruncatedDigits);
-        return Double.isNaN(result) ? parseRestOfDecimalFloatLiteralTheHardWay(str) : result;
+                index, isNegative, digits, exponent, virtualIndexOfPoint, exp_number, isDigitsTruncated, skipCountInTruncatedDigits, i128);
+        return Double.isNaN(result) ? parseRestOfDecimalFloatLiteralTheHardWay(str, offset, endIndex) : result;
     }
 
     /**
@@ -277,8 +279,13 @@ class FastDoubleParserFromCharSequence {
      * </dl>
      *  @param str            the input string
      */
-    private static double parseRestOfDecimalFloatLiteralTheHardWay(CharSequence str) {
-        return Double.parseDouble(str.toString());
+    private static double parseRestOfDecimalFloatLiteralTheHardWay(CharSequence str, int index, int endIndex) {
+        try {
+            return Double.parseDouble(str.subSequence(index, endIndex).toString());
+        }
+        catch (NumberFormatException e) {
+            return Double.NaN;
+        }
     }
 
     /**
@@ -303,7 +310,7 @@ class FastDoubleParserFromCharSequence {
      * @return a double representation
      */
     private static double parseRestOfHexFloatingPointLiteral(
-            CharSequence str, int index, int endIndex, boolean isNegative) {
+            CharSequence str, int index, int endIndex, boolean isNegative, int offset) {
         if (index >= endIndex) {
 //            throw newNumberFormatException(str);
             return Double.NaN;
@@ -406,7 +413,7 @@ class FastDoubleParserFromCharSequence {
 
         double d = FastDoubleMath.hexFloatLiteralToDouble(
                 index, isNegative, digits, exponent, virtualIndexOfPoint, exp_number, isDigitsTruncated, skipCountInTruncatedDigits);
-        return Double.isNaN(d) ? Double.parseDouble(str.toString()) : d;
+        return Double.isNaN(d) ? parseRestOfDecimalFloatLiteralTheHardWay(str, offset, endIndex) : d;
     }
 
     private static int skipWhitespace(CharSequence str, int index, int endIndex) {

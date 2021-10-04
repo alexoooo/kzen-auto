@@ -63,12 +63,12 @@ class FastDoubleParserFromCharArray {
 //    }
 
 
-    public static double parseDoubleOrNan(char[] str) {
-        return parseDoubleOrNan(str, 0, str.length);
+    public static double parseDoubleOrNan(char[] str, long[] i128) {
+        return parseDoubleOrNan(str, 0, str.length, i128);
     }
 
 
-    public static double parseDoubleOrNan(char[] str, int offset, int length) {
+    public static double parseDoubleOrNan(char[] str, int offset, int length, long[] i128) {
         final int endIndex = offset + length;
 
         // Skip leading whitespace
@@ -106,11 +106,11 @@ class FastDoubleParserFromCharArray {
         if (hasLeadingZero) {
             ch = ++index < endIndex ? str[index] : 0;
             if (ch == 'x' || ch == 'X') {
-                return parseRestOfHexFloatingPointLiteral(str, index + 1, endIndex, isNegative);
+                return parseRestOfHexFloatingPointLiteral(str, index + 1, endIndex, isNegative, offset);
             }
         }
 
-        return parseRestOfDecimalFloatLiteral(str, endIndex, index, isNegative, hasLeadingZero);
+        return parseRestOfDecimalFloatLiteral(str, endIndex, index, isNegative, hasLeadingZero, offset, i128);
     }
 
     private static double parseInfinity(char[] str, int index, int endIndex, boolean negative) {
@@ -171,7 +171,8 @@ class FastDoubleParserFromCharArray {
      * @param hasLeadingZero if the digit '0' has been consumed
      * @return a double representation
      */
-    private static double parseRestOfDecimalFloatLiteral(char[] str, int endIndex, int index, boolean isNegative, boolean hasLeadingZero) {
+    private static double parseRestOfDecimalFloatLiteral(
+            char[] str, int endIndex, int index, boolean isNegative, boolean hasLeadingZero, int offset, long[] i128) {
         // Parse digits
         // ------------
         // Note: a multiplication by a constant is cheaper than an
@@ -265,8 +266,8 @@ class FastDoubleParserFromCharArray {
             isDigitsTruncated = false;
         }
         double result = FastDoubleMath.decFloatLiteralToDouble(
-                index, isNegative, digits, exponent, virtualIndexOfPoint, exp_number, isDigitsTruncated, skipCountInTruncatedDigits);
-        return Double.isNaN(result) ? parseRestOfDecimalFloatLiteralTheHardWay(str, endIndex, index) : result;
+                index, isNegative, digits, exponent, virtualIndexOfPoint, exp_number, isDigitsTruncated, skipCountInTruncatedDigits, i128);
+        return Double.isNaN(result) ? parseRestOfDecimalFloatLiteralTheHardWay(str, offset, endIndex) : result;
     }
 
     /**
@@ -280,8 +281,13 @@ class FastDoubleParserFromCharArray {
      * </dl>
      *  @param str            the input string
      */
-    private static double parseRestOfDecimalFloatLiteralTheHardWay(char[] str, int endIndex, int index) {
-        return Double.parseDouble(new String(str, index, endIndex - index));
+    private static double parseRestOfDecimalFloatLiteralTheHardWay(char[] str, int index, int endIndex) {
+        try {
+            return Double.parseDouble(new String(str, index, endIndex - index));
+        }
+        catch (NumberFormatException e) {
+            return Double.NaN;
+        }
     }
 
     /**
@@ -306,7 +312,7 @@ class FastDoubleParserFromCharArray {
      * @return a double representation
      */
     private static double parseRestOfHexFloatingPointLiteral(
-            char[] str, int index, int endIndex, boolean isNegative) {
+            char[] str, int index, int endIndex, boolean isNegative, int offset) {
         if (index >= endIndex) {
 //            throw newNumberFormatException(str);
             return Double.NaN;
@@ -409,7 +415,7 @@ class FastDoubleParserFromCharArray {
 
         double d = FastDoubleMath.hexFloatLiteralToDouble(
                 index, isNegative, digits, exponent, virtualIndexOfPoint, exp_number, isDigitsTruncated, skipCountInTruncatedDigits);
-        return Double.isNaN(d) ? Double.parseDouble(new String(str, index, endIndex - index)) : d;
+        return Double.isNaN(d) ? parseRestOfDecimalFloatLiteralTheHardWay(str, offset, endIndex) : d;
     }
 
     private static int skipWhitespace(char[] str, int index, int endIndex) {

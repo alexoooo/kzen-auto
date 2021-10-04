@@ -14,6 +14,18 @@ class RecordFieldFlyweightTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     @Test
+    fun emptyNan() {
+        checkToDouble("", Double.NaN)
+    }
+
+
+    @Test
+    fun corruptExponentNan() {
+        checkToDouble("6E+53154")
+    }
+
+
+    @Test
     fun simpleDecimalNotExact() {
         checkToDouble("10.1")
     }

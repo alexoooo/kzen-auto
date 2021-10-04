@@ -20,6 +20,9 @@ class ProcessorPreCacheStage(
     }
 
 
+    private val i128 = LongArray(2)
+
+
     override fun onEvent(event: ProcessorOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
         if (event.skip) {
             return
@@ -31,6 +34,6 @@ class ProcessorPreCacheStage(
             return
         }
 
-        event.row.populateCaches()
+        event.row.populateCaches(i128)
     }
 }

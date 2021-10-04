@@ -64,9 +64,9 @@ class PipelineExecution(
 
 
 //        private const val preCachePartitionCount = 0
-        private const val preCachePartitionCount = 1
+//        private const val preCachePartitionCount = 1
 //        private const val preCachePartitionCount = 2
-//        private const val preCachePartitionCount = 3
+        private const val preCachePartitionCount = 3
 //        private const val preCachePartitionCount = 4
 
 //        private const val recordDisruptorBufferSize = 16 * 1024
@@ -396,7 +396,7 @@ class PipelineExecution(
         if (initialReportRunContext.previewAll.enabled) {
             TODO("Preview All not implemented (yet)")
         }
-        val filterEnabled = initialReportRunContext.previewFiltered.enabled
+        val previewEnabled = initialReportRunContext.previewFiltered.enabled
 
         val startOfOutput =
             if (tableOutput != null) {
@@ -408,7 +408,7 @@ class PipelineExecution(
             }
 
         builder =
-            if (filterEnabled) {
+            if (previewEnabled) {
                 builder
                     .then(*preCachePartitions)
                     .then(summary, startOfOutput)

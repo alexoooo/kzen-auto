@@ -31,7 +31,7 @@ public class FlatFileRecord
     public static FlatFileRecord of(List<String> values) {
         FlatFileRecord buffer = new FlatFileRecord(0, 0);
         buffer.addAll(values);
-        buffer.populateCaches();
+        buffer.populateCaches(new long[2]);
         return buffer;
     }
 
@@ -43,7 +43,7 @@ public class FlatFileRecord
         buffer.fieldEnds[0] = length;
         buffer.fieldContentLength = length;
         buffer.nonEmpty = true;
-        buffer.populateCaches();
+        buffer.populateCaches(new long[2]);
         return buffer;
     }
 
@@ -126,30 +126,30 @@ public class FlatFileRecord
      * @param fieldIndex field index
      * @return double value of field contents or NaN
      */
-    public double cachedDoubleOrNan(int fieldIndex) {
+    public double cachedDoubleOrNan(int fieldIndex, long[] i128) {
         double cached = doublesCache[fieldIndex];
         if (isDoubleCacheMissing(cached)) {
-            populateCache(fieldIndex);
+            populateCache(fieldIndex, i128);
             return doublesCache[fieldIndex];
         }
         return cached;
     }
 
 
-    public long cachedHash(int fieldIndex) {
-        populateCacheIfRequired(fieldIndex);
+    public long cachedHash(int fieldIndex, long[] i128) {
+        populateCacheIfRequired(fieldIndex, i128);
         return hashesCache[fieldIndex];
     }
 
 
-    public void populateCaches() {
+    public void populateCaches(long[] i128) {
         for (int i = 0; i < fieldCount; i++) {
-            populateCacheIfRequired(i);
+            populateCacheIfRequired(i, i128);
         }
     }
 
 
-    private void populateCacheIfRequired(int fieldIndex) {
+    private void populateCacheIfRequired(int fieldIndex, long[] i128) {
         if (! isDoubleCacheMissing(doublesCache[fieldIndex])) {
             return;
         }
@@ -157,23 +157,23 @@ public class FlatFileRecord
         int start = contentStart(fieldIndex);
         int length = fieldEnds[fieldIndex] - start;
 
-        cacheDouble(fieldIndex, start, length);
+        cacheDouble(fieldIndex, start, length, i128);
         cacheHash(fieldIndex, start, length);
         hasCache = true;
     }
 
 
-    private void populateCache(int fieldIndex) {
+    private void populateCache(int fieldIndex, long[] i128) {
         int start = contentStart(fieldIndex);
         int length = fieldEnds[fieldIndex] - start;
 
-        cacheDouble(fieldIndex, start, length);
+        cacheDouble(fieldIndex, start, length, i128);
         cacheHash(fieldIndex, start, length);
         hasCache = true;
     }
 
 
-    private void cacheDouble(int fieldIndex, int start, int length) {
+    private void cacheDouble(int fieldIndex, int start, int length, long[] i128) {
         int startCursor = start;
         int lengthCursor = length;
         for (int i = 0; i < lengthCursor; i++) {
@@ -191,7 +191,7 @@ public class FlatFileRecord
             lengthCursor--;
         }
 
-        double value = NumberParseUtils.toDoubleOrNan(fieldContents, startCursor, lengthCursor);
+        double value = NumberParseUtils.toDoubleOrNan(fieldContents, startCursor, lengthCursor, i128);
         doublesCache[fieldIndex] = value;
     }
 

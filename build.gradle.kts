@@ -5,7 +5,6 @@ plugins {
 
 allprojects {
     group = "tech.kzen.auto"
-//    version = "0.23.1-SNAPSHOT"
     version = "0.24.0-SNAPSHOT"
 
     repositories {
