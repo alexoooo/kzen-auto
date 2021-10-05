@@ -10,10 +10,10 @@ import react.RPureComponent
 import react.dom.attrs
 import react.dom.td
 import styled.*
+import tech.kzen.auto.client.objects.document.pipeline.input.PipelineInputController
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
 import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunProgress
-import tech.kzen.auto.client.objects.document.report.input.browse.InputBrowser
 import tech.kzen.auto.client.wrap.material.MaterialCheckbox
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
@@ -309,7 +309,7 @@ class InputSelectedTableController(
             css {
                 cursor = Cursor.pointer
                 hover {
-                    backgroundColor = InputBrowser.hoverRow
+                    backgroundColor = PipelineInputController.hoverRow
                 }
             }
 

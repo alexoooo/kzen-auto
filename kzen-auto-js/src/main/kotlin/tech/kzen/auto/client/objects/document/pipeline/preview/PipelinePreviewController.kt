@@ -11,7 +11,7 @@ import styled.*
 import tech.kzen.auto.client.objects.document.common.edit.BooleanAttributeEditor
 import tech.kzen.auto.client.objects.document.pipeline.preview.model.PipelinePreviewState
 import tech.kzen.auto.client.objects.document.pipeline.preview.model.PipelinePreviewStore
-import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
+import tech.kzen.auto.client.objects.document.pipeline.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconInfoCircleO
 import tech.kzen.auto.client.wrap.material.MaterialButton

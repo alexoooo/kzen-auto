@@ -5,9 +5,9 @@ import react.*
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.pipeline.PipelineController
 import tech.kzen.auto.client.objects.document.pipeline.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
-import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputBrowserSpec
 import tech.kzen.auto.common.util.data.DataLocation
@@ -78,8 +78,8 @@ class InputBrowserController(
         if (! props.forceOpen) {
             styledDiv {
                 css {
-                    borderTopWidth = ReportController.separatorWidth
-                    borderTopColor = ReportController.separatorColor
+                    borderTopWidth = PipelineController.separatorWidth
+                    borderTopColor = PipelineController.separatorColor
                     borderTopStyle = BorderStyle.solid
                     width = 100.pct
                     fontSize = 1.5.em

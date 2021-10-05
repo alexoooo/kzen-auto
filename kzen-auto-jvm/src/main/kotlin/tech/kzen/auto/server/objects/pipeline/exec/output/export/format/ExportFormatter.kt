@@ -5,7 +5,7 @@ import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
 import tech.kzen.auto.server.objects.pipeline.exec.output.export.model.ExportFormat
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.pipeline.exec.event.ProcessorOutputEvent
 
 
 class ExportFormatter(

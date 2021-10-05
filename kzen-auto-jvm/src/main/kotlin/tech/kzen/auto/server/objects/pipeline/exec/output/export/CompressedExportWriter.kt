@@ -7,8 +7,8 @@ import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpe
 import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
+import tech.kzen.auto.server.objects.pipeline.exec.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.pipeline.exec.output.export.model.ExportCompression
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
 import tech.kzen.lib.common.model.document.DocumentName
 import java.io.BufferedOutputStream
 import java.io.Closeable

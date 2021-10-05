@@ -7,7 +7,7 @@ import tech.kzen.auto.plugin.helper.ListPipelineOutput
 import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.plugin.model.DataInputEvent
 import tech.kzen.auto.plugin.model.ModelOutputEvent
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.pipeline.exec.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.instance.ProcessorSegmentInstance
 import tech.kzen.auto.server.objects.pipeline.exec.input.stages.ProcessorInputDecoder
 import tech.kzen.auto.server.objects.pipeline.exec.input.stages.ProcessorInputFramer

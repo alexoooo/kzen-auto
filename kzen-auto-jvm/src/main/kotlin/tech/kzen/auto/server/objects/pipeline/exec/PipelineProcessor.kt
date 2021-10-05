@@ -21,9 +21,9 @@ import tech.kzen.auto.server.objects.pipeline.exec.input.stages.ProcessorInputDe
 import tech.kzen.auto.server.objects.pipeline.exec.input.stages.ProcessorInputFramer
 import tech.kzen.auto.server.objects.pipeline.exec.input.stages.ProcessorInputReader
 import tech.kzen.auto.server.objects.pipeline.exec.trace.PipelineInputTrace
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
-import tech.kzen.auto.server.objects.report.pipeline.event.output.DecoratorPipelineOutput
-import tech.kzen.auto.server.objects.report.pipeline.event.output.DisruptorPipelineOutput
+import tech.kzen.auto.server.objects.pipeline.exec.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.pipeline.exec.event.output.DecoratorPipelineOutput
+import tech.kzen.auto.server.objects.pipeline.exec.event.output.DisruptorPipelineOutput
 import tech.kzen.auto.server.util.DisruptorUtils
 import java.util.concurrent.atomic.AtomicBoolean
 

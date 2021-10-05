@@ -9,7 +9,8 @@ import tech.kzen.lib.common.model.obj.ObjectName
 
 
 object PipelineConventions {
-    val objectName = ObjectName("Pipeline")
+//    val objectName = ObjectName("Pipeline")
+    val objectName = ObjectName("Report")
 
     private const val inputKey = "input"
     val inputAttributeName = AttributeName(inputKey)

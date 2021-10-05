@@ -4,10 +4,10 @@ import kotlinx.css.*
 import react.*
 import styled.css
 import styled.styledDiv
+import tech.kzen.auto.client.objects.document.pipeline.PipelineController
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.pipeline.input.select.model.InputSelectedState
 import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunProgress
-import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.wrap.material.GroupWorkIcon
 import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.MoreHorizIcon
@@ -70,8 +70,8 @@ class InputSelectedController(
         if (props.browserOpen) {
             styledDiv {
                 css {
-                    borderTopWidth = ReportController.separatorWidth
-                    borderTopColor = ReportController.separatorColor
+                    borderTopWidth = PipelineController.separatorWidth
+                    borderTopColor = PipelineController.separatorColor
                     borderTopStyle = BorderStyle.solid
                     marginTop = 1.em
                     width = 100.pct
@@ -188,7 +188,7 @@ class InputSelectedController(
 
                 style = reactStyle {
                     if (state.showGroupBy) {
-                        backgroundColor = ReportController.selectedColor
+                        backgroundColor = PipelineController.selectedColor
                     }
                     borderWidth = 2.px
                 }
@@ -229,7 +229,7 @@ class InputSelectedController(
                     marginLeft = 1.em
 
                     if (state.showDetails) {
-                        backgroundColor = ReportController.selectedColor
+                        backgroundColor = PipelineController.selectedColor
                     }
                     borderWidth = 2.px
                 }

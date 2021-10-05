@@ -32,13 +32,13 @@ import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.FlatDataHead
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.FlatDataInfo
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.FlatDataLocation
 import tech.kzen.auto.server.objects.pipeline.exec.output.TableReportOutput
+import tech.kzen.auto.server.objects.pipeline.exec.summary.ReportSummary
 import tech.kzen.auto.server.objects.pipeline.model.GroupPattern
 import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
+import tech.kzen.auto.server.objects.pipeline.service.ReportUtils
+import tech.kzen.auto.server.objects.pipeline.service.ReportWorkPool
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
-import tech.kzen.auto.server.objects.report.ReportUtils
-import tech.kzen.auto.server.objects.report.ReportWorkPool
-import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.ServerContext
@@ -59,6 +59,10 @@ import java.util.regex.PatternSyntaxException
 import kotlin.io.path.Path
 
 
+// TODO: consider charting support
+//  https://github.com/JetBrains/lets-plot-kotlin
+//  https://github.com/JetBrains/lets-plot-kotlin/issues/46
+//  https://github.com/JetBrains/lets-plot-kotlin/issues/5
 @Reflect
 class PipelineDocument(
     private val input: InputSpec,

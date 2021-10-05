@@ -6,10 +6,10 @@ import styled.css
 import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
+import tech.kzen.auto.client.objects.document.pipeline.PipelineController
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputState
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
 import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunProgress
-import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconTable
 import tech.kzen.auto.client.wrap.iconify.vaadinIconUploadAlt
@@ -260,7 +260,7 @@ class PipelineOutputController(
                     marginTop = (-10).px
 
                     if (state.settingsOpen) {
-                        backgroundColor = ReportController.selectedColor
+                        backgroundColor = PipelineController.selectedColor
                     }
                 }
             }

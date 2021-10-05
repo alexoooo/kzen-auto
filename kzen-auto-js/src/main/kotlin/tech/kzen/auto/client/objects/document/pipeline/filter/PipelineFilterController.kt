@@ -8,7 +8,7 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.pipeline.filter.model.PipelineFilterState
 import tech.kzen.auto.client.objects.document.pipeline.filter.model.PipelineFilterStore
-import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
+import tech.kzen.auto.client.objects.document.pipeline.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconFilter
 import tech.kzen.auto.client.wrap.material.MaterialButton

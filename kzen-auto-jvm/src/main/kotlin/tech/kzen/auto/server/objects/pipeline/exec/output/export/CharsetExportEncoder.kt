@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.pipeline.exec.output.export
 
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.pipeline.exec.event.ProcessorOutputEvent
 import java.nio.charset.Charset
 import kotlin.math.ceil
 

@@ -4,7 +4,7 @@ import tech.kzen.auto.common.objects.document.report.output.OutputTableInfo
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
 import tech.kzen.auto.server.objects.pipeline.exec.output.TableReportOutput
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.pipeline.exec.event.ProcessorOutputEvent
 
 
 class ProcessorOutputTableStage(

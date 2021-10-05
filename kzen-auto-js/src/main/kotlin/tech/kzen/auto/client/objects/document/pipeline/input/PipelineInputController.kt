@@ -8,13 +8,13 @@ import react.dom.div
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.pipeline.PipelineController
 import tech.kzen.auto.client.objects.document.pipeline.input.browse.InputBrowserController
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputState
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.pipeline.input.select.InputSelectedController
 import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunProgress
-import tech.kzen.auto.client.objects.document.report.ReportController
-import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
+import tech.kzen.auto.client.objects.document.pipeline.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
@@ -231,7 +231,7 @@ class PipelineInputController(
 
                 style = reactStyle {
                     if (isBrowserOpen()) {
-                        backgroundColor = ReportController.selectedColor
+                        backgroundColor = PipelineController.selectedColor
                     }
                     borderWidth = 2.px
                     marginTop = 0.px

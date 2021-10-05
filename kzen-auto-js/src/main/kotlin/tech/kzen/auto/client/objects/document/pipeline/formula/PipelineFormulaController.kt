@@ -8,7 +8,7 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.pipeline.formula.model.PipelineFormulaState
 import tech.kzen.auto.client.objects.document.pipeline.formula.model.PipelineFormulaStore
-import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
+import tech.kzen.auto.client.objects.document.pipeline.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.material.FunctionsIcon
 import tech.kzen.auto.client.wrap.material.MaterialCircularProgress
 import tech.kzen.auto.client.wrap.reactStyle

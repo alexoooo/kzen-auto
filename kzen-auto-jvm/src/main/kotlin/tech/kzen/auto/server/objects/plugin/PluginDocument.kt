@@ -5,12 +5,11 @@ import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
-import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.common.util.data.FilePathJvm.toPath
 import tech.kzen.auto.plugin.definition.ProcessorDefiner
+import tech.kzen.auto.server.objects.pipeline.service.ReportUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
-import tech.kzen.auto.server.objects.report.ReportUtils.asCommon
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.yaml.YamlList
@@ -88,9 +87,10 @@ class PluginDocument(
         pluginsInJarConnection.useCaches = false
         val pluginsYaml = pluginsInJarConnection.inputStream.use { it.readAllBytes() }.toString(Charsets.UTF_8)
 
-        val pluginClasses = (YamlParser.parse(pluginsYaml) as YamlList)
-            .values
-            .map { (it as YamlString).value }
+        val pluginClasses = (YamlParser.parse(pluginsYaml) as? YamlList)
+            ?.values
+            ?.map { (it as YamlString).value }
+            ?: listOf()
 
         val builder = mutableListOf<ProcessorDefiner<*>>()
 

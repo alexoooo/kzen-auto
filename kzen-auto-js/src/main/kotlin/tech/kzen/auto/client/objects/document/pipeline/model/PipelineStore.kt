@@ -8,7 +8,6 @@ import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInput
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
 import tech.kzen.auto.client.objects.document.pipeline.preview.model.PipelinePreviewStore
 import tech.kzen.auto.client.objects.document.pipeline.run.model.PipelineRunStore
-import tech.kzen.auto.client.objects.document.report.state.ReportStore
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
@@ -48,7 +47,7 @@ class PipelineStore: SessionGlobal.Observer {
             refresh()
             scheduleRefresh()
         }
-    }, ReportStore.debounceMillis)
+    }, debounceMillis)
 
 
     val input = PipelineInputStore(this)

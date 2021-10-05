@@ -10,7 +10,7 @@ import tech.kzen.auto.client.objects.document.pipeline.analysis.model.PipelineAn
 import tech.kzen.auto.client.objects.document.pipeline.analysis.pivot.AnalysisPivotController
 import tech.kzen.auto.client.objects.document.pipeline.input.model.PipelineInputStore
 import tech.kzen.auto.client.objects.document.pipeline.output.model.PipelineOutputStore
-import tech.kzen.auto.client.objects.document.report.edge.ReportBottomEgress
+import tech.kzen.auto.client.objects.document.pipeline.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconLayout
 import tech.kzen.auto.client.wrap.iconify.vaadinIconTable

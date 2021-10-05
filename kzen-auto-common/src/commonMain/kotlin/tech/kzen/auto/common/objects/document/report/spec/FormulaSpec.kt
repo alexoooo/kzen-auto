@@ -61,7 +61,7 @@ data class FormulaSpec(
         }
 
 
-        fun formulaAttributePath(columnName: String): AttributePath {
+        private fun formulaAttributePath(columnName: String): AttributePath {
             val columnAttributeSegment = AttributeSegment.ofKey(columnName)
             return ReportConventions.formulaAttributePath.nest(columnAttributeSegment)
         }

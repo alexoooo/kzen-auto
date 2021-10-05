@@ -7,8 +7,8 @@ import react.RPureComponent
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.objects.document.pipeline.PipelineController
 import tech.kzen.auto.client.objects.document.pipeline.analysis.model.PipelineAnalysisStore
-import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.wrap.select.ReactSelectMulti
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
@@ -66,8 +66,8 @@ class AnalysisPivotRowListController(
 
         styledDiv {
             css {
-                borderTopWidth = ReportController.separatorWidth
-                borderTopColor = ReportController.separatorColor
+                borderTopWidth = PipelineController.separatorWidth
+                borderTopColor = PipelineController.separatorColor
                 borderTopStyle = BorderStyle.solid
                 paddingTop = 0.5.em
             }

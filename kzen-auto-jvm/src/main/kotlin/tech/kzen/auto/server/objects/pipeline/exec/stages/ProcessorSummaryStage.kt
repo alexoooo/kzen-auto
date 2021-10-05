@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.pipeline.exec.stages
 
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
-import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
+import tech.kzen.auto.server.objects.pipeline.exec.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.pipeline.exec.summary.ReportSummary
 
 
 class ProcessorSummaryStage(

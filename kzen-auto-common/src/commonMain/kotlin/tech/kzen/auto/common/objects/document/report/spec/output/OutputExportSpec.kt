@@ -5,11 +5,7 @@ import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentName
-import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
 
 
 data class OutputExportSpec(
@@ -52,30 +48,6 @@ data class OutputExportSpec(
                 ?: throw IllegalArgumentException("missing '$pathPatterKey'")
 
             return OutputExportSpec(format, compression, pathPattern)
-        }
-
-
-        fun changeFormatCommand(mainLocation: ObjectLocation, format: String): NotationCommand {
-            return UpdateInAttributeCommand(
-                mainLocation,
-                formatAttributePath,
-                ScalarAttributeNotation(format))
-        }
-
-
-        fun changeCompressionCommand(mainLocation: ObjectLocation, compression: String): NotationCommand {
-            return UpdateInAttributeCommand(
-                mainLocation,
-                compressionAttributePath,
-                ScalarAttributeNotation(compression))
-        }
-
-
-        fun changePathCommand(mainLocation: ObjectLocation, path: String): NotationCommand {
-            return UpdateInAttributeCommand(
-                mainLocation,
-                pathAttributePath,
-                ScalarAttributeNotation(path))
         }
 
 

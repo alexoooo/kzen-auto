@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.pipeline.exec.output.export
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.pipeline.exec.event.ProcessorOutputEvent
 
 
 class ExportColumnNormalizer(

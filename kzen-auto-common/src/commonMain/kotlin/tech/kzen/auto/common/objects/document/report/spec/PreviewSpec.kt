@@ -11,8 +11,6 @@ import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
@@ -33,17 +31,17 @@ data class PreviewSpec(
         }
 
 
-        fun changeEnabledCommand(mainLocation: ObjectLocation, filtered: Boolean, enabled: Boolean): NotationCommand {
-            val attributeName = when (filtered) {
-                false -> ReportConventions.previewAllAttributeName
-                true -> ReportConventions.previewFilteredAttributeName
-            }
-
-            return UpdateInAttributeCommand(
-                mainLocation,
-                AttributePath.ofName(attributeName),
-                ScalarAttributeNotation(enabled.toString()))
-        }
+//        fun changeEnabledCommand(mainLocation: ObjectLocation, filtered: Boolean, enabled: Boolean): NotationCommand {
+//            val attributeName = when (filtered) {
+//                false -> ReportConventions.previewAllAttributeName
+//                true -> ReportConventions.previewFilteredAttributeName
+//            }
+//
+//            return UpdateInAttributeCommand(
+//                mainLocation,
+//                AttributePath.ofName(attributeName),
+//                ScalarAttributeNotation(enabled.toString()))
+//        }
     }
 
 

@@ -2,11 +2,11 @@ package tech.kzen.auto.server.objects.pipeline.exec.stages
 
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
-import tech.kzen.auto.server.objects.report.pipeline.calc.CalculatedColumn
-import tech.kzen.auto.server.objects.report.pipeline.calc.CalculatedColumnEval
-import tech.kzen.auto.server.objects.report.pipeline.calc.ColumnValue
-import tech.kzen.auto.server.objects.report.pipeline.calc.ConstantCalculatedColumn
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.pipeline.exec.calc.CalculatedColumn
+import tech.kzen.auto.server.objects.pipeline.exec.calc.CalculatedColumnEval
+import tech.kzen.auto.server.objects.pipeline.exec.calc.ColumnValue
+import tech.kzen.auto.server.objects.pipeline.exec.calc.ConstantCalculatedColumn
+import tech.kzen.auto.server.objects.pipeline.exec.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeader
 import tech.kzen.lib.platform.ClassName
 

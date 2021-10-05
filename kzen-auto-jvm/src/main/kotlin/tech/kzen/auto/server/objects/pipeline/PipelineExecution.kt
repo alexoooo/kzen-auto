@@ -20,6 +20,8 @@ import tech.kzen.auto.plugin.definition.ProcessorDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessor
+import tech.kzen.auto.server.objects.pipeline.exec.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.pipeline.exec.event.output.DisruptorPipelineOutput
 import tech.kzen.auto.server.objects.pipeline.exec.input.connect.file.FileFlatDataSource
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.DatasetDefinition
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.data.DatasetInfo
@@ -33,14 +35,12 @@ import tech.kzen.auto.server.objects.pipeline.exec.output.export.ExportColumnNor
 import tech.kzen.auto.server.objects.pipeline.exec.output.export.format.ExportFormatter
 import tech.kzen.auto.server.objects.pipeline.exec.output.export.model.ExportFormat
 import tech.kzen.auto.server.objects.pipeline.exec.stages.*
+import tech.kzen.auto.server.objects.pipeline.exec.summary.ReportSummary
 import tech.kzen.auto.server.objects.pipeline.exec.trace.PipelineInputTrace
 import tech.kzen.auto.server.objects.pipeline.exec.trace.PipelineOutputTrace
 import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
+import tech.kzen.auto.server.objects.pipeline.service.ReportWorkPool
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
-import tech.kzen.auto.server.objects.report.ReportWorkPool
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
-import tech.kzen.auto.server.objects.report.pipeline.event.output.DisruptorPipelineOutput
-import tech.kzen.auto.server.objects.report.pipeline.summary.ReportSummary
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution

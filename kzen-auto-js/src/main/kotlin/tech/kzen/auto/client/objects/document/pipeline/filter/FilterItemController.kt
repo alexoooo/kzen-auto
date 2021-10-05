@@ -12,8 +12,8 @@ import react.dom.attrs
 import react.setState
 import styled.*
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
+import tech.kzen.auto.client.objects.document.pipeline.PipelineController
 import tech.kzen.auto.client.objects.document.pipeline.filter.model.PipelineFilterStore
-import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterSpec
@@ -147,8 +147,8 @@ class FilterItemController(
 
         styledDiv {
             css {
-                borderTopWidth = ReportController.separatorWidth
-                borderTopColor = ReportController.separatorColor
+                borderTopWidth = PipelineController.separatorWidth
+                borderTopColor = PipelineController.separatorColor
                 borderTopStyle = BorderStyle.solid
             }
 

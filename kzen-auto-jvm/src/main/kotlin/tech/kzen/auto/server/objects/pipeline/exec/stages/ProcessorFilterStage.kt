@@ -8,7 +8,7 @@ import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.pipeline.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.pipeline.model.ReportRunContext
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.pipeline.exec.event.ProcessorOutputEvent
 
 
 class ProcessorFilterStage(

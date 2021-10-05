@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.pipeline.exec.stages
 
 import com.lmax.disruptor.EventHandler
 import tech.kzen.auto.server.objects.pipeline.exec.PipelineProcessorStage
-import tech.kzen.auto.server.objects.report.pipeline.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.pipeline.exec.event.ProcessorOutputEvent
 
 
 class ProcessorPreCacheStage(
