@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.paradigm.task.model
 
-import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
@@ -80,6 +80,6 @@ data class TaskModel(
 
 
     fun requestAction(): String {
-        return request.parameters.get(ReportConventions.actionParameter)!!
+        return request.parameters.get(CommonRestApi.paramAction)!!
     }
 }

@@ -8,8 +8,8 @@ import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.common.util.data.FilePathJvm.toPath
 import tech.kzen.auto.plugin.definition.ProcessorDefiner
-import tech.kzen.auto.server.objects.pipeline.service.ReportUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
+import tech.kzen.auto.server.objects.report.service.ReportUtils.asCommon
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.yaml.YamlList

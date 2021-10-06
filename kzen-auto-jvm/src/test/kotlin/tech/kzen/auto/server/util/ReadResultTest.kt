@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.util
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.pipeline.exec.input.model.ReadResult
+import tech.kzen.auto.server.objects.report.exec.input.model.ReadResult
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 

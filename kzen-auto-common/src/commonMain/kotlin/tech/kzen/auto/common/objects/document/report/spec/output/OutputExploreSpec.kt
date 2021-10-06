@@ -18,21 +18,35 @@ data class OutputExploreSpec(
 
 
         fun ofNotation(notation: MapAttributeNotation): OutputExploreSpec {
-            val previewStart = notation
-                .get(previewStartKey)
-                ?.asString()
-                ?.replace(",", "")
-                ?.toLongOrNull()
+            val previewStart = readLong(previewStartKey, notation)
                 ?: 1
 
-            val previewCount = notation
-                .get(previewRowCountKey)
-                ?.asString()
-                ?.replace(",", "")
-                ?.toIntOrNull()
+            val previewCount = readLong(previewRowCountKey, notation)?.toInt()
                 ?: 0
 
             return OutputExploreSpec(previewStart, previewCount)
+        }
+
+
+        private fun readLong(key: String, notation: MapAttributeNotation): Long? {
+            val value = notation.get(key)?.asString()
+                ?: return null
+//            println("$$ readLong - $value")
+
+            val dotIndex = value.indexOf(".")
+
+            val wholePart =
+                if (dotIndex != -1) {
+                    value.substring(0 until dotIndex)
+                }
+                else {
+                    value
+                }
+
+            val numberText = wholePart.filter { it.isDigit() }
+
+//            println("$$ readLong --- $numberText - ${numberText.toLongOrNull()}")
+            return numberText.toLongOrNull()
         }
     }
 

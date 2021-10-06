@@ -8,5 +8,5 @@
 
 ReportController:
   is: DocumentController
-  class: tech.kzen.auto.client.objects.document.pipeline.PipelineController$Wrapper
+  class: tech.kzen.auto.client.objects.document.report.ReportController$Wrapper
   archetype: Report

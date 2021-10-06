@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.objects.document.report.spec.analysis.pivot
 
-import tech.kzen.auto.common.objects.document.pipeline.PipelineConventions
+import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
@@ -21,9 +21,9 @@ data class PivotValueTableSpec(
 
 
         fun ofRequest(requestParams: RequestParams): PivotValueTableSpec {
-            val values = requestParams.values[PipelineConventions.previewPivotValuesKey]
+            val values = requestParams.values[ReportConventions.previewPivotValuesKey]
                 ?: throw IllegalArgumentException(
-                    "Request missing '${PipelineConventions.previewPivotValuesKey}': $requestParams")
+                    "Request missing '${ReportConventions.previewPivotValuesKey}': $requestParams")
 
             val columns = values
                 .map { encodedColumnValue ->
@@ -73,7 +73,7 @@ data class PivotValueTableSpec(
             }
 
         return RequestParams(mapOf(
-            PipelineConventions.previewPivotValuesKey to encodedValues))
+            ReportConventions.previewPivotValuesKey to encodedValues))
     }
 
 

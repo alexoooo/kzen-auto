@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
-import kotlinx.html.InputType
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLTextAreaElement
 import react.*
@@ -9,6 +8,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.material.MaterialTextField
+import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
@@ -61,7 +61,7 @@ class TextAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        this.value = props.value.toString()
+        value = stateText(props.value, props.type)
         pending = false
     }
 
@@ -76,7 +76,23 @@ class TextAttributeEditor(
         }
 
         setState {
-            this.value = props.value.toString()
+            this.value = stateText(props.value, props.type)
+        }
+    }
+
+
+    private fun stateText(value: Any, type: Type?): String {
+        return when {
+            type == Type.Number && value is Number ->
+                if (value is Double || value is Float) {
+                    value.toString()
+                }
+                else {
+                    FormatUtils.decimalSeparator(value.toLong())
+                }
+
+            else ->
+                value.toString()
         }
     }
 
@@ -154,9 +170,9 @@ class TextAttributeEditor(
                     onValueChange(value)
                 }
 
-                if (valueType == Type.Number) {
-                    type = InputType.number.name
-                }
+//                if (valueType == Type.Number) {
+//                    type = InputType.number.name
+//                }
 
                 disabled = props.disabled
                 error = props.invalid

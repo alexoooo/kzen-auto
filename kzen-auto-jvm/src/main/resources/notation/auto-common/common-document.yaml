@@ -191,7 +191,7 @@ OutputSpecDefiner:
 Report:
   abstract: true
   is: Document
-  class: tech.kzen.auto.server.objects.pipeline.PipelineDocument
+  class: tech.kzen.auto.server.objects.report.ReportDocument
   title: "Report"
   icon: TableChart
   input:
@@ -217,7 +217,6 @@ Report:
   output:
     type: Explore
     explore:
-      save: ""
       start: 1
       count: 50
     export:

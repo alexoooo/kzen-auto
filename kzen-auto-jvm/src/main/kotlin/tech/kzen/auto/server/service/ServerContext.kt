@@ -9,15 +9,12 @@ import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepo
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.service.GraphInstanceCreator
 import tech.kzen.auto.server.codegen.KzenAutoJvmModule
-import tech.kzen.auto.server.objects.pipeline.exec.calc.CalculatedColumnEval
-import tech.kzen.auto.server.objects.pipeline.exec.input.parse.csv.CsvProcessorDefiner
-import tech.kzen.auto.server.objects.pipeline.exec.input.parse.text.TextProcessorDefiner
-import tech.kzen.auto.server.objects.pipeline.exec.input.parse.tsv.TsvProcessorDefiner
-import tech.kzen.auto.server.objects.pipeline.service.ColumnListingAction
-import tech.kzen.auto.server.objects.pipeline.service.FileListingAction
-import tech.kzen.auto.server.objects.pipeline.service.FilterIndex
-import tech.kzen.auto.server.objects.pipeline.service.ReportWorkPool
 import tech.kzen.auto.server.objects.plugin.PluginProcessorDefinitionRepository
+import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
+import tech.kzen.auto.server.objects.report.service.ColumnListingAction
+import tech.kzen.auto.server.objects.report.service.FileListingAction
+import tech.kzen.auto.server.objects.report.service.FilterIndex
+import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
 import tech.kzen.auto.server.service.exec.EmptyExecutionInitializer
@@ -107,15 +104,15 @@ object ServerContext {
     val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler)
 
     val fileListingAction = FileListingAction()
-//    val reportRunAction = ReportRunAction(reportWorkPool)
     val filterIndex = FilterIndex(workUtils)
     val columnListingAction = ColumnListingAction(filterIndex)
 
 
     private val basicDefinitionRepository = HostProcessorDefinitionRepository(listOf(
-        CsvProcessorDefiner(),
-        TsvProcessorDefiner(),
-        TextProcessorDefiner()))
+        tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvProcessorDefiner(),
+        tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvProcessorDefiner(),
+        tech.kzen.auto.server.objects.report.exec.input.parse.text.TextProcessorDefiner()
+    ))
 
     private val pluginProcessorDefinitionRepository = PluginProcessorDefinitionRepository(
          graphStore, graphDefiner, graphCreator)
