@@ -282,10 +282,16 @@ class FilterItemController(
                 ColumnFilterType.ExcludeAll -> "Exclude"
             }
 
-        +"$label: "
+        styledDiv {
+            css {
+                maxHeight = 5.em
+                overflowY = Overflow.auto
+            }
+            +"$label: "
 
-        +columnFilterSpec.values.joinToString {
-            it.ifBlank { "(blank)" }
+            +columnFilterSpec.values.joinToString {
+                it.ifBlank { "(blank)" }
+            }
         }
     }
 
