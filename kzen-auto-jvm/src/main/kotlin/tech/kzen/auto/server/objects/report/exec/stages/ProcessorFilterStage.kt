@@ -6,7 +6,6 @@ import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import tech.kzen.auto.server.objects.report.exec.ReportProcessorStage
 import tech.kzen.auto.server.objects.report.exec.event.ProcessorOutputEvent
-import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 
@@ -73,11 +72,11 @@ class ProcessorFilterStage(
             return
         }
 
-        event.skip = ! test(event.row, event.header.value)
+        event.skip = ! test(event.row, event.header.value.headerNames)
     }
 
 
-    private fun test(row: FlatFileRecord, header: RecordHeader): Boolean {
+    private fun test(row: FlatFileRecord, header: HeaderListing): Boolean {
         val columnIndices = recordHeaderIndex.indices(header)
 
         flyweight.selectHost(row)

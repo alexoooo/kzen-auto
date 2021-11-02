@@ -50,6 +50,8 @@ import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean
 
 
+// TODO: bugfix empty on small input
+// TODO: bugfix keeps showing as running after large export done (after interrupt and remove some inputs?)
 class ReportExecution(
     private val initialReportRunContext: ReportRunContext,
     private val reportWorkPool: ReportWorkPool,

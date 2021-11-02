@@ -23,7 +23,7 @@ class ProcessorOutputTableStage(
             return
         }
 
-        tableReportOutput.add(event.row, event.header.value)
+        tableReportOutput.add(event.row, event.header.value.headerNames)
     }
 
 

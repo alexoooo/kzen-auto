@@ -21,7 +21,7 @@ class ProcessorSummaryStage(
             return
         }
 
-        reportSummary.add(event.row, event.header.value)
+        reportSummary.add(event.row, event.header.value.headerNames)
     }
 
 

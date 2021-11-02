@@ -9,6 +9,14 @@ ScriptController:
   scriptCommander: ScriptCommander
 
 
+SequenceController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.sequence.SequenceController$Wrapper
+  archetype: Sequence
+#  stepController: StepController
+#  scriptCommander: ScriptCommander
+
+
 ################################################################
 
 

@@ -45,7 +45,7 @@ object LogicTraceStore:
     ): LogicTraceHandle {
         val buffer = getOrCreateBuffer(runExecutionId)
 
-        return object : LogicTraceHandle {
+        return object: LogicTraceHandle {
             override fun register(callback: (LogicTraceQuery) -> Unit): AutoCloseable {
                 buffer.callbacks.add(callback)
                 return AutoCloseable {

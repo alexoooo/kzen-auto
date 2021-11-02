@@ -6,6 +6,7 @@ import tech.kzen.auto.server.objects.report.exec.event.ProcessorOutputEvent
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 
 
+// TODO: use bulk copy instead of copying field-by-field, or maybe even add special RowView
 class ExportColumnNormalizer(
     private val filteredColumns: HeaderListing
 ):
@@ -15,8 +16,6 @@ class ExportColumnNormalizer(
     private val recordHeaderIndex = RecordHeaderIndex(filteredColumns)
     private val normalizedColumnCount = filteredColumns.values.size
 
-//    private var previousGroup: DataLocationGroup? = null
-
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onEvent(event: ProcessorOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
@@ -25,9 +24,15 @@ class ExportColumnNormalizer(
         }
 
         val row = event.row
+        val rowHeader = event.header.value.headerNames
+        check(row.fieldCount() == rowHeader.values.size) {
+            "Mismatch between header column could and row column count " +
+                    "(${rowHeader.values.size} vs ${row.fieldCount()}): ${rowHeader.values} vs $row"
+        }
+
         val normalizedRow = event.normalizedRow
 
-        if (filteredColumns == event.header.value.headerNames) {
+        if (filteredColumns == rowHeader) {
             normalizedRow.clone(row)
             return
         }
@@ -35,7 +40,7 @@ class ExportColumnNormalizer(
         normalizedRow.clear()
         normalizedRow.growTo(row.fieldContentLength(), normalizedColumnCount)
 
-        val columnIndices = recordHeaderIndex.indices(event.header.value)
+        val columnIndices = recordHeaderIndex.indices(rowHeader)
         val fieldEnds = row.fieldEndsUnsafe()
         val fieldContents = row.fieldContentsUnsafe()
 

@@ -3,7 +3,6 @@ package tech.kzen.auto.server.objects.report.exec.output.pivot.row.digest
 
 @JvmInline
 value class DigestOrdinal(
-//inline class DigestOrdinal(
     private val value: Long
 ) {
     companion object {

@@ -8,7 +8,6 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotVa
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import tech.kzen.auto.server.objects.report.exec.calc.ColumnValueUtils
-import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.exec.output.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.report.exec.output.pivot.row.digest.H2DigestIndex
@@ -187,7 +186,7 @@ class PivotBuilder(
     /**
      * @return true if new row was created
      */
-    fun add(recordRow: FlatFileRecord, header: RecordHeader): Boolean {
+    fun add(recordRow: FlatFileRecord, header: HeaderListing): Boolean {
         val headerIndexes = valueColumnIndex.indices(header)
 
         var present = false
@@ -221,7 +220,7 @@ class PivotBuilder(
     }
 
 
-    private fun rowIndex(recordRow: FlatFileRecord, header: RecordHeader): Long {
+    private fun rowIndex(recordRow: FlatFileRecord, header: HeaderListing): Long {
         var valueAdded = false
         val headerIndices = rowColumnIndex.indices(header)
 

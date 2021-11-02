@@ -7,7 +7,6 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
-import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.report.exec.output.pivot.PivotBuilder
 import tech.kzen.auto.server.objects.report.exec.trace.ReportOutputTrace
@@ -126,7 +125,7 @@ class TableReportOutput(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordRow: FlatFileRecord, header: RecordHeader) {
+    fun add(recordRow: FlatFileRecord, header: HeaderListing) {
         if (indexedCsvTable != null) {
             indexedCsvTable.add(recordRow, header)
             progress?.nextOutput(1L)

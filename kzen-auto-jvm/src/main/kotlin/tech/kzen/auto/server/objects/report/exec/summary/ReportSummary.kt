@@ -1,10 +1,10 @@
 package tech.kzen.auto.server.objects.report.exec.summary
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.summary.*
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
-import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.exec.summary.model.ValueSummaryBuilder
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
@@ -301,7 +301,7 @@ class ReportSummary(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordRow: FlatFileRecord, header: RecordHeader) {
+    fun add(recordRow: FlatFileRecord, header: HeaderListing) {
         flyweight.selectHost(recordRow);
 
         val indices = headerIndex.indices(header)

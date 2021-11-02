@@ -6,7 +6,6 @@ import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.report.exec.input.ProcessorInputChain
 import tech.kzen.auto.server.objects.report.exec.input.connect.InputStreamFlatDataStream
-import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvProcessorDefiner
 import tech.kzen.auto.server.objects.report.exec.input.stages.ProcessorInputReader
@@ -97,7 +96,7 @@ class IndexedCsvTable(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun add(recordRow: FlatFileRecord, recordHeader: RecordHeader) {
+    fun add(recordRow: FlatFileRecord, recordHeader: HeaderListing) {
         val indices = headerIndex.indices(recordHeader)
 
         var first = true

@@ -11,7 +11,7 @@ import java.util.zip.GZIPInputStream
 import kotlin.io.path.name
 
 
-//@OptIn(ExperimentalPathApi::class)
+@Suppress("UnstableApiUsage")
 class FileFlatDataStream constructor(
     location: Path,
     gzip: Boolean = location.name.endsWith(".gz"),

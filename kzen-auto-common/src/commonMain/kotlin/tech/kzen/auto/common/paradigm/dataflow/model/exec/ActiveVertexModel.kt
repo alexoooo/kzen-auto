@@ -8,7 +8,7 @@ class ActiveVertexModel(
         var streamHasNext: Boolean,
         var epoch: Long,
 
-        // TODO: consider factor out to be visual-only for performance
+        // TODO: factor out to be visual-only for performance?
         var error: String?
 ) {
     fun hasNext(): Boolean {

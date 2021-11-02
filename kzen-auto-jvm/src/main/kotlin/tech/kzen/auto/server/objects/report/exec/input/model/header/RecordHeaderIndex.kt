@@ -8,22 +8,21 @@ data class RecordHeaderIndex(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     private var cachedIndices = IntArray(0)
-    private var cachedRecordHeader = RecordHeader.empty
+//    private var cachedRecordHeader = RecordHeader.empty
+    private var cachedRecordHeader = HeaderListing.empty
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun indices(recordHeader: RecordHeader): IntArray {
+    fun indices(recordHeader: HeaderListing): IntArray {
         if (recordHeader == cachedRecordHeader) {
             cachedRecordHeader = recordHeader
             return cachedIndices
         }
 
-//        val indices = IntArray(recordHeader.headerNames.size)
         val indices = IntArray(columnHeaders.values.size)
         for (i in columnHeaders.values.indices) {
             val columnHeader = columnHeaders.values[i]
-//            indices[i] = columnHeaders.indexOf(recordHeader.headerNames[i])
-            indices[i] = recordHeader.headerNames.values.indexOf(columnHeader)
+            indices[i] = recordHeader.values.indexOf(columnHeader)
         }
 
         cachedIndices = indices
