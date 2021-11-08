@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.exec.input.parse
 
 import org.junit.Test
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
-import tech.kzen.auto.server.objects.report.exec.input.parse.text.TextProcessorDefiner
+import tech.kzen.auto.server.objects.report.exec.input.parse.text.TextReportDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -158,6 +158,6 @@ class TextLineParserTest {
         bufferSize: Int = text.length
     ): List<FlatFileRecord> {
 //        return ReportInputChain.allText(text, bufferSize)
-        return tech.kzen.auto.server.objects.report.exec.input.parse.text.TextProcessorDefiner.literal(text, bufferSize)
+        return TextReportDefiner.literal(text, bufferSize)
     }
 }

@@ -4,11 +4,11 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
-import tech.kzen.auto.server.objects.report.exec.input.ProcessorInputChain
+import tech.kzen.auto.server.objects.report.exec.input.ReportInputChain
 import tech.kzen.auto.server.objects.report.exec.input.connect.InputStreamFlatDataStream
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
-import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvProcessorDefiner
-import tech.kzen.auto.server.objects.report.exec.input.stages.ProcessorInputReader
+import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner
+import tech.kzen.auto.server.objects.report.exec.input.stages.ReportInputReader
 import tech.kzen.auto.server.objects.report.exec.output.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.report.exec.output.pivot.store.FileOffsetStore
 import tech.kzen.auto.server.objects.report.exec.output.pivot.store.StoreUtils
@@ -205,13 +205,13 @@ class IndexedCsvTable(
     }
 
 
-    private fun handleChannelProcessorInputChain(): ProcessorInputChain<FlatFileRecord> {
+    private fun handleChannelProcessorInputChain(): ReportInputChain<FlatFileRecord> {
         val flatDataStream = InputStreamFlatDataStream(
             Channels.newInputStream(handle.channel))
 
-        return ProcessorInputChain(
-            ProcessorInputReader(flatDataStream, null),
-            CsvProcessorDefiner.instance.define().processorDataDefinition,
+        return ReportInputChain(
+            ReportInputReader(flatDataStream, null),
+            CsvReportDefiner.instance.define().reportDataDefinition,
             Charsets.UTF_8)
     }
 

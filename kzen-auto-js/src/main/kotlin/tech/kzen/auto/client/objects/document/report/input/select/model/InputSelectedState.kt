@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.input.select.model
 
-import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
+import tech.kzen.auto.common.objects.document.plugin.model.ReportDefinerDetail
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.platform.ClassName
@@ -20,7 +20,7 @@ data class InputSelectedState(
     val dataTypes: List<ClassName>? = null,
     val selectedDataTypesError: String? = null,
 
-    val typeFormats: List<ProcessorDefinerDetail>? = null,
+    val typeFormats: List<ReportDefinerDetail>? = null,
     val selectedTypeFormatsError: String? = null,
 
     val selectedChecked: PersistentSet<DataLocation> = persistentSetOf()

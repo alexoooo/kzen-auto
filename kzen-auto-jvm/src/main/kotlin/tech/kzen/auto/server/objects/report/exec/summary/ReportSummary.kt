@@ -6,6 +6,7 @@ import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
+import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner
 import tech.kzen.auto.server.objects.report.exec.summary.model.ValueSummaryBuilder
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import java.nio.file.Files
@@ -37,7 +38,7 @@ class ReportSummary(
 
 
         private fun fromCsv(csv: String): List<List<String>> {
-            return tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvProcessorDefiner
+            return CsvReportDefiner
                 .literal(csv)
                 .map { it.toList() }
         }

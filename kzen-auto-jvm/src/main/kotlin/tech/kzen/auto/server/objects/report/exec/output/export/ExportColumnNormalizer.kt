@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.report.exec.output.export
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
-import tech.kzen.auto.server.objects.report.exec.ReportProcessorStage
-import tech.kzen.auto.server.objects.report.exec.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.report.exec.ReportPipelineStage
+import tech.kzen.auto.server.objects.report.exec.event.ReportOutputEvent
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 
 
@@ -10,7 +10,7 @@ import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeader
 class ExportColumnNormalizer(
     private val filteredColumns: HeaderListing
 ):
-    ReportProcessorStage<ProcessorOutputEvent<*>>("export-normalize")
+    ReportPipelineStage<ReportOutputEvent<*>>("export-normalize")
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val recordHeaderIndex = RecordHeaderIndex(filteredColumns)
@@ -18,16 +18,16 @@ class ExportColumnNormalizer(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onEvent(event: ProcessorOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
-        if (event.skip) {
+    override fun onEvent(event: ReportOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
+        if (event.isSkipOrSentinel()) {
             return
         }
 
         val row = event.row
-        val rowHeader = event.header.value.headerNames
+        val rowHeader = event.header.value
         check(row.fieldCount() == rowHeader.values.size) {
-            "Mismatch between header column could and row column count " +
-                    "(${rowHeader.values.size} vs ${row.fieldCount()}): ${rowHeader.values} vs $row"
+            "Mismatch between header (${rowHeader.values.size}) vs row (${row.fieldCount()})) " +
+                    "column count: ${rowHeader.values} vs $row"
         }
 
         val normalizedRow = event.normalizedRow

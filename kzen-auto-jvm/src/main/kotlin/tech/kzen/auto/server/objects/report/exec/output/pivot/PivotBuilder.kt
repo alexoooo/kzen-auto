@@ -255,10 +255,10 @@ class PivotBuilder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun corruptPreview(values: PivotValueTableSpec, start: Long): OutputPreview {
-        val exportSignature = OutputPivotExportSignature.of(rows, values)
-        return OutputPreview(exportSignature.header, listOf(), start)
-    }
+//    fun corruptPreview(values: PivotValueTableSpec, start: Long): OutputPreview {
+//        val exportSignature = OutputPivotExportSignature.of(rows, values)
+//        return OutputPreview(exportSignature.header, listOf(), start)
+//    }
 
 
     fun preview(values: PivotValueTableSpec, start: Long, count: Int): OutputPreview {

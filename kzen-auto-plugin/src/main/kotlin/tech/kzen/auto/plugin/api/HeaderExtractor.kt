@@ -1,6 +1,6 @@
 package tech.kzen.auto.plugin.api
 
-import tech.kzen.auto.plugin.api.managed.TraversableProcessorOutput
+import tech.kzen.auto.plugin.api.managed.TraversableReportOutput
 
 
 interface HeaderExtractor<Output> {
@@ -8,7 +8,7 @@ interface HeaderExtractor<Output> {
     companion object {
         fun <T> ofLiteral(vararg headerColumns: String): HeaderExtractor<T> {
             return object : HeaderExtractor<T> {
-                override fun extract(processed: TraversableProcessorOutput<T>): List<String> {
+                override fun extract(processed: TraversableReportOutput<T>): List<String> {
                     return listOf(*headerColumns)
                 }
             }
@@ -18,6 +18,6 @@ interface HeaderExtractor<Output> {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun extract(
-        processed: TraversableProcessorOutput<Output>
+        processed: TraversableReportOutput<Output>
     ): List<String>
 }

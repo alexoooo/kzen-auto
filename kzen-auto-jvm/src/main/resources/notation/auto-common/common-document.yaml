@@ -32,7 +32,7 @@ Script:
 Sequence:
   abstract: true
   is: Document
-  class: tech.kzen.auto.common.objects.document.sequence.SequenceDocument
+  class: tech.kzen.auto.server.objects.sequence.SequenceDocument
   icon: PlaylistPlay
   steps: []
   meta:

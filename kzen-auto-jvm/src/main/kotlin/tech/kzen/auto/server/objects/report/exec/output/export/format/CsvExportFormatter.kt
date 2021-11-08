@@ -9,7 +9,7 @@ class CsvExportFormatter:
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        // maxOf('"', ',', '\r', '\n')
+        // maxOf(',', '"', '\r', '\n')
         private const val maxSpecial: Char = 44.toChar()
     }
 
@@ -21,8 +21,9 @@ class CsvExportFormatter:
         val fieldCount = record.fieldCount()
         val fieldContentLength = fieldEnds[fieldCount - 1]
 
-        val outputLength = fieldContentLength * 2 + fieldCount * 3
-        output.ensureCharCapacity(output.charsLength + outputLength)
+        // if it's all quotes (i.e. """""""","""",...) + first empty field in empty record
+        val maxOutputLength = fieldContentLength * 2 + fieldCount * 3 + 2
+        output.ensureCharCapacity(output.charsLength + maxOutputLength)
 
         val outputChars = output.chars
         var nextOutput = output.charsLength
@@ -31,16 +32,30 @@ class CsvExportFormatter:
         for (i in 0 until fieldCount) {
             val end = fieldEnds[i]
 
+            // NB: behaviour align with commons-csv
+            //  https://github.com/apache/commons-csv/blob/c797b6109ec108d357cf254191aa232dd0c03710/src/main/java/org/apache/commons/csv/CSVFormat.java#L2000
             var hasSpecial = false
-            for (j in nextStart until end) {
-                val nextChar = fieldContents[j]
-                if (nextChar < maxSpecial) {
-                    when (nextChar) {
-                        ',', '"', '\r', '\n' -> {
-                            hasSpecial = true
-                            break
+            if (nextStart == end) {
+                hasSpecial = i == 0
+            }
+            else if (fieldContents[nextStart] == '#') {
+                hasSpecial = true
+            }
+            else {
+                specialCharLoop@
+                for (j in nextStart until end) {
+                    val nextChar = fieldContents[j]
+                    if (nextChar <= maxSpecial) {
+                        when (nextChar) {
+                            ',', '"', '\r', '\n' -> {
+                                hasSpecial = true
+                                break@specialCharLoop
+                            }
                         }
                     }
+                }
+                if (! hasSpecial) {
+                    hasSpecial = fieldContents[end - 1] <= ' '
                 }
             }
 

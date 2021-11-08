@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.exec.input
 
 import org.junit.Test
 import tech.kzen.auto.plugin.model.data.DataBlockBuffer
-import tech.kzen.auto.server.objects.report.exec.input.stages.ProcessorInputDecoder
+import tech.kzen.auto.server.objects.report.exec.input.stages.ReportInputDecoder
 import kotlin.test.assertEquals
 
 
@@ -51,7 +51,7 @@ class ReportInputDecoderTest {
     private fun decode(encoded: ByteArray, bufferSize: Int = encoded.size): String {
         val buffer = DataBlockBuffer.ofText(
             bufferSize.coerceAtLeast(DataBlockBuffer.maxUnicodeSize))
-        val decoder = ProcessorInputDecoder(Charsets.UTF_8)
+        val decoder = ReportInputDecoder(Charsets.UTF_8)
         val builder = StringBuilder()
 
         var offset = 0

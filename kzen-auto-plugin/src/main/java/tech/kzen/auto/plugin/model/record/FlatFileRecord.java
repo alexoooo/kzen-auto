@@ -235,7 +235,6 @@ public class FlatFileRecord
         int startIndex = contentStart(fieldIndex);
         int endIndex = fieldEnds[fieldIndex];
 
-        //CsvFormatUtils.writeCsv(fieldContents, startIndex, endIndex, out);
         var containsSpecial = false;
         for (int i = startIndex; i < endIndex; i++) {
             char nextChar = fieldContents[i];

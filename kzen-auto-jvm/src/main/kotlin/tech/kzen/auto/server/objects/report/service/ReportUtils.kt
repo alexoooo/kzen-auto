@@ -4,18 +4,18 @@ import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpe
 import tech.kzen.auto.common.objects.document.plugin.model.CommonTextEncodingSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.plugin.spec.DataEncodingSpec
-import tech.kzen.auto.server.service.plugin.ProcessorDefinitionMetadata
+import tech.kzen.auto.server.service.plugin.ReportDefinitionMetadata
 
 
 object ReportUtils {
     // TODO: encoding override from user
     fun encoding(
         inputDataSpec: InputDataSpec,
-        processorDefinitionMetadata: ProcessorDefinitionMetadata?
+        reportDefinitionMetadata: ReportDefinitionMetadata?
     ): DataEncodingSpec? {
         return when {
-            processorDefinitionMetadata != null ->
-                encodingWithMetadata(inputDataSpec, processorDefinitionMetadata)
+            reportDefinitionMetadata != null ->
+                encodingWithMetadata(inputDataSpec, reportDefinitionMetadata)
 
             else ->
                 encodingWithoutMetadata(inputDataSpec)
@@ -32,9 +32,9 @@ object ReportUtils {
 
     fun encodingWithMetadata(
         inputDataSpec: InputDataSpec,
-        processorDefinitionMetadata: ProcessorDefinitionMetadata
+        reportDefinitionMetadata: ReportDefinitionMetadata
     ): DataEncodingSpec {
-        return processorDefinitionMetadata.processorDefinitionInfo.dataEncoding
+        return reportDefinitionMetadata.reportDefinitionInfo.dataEncoding
     }
 
 

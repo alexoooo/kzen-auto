@@ -3,7 +3,6 @@ package tech.kzen.auto.server.objects.report.exec.calc
 import org.junit.Test
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
-import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
 import tech.kzen.auto.server.util.WorkUtils
@@ -411,7 +410,7 @@ class CalculatedColumnEvalTest {
         val value = calculatedColumn.evaluate(
             Unit,
             FlatFileRecord.of(aValue, bValue),
-            RecordHeader.of(columnNames))
+            HeaderListing(columnNames))
 
         assertEquals(expected, value.text)
     }

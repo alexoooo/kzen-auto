@@ -2,8 +2,7 @@ package tech.kzen.auto.server.objects.report.exec.input.parse
 
 import org.junit.Test
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
-import tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils
-import tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvProcessorDefiner
+import tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvReportDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -203,6 +202,6 @@ class TsvLineParserTest {
         text: String,
         bufferSize: Int = text.length
     ): List<FlatFileRecord> {
-        return tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvProcessorDefiner.literal(text, bufferSize)
+        return TsvReportDefiner.literal(text, bufferSize)
     }
 }

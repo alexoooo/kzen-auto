@@ -114,8 +114,8 @@ class ReportRunStore(
         delay(10)
         store.output.lookupOutputWithFallback()
 
-        delay(10)
-        store.previewFiltered.lookupSummaryWithFallback()
+        store.previewFiltered.lookupSummaryWithFallbackAsync()
+        lookupProgressWithFallbackAsync()
     }
 
 
@@ -156,9 +156,30 @@ class ReportRunStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun lookupProgressWithFallbackAsync() {
+        if (store.state().isRunning()) {
+            lookupProgressActiveAsync()
+        }
+        else {
+            lookupProgressOfflineAsync()
+        }
+    }
+
+
+//    suspend fun lookupProgressWithFallback() {
+//        val wasActive = lookupProgressActive()
+//        if (! wasActive) {
+//            lookupProgressOffline()
+//        }
+//    }
+
+
     fun lookupProgressOfflineAsync() {
+        val runExecutionId = store.state().output.outputInfo?.runExecutionId
+            ?: return
+
         async {
-            lookupProgressOffline()
+            lookupProgress(runExecutionId)
         }
     }
 
@@ -170,6 +191,16 @@ class ReportRunStore(
         lookupProgress(runExecutionId)
     }
 
+
+    fun lookupProgressActiveAsync() {
+        val activeInfo = store.state().run.logicStatus?.active
+            ?: return
+
+        async {
+            lookupProgress(LogicRunExecutionId(
+                activeInfo.id, activeInfo.frame.executionId))
+        }
+    }
 
     suspend fun lookupProgressActive() {
         val activeInfo = store.state().run.logicStatus?.active

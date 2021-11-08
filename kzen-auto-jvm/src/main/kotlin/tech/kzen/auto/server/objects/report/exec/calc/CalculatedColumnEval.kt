@@ -2,7 +2,6 @@ package tech.kzen.auto.server.objects.report.exec.calc
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
-import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.KotlinCode
@@ -127,10 +126,10 @@ $columnAccessors
     override fun evaluate(
         model: ${ modelType.topLevel() },
         flatFileRecord: ${ FlatFileRecord::class.java.simpleName },
-        recordHeader: ${ RecordHeader::class.java.simpleName }
+        headerListing: ${ HeaderListing::class.java.simpleName }
     ): ColumnValue {
         record = flatFileRecord
-        indices = recordHeaderIndex.indices(recordHeader)
+        indices = recordHeaderIndex.indices(headerListing)
         val value = model.evaluate()
         return ${ ColumnValue::class.java.simpleName }.ofScalar(value)
     }
@@ -158,10 +157,9 @@ $calculatedColumnFormula
         val classImports = setOf(
             CalculatedColumn::class.java.name,
             ColumnValue::class.java.name,
-            RecordHeader::class.java.name,
+            HeaderListing::class.java.name,
             RecordHeaderIndex::class.java.name,
             FlatFileRecord::class.java.name,
-            HeaderListing::class.java.name,
             modelType.asTopLevelImport()
         )
 

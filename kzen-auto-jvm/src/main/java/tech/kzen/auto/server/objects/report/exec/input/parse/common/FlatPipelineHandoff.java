@@ -2,16 +2,19 @@ package tech.kzen.auto.server.objects.report.exec.input.parse.common;
 
 
 import org.jetbrains.annotations.NotNull;
-import tech.kzen.auto.plugin.api.PipelineTerminalStep;
+import tech.kzen.auto.plugin.api.ReportInputTerminalStep;
 import tech.kzen.auto.plugin.api.managed.PipelineOutput;
 import tech.kzen.auto.plugin.model.ModelOutputEvent;
 import tech.kzen.auto.plugin.model.record.FlatFileRecord;
 
+import java.util.concurrent.CountDownLatch;
+
 
 public class FlatPipelineHandoff
-        implements PipelineTerminalStep<FlatProcessorEvent, ModelOutputEvent<FlatFileRecord>>
+        implements ReportInputTerminalStep<FlatReportEvent, ModelOutputEvent<FlatFileRecord>>
 {
     //-----------------------------------------------------------------------------------------------------------------
+    private final CountDownLatch endOfData = new CountDownLatch(1);
     private boolean skipFirst;
 
 
@@ -24,10 +27,11 @@ public class FlatPipelineHandoff
     //-----------------------------------------------------------------------------------------------------------------
     @Override
     public void process(
-            FlatProcessorEvent model,
+            FlatReportEvent model,
             @NotNull PipelineOutput<ModelOutputEvent<FlatFileRecord>> output
     ) {
         if (model.getEndOfData()) {
+            endOfData.countDown();
             return;
         }
 
@@ -48,5 +52,16 @@ public class FlatPipelineHandoff
         row.clone(flatFileRecord);
 
         output.commit();
+    }
+
+
+    @Override
+    public void awaitEndOfData() {
+        try {
+            endOfData.await();
+        }
+        catch (InterruptedException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

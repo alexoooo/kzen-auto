@@ -86,20 +86,20 @@ class ReportStore: SessionGlobal.Observer {
             return
         }
 
-        val pipelineMainLocation = ReportState.tryMainLocation(clientState)
+        val reportMainLocation = ReportState.tryMainLocation(clientState)
             ?: return
 
-        val pipelineMainDefinition = mainDefinition(clientState, pipelineMainLocation)
+        val reportMainDefinition = mainDefinition(clientState, reportMainLocation)
 
         val previousState = state
         val nextState = when {
-            previousState == null || pipelineMainLocation != previousState.mainLocation ->
+            previousState == null || reportMainLocation != previousState.mainLocation ->
                 ReportState(
-                    pipelineMainLocation,
-                    pipelineMainDefinition)
+                    reportMainLocation,
+                    reportMainDefinition)
 
             else ->
-                previousState.copy(mainDefinition = pipelineMainDefinition)
+                previousState.copy(mainDefinition = reportMainDefinition)
         }
 
         val initial =
@@ -198,6 +198,7 @@ class ReportStore: SessionGlobal.Observer {
             refreshDebounce.apply()
         }
         else if (previousRunning) {
+            println("ReportStore - previousRunning")
             cancelRefresh()
             output.lookupOutputWithFallbackAsync()
             run.lookupProgressOfflineAsync()

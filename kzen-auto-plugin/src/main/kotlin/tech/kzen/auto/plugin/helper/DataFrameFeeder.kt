@@ -1,8 +1,8 @@
 package tech.kzen.auto.plugin.helper
 
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
-import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.plugin.model.DataInputEvent
+import tech.kzen.auto.plugin.model.data.DataBlockBuffer
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer
 
 
@@ -38,6 +38,7 @@ class DataFrameFeeder(
             output.commit()
             partialInput.clear()
             count++
+//            println("DataFrameFeeder - continuingPartial")
         }
 
         val firstComplete = if (continuingPartial) { 1 } else { 0 }
@@ -49,11 +50,13 @@ class DataFrameFeeder(
             next.data.setFrame(dataBlockBuffer, i)
             output.commit()
             count++
+//            println("DataFrameFeeder - commit - $count")
         }
 
         if (frames.partialLast) {
             check(! dataBlockBuffer.endOfData)
             partialInput.addFrame(dataBlockBuffer, frames.count - 1)
+//            println("DataFrameFeeder - partialLast")
         }
 
         if (dataBlockBuffer.endOfData) {
@@ -61,6 +64,7 @@ class DataFrameFeeder(
             next.data.clear()
             next.endOfData = true
             output.commit()
+//            println("DataFrameFeeder - end of data")
         }
 
         return count

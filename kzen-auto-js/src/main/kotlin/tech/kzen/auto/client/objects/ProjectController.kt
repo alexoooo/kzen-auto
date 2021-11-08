@@ -71,17 +71,7 @@ class ProjectController(
         private val ribbonController: RibbonController.Wrapper,
         private val stageController: StageController.Wrapper
     ): ReactWrapper<Props> {
-        override fun child(input: RBuilder, handler: RHandler<Props>)/*: ReactElement*/ {
-//            return input.child(ProjectController::class) {
-//                attrs {
-//                    ribbonController = this@Wrapper.ribbonController
-//                    sidebarController = this@Wrapper.sidebarController
-//                    stageController = this@Wrapper.stageController
-//                }
-//
-//                handler()
-//            }
-
+        override fun child(input: RBuilder, handler: RHandler<Props>) {
             input.child(ProjectController::class) {
                 attrs {
                     ribbonController = this@Wrapper.ribbonController

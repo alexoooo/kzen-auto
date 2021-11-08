@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.exec.calc
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
-import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeader
 
 
 class ConstantCalculatedColumn<T>(
@@ -19,7 +19,7 @@ class ConstantCalculatedColumn<T>(
     override fun evaluate(
         model: T,
         flatFileRecord: FlatFileRecord,
-        recordHeader: RecordHeader
+        headerListing: HeaderListing
     ): ColumnValue {
         return value
     }

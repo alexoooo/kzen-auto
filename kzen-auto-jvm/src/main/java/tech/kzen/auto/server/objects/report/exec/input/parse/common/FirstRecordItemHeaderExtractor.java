@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.exec.input.parse.common;
 
 import org.jetbrains.annotations.NotNull;
 import tech.kzen.auto.plugin.api.HeaderExtractor;
-import tech.kzen.auto.plugin.api.managed.TraversableProcessorOutput;
+import tech.kzen.auto.plugin.api.managed.TraversableReportOutput;
 import tech.kzen.auto.plugin.model.record.FlatFileRecord;
 
 import java.util.List;
@@ -15,7 +15,7 @@ public class FirstRecordItemHeaderExtractor
     @NotNull
     @Override
     public List<String> extract(
-            @NotNull TraversableProcessorOutput<FlatFileRecord> processed
+            @NotNull TraversableReportOutput<FlatFileRecord> processed
     ) {
         @SuppressWarnings("unchecked")
         List<String>[] values = new List[1];

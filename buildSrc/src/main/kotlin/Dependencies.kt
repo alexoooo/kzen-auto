@@ -3,7 +3,7 @@ const val kotlinVersion = "1.5.31"
 const val jvmTargetVersion = "16"
 const val jvmToolchainVersion = 16
 const val shadowVersion = "7.0.0"
-const val springBootVersion = "2.5.5"
+const val springBootVersion = "2.5.6"
 const val dependencyManagementVersion = "1.0.11.RELEASE"
 
 
@@ -27,8 +27,8 @@ const val migzVersion = "2.0.beta-1"
 
 const val reactVersion = "17.0.2"
 const val inlineStylePrefixerVersion = "6.0.0"
-const val styledComponentsVersion = "5.3.1"
-const val kotlinxDatetimeVersion = "0.2.1"
+const val styledComponentsVersion = "5.3.3"
+const val kotlinxDatetimeVersion = "0.3.1"
 const val kotlinxHtmlVersion = "0.7.3"
 const val lodashVersion = "4.17.21"
 const val cropperJsVersion = "1.5.12"

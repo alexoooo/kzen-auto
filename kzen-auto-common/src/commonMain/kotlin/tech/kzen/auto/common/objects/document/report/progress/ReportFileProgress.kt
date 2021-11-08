@@ -73,6 +73,10 @@ data class ReportFileProgress(
 
         return when {
             finished -> {
+                if (records == 0L) {
+                    println("foo")
+                }
+
                 val overallRecordsSpeed = FormatUtils.decimalSeparator(
                     1000L * records / adjustedDurationMillis)
 

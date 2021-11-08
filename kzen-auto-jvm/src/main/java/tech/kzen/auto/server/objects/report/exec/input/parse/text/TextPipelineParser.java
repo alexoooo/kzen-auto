@@ -1,19 +1,18 @@
 package tech.kzen.auto.server.objects.report.exec.input.parse.text;
 
 
-import tech.kzen.auto.plugin.api.PipelineIntermediateStep;
+import tech.kzen.auto.plugin.api.ReportInputIntermediateStep;
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer;
 import tech.kzen.auto.plugin.model.record.FlatFileRecord;
-import tech.kzen.auto.server.objects.report.exec.input.parse.common.FlatProcessorEvent;
-import tech.kzen.auto.server.objects.report.exec.input.parse.common.FlatProcessorEvent;
+import tech.kzen.auto.server.objects.report.exec.input.parse.common.FlatReportEvent;
 
 
 public class TextPipelineParser
-        implements PipelineIntermediateStep<FlatProcessorEvent>
+        implements ReportInputIntermediateStep<FlatReportEvent>
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Override
-    public void process(FlatProcessorEvent model, long index) {
+    public void process(FlatReportEvent model, long index) {
         if (model.getEndOfData()) {
             return;
         }

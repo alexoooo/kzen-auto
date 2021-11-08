@@ -16,19 +16,19 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
-import tech.kzen.auto.plugin.definition.ProcessorDefinition
+import tech.kzen.auto.plugin.definition.ReportDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
-import tech.kzen.auto.server.objects.report.exec.ReportProcessor
-import tech.kzen.auto.server.objects.report.exec.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.report.exec.ReportInputPipeline
+import tech.kzen.auto.server.objects.report.exec.event.ReportOutputEvent
 import tech.kzen.auto.server.objects.report.exec.event.output.DisruptorPipelineOutput
 import tech.kzen.auto.server.objects.report.exec.input.connect.file.FileFlatDataSource
 import tech.kzen.auto.server.objects.report.exec.input.model.data.DatasetDefinition
 import tech.kzen.auto.server.objects.report.exec.input.model.data.DatasetInfo
 import tech.kzen.auto.server.objects.report.exec.input.model.data.FlatDataContentDefinition
-import tech.kzen.auto.server.objects.report.exec.input.model.instance.ProcessorDataInstance
-import tech.kzen.auto.server.objects.report.exec.input.stages.ProcessorInputReader
+import tech.kzen.auto.server.objects.report.exec.input.model.instance.ReportDataInstance
+import tech.kzen.auto.server.objects.report.exec.input.stages.ReportInputReader
 import tech.kzen.auto.server.objects.report.exec.output.TableReportOutput
 import tech.kzen.auto.server.objects.report.exec.output.export.CharsetExportEncoder
 import tech.kzen.auto.server.objects.report.exec.output.export.CompressedExportWriter
@@ -47,11 +47,12 @@ import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.util.DisruptorUtils
 import java.nio.file.Files
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 
-// TODO: bugfix empty on small input
-// TODO: bugfix keeps showing as running after large export done (after interrupt and remove some inputs?)
 class ReportExecution(
     private val initialReportRunContext: ReportRunContext,
     private val reportWorkPool: ReportWorkPool,
@@ -74,6 +75,12 @@ class ReportExecution(
 //        private const val recordDisruptorBufferSize = 16 * 1024
         private const val recordDisruptorBufferSize = 32 * 1024
 //        private const val recordDisruptorBufferSize = 64 * 1024
+
+
+        // NB: multiple input threads plus sentinel
+        private val recordProducerType =
+//            ProducerType.SINGLE
+            ProducerType.MULTI
 
 
         fun outputInfoOffline(
@@ -120,6 +127,12 @@ class ReportExecution(
 
             return withPreview
         }
+
+
+        private data class RecordDisruptor(
+            val disruptor: Disruptor<ReportOutputEvent<Any>>,
+            val executor: ExecutorService
+        )
     }
 
 
@@ -129,26 +142,25 @@ class ReportExecution(
     @Volatile
     private var cancelled = false
 
-    private val preCachePartitions = ProcessorPreCacheStage.partitions(preCachePartitionCount)
+    private val preCachePartitions = PipelinePreCacheStage.partitions(preCachePartitionCount)
 
-    private val summary = ProcessorSummaryStage(
+    private val summary = PipelineSummaryStage(
         ReportSummary(initialReportRunContext, initialReportRunContext.runDir))
 
-    private var tableOutput: ProcessorOutputTableStage? = null
+    private var tableOutput: PipelineOutputTableStage? = null
     private var exportWriter: CompressedExportWriter? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun init(logicControl: LogicControl) {
         if (initialReportRunContext.output.type == OutputType.Explore) {
-            tableOutput = ProcessorOutputTableStage(
+            tableOutput = PipelineOutputTableStage(
                 TableReportOutput(
                     initialReportRunContext,
                     ReportOutputTrace(trace)))
         }
         else {
             exportWriter = CompressedExportWriter(
-                initialReportRunContext.reportDocumentName,
                 initialReportRunContext.output.export)
         }
 
@@ -175,7 +187,7 @@ class ReportExecution(
         val classLoaderHandle = ServerContext.definitionRepository
             .classLoaderHandle(pluginCoordinates, ClassLoader.getSystemClassLoader())
 
-        val cache = mutableMapOf<PluginCoordinate, ProcessorDefinition<T>>()
+        val cache = mutableMapOf<PluginCoordinate, ReportDefinition<T>>()
         val builder = mutableListOf<FlatDataContentDefinition<T>>()
 
         for (flatDataInfo in datasetInfo.items) {
@@ -202,12 +214,12 @@ class ReportExecution(
     private fun <T> processorDataDefinition(
         processorDefinitionCoordinate: PluginCoordinate,
         classLoaderHandle: ClassLoaderHandle
-    ): ProcessorDefinition<T> {
+    ): ReportDefinition<T> {
         val definition = ServerContext.definitionRepository.define(
             processorDefinitionCoordinate, classLoaderHandle)
 
         @Suppress("UNCHECKED_CAST")
-        return definition as ProcessorDefinition<T>
+        return definition as ReportDefinition<T>
     }
 
 
@@ -219,11 +231,10 @@ class ReportExecution(
         datasetDefinition<Any>(datasetInfo).use { datasetDefinition ->
             val recordDisruptor = setupRecordDisruptor(
                 datasetDefinition.classLoaderHandle/*, control*/)
-            recordDisruptor.start()
+            recordDisruptor.disruptor.start()
 
+            val recordDisruptorInput = DisruptorPipelineOutput(recordDisruptor.disruptor.ringBuffer)
             try {
-                val recordDisruptorInput = DisruptorPipelineOutput(recordDisruptor.ringBuffer)
-
                 for (flatDataContentDefinition in datasetDefinition.items) {
                     runFlatData(recordDisruptorInput, flatDataContentDefinition, control)
 
@@ -233,8 +244,10 @@ class ReportExecution(
                 }
             }
             finally {
-                recordDisruptor.shutdown()
-//                progressTracker.finish()
+                waitForProcessingToFinish(recordDisruptorInput)
+                recordDisruptor.disruptor.shutdown()
+                recordDisruptor.executor.shutdown()
+                recordDisruptor.executor.awaitTermination(1, TimeUnit.MINUTES)
             }
         }
 
@@ -258,7 +271,7 @@ class ReportExecution(
 
 
     private fun <T> runFlatData(
-        recordDisruptorInput: PipelineOutput<ProcessorOutputEvent<T>>,
+        recordDisruptorInput: PipelineOutput<ReportOutputEvent<T>>,
         flatDataContentDefinition: FlatDataContentDefinition<T>,
         control: LogicControl
     ) {
@@ -268,21 +281,23 @@ class ReportExecution(
         val flatDataLocation = flatDataContentDefinition.flatDataInfo.flatDataLocation
         val reportInputTrace = ReportInputTrace(trace, flatDataLocation.dataLocation, totalSize)
 
-        val processorInputReader = ProcessorInputReader(flatDataStream, reportInputTrace)
+        val reportInputReader = ReportInputReader(flatDataStream, reportInputTrace)
 
-        val processorDataInstance = ProcessorDataInstance(
-            flatDataContentDefinition.processorDefinition.processorDataDefinition)
+        val reportDataInstance = ReportDataInstance(
+            flatDataContentDefinition.reportDefinition.reportDataDefinition)
 
-        val processorInputPipeline = ReportProcessor(
-            processorInputReader,
+        val reportInputPipeline = ReportInputPipeline(
+            reportInputReader,
             recordDisruptorInput,
-            processorDataInstance,
+            reportDataInstance,
             flatDataLocation.dataEncoding,
             flatDataContentDefinition.flatDataInfo,
             reportInputTrace,
             failed)
 
-        processorInputPipeline.start()
+//        println("ReportExecution - start")
+        var reachedEndOfData = false
+        reportInputPipeline.start()
         try {
             reportInputTrace.startReading()
 
@@ -292,19 +307,33 @@ class ReportExecution(
                     break
                 }
 
-                val hasNext = processorInputPipeline.poll()
-
+                val hasNext = reportInputPipeline.poll()
                 if (! hasNext) {
+                    reachedEndOfData = true
                     break
                 }
             }
         }
         finally {
-            processorInputPipeline.close()
+            reportInputPipeline.close(reachedEndOfData)
 
-            val reachedEnd = ! failed.get() && ! cancelled
-            reportInputTrace.finishParsing(reachedEnd)
+            waitForProcessingToFinish(recordDisruptorInput)
+
+            val reachedEndWithoutFailOrCancel = ! failed.get() && ! cancelled
+            reportInputTrace.finishParsing(reachedEndWithoutFailOrCancel)
         }
+    }
+
+
+    private fun <T> waitForProcessingToFinish(
+        recordDisruptorInput: PipelineOutput<ReportOutputEvent<T>>
+    ) {
+        val sentinelEvent = recordDisruptorInput.next()
+        val sentinel = sentinelEvent.setSentinel()
+
+        recordDisruptorInput.commit()
+
+        sentinel.await()
     }
 
 
@@ -371,17 +400,19 @@ class ReportExecution(
     //-----------------------------------------------------------------------------------------------------------------
     private fun setupRecordDisruptor(
         classLoaderHandle: ClassLoaderHandle,
-//        control: LogicControl
-    ): Disruptor<ProcessorOutputEvent<Any>> {
+    ): RecordDisruptor {
+        val executor = Executors.newCachedThreadPool(DaemonThreadFactory.INSTANCE)
+
+        @Suppress("DEPRECATION")
         val recordDisruptor = Disruptor(
-            { ProcessorOutputEvent<Any>() },
+            { ReportOutputEvent<Any>() },
             recordDisruptorBufferSize,
-            DaemonThreadFactory.INSTANCE,
-            ProducerType.SINGLE,
+            executor,
+            recordProducerType,
             DisruptorUtils.newWaitStrategy()
         )
 
-        val formulas = ProcessorFormulaStage(
+        val formulas = ReportFormulaStage(
             initialReportRunContext.dataType,
             initialReportRunContext.formula,
             classLoaderHandle.classLoader,
@@ -389,7 +420,7 @@ class ReportExecution(
 
         var builder = recordDisruptor.handleEventsWith(formulas)
 
-        val filter = ProcessorFilterStage(initialReportRunContext)
+        val filter = ReportFilterStage(initialReportRunContext)
         if (! filter.isEmpty()) {
             builder = builder.then(filter)
         }
@@ -423,7 +454,9 @@ class ReportExecution(
             builder
                 .then(ExportFormatter(
                     ExportFormat.byName(initialReportRunContext.output.export.format),
-                    initialReportRunContext.analysisColumnInfo.filteredColumns()
+                    initialReportRunContext.analysisColumnInfo.filteredColumns(),
+                    initialReportRunContext.reportDocumentName,
+                    initialReportRunContext.output.export
                 ))
                 .then(CharsetExportEncoder(Charsets.UTF_8))
                 .then(exportWriter)
@@ -432,15 +465,15 @@ class ReportExecution(
         val recordExceptionHandler = recordExceptionHandler(/*control*/)
         recordDisruptor.setDefaultExceptionHandler(recordExceptionHandler)
 
-        return recordDisruptor
+        return RecordDisruptor(recordDisruptor, executor)
     }
 
 
     private fun recordExceptionHandler(
 //        control: LogicControl
-    ): ExceptionHandler<ProcessorOutputEvent<*>> {
-        return object : ExceptionHandler<ProcessorOutputEvent<*>> {
-            override fun handleEventException(ex: Throwable, sequence: Long, event: ProcessorOutputEvent<*>) {
+    ): ExceptionHandler<ReportOutputEvent<*>> {
+        return object : ExceptionHandler<ReportOutputEvent<*>> {
+            override fun handleEventException(ex: Throwable, sequence: Long, event: ReportOutputEvent<*>) {
                 if (failed.get()) {
                     return
                 }

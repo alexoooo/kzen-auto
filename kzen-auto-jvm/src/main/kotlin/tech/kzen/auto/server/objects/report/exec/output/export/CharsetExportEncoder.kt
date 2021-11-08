@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.report.exec.output.export
 
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer
-import tech.kzen.auto.server.objects.report.exec.ReportProcessorStage
-import tech.kzen.auto.server.objects.report.exec.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.report.exec.ReportPipelineStage
+import tech.kzen.auto.server.objects.report.exec.event.ReportOutputEvent
 import java.nio.charset.Charset
 import kotlin.math.ceil
 
@@ -10,7 +10,7 @@ import kotlin.math.ceil
 class CharsetExportEncoder(
     charset: Charset
 ):
-    ReportProcessorStage<ProcessorOutputEvent<*>>("export-encode")
+    ReportPipelineStage<ReportOutputEvent<*>>("export-encode")
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val encoder = charset.newEncoder()
@@ -18,8 +18,8 @@ class CharsetExportEncoder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onEvent(event: ProcessorOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
-        if (event.skip) {
+    override fun onEvent(event: ReportOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
+        if (event.isSkipOrSentinel()) {
             return
         }
 

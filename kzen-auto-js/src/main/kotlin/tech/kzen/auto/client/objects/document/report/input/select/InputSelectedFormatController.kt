@@ -16,7 +16,7 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
-import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
+import tech.kzen.auto.common.objects.document.plugin.model.ReportDefinerDetail
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
 import kotlin.js.Json
 import kotlin.js.json
@@ -91,8 +91,8 @@ class InputSelectedFormatController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun typeLabel(processorDefinerDetail: ProcessorDefinerDetail): String {
-        return processorDefinerDetail.coordinate.asString()
+    private fun typeLabel(reportDefinerDetail: ReportDefinerDetail): String {
+        return reportDefinerDetail.coordinate.asString()
     }
 
 

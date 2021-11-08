@@ -1,21 +1,16 @@
 package tech.kzen.auto.server.objects.report.exec.output.export
 
 import com.linkedin.migz.MiGzOutputStream
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
-import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer
-import tech.kzen.auto.server.objects.report.exec.ReportProcessorStage
-import tech.kzen.auto.server.objects.report.exec.event.ProcessorOutputEvent
+import tech.kzen.auto.server.objects.report.exec.ReportPipelineStage
+import tech.kzen.auto.server.objects.report.exec.event.ReportOutputEvent
 import tech.kzen.auto.server.objects.report.exec.output.export.model.ExportCompression
-import tech.kzen.lib.common.model.document.DocumentName
 import java.io.BufferedOutputStream
 import java.io.Closeable
 import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.zip.GZIPOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -23,10 +18,9 @@ import kotlin.io.path.absolute
 
 
 class CompressedExportWriter(
-    private val reportName: DocumentName,
     private val outputExportSpec: OutputExportSpec
 ):
-    ReportProcessorStage<ProcessorOutputEvent<*>>("export-write")
+    ReportPipelineStage<ReportOutputEvent<*>>("export-write")
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -40,20 +34,20 @@ class CompressedExportWriter(
     private var out: OutputStream? = null
     private var closer: Closeable? = null
 
-    private var previousGroup: DataLocationGroup? = null
-    private var previousGroupStart: Instant = Instant.DISTANT_FUTURE
-    private var previousGroupResolvedPattern: String = ""
+    private var previousExportPath: Path? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onEvent(event: ProcessorOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
-        if (event.skip) {
+    override fun onEvent(event: ReportOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
+        if (event.isSkipOrSentinel()) {
+//            println("saw sentinel: ${event.hasSentinel()}")
+            event.completeAndClearSentinel()
             return
         }
 
-        if (previousGroup != event.group) {
-            openNextGroupIfRequired(event.group)
-            previousGroup = event.group
+        if (previousExportPath != event.exportPath) {
+            openNextGroup(event.exportPath, event.innerFilename)
+            previousExportPath = event.exportPath
         }
 
         write(event.exportData)
@@ -61,29 +55,11 @@ class CompressedExportWriter(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun openNextGroupIfRequired(group: DataLocationGroup) {
-        if (previousGroup == null) {
-            openGroupAndRememberPrevious(group)
-        }
-        else {
-            val resolvedPattern = outputExportSpec.resolvePath(reportName, group, previousGroupStart)
-            if (resolvedPattern == previousGroupResolvedPattern) {
-                return
-            }
-
+    private fun openNextGroup(exportPath: Path, innerFilename: String) {
+        if (previousExportPath != null) {
             closeGroup()
-            openGroupAndRememberPrevious(group)
         }
-    }
-
-
-    private fun openGroupAndRememberPrevious(group: DataLocationGroup) {
-        previousGroupStart = Clock.System.now()
-        previousGroupResolvedPattern = outputExportSpec.resolvePath(reportName, group, previousGroupStart)
-
-        val asPath = Paths.get(previousGroupResolvedPattern)
-        val resolvedInnerFilename = outputExportSpec.resolveInnerFilename(reportName, group, previousGroupStart)
-        openGroup(asPath, resolvedInnerFilename)
+        openGroup(exportPath, innerFilename)
     }
 
 

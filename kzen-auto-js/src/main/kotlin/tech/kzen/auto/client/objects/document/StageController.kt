@@ -62,7 +62,7 @@ class StageController(
     class Wrapper(
             private val documentControllers: List<DocumentController>
     ): ReactWrapper<Props> {
-        override fun child(input: RBuilder, handler: RHandler<Props>)/*: ReactElement*/ {
+        override fun child(input: RBuilder, handler: RHandler<Props>) {
             input.child(StageController::class) {
                 attrs {
                     documentControllers = this@Wrapper.documentControllers

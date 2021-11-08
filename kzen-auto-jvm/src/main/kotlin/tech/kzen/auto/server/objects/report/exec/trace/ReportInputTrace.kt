@@ -60,12 +60,12 @@ class ReportInputTrace(
     }
 
 
-    fun finishParsing(reachedEnd: Boolean) {
+    fun finishParsing(success: Boolean) {
         check(running)
         check(! finished)
 
         running = false
-        finished = reachedEnd
+        finished = success
         innerStopwatch.reset()
         endTime = clock.now()
 

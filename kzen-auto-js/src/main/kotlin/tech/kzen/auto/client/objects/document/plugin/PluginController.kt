@@ -14,7 +14,7 @@ import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.plugin.PluginConventions
-import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
+import tech.kzen.auto.common.objects.document.plugin.model.ReportDefinerDetail
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -58,7 +58,7 @@ class PluginController(
     //-----------------------------------------------------------------------------------------------------------------
     interface State: react.State {
         var clientState: SessionState?
-        var detailList: List<ProcessorDefinerDetail>?
+        var detailList: List<ReportDefinerDetail>?
         var listingError: String?
 //        var mainObjectLocation: ObjectLocation?
     }
@@ -138,7 +138,7 @@ class PluginController(
                 is ExecutionSuccess -> {
                     @Suppress("UNCHECKED_CAST")
                     val infoCollectionList = result.value.get() as List<Map<String, Any?>>
-                    val infoList = infoCollectionList.map { ProcessorDefinerDetail.ofCollection(it) }
+                    val infoList = infoCollectionList.map { ReportDefinerDetail.ofCollection(it) }
                     setState {
                         this.detailList = infoList
                         listingError = null
@@ -217,7 +217,7 @@ class PluginController(
     }
 
 
-    private fun RBuilder.renderInfoList(detailList: List<ProcessorDefinerDetail>) {
+    private fun RBuilder.renderInfoList(detailList: List<ReportDefinerDetail>) {
         if (detailList.isEmpty()) {
             +"Empty"
             return

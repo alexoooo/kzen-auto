@@ -16,9 +16,8 @@ import java.nio.file.Files
 import java.util.concurrent.CompletableFuture
 
 
-// TODO: optimize save csv generation
 class TableReportOutput(
-    private val initialReportRunContext: ReportRunContext,
+    initialReportRunContext: ReportRunContext,
     private val progress: ReportOutputTrace?
 ) {
     //-----------------------------------------------------------------------------------------------------------------

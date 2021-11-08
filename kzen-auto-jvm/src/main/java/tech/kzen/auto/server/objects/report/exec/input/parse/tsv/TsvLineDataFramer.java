@@ -71,5 +71,8 @@ public class TsvLineDataFramer
             dataBlockBuffer.frames.clearPartialLast();
             partial = false;
         }
+
+//        System.out.println("TsvLineDataFramer - " +
+//                frames.count + " - " + partial + " - " + dataBlockBuffer.endOfData);
     }
 }

@@ -2,12 +2,12 @@ package tech.kzen.auto.server.objects.plugin
 
 import com.google.common.io.Files
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
+import tech.kzen.auto.common.objects.document.plugin.model.ReportDefinerDetail
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.common.util.data.FilePathJvm.toPath
-import tech.kzen.auto.plugin.definition.ProcessorDefiner
+import tech.kzen.auto.plugin.definition.ReportDefiner
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.report.service.ReportUtils.asCommon
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -75,7 +75,7 @@ class PluginDocument(
     }
 
 
-    fun loadDefiners(classLoader: ClassLoader): List<ProcessorDefiner<*>>? {
+    fun loadDefiners(classLoader: ClassLoader): List<ReportDefiner<*>>? {
         val jarRoot = jarRoot()
             ?: return null
 
@@ -92,14 +92,14 @@ class PluginDocument(
             ?.map { (it as YamlString).value }
             ?: listOf()
 
-        val builder = mutableListOf<ProcessorDefiner<*>>()
+        val builder = mutableListOf<ReportDefiner<*>>()
 
         for (pluginClass in pluginClasses) {
             val loadedClass = classLoader.loadClass(pluginClass)
             val noArgConstructor = loadedClass.getDeclaredConstructor()
             val newInstance = noArgConstructor.newInstance()
 
-            val cast = newInstance as ProcessorDefiner<*>
+            val cast = newInstance as ReportDefiner<*>
             builder.add(cast)
         }
 
@@ -107,7 +107,7 @@ class PluginDocument(
     }
 
 
-    private fun definerDetailsImpl(classLoader: ClassLoader): List<ProcessorDefinerDetail>? {
+    private fun definerDetailsImpl(classLoader: ClassLoader): List<ReportDefinerDetail>? {
         val processorDefiners = loadDefiners(classLoader)
             ?: return null
 
@@ -119,9 +119,9 @@ class PluginDocument(
             val commonDataEncodingSpec = info.dataEncoding.asCommon()
 
             val definition = processorDefiner.define()
-            val modelType = ClassName(definition.processorDataDefinition.outputModelType.name)
+            val modelType = ClassName(definition.reportDataDefinition.outputModelType.name)
 
-            ProcessorDefinerDetail(
+            ReportDefinerDetail(
                 commonCoordinate,
                 info.extensions,
                 commonDataEncodingSpec,
@@ -134,7 +134,7 @@ class PluginDocument(
     }
 
 
-    private fun definerDetails(): List<ProcessorDefinerDetail>? {
+    private fun definerDetails(): List<ReportDefinerDetail>? {
         val classLoader = jarClassLoader()
             ?: return null
 

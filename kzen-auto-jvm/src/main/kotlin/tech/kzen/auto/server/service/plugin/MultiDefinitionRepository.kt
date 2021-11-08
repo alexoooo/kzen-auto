@@ -1,21 +1,21 @@
 package tech.kzen.auto.server.service.plugin
 
-import tech.kzen.auto.plugin.definition.ProcessorDefinition
+import tech.kzen.auto.plugin.definition.ReportDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 
 
 class MultiDefinitionRepository(
-    private val repositories: List<ProcessorDefinitionRepository>
+    private val repositories: List<ReportDefinitionRepository>
 ):
-    ProcessorDefinitionRepository
+    ReportDefinitionRepository
 {
     override fun contains(coordinate: PluginCoordinate): Boolean {
         return repositories.any { it.contains(coordinate) }
     }
 
 
-    override fun metadata(coordinate: PluginCoordinate): ProcessorDefinitionMetadata? {
+    override fun metadata(coordinate: PluginCoordinate): ReportDefinitionMetadata? {
         for (repository in repositories) {
             if (coordinate !in repository) {
                 continue
@@ -28,7 +28,7 @@ class MultiDefinitionRepository(
     }
 
 
-    override fun listMetadata(): List<ProcessorDefinitionMetadata> {
+    override fun listMetadata(): List<ReportDefinitionMetadata> {
         return repositories.flatMap { it.listMetadata() }
     }
 
@@ -43,8 +43,8 @@ class MultiDefinitionRepository(
         for (repository in repositories) {
             val matching = repository
                 .listMetadata()
-                .filter { it.processorDefinitionInfo.coordinate in coordinates }
-                .map { it.processorDefinitionInfo.coordinate }
+                .filter { it.reportDefinitionInfo.coordinate in coordinates }
+                .map { it.reportDefinitionInfo.coordinate }
                 .toSet()
 
             if (matching.isEmpty()) {
@@ -66,7 +66,7 @@ class MultiDefinitionRepository(
     override fun define(
         coordinate: PluginCoordinate,
         classLoaderHandle: ClassLoaderHandle
-    ): ProcessorDefinition<*> {
+    ): ReportDefinition<*> {
         val repository = repositories.find { it.contains(coordinate) }
             ?: throw IllegalArgumentException("Unknown: $coordinate")
 

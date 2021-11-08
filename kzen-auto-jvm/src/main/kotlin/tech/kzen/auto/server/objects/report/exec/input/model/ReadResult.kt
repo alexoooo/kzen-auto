@@ -45,7 +45,7 @@ value class ReadResult constructor(
 
     fun byteCount(): Int {
         if (isEndOfData()) {
-            return 0;
+            return 0
         }
         return (value shr Int.SIZE_BITS).toInt()
     }
@@ -53,7 +53,7 @@ value class ReadResult constructor(
 
     fun rawByteCount(): Int {
         if (isEndOfData()) {
-            return 0;
+            return 0
         }
         return value.toInt()
     }

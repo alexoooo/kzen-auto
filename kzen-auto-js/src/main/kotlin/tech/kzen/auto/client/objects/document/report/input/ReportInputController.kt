@@ -22,6 +22,7 @@ import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
+// TODO: add ability to select range of consecutive files (e.g. with shift + click)
 class ReportInputController(
     props: Props
 ):

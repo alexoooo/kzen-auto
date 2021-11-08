@@ -5,7 +5,8 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.report.exec.input.model.data.FlatDataHeaderDefinition
-import tech.kzen.auto.server.objects.report.exec.input.stages.ProcessorHeaderReader
+import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner
+import tech.kzen.auto.server.objects.report.exec.input.stages.ReportHeaderReader
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -44,7 +45,7 @@ class ColumnListingAction(
                 Files.readString(columnsFile, Charsets.UTF_8)
 //            }
 
-        return tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvProcessorDefiner
+        return CsvReportDefiner
             .literal(text)
             .drop(1)
             .map { it.getString(1) }
@@ -100,6 +101,6 @@ class ColumnListingAction(
     private fun <T> extractColumnNames(
         flatDataHeaderDefinition: FlatDataHeaderDefinition<T>
     ): HeaderListing {
-        return ProcessorHeaderReader().extract(flatDataHeaderDefinition)
+        return ReportHeaderReader().extract(flatDataHeaderDefinition)
     }
 }

@@ -7,9 +7,9 @@ import tech.kzen.auto.client.util.ClientError
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
-import tech.kzen.auto.common.objects.document.plugin.model.ProcessorDefinerDetail
+import tech.kzen.auto.common.objects.document.plugin.model.ReportDefinerDetail
+import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputDataSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
@@ -181,6 +181,10 @@ class InputSelectedStore(
             }
 
             store.input.listColumns()
+            store.formula.validateAsync()
+            store.output.lookupOutputWithFallback()
+            store.run.lookupProgressOfflineAsync()
+            store.previewFiltered.lookupSummaryWithFallbackAsync()
         }
     }
 
@@ -400,7 +404,7 @@ class InputSelectedStore(
     }
 
 
-    private suspend fun listFormats(): ClientResult<List<ProcessorDefinerDetail>> {
+    private suspend fun listFormats(): ClientResult<List<ReportDefinerDetail>> {
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
             ReportConventions.actionParameter to ReportConventions.actionTypeFormats)
@@ -410,7 +414,7 @@ class InputSelectedStore(
                 @Suppress("UNCHECKED_CAST")
                 val resultValue = result.value.get() as List<Map<String, Any?>>
 
-                val formats = resultValue.map { ProcessorDefinerDetail.ofCollection(it) }
+                val formats = resultValue.map { ReportDefinerDetail.ofCollection(it) }
 
                 ClientResult.ofSuccess(formats)
             }

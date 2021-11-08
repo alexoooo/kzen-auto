@@ -44,7 +44,7 @@ class SidebarController(
     class Wrapper(
             private val archetypes: List<ObjectLocation>
     ): ReactWrapper<Props> {
-        override fun child(input: RBuilder, handler: RHandler<Props>)/*: ReactElement*/ {
+        override fun child(input: RBuilder, handler: RHandler<Props>) {
             input.child(SidebarController::class) {
                 attrs {
                     archetypeLocations = this@Wrapper.archetypes

@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.exec.input.parse
 import org.junit.Test
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
-import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvProcessorDefiner
+import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -486,6 +486,6 @@ class CsvLineParserTest {
         bufferSize: Int = text.encodeToByteArray().size
     ): List<FlatFileRecord> {
 //        return ReportInputChain.allCsv(text, bufferSize)
-        return tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvProcessorDefiner.literal(text, bufferSize)
+        return CsvReportDefiner.literal(text, bufferSize)
     }
 }
