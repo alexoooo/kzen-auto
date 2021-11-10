@@ -46,11 +46,13 @@ class ReportInputPipeline<Output>(
         private const val binaryDisruptorBufferSize = 256
 //        private const val binaryDisruptorBufferSize = 512
 
-//        private val binaryProducerType = ProducerType.SINGLE
-        private val binaryProducerType = ProducerType.MULTI
+        private val binaryProducerType =
+            ProducerType.SINGLE
+//            ProducerType.MULTI
 
-//        private val modelProducerType = ProducerType.SINGLE
-        private val modelProducerType = ProducerType.MULTI
+        private val modelProducerType =
+            ProducerType.SINGLE
+//            ProducerType.MULTI
 
 
         private data class BinaryDisruptor(

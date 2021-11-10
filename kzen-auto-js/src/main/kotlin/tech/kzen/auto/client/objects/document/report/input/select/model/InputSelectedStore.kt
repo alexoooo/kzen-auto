@@ -138,6 +138,10 @@ class InputSelectedStore(
 
             delay(10)
             selectionPerformLoadInfo()
+
+            store.output.lookupOutputWithFallback()
+            store.run.lookupProgressOfflineAsync()
+            store.previewFiltered.lookupSummaryWithFallbackAsync()
         }
     }
 

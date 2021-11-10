@@ -79,8 +79,8 @@ class ReportExecution(
 
         // NB: multiple input threads plus sentinel
         private val recordProducerType =
-//            ProducerType.SINGLE
-            ProducerType.MULTI
+            ProducerType.SINGLE
+//            ProducerType.MULTI
 
 
         fun outputInfoOffline(

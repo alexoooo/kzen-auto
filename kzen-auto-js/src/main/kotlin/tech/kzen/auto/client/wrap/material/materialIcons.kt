@@ -512,7 +512,14 @@ external class VisibilityIcon: Component<IconProps, react.State> {
     override fun render(): ReactElement?
 }
 
+
 @JsName("Info")
 external class InfoIcon: Component<IconProps, react.State> {
+    override fun render(): ReactElement?
+}
+
+
+@JsName("Block")
+external class BlockIcon: Component<IconProps, react.State> {
     override fun render(): ReactElement?
 }

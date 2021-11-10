@@ -270,9 +270,13 @@ class ReportController(
 
             child(ReportRunController::class) {
                 attrs {
-                    this.runState = reportState.run
-                    this.outputStatus = reportState.output.outputInfo?.status ?: OutputStatus.Missing
-                    this.reportStore = store
+                    thisRunning = reportState.isRunning()
+                    thisSubmitting = reportState.run.submitting()
+                    otherRunning = reportState.run.otherRunning
+
+                    outputTerminal = (reportState.output.outputInfo?.status ?: OutputStatus.Missing).isTerminal()
+
+                    reportStore = store
                 }
             }
         }

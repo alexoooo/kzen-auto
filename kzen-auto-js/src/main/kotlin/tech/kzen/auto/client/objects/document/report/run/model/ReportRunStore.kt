@@ -54,21 +54,28 @@ class ReportRunStore(
     suspend fun refresh() {
         lookupStatus()
         lookupProgressActive()
-
-//        if (store.state().run.logicStatus?.active != null &&
-//                store.state().output.outputInfo == null
-//        ) {
-//            console.log("Refresh with outputInfo = null")
-//            store.output.lookupOutputWithFallback()
-//        }
     }
 
 
     suspend fun lookupStatus() {
         val status = ClientContext.restClient.logicStatus()
 
+        val active = status.active
+        val otherRunning = active != null && active.frame.objectLocation != store.state().mainLocation
+
         store.update { state -> state
-            .withRun { it.copy(logicStatus = status) }
+            .withRun {
+                if (otherRunning) {
+                    it.copy(
+                        logicStatus = status.copy(active = null),
+                        otherRunning = true)
+                }
+                else {
+                    it.copy(
+                        logicStatus = status,
+                        otherRunning = false)
+                }
+            }
         }
     }
 

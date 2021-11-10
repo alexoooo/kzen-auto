@@ -1,17 +1,10 @@
 package tech.kzen.auto.client.objects.document.report.run
 
 import kotlinx.css.*
-import kotlinx.html.js.onMouseOutFunction
-import kotlinx.html.js.onMouseOverFunction
 import react.*
-import react.dom.attrs
-import react.dom.div
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
-import tech.kzen.auto.client.objects.document.report.run.model.ReportRunState
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.report.output.OutputStatus
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicStatus
 
 
 class ReportRunController(
@@ -20,44 +13,48 @@ class ReportRunController(
     RPureComponent<ReportRunController.Props, ReportRunController.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-        var runState: ReportRunState,
-        var outputStatus: OutputStatus,
+    interface Props: react.Props {
+        var thisRunning: Boolean
+        var thisSubmitting: Boolean
+        var otherRunning: Boolean
+
+        var outputTerminal: Boolean
+
         var reportStore: ReportStore
-    ): react.Props
+    }
 
 
-    class State(
-        var fabHover: Boolean
-    ): react.State
+    interface State: react.State {
+//        var fabHover: Boolean
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun State.init(props: Props) {
-        fabHover = false
+//        fabHover = false
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onOuterEnter() {
-        setState {
-            fabHover = true
-        }
-    }
+//    private fun onOuterEnter() {
+//        setState {
+//            fabHover = true
+//        }
+//    }
+//
+//
+//    private fun onOuterLeave() {
+//        setState {
+//            fabHover = false
+//        }
+//    }
 
 
-    private fun onOuterLeave() {
-        setState {
-            fabHover = false
-        }
-    }
-
-
-    private fun onRunMain(running: Boolean, terminal: Boolean) {
-        if (running) {
+    private fun onRunMain() {
+        if (props.thisRunning) {
             props.reportStore.run.cancelAsync()
         }
-        else if (terminal) {
+        else if (props.outputTerminal) {
             props.reportStore.output.resetAsync()
         }
         else {
@@ -68,42 +65,61 @@ class ReportRunController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        div {
-            attrs {
-                onMouseOverFunction = {
-                    onOuterEnter()
-                }
-                onMouseOutFunction = {
-                    onOuterLeave()
-                }
-            }
-
-            renderInner()
+        if (props.otherRunning) {
+            renderOtherRunning()
         }
-    }
+        else {
+            renderMainAction()
+        }
 
-
-    private fun RBuilder.renderInner() {
-        val logicStatus = props.runState.logicStatus
-            ?: return
-
-        renderMainAction(logicStatus)
+//        div {
+//            attrs {
+//                onMouseOverFunction = {
+//                    onOuterEnter()
+//                }
+//                onMouseOutFunction = {
+//                    onOuterLeave()
+//                }
+//            }
+//
+//            renderInner()
+//        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun RBuilder.renderMainAction(
-        logicStatus: LogicStatus
-    ) {
-        val running = logicStatus.active != null
-        val terminal = props.outputStatus.isTerminal()
-        val inProgress = props.runState.submitting()
+    private fun RBuilder.renderOtherRunning() {
+        child(MaterialFab::class) {
+            attrs {
+                style = reactStyle {
+                    backgroundColor = Color.grey
+                    width = 5.em
+                    height = 5.em
+                }
+
+                title = "Other report is already running, refresh this page after it finishes"
+            }
+
+            child(BlockIcon::class) {
+                attrs {
+                    style = reactStyle {
+                        fontSize = 3.em
+                    }
+                }
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun RBuilder.renderMainAction() {
+        val inProgress = props.thisSubmitting
 
         child(MaterialFab::class) {
             attrs {
                 style = reactStyle {
                     backgroundColor =
-                        if (running || inProgress) {
+                        if (props.thisRunning || inProgress) {
                             Color.gold
                         }
                         else {
@@ -115,15 +131,15 @@ class ReportRunController(
                 }
 
                 onClick = {
-                    onRunMain(running, terminal)
+                    onRunMain()
                 }
 
                 title =
                     when {
-                        running ->
+                        props.thisRunning ->
                             "Cancel"
 
-                        terminal ->
+                        props.outputTerminal ->
                             "Reset"
 
                         else ->
@@ -132,10 +148,10 @@ class ReportRunController(
             }
 
             when {
-                running ->
+                props.thisRunning ->
                     renderProgressWithPause(inProgress)
 
-                terminal -> {
+                props.outputTerminal -> {
                     child(ReplayIcon::class) {
                         attrs {
                             style = reactStyle {
