@@ -54,8 +54,14 @@ class ModelTaskRepository(
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
 
-    @Synchronized
+
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+        onCommandSuccessSynchronized(event)
+    }
+
+
+    @Synchronized
+    private fun onCommandSuccessSynchronized(event: NotationEvent) {
         when (event) {
             is DeletedDocumentEvent ->
                 documentDeleted(event)

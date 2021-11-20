@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.service.v1
 
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
@@ -67,11 +68,13 @@ class ServerLogicController(
     }
 
 
+    override suspend fun start(root: ObjectLocation): LogicRunId? {
+        return startSynchronized(root)
+    }
+
+
     @Synchronized
-    override suspend fun start(
-        root: ObjectLocation,
-//        request: ExecutionRequest
-    ): LogicRunId? {
+    private fun startSynchronized(root: ObjectLocation): LogicRunId? {
         val state = stateOrNull
         if (state != null) {
             return null
@@ -83,9 +86,11 @@ class ServerLogicController(
 
         val objectStableMapper = ObjectStableMapper()
 
-        val successfulGraphDefinition = graphStore
-            .graphDefinition()
-            .successful()
+        val graphDefinition = runBlocking {
+            graphStore.graphDefinition()
+        }
+
+        val successfulGraphDefinition = graphDefinition.successful()
 
         val transitiveDefinition = successfulGraphDefinition.filterTransitive(root)
 
