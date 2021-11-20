@@ -1,10 +1,10 @@
 package tech.kzen.auto.plugin.definition
 
-import tech.kzen.auto.plugin.api.ReportInputIntermediateStep
+import tech.kzen.auto.plugin.api.ReportIntermediateStep
 
 
 data class ReportSegmentStepDefinition<Model>(
-    val intermediateStepFactories: List<() -> ReportInputIntermediateStep<Model>>
+    val intermediateStepFactories: List<() -> ReportIntermediateStep<Model>>
 ) {
 //    companion object {
 //        fun <Model> of(

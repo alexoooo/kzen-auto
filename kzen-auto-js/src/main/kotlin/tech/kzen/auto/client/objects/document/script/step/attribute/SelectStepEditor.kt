@@ -125,6 +125,8 @@ class SelectStepEditor(
                     }
                 }
             }
+
+            else -> {}
         }
     }
 

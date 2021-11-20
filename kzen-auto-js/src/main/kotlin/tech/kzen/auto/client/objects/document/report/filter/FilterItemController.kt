@@ -4,10 +4,10 @@ import kotlinx.css.*
 import kotlinx.html.title
 import react.RBuilder
 import react.RPureComponent
-import react.dom.ReactHTML.table
-import react.dom.ReactHTML.tbody
-import react.dom.ReactHTML.td
-import react.dom.ReactHTML.tr
+import react.dom.table
+import react.dom.tbody
+import react.dom.td
+import react.dom.tr
 import react.dom.attrs
 import react.setState
 import styled.*

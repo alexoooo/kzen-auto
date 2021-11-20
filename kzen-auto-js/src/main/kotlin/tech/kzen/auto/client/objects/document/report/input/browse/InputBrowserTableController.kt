@@ -9,6 +9,7 @@ import react.RBuilder
 import react.RPureComponent
 import react.dom.attrs
 import react.dom.td
+import react.setState
 import styled.*
 import tech.kzen.auto.client.objects.document.report.input.ReportInputController
 import tech.kzen.auto.client.objects.document.report.input.browse.model.InputBrowserState
@@ -23,6 +24,8 @@ import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.platform.collect.persistentSetOf
 import tech.kzen.lib.platform.collect.toPersistentSet
+import kotlin.math.max
+import kotlin.math.min
 
 
 class InputBrowserTableController(
@@ -36,15 +39,40 @@ class InputBrowserTableController(
         var hasFilter: Boolean
         var dataLocationInfos: List<DataLocationInfo>
         var selectedDataLocation: Set<DataLocation>
-//        var loading: Boolean
         var inputBrowserState: InputBrowserState
         var inputStore: ReportInputStore
     }
 
 
     interface State: react.State {
-//        var textEdit: Boolean
-//        var editDir: String
+        var folders: List<DataLocationInfo>
+        var files: List<DataLocationInfo>
+        var previousFileIndex: Int
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun State.init(props: Props) {
+        val (folders, files) = props.dataLocationInfos.partition { it.directory }
+        this.folders = folders
+        this.files = files
+        previousFileIndex = -1
+    }
+
+
+    override fun componentDidUpdate(
+            prevProps: Props,
+            prevState: State,
+            snapshot: Any
+    ) {
+        if (props.dataLocationInfos != prevProps.dataLocationInfos) {
+            val (folders, files) = props.dataLocationInfos.partition { it.directory }
+            setState {
+                this.folders = folders
+                this.files = files
+                previousFileIndex = -1
+            }
+        }
     }
 
 
@@ -54,9 +82,45 @@ class InputBrowserTableController(
     }
 
 
-    private fun onFileSelectedToggle(path: DataLocation) {
+    private fun onFileSelectedToggle(path: DataLocation, fileIndex: Int, shiftKey: Boolean) {
+        if (shiftKey && state.previousFileIndex != -1) {
+            onFileSelectedToggleRange(fileIndex)
+        }
+        else {
+            onFileSelectedToggleSingle(path)
+        }
+
+        setState {
+            previousFileIndex = fileIndex
+        }
+    }
+
+
+    private fun onFileSelectedToggleRange(fileIndex: Int) {
+        val minIndex = min(state.previousFileIndex, fileIndex)
+        val maxIndex = max(state.previousFileIndex, fileIndex)
+        val paths = state.files.subList(minIndex, maxIndex + 1).map { it.path }
+
+        val selected = props.inputBrowserState.browserChecked
+        val initialPath = state.files[state.previousFileIndex]
+        val initialPreviousChecked = selected.contains(initialPath.path)
+
+        val nextSelected =
+            if (initialPreviousChecked) {
+                selected.addAll(paths)
+            }
+            else {
+                selected.removeAll(paths)
+            }
+
+        props.inputStore.browser.browserCheckedUpdate(nextSelected)
+    }
+
+
+    private fun onFileSelectedToggleSingle(path: DataLocation) {
         val selected = props.inputBrowserState.browserChecked
         val previousChecked = selected.contains(path)
+
         val nextSelected =
             if (previousChecked) {
                 selected.remove(path)
@@ -127,15 +191,14 @@ class InputBrowserTableController(
                     width = 100.pct
                 }
 
-                val (folders, files) = props.dataLocationInfos.partition { it.directory }
-                renderTableHeader(files)
-                renderTableBody(folders, files)
+                renderTableHeader()
+                renderTableBody()
             }
         }
     }
 
 
-    private fun RBuilder.renderTableHeader(files: List<DataLocationInfo>) {
+    private fun RBuilder.renderTableHeader() {
         val selected = props.inputBrowserState.browserChecked
 
         styledThead {
@@ -165,7 +228,7 @@ class InputBrowserTableController(
                             }
                             disableRipple = true
 
-                            if (files.isEmpty()) {
+                            if (state.files.isEmpty()) {
                                 disabled = true
                                 checked = false
                                 indeterminate = false
@@ -173,7 +236,7 @@ class InputBrowserTableController(
                             else {
                                 disabled = false
                                 if (selected.isNotEmpty()) {
-                                    if (selected.size == files.size) {
+                                    if (selected.size == state.files.size) {
                                         checked = true
                                         indeterminate = false
                                         allSelected = true
@@ -194,7 +257,7 @@ class InputBrowserTableController(
 
                     attrs {
                         title = when {
-                            files.isEmpty() ->"No files"
+                            state.files.isEmpty() -> "No files"
                             allSelected -> "Un-select all"
                             else -> "Select all"
                         }
@@ -255,7 +318,7 @@ class InputBrowserTableController(
     }
 
 
-    private fun RBuilder.renderTableBody(folders: List<DataLocationInfo>, files: List<DataLocationInfo>) {
+    private fun RBuilder.renderTableBody() {
         styledTbody {
             css {
                 if (props.inputBrowserState.browserInfoLoading) {
@@ -263,14 +326,14 @@ class InputBrowserTableController(
                 }
             }
 
-            renderFolderRows(folders)
-            renderFileRows(files)
+            renderFolderRows()
+            renderFileRows()
         }
     }
 
 
-    private fun RBuilder.renderFolderRows(folders: List<DataLocationInfo>) {
-        for (folderInfo in folders) {
+    private fun RBuilder.renderFolderRows() {
+        for (folderInfo in state.folders) {
             styledTr {
                 key = folderInfo.path.asString()
 
@@ -326,8 +389,8 @@ class InputBrowserTableController(
     }
 
 
-    private fun RBuilder.renderFileRows(files: List<DataLocationInfo>) {
-        for (fileInfo in files) {
+    private fun RBuilder.renderFileRows() {
+        for ((index, fileInfo) in state.files.withIndex()) {
             val checked = fileInfo.path in props.inputBrowserState.browserChecked
             val selected = fileInfo.path in props.selectedDataLocation
 
@@ -352,7 +415,9 @@ class InputBrowserTableController(
 
                 attrs {
                     onClickFunction = {
-                        onFileSelectedToggle(fileInfo.path)
+                        val dynamicEvent: dynamic = it
+                        val shiftKey = dynamicEvent.shiftKey as Boolean
+                        onFileSelectedToggle(fileInfo.path, index, shiftKey)
                     }
                 }
 

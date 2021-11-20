@@ -174,6 +174,8 @@ data class DataflowDag(
                     if (cellBelow.orientation.hasTop()) {
                         traceEdge(cellBelow, dataflowMatrix, buffer)
                     }
+
+                else -> {}
             }
         }
 

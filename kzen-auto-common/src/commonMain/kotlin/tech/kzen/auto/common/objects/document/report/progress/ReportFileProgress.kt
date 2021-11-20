@@ -74,7 +74,7 @@ data class ReportFileProgress(
         return when {
             finished -> {
                 if (records == 0L) {
-                    println("foo")
+                    println(">> ReportFileProgress !!! finished with 0 - race condition?")
                 }
 
                 val overallRecordsSpeed = FormatUtils.decimalSeparator(

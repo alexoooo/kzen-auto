@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.exec.input.parse.common;
 
 
 import org.jetbrains.annotations.NotNull;
-import tech.kzen.auto.plugin.api.ReportInputTerminalStep;
+import tech.kzen.auto.plugin.api.ReportTerminalStep;
 import tech.kzen.auto.plugin.api.managed.PipelineOutput;
 import tech.kzen.auto.plugin.model.ModelOutputEvent;
 import tech.kzen.auto.plugin.model.record.FlatFileRecord;
@@ -11,7 +11,7 @@ import java.util.concurrent.CountDownLatch;
 
 
 public class FlatPipelineHandoff
-        implements ReportInputTerminalStep<FlatReportEvent, ModelOutputEvent<FlatFileRecord>>
+        implements ReportTerminalStep<FlatReportEvent, ModelOutputEvent<FlatFileRecord>>
 {
     //-----------------------------------------------------------------------------------------------------------------
     private final CountDownLatch endOfData = new CountDownLatch(1);

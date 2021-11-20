@@ -29,28 +29,28 @@ Script:
       of: Action
 
 
-Sequence:
-  abstract: true
-  is: Document
-  class: tech.kzen.auto.server.objects.sequence.SequenceDocument
-  icon: PlaylistPlay
-  steps: []
-  meta:
-    steps:
-      is: List
-      of: SequenceStep
-
-
-SequenceStep:
-  abstract: true
-  class: tech.kzen.auto.server.objects.sequence.api.SequenceStep
-  description: "Run step"
-#  display: DefaultStepDisplay
-  meta:
-    icon: String
-    title: String
-    description: String
-#    display: String
+#Sequence:
+#  abstract: true
+#  is: Document
+#  class: tech.kzen.auto.server.objects.sequence.SequenceDocument
+#  icon: PlaylistPlay
+#  steps: []
+#  meta:
+#    steps:
+#      is: List
+#      of: SequenceStep
+#
+#
+#SequenceStep:
+#  abstract: true
+#  class: tech.kzen.auto.server.objects.sequence.api.SequenceStep
+#  description: "Run step"
+##  display: DefaultStepDisplay
+#  meta:
+#    icon: String
+#    title: String
+#    description: String
+##    display: String
 
 
 ################################################################

@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.exec.input
 
-import tech.kzen.auto.plugin.api.ReportInputTerminalStep
+import tech.kzen.auto.plugin.api.ReportTerminalStep
 import tech.kzen.auto.plugin.definition.ReportDataDefinition
 import tech.kzen.auto.plugin.helper.DataFrameFeeder
 import tech.kzen.auto.plugin.helper.ListPipelineOutput
@@ -122,7 +122,7 @@ class ReportInputChain<T>(
 
         if (index + 1 == segments.size) {
             @Suppress("UNCHECKED_CAST")
-            val terminal = segment.finalStage as ReportInputTerminalStep<Model, ReportOutputEvent<T>>
+            val terminal = segment.finalStage as ReportTerminalStep<Model, ReportOutputEvent<T>>
 
             terminal.process(model, modelOutputBuffer)
 

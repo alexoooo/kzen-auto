@@ -17,6 +17,7 @@ import java.util.zip.ZipOutputStream
 import kotlin.io.path.absolute
 
 
+// see: https://github.com/airlift/aircompressor
 class CompressedExportWriter(
     private val outputExportSpec: OutputExportSpec
 ):

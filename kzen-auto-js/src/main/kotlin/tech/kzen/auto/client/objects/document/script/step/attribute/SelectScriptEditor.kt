@@ -130,6 +130,8 @@ class SelectScriptEditor(
                     }
                 }
             }
+
+            else -> {}
         }
     }
 

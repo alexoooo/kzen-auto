@@ -126,6 +126,8 @@ class SelectFeatureEditor(
                     }
                 }
             }
+
+            else -> {}
         }
     }
 

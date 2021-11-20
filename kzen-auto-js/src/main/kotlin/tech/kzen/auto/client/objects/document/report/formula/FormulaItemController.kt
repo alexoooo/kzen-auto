@@ -4,9 +4,9 @@ import kotlinx.css.*
 import org.w3c.dom.HTMLTextAreaElement
 import react.RBuilder
 import react.RPureComponent
-import react.dom.ReactHTML.tbody
-import react.dom.ReactHTML.td
-import react.dom.ReactHTML.tr
+import react.dom.tbody
+import react.dom.td
+import react.dom.tr
 import react.dom.div
 import react.setState
 import styled.css

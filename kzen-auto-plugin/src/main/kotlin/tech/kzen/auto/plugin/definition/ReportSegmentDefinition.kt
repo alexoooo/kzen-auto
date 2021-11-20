@@ -1,13 +1,13 @@
 package tech.kzen.auto.plugin.definition
 
-import tech.kzen.auto.plugin.api.ReportInputTerminalStep
+import tech.kzen.auto.plugin.api.ReportTerminalStep
 
 
 data class ReportSegmentDefinition<Model, Output>(
     val modelFactory: () -> Model,
     val outputPayloadType: Class<*>,
     val intermediateStepFactories: List<ReportSegmentStepDefinition<Model>>,
-    val finalStepFactory: () -> ReportInputTerminalStep<Model, Output>,
+    val finalStepFactory: () -> ReportTerminalStep<Model, Output>,
     val ringBufferSize: Int
 ) {
     init {

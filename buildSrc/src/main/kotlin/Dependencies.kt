@@ -1,14 +1,14 @@
 // https://youtrack.jetbrains.com/issue/KT-47444
-const val kotlinVersion = "1.5.31"
-const val jvmTargetVersion = "16"
-const val jvmToolchainVersion = 16
-const val shadowVersion = "7.0.0"
-const val springBootVersion = "2.5.6"
+const val kotlinVersion = "1.6.0"
+const val jvmTargetVersion = "17"
+const val jvmToolchainVersion = 17
+const val shadowVersion = "7.1.0"
+const val springBootVersion = "2.6.0"
 const val dependencyManagementVersion = "1.0.11.RELEASE"
 
 
-//const val kzenLibVersion = "0.23.0"
-const val kzenLibVersion = "0.24.0"
+const val kzenLibVersion = "0.24.1"
+//const val kzenLibVersion = "0.24.1-SNAPSHOT"
 
 
 const val logbackVersion = "1.2.6"
@@ -26,7 +26,7 @@ const val migzVersion = "2.0.beta-1"
 
 
 const val reactVersion = "17.0.2"
-const val inlineStylePrefixerVersion = "6.0.0"
+const val inlineStylePrefixerVersion = "6.0.1"
 const val styledComponentsVersion = "5.3.3"
 const val kotlinxDatetimeVersion = "0.3.1"
 const val kotlinxHtmlVersion = "0.7.3"
@@ -35,13 +35,13 @@ const val cropperJsVersion = "1.5.12"
 const val materialUiCoreVersion = "4.12.3"
 const val materialUiIconsVersion = "4.11.2"
 const val materialUiLabVersion = "4.0.0-alpha.60"
-const val reactSelectVersion = "5.0.0"
-const val iconifyReactVersion = "3.0.1"
+const val reactSelectVersion = "5.2.1"
+const val iconifyReactVersion = "3.1.0"
 const val iconifyIconsVaadinVersion = "1.1.0"
 
-const val wrapperKotlinVersion = "pre.248-kotlin-1.5.31"
+const val wrapperKotlinVersion = "pre.268-kotlin-1.6.0"
 const val kotlinReactVersion = "17.0.2-$wrapperKotlinVersion"
 const val kotlinReactDomVersion = "17.0.2-$wrapperKotlinVersion"
-const val kotlinStyledVersion = "5.3.1-$wrapperKotlinVersion"
+const val kotlinStyledVersion = "5.3.3-$wrapperKotlinVersion"
 const val kotlinExtensionsVersion = "1.0.1-$wrapperKotlinVersion"
 const val kotlinCssVersion = "1.0.0-$wrapperKotlinVersion"

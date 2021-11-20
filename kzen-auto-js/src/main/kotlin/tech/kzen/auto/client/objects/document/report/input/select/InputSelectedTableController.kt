@@ -9,6 +9,7 @@ import react.RBuilder
 import react.RPureComponent
 import react.dom.attrs
 import react.dom.td
+import react.setState
 import styled.*
 import tech.kzen.auto.client.objects.document.report.input.ReportInputController
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
@@ -25,6 +26,8 @@ import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.platform.collect.persistentSetOf
 import tech.kzen.lib.platform.collect.toPersistentSet
+import kotlin.math.max
+import kotlin.math.min
 
 
 class InputSelectedTableController(
@@ -43,21 +46,91 @@ class InputSelectedTableController(
 
 
     interface State: react.State {
-//        var selected: PersistentSet<DataLocation>
-//        var showDetails: Boolean
+        var selected: List<Pair<InputDataSpec, InputDataInfo?>>
+        var previousSelectedIndex: Int
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    override fun State.init(props: Props) {
-//        selected = persistentSetOf()
-//        showGroupBy = false
-//    }
+    override fun State.init(props: Props) {
+        selected = extractSelected(props)
+        previousSelectedIndex = -1
+    }
 
 
-    private fun onFileSelectedToggle(dataLocation: DataLocation) {
+    override fun componentDidUpdate(
+            prevProps: Props,
+            prevState: State,
+            snapshot: Any
+    ) {
+        if (props.inputSelectedState.selectedInfo != prevProps.inputSelectedState.selectedInfo ||
+                props.spec.locations != prevProps.spec.locations
+        ) {
+            setState {
+                selected = extractSelected(props)
+                previousSelectedIndex = -1
+            }
+        }
+    }
+
+
+    private fun extractSelected(props: Props): List<Pair<InputDataSpec, InputDataInfo?>> {
+        val selectedInput = props.inputSelectedState.selectedInfo
+            ?: return props.spec.locations.map { it to null }
+
+        val inputDataSpecByPath = props
+            .spec
+            .locations
+            .groupBy { it.location }
+            .mapValues { it.value.single() }
+
+        return selectedInput
+            .locations
+            .filter { it.dataLocationInfo.path in inputDataSpecByPath }
+            .map { inputDataSpecByPath[it.dataLocationInfo.path]!! to it }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onFileSelectedToggle(dataLocation: DataLocation, index: Int, shiftKey: Boolean) {
+        if (shiftKey && state.previousSelectedIndex != -1) {
+            onFileSelectedToggleRange(index)
+        }
+        else {
+            onFileSelectedToggleSingle(dataLocation)
+        }
+
+        setState {
+            previousSelectedIndex = index
+        }
+    }
+
+
+    private fun onFileSelectedToggleRange(index: Int) {
+        val minIndex = min(state.previousSelectedIndex, index)
+        val maxIndex = max(state.previousSelectedIndex, index)
+        val paths = state.selected.subList(minIndex, maxIndex + 1).map { it.first.location }
+
+        val selected = props.inputSelectedState.selectedChecked
+        val initialSelected = state.selected[state.previousSelectedIndex]
+        val initialPreviousChecked = selected.contains(initialSelected.first.location)
+
+        val nextSelected =
+            if (initialPreviousChecked) {
+                selected.addAll(paths)
+            }
+            else {
+                selected.removeAll(paths)
+            }
+
+        props.inputStore.selected.checkedUpdate(nextSelected)
+    }
+
+
+    private fun onFileSelectedToggleSingle(dataLocation: DataLocation) {
         val selectedChecked = props.inputSelectedState.selectedChecked
         val previousChecked = selectedChecked.contains(dataLocation)
+
         val nextCheckedDataLocations =
             if (previousChecked) {
                 selectedChecked.remove(dataLocation)
@@ -255,25 +328,9 @@ class InputSelectedTableController(
                 cursor = Cursor.default
             }
 
-            val selectedInput = props.inputSelectedState.selectedInfo
-
-            if (selectedInput == null) {
-                for (inputDataSpec in props.spec.locations) {
-                    renderTableRow(inputDataSpec, null, /*reportProgress*/)
-                }
-            }
-            else {
-                val inputDataSpecByPath = props
-                    .spec
-                    .locations
-                    .groupBy { it.location }
-                    .mapValues { it.value.single() }
-
-                for (inputDataInfo in selectedInput.locations) {
-                    val inputDataSpec = inputDataSpecByPath[inputDataInfo.dataLocationInfo.path]
-                        ?: continue
-                    renderTableRow(inputDataSpec, inputDataInfo, /*reportProgress*/)
-                }
+            val selected = state.selected
+            for ((index, e) in selected.withIndex()) {
+                renderTableRow(e.first, e.second, index)
             }
         }
     }
@@ -281,7 +338,8 @@ class InputSelectedTableController(
 
     private fun RBuilder.renderTableRow(
         inputDataSpec: InputDataSpec,
-        inputDataInfo: InputDataInfo?
+        inputDataInfo: InputDataInfo?,
+        index: Int
     ) {
         val dataLocation = inputDataSpec.location
 
@@ -315,7 +373,9 @@ class InputSelectedTableController(
 
             attrs {
                 onClickFunction = {
-                    onFileSelectedToggle(dataLocation)
+                    val dynamicEvent: dynamic = it
+                    val shiftKey = dynamicEvent.shiftKey as Boolean
+                    onFileSelectedToggle(dataLocation, index, shiftKey)
                 }
             }
 

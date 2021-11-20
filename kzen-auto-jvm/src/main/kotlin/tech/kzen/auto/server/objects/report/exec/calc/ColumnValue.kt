@@ -146,20 +146,54 @@ class ColumnValue(
         get() = ! number.isNaN()
 
 
-    val isTrue: Boolean
-        get() = text.equals("true", true)
+    val isNaN: Boolean
+        get() = text == "NaN"
 
 
     val isNull: Boolean
         get() = text == "null"
 
 
-    val isNaN: Boolean
-        get() = text == "NaN"
-
-
     val isBlank: Boolean
         get() = isBlank()
+
+
+    val isTrue: Boolean
+        get() = text.equals("true", true)
+
+
+    val truthy: Boolean get() {
+        if (! number.isNaN()) {
+            return asNumber == 1.0
+        }
+
+        val asString = asText!!
+        return when (asString.length) {
+            1 -> asString == "y" || asString == "Y"
+            3 -> asString.equals("yes", true)
+            4 -> asString.equals("true", true)
+            else -> false
+        }
+    }
+
+
+    @Suppress("SpellCheckingInspection")
+    val falsy: Boolean get() {
+        if (! number.isNaN()) {
+            return asNumber == 0.0
+        }
+
+        val asString = asText!!
+        return when (asString.length) {
+            0 -> true
+            1 -> asString == "n" || asString == "N"
+            2 -> asString.equals("no", true)
+            3 -> asString == "NaN"
+            4 -> asString == "null"
+            5 -> asString.equals("false", true)
+            else -> false
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -365,41 +399,6 @@ class ColumnValue(
             truthy -> falseValue
             falsy -> trueValue
             else -> errorValue
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    val truthy: Boolean get() {
-        if (! number.isNaN()) {
-            return asNumber == 1.0
-        }
-
-        val asString = asText!!
-        return when (asString.length) {
-            1 -> asString == "y" || asString == "Y"
-            3 -> asString.equals("yes", true)
-            4 -> asString.equals("true", true)
-            else -> false
-        }
-    }
-
-
-    @Suppress("SpellCheckingInspection")
-    val falsy: Boolean get() {
-        if (! number.isNaN()) {
-            return asNumber == 0.0
-        }
-
-        val asString = asText!!
-        return when (asString.length) {
-            0 -> true
-            1 -> asString == "n" || asString == "N"
-            2 -> asString.equals("no", true)
-            3 -> asString == "NaN"
-            4 -> asString == "null"
-            5 -> asString.equals("false", true)
-            else -> false
         }
     }
 

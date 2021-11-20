@@ -1,14 +1,14 @@
 package tech.kzen.auto.server.objects.report.exec.input.parse.csv;
 
 
-import tech.kzen.auto.plugin.api.ReportInputIntermediateStep;
+import tech.kzen.auto.plugin.api.ReportIntermediateStep;
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer;
 import tech.kzen.auto.plugin.model.record.FlatFileRecord;
 import tech.kzen.auto.server.objects.report.exec.input.parse.common.FlatReportEvent;
 
 
 public class CsvPipelineParser
-        implements ReportInputIntermediateStep<FlatReportEvent>
+        implements ReportIntermediateStep<FlatReportEvent>
 {
     //-----------------------------------------------------------------------------------------------------------------
     @SuppressWarnings("EnhancedSwitchMigration")
