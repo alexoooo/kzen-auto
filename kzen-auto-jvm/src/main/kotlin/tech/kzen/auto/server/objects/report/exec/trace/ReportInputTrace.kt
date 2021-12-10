@@ -138,9 +138,8 @@ class ReportInputTrace(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun publishAndLogStarted() {
-        val published = publishUpdate()
-        val message = published.toMessage(totalSize)
-        logger.info("Started {} ({}) - {}", locationKey, FormatUtils.decimalSeparator(totalSize), message)
+        publishUpdate()
+        logger.info("Started {}: {} file size", locationKey, FormatUtils.readableFileSize(totalSize))
     }
 
 

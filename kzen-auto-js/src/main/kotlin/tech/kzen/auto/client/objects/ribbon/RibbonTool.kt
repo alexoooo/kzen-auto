@@ -5,8 +5,8 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class RibbonTool(
-        // used structurally by name
-        @Suppress("unused")
-        val delegate: ObjectLocation
+data class RibbonTool(
+    // used structurally by name
+    @Suppress("unused")
+    val delegate: ObjectLocation
 )

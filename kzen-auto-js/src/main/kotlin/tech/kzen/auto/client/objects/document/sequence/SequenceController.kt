@@ -5,6 +5,7 @@ import kotlinx.css.margin
 import react.*
 import styled.css
 import styled.styledDiv
+import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -71,14 +72,30 @@ class SequenceController:
             return archetype
         }
 
-        override fun child(input: RBuilder, handler: RHandler<react.Props>)/*: ReactElement*/ {
-            input.child(SequenceController::class) {
-                attrs {
+
+        override fun header(): ReactWrapper<react.Props> {
+            return object: ReactWrapper<react.Props> {
+                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
+                    with (input) {
+                        +"Test"
+                    }
+                }
+            }
+        }
+
+
+        override fun body(): ReactWrapper<react.Props> {
+            return object: ReactWrapper<react.Props> {
+                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
+                    input.child(SequenceController::class) {
+                        attrs {
 //                    this.stepController = this@Wrapper.stepController
 //                    this.scriptCommander = this@Wrapper.scriptCommander
-                }
+                        }
 
-                handler()
+                        handler()
+                    }
+                }
             }
         }
     }

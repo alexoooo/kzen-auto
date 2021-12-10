@@ -7,6 +7,7 @@ import styled.css
 import styled.styledDiv
 import styled.styledH2
 import styled.styledSpan
+import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
 import tech.kzen.auto.client.service.ClientContext
@@ -75,9 +76,21 @@ class PluginController(
             return archetype
         }
 
-        override fun child(input: RBuilder, handler: RHandler<react.Props>)/*: ReactElement*/ {
-            input.child(PluginController::class) {
-                handler()
+
+        override fun header(): ReactWrapper<Props> {
+            return object: ReactWrapper<Props> {
+                override fun child(input: RBuilder, handler: RHandler<Props>) {}
+            }
+        }
+
+
+        override fun body(): ReactWrapper<Props> {
+            return object: ReactWrapper<Props> {
+                override fun child(input: RBuilder, handler: RHandler<Props>) {
+                    input.child(PluginController::class) {
+                        handler()
+                    }
+                }
             }
         }
     }

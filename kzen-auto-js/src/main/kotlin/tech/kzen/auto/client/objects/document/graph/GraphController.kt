@@ -7,8 +7,10 @@ import react.dom.attrs
 import react.dom.tbody
 import react.dom.tr
 import styled.*
+import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.AttributeController
+import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.SessionGlobal
@@ -45,9 +47,7 @@ import tech.kzen.lib.platform.collect.persistentMapOf
 @Suppress("unused")
 class GraphController:
     RPureComponent<GraphController.Props, GraphController.State>(),
-//        LocalGraphStore.Observer,
     InsertionGlobal.Subscriber,
-//        NavigationGlobal.Observer,
     VisualDataflowRepository.Observer,
     SessionGlobal.Observer
 {
@@ -57,40 +57,53 @@ class GraphController:
     }
 
 
-    class Props(
-            var attributeController: AttributeController.Wrapper
-    ): react.Props
+    interface Props: react.Props {
+        var attributeController: AttributeController.Wrapper
+    }
 
 
-    class State(
-//            var documentPath: DocumentPath?,
-//            var graphStructure: GraphStructure?,
-            var clientState: SessionState?,
-            var creating: Boolean,
+    interface State: react.State {
+        var clientState: SessionState?
+        var creating: Boolean
 
-            var visualDataflowModel: VisualDataflowModel?
-    ): react.State
+        var visualDataflowModel: VisualDataflowModel?
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-            private val archetype: ObjectLocation,
-            private val attributeController: AttributeController.Wrapper
+        private val archetype: ObjectLocation,
+        private val attributeController: AttributeController.Wrapper,
+        private val ribbonController: RibbonController.Wrapper
     ):
-            DocumentController
+        DocumentController
     {
         override fun archetypeLocation(): ObjectLocation {
             return archetype
         }
 
-        override fun child(input: RBuilder, handler: RHandler<react.Props>)/*: ReactElement*/ {
-            input.child(GraphController::class) {
-                attrs {
-                    this.attributeController = this@Wrapper.attributeController
-                }
 
-                handler()
+        override fun header(): ReactWrapper<react.Props> {
+            return object: ReactWrapper<react.Props> {
+                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
+                    ribbonController.child(input) {}
+                }
+            }
+        }
+
+
+        override fun body(): ReactWrapper<react.Props> {
+            return object: ReactWrapper<react.Props> {
+                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
+                    input.child(GraphController::class) {
+                        attrs {
+                            this.attributeController = this@Wrapper.attributeController
+                        }
+
+                        handler()
+                    }
+                }
             }
         }
     }

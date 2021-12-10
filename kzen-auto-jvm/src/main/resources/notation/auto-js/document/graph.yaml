@@ -5,6 +5,7 @@ GraphController:
   class: tech.kzen.auto.client.objects.document.graph.GraphController$Wrapper
   archetype: Graph
   attributeController: AttributeController
+  ribbonController: RibbonController
 
 
 #######################################################################################################################

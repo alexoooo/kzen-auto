@@ -26,10 +26,10 @@ import tech.kzen.lib.common.model.structure.notation.GraphNotation
 
 
 class RibbonRun (
-        props: Props
+    props: Props
 ):
-        RPureComponent<RibbonRun.Props, RibbonRun.State>(props),
-        SessionGlobal.Observer
+    RPureComponent<RibbonRun.Props, RibbonRun.State>(props),
+    SessionGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -38,7 +38,7 @@ class RibbonRun (
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
+    interface Props: react.Props {
 //            var actionTypes: List<ObjectLocation>,
 //            var ribbonGroups: List<RibbonGroup>,
 
@@ -46,18 +46,18 @@ class RibbonRun (
 //            var parameters: RequestParams,
 //
 //            var notation: GraphNotation
-    ): react.Props
+    }
 
 
-    class State(
+    interface State: react.State {
 //            var active: Set<DocumentPath>,
 //            var selectedFramePaths: List<DocumentPath>,
 //            var executionModel: ImperativeModel?,
 
-            var clientState: SessionState?,
+        var clientState: SessionState?
 
-            var dropdownOpen: Boolean
-    ): react.State
+        var dropdownOpen: Boolean
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -4,7 +4,8 @@ ProjectController:
   abstract: true
   class: tech.kzen.auto.client.objects.ProjectController$Wrapper
   sidebarController: SidebarController
-  ribbonController: RibbonController
+#  ribbonController: RibbonController
+  headerController: HeaderController
   stageController: StageController
 
 
@@ -65,6 +66,15 @@ RibbonTool:
 
 
 ###########################################################
+
+
+HeaderController:
+  class: tech.kzen.auto.client.objects.ribbon.HeaderController$Wrapper
+  meta:
+    documentControllers:
+      is: List
+      of: DocumentController
+      by: Autowired
 
 
 StageController:

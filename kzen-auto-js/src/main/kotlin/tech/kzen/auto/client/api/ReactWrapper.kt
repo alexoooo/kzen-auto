@@ -5,5 +5,5 @@ import react.RHandler
 
 
 interface ReactWrapper<T: react.Props> {
-    fun child(input: RBuilder, handler: RHandler<T>)//: ReactElement
+    fun child(input: RBuilder, handler: RHandler<T>)
 }

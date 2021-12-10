@@ -11,7 +11,7 @@ import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.StageController
-import tech.kzen.auto.client.objects.ribbon.RibbonController
+import tech.kzen.auto.client.objects.ribbon.HeaderController
 import tech.kzen.auto.client.objects.sidebar.SidebarController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
@@ -50,7 +50,8 @@ class ProjectController(
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: react.Props {
         var sidebarController: SidebarController.Wrapper
-        var ribbonController: RibbonController.Wrapper
+//        var ribbonController: RibbonController.Wrapper
+        var headerController: HeaderController.Wrapper
         var stageController: StageController.Wrapper
     }
 
@@ -68,14 +69,16 @@ class ProjectController(
     @Reflect
     class Wrapper(
         private val sidebarController: SidebarController.Wrapper,
-        private val ribbonController: RibbonController.Wrapper,
+//        private val ribbonController: RibbonController.Wrapper,
+        private val headerController: HeaderController.Wrapper,
         private val stageController: StageController.Wrapper
     ): ReactWrapper<Props> {
         override fun child(input: RBuilder, handler: RHandler<Props>) {
             input.child(ProjectController::class) {
                 attrs {
-                    ribbonController = this@Wrapper.ribbonController
+//                    ribbonController = this@Wrapper.ribbonController
                     sidebarController = this@Wrapper.sidebarController
+                    headerController = this@Wrapper.headerController
                     stageController = this@Wrapper.stageController
                 }
 
@@ -204,15 +207,14 @@ class ProjectController(
 
                 div {
                     ref = headerElement
-//                    ref {
-//                        headerElement = it as? HTMLElement
-//                    }
 
-                    props.ribbonController.child(this) {
-                        attrs {
-                            notation = graphNotation
-                        }
-                    }
+                    props.headerController.child(this) {}
+
+//                    props.ribbonController.child(this) {
+//                        attrs {
+//                            notation = graphNotation
+//                        }
+//                    }
                 }
             }
 

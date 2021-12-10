@@ -5,8 +5,8 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class RibbonGroup(
-        val title: String,
-        val archetype: ObjectLocation,
-        val children: List<RibbonTool>
+data class RibbonGroup(
+    val title: String,
+    val archetype: ObjectLocation,
+    val children: List<RibbonTool>
 )

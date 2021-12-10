@@ -1,16 +1,18 @@
-package tech.kzen.auto.client.objects.document
+package tech.kzen.auto.client.objects.ribbon
 
 import kotlinx.css.*
+import kotlinx.html.title
 import react.*
-import styled.css
-import styled.styledDiv
+import react.dom.attrs
+import styled.*
 import tech.kzen.auto.client.api.ReactWrapper
+import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.common.util.RequestParams
+import tech.kzen.auto.platform.decodeURIComponent
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -21,29 +23,13 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
-class StageController(
-        props: Props
+class HeaderController(
+    props: Props
 ):
-        RPureComponent<StageController.Props, StageController.State>(props),
-        LocalGraphStore.Observer,
-        NavigationGlobal.Observer
+    RPureComponent<HeaderController.Props, HeaderController.State>(props),
+    LocalGraphStore.Observer,
+    NavigationGlobal.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    data class CoordinateContext(
-        val stageTop: LinearDimension,
-        val stageLeft: LinearDimension
-    ) {
-        companion object {
-            val origin = CoordinateContext(0.px, 0.px)
-        }
-    }
-
-
-    companion object {
-        val StageContext = createContext(CoordinateContext.origin)
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     interface Props: react.Props {
         var documentControllers: List<DocumentController>
@@ -60,10 +46,10 @@ class StageController(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-            private val documentControllers: List<DocumentController>
+        private val documentControllers: List<DocumentController>
     ): ReactWrapper<Props> {
         override fun child(input: RBuilder, handler: RHandler<Props>) {
-            input.child(StageController::class) {
+            input.child(HeaderController::class) {
                 attrs {
                     documentControllers = this@Wrapper.documentControllers
                 }
@@ -72,6 +58,7 @@ class StageController(
             }
         }
     }
+
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -137,8 +124,8 @@ class StageController(
 
 
     override fun handleNavigation(
-            documentPath: DocumentPath?,
-            parameters: RequestParams
+        documentPath: DocumentPath?,
+        parameters: RequestParams
     ) {
         setState {
             this.documentPath = documentPath
@@ -149,10 +136,10 @@ class StageController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun documentArchetypeName(): ObjectName? {
         val notation = state.structure?.graphNotation
-                ?: return null
+            ?: return null
 
         val path = state.documentPath
-                ?: return null
+            ?: return null
 
         return DocumentArchetype.archetypeName(notation, path)
     }
@@ -160,61 +147,124 @@ class StageController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        if (state.transition) {
-            return
-        }
-
-        val archetypeName = documentArchetypeName()
-
-        if (archetypeName == null) {
-            renderMissingDocument()
-        }
-        else {
-            renderDocumentController(archetypeName)
-        }
-    }
-
-
-    private fun RBuilder.renderMissingDocument() {
         styledDiv {
             css {
-                marginLeft = 2.em
-                paddingTop = 2.em
+                backgroundColor = Color.white
+                paddingRight = 1.75.em
+                paddingBottom = 1.px
+                paddingLeft = 1.75.em
+                minHeight = 55.px
             }
 
-            val mainDocuments = state
-                    .structure
-                    ?.graphNotation
-                    ?.let { AutoConventions.mainDocuments(it) }
-                    ?: listOf()
+            styledSpan {
+                css {
+                    float = Float.left
+                    marginLeft = (-11).px
+                    marginTop = 7.px
+                    marginRight = 1.em
+                }
+                renderLogo()
+            }
 
             styledDiv {
                 css {
-                    fontSize = 1.5.em
+                    float = Float.right
                 }
+                renderRightFloat()
+            }
 
-                if (mainDocuments.isEmpty()) {
-                    +"Please create a document from the sidebar (left)"
-                }
-                else {
-                    +"Please select a document from the sidebar (left)"
+            if (! state.transition) {
+                val archetypeName = documentArchetypeName()
+                if (archetypeName != null) {
+                    renderHeaderController(archetypeName)
                 }
             }
         }
     }
 
 
-    private fun RBuilder.renderDocumentController(
-            archetypeName: ObjectName
+    private fun RBuilder.renderLogo() {
+        styledA {
+            attrs {
+                href = "/"
+            }
+
+            styledImg(src = "logo.png") {
+                css {
+                    height = 42.px
+                }
+
+                attrs {
+                    title = "Kzen (home)"
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderRightFloat() {
+        renderTitle()
+
+        renderRunNavigation()
+    }
+
+
+    private fun RBuilder.renderTitle() {
+        val projectTitle =
+            if (ClientContext.baseUrl.isEmpty()) {
+                "Running in dev mode"
+            }
+            else {
+                decodeURIComponent(ClientContext.baseUrl).substringAfter("/")
+            }
+
+        styledDiv {
+            css {
+                marginTop = 0.5.em
+                marginRight = 0.5.em
+                fontSize = 1.5.em
+                color = Color.gray
+                fontStyle = FontStyle.italic
+                display = Display.inlineBlock
+            }
+
+            attrs {
+                title = "Project name"
+            }
+
+            +projectTitle
+        }
+    }
+
+
+    private fun RBuilder.renderRunNavigation() {
+        styledDiv {
+            css {
+                display = Display.inlineBlock
+            }
+
+            child(RibbonRun::class) {
+                attrs {
+//                    navPath = state.documentPath
+//                    parameters = state.parameters
+//                    notation = props.notation
+                }
+            }
+        }
+    }
+
+
+    private fun RBuilder.renderHeaderController(
+        archetypeName: ObjectName
     ) {
         val documentController = props.documentControllers
-                .singleOrNull { archetypeName == it.archetypeLocation().objectPath.name }
+            .singleOrNull { archetypeName == it.archetypeLocation().objectPath.name }
 
         if (documentController == null) {
-            +"Document: $archetypeName"
+            +"Header: $archetypeName"
         }
         else {
-            documentController.body().child(this) {}
+            documentController.header().child(this) {}
         }
     }
 }

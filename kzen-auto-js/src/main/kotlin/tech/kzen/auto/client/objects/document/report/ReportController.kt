@@ -4,6 +4,7 @@ import kotlinx.css.*
 import react.*
 import styled.css
 import styled.styledDiv
+import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.report.analysis.ReportAnalysisController
 import tech.kzen.auto.client.objects.document.report.filter.ReportFilterController
@@ -51,9 +52,25 @@ class ReportController(
             return archetype
         }
 
-        override fun child(input: RBuilder, handler: RHandler<react.Props>)/*: ReactElement*/ {
-            input.child(ReportController::class) {
-                handler()
+
+        override fun header(): ReactWrapper<Props> {
+            return object: ReactWrapper<Props> {
+                override fun child(input: RBuilder, handler: RHandler<Props>) {
+//                    with (input) {
+//                        +"... foo ..."
+//                    }
+                }
+            }
+        }
+
+
+        override fun body(): ReactWrapper<Props> {
+            return object: ReactWrapper<Props> {
+                override fun child(input: RBuilder, handler: RHandler<Props>) {
+                    input.child(ReportController::class) {
+                        handler()
+                    }
+                }
             }
         }
     }

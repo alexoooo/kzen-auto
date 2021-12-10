@@ -1,15 +1,18 @@
 package tech.kzen.auto.client.objects.ribbon
 
-//import tech.kzen.auto.client.util.decodeURIComponent
 import kotlinx.css.*
 import kotlinx.html.title
 import react.*
 import react.dom.attrs
-import styled.*
+import styled.css
+import styled.styledA
+import styled.styledDiv
+import styled.styledImg
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.MaterialTab
 import tech.kzen.auto.client.wrap.material.MaterialTabs
@@ -19,48 +22,54 @@ import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.platform.decodeURIComponent
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
 @Suppress("unused")
 class RibbonController(
-        props: Props
+    props: Props
 ):
-        RPureComponent<RibbonController.Props, RibbonController.State>(props),
-        InsertionGlobal.Subscriber,
-        NavigationGlobal.Observer
+    RPureComponent<RibbonController.Props, RibbonController.State>(props),
+    InsertionGlobal.Subscriber,
+    NavigationGlobal.Observer,
+    LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var actionTypes: List<ObjectLocation>,
-            var ribbonGroups: List<RibbonGroup>,
-
-            var notation: GraphNotation
-    ): react.Props
+    interface Props: react.Props {
+        var actionTypes: List<ObjectLocation>
+        var ribbonGroups: List<RibbonGroup>
+    }
 
 
-    class State(
-        var updatePending: Boolean,
-        var documentPath: DocumentPath?,
-        var parameters: RequestParams,
+    interface State: react.State {
+        var updatePending: Boolean
+        var documentPath: DocumentPath?
+        var parameters: RequestParams
 
-        var type: ObjectLocation?,
-        var tabIndex: Int = 0,
+        var type: ObjectLocation?
+        var tabIndex: Int
 
         var currentRibbonGroups: List<RibbonGroup>
-    ): react.State
+
+        var notation: GraphNotation?
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-            private val actionTypes: List<ObjectLocation>,
-            private val ribbonGroups: List<RibbonGroup>
+        private val actionTypes: List<ObjectLocation>,
+        private val ribbonGroups: List<RibbonGroup>
     ): ReactWrapper<Props> {
-        override fun child(input: RBuilder, handler: RHandler<Props>)/*: ReactElement*/ {
+        override fun child(input: RBuilder, handler: RHandler<Props>) {
+//            console.log("RibbonController - $actionTypes - $ribbonGroups")
             input.child(RibbonController::class) {
                 attrs {
                     actionTypes = this@Wrapper.actionTypes
@@ -89,12 +98,16 @@ class RibbonController(
     override fun componentDidMount() {
         ClientContext.insertionGlobal.subscribe(this)
         ClientContext.navigationGlobal.observe(this)
+        async {
+            ClientContext.mirroredGraphStore.observe(this)
+        }
     }
 
 
     override fun componentWillUnmount() {
         ClientContext.insertionGlobal.unsubscribe(this)
         ClientContext.navigationGlobal.unobserve(this)
+        ClientContext.mirroredGraphStore.unobserve(this)
     }
 
 
@@ -125,14 +138,20 @@ class RibbonController(
             }
         }
         else {
-            val typeName = DocumentArchetype.archetypeName(props.notation, state.documentPath!!)
-                    ?: return
+//            console.log("^^^^^ 00!! - ${state.documentPath} - ${state.notation}")
+            val notation = state.notation
+                ?: return
 
-//            console.log("^^^^^ handleNavigation - ribbonGroups", typeName, props.ribbonGroups)
+            val typeName = DocumentArchetype.archetypeName(
+                notation, state.documentPath!!
+            ) ?: return
+
 
             val documentRibbonGroups = props
                     .ribbonGroups
                     .filter { it.archetype.objectPath.name == typeName }
+
+//            console.log("^^^^^ 00!! - typeName $typeName - $documentRibbonGroups")
 
             setState {
                 updatePending = false
@@ -172,6 +191,26 @@ class RibbonController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+
+
+    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+        setState {
+            notation = graphDefinition.graphStructure.graphNotation
+            updatePending = true
+        }
+    }
+
+
+    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
+        setState {
+            notation = graphDefinition.graphStructure.graphNotation
+            updatePending = true
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun onUnSelect() {
         ClientContext.insertionGlobal.clearSelection()
     }
@@ -191,39 +230,13 @@ class RibbonController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
+        renderTabs()
+
         styledDiv {
             css {
-                backgroundColor = Color.white
-                paddingRight = 1.75.em
-                paddingBottom = 1.px
-                paddingLeft = 1.75.em
+                marginTop = 0.5.em
             }
-
-            styledSpan {
-                css {
-                    float = Float.left
-                    marginLeft = (-11).px
-                    marginTop = 7.px
-                    marginRight = 1.em
-                }
-                renderLogo()
-            }
-
-            styledDiv {
-                css {
-                    float = Float.right
-                }
-                renderRightFloat()
-            }
-
-            renderTabs()
-
-            styledDiv {
-                css {
-                    marginTop = 0.5.em
-                }
-                renderSubActions()
-            }
+            renderSubActions()
         }
     }
 
@@ -248,6 +261,7 @@ class RibbonController(
 
 
     private fun RBuilder.renderTabs() {
+//        +"tabs - ${state.currentRibbonGroups}"
         child(MaterialTabs::class) {
             attrs {
                 textColor = "primary"
@@ -325,6 +339,7 @@ class RibbonController(
 
 
     private fun RBuilder.renderSubActions() {
+//        +"SubActions"
         if (state.currentRibbonGroups.isEmpty()) {
             return
         }
@@ -358,8 +373,8 @@ class RibbonController(
                     }
                 }
 
-                val description = props.notation
-                        .firstAttribute(ribbonTool.delegate, AutoConventions.descriptionAttributePath)
+                val description = state.notation
+                        ?.firstAttribute(ribbonTool.delegate, AutoConventions.descriptionAttributePath)
                         ?.asString()
 
                 if (description != null) {
@@ -368,8 +383,8 @@ class RibbonController(
                     }
                 }
 
-                val icon = props.notation
-                        .firstAttribute(ribbonTool.delegate, AutoConventions.iconAttributePath)
+                val icon = state.notation
+                        ?.firstAttribute(ribbonTool.delegate, AutoConventions.iconAttributePath)
                         ?.asString()
 
                 if (icon != null) {
@@ -382,8 +397,8 @@ class RibbonController(
                     }
                 }
 
-                val title = props.notation
-                        .firstAttribute(ribbonTool.delegate, AutoConventions.titleAttributePath)
+                val title = state.notation
+                        ?.firstAttribute(ribbonTool.delegate, AutoConventions.titleAttributePath)
                         ?.asString()
                         ?: ribbonTool.delegate.objectPath.name.value
 

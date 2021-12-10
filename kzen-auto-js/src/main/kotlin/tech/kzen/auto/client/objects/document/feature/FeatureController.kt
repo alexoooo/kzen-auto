@@ -9,6 +9,7 @@ import react.dom.img
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
@@ -74,13 +75,21 @@ class FeatureController(
             return archetype
         }
 
-        override fun child(input: RBuilder, handler: RHandler<react.Props>)/*: ReactElement*/ {
-            input.child(FeatureController::class) {
-//                attrs {
-//                    this.attributeController = this@Wrapper.attributeController
-//                }
 
-                handler()
+        override fun header(): ReactWrapper<react.Props> {
+            return object: ReactWrapper<react.Props> {
+                override fun child(input: RBuilder, handler: RHandler<react.Props>) {}
+            }
+        }
+
+
+        override fun body(): ReactWrapper<react.Props> {
+            return object: ReactWrapper<react.Props> {
+                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
+                    input.child(FeatureController::class) {
+                        handler()
+                    }
+                }
             }
         }
     }

@@ -12,8 +12,8 @@ const val kzenLibVersion = "0.24.1"
 
 
 const val logbackVersion = "1.2.6"
-const val jacksonModuleKotlin = "2.12.5"
-const val seleniumVersion = "3.141.59"
+const val jacksonModuleKotlin = "2.13.0"
+const val seleniumVersion = "4.0.0"
 const val commonsCompressVersion = "1.21"
 const val fastutilVersion = "8.5.6"
 const val bifurcanVersion = "0.2.0-alpha6"

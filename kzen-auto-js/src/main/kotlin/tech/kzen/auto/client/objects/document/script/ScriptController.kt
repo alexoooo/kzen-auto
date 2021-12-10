@@ -8,10 +8,12 @@ import react.dom.span
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
+import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
+import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.SessionGlobal
@@ -37,15 +39,15 @@ import tech.kzen.lib.platform.collect.persistentListOf
 
 
 class ScriptController:
-        RPureComponent<ScriptController.Props, ScriptController.State>(),
-        SessionGlobal.Observer,
-        InsertionGlobal.Subscriber
+    RPureComponent<ScriptController.Props, ScriptController.State>(),
+    SessionGlobal.Observer,
+    InsertionGlobal.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         fun stepLocations(
-                graphStructure: GraphStructure,
-                documentPath: DocumentPath
+            graphStructure: GraphStructure,
+            documentPath: DocumentPath
         ): List<ObjectLocation>? {
             val mainObjectLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
 
@@ -65,39 +67,54 @@ class ScriptController:
     }
 
 
-    class Props(
-            var stepController: StepController.Wrapper,
-            var scriptCommander: ScriptCommander
-    ): react.Props
+    interface Props: react.Props {
+        var stepController: StepController.Wrapper
+        var scriptCommander: ScriptCommander
+    }
 
 
-    class State(
-            var clientState: SessionState?,
-            var creating: Boolean
-    ): react.State
+    interface State: react.State {
+        var clientState: SessionState?
+        var creating: Boolean
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-            private val archetype: ObjectLocation,
-            private val stepController: StepController.Wrapper,
-            private val scriptCommander: ScriptCommander
+        private val archetype: ObjectLocation,
+        private val stepController: StepController.Wrapper,
+        private val scriptCommander: ScriptCommander,
+        private val ribbonController: RibbonController.Wrapper
     ):
-            DocumentController
+        DocumentController
     {
         override fun archetypeLocation(): ObjectLocation {
             return archetype
         }
 
-        override fun child(input: RBuilder, handler: RHandler<react.Props>)/*: ReactElement*/ {
-            input.child(ScriptController::class) {
-                attrs {
-                    this.stepController = this@Wrapper.stepController
-                    this.scriptCommander = this@Wrapper.scriptCommander
-                }
 
-                handler()
+        override fun header(): ReactWrapper<react.Props> {
+            return object: ReactWrapper<react.Props> {
+                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
+                    ribbonController.child(input) {}
+                }
+            }
+        }
+
+
+        override fun body(): ReactWrapper<react.Props> {
+            return object: ReactWrapper<react.Props> {
+                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
+                    input.child(ScriptController::class) {
+                        attrs {
+                            this.stepController = this@Wrapper.stepController
+                            this.scriptCommander = this@Wrapper.scriptCommander
+                        }
+
+                        handler()
+                    }
+                }
             }
         }
     }
