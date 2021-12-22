@@ -26,6 +26,11 @@ tasks.withType<KotlinCompile> {
 }
 
 
+tasks.compileJava {
+    options.release.set(javaVersion)
+}
+
+
 val sourcesJar by tasks.registering(Jar::class) {
     archiveClassifier.set("sources")
     from(sourceSets.main.get().allSource)

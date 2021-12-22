@@ -74,6 +74,11 @@ tasks.withType<KotlinCompile> {
 }
 
 
+tasks.compileJava {
+    options.release.set(javaVersion)
+}
+
+
 tasks.getByName<Jar>("jar") {
     enabled = true
 }

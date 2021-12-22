@@ -1,0 +1,17 @@
+
+SequenceGroup_InputOutput:
+  is: RibbonGroup
+  title: "Input / Output"
+  archetype: Sequence
+
+
+BooleanLiteralStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_InputOutput
+  delegate: BooleanLiteralStep
+
+
+DisplayValueStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_InputOutput
+  delegate: DisplayValueStep

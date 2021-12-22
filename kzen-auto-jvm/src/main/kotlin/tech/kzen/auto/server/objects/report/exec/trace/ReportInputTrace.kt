@@ -11,7 +11,6 @@ import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import java.util.concurrent.TimeUnit
-import kotlin.time.ExperimentalTime
 
 
 class ReportInputTrace(
@@ -107,7 +106,7 @@ class ReportInputTrace(
     }
 
 
-    fun snapshot(): ReportFileProgress {
+    private fun snapshot(): ReportFileProgress {
         val durationMillis = durationMillis()
         return ReportFileProgress(
             running,
@@ -121,7 +120,6 @@ class ReportInputTrace(
     }
 
 
-    @OptIn(ExperimentalTime::class)
     private fun durationMillis(): Long {
         return when {
             startTime == Instant.DISTANT_PAST ->

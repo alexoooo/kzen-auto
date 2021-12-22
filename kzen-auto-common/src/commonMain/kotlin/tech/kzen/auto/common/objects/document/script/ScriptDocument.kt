@@ -15,9 +15,9 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 
 @Reflect
 class ScriptDocument(
-        val steps: List<ScriptStep>
+    val steps: List<ScriptStep>
 ):
-        DocumentArchetype()
+    DocumentArchetype()
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -27,7 +27,7 @@ class ScriptDocument(
         val stepsAttributePath = AttributePath.ofName(stepsAttributeName)
 
 
-        fun isScript(/*documentPath: DocumentPath,*/ documentNotation: DocumentNotation): Boolean {
+        fun isScript(documentNotation: DocumentNotation): Boolean {
             val mainNotation = documentNotation.objects.notations[AutoConventions.mainPath]
                     ?: return false
 

@@ -22,9 +22,9 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Suppress("unused")
 class ReportController(
-    props: react.Props
+    props: Props
 ):
-    RPureComponent<react.Props, ReportController.State>(props),
+    RPureComponent<Props, ReportController.State>(props),
     ReportStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ class ReportController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: react.Props) {
+    override fun State.init(props: Props) {
         reportState = null
     }
 
@@ -106,7 +106,7 @@ class ReportController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val pipelineState = state.reportState
+        val reportState = state.reportState
             ?: return
 
 //        renderHeader(processState)
@@ -116,27 +116,27 @@ class ReportController(
                 padding(3.em, 3.em, 7.em, 3.em)
             }
 
-            if (pipelineState.notationError != null) {
+            if (reportState.notationError != null) {
                 styledDiv {
                     css {
                         margin(1.em)
                         color =  Color.crimson
                         fontWeight = FontWeight.bold
                     }
-                    +"Error: ${pipelineState.notationError}"
+                    +"Error: ${reportState.notationError}"
                 }
             }
 
-            renderInput(pipelineState)
-            renderFormulas(pipelineState)
+            renderInput(reportState)
+            renderFormulas(reportState)
 //            renderPreview(processState, false)
-            renderFilter(pipelineState)
-            renderPreview(pipelineState, true)
-            renderAnalysis(pipelineState)
-            renderOutput(pipelineState)
+            renderFilter(reportState)
+            renderPreview(reportState, true)
+            renderAnalysis(reportState)
+            renderOutput(reportState)
         }
 
-        renderRun(pipelineState)
+        renderRun(reportState)
     }
 
 

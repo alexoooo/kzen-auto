@@ -209,6 +209,7 @@ class ReportRunStore(
         }
     }
 
+
     suspend fun lookupProgressActive() {
         val activeInfo = store.state().run.logicStatus?.active
             ?: return

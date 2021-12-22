@@ -1,0 +1,22 @@
+
+
+BooleanLiteralStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.BooleanLiteralStep
+  icon: ToggleOn
+  title: "True or false"
+  value: false
+  meta:
+    value: Boolean
+
+
+DisplayValueStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.DisplayValueStep
+  icon: ToggleOn
+  text: ""
+  meta:
+    text: ObjectLocation
+    by: Nominal

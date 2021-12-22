@@ -1,14 +1,15 @@
 // https://youtrack.jetbrains.com/issue/KT-47444
 const val kotlinVersion = "1.6.0"
 const val jvmTargetVersion = "17"
+const val javaVersion = 17
 const val jvmToolchainVersion = 17
 const val shadowVersion = "7.1.0"
 const val springBootVersion = "2.6.0"
 const val dependencyManagementVersion = "1.0.11.RELEASE"
 
 
-const val kzenLibVersion = "0.24.1"
-//const val kzenLibVersion = "0.24.1-SNAPSHOT"
+//const val kzenLibVersion = "0.24.1"
+const val kzenLibVersion = "0.25.0-SNAPSHOT"
 
 
 const val logbackVersion = "1.2.6"

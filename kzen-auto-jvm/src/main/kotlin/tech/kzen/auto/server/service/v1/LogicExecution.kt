@@ -6,7 +6,8 @@ import tech.kzen.auto.server.service.v1.model.TupleValue
 
 interface LogicExecution {
     /**
-     * Initialize for next execution, return false if something went wrong
+     * Initialize for next execution
+     * @return false if something went wrong
      */
     fun next(arguments: TupleValue): Boolean
 
@@ -18,7 +19,8 @@ interface LogicExecution {
 
 
     /**
-     * Continue running as little as possible from where we left off (paused state), and then pausing again
+     * Continue running as little as possible from where we left off (paused state or beginning),
+     *  and then pause (again)
      */
     fun step(control: LogicControl): LogicResult {
         return run(control)

@@ -5,6 +5,8 @@ import kotlin.math.abs
 
 
 // NB: used from expressions, e.g. CalculatedColumnEvalTest
+// NB: would be nice to have some kind of "truth" conversion (i.e. toBoolean),
+//  e.g. https://discuss.kotlinlang.org/t/can-a-compiler-plugin-add-new-syntax-to-kotlin/23651
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 class ColumnValue(
     private var asText: String?,
@@ -162,6 +164,7 @@ class ColumnValue(
         get() = text.equals("true", true)
 
 
+    // TODO: rename or alias as `logic`? add special If construct?
     val truthy: Boolean get() {
         if (! number.isNaN()) {
             return asNumber == 1.0

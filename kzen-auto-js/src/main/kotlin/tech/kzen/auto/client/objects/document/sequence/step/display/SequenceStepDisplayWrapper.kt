@@ -1,13 +1,15 @@
-package tech.kzen.auto.client.objects.document.script.step.display
+package tech.kzen.auto.client.objects.document.sequence.step.display
 
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 
 
-abstract class StepDisplayWrapper(
-        private val objectLocation: ObjectLocation
-): ReactWrapper<StepDisplayProps> {
+abstract class SequenceStepDisplayWrapper(
+    private val objectLocation: ObjectLocation
+):
+    ReactWrapper<SequenceStepDisplayProps>
+{
     //-----------------------------------------------------------------------------------------------------------------
     fun name(): ObjectName {
         return objectLocation.objectPath.name

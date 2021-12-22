@@ -8,11 +8,15 @@ import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.auto.server.service.v1.LogicHandle
 import tech.kzen.auto.server.service.v1.model.LogicDefinition
+import tech.kzen.auto.server.service.v1.model.TupleDefinition
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class SequenceDocument:
+class SequenceDocument(
+    val steps: List<ObjectLocation>
+):
     DocumentArchetype(),
     Logic
 {
@@ -22,8 +26,11 @@ class SequenceDocument:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun define(): LogicDefinition {
-        TODO("Not yet implemented")
+        return LogicDefinition(
+            TupleDefinition.empty,
+            TupleDefinition.empty)
     }
+
 
     override fun execute(
         handle: LogicHandle,
@@ -31,6 +38,6 @@ class SequenceDocument:
         logicRunExecutionId: LogicRunExecutionId,
         logicControl: LogicControl
     ): LogicExecution {
-        TODO("Not yet implemented")
+        return SequenceExecution()
     }
 }

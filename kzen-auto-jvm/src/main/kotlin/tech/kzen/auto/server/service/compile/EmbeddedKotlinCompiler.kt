@@ -25,6 +25,10 @@ import kotlin.script.experimental.jvm.util.classpathFromClassloader
 
 /**
  * see: https://stackoverflow.com/questions/58921225/how-to-pass-current-classloader-to-kotlintojvmbytecodecompiler-for-dynamic-runt
+ *
+ * https://discuss.kotlinlang.org/t/is-there-a-kotlin-equivalent-of-javax-tools-javacompiler/23575
+ * - https://github.com/tschuchortdev/kotlin-compile-testing
+ * - https://github.com/Kotlin/KEEP/blob/master/proposals/scripting-support.md
  */
 class EmbeddedKotlinCompiler: KotlinCompiler {
     //-----------------------------------------------------------------------------------------------------------------
