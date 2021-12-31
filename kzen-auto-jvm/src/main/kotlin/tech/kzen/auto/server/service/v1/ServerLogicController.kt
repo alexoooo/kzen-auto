@@ -3,6 +3,7 @@ package tech.kzen.auto.server.service.v1
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.v1.LogicController
@@ -12,6 +13,7 @@ import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.TupleValue
 import tech.kzen.auto.server.service.v1.model.context.LogicFrame
 import tech.kzen.auto.server.service.v1.model.context.MutableLogicControl
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.LocalGraphStore
@@ -68,13 +70,19 @@ class ServerLogicController(
     }
 
 
-    override suspend fun start(root: ObjectLocation): LogicRunId? {
-        return startSynchronized(root)
+    override suspend fun start(
+        root: ObjectLocation,
+        graphDefinitionSnapshot: GraphDefinitionAttempt?
+    ): LogicRunId? {
+        return startSynchronized(root, graphDefinitionSnapshot)
     }
 
 
     @Synchronized
-    private fun startSynchronized(root: ObjectLocation): LogicRunId? {
+    private fun startSynchronized(
+        root: ObjectLocation,
+        graphDefinitionSnapshot: GraphDefinitionAttempt?
+    ): LogicRunId? {
         val state = stateOrNull
         if (state != null) {
             return null
@@ -86,9 +94,7 @@ class ServerLogicController(
 
         val objectStableMapper = ObjectStableMapper()
 
-        val graphDefinition = runBlocking {
-            graphStore.graphDefinition()
-        }
+        val graphDefinition = graphDefinitionAttempt(graphDefinitionSnapshot)
 
         val successfulGraphDefinition = graphDefinition.successful()
 
@@ -106,7 +112,7 @@ class ServerLogicController(
         val rootInstance = rootGraphInstance.objectInstances[root]?.reference
             ?: return null
 
-        val logicHandle: LogicHandle = object : LogicHandle {
+        val logicHandle: LogicHandle = object: LogicHandle {
             override fun start(originalObjectLocation: ObjectLocation): LogicHandle.Execution {
                 TODO("Not yet implemented")
 //                val dependencyGraphInstance = graphCreator.createGraph(
@@ -198,7 +204,12 @@ class ServerLogicController(
 
 
     @Synchronized
-    override fun run(runId: LogicRunId): LogicRunResponse {
+    override fun continueOrStart(
+        runId: LogicRunId,
+        graphDefinitionSnapshot: GraphDefinitionAttempt?
+    ):
+            LogicRunResponse
+    {
         val state = stateOrNull
             ?: return LogicRunResponse.NotFound
 
@@ -206,13 +217,22 @@ class ServerLogicController(
             return LogicRunResponse.Rejected
         }
 
-        val ready = state.frame.execution.next(TupleValue.empty)
+        val ready = state.frame.execution.beforeStart(TupleValue.empty)
         if (! ready) {
             return LogicRunResponse.Aborted
         }
 
+        val graphDefinitionAttempt = graphDefinitionAttempt(graphDefinitionSnapshot)
+
         Thread {
-            val result = state.frame.execution.run(state.frame.control)
+            val result =
+                try {
+                    state.frame.execution.continueOrStart(
+                        state.frame.control, graphDefinitionAttempt.successful())
+                }
+                catch (t: Throwable) {
+                    LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
+                }
 
             if (result.isTerminal()) {
                 state.frame.execution.close(result is LogicResultFailed)
@@ -221,6 +241,19 @@ class ServerLogicController(
         }.start()
 
         return LogicRunResponse.Submitted
+    }
+
+
+    private fun graphDefinitionAttempt(
+        snapshot: GraphDefinitionAttempt?
+    ): GraphDefinitionAttempt {
+        if (snapshot != null) {
+            return snapshot
+        }
+
+        return runBlocking {
+            graphStore.graphDefinition()
+        }
     }
 
 

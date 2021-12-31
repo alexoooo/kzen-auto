@@ -29,7 +29,8 @@ class MutableLogicControl(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun commandCancel(): Boolean {
-        return command.compareAndSet(LogicCommand.None, LogicCommand.Cancel)
+        val previousCommand = command.getAndSet(LogicCommand.Cancel)
+        return previousCommand != LogicCommand.Cancel
     }
 
 

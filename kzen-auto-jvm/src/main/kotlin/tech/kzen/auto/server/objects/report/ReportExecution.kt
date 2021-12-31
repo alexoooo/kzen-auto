@@ -46,6 +46,7 @@ import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.util.DisruptorUtils
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import java.nio.file.Files
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -169,7 +170,7 @@ class ReportExecution(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun next(arguments: TupleValue): Boolean {
+    override fun beforeStart(arguments: TupleValue): Boolean {
 //        if (nextDatasetInfo != null) {
 //            return false
 //        }
@@ -224,7 +225,10 @@ class ReportExecution(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun run(control: LogicControl): LogicResult {
+    override fun continueOrStart(
+        control: LogicControl,
+        graphDefinition: GraphDefinition
+    ): LogicResult {
         val datasetInfo = initialReportRunContext.datasetInfo
 //            ?: return LogicResultFailed("Not initialized")
 

@@ -1245,17 +1245,20 @@ class RestHandler {
 
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
+        val graphDefinitionAttempt = runBlocking {
+            ServerContext.graphStore.graphDefinition()
+        }
+
         val logicRunId = runBlocking {
-            ServerContext.serverLogicController.start(objectLocation)
+            ServerContext.serverLogicController.start(objectLocation, graphDefinitionAttempt)
         }
 
         @Suppress("FoldInitializerAndIfToElvis")
         if (logicRunId == null) {
             return ServerResponse.badRequest().build()
         }
-
         val response = runBlocking {
-            ServerContext.serverLogicController.run(logicRunId)
+            ServerContext.serverLogicController.continueOrStart(logicRunId, graphDefinitionAttempt)
         }
 
         if (response != LogicRunResponse.Submitted) {
@@ -1330,7 +1333,7 @@ class RestHandler {
         }
 
         val response = runBlocking {
-            ServerContext.serverLogicController.run(runId)
+            ServerContext.serverLogicController.continueOrStart(runId)
         }
 
         return ServerResponse

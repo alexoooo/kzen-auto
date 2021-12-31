@@ -4,7 +4,7 @@ const val jvmTargetVersion = "17"
 const val javaVersion = 17
 const val jvmToolchainVersion = 17
 const val shadowVersion = "7.1.0"
-const val springBootVersion = "2.6.0"
+const val springBootVersion = "2.6.2"
 const val dependencyManagementVersion = "1.0.11.RELEASE"
 
 
@@ -18,7 +18,7 @@ const val seleniumVersion = "4.0.0"
 const val commonsCompressVersion = "1.21"
 const val fastutilVersion = "8.5.6"
 const val bifurcanVersion = "0.2.0-alpha6"
-const val h2Version = "1.4.200"
+const val h2Version = "2.0.204"
 const val zeroAllocationHashingVersion = "0.15"
 const val disruptorVersion = "3.4.4"
 const val bloomFilterVersion = "0.9.0"

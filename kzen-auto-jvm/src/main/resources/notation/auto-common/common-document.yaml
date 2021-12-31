@@ -40,6 +40,9 @@ Sequence:
       is: List
       of: SequenceStep
       by: Nominal
+    selfLocation:
+      is: ObjectLocation
+      by: Self
 
 
 SequenceStep:

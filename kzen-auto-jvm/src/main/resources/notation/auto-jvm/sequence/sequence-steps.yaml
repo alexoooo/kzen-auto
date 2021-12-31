@@ -16,7 +16,9 @@ DisplayValueStep:
   is: SequenceStep
   class: tech.kzen.auto.server.objects.sequence.step.DisplayValueStep
   icon: ToggleOn
+  title: "Display"
   text: ""
   meta:
-    text: ObjectLocation
-    by: Nominal
+    text:
+      is: ObjectLocation
+      by: Nominal

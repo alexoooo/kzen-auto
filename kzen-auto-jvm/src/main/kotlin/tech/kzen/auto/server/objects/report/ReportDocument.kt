@@ -390,9 +390,8 @@ class ReportDocument(
 
         var success = false
         try {
-            val reportExecution = tech.kzen.auto.server.objects.report.ReportExecution(
-                reportRunContext, ServerContext.reportWorkPool, logicTraceHandle, logicRunExecutionId
-            )
+            val reportExecution = ReportExecution(
+                reportRunContext, ServerContext.reportWorkPool, logicTraceHandle, logicRunExecutionId)
 
             reportExecution.init(logicControl)
 
