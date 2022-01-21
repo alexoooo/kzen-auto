@@ -22,3 +22,16 @@ DisplayValueStep:
     text:
       is: ObjectLocation
       by: Nominal
+
+
+InvokeSequenceStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.InvokeSequenceStep
+  icon: ToggleOn
+  title: "Invoke Sequence"
+  sequence: ""
+  meta:
+    sequence:
+      is: ObjectLocation
+      by: Nominal

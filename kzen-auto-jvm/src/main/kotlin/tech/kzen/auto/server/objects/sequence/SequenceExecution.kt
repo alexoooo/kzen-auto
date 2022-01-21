@@ -10,6 +10,7 @@ import tech.kzen.auto.server.objects.sequence.model.ActiveStepModel
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
+import tech.kzen.auto.server.service.v1.LogicHandle
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
 import tech.kzen.auto.server.service.v1.model.TupleValue
@@ -22,6 +23,7 @@ class SequenceExecution(
 //    private val steps: List<SequenceStep<*>>,
     private val documentPath: DocumentPath,
     private val stepLocations: List<ObjectLocation>,
+    private val logicHandle: LogicHandle,
     private val trace: LogicTraceHandle,
     private val runExecutionId: LogicRunExecutionId
 ):
@@ -62,7 +64,7 @@ class SequenceExecution(
             val model = activeSequenceModel.steps.getOrPut(stepLocation) { ActiveStepModel() }
 
             try {
-                val stepValue = step.perform(activeSequenceModel)
+                val stepValue = step.perform(activeSequenceModel, logicHandle)
                 model.value = stepValue
             }
             catch (e: Exception) {

@@ -389,6 +389,18 @@ class CalculatedColumnEvalTest {
     }
 
 
+//    @Test
+//    fun foo() {
+//        val stat = DoubleSummaryStatistics()
+//        stat.accept(0.1)
+//        stat.accept(0.1)
+//        stat.accept(0.1)
+//
+//        assertEquals("0.1", stat.average.toString())
+//        assertEquals("0.1", ((0.1 + 0.1 + 0.1) / 3).toString())
+//    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun testEval(
         expected: String,

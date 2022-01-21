@@ -15,3 +15,9 @@ DisplayValueStepTool:
   is: RibbonTool
   parent: SequenceGroup_InputOutput
   delegate: DisplayValueStep
+
+
+InvokeSequenceStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_InputOutput
+  delegate: InvokeSequenceStep

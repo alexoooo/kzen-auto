@@ -4,6 +4,7 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.ActiveSequenceModel
 import tech.kzen.auto.server.objects.sequence.model.StepValue
+import tech.kzen.auto.server.service.v1.LogicHandle
 import tech.kzen.lib.common.reflect.Reflect
 
 
@@ -22,6 +23,7 @@ class BooleanLiteralStep(
     //-----------------------------------------------------------------------------------------------------------------
     override fun perform(
         activeSequenceModel: ActiveSequenceModel,
+        logicHandle: LogicHandle
 //        graphInstance: GraphInstance
     ): StepValue<Boolean> {
         logger.info("value = {}", value)

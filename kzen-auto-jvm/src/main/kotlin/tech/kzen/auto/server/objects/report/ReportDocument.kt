@@ -378,7 +378,7 @@ class ReportDocument(
 
 
     override fun execute(
-        handle: LogicHandle,
+        logicHandle: LogicHandle,
         logicTraceHandle: LogicTraceHandle,
         logicRunExecutionId: LogicRunExecutionId,
         logicControl: LogicControl

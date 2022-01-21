@@ -34,14 +34,14 @@ class SequenceDocument(
 
 
     override fun execute(
-        handle: LogicHandle,
+        logicHandle: LogicHandle,
         logicTraceHandle: LogicTraceHandle,
         logicRunExecutionId: LogicRunExecutionId,
         logicControl: LogicControl
     ): LogicExecution {
         val sequenceExecution = SequenceExecution(
             selfLocation.documentPath, steps,
-            logicTraceHandle, logicRunExecutionId)
+            logicHandle, logicTraceHandle, logicRunExecutionId)
         sequenceExecution.init(logicControl)
         return sequenceExecution
     }

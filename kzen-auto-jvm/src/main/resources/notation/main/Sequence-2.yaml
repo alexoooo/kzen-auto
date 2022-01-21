@@ -1,0 +1,18 @@
+main:
+  is: Sequence
+  steps:
+    - main.steps/MyStepA
+    - main.steps/MyStepB
+    - main.steps/MyStepC
+
+main.steps/MyStepA:
+  is: BooleanLiteralStep
+  value: true
+
+main.steps/MyStepB:
+  is: BooleanLiteralStep
+  value: false
+
+main.steps/MyStepC:
+  is: DisplayValueStep
+  text: main.steps/MyStepA
