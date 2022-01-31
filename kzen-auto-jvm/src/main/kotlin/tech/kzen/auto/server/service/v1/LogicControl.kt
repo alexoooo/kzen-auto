@@ -6,9 +6,6 @@ import tech.kzen.auto.server.service.v1.model.LogicCommand
 
 
 interface LogicControl {
-//    fun arguments(): TupleValue
-
-
     fun pollCommand(): LogicCommand
 
 

@@ -4,13 +4,15 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.ActiveSequenceModel
 import tech.kzen.auto.server.objects.sequence.model.StepValue
-import tech.kzen.auto.server.service.v1.LogicHandle
+import tech.kzen.auto.server.service.v1.LogicHandleFacade
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
 class BooleanLiteralStep(
-    private val value: Boolean
+    private val value: Boolean,
+    private val selfLocation: ObjectLocation
 ):
     SequenceStep<Boolean>
 {
@@ -23,10 +25,10 @@ class BooleanLiteralStep(
     //-----------------------------------------------------------------------------------------------------------------
     override fun perform(
         activeSequenceModel: ActiveSequenceModel,
-        logicHandle: LogicHandle
+        logicHandleFacade: LogicHandleFacade
 //        graphInstance: GraphInstance
     ): StepValue<Boolean> {
-        logger.info("value = {}", value)
+        logger.info("{} - value = {}", selfLocation, value)
         return StepValue.ofValue(value)
     }
 }

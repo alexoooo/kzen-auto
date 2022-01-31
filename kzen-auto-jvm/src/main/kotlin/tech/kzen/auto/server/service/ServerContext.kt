@@ -27,7 +27,7 @@ import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import tech.kzen.auto.server.service.plugin.MultiDefinitionRepository
 import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
-import tech.kzen.auto.server.service.v1.ServerLogicController
+import tech.kzen.auto.server.service.v1.impl.ServerLogicController
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
 import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao

@@ -5,7 +5,7 @@ import tech.kzen.auto.common.paradigm.common.model.TextExecutionValue
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.ActiveSequenceModel
 import tech.kzen.auto.server.objects.sequence.model.StepValue
-import tech.kzen.auto.server.service.v1.LogicHandle
+import tech.kzen.auto.server.service.v1.LogicHandleFacade
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -21,7 +21,7 @@ class DisplayValueStep(
 
     override fun perform(
         activeSequenceModel: ActiveSequenceModel,
-        logicHandle: LogicHandle
+        logicHandleFacade: LogicHandleFacade
 //        graphInstance: GraphInstance
     ): StepValue<Unit> {
         val step = activeSequenceModel.steps[text]

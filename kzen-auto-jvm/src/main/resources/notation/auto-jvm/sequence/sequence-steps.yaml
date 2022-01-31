@@ -9,6 +9,7 @@ BooleanLiteralStep:
   value: false
   meta:
     value: Boolean
+    selfLocation: SelfLocation
 
 
 DisplayValueStep:

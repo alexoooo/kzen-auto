@@ -25,14 +25,5 @@ interface LogicExecution {
     ): LogicResult
 
 
-//    /**
-//     * Continue running as little as possible from where we left off (paused state or beginning),
-//     *  and then pause (again)
-//     */
-//    fun continueOrStartStep(control: LogicControl): LogicResult {
-//        return continueOrStart(control)
-//    }
-
-
     fun close(error: Boolean)
 }

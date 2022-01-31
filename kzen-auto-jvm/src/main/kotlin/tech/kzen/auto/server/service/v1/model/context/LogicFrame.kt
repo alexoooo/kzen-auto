@@ -13,7 +13,7 @@ data class LogicFrame(
     val executionId: LogicExecutionId,
     val execution: LogicExecution,
     var state: LogicRunFrameState,
-    val dependencies: List<LogicFrame>,
+    val dependencies: MutableList<LogicFrame>,
     val control: MutableLogicControl
 ) {
     fun toInfo(

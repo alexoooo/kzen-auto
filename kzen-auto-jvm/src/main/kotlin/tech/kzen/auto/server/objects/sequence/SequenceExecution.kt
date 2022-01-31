@@ -11,6 +11,7 @@ import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.auto.server.service.v1.LogicHandle
+import tech.kzen.auto.server.service.v1.LogicHandleFacade
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
 import tech.kzen.auto.server.service.v1.model.TupleValue
@@ -43,7 +44,7 @@ class SequenceExecution(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun beforeStart(arguments: TupleValue): Boolean {
-        logger.info("arguments - {}", arguments)
+        logger.info("{} - arguments - {}", documentPath, arguments)
         return true
     }
 
@@ -52,7 +53,7 @@ class SequenceExecution(
         control: LogicControl,
         graphDefinition: GraphDefinition
     ): LogicResult {
-        logger.info("run - {}", control.pollCommand())
+        logger.info("{} - run - {}", documentPath, control.pollCommand())
 
         val graphInstance = ServerContext.graphCreator.createGraph(
             graphDefinition.filterTransitive(documentPath))
@@ -64,13 +65,13 @@ class SequenceExecution(
             val model = activeSequenceModel.steps.getOrPut(stepLocation) { ActiveStepModel() }
 
             try {
-                val stepValue = step.perform(activeSequenceModel, logicHandle)
+                val logicHandleFacade = LogicHandleFacade(runExecutionId, logicHandle)
+                val stepValue = step.perform(activeSequenceModel, logicHandleFacade)
                 model.value = stepValue
             }
             catch (e: Exception) {
                 model.error = ExecutionFailure.ofException(e).errorMessage
             }
-//            stepValue.value
         }
 
         return LogicResultSuccess(TupleValue.ofMain(
@@ -79,6 +80,6 @@ class SequenceExecution(
 
 
     override fun close(error: Boolean) {
-        logger.info("close - {}", error)
+        logger.info("{} - close - {}", documentPath, error)
     }
 }

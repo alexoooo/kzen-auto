@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.service.v1
+package tech.kzen.auto.server.service.v1.impl
 
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
@@ -9,6 +9,10 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.v1.LogicController
 import tech.kzen.auto.common.paradigm.common.v1.model.*
 import tech.kzen.auto.server.objects.logic.LogicTraceStore
+import tech.kzen.auto.server.service.v1.Logic
+import tech.kzen.auto.server.service.v1.LogicExecutionFacade
+import tech.kzen.auto.server.service.v1.LogicExecutionListener
+import tech.kzen.auto.server.service.v1.LogicHandle
 import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.TupleValue
 import tech.kzen.auto.server.service.v1.model.context.LogicFrame
@@ -17,6 +21,7 @@ import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
@@ -88,7 +93,7 @@ class ServerLogicController(
             return null
         }
 
-        val runId = LogicRunId(Clock.System.now().toString())
+        val runId = LogicRunId(LogicExecutionFacadeImpl.arbitraryId())
         val executionId = LogicExecutionId(runId.value)
         val runExecutionId = LogicRunExecutionId(runId, executionId)
 
@@ -112,32 +117,44 @@ class ServerLogicController(
         val rootInstance = rootGraphInstance.objectInstances[root]?.reference
             ?: return null
 
+        val mutableLogicControl = MutableLogicControl()
+
         val logicHandle: LogicHandle = object: LogicHandle {
-            override fun start(originalObjectLocation: ObjectLocation): LogicHandle.Execution {
-                TODO("Not yet implemented")
-//                val dependencyGraphInstance = graphCreator.createGraph(
-//                    successfulGraphDefinition.filterTransitive(originalObjectLocation))
-//
-//                val dependencyInstance = rootGraphInstance.objectInstances[root]?.reference as? Logic
-//                    ?: throw IllegalArgumentException("Dependency logic not found: $originalObjectLocation")
-//
-//                val dependencyExecution = dependencyInstance.execute(this)
-//
-//                return object : LogicHandle.Execution {
-//                    override fun next(arguments: TupleValue): LogicResult {
-//                        return dependencyExecution.next(arguments)
-//                    }
-//
-//                    override fun run(): LogicResult {
-//                        dependencyExecution.run()
-//                    }
-//                }
+            override fun start(
+                logicRunExecutionId: LogicRunExecutionId,
+                originalObjectLocation: ObjectLocation
+            ): LogicExecutionFacade {
+                val dependencies = mutableListOf<LogicFrame>()
+                val listener = object: LogicExecutionListener {
+
+                }
+
+                val logicExecutionFacadeImpl = LogicExecutionFacadeImpl(
+                    successfulGraphDefinition, mutableLogicControl, listener)
+
+                val currentState = checkNotNull(stateOrNull)
+                check(currentState.runId == runId)
+
+                val frame = currentState.frame.find(executionId)
+                checkNotNull(frame)
+
+                val logicExecution = logicExecutionFacadeImpl.open(
+                    runId, originalObjectLocation, this, graphCreator)
+
+                frame.dependencies.add(LogicFrame(
+                    ObjectStableId(originalObjectLocation.asString()),
+                    executionId,
+                    logicExecution,
+                    LogicRunFrameState.Ready,
+                    dependencies,
+                    mutableLogicControl
+                ))
+
+                return logicExecutionFacadeImpl
             }
         }
 
         val logicTraceHandle = LogicTraceStore.handle(runExecutionId)
-
-        val mutableLogicControl = MutableLogicControl()
 
         val logic = rootInstance as Logic
         val execution =
@@ -156,7 +173,7 @@ class ServerLogicController(
                 executionId,
                 execution,
                 LogicRunFrameState.Ready,
-                listOf(),
+                mutableListOf(),
                 mutableLogicControl
             ),
             objectStableMapper
@@ -231,6 +248,7 @@ class ServerLogicController(
                         state.frame.control, graphDefinitionAttempt.successful())
                 }
                 catch (t: Throwable) {
+                    logger.warn("Execution failed", t)
                     LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
                 }
 

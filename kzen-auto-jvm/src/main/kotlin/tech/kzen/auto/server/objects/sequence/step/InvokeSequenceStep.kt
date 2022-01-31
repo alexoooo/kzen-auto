@@ -4,7 +4,7 @@ import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.ActiveSequenceModel
 import tech.kzen.auto.server.objects.sequence.model.StepValue
-import tech.kzen.auto.server.service.v1.LogicHandle
+import tech.kzen.auto.server.service.v1.LogicHandleFacade
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
 import tech.kzen.auto.server.service.v1.model.TupleValue
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -24,17 +24,19 @@ class InvokeSequenceStep(
 
     override fun perform(
         activeSequenceModel: ActiveSequenceModel,
-        logicHandle: LogicHandle
+        logicHandleFacade: LogicHandleFacade
     ): StepValue<Any> {
-        val execution = logicHandle.start(sequence)
+        val execution = logicHandleFacade.start(sequence)
 
-        val initResult = execution.next(TupleValue.empty)
-        initResult as LogicResultSuccess
+        val resultValue = execution.use { closingExecution ->
+            val initResult = closingExecution.beforeStart(TupleValue.empty)
+            check(initResult)
 
-        val runResult = execution.stepOrRun()
-            as LogicResultSuccess
+            val runResult = closingExecution.continueOrStart()
+                    as LogicResultSuccess
 
-        val resultValue = runResult.value
+            runResult.value
+        }
 
         return StepValue(resultValue, NullExecutionValue)
     }
