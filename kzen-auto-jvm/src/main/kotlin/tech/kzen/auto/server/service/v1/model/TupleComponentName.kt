@@ -6,5 +6,6 @@ data class TupleComponentName(
 ) {
     companion object {
         val main = TupleComponentName("main")
+        val detail = TupleComponentName("detail")
     }
 }

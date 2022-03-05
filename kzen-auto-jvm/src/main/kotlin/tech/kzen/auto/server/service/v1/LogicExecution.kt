@@ -15,12 +15,12 @@ interface LogicExecution {
 
     /**
      * Continue running where we left off (possibly from beginning)
-     * @param control might have LogicCommand Pause,
+     * @param logicControl might have LogicCommand Pause,
      *  where we continue to run as little as possible from where we left off
      * @param graphDefinition
      */
     fun continueOrStart(
-        control: LogicControl,
+        logicControl: LogicControl,
         graphDefinition: GraphDefinition
     ): LogicResult
 

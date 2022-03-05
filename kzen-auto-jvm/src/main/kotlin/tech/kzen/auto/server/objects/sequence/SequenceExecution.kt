@@ -7,6 +7,7 @@ import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.ActiveSequenceModel
 import tech.kzen.auto.server.objects.sequence.model.ActiveStepModel
+import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
@@ -21,9 +22,8 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 class SequenceExecution(
-//    private val steps: List<SequenceStep<*>>,
     private val documentPath: DocumentPath,
-    private val stepLocations: List<ObjectLocation>,
+    private val root: ObjectLocation,
     private val logicHandle: LogicHandle,
     private val trace: LogicTraceHandle,
     private val runExecutionId: LogicRunExecutionId
@@ -50,28 +50,28 @@ class SequenceExecution(
 
 
     override fun continueOrStart(
-        control: LogicControl,
+        logicControl: LogicControl,
         graphDefinition: GraphDefinition
     ): LogicResult {
-        logger.info("{} - run - {}", documentPath, control.pollCommand())
+        logger.info("{} - run - {}", documentPath, logicControl.pollCommand())
 
         val graphInstance = ServerContext.graphCreator.createGraph(
             graphDefinition.filterTransitive(documentPath))
 
         val activeSequenceModel = ActiveSequenceModel()
+        val logicHandleFacade = LogicHandleFacade(runExecutionId, logicHandle)
+        val stepContext = StepContext(
+            logicControl, activeSequenceModel, logicHandleFacade, graphInstance)
 
-        for (stepLocation in stepLocations) {
-            val step = graphInstance[stepLocation]!!.reference as SequenceStep<*>
-            val model = activeSequenceModel.steps.getOrPut(stepLocation) { ActiveStepModel() }
+        val step = graphInstance[root]!!.reference as SequenceStep
+        val model = activeSequenceModel.steps.getOrPut(root) { ActiveStepModel() }
 
-            try {
-                val logicHandleFacade = LogicHandleFacade(runExecutionId, logicHandle)
-                val stepValue = step.perform(activeSequenceModel, logicHandleFacade)
-                model.value = stepValue
-            }
-            catch (e: Exception) {
-                model.error = ExecutionFailure.ofException(e).errorMessage
-            }
+        try {
+            val stepValue = step.continueOrStart(stepContext)
+            model.value = stepValue
+        }
+        catch (e: Exception) {
+            model.error = ExecutionFailure.ofException(e).errorMessage
         }
 
         return LogicResultSuccess(TupleValue.ofMain(

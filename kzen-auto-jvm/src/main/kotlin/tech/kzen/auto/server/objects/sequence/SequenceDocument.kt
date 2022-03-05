@@ -15,7 +15,8 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Reflect
 class SequenceDocument(
-    private val steps: List<ObjectLocation>,
+//    private val steps: List<ObjectLocation>,
+    private val root: ObjectLocation,
     private val selfLocation: ObjectLocation
 ):
     DocumentArchetype(),
@@ -40,7 +41,7 @@ class SequenceDocument(
         logicControl: LogicControl
     ): LogicExecution {
         val sequenceExecution = SequenceExecution(
-            selfLocation.documentPath, steps,
+            selfLocation.documentPath, root,
             logicHandle, logicTraceHandle, logicRunExecutionId)
         sequenceExecution.init(logicControl)
         return sequenceExecution

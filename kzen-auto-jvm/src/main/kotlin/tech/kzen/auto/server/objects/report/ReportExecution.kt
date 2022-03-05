@@ -226,7 +226,7 @@ class ReportExecution(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun continueOrStart(
-        control: LogicControl,
+        logicControl: LogicControl,
         graphDefinition: GraphDefinition
     ): LogicResult {
         val datasetInfo = initialReportRunContext.datasetInfo
@@ -240,7 +240,7 @@ class ReportExecution(
             val recordDisruptorInput = DisruptorPipelineOutput(recordDisruptor.disruptor.ringBuffer)
             try {
                 for (flatDataContentDefinition in datasetDefinition.items) {
-                    runFlatData(recordDisruptorInput, flatDataContentDefinition, control)
+                    runFlatData(recordDisruptorInput, flatDataContentDefinition, logicControl)
 
                     if (failed.get() || cancelled) {
                         break

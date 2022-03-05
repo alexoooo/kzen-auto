@@ -1,7 +1,9 @@
 package tech.kzen.auto.common.paradigm.common.model
 
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible
+import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.IoUtils
 
 
@@ -10,6 +12,9 @@ sealed class ExecutionValue
     : Digestible
 {
     companion object {
+        private val className = ClassName("tech.kzen.auto.common.paradigm.common.model.ExecutionValue")
+        val typeMetadata = TypeMetadata.of(className)
+
         private const val typeKey = "type"
         private const val valueKey = "value"
 

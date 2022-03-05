@@ -36,3 +36,17 @@ InvokeSequenceStep:
     sequence:
       is: ObjectLocation
       by: Nominal
+
+
+MultiSequenceStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.MultiSequenceStep
+  icon: ToggleOn
+  title: "Sub-sequence"
+  steps: []
+  meta:
+    steps:
+      is: List
+      of: SequenceStep
+      by: Nominal

@@ -36,9 +36,8 @@ Sequence:
   icon: PlaylistPlay
   steps: []
   meta:
-    steps:
-      is: List
-      of: SequenceStep
+    root:
+      is: ObjectLocation
       by: Nominal
     selfLocation:
       is: ObjectLocation
@@ -250,7 +249,7 @@ Report:
     export:
       format: csv
       compression: none
-      path: "../work/export/${report}_${group}_${time}.${extension}"
+      path: "../work/output/${report}_${group}_${time}.${extension}"
     work: "report" # NB: referenced in OutputSpec
   meta:
     input: InputSpec

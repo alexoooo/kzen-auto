@@ -7,9 +7,17 @@ data class TupleDefinition(
     companion object {
         val empty = TupleDefinition(listOf())
 
+
         fun ofMain(type: LogicType): TupleDefinition {
             return TupleDefinition(listOf(
                 TupleComponentDefinition.ofMain(type)
+            ))
+        }
+
+
+        fun ofVoidWithDetail(): TupleDefinition {
+            return TupleDefinition(listOf(
+                TupleComponentDefinition.ofDetail()
             ))
         }
     }
