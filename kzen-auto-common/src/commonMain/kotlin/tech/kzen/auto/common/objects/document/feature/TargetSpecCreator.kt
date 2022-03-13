@@ -16,12 +16,12 @@ import tech.kzen.lib.common.reflect.Reflect
 @Reflect
 class TargetSpecCreator: AttributeCreator {
     override fun create(
-            objectLocation: ObjectLocation,
-            attributeName: AttributeName,
-            graphStructure: GraphStructure,
-            objectDefinition: ObjectDefinition,
-            partialGraphInstance: GraphInstance
-    ): Any? {
+        objectLocation: ObjectLocation,
+        attributeName: AttributeName,
+        graphStructure: GraphStructure,
+        objectDefinition: ObjectDefinition,
+        partialGraphInstance: GraphInstance
+    ): Any {
         val attributeDefinition = objectDefinition.attributeDefinitions.values[attributeName]
                 as? MapAttributeDefinition
                 ?: throw IllegalArgumentException("Attribute definition missing: $objectLocation - $attributeName")

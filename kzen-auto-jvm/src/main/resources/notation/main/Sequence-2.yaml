@@ -1,22 +1,13 @@
 main:
   is: Sequence
-  root: root
-
-root:
-  is: MultiSequenceStep
   steps:
-    - root.steps/MyStepA
-    - root.steps/MyStepB
-    - root.steps/MyStepC
+    - main.steps/MyStepA
+    - main.steps/MyStepC
 
-root.steps/MyStepA:
+main.steps/MyStepA:
   is: BooleanLiteralStep
   value: true
 
-root.steps/MyStepB:
-  is: BooleanLiteralStep
-  value: false
-
-root.steps/MyStepC:
+main.steps/MyStepC:
   is: DisplayValueStep
-  text: root.steps/MyStepA
+  text: main.steps/MyStepA

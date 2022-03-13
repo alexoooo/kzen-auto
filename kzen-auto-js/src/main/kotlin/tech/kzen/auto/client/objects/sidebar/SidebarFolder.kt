@@ -13,7 +13,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
-import tech.kzen.auto.common.objects.document.DocumentArchetype
+import tech.kzen.auto.common.objects.document.DocumentCreator
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -27,9 +27,9 @@ import kotlin.random.Random
 
 
 class SidebarFolder(
-        props: Props
+    props: Props
 ):
-        RComponent<SidebarFolder.Props, SidebarFolder.State>(props)
+    RComponent<SidebarFolder.Props, SidebarFolder.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -42,9 +42,9 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     class Props(
-            var graphStructure: GraphStructure,
-            var selectedDocumentPath: DocumentPath?,
-            var archetypeLocations: List<ObjectLocation>
+        var graphStructure: GraphStructure,
+        var selectedDocumentPath: DocumentPath?,
+        var archetypeLocations: List<ObjectLocation>
     ): react.Props
 
 
@@ -248,8 +248,8 @@ class SidebarFolder(
 
 
     private suspend fun createDocument(
-            documentPath: DocumentPath,
-            archetypeLocation: ObjectLocation
+        documentPath: DocumentPath,
+        archetypeLocation: ObjectLocation
     ) {
 //        val directoryAttribute = props.graphStructure.graphNotation.transitiveAttribute(
 //                archetypeLocation, AutoConventions.directoryAttributePath
@@ -257,7 +257,7 @@ class SidebarFolder(
 //
 //        val directory = directoryAttribute?.asBoolean() ?: false
 
-        val newDocument = DocumentArchetype.newDocument(archetypeLocation)
+        val newDocument = DocumentCreator.newDocument(archetypeLocation)
 //        console.log("^^^^^ createDocument - creating", newDocument)
 
         ClientContext.mirroredGraphStore.apply(
@@ -268,8 +268,8 @@ class SidebarFolder(
 
 
     private fun onAdd(
-            archetypeLocation: ObjectLocation,
-            title: String
+        archetypeLocation: ObjectLocation,
+        title: String
     ) {
         processingOption = true
         onOptionsClose()

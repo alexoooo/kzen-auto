@@ -17,7 +17,7 @@ interface LogicController {
     suspend fun start(
         root: ObjectLocation,
 //        request: ExecutionRequest,
-        graphDefinitionSnapshot: GraphDefinitionAttempt? = null
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt? = null
     ): LogicRunId?
 
 

@@ -230,6 +230,7 @@ class SequenceController:
 //                +"[_]"
 //            }
 //        }
+//        return
 
         val clientState = state.clientState
             ?: return

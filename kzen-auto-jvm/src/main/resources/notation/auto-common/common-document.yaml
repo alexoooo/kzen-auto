@@ -36,8 +36,9 @@ Sequence:
   icon: PlaylistPlay
   steps: []
   meta:
-    root:
-      is: ObjectLocation
+    steps:
+      is: List
+      of: Action
       by: Nominal
     selfLocation:
       is: ObjectLocation

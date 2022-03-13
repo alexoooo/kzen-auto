@@ -211,7 +211,7 @@ class ServerLogicController(
             ?: return LogicRunResponse.NotFound
 
         if (state.runId != runId) {
-            return LogicRunResponse.Rejected
+            return LogicRunResponse.RunIdMismatch
         }
 
         state.frame.control.commandCancel()
@@ -231,12 +231,12 @@ class ServerLogicController(
             ?: return LogicRunResponse.NotFound
 
         if (state.runId != runId) {
-            return LogicRunResponse.Rejected
+            return LogicRunResponse.RunIdMismatch
         }
 
         val ready = state.frame.execution.beforeStart(TupleValue.empty)
         if (! ready) {
-            return LogicRunResponse.Aborted
+            return LogicRunResponse.UnableToStart
         }
 
         val graphDefinitionAttempt = graphDefinitionAttempt(graphDefinitionSnapshot)

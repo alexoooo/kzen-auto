@@ -58,7 +58,7 @@ class SequenceStore: SessionGlobal.Observer {
                 run = it(state!!.run))
         },
         {
-            console.log("refresh - $it")
+//            console.log("refresh - $it")
         }
     )
 
@@ -123,9 +123,15 @@ class SequenceStore: SessionGlobal.Observer {
 
 
     private fun mainDefinition(clientState: SessionState, mainLocation: ObjectLocation): ObjectDefinition {
-        return clientState
+        val mainDefinition = clientState
             .graphDefinitionAttempt
-            .objectDefinitions[mainLocation]!!
+            .objectDefinitions[mainLocation]
+
+        check(mainDefinition != null) {
+            "Sequence definition missing: $mainLocation - ${clientState.graphDefinitionAttempt.failures[mainLocation]}"
+        }
+
+        return mainDefinition
     }
 
 
