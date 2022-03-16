@@ -10,7 +10,7 @@ import kotlin.js.Json
 
 @JsName("ToggleButton")
 external class MaterialToggleButton: Component<ToggleButtonProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<ToggleButtonProps>?
 }
 
 external interface ToggleButtonProps: react.Props {
@@ -23,7 +23,7 @@ external interface ToggleButtonProps: react.Props {
 
 @JsName("ToggleButtonGroup")
 external class MaterialToggleButtonGroup: Component<ToggleButtonGroupProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<ToggleButtonGroupProps>?
 }
 
 external interface ToggleButtonGroupProps: react.Props {
@@ -37,7 +37,7 @@ external interface ToggleButtonGroupProps: react.Props {
 
 @JsName("ToggleButtonGroup")
 external class MaterialToggleButtonMultiGroup: Component<ToggleButtonGroupMultiProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<ToggleButtonGroupMultiProps>?
 }
 
 external interface ToggleButtonGroupMultiProps: react.Props {

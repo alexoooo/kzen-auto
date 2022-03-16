@@ -4,7 +4,7 @@ import kotlinx.css.*
 import kotlinx.html.title
 import react.*
 import react.dom.attrs
-import react.dom.html.ReactHTML.span
+import react.dom.span
 import styled.css
 import styled.styledDiv
 import styled.styledSpan

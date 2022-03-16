@@ -8,7 +8,7 @@ import react.ReactElement
 //---------------------------------------------------------------------------------------------------------------------
 @JsName("Icon")
 external class IconifyIcon: Component<IconifyProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<IconifyProps>?
 }
 
 

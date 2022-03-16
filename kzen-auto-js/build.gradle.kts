@@ -27,9 +27,13 @@ dependencies {
     api("tech.kzen.lib:kzen-lib-js:$kzenLibVersion")
 
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-html-assembly:$kotlinxHtmlVersion")
-    implementation("org.jetbrains.kotlin-wrappers:kotlin-react:$kotlinReactVersion")
-    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$kotlinReactDomVersion")
+//    implementation("org.jetbrains.kotlinx:kotlinx-html-assembly:$kotlinxHtmlVersion")
+
+//    implementation("org.jetbrains.kotlin-wrappers:kotlin-react:$kotlinReactVersion")
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-legacy:$kotlinReactVersion")
+//    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$kotlinReactDomVersion")
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom-legacy:$kotlinReactDomVersion")
+
     implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:$kotlinStyledVersion")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-extensions:$kotlinExtensionsVersion")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-css-js:$kotlinCssVersion")
@@ -50,6 +54,13 @@ dependencies {
 //    implementation(npm("@iconify/icons-vaadin/area-select", iconifyIconsVaadinVersion))
 
     testImplementation(kotlin("test"))
+}
+
+
+configurations.implementation {
+//    exclude(group = "org.jetbrains.kotlin-wrappers", module = "kotlin-react-legacy")
+//    exclude(group = "org.jetbrains.kotlin-wrappers", module = "kotlin-react-dom-legacy")
+    exclude(group = "org.jetbrains.kotlin-wrappers", module = "kotlin-react-dom")
 }
 
 

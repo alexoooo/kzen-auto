@@ -17,7 +17,7 @@ import kotlin.js.Json
 //---------------------------------------------------------------------------------------------------------------------
 @JsName("Button")
 external class MaterialButton: Component<MaterialButtonProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<MaterialButtonProps>?
 }
 
 external interface MaterialButtonProps: react.Props {
@@ -42,7 +42,7 @@ external interface MaterialButtonProps: react.Props {
 
 @JsName("IconButton")
 external class MaterialIconButton: Component<MaterialIconButtonProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<MaterialIconButtonProps>?
 }
 
 external interface MaterialIconButtonProps: react.Props {
@@ -66,14 +66,14 @@ external interface MaterialIconButtonProps: react.Props {
 
 @JsName("Fab")
 external class MaterialFab: Component<MaterialButtonProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<MaterialButtonProps>?
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 @JsName("Drawer")
 external class MaterialDrawer: Component<DrawerProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<DrawerProps>?
 }
 
 external interface DrawerProps: react.Props {
@@ -85,7 +85,7 @@ external interface DrawerProps: react.Props {
 // https://stackoverflow.com/a/37332913/1941359
 @JsName("Tabs")
 external class MaterialTabs: Component<TabsProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<TabsProps>?
 }
 
 external interface TabsProps: react.Props {
@@ -102,7 +102,7 @@ external interface TabsProps: react.Props {
 
 @JsName("Tab")
 external class MaterialTab: Component<TabProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<TabProps>?
 }
 
 external interface TabProps: react.Props {
@@ -113,8 +113,9 @@ external interface TabProps: react.Props {
 
 @JsName("Typography")
 external class MaterialTypography: Component<TypographyProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<TypographyProps>?
 }
+
 external interface TypographyProps: react.Props {
     var style: Json
 }
@@ -122,7 +123,7 @@ external interface TypographyProps: react.Props {
 
 @JsName("AppBar")
 external class MaterialAppBar: Component<AppBarProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<AppBarProps>?
 }
 
 
@@ -134,14 +135,14 @@ external interface AppBarProps: react.Props {
 
 @JsName("Toolbar")
 external class MaterialToolbar: Component<react.Props, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<react.Props>?
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 @JsName("Card")
 external class MaterialCard: Component<CardProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<CardProps>?
 }
 
 
@@ -157,19 +158,19 @@ external interface CardProps: react.Props {
 
 @JsName("CardContent")
 external class MaterialCardContent: Component<react.Props, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<react.Props>?
 }
 
 
 @JsName("CardActions")
 external class MaterialCardActions: Component<react.Props, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<react.Props>?
 }
 
 
 @JsName("Paper")
 external class MaterialPaper: Component<PaperProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<PaperProps>?
 }
 
 
@@ -181,7 +182,7 @@ external interface PaperProps: react.Props {
 //---------------------------------------------------------------------------------------------------------------------
 @JsName("TextField")
 external class MaterialTextField: Component<TextFieldProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<TextFieldProps>?
 }
 
 external interface TextFieldProps: react.Props {
@@ -221,7 +222,7 @@ external interface TextFieldProps: react.Props {
 
 @JsName("InputAdornment")
 external class MaterialInputAdornment : Component<MaterialInputAdornmentProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<MaterialInputAdornmentProps>?
 }
 
 
@@ -232,7 +233,7 @@ external interface MaterialInputAdornmentProps : react.Props {
 
 @JsName("InputLabel")
 external class MaterialInputLabel : Component<MaterialInputLabelProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<MaterialInputLabelProps>?
 }
 
 external interface MaterialInputLabelProps : react.Props {
@@ -244,14 +245,15 @@ external interface MaterialInputLabelProps : react.Props {
 
 @JsName("FormControl")
 external class MaterialFormControl : Component<react.Props, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<react.Props>?
 }
 
 
 @JsName("Switch")
 external class MaterialSwitch: Component<SwitchProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<react.Props>?
 }
+
 
 external interface SwitchProps: react.Props {
 //    var style: Json
@@ -290,10 +292,10 @@ external interface SwitchProps: react.Props {
 
 @JsName("Select")
 external class MaterialSelect : Component<MaterialSelectProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<MaterialSelectProps>?
 }
 
-external interface MaterialSelectProps : react.Props {
+external interface MaterialSelectProps: react.Props {
     var id: String
     var labelId: String
     var style: Json
@@ -308,7 +310,7 @@ external interface MaterialSelectProps : react.Props {
 //---------------------------------------------------------------------------------------------------------------------
 @JsName("Menu")
 external class MaterialMenu: Component<MenuProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<MenuProps>?
 }
 
 
@@ -321,8 +323,9 @@ external interface MenuProps: react.Props {
 
 @JsName("MenuItem")
 external class MaterialMenuItem: Component<MenuItemProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<MenuItemProps>?
 }
+
 
 external interface MenuItemProps: react.Props {
     var onClick: () -> Unit
@@ -333,7 +336,7 @@ external interface MenuItemProps: react.Props {
 //---------------------------------------------------------------------------------------------------------------------
 @JsName("Checkbox")
 external class MaterialCheckbox: Component<CheckboxProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<CheckboxProps>?
 }
 
 external interface CheckboxProps: react.Props {
@@ -354,13 +357,15 @@ external interface CheckboxProps: react.Props {
 //---------------------------------------------------------------------------------------------------------------------
 @JsName("CircularProgress")
 external class MaterialCircularProgress: Component<ProgressProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<ProgressProps>?
 }
+
 
 @JsName("LinearProgress")
 external class MaterialLinearProgress: Component<ProgressProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<ProgressProps>?
 }
+
 
 external interface ProgressProps: react.Props {
     var style: Json
@@ -371,7 +376,7 @@ external interface ProgressProps: react.Props {
 //---------------------------------------------------------------------------------------------------------------------
 @JsName("Fade")
 external class MaterialFade: Component<FadeProps, react.State> {
-    override fun render(): ReactElement?
+    override fun render(): ReactElement<FadeProps>?
 }
 
 external interface FadeProps: react.Props {

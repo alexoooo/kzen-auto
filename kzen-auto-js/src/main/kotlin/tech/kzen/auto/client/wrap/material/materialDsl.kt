@@ -14,7 +14,7 @@ import kotlin.js.Json
 
 interface NestedInputProps: react.Props {
 //        val startAdornment: MaterialInputAdornment
-        val startAdornment: ReactElement
+        val startAdornment: ReactElement<react.Props>
 }
 
 class NestedInputLabelProps(
