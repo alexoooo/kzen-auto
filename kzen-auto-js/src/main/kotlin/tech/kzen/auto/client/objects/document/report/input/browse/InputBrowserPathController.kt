@@ -227,6 +227,7 @@ class InputBrowserPathController(
             child(MaterialTextField::class) {
                 attrs {
                     fullWidth = true
+                    size = "small"
 
                     label = "Path"
                     value = state.editDir

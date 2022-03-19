@@ -79,8 +79,12 @@ class InputSelectedGroupController(
     override fun RBuilder.render() {
         child(MaterialTextField::class) {
             attrs {
+//                variant = "standard"
+//                variant = "filled"
+                size = "small"
                 style = reactStyle {
-                    marginTop = 0.25.em
+                    marginTop = 0.5.em
+//                    marginTop = 0.25.em
                 }
 
                 label = "Group By (Regular Expression)"

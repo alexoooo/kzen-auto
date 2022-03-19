@@ -1,4 +1,4 @@
-@file:JsModule("@material-ui/icons")
+@file:JsModule("@mui/icons-material")
 package tech.kzen.auto.client.wrap.material
 
 
@@ -273,8 +273,8 @@ external class TripOriginIcon: Component<IconProps, react.State> {
 }
 
 
-@JsName("ExposurePlus1")
-external class ExposurePlus1Icon: Component<IconProps, react.State> {
+@JsName("PlusOne")
+external class PlusOneIcon: Component<IconProps, react.State> {
     override fun render(): ReactElement<IconProps>?
 }
 

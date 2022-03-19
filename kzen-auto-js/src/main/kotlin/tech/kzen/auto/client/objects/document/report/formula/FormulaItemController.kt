@@ -4,10 +4,10 @@ import kotlinx.css.*
 import org.w3c.dom.HTMLTextAreaElement
 import react.RBuilder
 import react.RPureComponent
+import react.dom.div
 import react.dom.tbody
 import react.dom.td
 import react.dom.tr
-import react.dom.div
 import react.setState
 import styled.css
 import styled.styledPre
@@ -190,6 +190,7 @@ class FormulaItemController(
                             attrs {
                                 fullWidth = true
                                 multiline = true
+                                size = "small"
 
                                 label = props.columnName
                                 value = state.value

@@ -191,6 +191,7 @@ class DocumentNameEditor(
 
             child(MaterialTextField::class) {
                 attrs {
+                    size = "small"
                     style = reactStyle {
                         marginTop = (-5).px
                     }

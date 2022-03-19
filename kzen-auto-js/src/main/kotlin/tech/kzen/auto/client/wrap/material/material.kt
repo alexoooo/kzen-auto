@@ -1,4 +1,4 @@
-@file:JsModule("@material-ui/core")
+@file:JsModule("@mui/material")
 package tech.kzen.auto.client.wrap.material
 
 import org.w3c.dom.HTMLButtonElement
@@ -212,6 +212,7 @@ external interface TextFieldProps: react.Props {
     var disabled: Boolean
     var error: Boolean
     var type: String
+    var variant: String
 }
 
 
@@ -256,7 +257,9 @@ external class MaterialSwitch: Component<SwitchProps, react.State> {
 
 
 external interface SwitchProps: react.Props {
-//    var style: Json
+    var color: String
+    var style: Json
+//    var styleOverrides: Json
 
     var id: String
 
@@ -389,3 +392,46 @@ external interface FadeProps: react.Props {
 //    var enter: Int
 //    var exit: Int
 //}
+
+
+//---------------------------------------------------------------------------------------------------------------------
+@JsName("ToggleButton")
+external class MaterialToggleButton: Component<ToggleButtonProps, react.State> {
+    override fun render(): ReactElement<ToggleButtonProps>?
+}
+
+external interface ToggleButtonProps: react.Props {
+    var value: String
+    var disabled: Boolean
+    var size: String
+    var style: Json
+}
+
+
+@JsName("ToggleButtonGroup")
+external class MaterialToggleButtonGroup: Component<ToggleButtonGroupProps, react.State> {
+    override fun render(): ReactElement<ToggleButtonGroupProps>?
+}
+
+external interface ToggleButtonGroupProps: react.Props {
+    var value: String
+    var exclusive: Boolean
+    var onChange: (e: Event, v: Any?) -> Unit
+    var size: String
+    var style: Json
+}
+
+
+@JsName("ToggleButtonGroup")
+external class MaterialToggleButtonMultiGroup: Component<ToggleButtonGroupMultiProps, react.State> {
+    override fun render(): ReactElement<ToggleButtonGroupMultiProps>?
+}
+
+external interface ToggleButtonGroupMultiProps: react.Props {
+    var value: Array<String>
+    var exclusive: Boolean
+    var onChange: (e: Event, v: Array<String>) -> Unit
+    var size: String
+    var style: Json
+}
+

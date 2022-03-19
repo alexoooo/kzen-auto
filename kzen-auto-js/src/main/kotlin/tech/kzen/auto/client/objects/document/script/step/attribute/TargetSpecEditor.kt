@@ -376,6 +376,7 @@ class TargetSpecEditor(
         child(MaterialTextField::class) {
             attrs {
                 fullWidth = true
+                size = "small"
 
 //                style = reactStyle {
 //                    marginTop = 0.5.em

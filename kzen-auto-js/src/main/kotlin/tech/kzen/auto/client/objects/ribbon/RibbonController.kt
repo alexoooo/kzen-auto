@@ -264,7 +264,8 @@ class RibbonController(
 //        +"tabs - ${state.currentRibbonGroups}"
         child(MaterialTabs::class) {
             attrs {
-                textColor = "primary"
+//                textColor = "primary"
+                textColor = "inherit"
                 indicatorColor = "primary"
 
                 value = state.tabIndex
@@ -370,6 +371,8 @@ class RibbonController(
 
                         marginRight = 0.5.em
                         marginBottom = 0.5.em
+                        color = Color.black
+                        borderColor = Color("#c4c4c4")
                     }
                 }
 
@@ -388,6 +391,7 @@ class RibbonController(
                         ?.asString()
 
                 if (icon != null) {
+//                    +"[$icon]"
                     child(iconClassForName(icon)) {
                         attrs {
                             style = reactStyle {

@@ -191,6 +191,8 @@ class InputSelectedController(
                         backgroundColor = ReportController.selectedColor
                     }
                     borderWidth = 2.px
+                    color = Color.black
+                    borderColor = Color("#c4c4c4")
                 }
 
                 title =
@@ -225,6 +227,7 @@ class InputSelectedController(
                     onToggleFolders()
                 }
 
+//                color = "inherit"
                 style = reactStyle {
                     marginLeft = 1.em
 
@@ -232,6 +235,8 @@ class InputSelectedController(
                         backgroundColor = ReportController.selectedColor
                     }
                     borderWidth = 2.px
+                    color = Color.black
+                    borderColor = Color("#c4c4c4")
                 }
 
                 title =

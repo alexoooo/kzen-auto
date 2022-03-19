@@ -4,11 +4,7 @@ import kotlinx.css.*
 import kotlinx.html.title
 import react.RBuilder
 import react.RPureComponent
-import react.dom.table
-import react.dom.tbody
-import react.dom.td
-import react.dom.tr
-import react.dom.attrs
+import react.dom.*
 import react.setState
 import styled.*
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
@@ -347,6 +343,7 @@ class FilterItemController(
             attrs {
                 value = columnFilterSpec.type.name
                 exclusive = true
+//                size = "small"
                 onChange = { _, v ->
                     if (v is String) {
                         onTypeChange(ColumnFilterType.valueOf(v))
@@ -358,6 +355,7 @@ class FilterItemController(
                 attrs {
                     value = ColumnFilterType.RequireAny.name
                     disabled = editDisabled
+                    size = "small"
                 }
                 styledSpan {
                     css {
@@ -371,6 +369,7 @@ class FilterItemController(
                 attrs {
                     value = ColumnFilterType.ExcludeAll.name
                     disabled = editDisabled
+                    size = "small"
                 }
                 styledSpan {
                     css {

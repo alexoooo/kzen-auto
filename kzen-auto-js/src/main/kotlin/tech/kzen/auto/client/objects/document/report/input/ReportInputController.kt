@@ -225,6 +225,7 @@ class ReportInputController(
             attrs {
                 variant = "outlined"
                 size = "small"
+//                color = "black"
 
                 onClick = {
                     onToggleBrowser()
@@ -236,6 +237,8 @@ class ReportInputController(
                     }
                     borderWidth = 2.px
                     marginTop = 0.px
+                    color = Color.black
+                    borderColor = Color("#c4c4c4")
                 }
 
                 title = when {

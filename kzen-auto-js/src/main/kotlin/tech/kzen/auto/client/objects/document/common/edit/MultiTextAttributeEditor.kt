@@ -171,6 +171,7 @@ class MultiTextAttributeEditor(
             attrs {
                 fullWidth = true
                 multiline = true
+                size = "small"
 
                 label = formattedLabel() + " (one per line)"
                 value = state.value.joinToString("\n")

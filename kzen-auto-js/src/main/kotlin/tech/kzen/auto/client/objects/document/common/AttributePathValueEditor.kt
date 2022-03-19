@@ -1,5 +1,7 @@
 package tech.kzen.auto.client.objects.document.common
 
+import kotlinx.css.Color
+import kotlinx.css.color
 import kotlinx.css.em
 import kotlinx.css.fontSize
 import org.w3c.dom.HTMLInputElement
@@ -279,6 +281,7 @@ class AttributePathValueEditor(
             attrs {
                 fullWidth = true
                 multiline = multilineOverride
+                size = "small"
 
                 label = formattedLabel()
                 value = stateValue
@@ -332,6 +335,15 @@ class AttributePathValueEditor(
                     val target = it.target as HTMLInputElement
                     onValueChange(target.checked.toString())
                 }
+
+                color = "default"
+
+                if (stateValue) {
+                    style = reactStyle {
+//                        this.color = Color("#8CBAE8")
+                        this.color = Color.black
+                    }
+                }
             }
         }
     }
@@ -342,6 +354,7 @@ class AttributePathValueEditor(
             attrs {
                 fullWidth = true
                 multiline = true
+                size = "small"
 
                 label = formattedLabel() + " (one per line)"
                 value = stateValues.joinToString("\n")

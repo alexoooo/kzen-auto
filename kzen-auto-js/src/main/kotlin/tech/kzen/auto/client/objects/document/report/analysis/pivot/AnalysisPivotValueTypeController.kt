@@ -70,6 +70,7 @@ class AnalysisPivotValueTypeController(
                     attrs {
                         key = valueType.name
                         value = valueType.name
+                        size = "small"
                     }
                     styledSpan {
                         css {

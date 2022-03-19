@@ -1,5 +1,7 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
+import kotlinx.css.Color
+import kotlinx.css.color
 import kotlinx.css.em
 import kotlinx.css.fontSize
 import org.w3c.dom.HTMLInputElement
@@ -98,6 +100,24 @@ class BooleanAttributeEditor(
                     val target = it.target as HTMLInputElement
                     submitEditAsync(target.checked)
                 }
+                color = "default"
+
+                if (props.value) {
+                    style = reactStyle {
+//                        this.color = Color("#8CBAE8")
+                        this.color = Color.black
+                    }
+                }
+//                style = reactStyle {
+//                    color = Color("#c4c4c4")
+//                }
+
+//                styleOverrides = json(
+//                    "track" to reactStyle {
+//                        color = Color.red
+//                        backgroundColor = Color.green
+//                    }
+//                )
             }
         }
     }

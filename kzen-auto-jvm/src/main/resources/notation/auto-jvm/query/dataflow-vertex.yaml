@@ -108,7 +108,7 @@ CountSink:
   abstract: true
   is: Dataflow
   class: tech.kzen.auto.server.objects.graph.CountSink
-  icon: ExposurePlus1
+  icon: PlusOne
   title: "Count"
   description: "Counter"
   meta:

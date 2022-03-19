@@ -186,6 +186,7 @@ class FormulaAddController(
             attrs {
                 label = "Calculated column name"
                 fullWidth = true
+                size = "small"
 
                 onChange = {
                     val target = it.target as HTMLInputElement

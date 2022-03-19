@@ -43,9 +43,16 @@ dependencies {
     implementation(npm("react-is", reactVersion))
     implementation(npm("inline-style-prefixer", inlineStylePrefixerVersion))
     implementation(npm("styled-components", styledComponentsVersion))
-    implementation(npm("@material-ui/core", materialUiCoreVersion))
-    implementation(npm("@material-ui/icons", materialUiIconsVersion))
-    implementation(npm("@material-ui/lab", materialUiLabVersion))
+
+//    implementation(npm("@material-ui/core", materialUiCoreVersion))
+//    implementation(npm("@material-ui/icons", materialUiIconsVersion))
+//    implementation(npm("@material-ui/lab", materialUiLabVersion))
+    implementation(npm("@mui/material", muiMaterialVersion))
+    implementation(npm("@mui/icons-material", muiIconsVersion))
+    implementation(npm("@mui/styles", muiStylesVersion))
+    implementation(npm("@emotion/styled", emotionStyledVersion))
+    implementation(npm("@emotion/react", emotionReactVersion))
+
     implementation(npm("cropperjs", cropperJsVersion))
     implementation(npm("lodash", lodashVersion))
     implementation(npm("react-select", reactSelectVersion))
@@ -82,6 +89,6 @@ publishing {
 
 
 // https://youtrack.jetbrains.com/issue/KT-49124
-rootProject.extensions.configure<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension> {
-    versions.webpackCli.version = "4.9.0"
-}
+//rootProject.extensions.configure<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension> {
+//    versions.webpackCli.version = "4.9.0"
+//}

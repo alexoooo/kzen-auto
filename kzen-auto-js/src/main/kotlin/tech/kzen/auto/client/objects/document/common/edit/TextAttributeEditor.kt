@@ -149,6 +149,7 @@ class TextAttributeEditor(
             attrs {
                 fullWidth = true
                 multiline = isMultiline
+                size = "small"
 
                 label = formattedLabel()
                 value = state.value

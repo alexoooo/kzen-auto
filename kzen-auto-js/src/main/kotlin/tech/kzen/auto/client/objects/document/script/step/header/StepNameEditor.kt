@@ -324,6 +324,7 @@ class StepNameEditor(
 //                    label = "Name"
                     fullWidth = true
                     autoFocus = true
+                    size = "small"
 
                     inputRef = ::onInputRef
 

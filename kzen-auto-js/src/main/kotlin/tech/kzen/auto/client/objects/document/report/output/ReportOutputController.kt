@@ -262,6 +262,8 @@ class ReportOutputController(
                     if (state.settingsOpen) {
                         backgroundColor = ReportController.selectedColor
                     }
+                    color = Color.black
+                    borderColor = Color("#c4c4c4")
                 }
             }
 

@@ -10,6 +10,12 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, react.State>
     //  e.g. <Icon>edit_icon</Icon> in https://codesandbox.io/s/9yp4yk6qno
 
     return when (name) {
+        "TripOrigin" -> TripOriginIcon::class
+        "FilterList" -> FilterListIcon::class
+        "Forward" -> ForwardIcon::class
+        "FileCopy" -> FileCopyIcon::class
+        "PlusOne" -> PlusOneIcon::class
+
         "PlayArrow" -> PlayArrowIcon::class
         "OpenInNew" -> OpenInNewIcon::class
         "Http" -> HttpIcon::class
@@ -27,16 +33,11 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, react.State>
         "TableChart" -> TableChartIcon::class
         "Search" -> SearchIcon::class
         "CallSplit" -> CallSplitIcon::class
-        "TripOrigin" -> TripOriginIcon::class
-        "ExposurePlus1" -> ExposurePlus1Icon::class
         "ArrowDownward" -> ArrowDownwardIcon::class
         "SubdirectoryArrowLeft" -> SubdirectoryArrowLeftIcon::class
         "SubdirectoryArrowRight" -> SubdirectoryArrowRightIcon::class
         "ArrowForward" -> ArrowForwardIcon::class
         "ArrowBack" -> ArrowBackIcon::class
-        "FilterList" -> FilterListIcon::class
-        "Forward" -> ForwardIcon::class
-        "FileCopy" -> FileCopyIcon::class
         "Add" -> AddIcon::class
         "CompareArrows" -> CompareArrowsIcon::class
         "PlaylistAdd" -> PlaylistAddIcon::class
