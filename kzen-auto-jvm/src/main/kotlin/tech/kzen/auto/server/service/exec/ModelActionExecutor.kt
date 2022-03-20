@@ -35,7 +35,8 @@ class ModelActionExecutor(
         val instance = graphInstance.objectInstances[actionLocation]?.reference
                 ?: throw IllegalArgumentException("Not found: $actionLocation")
 
-        val action = instance as ScriptStep
+        val action = instance as? ScriptStep
+            ?: throw IllegalArgumentException("ScriptStep expected: $actionLocation")
 
         return action.perform(imperativeModel, graphInstance)
     }

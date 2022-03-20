@@ -21,7 +21,6 @@ import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.LocalGraphStore
-import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
@@ -77,16 +76,16 @@ class ServerLogicController(
 
     override suspend fun start(
         root: ObjectLocation,
-        graphDefinitionSnapshot: GraphDefinitionAttempt?
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunId? {
-        return startSynchronized(root, graphDefinitionSnapshot)
+        return startSynchronized(root, snapshotGraphDefinitionAttempt)
     }
 
 
     @Synchronized
     private fun startSynchronized(
         root: ObjectLocation,
-        graphDefinitionSnapshot: GraphDefinitionAttempt?
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunId? {
         val state = stateOrNull
         if (state != null) {
@@ -99,7 +98,7 @@ class ServerLogicController(
 
         val objectStableMapper = ObjectStableMapper()
 
-        val graphDefinition = graphDefinitionAttempt(graphDefinitionSnapshot)
+        val graphDefinition = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
 
         val successfulGraphDefinition = graphDefinition.successful()
 
@@ -141,8 +140,9 @@ class ServerLogicController(
                 val logicExecution = logicExecutionFacadeImpl.open(
                     runId, originalObjectLocation, this, graphCreator)
 
+                val stableObjectLocation = objectStableMapper.objectStableId(originalObjectLocation)
                 frame.dependencies.add(LogicFrame(
-                    ObjectStableId(originalObjectLocation.asString()),
+                    stableObjectLocation,
                     executionId,
                     logicExecution,
                     LogicRunFrameState.Ready,

@@ -113,20 +113,26 @@ class DefaultAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-        val attributeMetadata: AttributeMetadata = props
+        val graphStructure = props
             .clientState
             .graphStructure()
+
+        val attributeMetadata: AttributeMetadata = graphStructure
             .graphMetadata
             .get(props.objectLocation)
             ?.attributes
             ?.get(props.attributeName)
             ?: return
 
+        val attributeNotation: AttributeNotation? = graphStructure
+            .graphNotation
+            .mergeAttribute(props.objectLocation, props.attributeName)
+
         val type = attributeMetadata.type
 
         when {
             type == null -> {
-                +"${props.attributeName} (type missing)"
+                +"'${props.attributeName}' (unknown type)"
             }
 
             attributeMetadata.definerReference?.name?.value == "Self" -> {
@@ -138,9 +144,11 @@ class DefaultAttributeEditor(
             }
 
             else -> {
-                +"${props.attributeName} (type not supported)"
+                +"'${props.attributeName}' (type not supported)"
 
                 div {
+                    +"value: ${attributeNotation?.asString() ?: "<missing>"}"
+                    br {}
                     +"type: ${attributeMetadata.type?.className?.topLevel()}"
                     br {}
                     +"generics: ${attributeMetadata.type?.generics?.map { it.className.get() }}"

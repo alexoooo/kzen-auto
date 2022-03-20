@@ -7,7 +7,7 @@ import tech.kzen.lib.common.model.instance.GraphInstance
 
 interface ScriptStep {
     suspend fun perform(
-            imperativeModel: ImperativeModel,
-            graphInstance: GraphInstance
+        imperativeModel: ImperativeModel,
+        graphInstance: GraphInstance
     ): ExecutionResult
 }

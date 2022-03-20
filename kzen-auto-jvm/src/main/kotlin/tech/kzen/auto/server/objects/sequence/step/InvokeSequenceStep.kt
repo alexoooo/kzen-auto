@@ -22,15 +22,8 @@ class InvokeSequenceStep(
         return TupleDefinition.ofMain(LogicType.any)
     }
 
+
     override fun continueOrStart(stepContext: StepContext): LogicResult {
-//        TODO("Not yet implemented")
-//    }
-//
-//
-//    override fun perform(
-//        activeSequenceModel: ActiveSequenceModel,
-//        logicHandleFacade: LogicHandleFacade
-//    ): StepValue<Any> {
         val execution = stepContext.logicHandleFacade.start(sequence)
 
         val resultValue = execution.use { closingExecution ->
