@@ -16,13 +16,14 @@ DisplayValueStep:
   abstract: true
   is: SequenceStep
   class: tech.kzen.auto.server.objects.sequence.step.DisplayValueStep
-  icon: ToggleOn
+  icon: Print
   title: "Display"
   text: ""
   meta:
     text:
       is: ObjectLocation
       by: Nominal
+    selfLocation: SelfLocation
 
 
 InvokeSequenceStep:

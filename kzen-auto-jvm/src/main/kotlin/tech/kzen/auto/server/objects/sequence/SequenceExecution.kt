@@ -25,7 +25,7 @@ class SequenceExecution(
     private val documentPath: DocumentPath,
     private val root: ObjectLocation,
     private val logicHandle: LogicHandle,
-    private val trace: LogicTraceHandle,
+    private val logicTraceHandle: LogicTraceHandle,
     private val runExecutionId: LogicRunExecutionId
 ):
     LogicExecution
@@ -61,7 +61,7 @@ class SequenceExecution(
         val activeSequenceModel = ActiveSequenceModel()
         val logicHandleFacade = LogicHandleFacade(runExecutionId, logicHandle)
         val stepContext = StepContext(
-            logicControl, activeSequenceModel, logicHandleFacade, graphInstance)
+            logicControl, activeSequenceModel, logicHandleFacade, logicTraceHandle, graphInstance)
 
         val step = graphInstance[root]!!.reference as SequenceStep
         val model = activeSequenceModel.steps.getOrPut(root) { ActiveStepModel() }
@@ -70,7 +70,7 @@ class SequenceExecution(
             val stepValue = step.continueOrStart(stepContext)
             model.value = stepValue
         }
-        catch (e: Exception) {
+        catch (e: Throwable) {
             model.error = ExecutionFailure.ofException(e).errorMessage
         }
 

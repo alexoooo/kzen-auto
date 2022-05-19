@@ -154,7 +154,7 @@ class ServerLogicController(
             }
         }
 
-        val logicTraceHandle = LogicTraceStore.handle(runExecutionId)
+        val logicTraceHandle = LogicTraceStore.handle(runExecutionId, root)
 
         val logic = rootInstance as Logic
         val execution =

@@ -3,7 +3,6 @@ package tech.kzen.auto.server.objects.feature
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
-import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.toInputStream
 import java.io.ByteArrayOutputStream

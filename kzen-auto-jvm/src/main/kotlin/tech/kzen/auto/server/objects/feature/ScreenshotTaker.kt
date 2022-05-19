@@ -1,11 +1,7 @@
 package tech.kzen.auto.server.objects.feature
 
-import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
+import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
-import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.lib.common.reflect.Reflect
 import java.awt.GraphicsEnvironment
 import java.awt.Rectangle
@@ -14,7 +10,6 @@ import java.awt.Toolkit
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
-
 
 
 @Reflect

@@ -21,6 +21,7 @@ class MultiSequenceStep(
         return TupleDefinition.empty
     }
 
+
     override fun continueOrStart(stepContext: StepContext): LogicResult {
         for (stepLocation in steps) {
             val step = stepContext.graphInstance[stepLocation]!!.reference as SequenceStep

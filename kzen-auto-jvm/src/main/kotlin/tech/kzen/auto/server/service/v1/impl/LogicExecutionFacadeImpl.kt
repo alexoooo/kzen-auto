@@ -61,7 +61,7 @@ class LogicExecutionFacadeImpl(
 
         val logicExecutionId = LogicExecutionId(arbitraryId())
         val runExecutionId = LogicRunExecutionId(logicRunId, logicExecutionId)
-        val logicTraceHandle = LogicTraceStore.handle(runExecutionId)
+        val logicTraceHandle = LogicTraceStore.handle(runExecutionId, originalObjectLocation)
 
         val execution = dependencyInstance.execute(
             logicHandle,

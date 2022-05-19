@@ -20,15 +20,17 @@ object LogicConventions {
     )
 
 
-    val runIdKey = "run"
-    val executionIdKey = "execution"
+    val runIdKey = "runId"
+    val executionIdKey = "executionId"
     val queryKey = "query"
+    val actionKey = "action"
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun notRunningError(): String {
         return "Not running"
     }
+
 
     fun wrongRunningError(runId: LogicRunId, actualRunId: LogicRunId): String {
         return "Expected runId '${runId.value}' but was '${actualRunId.value}'"

@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.objects.document.report.spec.input
 
-import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
+import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
