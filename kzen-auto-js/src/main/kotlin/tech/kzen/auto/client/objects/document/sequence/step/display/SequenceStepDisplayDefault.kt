@@ -4,7 +4,10 @@ import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
-import react.*
+import react.RBuilder
+import react.RHandler
+import react.RPureComponent
+import react.State
 import react.dom.attrs
 import react.dom.img
 import styled.css
@@ -25,28 +28,28 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.IoUtils
 
 
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface SequenceStepDisplayDefaultProps: SequenceStepDisplayProps {
+//    var common: SequenceStepDisplayPropsCommon
+    var attributeController: AttributeController.Wrapper
+}
+
+
+external interface SequenceStepDisplayDefaultState: State
+
+
+//---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class SequenceStepDisplayDefault(
-        props: Props
+        props: SequenceStepDisplayDefaultProps
 ):
-        RPureComponent<SequenceStepDisplayDefault.Props, SequenceStepDisplayDefault.State>(props)
+        RPureComponent<SequenceStepDisplayDefaultProps, SequenceStepDisplayDefaultState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
 //    companion object {
 //        val wrapperName = ObjectName("DefaultStepDisplay")
 //    }
-
-
-    class Props(
-            var attributeController: AttributeController.Wrapper,
-
-            common: Common
-    ): SequenceStepDisplayProps(common)
-
-
-    class State(
-//            var hoverCard: Boolean
-    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -57,7 +60,7 @@ class SequenceStepDisplayDefault(
     ):
         SequenceStepDisplayWrapper(objectLocation)
     {
-        override fun child(input: RBuilder, handler: RHandler<SequenceStepDisplayProps>)/*: ReactElement*/ {
+        override fun child(input: RBuilder, handler: RHandler<SequenceStepDisplayProps>) {
             input.child(SequenceStepDisplayDefault::class) {
                 attrs {
                     this.attributeController = this@Wrapper.attributeController
@@ -74,7 +77,7 @@ class SequenceStepDisplayDefault(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun SequenceStepDisplayDefaultState.init(props: SequenceStepDisplayDefaultProps) {
 //        hoverCard = false
     }
 

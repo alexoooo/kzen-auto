@@ -7,6 +7,7 @@ sealed class ClientResult<T> {
 
 
         fun <T> ofSuccess(value: T): ClientSuccess<T> {
+            requireNotNull(value)
             return ClientSuccess(value)
         }
 

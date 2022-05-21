@@ -8,7 +8,8 @@ import tech.kzen.lib.common.model.obj.ObjectPath
 
 
 object LogicConventions {
-    val logicTraceStoreName = ObjectName("LogicTraceStore")
+    // NB: referenced in logic-trace.yaml
+    private val logicTraceStoreName = ObjectName("LogicTraceStore")
 
     private val logicTraceJvmPath = DocumentPath.parse(
         "auto-jvm/logic/logic-trace.yaml")
@@ -16,14 +17,19 @@ object LogicConventions {
 
     val logicTraceStoreLocation = ObjectLocation(
         logicTraceJvmPath,
-        ObjectPath(logicTraceStoreName, ObjectNesting.root)
-    )
+        ObjectPath(logicTraceStoreName, ObjectNesting.root))
 
 
-    val runIdKey = "runId"
-    val executionIdKey = "executionId"
-    val queryKey = "query"
-    val actionKey = "action"
+    const val paramAction = "action"
+    const val actionLookup = "lookup"
+    const val actionMostRecent = "recent"
+
+    const val paramSubDocumentPath = "sub-path"
+    const val paramSubObjectPath = "sub-object"
+
+    const val paramRunId = "runId"
+    const val paramExecution = "executionId"
+    const val paramQuery = "query"
 
 
     //-----------------------------------------------------------------------------------------------------------------

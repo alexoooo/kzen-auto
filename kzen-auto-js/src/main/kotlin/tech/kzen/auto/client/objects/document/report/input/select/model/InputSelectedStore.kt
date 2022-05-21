@@ -81,7 +81,7 @@ class InputSelectedStore(
     ): ClientResult<List<InputDataSpec>> {
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
-            ReportConventions.actionParameter to ReportConventions.actionDefaultFormat,
+            ReportConventions.paramAction to ReportConventions.actionDefaultFormat,
             *paths.map { ReportConventions.filesParameter to it.asString() }.toTypedArray())
 
         return when (result) {
@@ -250,7 +250,7 @@ class InputSelectedStore(
     private suspend fun selectionInfo(): ClientResult<InputSelectedInfo> {
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
-            ReportConventions.actionParameter to ReportConventions.actionInputInfo)
+            ReportConventions.paramAction to ReportConventions.actionInputInfo)
 
         return when (result) {
             is ExecutionSuccess -> {
@@ -328,7 +328,7 @@ class InputSelectedStore(
     private suspend fun listDataTypes(): ClientResult<List<ClassName>> {
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
-            ReportConventions.actionParameter to ReportConventions.actionDataTypes)
+            ReportConventions.paramAction to ReportConventions.actionDataTypes)
 
         return when (result) {
             is ExecutionSuccess -> {
@@ -411,7 +411,7 @@ class InputSelectedStore(
     private suspend fun listFormats(): ClientResult<List<ReportDefinerDetail>> {
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
-            ReportConventions.actionParameter to ReportConventions.actionTypeFormats)
+            ReportConventions.paramAction to ReportConventions.actionTypeFormats)
 
         return when (result) {
             is ExecutionSuccess -> {

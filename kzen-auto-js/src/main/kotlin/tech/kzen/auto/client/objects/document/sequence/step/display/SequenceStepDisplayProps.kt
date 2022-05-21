@@ -5,30 +5,31 @@ import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
-open class SequenceStepDisplayProps(
-        var common: Common
-): react.Props {
-    data class Common(
-        var clientState: SessionState,
+external interface SequenceStepDisplayProps: react.Props {
+    var common: SequenceStepDisplayPropsCommon
+}
+
+
+data class SequenceStepDisplayPropsCommon(
+    var clientState: SessionState,
 //        var graphStructure: GraphStructure,
-        var objectLocation: ObjectLocation,
-        var attributeNesting: AttributeNesting,
+    var objectLocation: ObjectLocation,
+    var attributeNesting: AttributeNesting,
 //        var imperativeModel: ImperativeModel,
 
-        var managed: Boolean = false,
-        var first: Boolean = false,
-        var last: Boolean = false/*,
+    var managed: Boolean = false,
+    var first: Boolean = false,
+    var last: Boolean = false/*,
         var active: Boolean = false*/
-    ) {
-        fun isRunning(): Boolean {
+) {
+    fun isRunning(): Boolean {
 //            return objectLocation == imperativeModel.running
-            return false
-        }
+        return false
+    }
 
-        fun isActive(): Boolean {
+    fun isActive(): Boolean {
 //            return clientState.activeHost != null &&
 //                    imperativeModel.frames.any { it.path == clientState.navigationRoute.documentPath }
-            return false
-        }
+        return false
     }
 }

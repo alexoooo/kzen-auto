@@ -250,9 +250,9 @@ class ReportRunStore(
     ): ClientResult<LogicTraceSnapshot> {
         val result = ClientContext.restClient.performDetached(
             LogicConventions.logicTraceStoreLocation,
-            LogicConventions.runIdKey to logicRunId.value,
-            LogicConventions.executionIdKey to logicExecutionId.value,
-            LogicConventions.queryKey to logicTraceQuery.asString()
+            LogicConventions.paramRunId to logicRunId.value,
+            LogicConventions.paramExecution to logicExecutionId.value,
+            LogicConventions.paramQuery to logicTraceQuery.asString()
         )
 
         return when (result) {

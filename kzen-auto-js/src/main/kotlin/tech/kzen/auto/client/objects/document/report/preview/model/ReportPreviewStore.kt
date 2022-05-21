@@ -89,7 +89,7 @@ class ReportPreviewStore(
         val result = ClientContext.restClient.logicRequest(
             logicRunId,
             logicExecutionId,
-            ReportConventions.actionParameter to ReportConventions.actionSummaryOnline)
+            ReportConventions.paramAction to ReportConventions.actionSummaryOnline)
 
         return when (result) {
             is ExecutionSuccess -> {
@@ -109,7 +109,7 @@ class ReportPreviewStore(
     private suspend fun summaryOffline(): ClientResult<TableSummary> {
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
-            ReportConventions.actionParameter to ReportConventions.actionSummaryOffline)
+            ReportConventions.paramAction to ReportConventions.actionSummaryOffline)
 
         return when (result) {
             is ExecutionSuccess -> {

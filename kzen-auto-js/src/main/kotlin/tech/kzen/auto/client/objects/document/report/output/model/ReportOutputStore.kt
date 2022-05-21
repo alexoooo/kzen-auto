@@ -158,9 +158,9 @@ class ReportOutputStore(
     ): ClientResult<OutputInfo> {
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
-            ReportConventions.actionParameter to ReportConventions.actionOutputInfoOnline,
-            LogicConventions.runIdKey to logicRunId.value,
-            LogicConventions.executionIdKey to logicExecutionId.value,
+            ReportConventions.paramAction to ReportConventions.actionOutputInfoOnline,
+            LogicConventions.paramRunId to logicRunId.value,
+            LogicConventions.paramExecution to logicExecutionId.value,
         )
 
         return when (result) {
@@ -182,7 +182,7 @@ class ReportOutputStore(
     private suspend fun outputInfoOffline(): ClientResult<OutputInfo> {
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
-            ReportConventions.actionParameter to ReportConventions.actionOutputInfoOffline)
+            ReportConventions.paramAction to ReportConventions.actionOutputInfoOffline)
 
         return when (result) {
             is ExecutionSuccess -> {
@@ -231,7 +231,7 @@ class ReportOutputStore(
     private suspend fun resetRequest(): ClientResult<Unit> {
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
-            ReportConventions.actionParameter to ReportConventions.actionReset)
+            ReportConventions.paramAction to ReportConventions.actionReset)
 
         return when (result) {
             is ExecutionSuccess -> {

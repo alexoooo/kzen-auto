@@ -16,33 +16,61 @@ class ColumnValue(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        const val errorText = "<error>"
-        val errorValue = ColumnValue(errorText, Double.NaN)
-
         private const val epsilon = 0.000_000_000_1
-
         private const val maxTimeTextLength = 1024
 
-        private val emptyValue = ColumnValue("", Double.NaN)
-        private val nullValue = ColumnValue("null", Double.NaN)
-        private val zeroValue = ColumnValue("0", 0.0)
-        private val oneValue = ColumnValue("1", 1.0)
-        private val nanValue = ColumnValue("NaN", Double.NaN)
-        private val trueValue = ColumnValue("true", Double.NaN)
-        private val trueUpperValue = ColumnValue("TRUE", Double.NaN)
-        private val falseValue = ColumnValue("false", Double.NaN)
-        private val falseUpperValue = ColumnValue("FALSE", Double.NaN)
-        private val yLowerValue = ColumnValue("y", Double.NaN)
-        private val yUpperValue = ColumnValue("y", Double.NaN)
-        private val yesValue = ColumnValue("yes", Double.NaN)
-        private val nLowerValue = ColumnValue("n", Double.NaN)
-        private val nUpperValue = ColumnValue("N", Double.NaN)
-        private val noValue = ColumnValue("no", Double.NaN)
+        private const val errorText = "<error>"
+        val errorValue = ColumnValue(errorText, Double.NaN)
+
+        private const val emptyText = ""
+        private val emptyValue = ColumnValue(emptyText, Double.NaN)
+
+        private const val nullText = "null"
+        private val nullValue = ColumnValue(nullText, Double.NaN)
+
+        private const val zeroText = "0"
+        private val zeroValue = ColumnValue(zeroText, 0.0)
+
+        private const val oneText = "1"
+        private val oneValue = ColumnValue(oneText, 1.0)
+
+        private const val nanText = "NaN"
+        private val nanValue = ColumnValue(nanText, Double.NaN)
+
+        private const val trueText = "true"
+        private val trueValue = ColumnValue(trueText, Double.NaN)
+
+        private const val trueUpperText = "TRUE"
+        private val trueUpperValue = ColumnValue(trueUpperText, Double.NaN)
+
+        private const val falseText = "false"
+        private val falseValue = ColumnValue(falseText, Double.NaN)
+
+        private const val falseUpperText = "FALSE"
+        private val falseUpperValue = ColumnValue(falseUpperText, Double.NaN)
+
+        private const val yLowerText = "y"
+        private val yLowerValue = ColumnValue(yLowerText, Double.NaN)
+
+        private const val yUpperText = "Y"
+        private val yUpperValue = ColumnValue(yUpperText, Double.NaN)
+
+        private const val yesText = "yes"
+        private val yesValue = ColumnValue(yesText, Double.NaN)
+
+        private const val nLowerText = "n"
+        private val nLowerValue = ColumnValue(nLowerText, Double.NaN)
+
+        private const val nUpperText = "N"
+        private val nUpperValue = ColumnValue(nUpperText, Double.NaN)
+
+        private const val noText = "no"
+        private val noValue = ColumnValue(noText, Double.NaN)
 
 
         fun toText(value: Any?): String {
             return when (value) {
-                null -> "null"
+                null -> nullText
                 is String -> value
                 is ColumnValue -> value.toString()
                 is Number -> ofNumber(value.toDouble()).toString()
@@ -63,21 +91,21 @@ class ColumnValue(
 
         fun ofText(text: String): ColumnValue {
             when (text) {
-                "" -> return emptyValue
-                "0" -> return zeroValue
-                "1" -> return oneValue
-                "NaN" -> return nanValue
-                "true" -> return trueValue
-                "TRUE" -> return trueUpperValue
-                "y" -> return yLowerValue
-                "Y" -> return yUpperValue
-                "yes" -> return yesValue
-                "false" -> return falseValue
-                "FALSE" -> return falseUpperValue
-                "n" -> return nLowerValue
-                "N" -> return nUpperValue
-                "no" -> return noValue
-                "null" -> return nullValue
+                emptyText -> return emptyValue
+                zeroText -> return zeroValue
+                oneText -> return oneValue
+                nanText -> return nanValue
+                trueText -> return trueValue
+                trueUpperText -> return trueUpperValue
+                yLowerText -> return yLowerValue
+                yUpperText -> return yUpperValue
+                yesText -> return yesValue
+                falseText -> return falseValue
+                falseUpperText -> return falseUpperValue
+                nLowerText -> return nLowerValue
+                nUpperText -> return nUpperValue
+                noText -> return noValue
+                nullText -> return nullValue
                 errorText -> return errorValue
             }
 
@@ -87,19 +115,19 @@ class ColumnValue(
 
         fun ofTextNan(text: String): ColumnValue {
             when (text) {
-                "" -> return emptyValue
-                "NaN" -> return nanValue
-                "true" -> return trueValue
-                "TRUE" -> return trueUpperValue
-                "y" -> return yLowerValue
-                "Y" -> return yUpperValue
-                "yes" -> return yesValue
-                "false" -> return falseValue
-                "FALSE" -> return falseUpperValue
-                "n" -> return nLowerValue
-                "N" -> return nUpperValue
-                "no" -> return noValue
-                "null" -> return nullValue
+                emptyText -> return emptyValue
+                nanText -> return nanValue
+                trueText -> return trueValue
+                trueUpperText -> return trueUpperValue
+                yLowerText -> return yLowerValue
+                yUpperText -> return yUpperValue
+                yesText -> return yesValue
+                falseText -> return falseValue
+                falseUpperText -> return falseUpperValue
+                nLowerText -> return nLowerValue
+                nUpperText -> return nUpperValue
+                noText -> return noValue
+                nullText -> return nullValue
                 errorText -> return errorValue
             }
 
@@ -149,11 +177,11 @@ class ColumnValue(
 
 
     val isNaN: Boolean
-        get() = text == "NaN"
+        get() = text == nanText
 
 
     val isNull: Boolean
-        get() = text == "null"
+        get() = text == nullText
 
 
     val isBlank: Boolean
@@ -161,7 +189,7 @@ class ColumnValue(
 
 
     val isTrue: Boolean
-        get() = text.equals("true", true)
+        get() = text.equals(trueText, true)
 
 
     // TODO: rename or alias as `logic`? add special If construct?
@@ -172,9 +200,9 @@ class ColumnValue(
 
         val asString = asText!!
         return when (asString.length) {
-            1 -> asString == "y" || asString == "Y"
-            3 -> asString.equals("yes", true)
-            4 -> asString.equals("true", true)
+            1 -> asString == yLowerText || asString == yUpperText
+            3 -> asString.equals(yesText, true)
+            4 -> asString.equals(trueText, true)
             else -> false
         }
     }
@@ -189,11 +217,11 @@ class ColumnValue(
         val asString = asText!!
         return when (asString.length) {
             0 -> true
-            1 -> asString == "n" || asString == "N"
-            2 -> asString.equals("no", true)
-            3 -> asString == "NaN"
-            4 -> asString == "null"
-            5 -> asString.equals("false", true)
+            1 -> asString == nLowerText || asString == nUpperText
+            2 -> asString.equals(noText, true)
+            3 -> asString == nanText
+            4 -> asString == nullText
+            5 -> asString.equals(falseText, true)
             else -> false
         }
     }
@@ -497,7 +525,7 @@ class ColumnValue(
             is Number -> {
                 val thisNumber = number
                 if (thisNumber.isNaN()) {
-                    other.toDouble().isNaN() && text == "NaN"
+                    other.toDouble().isNaN() && text == nanText
                 }
                 else {
                     val otherNumber = other.toDouble()

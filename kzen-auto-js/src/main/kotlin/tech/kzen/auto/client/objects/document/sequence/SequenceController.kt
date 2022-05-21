@@ -15,7 +15,7 @@ import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
 import tech.kzen.auto.client.objects.document.sequence.step.SequenceStepController
-import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayProps
+import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
@@ -39,8 +39,22 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
+//-----------------------------------------------------------------------------------------------------------------
+external interface SequenceControllerProps: Props {
+    var stepController: SequenceStepController.Wrapper
+}
+
+
+external interface SequenceControllerState: State {
+    var clientState: SessionState?
+    var sequenceState: SequenceState?
+    var creating: Boolean
+}
+
+
+//-----------------------------------------------------------------------------------------------------------------
 class SequenceController:
-    RPureComponent<SequenceController.Props, SequenceController.State>(),
+    RPureComponent<SequenceControllerProps, SequenceControllerState>(),
     SequenceStore.Observer,
     InsertionGlobal.Subscriber,
     SessionGlobal.Observer
@@ -70,22 +84,41 @@ class SequenceController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var stepController: SequenceStepController.Wrapper
-    }
+    @Reflect
+    class Wrapper(
+        private val archetype: ObjectLocation,
+        private val stepController: SequenceStepController.Wrapper,
+        private val ribbonController: RibbonController.Wrapper
+    ):
+        DocumentController
+    {
+        override fun archetypeLocation(): ObjectLocation {
+            return archetype
+        }
 
 
-    interface State: react.State {
-        var clientState: SessionState?
-        var sequenceState: SequenceState?
-        var creating: Boolean
-    }
+        override fun header(): ReactWrapper<Props> {
+            return object: ReactWrapper<Props> {
+                override fun child(input: RBuilder, handler: RHandler<Props>) {
+                    ribbonController.child(input) {}
+                }
+            }
+        }
 
 
-    override fun State.init(props: Props) {
-        clientState = null
-        sequenceState = null
-        creating = false
+        override fun body(): ReactWrapper<Props> {
+            return object: ReactWrapper<Props> {
+                override fun child(input: RBuilder, handler: RHandler<Props>) {
+                    input.child(SequenceController::class) {
+                        attrs {
+                            this.stepController = this@Wrapper.stepController
+                        }
+
+                        handler()
+                    }
+                }
+            }
+        }
     }
 
 
@@ -94,43 +127,10 @@ class SequenceController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Reflect
-    class Wrapper(
-        private val archetype: ObjectLocation,
-        private val stepController: SequenceStepController.Wrapper,
-//            private val scriptCommander: ScriptCommander
-        private val ribbonController: RibbonController.Wrapper
-    ):
-            DocumentController
-    {
-        override fun archetypeLocation(): ObjectLocation {
-            return archetype
-        }
-
-
-        override fun header(): ReactWrapper<react.Props> {
-            return object: ReactWrapper<react.Props> {
-                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
-                    ribbonController.child(input) {}
-                }
-            }
-        }
-
-
-        override fun body(): ReactWrapper<react.Props> {
-            return object: ReactWrapper<react.Props> {
-                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
-                    input.child(SequenceController::class) {
-                        attrs {
-                            this.stepController = this@Wrapper.stepController
-//                    this.scriptCommander = this@Wrapper.scriptCommander
-                        }
-
-                        handler()
-                    }
-                }
-            }
-        }
+    override fun SequenceControllerState.init(props: SequenceControllerProps) {
+        clientState = null
+        sequenceState = null
+        creating = false
     }
 
 
@@ -150,9 +150,9 @@ class SequenceController:
 
 
     override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: State,
-            snapshot: Any
+        prevProps: SequenceControllerProps,
+        prevState: SequenceControllerState,
+        snapshot: Any
     ) {
 //        val clientState = state.clientState
 //                ?: return
@@ -219,19 +219,6 @@ class SequenceController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
-//        styledDiv {
-//            css {
-//                margin(2.em)
-//            }
-//
-//            +"Foo"
-//
-//            if (state.creating) {
-//                +"[_]"
-//            }
-//        }
-//        return
-
         val clientState = state.clientState
             ?: return
 
@@ -248,7 +235,25 @@ class SequenceController:
 //        val imperativeModel = clientState.imperativeModel
 //                ?: ClientContext.executionRepository.emptyState(
 //                        documentPath, clientState.graphDefinitionAttempt.graphStructure)
-//
+
+        val sequenceState = state.sequenceState
+            ?: return
+
+        styledDiv {
+            if (sequenceState.globalError != null) {
+                +"Error: ${sequenceState.globalError}"
+            }
+            else if (sequenceState.progress.mostRecentTrace == null) {
+                +"Loading..."
+            }
+            else if (sequenceState.progress.mostRecentTrace.logicRunExecutionId == null) {
+                +"Did not run yet"
+            }
+            else {
+                +"Most recent LogicRunExecutionId: ${sequenceState.progress.mostRecentTrace.logicRunExecutionId}"
+            }
+        }
+
         styledDiv {
             css {
                 marginLeft = 2.em
@@ -418,7 +423,7 @@ class SequenceController:
 
             props.stepController.child(this) {
                 attrs {
-                    common = SequenceStepDisplayProps.Common(
+                    common = SequenceStepDisplayPropsCommon(
                         state.clientState!!,
                         objectLocation,
                         AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),

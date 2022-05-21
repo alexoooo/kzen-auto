@@ -56,26 +56,13 @@ class ServerRestApi(
 
         GET(CommonRestApi.commandBenchmark, counterHandler::benchmark)
 
-        // script
-        GET(CommonRestApi.actionList, counterHandler::actionList)
-        GET(CommonRestApi.actionModel, counterHandler::actionModel)
-        GET(CommonRestApi.actionStart, counterHandler::actionStart)
-        GET(CommonRestApi.actionReturn, counterHandler::actionReturn)
-        GET(CommonRestApi.actionReset, counterHandler::actionReset)
-        GET(CommonRestApi.actionPerform, counterHandler::actionPerform)
-
         // detached
         GET(CommonRestApi.actionDetached, counterHandler::actionDetachedByQuery)
         POST(CommonRestApi.actionDetached, counterHandler::actionDetachedByQuery)
         PUT(CommonRestApi.actionDetached, counterHandler::actionDetachedByForm)
         GET(CommonRestApi.actionDetachedDownload, counterHandler::actionDetachedDownload)
 
-        // dataflow
-        GET(CommonRestApi.execModel, counterHandler::execModel)
-        GET(CommonRestApi.execReset, counterHandler::execReset)
-        GET(CommonRestApi.execPerform, counterHandler::execPerform)
-
-        // task (report)
+        // task
         GET(CommonRestApi.taskSubmit, counterHandler::taskSubmit)
         GET(CommonRestApi.taskQuery, counterHandler::taskQuery)
         GET(CommonRestApi.taskCancel, counterHandler::taskCancel)
@@ -87,6 +74,20 @@ class ServerRestApi(
         GET(CommonRestApi.logicRequest, counterHandler::logicRequest)
         GET(CommonRestApi.logicCancel, counterHandler::logicCancel)
         GET(CommonRestApi.logicRun, counterHandler::logicRun)
+
+        // script
+        GET(CommonRestApi.actionList, counterHandler::actionList)
+        GET(CommonRestApi.actionModel, counterHandler::actionModel)
+        GET(CommonRestApi.actionStart, counterHandler::actionStart)
+        GET(CommonRestApi.actionReturn, counterHandler::actionReturn)
+        GET(CommonRestApi.actionReset, counterHandler::actionReset)
+        GET(CommonRestApi.actionPerform, counterHandler::actionPerform)
+
+        // dataflow
+        GET(CommonRestApi.execModel, counterHandler::execModel)
+        GET(CommonRestApi.execReset, counterHandler::execReset)
+        GET(CommonRestApi.execPerform, counterHandler::execPerform)
+
 
         // provide value from client
 //        GET("/auto-jvm/submit", counterHandler::actionSubmit)

@@ -113,7 +113,7 @@ class ReportInputStore(
     private suspend fun listColumnsRequest(): ClientResult<AnalysisColumnInfo> {
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
-            ReportConventions.actionParameter to ReportConventions.actionListColumns)
+            ReportConventions.paramAction to ReportConventions.actionListColumns)
 
         return when (result) {
             is ExecutionSuccess -> {

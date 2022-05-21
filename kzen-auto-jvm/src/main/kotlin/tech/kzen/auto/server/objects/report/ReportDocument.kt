@@ -91,8 +91,8 @@ class ReportDocument(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun execute(request: ExecutionRequest): ExecutionResult {
-        val action = request.parameters.get(ReportConventions.actionParameter)
-            ?: return ExecutionFailure("'${ReportConventions.actionParameter}' expected")
+        val action = request.parameters.get(ReportConventions.paramAction)
+            ?: return ExecutionFailure("'${ReportConventions.paramAction}' expected")
 
         return when (action) {
             ReportConventions.actionBrowseFiles ->
@@ -282,7 +282,7 @@ class ReportDocument(
             ?: return ExecutionResult.failure("Not found: ${CommonRestApi.paramExecutionId}")
 
         val runExecutionParams = RequestParams.of(
-            ReportConventions.actionParameter to ReportConventions.actionOutputInfoOnline,
+            ReportConventions.paramAction to ReportConventions.actionOutputInfoOnline,
             CommonRestApi.paramRunId to runId.value,
             CommonRestApi.paramExecutionId to executionId.value,
             OutputExploreSpec.previewStartKey to output.explore.previewStartZeroBased().toString(),
@@ -357,7 +357,7 @@ class ReportDocument(
             ?: return ExecutionResult.failure("Not found: ${CommonRestApi.paramExecutionId}")
 
         val runExecutionParams = RequestParams.of(
-            ReportConventions.actionParameter to ReportConventions.actionSummaryOnline,
+            ReportConventions.paramAction to ReportConventions.actionSummaryOnline,
             CommonRestApi.paramRunId to runId.value,
             CommonRestApi.paramExecutionId to executionId.value
         )

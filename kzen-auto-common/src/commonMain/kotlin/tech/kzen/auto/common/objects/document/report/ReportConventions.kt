@@ -34,7 +34,7 @@ object ReportConventions {
     const val previewPivotValuesKey = "values"
 
 
-    const val actionParameter = "action"
+    const val paramAction = "action"
     const val actionBrowseFiles = "browse"
     const val actionInputInfo = "files"
     const val actionDataTypes = "types"

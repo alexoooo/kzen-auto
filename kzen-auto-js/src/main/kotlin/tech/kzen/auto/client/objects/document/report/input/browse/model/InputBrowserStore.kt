@@ -140,7 +140,7 @@ class InputBrowserStore(
     private suspend fun browserInfo(): ClientResult<InputBrowserInfo> {
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
-            ReportConventions.actionParameter to ReportConventions.actionBrowseFiles)
+            ReportConventions.paramAction to ReportConventions.actionBrowseFiles)
 
         return when (result) {
             is ExecutionSuccess -> {

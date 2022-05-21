@@ -137,7 +137,7 @@ class ReportFormulaStore(
 
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
-            ReportConventions.actionParameter to ReportConventions.actionValidateFormulas)
+            ReportConventions.paramAction to ReportConventions.actionValidateFormulas)
 
         return when (result) {
             is ExecutionSuccess -> {

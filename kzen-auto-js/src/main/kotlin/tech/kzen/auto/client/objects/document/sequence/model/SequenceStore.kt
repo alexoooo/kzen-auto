@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.sequence.model
 
 import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.common.run.ExecutionRunStore
+import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressStore
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
@@ -61,6 +62,10 @@ class SequenceStore: SessionGlobal.Observer {
 //            console.log("refresh - $it")
         }
     )
+
+
+    private val progressStore = SequenceProgressStore(this)
+
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -148,6 +153,8 @@ class SequenceStore: SessionGlobal.Observer {
 //            input.init()
 //            formula.validateAsync()
 //            previewFiltered.init()
+
+            progressStore.init()
 
             run.open()
         }

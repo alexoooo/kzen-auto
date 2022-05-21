@@ -6,7 +6,7 @@ import react.RHandler
 import react.RPureComponent
 import react.State
 import tech.kzen.auto.client.api.ReactWrapper
-import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayProps
+import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayWrapper
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -28,7 +28,7 @@ class SequenceStepController(
     class Props(
             var stepDisplays: List<SequenceStepDisplayWrapper>,
 
-            var common: SequenceStepDisplayProps.Common
+            var common: SequenceStepDisplayPropsCommon
     ): react.Props
 
 

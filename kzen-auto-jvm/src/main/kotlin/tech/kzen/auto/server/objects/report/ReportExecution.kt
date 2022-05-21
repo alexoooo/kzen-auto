@@ -342,7 +342,7 @@ class ReportExecution(
 
 
     private fun pollRequest(executionRequest: ExecutionRequest): ExecutionResult {
-        val action = executionRequest.getSingle(ReportConventions.actionParameter)
+        val action = executionRequest.getSingle(ReportConventions.paramAction)
             ?: return ExecutionResult.failure("Missing action")
 
         return when (action) {
