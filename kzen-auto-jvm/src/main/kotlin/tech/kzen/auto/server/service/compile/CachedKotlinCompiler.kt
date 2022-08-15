@@ -15,8 +15,9 @@ class CachedKotlinCompiler(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val codeCacheDir = "code-cache"
-        private const val sourceDir = "src"
-        private const val buildDir = "build"
+//        private const val sourceDir = "src"
+//        private const val buildDir = "build"
+        private const val jarExtension = ".jar"
         private const val sourceExtension = ".kt"
         private const val errorFile = "err.txt"
         private const val successFile = "success.txt"
@@ -78,17 +79,19 @@ class CachedKotlinCompiler(
     ): Class<out Any>? {
         val signature = kotlinCode.signature()
         val codeDir = cacheDir.resolve(signature)
-        val classDir = codeDir.resolve(buildDir)
-        val classUrl = classDir.toUri().toURL()
+        val outputJar = outputJar(codeDir, kotlinCode.mainClassName)
+
+//        val classDir = codeDir.resolve(buildDir)
+//        val classUrl = classDir.toUri().toURL()
 
         val sourceClassLoader = URLClassLoader(
-            "code_$signature",
-            arrayOf(classUrl),
+            arrayOf(outputJar.toUri().toURL()),
             classLoader)
 
         @Suppress("LiftReturnOrAssignment")
         try {
-            return sourceClassLoader.loadClass(kotlinCode.fullyQualifiedMainClass())
+            val fullClassName = KotlinCode.classNamePrefix + kotlinCode.mainClassName
+            return sourceClassLoader.loadClass(fullClassName)
         }
         catch (e: ClassNotFoundException) {
             return null
@@ -127,25 +130,28 @@ class CachedKotlinCompiler(
         codeDir: Path,
         classLoader: ClassLoader
     ): String? {
-        val codeFile = codeDir.resolve(sourceDir).resolve(kotlinCode.mainClassName + sourceExtension)
-        Files.createDirectories(codeFile.parent)
-        Files.write(codeFile, kotlinCode.fileSourceCode.toByteArray())
+        val outputJar = outputJar(codeDir, kotlinCode.mainClassName)
 
-//        val classLoader = object: ClassLoader() {}
-        val errorMessage = kotlinCompiler.tryCompileModule(
-            kotlinCode.mainClassName,
-            listOf(codeFile),
-            codeDir.resolve(buildDir),
+        val result = kotlinCompiler.compile(
+            kotlinCode,
+            outputJar,
             listOf(),
             classLoader)
 
-        if (errorMessage == null) {
+        if (result is KotlinCompilerSuccess){
             writeSuccessFile(codeDir)
+            return null
         }
-        else {
-            writeErrorFile(codeDir, errorMessage)
-        }
+        result as KotlinCompilerError
+        writeErrorFile(codeDir, result.error)
+        return result.error
+    }
 
-        return errorMessage
+
+    private fun outputJar(codeDir: Path, mainClassName: String): Path {
+        return codeDir
+            .resolve(mainClassName + jarExtension)
+            .toAbsolutePath()
+            .normalize()
     }
 }

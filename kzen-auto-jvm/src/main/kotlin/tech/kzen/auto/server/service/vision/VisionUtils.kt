@@ -145,7 +145,7 @@ object VisionUtils {
                 "el = document.elementFromPoint($translateX, $translateY);" +
                         "el.classList.add('$randomClassName');")
 
-        val element = driver.findElementByClassName(randomClassName)
+        val element = driver.findElement(By.className(randomClassName))
 
         // TODO: clean up randomClassName, the below doesn't work?
 //        jsExec.executeScript(

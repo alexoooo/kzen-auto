@@ -7,11 +7,10 @@ interface KotlinCompiler {
     /**
      * @return error message, or null if successful
      */
-    fun tryCompileModule(
-        moduleName: String,
-        sourcePaths: List<Path>,
-        saveClassesDir: Path,
+    fun compile(
+        kotlinCode: KotlinCode,
+        outputJarFile: Path,
         classpathLocations: List<Path>,
         classLoader: ClassLoader
-    ): String?
+    ): KotlinCompilerResult
 }

@@ -2,7 +2,6 @@ package tech.kzen.auto.plugin.util;
 
 
 // Similar to Java Util Lang, but more tolerant and specialized, also it normalizes -0 to 0
-// TODO: https://github.com/wrandelshofer/FastDoubleParser
 public enum NumberParseUtils {;
     //-----------------------------------------------------------------------------------------------------------------
     public static final long[] decimalLongPowers = {
@@ -133,7 +132,7 @@ public enum NumberParseUtils {;
     }
 
 
-    // NB: shadowed from java.lang.Long, where it's not public
+    // NB: shaded from java.lang.Long, where it's not public
     public static int stringSize(long value) {
         int d = 1;
         if (value >= 0) {

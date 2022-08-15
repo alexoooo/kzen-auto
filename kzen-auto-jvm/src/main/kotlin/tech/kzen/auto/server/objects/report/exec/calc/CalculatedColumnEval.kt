@@ -94,16 +94,15 @@ class CalculatedColumnEval(
 
         val columnAccessors = generateColumnAccessors(columnNames)
 
+//${
+//    if (packagePath.isEmpty()) {
+//        ""
+//    }
+//    else {
+//        "package $packagePath"
+//    }
+//}
         val code = """
-${
-    if (packagePath.isEmpty()) {
-        ""
-    }
-    else {
-        "package $packagePath"
-    }
-}
-
 $imports
 
 class $mainClassName: ${ CalculatedColumn::class.java.simpleName }<${modelType.topLevel()}> {
@@ -143,7 +142,7 @@ $calculatedColumnFormula
 }
 """
         return KotlinCode(
-            packagePath,
+//            packagePath,
             mainClassName,
             code)
     }

@@ -338,6 +338,8 @@ public class FlatFileRecord
     }
 
 
+    // TODO: add(double value, int zeroPad, boolean digitGroup, int minDecimals, int maxDecimals)
+    //  for eg 00,000.00### DecimalFormat
     public void add(double value, int decimalPlaces) {
         if (decimalPlaces == 0) {
             add(Math.round(value));

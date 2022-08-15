@@ -33,8 +33,11 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-webflux")
 
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
-    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion")
+
+//    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-scripting-jvm:$kotlinVersion")
+    implementation("org.jetbrains.kotlin:kotlin-scripting-jvm-host:$kotlinVersion")
+    implementation("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:$kotlinVersion")
 
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-css-jvm:$kotlinCssVersion")
@@ -49,6 +52,22 @@ dependencies {
     implementation("commons-io:commons-io:$commonsIoVersion")
     implementation("com.linkedin.migz:migz:$migzVersion")
 //    implementation("ch.randelshofer:fastdoubleparser:$fastDoubleParserVersion")
+
+//    <dependency>
+//    <groupId>org.jetbrains.kotlin</groupId>
+//    <artifactId>kotlin-scripting-jvm</artifactId>
+//    <version>${kotlin.version}</version>
+//    </dependency>
+//    <dependency>
+//    <groupId>org.jetbrains.kotlin</groupId>
+//    <artifactId>kotlin-scripting-jvm-host</artifactId>
+//    <version>${kotlin.version}</version>
+//    </dependency>
+//    <dependency>
+//    <groupId>org.jetbrains.kotlin</groupId>
+//    <artifactId>kotlin-scripting-compiler-embeddable</artifactId>
+//    <version>${kotlin.version}</version>
+//    </dependency>
 
     testImplementation(kotlin("test"))
 }

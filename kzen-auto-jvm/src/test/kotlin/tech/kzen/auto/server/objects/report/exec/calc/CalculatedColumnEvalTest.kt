@@ -4,9 +4,10 @@ import org.junit.Test
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
-import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
+import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.platform.ClassNames
+import java.nio.file.Path
 import kotlin.test.assertEquals
 
 
@@ -408,7 +409,7 @@ class CalculatedColumnEvalTest {
         aValue: String = "",
         bValue: String = ""
     ) {
-        val workUtils = WorkUtils.temporary("CachedKotlinCompiler")
+        val workUtils = WorkUtils(Path.of("../work/${CalculatedColumnEvalTest::class.simpleName}"))
         val calculatedColumnEval = calculatedColumnEval(workUtils)
 
         val columnNames = listOf("a", "b")
@@ -429,7 +430,7 @@ class CalculatedColumnEvalTest {
 
 
     private fun calculatedColumnEval(workUtils: WorkUtils): CalculatedColumnEval {
-        val kotlinCompiler = EmbeddedKotlinCompiler()
+        val kotlinCompiler = ScriptKotlinCompiler()
         val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workUtils)
         return CalculatedColumnEval(cachedKotlinCompiler)
     }

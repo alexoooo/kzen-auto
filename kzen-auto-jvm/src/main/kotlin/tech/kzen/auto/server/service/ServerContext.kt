@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.service
 
+//import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveDataflowRepository
@@ -19,7 +20,7 @@ import tech.kzen.auto.server.objects.report.service.FileListingAction
 import tech.kzen.auto.server.objects.report.service.FilterIndex
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
-import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
+import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
 import tech.kzen.auto.server.service.exec.EmptyExecutionInitializer
 import tech.kzen.auto.server.service.exec.ModelActionExecutor
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
@@ -102,7 +103,8 @@ object ServerContext {
     val workUtils = WorkUtils.sibling
     val reportWorkPool = ReportWorkPool(workUtils)
 
-    val kotlinCompiler = EmbeddedKotlinCompiler()
+//    val kotlinCompiler = EmbeddedKotlinCompiler()
+    val kotlinCompiler = ScriptKotlinCompiler()
     val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workUtils)
     val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler)
 
