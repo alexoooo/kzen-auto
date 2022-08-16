@@ -66,6 +66,7 @@ class FileListingAction {
                         return FileVisitResult.CONTINUE
                     }
                 })
+            builder.sort()
             builder
         }
     }
@@ -97,7 +98,7 @@ class FileListingAction {
                 invalidProcessor
             ))
         }
-
+        locations.sort()
         return InputSelectedInfo(locations)
     }
 

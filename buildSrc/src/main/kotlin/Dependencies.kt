@@ -8,8 +8,8 @@ const val springBootVersion = "2.7.2"
 const val dependencyManagementVersion = "1.0.11.RELEASE"
 
 
-//const val kzenLibVersion = "0.24.1"
-const val kzenLibVersion = "0.25.0-SNAPSHOT"
+const val kzenLibVersion = "0.25.0"
+//const val kzenLibVersion = "0.25.0-SNAPSHOT"
 
 
 const val logbackVersion = "1.2.11"
