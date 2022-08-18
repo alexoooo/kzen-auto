@@ -5,7 +5,7 @@ const val javaVersion = 18
 const val jvmToolchainVersion = 18
 const val shadowVersion = "7.1.2"
 const val springBootVersion = "2.7.2"
-const val dependencyManagementVersion = "1.0.11.RELEASE"
+const val dependencyManagementVersion = "1.0.13.RELEASE"
 
 
 const val kzenLibVersion = "0.25.0"
