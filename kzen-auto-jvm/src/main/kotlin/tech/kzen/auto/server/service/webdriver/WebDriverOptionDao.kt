@@ -23,31 +23,31 @@ class WebDriverOptionDao {
                     BrowserLauncher.Firefox,
                     OperatingSystem.Linux,
                     CpuArchitecture.X86_64,
-                    "0.30.0",
-                    URI("https://github.com/mozilla/geckodriver/releases/download/v0.30.0/geckodriver-v0.30.0-linux64.tar.gz")
+                    "0.31.0",
+                    URI("https://github.com/mozilla/geckodriver/releases/download/v0.31.0/geckodriver-v0.31.0-linux64.tar.gz")
             ),
 
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_32,
-                    "99.0.4844.17",
-                    URI("https://chromedriver.storage.googleapis.com/99.0.4844.17/chromedriver_win32.zip")
+                    "104.0.5112.79",
+                    URI("https://chromedriver.storage.googleapis.com/104.0.5112.79/chromedriver_win32.zip")
             ),
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
                     CpuArchitecture.X86_64,
-                    "99.0.4844.17",
-                    URI("https://chromedriver.storage.googleapis.com/99.0.4844.17/chromedriver_win32.zip")
+                    "104.0.5112.79",
+                    URI("https://chromedriver.storage.googleapis.com/104.0.5112.79/chromedriver_win32.zip")
             ),
 
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.OsX,
                     CpuArchitecture.X86_64,
-                    "99.0.4844.17",
-                    URI("https://chromedriver.storage.googleapis.com/99.0.4844.17/chromedriver_mac64.zip")
+                    "104.0.5112.79",
+                    URI("https://chromedriver.storage.googleapis.com/104.0.5112.79/chromedriver_mac64.zip")
             ))
 
 
