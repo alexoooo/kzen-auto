@@ -19,6 +19,7 @@ class WebDriverOptionDao {
 //                    "77.0.3865.40",
 //                    URI("https://chromedriver.storage.googleapis.com/77.0.3865.40/chromedriver_linux64.zip")
 //            ),
+
             WebDriverOption(
                     BrowserLauncher.Firefox,
                     OperatingSystem.Linux,
@@ -34,6 +35,7 @@ class WebDriverOptionDao {
                     "104.0.5112.79",
                     URI("https://chromedriver.storage.googleapis.com/104.0.5112.79/chromedriver_win32.zip")
             ),
+
             WebDriverOption(
                     BrowserLauncher.GoogleChrome,
                     OperatingSystem.Windows,
