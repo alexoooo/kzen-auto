@@ -36,31 +36,33 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveInAttributeComma
 import tech.kzen.lib.common.service.notation.NotationConventions
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface EdgeControllerProps: Props {
+    var cellDescriptor: EdgeDescriptor
+
+    var documentPath: DocumentPath
+    var attributeNesting: AttributeNesting
+    var graphStructure: GraphStructure
+    var visualDataflowModel: VisualDataflowModel
+    var dataflowMatrix: DataflowMatrix
+    var dataflowDag: DataflowDag
+}
+
+
+external interface EdgeControllerState: State {
+    var edgeHover: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class EdgeController(
-        props: Props
+        props: EdgeControllerProps
 ):
-        RPureComponent<EdgeController.Props, EdgeController.State>(props)
+        RPureComponent<EdgeControllerProps, EdgeControllerState>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var cellDescriptor: EdgeDescriptor,
-
-            var documentPath: DocumentPath,
-            var attributeNesting: AttributeNesting,
-            var graphStructure: GraphStructure,
-            var visualDataflowModel: VisualDataflowModel,
-            var dataflowMatrix: DataflowMatrix,
-            var dataflowDag: DataflowDag
-    ): react.Props
-
-
-    class State(
-            var edgeHover: Boolean
-    ): react.State
-
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun EdgeControllerState.init(props: EdgeControllerProps) {
         edgeHover = false
     }
 

@@ -13,19 +13,20 @@ import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface TopIngressProps: react.Props {
+    var attributeName: AttributeName?
+    var ingressColor: Color
+    var parentWidth: LinearDimension?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class TopIngress(
-        props: Props
+        props: TopIngressProps
 ):
-        RPureComponent<TopIngress.Props, react.State>(props)
+        RPureComponent<TopIngressProps, react.State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var attributeName: AttributeName?,
-            var ingressColor: Color,
-            var parentWidth: LinearDimension?
-    ): react.Props
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val parentWidth = props.parentWidth ?: CellController.cardWidth

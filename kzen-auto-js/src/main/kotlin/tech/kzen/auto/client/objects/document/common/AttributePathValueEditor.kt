@@ -28,10 +28,35 @@ import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.collect.toPersistentList
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface AttributePathValueEditorProps: Props {
+    var labelOverride: String?
+    var multilineOverride: Boolean?
+    var disabled: Boolean
+    var invalid: Boolean
+    var onChange: ((AttributeNotation) -> Unit)?
+
+    var clientState: SessionState
+    var objectLocation: ObjectLocation
+    var attributePath: AttributePath
+
+    var valueType: TypeMetadata
+}
+
+
+external interface AttributePathValueEditorState: State {
+    var value: String?
+    var values: List<String>?
+
+    var pending: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class AttributePathValueEditor(
-    props: Props
+    props: AttributePathValueEditorProps
 ):
-    RPureComponent<AttributePathValueEditor.Props, AttributePathValueEditor.State>(props)
+    RPureComponent<AttributePathValueEditorProps, AttributePathValueEditorState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -58,23 +83,8 @@ class AttributePathValueEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-        var labelOverride: String?,
-        var multilineOverride: Boolean?,
-        var disabled: Boolean,
-        var invalid: Boolean,
-        var onChange: ((AttributeNotation) -> Unit)?,
-
-        var clientState: SessionState,
-        var objectLocation: ObjectLocation,
-        var attributePath: AttributePath,
-
-        var valueType: TypeMetadata
-    ): react.Props
-
-
-    private fun Props.valuesAttribute(): AttributeNotation {
-        @Suppress("MoveVariableDeclarationIntoWhen")
+    private fun AttributePathValueEditorProps.valuesAttribute(): AttributeNotation {
+//        @Suppress("MoveVariableDeclarationIntoWhen")
         val attributeNotation = clientState
             .graphStructure()
             .graphNotation
@@ -94,13 +104,6 @@ class AttributePathValueEditor(
     }
 
 
-    class State(
-        var value: String?,
-        var values: List<String>?,
-
-        var pending: Boolean
-    ): react.State
-
 
     //-----------------------------------------------------------------------------------------------------------------
     private var submitDebounce: FunctionWithDebounce = lodash.debounce({
@@ -111,7 +114,7 @@ class AttributePathValueEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun AttributePathValueEditorState.init(props: AttributePathValueEditorProps) {
         val attributeNotation = props.valuesAttribute()
 
         val (value, values) = extractValues(attributeNotation)
@@ -147,8 +150,8 @@ class AttributePathValueEditor(
 
 
     override fun componentDidUpdate(
-        prevProps: Props,
-        prevState: State,
+        prevProps: AttributePathValueEditorProps,
+        prevState: AttributePathValueEditorState,
         snapshot: Any
     ) {
         if (props.clientState == prevProps.clientState) {

@@ -5,10 +5,8 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
-open class AttributeEditorProps(
-        var clientState: SessionState,
-        var objectLocation: ObjectLocation,
-        var attributeName: AttributeName//,
-//        var labelOverride: String?,
-//        var disabled: Boolean
-): react.Props
+external interface AttributeEditorProps: react.Props {
+    var clientState: SessionState
+    var objectLocation: ObjectLocation
+    var attributeName: AttributeName
+}

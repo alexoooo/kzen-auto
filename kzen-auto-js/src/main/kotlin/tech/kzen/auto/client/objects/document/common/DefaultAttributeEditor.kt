@@ -6,11 +6,9 @@ import react.dom.br
 import react.dom.div
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
-import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -22,33 +20,26 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.ClassNames.topLevel
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface DefaultAttributeEditorProps: AttributeEditorProps {
+    var labelOverride: String?
+    var disabled: Boolean
+    var onChange: ((AttributeNotation) -> Unit)?
+    var invalid: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class DefaultAttributeEditor(
-        props: Props
+        props: DefaultAttributeEditorProps
 ):
-        RPureComponent<DefaultAttributeEditor.Props, DefaultAttributeEditor.State>(props),
+        RPureComponent<DefaultAttributeEditorProps, State>(props),
         ExecutionRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val wrapperName = ObjectName("DefaultAttributeEditor")
     }
-
-
-    class Props(
-        var labelOverride: String?,
-        var disabled: Boolean,
-        var onChange: ((AttributeNotation) -> Unit)?,
-        var invalid: Boolean,
-
-        clientState: SessionState,
-        objectLocation: ObjectLocation,
-        attributeName: AttributeName
-    ): AttributeEditorProps(
-        clientState, objectLocation, attributeName//, labelOverride, disabled
-    )
-
-
-    class State: react.State
 
 
     private var attributePathValueEditor: RefObject<AttributePathValueEditor> = createRef()
@@ -84,7 +75,7 @@ class DefaultAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
-        prevProps: Props,
+        prevProps: DefaultAttributeEditorProps,
         prevState: State,
         snapshot: Any
     ) {

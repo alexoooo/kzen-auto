@@ -41,29 +41,27 @@ import tech.kzen.lib.platform.DateTimeUtils
 import tech.kzen.lib.platform.IoUtils
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface FeatureControllerState: react.State {
+    var documentPath: DocumentPath?
+    var graphStructure: GraphStructure?
+
+    var detail: CropperDetail?
+    var screenshotDataUrl: String?
+    var capturedDataUrl: String?
+    var requestingScreenshot: Boolean?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class FeatureController(
         props: Props
 ):
-        RPureComponent<FeatureController.Props, FeatureController.State>(props),
+        RPureComponent<Props, FeatureControllerState>(props),
         NavigationGlobal.Observer,
         LocalGraphStore.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    class Props: react.Props
-
-
-    class State(
-        var documentPath: DocumentPath?,
-        var graphStructure: GraphStructure?,
-
-        var detail: CropperDetail?,
-        var screenshotDataUrl: String?,
-        var capturedDataUrl: String?,
-        var requestingScreenshot: Boolean?
-    ): react.State
-
-
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
@@ -101,7 +99,7 @@ class FeatureController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun FeatureControllerState.init(props: Props) {
         documentPath = null
         graphStructure = null
 
@@ -134,7 +132,7 @@ class FeatureController(
 
     override fun componentDidUpdate(
             prevProps: Props,
-            prevState: State,
+            prevState: FeatureControllerState,
             snapshot: Any
     ) {
         if (state.screenshotDataUrl == null && state.requestingScreenshot != true) {

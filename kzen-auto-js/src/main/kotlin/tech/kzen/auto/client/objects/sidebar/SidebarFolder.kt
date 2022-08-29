@@ -26,10 +26,29 @@ import kotlin.js.Date
 import kotlin.random.Random
 
 
+
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface SidebarFolderProps: react.Props {
+    var graphStructure: GraphStructure
+    var selectedDocumentPath: DocumentPath?
+    var archetypeLocations: List<ObjectLocation>
+}
+
+
+external interface SidebarFolderState: react.State {
+    var hoverItem: Boolean
+    var hoverOptions: Boolean
+    var optionsOpen: Boolean
+    var mainDocuments: List<DocumentPath>
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class SidebarFolder(
-    props: Props
+    props: SidebarFolderProps
 ):
-    RComponent<SidebarFolder.Props, SidebarFolder.State>(props)
+    RComponent<SidebarFolderProps, SidebarFolderState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -41,22 +60,6 @@ class SidebarFolder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-        var graphStructure: GraphStructure,
-        var selectedDocumentPath: DocumentPath?,
-        var archetypeLocations: List<ObjectLocation>
-    ): react.Props
-
-
-    class State(
-            var hoverItem: Boolean,
-            var hoverOptions: Boolean,
-            var optionsOpen: Boolean,
-            var mainDocuments: List<DocumentPath>
-    ): react.State
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private var menuAnchorRef: RefObject<HTMLElement> = createRef()
 
     // NB: workaround for open options icon remaining after click with drag away from item
@@ -65,15 +68,15 @@ class SidebarFolder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun SidebarFolderState.init(props: SidebarFolderProps) {
         optionsOpen = false
         mainDocuments = mainDocuments(props.graphStructure)
     }
 
 
     override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: State,
+            prevProps: SidebarFolderProps,
+            prevState: SidebarFolderState,
             snapshot: Any
     ) {
         if (props.graphStructure != prevProps.graphStructure) {
@@ -84,7 +87,7 @@ class SidebarFolder(
     }
 
 
-    override fun shouldComponentUpdate(nextProps: Props, nextState: State): Boolean {
+    override fun shouldComponentUpdate(nextProps: SidebarFolderProps, nextState: SidebarFolderState): Boolean {
         if (state.hoverItem != nextState.hoverItem ||
                 state.hoverOptions != nextState.hoverOptions ||
                 state.optionsOpen != nextState.optionsOpen ||

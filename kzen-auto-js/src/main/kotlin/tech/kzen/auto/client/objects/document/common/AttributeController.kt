@@ -1,20 +1,27 @@
 package tech.kzen.auto.client.objects.document.common
 
-import react.*
+import react.RBuilder
+import react.RHandler
+import react.RPureComponent
+import react.State
 import tech.kzen.auto.client.api.ReactWrapper
-import tech.kzen.auto.client.service.global.SessionState
-import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
-import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface AttributeControllerProps: AttributeEditorProps {
+    var attributeEditors: List<AttributeEditorWrapper>
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class AttributeController(
-        props: Props
+        props: AttributeControllerProps
 ):
-        RPureComponent<AttributeController.Props, react.State>(props)
+        RPureComponent<AttributeControllerProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -22,27 +29,14 @@ class AttributeController(
     }
 
 
-    class Props(
-        var attributeEditors: List<AttributeEditorWrapper>,
-
-        clientState: SessionState,
-        objectLocation: ObjectLocation,
-        attributeName: AttributeName//,
-//        labelOverride: String?,
-//        disabled: Boolean
-    ): AttributeEditorProps(
-        clientState, objectLocation, attributeName//, labelOverride, disabled
-    )
-
-
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
         private val attributeEditors: List<AttributeEditorWrapper>
     ):
-        ReactWrapper<Props>
+        ReactWrapper<AttributeControllerProps>
     {
-        override fun child(input: RBuilder, handler: RHandler<Props>)/*: ReactElement*/ {
+        override fun child(input: RBuilder, handler: RHandler<AttributeControllerProps>) {
             input.child(AttributeController::class) {
                 attrs {
                     this.attributeEditors = this@Wrapper.attributeEditors

@@ -26,10 +26,38 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftInAttributeComman
 import kotlin.js.Date
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface StepHeaderProps : Props {
+    var hoverSignal: StepHeader.HoverSignal
+
+    var attributeNesting: AttributeNesting
+
+    var objectLocation: ObjectLocation
+    var graphStructure: GraphStructure
+
+    var imperativeState: ImperativeState?
+    var isRunning: Boolean
+
+    var managed: Boolean
+    var first: Boolean
+    var last: Boolean
+}
+
+
+external interface StepHeaderState: State {
+    var hoverCard: Boolean
+    var hoverMenu: Boolean
+    var intentToRun: Boolean
+
+    var optionsOpen: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class StepHeader(
-        props: Props
+        props: StepHeaderProps
 ):
-        RPureComponent<StepHeader.Props, StepHeader.State>(props),
+        RPureComponent<StepHeaderProps, StepHeaderState>(props),
         ExecutionIntentGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -44,32 +72,6 @@ class StepHeader(
         private const val menuDanglingTimeout = 300
     }
 
-
-    //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var hoverSignal: HoverSignal,
-
-            var attributeNesting: AttributeNesting,
-
-            var objectLocation: ObjectLocation,
-            var graphStructure: GraphStructure,
-
-            var imperativeState: ImperativeState?,
-            var isRunning: Boolean,
-
-            var managed: Boolean = false,
-            var first: Boolean = false,
-            var last: Boolean = false
-    ): react.Props
-
-
-    class State(
-            var hoverCard: Boolean,
-            var hoverMenu: Boolean,
-            var intentToRun: Boolean,
-
-            var optionsOpen: Boolean
-    ): react.State
 
 
     class HoverSignal {
@@ -109,7 +111,7 @@ class StepHeader(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun StepHeaderState.init(props: StepHeaderProps) {
         hoverMenu = false
         intentToRun = false
 

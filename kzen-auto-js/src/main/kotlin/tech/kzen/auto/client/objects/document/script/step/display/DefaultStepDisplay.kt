@@ -4,7 +4,10 @@ import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
-import react.*
+import react.RBuilder
+import react.RHandler
+import react.RPureComponent
+import react.State
 import react.dom.attrs
 import react.dom.img
 import styled.css
@@ -28,28 +31,29 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.IoUtils
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface DefaultStepDisplayProps: StepDisplayProps {
+    var attributeController: AttributeController.Wrapper
+}
+
+
+external interface DefaultStepDisplayState: State {
+
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class DefaultStepDisplay(
-        props: Props
+        props: DefaultStepDisplayProps
 ):
-        RPureComponent<DefaultStepDisplay.Props, DefaultStepDisplay.State>(props)
+        RPureComponent<DefaultStepDisplayProps, DefaultStepDisplayState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
 //    companion object {
 //        val wrapperName = ObjectName("DefaultStepDisplay")
 //    }
 
-
-    class Props(
-            var attributeController: AttributeController.Wrapper,
-
-            common: Common
-    ): StepDisplayProps(common)
-
-
-    class State(
-//            var hoverCard: Boolean
-    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -60,7 +64,7 @@ class DefaultStepDisplay(
     ):
             StepDisplayWrapper(objectLocation)
     {
-        override fun child(input: RBuilder, handler: RHandler<StepDisplayProps>)/*: ReactElement*/ {
+        override fun child(input: RBuilder, handler: RHandler<StepDisplayProps>) {
             input.child(DefaultStepDisplay::class) {
                 attrs {
                     this.attributeController = this@Wrapper.attributeController
@@ -77,7 +81,7 @@ class DefaultStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun DefaultStepDisplayState.init(props: DefaultStepDisplayProps) {
 //        hoverCard = false
     }
 

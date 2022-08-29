@@ -29,10 +29,31 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.DeleteDocumentCommand
 import kotlin.js.Date
 
 
+
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface SidebarFileProps: react.Props {
+    var structure: GraphStructure
+    var documentPath: DocumentPath
+    var selected: Boolean
+}
+
+
+// TODO: centralize menu logic with SidebarFolder / ActionController
+external interface SidebarFileState: react.State {
+    var hoverItem: Boolean
+    var hoverOptions: Boolean
+    var optionsOpen: Boolean
+    var editing: Boolean
+    var parameters: RequestParams
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class SidebarFile(
-        props: Props
+        props: SidebarFileProps
 ):
-        RPureComponent<SidebarFile.Props, SidebarFile.State>(props),
+        RPureComponent<SidebarFileProps, SidebarFileState>(props),
         NavigationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -44,24 +65,6 @@ class SidebarFile(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var structure: GraphStructure,
-            var documentPath: DocumentPath,
-            var selected: Boolean
-    ): react.Props
-
-
-    // TODO: centralize menu logic with SidebarFolder / ActionController
-    class State(
-            var hoverItem: Boolean,
-            var hoverOptions: Boolean,
-            var optionsOpen: Boolean,
-            var editing: Boolean,
-            var parameters: RequestParams
-    ): react.State
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private var menuAnchorRef: RefObject<HTMLElement> = createRef()
     private var nameEditorRef: RefObject<DocumentNameEditor> = createRef()
 
@@ -70,7 +73,7 @@ class SidebarFile(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun SidebarFileState.init(props: SidebarFileProps) {
         optionsOpen = false
         editing = false
         parameters = RequestParams.empty

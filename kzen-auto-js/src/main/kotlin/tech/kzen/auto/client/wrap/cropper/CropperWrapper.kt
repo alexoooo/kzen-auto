@@ -15,14 +15,16 @@ import styled.styledImg
 import kotlin.js.json
 
 
+//-----------------------------------------------------------------------------------------------------------------
+external interface CropperWrapperProps: react.Props {
+    var src: String?
+    var crop: (event: CustomEvent) -> Unit
+}
+
+
 class CropperWrapper:
-        RPureComponent<CropperWrapper.Props, react.State>()
+        RPureComponent<CropperWrapperProps, react.State>()
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var src: String?,
-            var crop: (event: CustomEvent) -> Unit
-    ): react.Props
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -11,7 +11,7 @@ plugins {
 //  - TestReport.destinationDir property has been deprecated
 allprojects {
     group = "tech.kzen.auto"
-    version = "0.25.0"
+    version = "0.25.1-SNAPSHOT"
 
     repositories {
         mavenCentral()

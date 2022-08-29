@@ -16,10 +16,36 @@ import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface CellControllerProps: Props {
+    var attributeController: AttributeController.Wrapper
+
+    var cellDescriptor: CellDescriptor
+
+    var documentPath: DocumentPath
+    var attributeNesting: AttributeNesting
+    var clientState: SessionState
+    var visualDataflowModel: VisualDataflowModel
+    var dataflowMatrix: DataflowMatrix
+    var dataflowDag: DataflowDag
+}
+
+
+external interface CellControllerState: State {
+    var hoverCard: Boolean
+    var hoverMenu: Boolean
+    var intentToRun: Boolean
+
+    var optionsOpen: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class CellController(
-        props: Props
+        props: CellControllerProps
 ):
-        RPureComponent<CellController.Props, CellController.State>(props),
+        RPureComponent<CellControllerProps, CellControllerState>(props),
         ExecutionIntentGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -33,35 +59,13 @@ class CellController(
     }
 
 
-    class Props(
-            var attributeController: AttributeController.Wrapper,
 
-            var cellDescriptor: CellDescriptor,
-
-            var documentPath: DocumentPath,
-            var attributeNesting: AttributeNesting,
-            var clientState: SessionState,
-            var visualDataflowModel: VisualDataflowModel,
-            var dataflowMatrix: DataflowMatrix,
-            var dataflowDag: DataflowDag
-    ): react.Props
-
-
-    class State(
-            var hoverCard: Boolean,
-            var hoverMenu: Boolean,
-            var intentToRun: Boolean,
-
-            var optionsOpen: Boolean
-    ): react.State
-
-
-    private fun Props.vertexLocation() =
+    private fun CellControllerProps.vertexLocation() =
             (cellDescriptor as? VertexDescriptor)?.objectLocation
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun CellControllerState.init(props: CellControllerProps) {
         hoverCard = false
         hoverMenu = false
         intentToRun = false

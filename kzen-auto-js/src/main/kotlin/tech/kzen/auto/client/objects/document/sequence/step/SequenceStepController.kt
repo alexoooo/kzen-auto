@@ -13,10 +13,16 @@ import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.reflect.Reflect
 
 
+external interface SequenceStepControllerProps : react.Props {
+    var stepDisplays: List<SequenceStepDisplayWrapper>
+
+    var common: SequenceStepDisplayPropsCommon
+}
+
 class SequenceStepController(
-        props: Props
+        props: SequenceStepControllerProps
 ):
-        RPureComponent<SequenceStepController.Props, State>(props)
+        RPureComponent<SequenceStepControllerProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -25,26 +31,18 @@ class SequenceStepController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var stepDisplays: List<SequenceStepDisplayWrapper>,
-
-            var common: SequenceStepDisplayPropsCommon
-    ): react.Props
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
         private val stepDisplays: List<SequenceStepDisplayWrapper>,
         handle: Handle
     ):
-        ReactWrapper<Props>
+        ReactWrapper<SequenceStepControllerProps>
     {
         init {
             handle.wrapper = this
         }
 
-        override fun child(input: RBuilder, handler: RHandler<Props>) {
+        override fun child(input: RBuilder, handler: RHandler<SequenceStepControllerProps>) {
             input.child(SequenceStepController::class) {
                 attrs {
                     this.stepDisplays = this@Wrapper.stepDisplays

@@ -3,8 +3,11 @@ package tech.kzen.auto.client.objects.document.script.step.display.control
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
-import org.w3c.dom.events.Event
-import react.*
+import kotlinx.html.org.w3c.dom.events.Event
+import react.RBuilder
+import react.RHandler
+import react.RPureComponent
+import react.State
 import react.dom.attrs
 import react.dom.br
 import react.dom.div
@@ -33,11 +36,21 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
 
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface MappingStepDisplayProps: StepDisplayProps {
+    var attributeController: AttributeController.Wrapper
+    var scriptCommander: ScriptCommander
+    var stepControllerHandle: StepController.Handle
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class MappingStepDisplay(
-        props: Props
+        props: MappingStepDisplayProps
 ):
-        RPureComponent<MappingStepDisplay.Props, react.State>(props)
+        RPureComponent<MappingStepDisplayProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -46,16 +59,6 @@ class MappingStepDisplay(
         private val stepWidth = StepController.width.minus(2.em)
         private val overlapTop = 4.px
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var attributeController: AttributeController.Wrapper,
-            var scriptCommander: ScriptCommander,
-            var stepControllerHandle: StepController.Handle,
-
-            common: Common
-    ): StepDisplayProps(common)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -71,7 +74,7 @@ class MappingStepDisplay(
         override fun child(
                 input: RBuilder,
                 handler: RHandler<StepDisplayProps>
-        )/*: ReactElement*/ {
+        ) {
             input.child(MappingStepDisplay::class) {
                 attrs {
                     attributeController = this@Wrapper.attributeController
@@ -123,18 +126,10 @@ class MappingStepDisplay(
                 // https://stackoverflow.com/a/24594811/1941359
                 height = 100.pct
 
-//                borderWidth = 1.px
-//                borderStyle = BorderStyle.solid
-
                 borderCollapse = BorderCollapse.collapse
             }
 
             styledTbody {
-//                css {
-//                    borderWidth = 1.px
-//                    borderStyle = BorderStyle.solid
-//                }
-
                 styledTr {
                     styledTd {
                         css {
@@ -164,12 +159,6 @@ class MappingStepDisplay(
                         renderBody(isNextToRun, imperativeState, isRunning)
                     }
                     styledTd {
-//                        css {
-//                            borderWidth = 1.px
-//                            borderStyle = BorderStyle.solid
-//                            padding(0.px)
-//                        }
-
                         renderBranch()
                     }
                 }

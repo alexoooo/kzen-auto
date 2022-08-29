@@ -1,7 +1,10 @@
 package tech.kzen.auto.client.objects.sidebar
 
 import kotlinx.css.*
-import react.*
+import react.RBuilder
+import react.RHandler
+import react.RPureComponent
+import react.setState
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.api.ReactWrapper
@@ -20,31 +23,32 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
+//-----------------------------------------------------------------------------------------------------------------
+external interface SidebarControllerProps : react.Props {
+    var archetypeLocations: List<ObjectLocation>
+}
+
+
+external interface SidebarControllerState : react.State {
+    var structure: GraphStructure?
+    var documentPath: DocumentPath?
+}
+
+
+//-----------------------------------------------------------------------------------------------------------------
 class SidebarController(
-        props: Props
+        props: SidebarControllerProps
 ):
-        RPureComponent<SidebarController.Props, SidebarController.State>(props),
+        RPureComponent<SidebarControllerProps, SidebarControllerState>(props),
         LocalGraphStore.Observer,
         NavigationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-        var archetypeLocations: List<ObjectLocation>
-    ): react.Props
-
-
-    class State(
-            var structure: GraphStructure?,
-            var documentPath: DocumentPath?
-    ): react.State
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
             private val archetypes: List<ObjectLocation>
-    ): ReactWrapper<Props> {
-        override fun child(input: RBuilder, handler: RHandler<Props>) {
+    ): ReactWrapper<SidebarControllerProps> {
+        override fun child(input: RBuilder, handler: RHandler<SidebarControllerProps>) {
             input.child(SidebarController::class) {
                 attrs {
                     archetypeLocations = this@Wrapper.archetypes
@@ -74,8 +78,8 @@ class SidebarController(
 
 
     override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: State,
+            prevProps: SidebarControllerProps,
+            prevState: SidebarControllerState,
             snapshot: Any
     ) {
         val structure = state.structure
@@ -83,7 +87,7 @@ class SidebarController(
 
         val mainDocuments = AutoConventions.mainDocuments(structure.graphNotation)
 
-        if (state.documentPath == null && ! mainDocuments.isEmpty()) {
+        if (state.documentPath == null && mainDocuments.isNotEmpty()) {
             ClientContext.navigationGlobal.goto(mainDocuments[0])
         }
     }

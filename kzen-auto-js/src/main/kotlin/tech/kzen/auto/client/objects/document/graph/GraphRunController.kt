@@ -16,25 +16,26 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.GraphStructure
 import kotlin.reflect.KClass
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface GraphRunControllerProps: Props {
+    var documentPath: DocumentPath?
+    var graphStructure: GraphStructure?
+    var visualDataflowModel: VisualDataflowModel?
+}
 
+
+external interface GraphRunControllerState: State {
+    var fabHover: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class GraphRunController(
-        props: Props
+        props: GraphRunControllerProps
 ):
-        RPureComponent<GraphRunController.Props, GraphRunController.State>(props)
+        RPureComponent<GraphRunControllerProps, GraphRunControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var documentPath: DocumentPath?,
-            var graphStructure: GraphStructure?,
-            var visualDataflowModel: VisualDataflowModel?
-    ): react.Props
-
-
-    class State(
-            var fabHover: Boolean
-    ): react.State
-
-
     private enum class Phase {
         Empty,
         Pending,
@@ -47,8 +48,8 @@ class GraphRunController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: State,
+            prevProps: GraphRunControllerProps,
+            prevState: GraphRunControllerState,
             snapshot: Any
     ) {
         if (props.visualDataflowModel != prevProps.visualDataflowModel) {

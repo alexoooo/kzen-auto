@@ -3,17 +3,27 @@ package tech.kzen.auto.client.objects.document.script.step
 import kotlinx.css.em
 import react.*
 import tech.kzen.auto.client.api.ReactWrapper
-import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
+import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.reflect.Reflect
 
 
+
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface StepControllerProps: Props {
+    var stepDisplays: List<StepDisplayWrapper>
+    var common: StepDisplayPropsCommon
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class StepController(
-        props: Props
+        props: StepControllerProps
 ):
-        RPureComponent<StepController.Props, react.State>(props)
+        RPureComponent<StepControllerProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -22,26 +32,18 @@ class StepController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var stepDisplays: List<StepDisplayWrapper>,
-
-            var common: StepDisplayProps.Common
-    ): react.Props
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
             private val stepDisplays: List<StepDisplayWrapper>,
             handle: Handle
     ):
-            ReactWrapper<Props>
+            ReactWrapper<StepControllerProps>
     {
         init {
             handle.wrapper = this
         }
 
-        override fun child(input: RBuilder, handler: RHandler<Props>)/*: ReactElement*/ {
+        override fun child(input: RBuilder, handler: RHandler<StepControllerProps>)/*: ReactElement*/ {
             input.child(StepController::class) {
                 attrs {
                     this.stepDisplays = this@Wrapper.stepDisplays

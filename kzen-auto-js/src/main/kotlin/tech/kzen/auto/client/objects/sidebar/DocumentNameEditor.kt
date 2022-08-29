@@ -20,34 +20,33 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenameDocumentRefactorCommand
 
 
+external interface DocumentNameEditorProps : Props {
+    var documentPath: DocumentPath
+
+    var initialEditing: Boolean
+    var onEditing: (Boolean) -> Unit
+}
+
+
+external interface DocumentNameEditorState: State {
+    var editing: Boolean
+    var name: String
+    var saving: Boolean
+}
+
+
 // TODO: error detection
 class DocumentNameEditor(
-        props: Props
+        props: DocumentNameEditorProps
 ):
-        RPureComponent<DocumentNameEditor.Props, DocumentNameEditor.State>(props)
+        RPureComponent<DocumentNameEditorProps, DocumentNameEditorState>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var documentPath: DocumentPath,
-
-            var initialEditing: Boolean,
-            var onEditing: (Boolean) -> Unit
-    ): react.Props
-
-
-    class State(
-            var editing: Boolean,
-            var name: String,
-            var saving: Boolean
-    ): react.State
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private var inputRef: HTMLInputElement? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun DocumentNameEditorState.init(props: DocumentNameEditorProps) {
 //        console.log("ObjectNameEditor | State.init - ${props.objectName}", Date.now())
         name = displayPath()
 

@@ -8,8 +8,10 @@ import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
-import react.*
+import react.RBuilder
+import react.RPureComponent
 import react.dom.attrs
+import react.setState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -30,29 +32,31 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.RenameObjectRefactorCo
 import tech.kzen.lib.common.service.notation.NotationConventions
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface StepNameEditorProps: react.Props {
+    var objectLocation: ObjectLocation
+    var notation: GraphNotation
+    var description: String
+    var intentToRun: Boolean
+
+    var runCallback: () -> Unit
+    var editSignal: StepNameEditor.EditSignal
+}
+
+
+external interface StepNameEditorState: react.State {
+    var editing: Boolean
+    var objectName: String
+    var saving: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class StepNameEditor(
-        props: Props
+        props: StepNameEditorProps
 ):
-        RPureComponent<StepNameEditor.Props, StepNameEditor.State>(props)
+        RPureComponent<StepNameEditorProps, StepNameEditorState>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var objectLocation: ObjectLocation,
-            var notation: GraphNotation,
-            var description: String,
-            var intentToRun: Boolean,
-
-            var runCallback: () -> Unit,
-            var editSignal: EditSignal
-    ): react.Props
-
-
-    class State(
-            var editing: Boolean,
-            var objectName: String,
-            var saving: Boolean
-    ): react.State
-
 
     class EditSignal {
         private var callback: (() -> Unit)? = null
@@ -79,7 +83,7 @@ class StepNameEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun StepNameEditorState.init(props: StepNameEditorProps) {
 //        console.log("ObjectNameEditor | State.init - ${props.objectName}", Date.now())
         objectName = props.objectLocation.objectPath.name.value
 
@@ -100,7 +104,7 @@ class StepNameEditor(
     }
 
 
-    override fun componentDidUpdate(prevProps: Props, prevState: State, snapshot: Any) {
+    override fun componentDidUpdate(prevProps: StepNameEditorProps, prevState: StepNameEditorState, snapshot: Any) {
         if (state.saving && ! prevState.saving) {
             saveAsync()
         }

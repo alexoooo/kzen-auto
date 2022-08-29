@@ -12,7 +12,7 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
-import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
+import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayPropsCommon
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
@@ -390,7 +390,7 @@ class ScriptController:
 
             props.stepController.child(this) {
                 attrs {
-                    common = StepDisplayProps.Common(
+                    common = StepDisplayPropsCommon(
                         state.clientState!!,
                         objectLocation,
                         AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),

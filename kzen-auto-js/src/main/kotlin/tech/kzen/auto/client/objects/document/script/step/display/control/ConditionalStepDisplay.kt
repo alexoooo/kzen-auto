@@ -3,8 +3,11 @@ package tech.kzen.auto.client.objects.document.script.step.display.control
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
-import org.w3c.dom.events.Event
-import react.*
+import kotlinx.html.org.w3c.dom.events.Event
+import react.RBuilder
+import react.RHandler
+import react.RPureComponent
+import react.State
 import react.dom.attrs
 import react.dom.br
 import react.dom.td
@@ -27,11 +30,23 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface ConditionalStepDisplayProps: StepDisplayProps {
+    var attributeController: AttributeController.Wrapper
+    var scriptCommander: ScriptCommander
+
+    var stepControllerHandle: StepController.Handle
+}
+//            common: StepDisplayPropsCommon
+//    ): StepDisplayProps(common)
+
+
+//---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class ConditionalStepDisplay(
-        props: Props
+        props: ConditionalStepDisplayProps
 ):
-        RPureComponent<ConditionalStepDisplay.Props, react.State>(props)
+        RPureComponent<ConditionalStepDisplayProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -44,17 +59,6 @@ class ConditionalStepDisplay(
 //        private const val tableBorders = true
         private const val tableBorders = false
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var attributeController: AttributeController.Wrapper,
-            var scriptCommander: ScriptCommander,
-
-            var stepControllerHandle: StepController.Handle,
-
-            common: Common
-    ): StepDisplayProps(common)
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -10,7 +10,7 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
-import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
+import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayPropsCommon
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.SessionState
@@ -31,12 +31,31 @@ import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface MappingBranchDisplayProps: Props {
+    var branchAttributePath: AttributePath
+
+    var stepController: StepController.Wrapper
+    var scriptCommander: ScriptCommander
+
+    var clientState: SessionState
+    var objectLocation: ObjectLocation
+    var imperativeModel: ImperativeModel
+}
+
+
+external interface MappingBranchDisplayState: State {
+    var creating: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class MappingBranchDisplay(
-        props: Props
+        props: MappingBranchDisplayProps
 ):
         RPureComponent<
-                MappingBranchDisplay.Props,
-                MappingBranchDisplay.State
+                MappingBranchDisplayProps,
+                MappingBranchDisplayState
                 >(props),
         InsertionGlobal.Subscriber
 {
@@ -63,25 +82,7 @@ class MappingBranchDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-        var branchAttributePath: AttributePath,
-
-        var stepController: StepController.Wrapper,
-        var scriptCommander: ScriptCommander,
-
-        var clientState: SessionState,
-        var objectLocation: ObjectLocation,
-        var imperativeModel: ImperativeModel
-    ): react.Props
-
-
-    class State(
-            var creating: Boolean
-    ): react.State
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun MappingBranchDisplayState.init(props: MappingBranchDisplayProps) {
         creating = false
     }
 
@@ -271,7 +272,7 @@ class MappingBranchDisplay(
 
             props.stepController.child(this) {
                 attrs {
-                    common = StepDisplayProps.Common(
+                    common = StepDisplayPropsCommon(
                             props.clientState,
                             stepLocation,
                             AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),

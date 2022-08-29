@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.report.input.browse
 
 import kotlinx.css.em
 import kotlinx.css.width
+import kotlinx.js.jso
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
 import react.*
@@ -17,29 +18,28 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.spec.input.InputBrowserSpec
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface InputBrowserFilterControllerProps: Props {
+    var spec: InputBrowserSpec
+    var inputStore: ReportInputStore
+}
+
+
+external interface InputBrowserFilterControllerState: State {
+    var filterText: String
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class InputBrowserFilterController(
-    props: Props
+    props: InputBrowserFilterControllerProps
 ):
-    RPureComponent<InputBrowserFilterController.Props, InputBrowserFilterController.State>(props)
+    RPureComponent<InputBrowserFilterControllerProps, InputBrowserFilterControllerState>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var spec: InputBrowserSpec
-        var inputStore: ReportInputStore
-
-//        var reportState: ReportState
-//        var dispatcher: ReportDispatcher
-//        var editDisabled: Boolean
-    }
-
-
-    interface State: react.State {
-        var filterText: String
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun InputBrowserFilterControllerState.init(props: InputBrowserFilterControllerProps) {
         filterText = props.spec.filter
     }
 
@@ -88,8 +88,8 @@ class InputBrowserFilterController(
 
                 size = "small"
 
-                InputProps = object : react.Props {
-                    @Suppress("unused")
+                InputProps = jso {
+                    @Suppress("UNUSED_VARIABLE")
                     var startAdornment = buildElement {
                         child(MaterialInputAdornment::class) {
                             attrs {

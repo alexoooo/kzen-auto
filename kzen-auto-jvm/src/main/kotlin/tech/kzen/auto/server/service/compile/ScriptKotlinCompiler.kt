@@ -20,8 +20,6 @@ import kotlin.script.experimental.jvm.updateClasspath
 import kotlin.script.experimental.jvm.util.classpathFromClassloader
 import kotlin.script.experimental.jvmhost.CompiledScriptJarsCache
 
-//import kotlin.script.experimental.jvm.baseClassLoader
-
 
 @KotlinScript
 class ScriptKotlinCompiler: KotlinCompiler {
@@ -32,11 +30,6 @@ class ScriptKotlinCompiler: KotlinCompiler {
 
         private val contextClass: KClass<*> = ScriptCompilationConfiguration::class.java.kotlin
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    @KotlinScript
-//    private abstract class Script
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -88,10 +81,6 @@ class ScriptKotlinCompiler: KotlinCompiler {
         outputJarFile: Path
     ) {
         jvm {
-//            dependenciesFromClassloader(
-//                classLoader = classLoader,
-//                wholeClasspath = true)
-
             val classloaderClasspath: List<File> = classpathFromClassloader(classLoader, false)!!
             val classpathFiles = classloaderClasspath + classpathLocations.map { it.toFile() }
             updateClasspath(classpathFiles)

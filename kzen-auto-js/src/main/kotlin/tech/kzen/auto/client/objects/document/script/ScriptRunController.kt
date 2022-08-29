@@ -4,9 +4,12 @@ import kotlinx.coroutines.delay
 import kotlinx.css.*
 import kotlinx.html.js.onMouseOutFunction
 import kotlinx.html.js.onMouseOverFunction
-import react.*
+import react.Props
+import react.RBuilder
+import react.RPureComponent
 import react.dom.attrs
 import react.dom.div
+import react.setState
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.material.*
@@ -20,27 +23,28 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface ScriptRunControllerProps: Props {
+    var documentPath: DocumentPath?
+    var runningHost: DocumentPath?
+    var structure: GraphStructure?
+    var execution: ImperativeModel?
+}
 
+
+external interface ScriptRunControllerState: react.State {
+    var fabHover: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class ScriptRunController(
-        props: Props
+        props: ScriptRunControllerProps
 ):
-        RPureComponent<ScriptRunController.Props, ScriptRunController.State>(props),
+        RPureComponent<ScriptRunControllerProps, ScriptRunControllerState>(props),
         ExecutionRepository.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-            var documentPath: DocumentPath?,
-            var runningHost: DocumentPath?,
-            var structure: GraphStructure?,
-            var execution: ImperativeModel?
-    ): react.Props
-
-
-    class State(
-            var fabHover: Boolean
-    ): react.State
-
-
     private enum class Phase {
         Empty,
         Pending,
@@ -141,8 +145,8 @@ class ScriptRunController(
 
 
     override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: State,
+            prevProps: ScriptRunControllerProps,
+            prevState: ScriptRunControllerState,
             snapshot: Any
     ) {
 //        val execution = props.execution

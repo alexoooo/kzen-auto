@@ -10,7 +10,7 @@ import styled.styledDiv
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.step.StepController
-import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayProps
+import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayPropsCommon
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.SessionState
@@ -31,12 +31,32 @@ import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface ConditionalBranchDisplayProps: Props {
+    var branchAttributePath: AttributePath
+
+    var stepController: StepController.Wrapper
+    var scriptCommander: ScriptCommander
+
+    var clientState: SessionState
+    var objectLocation: ObjectLocation
+    var imperativeModel: ImperativeModel
+}
+
+
+external interface ConditionalBranchDisplayState: State {
+    var creating: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class ConditionalBranchDisplay(
-        props: Props
+        props: ConditionalBranchDisplayProps
 ):
         RPureComponent<
-                ConditionalBranchDisplay.Props,
-                ConditionalBranchDisplay.State
+                ConditionalBranchDisplayProps,
+                ConditionalBranchDisplayState
                 >(props),
         InsertionGlobal.Subscriber
 {
@@ -62,27 +82,7 @@ class ConditionalBranchDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-        var branchAttributePath: AttributePath,
-
-        var stepController: StepController.Wrapper,
-        var scriptCommander: ScriptCommander,
-
-        var clientState: SessionState,
-//            var graphStructure: GraphStructure,
-//        var graphStructure: GraphStructure,
-        var objectLocation: ObjectLocation,
-        var imperativeModel: ImperativeModel
-    ): react.Props
-
-
-    class State(
-            var creating: Boolean
-    ): react.State
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun ConditionalBranchDisplayState.init(props: ConditionalBranchDisplayProps) {
         creating = false
     }
 
@@ -141,8 +141,6 @@ class ConditionalBranchDisplay(
             css {
                 width = 100.pct
                 marginLeft = 2.em
-
-//                backgroundColor = Color.red
             }
 
             renderSteps()
@@ -152,10 +150,8 @@ class ConditionalBranchDisplay(
             attrs {
                 style = reactStyle {
                     fontSize = 3.em
-//                    marginTop = (-35).px
                     marginBottom = 15.px
                     marginTop = (-60).px
-//                    marginLeft = (-32).px
                 }
             }
         }
@@ -172,7 +168,6 @@ class ConditionalBranchDisplay(
         if (stepLocations.isEmpty()) {
             styledDiv {
                 css {
-//                    marginTop = (-2).em
                     marginTop = 2.em
                     paddingLeft = 1.em
                     width = 100.pct
@@ -312,14 +307,14 @@ class ConditionalBranchDisplay(
 
             props.stepController.child(this) {
                 attrs {
-                    common = StepDisplayProps.Common(
-                            props.clientState,
-                            stepLocation,
-                            AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
-                            props.imperativeModel,
+                    common = StepDisplayPropsCommon(
+                        props.clientState,
+                        stepLocation,
+                        AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
+                        props.imperativeModel,
 
-                            first = index == 0,
-                            last = index == stepCount - 1
+                        first = index == 0,
+                        last = index == stepCount - 1
                     )
                 }
             }

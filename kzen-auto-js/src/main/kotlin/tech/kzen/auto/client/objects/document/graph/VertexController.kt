@@ -42,10 +42,38 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 import kotlin.js.Date
 
 
+
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface VertexControllerProps: Props {
+    var attributeController: AttributeController.Wrapper
+
+    var cellDescriptor: VertexDescriptor
+
+    var documentPath: DocumentPath
+    var attributeNesting: AttributeNesting
+
+    var clientState: SessionState
+    var visualDataflowModel: VisualDataflowModel
+    var dataflowMatrix: DataflowMatrix
+    var dataflowDag: DataflowDag
+}
+
+
+external interface VertexControllerState: State {
+    var hoverCard: Boolean
+    var hoverMenu: Boolean
+    var intentToRun: Boolean
+
+    var optionsOpen: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class VertexController(
-        props: Props
+        props: VertexControllerProps
 ):
-        RPureComponent<VertexController.Props, VertexController.State>(props),
+        RPureComponent<VertexControllerProps, VertexControllerState>(props),
         ExecutionIntentGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -62,31 +90,6 @@ class VertexController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class Props(
-        var attributeController: AttributeController.Wrapper,
-
-        var cellDescriptor: VertexDescriptor,
-
-        var documentPath: DocumentPath,
-        var attributeNesting: AttributeNesting,
-//            var graphStructure: GraphStructure,
-        var clientState: SessionState,
-        var visualDataflowModel: VisualDataflowModel,
-        var dataflowMatrix: DataflowMatrix,
-        var dataflowDag: DataflowDag
-    ): react.Props
-
-
-    class State(
-            var hoverCard: Boolean,
-            var hoverMenu: Boolean,
-            var intentToRun: Boolean,
-
-            var optionsOpen: Boolean
-    ): react.State
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private var menuAnchorRef: RefObject<HTMLElement> = createRef()
 
     // NB: workaround for open options icon remaining after click with drag away from item
@@ -95,7 +98,7 @@ class VertexController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun VertexControllerState.init(props: VertexControllerProps) {
         hoverCard = false
         hoverMenu = false
         intentToRun = false
