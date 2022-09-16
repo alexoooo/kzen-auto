@@ -1,5 +1,7 @@
 package tech.kzen.auto.common.paradigm.common.v1.model
 
+import tech.kzen.auto.common.api.CommonRestApi
+
 
 data class LogicRunExecutionId(
     val logicRunId: LogicRunId,
@@ -8,8 +10,8 @@ data class LogicRunExecutionId(
     companion object {
         fun ofCollection(collection: Map<String, String>): LogicRunExecutionId {
             return LogicRunExecutionId(
-                LogicRunId(collection[LogicConventions.paramRunId]!!),
-                LogicExecutionId(collection[LogicConventions.paramExecution]!!)
+                LogicRunId(collection[CommonRestApi.paramRunId]!!),
+                LogicExecutionId(collection[CommonRestApi.paramExecutionId]!!)
             )
         }
     }
@@ -17,8 +19,8 @@ data class LogicRunExecutionId(
 
     fun asCollection(): Map<String, String> {
         return mapOf(
-            LogicConventions.paramRunId to logicRunId.value,
-            LogicConventions.paramExecution to logicExecutionId.value
+            CommonRestApi.paramRunId to logicRunId.value,
+            CommonRestApi.paramExecutionId to logicExecutionId.value
         )
     }
 }

@@ -5,6 +5,7 @@ import tech.kzen.auto.client.objects.document.report.model.ReportStore
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
@@ -110,16 +111,6 @@ class ReportOutputStore(
             }
         }
 
-        // TODO: include signature to avoid refresh
-//        if (store.state().output.outputInfo?.status?.isTerminal() == true &&
-//                store.state().outputSpec().explore.previewStartZeroBased() ==
-//                    store.state().output.outputInfo?.table?.preview?.startRow &&
-//                store.state().outputSpec().explore.previewCount ==
-//                    store.state().output.outputInfo?.table?.preview?.rows?.size
-//        ) {
-//            return
-//        }
-
         lookupOutputOffline()
     }
 
@@ -159,8 +150,8 @@ class ReportOutputStore(
         val result = ClientContext.restClient.performDetached(
             store.mainLocation(),
             ReportConventions.paramAction to ReportConventions.actionOutputInfoOnline,
-            LogicConventions.paramRunId to logicRunId.value,
-            LogicConventions.paramExecution to logicExecutionId.value,
+            CommonRestApi.paramRunId to logicRunId.value,
+            CommonRestApi.paramExecutionId to logicExecutionId.value,
         )
 
         return when (result) {

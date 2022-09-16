@@ -7,6 +7,7 @@ import tech.kzen.auto.client.util.ClientError
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.v1.model.*
@@ -250,8 +251,9 @@ class ReportRunStore(
     ): ClientResult<LogicTraceSnapshot> {
         val result = ClientContext.restClient.performDetached(
             LogicConventions.logicTraceStoreLocation,
-            LogicConventions.paramRunId to logicRunId.value,
-            LogicConventions.paramExecution to logicExecutionId.value,
+            CommonRestApi.paramAction to LogicConventions.actionLookup,
+            CommonRestApi.paramRunId to logicRunId.value,
+            CommonRestApi.paramExecutionId to logicExecutionId.value,
             LogicConventions.paramQuery to logicTraceQuery.asString()
         )
 

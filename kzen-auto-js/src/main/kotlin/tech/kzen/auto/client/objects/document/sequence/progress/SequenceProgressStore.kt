@@ -5,6 +5,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientError
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.ClientSuccess
+import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicConventions
@@ -16,7 +17,7 @@ class SequenceProgressStore(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun init() {
-        @Suppress("MoveVariableDeclarationIntoWhen")
+        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
         val result = mostRecentQuery()
 
         when (result) {
@@ -42,7 +43,7 @@ class SequenceProgressStore(
 
         val result = ClientContext.restClient.performDetached(
             LogicConventions.logicTraceStoreLocation,
-            LogicConventions.paramAction to LogicConventions.actionMostRecent,
+            CommonRestApi.paramAction to LogicConventions.actionMostRecent,
             LogicConventions.paramSubDocumentPath to mainLocation.documentPath.asString(),
             LogicConventions.paramSubObjectPath to mainLocation.objectPath.asString()
         )

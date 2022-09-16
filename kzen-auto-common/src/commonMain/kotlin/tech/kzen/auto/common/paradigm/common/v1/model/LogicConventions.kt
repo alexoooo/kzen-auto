@@ -20,15 +20,15 @@ object LogicConventions {
         ObjectPath(logicTraceStoreName, ObjectNesting.root))
 
 
-    const val paramAction = "action"
+//    const val paramAction = "action"
     const val actionLookup = "lookup"
     const val actionMostRecent = "recent"
 
     const val paramSubDocumentPath = "sub-path"
     const val paramSubObjectPath = "sub-object"
 
-    const val paramRunId = "runId"
-    const val paramExecution = "executionId"
+//    const val paramRunId = "runId"
+//    const val paramExecution = "executionId"
     const val paramQuery = "query"
 
 

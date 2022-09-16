@@ -274,12 +274,12 @@ class ReportDocument(
         val runId: LogicRunId = request
             .getSingle(CommonRestApi.paramRunId)
             ?.let { LogicRunId(it) }
-            ?: return ExecutionResult.failure("Not found: ${CommonRestApi.paramRunId}")
+            ?: return ExecutionResult.failure("Parameter not found: ${CommonRestApi.paramRunId}")
 
         val executionId: LogicExecutionId = request
             .getSingle(CommonRestApi.paramExecutionId)
             ?.let { LogicExecutionId(it) }
-            ?: return ExecutionResult.failure("Not found: ${CommonRestApi.paramExecutionId}")
+            ?: return ExecutionResult.failure("Parameter not found: ${CommonRestApi.paramExecutionId}")
 
         val runExecutionParams = RequestParams.of(
             ReportConventions.paramAction to ReportConventions.actionOutputInfoOnline,

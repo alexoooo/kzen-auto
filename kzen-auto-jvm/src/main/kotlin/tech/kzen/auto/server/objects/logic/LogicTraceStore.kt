@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.logic
 
+import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
 import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -78,8 +79,8 @@ object LogicTraceStore:
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun execute(request: ExecutionRequest): ExecutionResult {
-        val action = request.getSingle(LogicConventions.paramAction)
-            ?: return ExecutionResult.failure("Action missing: '${LogicConventions.paramAction}'")
+        val action = request.getSingle(CommonRestApi.paramAction)
+            ?: return ExecutionResult.failure("Action missing: '${CommonRestApi.paramAction}'")
 
         return when (action) {
             LogicConventions.actionMostRecent -> {
@@ -100,11 +101,11 @@ object LogicTraceStore:
             }
 
             LogicConventions.actionLookup -> {
-                val logicRunId = request.getSingle(LogicConventions.paramRunId)?.let { LogicRunId(it) }
-                    ?: return ExecutionResult.failure("Logic Run ID missing: '${LogicConventions.paramRunId}'")
+                val logicRunId = request.getSingle(CommonRestApi.paramRunId)?.let { LogicRunId(it) }
+                    ?: return ExecutionResult.failure("Logic Run ID missing: '${CommonRestApi.paramRunId}'")
 
-                val logicExecutionId = request.getSingle(LogicConventions.paramExecution)?.let { LogicExecutionId(it) }
-                    ?: return ExecutionResult.failure("Logic Execution ID missing: '${LogicConventions.paramExecution}'")
+                val logicExecutionId = request.getSingle(CommonRestApi.paramExecutionId)?.let { LogicExecutionId(it) }
+                    ?: return ExecutionResult.failure("Logic Execution ID missing: '${CommonRestApi.paramExecutionId}'")
 
                 val logicTraceQuery = request.getSingle(LogicConventions.paramQuery)?.let { LogicTraceQuery.parse(it) }
                     ?: return ExecutionResult.failure("Logic Trade Query missing")
