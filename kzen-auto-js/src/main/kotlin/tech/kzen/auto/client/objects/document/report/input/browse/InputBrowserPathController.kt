@@ -7,8 +7,10 @@ import kotlinx.html.js.onMouseOverFunction
 import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
-import react.*
+import react.RBuilder
+import react.RPureComponent
 import react.dom.attrs
+import react.setState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -20,29 +22,31 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface InputBrowserPathControllerProps: react.Props {
+    var mainLocation: ObjectLocation
+    var browseDir: DataLocation
+    var errorMode: Boolean
+    var inputStore: ReportInputStore
+}
+
+
+external interface InputBrowserPathControllerState: react.State {
+    var textEdit: Boolean
+    var editDir: String
+    var hover: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class InputBrowserPathController(
-    props: Props
+    props: InputBrowserPathControllerProps
 ):
-    RPureComponent<InputBrowserPathController.Props, InputBrowserPathController.State>(props)
+    RPureComponent<InputBrowserPathControllerProps, InputBrowserPathControllerState>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var mainLocation: ObjectLocation
-        var browseDir: DataLocation
-        var errorMode: Boolean
-        var inputStore: ReportInputStore
-    }
-
-
-    interface State: react.State {
-        var textEdit: Boolean
-        var editDir: String
-        var hover: Boolean
-    }
-
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun InputBrowserPathControllerState.init(props: InputBrowserPathControllerProps) {
         textEdit = false
         editDir = props.browseDir.asString()
         hover = false
@@ -50,8 +54,8 @@ class InputBrowserPathController(
 
 
     override fun componentDidUpdate(
-        prevProps: Props,
-        prevState: State,
+        prevProps: InputBrowserPathControllerProps,
+        prevState: InputBrowserPathControllerState,
         snapshot: Any
     ) {
         if (! state.textEdit) {

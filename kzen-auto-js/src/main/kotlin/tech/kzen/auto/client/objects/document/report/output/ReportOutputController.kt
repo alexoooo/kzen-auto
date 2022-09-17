@@ -1,7 +1,9 @@
 package tech.kzen.auto.client.objects.document.report.output
 
 import kotlinx.css.*
-import react.*
+import react.RBuilder
+import react.RPureComponent
+import react.setState
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -22,10 +24,28 @@ import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 
 
+//---------------------------------------------------------------------------------------------------------------------
+interface ReportOutputControllerProps: react.Props {
+    var spec: OutputSpec
+    var analysisSpec: AnalysisSpec
+    var filteredColumns: HeaderListing?
+    var runningOrLoading: Boolean
+    var progress: ReportRunProgress?
+    var outputState: ReportOutputState
+    var outputStore: ReportOutputStore
+}
+
+
+interface ReportOutputControllerState: react.State {
+    var settingsOpen: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class ReportOutputController(
-    props: Props
+    props: ReportOutputControllerProps
 ):
-    RPureComponent<ReportOutputController.Props, ReportOutputController.State>(props)
+    RPureComponent<ReportOutputControllerProps, ReportOutputControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -34,24 +54,7 @@ class ReportOutputController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var spec: OutputSpec
-        var analysisSpec: AnalysisSpec
-        var filteredColumns: HeaderListing?
-        var runningOrLoading: Boolean
-        var progress: ReportRunProgress?
-        var outputState: ReportOutputState
-        var outputStore: ReportOutputStore
-    }
-
-
-    interface State: react.State {
-        var settingsOpen: Boolean
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun ReportOutputControllerState.init(props: ReportOutputControllerProps) {
         settingsOpen = ! props.spec.isDefaultWorkPath()
     }
 

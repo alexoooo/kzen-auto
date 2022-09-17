@@ -26,10 +26,27 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 
 
+//---------------------------------------------------------------------------------------------------------------------
+interface FormulaItemControllerProps: react.Props {
+    var formulaState: ReportFormulaState
+    var formulaSpec: FormulaSpec
+    var runningOrLoading: Boolean
+    var inputColumns: List<String>?
+    var columnName: String
+    var formulaStore: ReportFormulaStore
+}
+
+
+interface FormulaItemControllerState: react.State {
+    var value: String
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class FormulaItemController(
-    props: Props
+    props: FormulaItemControllerProps
 ):
-    RPureComponent<FormulaItemController.Props, FormulaItemController.State>(props)
+    RPureComponent<FormulaItemControllerProps, FormulaItemControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -60,22 +77,6 @@ class FormulaItemController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var formulaState: ReportFormulaState
-        var formulaSpec: FormulaSpec
-        var runningOrLoading: Boolean
-        var inputColumns: List<String>?
-        var columnName: String
-        var formulaStore: ReportFormulaStore
-    }
-
-
-    interface State: react.State {
-        var value: String
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private var submitDebounce: FunctionWithDebounce = lodash.debounce({
         async {
             onSubmitEdit()
@@ -84,10 +85,7 @@ class FormulaItemController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-//        open = false
-//        removeError = null
-//        updateError = null
+    override fun FormulaItemControllerState.init(props: FormulaItemControllerProps) {
         value = props.formulaSpec.formulas[props.columnName]!!
     }
 

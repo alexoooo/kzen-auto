@@ -1,40 +1,33 @@
 package tech.kzen.auto.client.objects.document.report.run
 
 import kotlinx.css.*
-import react.*
+import react.Props
+import react.RBuilder
+import react.RPureComponent
+import react.State
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface ReportRunControllerProps: Props {
+    var thisRunning: Boolean
+    var thisSubmitting: Boolean
+    var otherRunning: Boolean
+
+    var outputTerminal: Boolean
+
+    var reportStore: ReportStore
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class ReportRunController(
-    props: Props
+    props: ReportRunControllerProps
 ):
-    RPureComponent<ReportRunController.Props, ReportRunController.State>(props)
+    RPureComponent<ReportRunControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var thisRunning: Boolean
-        var thisSubmitting: Boolean
-        var otherRunning: Boolean
-
-        var outputTerminal: Boolean
-
-        var reportStore: ReportStore
-    }
-
-
-    interface State: react.State {
-//        var fabHover: Boolean
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-//        fabHover = false
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
 //    private fun onOuterEnter() {
 //        setState {

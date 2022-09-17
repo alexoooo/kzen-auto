@@ -2,8 +2,11 @@ package tech.kzen.auto.client.objects.ribbon
 
 import kotlinx.css.*
 import kotlinx.html.title
-import react.*
+import react.RBuilder
+import react.RHandler
+import react.RPureComponent
 import react.dom.attrs
+import react.setState
 import styled.css
 import styled.styledA
 import styled.styledDiv
@@ -32,43 +35,44 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface RibbonControllerProps: react.Props {
+    var actionTypes: List<ObjectLocation>
+    var ribbonGroups: List<RibbonGroup>
+}
+
+
+external interface RibbonControllerState: react.State {
+    var updatePending: Boolean
+    var documentPath: DocumentPath?
+    var parameters: RequestParams
+
+    var type: ObjectLocation?
+    var tabIndex: Int
+
+    var currentRibbonGroups: List<RibbonGroup>
+
+    var notation: GraphNotation?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class RibbonController(
-    props: Props
+    props: RibbonControllerProps
 ):
-    RPureComponent<RibbonController.Props, RibbonController.State>(props),
+    RPureComponent<RibbonControllerProps, RibbonControllerState>(props),
     InsertionGlobal.Subscriber,
     NavigationGlobal.Observer,
     LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var actionTypes: List<ObjectLocation>
-        var ribbonGroups: List<RibbonGroup>
-    }
-
-
-    interface State: react.State {
-        var updatePending: Boolean
-        var documentPath: DocumentPath?
-        var parameters: RequestParams
-
-        var type: ObjectLocation?
-        var tabIndex: Int
-
-        var currentRibbonGroups: List<RibbonGroup>
-
-        var notation: GraphNotation?
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
         private val actionTypes: List<ObjectLocation>,
         private val ribbonGroups: List<RibbonGroup>
-    ): ReactWrapper<Props> {
-        override fun child(input: RBuilder, handler: RHandler<Props>) {
+    ): ReactWrapper<RibbonControllerProps> {
+        override fun child(input: RBuilder, handler: RHandler<RibbonControllerProps>) {
 //            console.log("RibbonController - $actionTypes - $ribbonGroups")
             input.child(RibbonController::class) {
                 attrs {
@@ -83,7 +87,7 @@ class RibbonController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun RibbonControllerState.init(props: RibbonControllerProps) {
         documentPath = null
         parameters = RequestParams.empty
         updatePending = false
@@ -113,8 +117,8 @@ class RibbonController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: State,
+            prevProps: RibbonControllerProps,
+            prevState: RibbonControllerState,
             snapshot: Any
     ) {
         if (//state.documentPath == prevState.documentPath &&

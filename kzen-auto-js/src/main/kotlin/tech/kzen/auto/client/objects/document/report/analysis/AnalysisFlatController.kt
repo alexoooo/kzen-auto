@@ -3,8 +3,10 @@ package tech.kzen.auto.client.objects.document.report.analysis
 import kotlinx.css.*
 import kotlinx.css.properties.boxShadowInset
 import kotlinx.html.title
+import react.Props
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import react.dom.attrs
 import styled.*
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
@@ -17,29 +19,27 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisFlatD
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface AnalysisFlatControllerProps: Props {
+    var mainLocation: ObjectLocation
+    var analysisColumnInfo: AnalysisColumnInfo?
+    var spec: AnalysisFlatDataSpec
+    var reportInputStore: ReportInputStore
+    var reportOutputStore: ReportOutputStore
+    var runningOrLoading: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class AnalysisFlatController(
-    props: Props
+    props: AnalysisFlatControllerProps
 ):
-    RPureComponent<AnalysisFlatController.Props, AnalysisFlatController.State>(props)
+    RPureComponent<AnalysisFlatControllerProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val editorWidth = 18.em
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var mainLocation: ObjectLocation
-        var analysisColumnInfo: AnalysisColumnInfo?
-        var spec: AnalysisFlatDataSpec
-        var reportInputStore: ReportInputStore
-        var reportOutputStore: ReportOutputStore
-        var runningOrLoading: Boolean
-    }
-
-
-    interface State: react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -3,10 +3,8 @@ package tech.kzen.auto.client.objects.document.report.filter
 import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.title
-import react.RBuilder
-import react.RPureComponent
+import react.*
 import react.dom.attrs
-import react.setState
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterState
@@ -24,30 +22,29 @@ import kotlin.js.Json
 import kotlin.js.json
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface FilterAddControllerProps: Props {
+    var filterStore: ReportFilterStore
+    var filterState: ReportFilterState
+    var filterSpec: FilterSpec
+    var inputAndCalculatedColumns: HeaderListing?
+}
+
+
+external interface FilterAddControllerState: State {
+    var adding: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class FilterAddController(
-    props: Props
+    props: FilterAddControllerProps
 ):
-    RPureComponent<FilterAddController.Props, FilterAddController.State>(props)
+    RPureComponent<FilterAddControllerProps, FilterAddControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var filterStore: ReportFilterStore
-        var filterState: ReportFilterState
-        var filterSpec: FilterSpec
-        var inputAndCalculatedColumns: HeaderListing?
-    }
-
-
-    interface State: react.State {
-        var adding: Boolean
-//        var selectedColumn: String?
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun FilterAddControllerState.init(props: FilterAddControllerProps) {
         adding = false
-//        selectedColumn = null
     }
 
 

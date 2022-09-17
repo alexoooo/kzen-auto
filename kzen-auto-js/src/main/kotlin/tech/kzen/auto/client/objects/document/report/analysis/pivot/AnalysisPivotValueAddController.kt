@@ -22,27 +22,29 @@ import kotlin.js.Json
 import kotlin.js.json
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface AnalysisPivotValueAddControllerProps: Props {
+    var spec: PivotSpec
+    var inputAndCalculatedColumns: HeaderListing?
+    var analysisStore: ReportAnalysisStore
+    var runningOrLoading: Boolean
+}
+
+
+external interface AnalysisPivotValueAddControllerState: State {
+    var adding: Boolean
+    var selectedColumn: String?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class AnalysisPivotValueAddController(
-    props: Props
+    props: AnalysisPivotValueAddControllerProps
 ):
-    RPureComponent<AnalysisPivotValueAddController.Props, AnalysisPivotValueAddController.State>(props)
+    RPureComponent<AnalysisPivotValueAddControllerProps, AnalysisPivotValueAddControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var spec: PivotSpec
-        var inputAndCalculatedColumns: HeaderListing?
-        var analysisStore: ReportAnalysisStore
-        var runningOrLoading: Boolean
-    }
-
-    interface State: react.State {
-        var adding: Boolean
-        var selectedColumn: String?
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun AnalysisPivotValueAddControllerState.init(props: AnalysisPivotValueAddControllerProps) {
         adding = false
         selectedColumn = null
     }

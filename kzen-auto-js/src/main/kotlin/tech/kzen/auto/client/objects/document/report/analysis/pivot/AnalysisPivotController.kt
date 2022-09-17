@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.report.analysis.pivot
 
 import kotlinx.css.em
 import kotlinx.css.marginBottom
+import react.Props
 import react.RBuilder
 import react.RPureComponent
 import styled.css
@@ -11,20 +12,21 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 
 
+//---------------------------------------------------------------------------------------------------------------------
+interface AnalysisPivotControllerProps: Props {
+    var spec: PivotSpec
+    var inputAndCalculatedColumns: HeaderListing?
+    var analysisStore: ReportAnalysisStore
+    var runningOrLoading: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class AnalysisPivotController(
-    props: Props
+    props: AnalysisPivotControllerProps
 ):
-    RPureComponent<AnalysisPivotController.Props, react.State>(props)
+    RPureComponent<AnalysisPivotControllerProps, react.State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var spec: PivotSpec
-        var inputAndCalculatedColumns: HeaderListing?
-        var analysisStore: ReportAnalysisStore
-        var runningOrLoading: Boolean
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         if (props.inputAndCalculatedColumns == null) {

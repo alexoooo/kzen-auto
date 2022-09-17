@@ -22,11 +22,30 @@ import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
-// TODO: add ability to select range of consecutive files (e.g. with shift + click)
+
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface ReportInputControllerProps: Props {
+    var mainLocation: ObjectLocation
+    var spec: InputSpec
+    var runningOrLoading: Boolean
+    var inputState: ReportInputState
+    var inputStore: ReportInputStore
+    var progress: ReportRunProgress?
+}
+
+
+external interface ReportInputControllerState: State {
+    var browserOpen: Boolean
+    var inputSelection: InputSelectedInfo?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class ReportInputController(
-    props: Props
+    props: ReportInputControllerProps
 ):
-    RPureComponent<ReportInputController.Props, ReportInputController.State>(props)
+    RPureComponent<ReportInputControllerProps, ReportInputControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -37,32 +56,15 @@ class ReportInputController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var mainLocation: ObjectLocation
-        var spec: InputSpec
-        var runningOrLoading: Boolean
-        var inputState: ReportInputState
-        var inputStore: ReportInputStore
-        var progress: ReportRunProgress?
-    }
-
-
-    interface State: react.State {
-        var browserOpen: Boolean
-        var inputSelection: InputSelectedInfo?
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun ReportInputControllerState.init(props: ReportInputControllerProps) {
         browserOpen = false
         inputSelection = null
     }
 
 
     override fun componentDidUpdate(
-        prevProps: Props,
-        prevState: State,
+        prevProps: ReportInputControllerProps,
+        prevState: ReportInputControllerState,
         snapshot: Any
     ) {
 //        val clientState = state.clientState

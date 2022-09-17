@@ -96,6 +96,9 @@ class TableReportOutput(
     @Volatile
     private var previewResponse: CompletableFuture<PreviewResponse>? = null
 
+    @Volatile
+    private var closeRequested = false
+
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
@@ -189,11 +192,17 @@ class TableReportOutput(
         start: Long,
         count: Int
     ): OutputTableInfo? {
-        previewResponse = CompletableFuture()
+        val localPreviewResponse = CompletableFuture<PreviewResponse>()
+        previewResponse = localPreviewResponse
+
+        if (closeRequested) {
+            localPreviewResponse.complete(PreviewResponse.failed)
+        }
+
         previewRequest = PreviewRequest(
             pivotValueTableSpec, start, count)
 
-        val response = previewResponse!!.get()
+        val response = localPreviewResponse.get()
 
         return response.outputTableInfo
     }
@@ -201,7 +210,10 @@ class TableReportOutput(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun close(error: Boolean) {
+        // NB: must be in order to avoid deadlock w synchronized
+        closeRequested = true
         previewResponse?.complete(PreviewResponse.failed)
+
         indexedCsvTable?.close(error)
         pivotBuilder?.close()
     }

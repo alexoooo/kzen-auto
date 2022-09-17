@@ -5,11 +5,9 @@ import kotlinx.css.properties.boxShadowInset
 import kotlinx.html.InputType
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.title
-import react.RBuilder
-import react.RPureComponent
+import react.*
 import react.dom.attrs
 import react.dom.td
-import react.setState
 import styled.*
 import tech.kzen.auto.client.objects.document.report.input.ReportInputController
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
@@ -30,37 +28,38 @@ import kotlin.math.max
 import kotlin.math.min
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface InputSelectedTableControllerProps: Props {
+    var showDetails: Boolean
+    var spec: InputSelectionSpec
+    var inputSelectedState: InputSelectedState
+    var progress: ReportRunProgress?
+    var inputStore: ReportInputStore
+}
+
+
+external interface InputSelectedTableControllerState: State {
+    var selected: List<Pair<InputDataSpec, InputDataInfo?>>
+    var previousSelectedIndex: Int
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class InputSelectedTableController(
-    props: Props
+    props: InputSelectedTableControllerProps
 ):
-    RPureComponent<InputSelectedTableController.Props, InputSelectedTableController.State>(props)
+    RPureComponent<InputSelectedTableControllerProps, InputSelectedTableControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var showDetails: Boolean
-        var spec: InputSelectionSpec
-        var inputSelectedState: InputSelectedState
-        var progress: ReportRunProgress?
-        var inputStore: ReportInputStore
-    }
-
-
-    interface State: react.State {
-        var selected: List<Pair<InputDataSpec, InputDataInfo?>>
-        var previousSelectedIndex: Int
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun InputSelectedTableControllerState.init(props: InputSelectedTableControllerProps) {
         selected = extractSelected(props)
         previousSelectedIndex = -1
     }
 
 
     override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: State,
+            prevProps: InputSelectedTableControllerProps,
+            prevState: InputSelectedTableControllerState,
             snapshot: Any
     ) {
         if (props.inputSelectedState.selectedInfo != prevProps.inputSelectedState.selectedInfo ||
@@ -74,7 +73,7 @@ class InputSelectedTableController(
     }
 
 
-    private fun extractSelected(props: Props): List<Pair<InputDataSpec, InputDataInfo?>> {
+    private fun extractSelected(props: InputSelectedTableControllerProps): List<Pair<InputDataSpec, InputDataInfo?>> {
         val selectedInput = props.inputSelectedState.selectedInfo
             ?: return props.spec.locations.map { it to null }
 

@@ -44,9 +44,26 @@ import tech.kzen.lib.platform.collect.persistentListOf
 import tech.kzen.lib.platform.collect.persistentMapOf
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface GraphControllerProps: Props {
+    var attributeController: AttributeController.Wrapper
+}
+
+
+external interface GraphControllerState: State {
+    var clientState: SessionState?
+    var creating: Boolean
+
+    var visualDataflowModel: VisualDataflowModel?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
-class GraphController:
-    RPureComponent<GraphController.Props, GraphController.State>(),
+class GraphController(
+    props: GraphControllerProps
+):
+    RPureComponent<GraphControllerProps, GraphControllerState>(props),
     InsertionGlobal.Subscriber,
     VisualDataflowRepository.Observer,
     SessionGlobal.Observer
@@ -54,19 +71,6 @@ class GraphController:
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val edgePipeName = "EdgePipe"
-    }
-
-
-    interface Props: react.Props {
-        var attributeController: AttributeController.Wrapper
-    }
-
-
-    interface State: react.State {
-        var clientState: SessionState?
-        var creating: Boolean
-
-        var visualDataflowModel: VisualDataflowModel?
     }
 
 
@@ -84,18 +88,18 @@ class GraphController:
         }
 
 
-        override fun header(): ReactWrapper<react.Props> {
-            return object: ReactWrapper<react.Props> {
-                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
+        override fun header(): ReactWrapper<Props> {
+            return object: ReactWrapper<Props> {
+                override fun child(input: RBuilder, handler: RHandler<Props>) {
                     ribbonController.child(input) {}
                 }
             }
         }
 
 
-        override fun body(): ReactWrapper<react.Props> {
-            return object: ReactWrapper<react.Props> {
-                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
+        override fun body(): ReactWrapper<Props> {
+            return object: ReactWrapper<Props> {
+                override fun child(input: RBuilder, handler: RHandler<Props>) {
                     input.child(GraphController::class) {
                         attrs {
                             this.attributeController = this@Wrapper.attributeController
@@ -135,8 +139,8 @@ class GraphController:
 
 
     override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: State,
+            prevProps: GraphControllerProps,
+            prevState: GraphControllerState,
             snapshot: Any
     ) {
 //        console.log("ProjectController componentDidUpdate", state, prevState)

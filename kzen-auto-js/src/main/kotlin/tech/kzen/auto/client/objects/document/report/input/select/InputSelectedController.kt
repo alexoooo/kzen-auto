@@ -16,31 +16,32 @@ import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSp
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
+//---------------------------------------------------------------------------------------------------------------------
+interface InputSelectedControllerProps: Props {
+    var mainLocation: ObjectLocation
+    var spec: InputSelectionSpec
+    var browserOpen: Boolean
+    var runningOrLoading: Boolean
+    var inputSelectedState: InputSelectedState
+    var progress: ReportRunProgress?
+    var inputStore: ReportInputStore
+}
+
+
+interface InputSelectedControllerState: State {
+    var showDetails: Boolean
+    var showGroupBy: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class InputSelectedController(
-    props: Props
+    props: InputSelectedControllerProps
 ):
-    RPureComponent<InputSelectedController.Props, InputSelectedController.State>(props)
+    RPureComponent<InputSelectedControllerProps, InputSelectedControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var mainLocation: ObjectLocation
-        var spec: InputSelectionSpec
-        var browserOpen: Boolean
-        var runningOrLoading: Boolean
-        var inputSelectedState: InputSelectedState
-        var progress: ReportRunProgress?
-        var inputStore: ReportInputStore
-    }
-
-
-    interface State: react.State {
-        var showDetails: Boolean
-        var showGroupBy: Boolean
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun InputSelectedControllerState.init(props: InputSelectedControllerProps) {
         showDetails = false
         showGroupBy = false
     }

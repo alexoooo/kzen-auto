@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.formula
 import kotlinx.css.*
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -15,24 +16,22 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface ReportFormulaControllerProps: react.Props {
+    var formulaSpec: FormulaSpec
+    var formulaState: ReportFormulaState
+    var inputColumns: List<String>?
+    var runningOrLoading: Boolean
+    var formulaStore: ReportFormulaStore
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class ReportFormulaController(
-    props: Props
+    props: ReportFormulaControllerProps
 ):
-    RPureComponent<ReportFormulaController.Props, ReportFormulaController.State>(props)
+    RPureComponent<ReportFormulaControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var formulaSpec: FormulaSpec
-        var formulaState: ReportFormulaState
-        var inputColumns: List<String>?
-        var runningOrLoading: Boolean
-        var formulaStore: ReportFormulaStore
-    }
-
-
-    interface State: react.State
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         styledDiv {

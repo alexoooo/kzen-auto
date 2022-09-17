@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.analysis.pivot
 import kotlinx.css.*
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
@@ -11,30 +12,20 @@ import tech.kzen.auto.client.wrap.material.MaterialIconButton
 import tech.kzen.auto.client.wrap.reactStyle
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface AnalysisPivotValueItemControllerProps: react.Props {
+    var columnName: String
+    var analysisStore: ReportAnalysisStore
+    var runningOrLoading: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class AnalysisPivotValueItemController(
-    props: Props
+    props: AnalysisPivotValueItemControllerProps
 ):
-    RPureComponent<AnalysisPivotValueItemController.Props, AnalysisPivotValueItemController.State>(props)
+    RPureComponent<AnalysisPivotValueItemControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var columnName: String
-        var analysisStore: ReportAnalysisStore
-        var runningOrLoading: Boolean
-    }
-
-
-    interface State: react.State {
-//        var hover: Boolean
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-//        hover = false
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
 //    private fun onMouseOver() {
 //        setState {

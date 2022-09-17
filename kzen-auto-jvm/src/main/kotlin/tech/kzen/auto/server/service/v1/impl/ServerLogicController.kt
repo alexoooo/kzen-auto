@@ -225,7 +225,7 @@ class ServerLogicController(
         runId: LogicRunId,
         graphDefinitionSnapshot: GraphDefinitionAttempt?
     ):
-            LogicRunResponse
+        LogicRunResponse
     {
         val state = stateOrNull
             ?: return LogicRunResponse.NotFound

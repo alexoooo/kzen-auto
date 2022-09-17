@@ -2,8 +2,11 @@ package tech.kzen.auto.client.objects.ribbon
 
 import kotlinx.css.*
 import kotlinx.html.title
-import react.*
+import react.RBuilder
+import react.RHandler
+import react.RPureComponent
 import react.dom.attrs
+import react.setState
 import styled.*
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
@@ -23,32 +26,33 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface HeaderControllerProps: react.Props {
+    var documentControllers: List<DocumentController>
+}
+
+
+external interface HeaderControllerState: react.State {
+    var structure: GraphStructure?
+    var documentPath: DocumentPath?
+    var transition: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class HeaderController(
-    props: Props
+    props: HeaderControllerProps
 ):
-    RPureComponent<HeaderController.Props, HeaderController.State>(props),
+    RPureComponent<HeaderControllerProps, HeaderControllerState>(props),
     LocalGraphStore.Observer,
     NavigationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var documentControllers: List<DocumentController>
-    }
-
-
-    interface State: react.State {
-        var structure: GraphStructure?
-        var documentPath: DocumentPath?
-        var transition: Boolean
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
         private val documentControllers: List<DocumentController>
-    ): ReactWrapper<Props> {
-        override fun child(input: RBuilder, handler: RHandler<Props>) {
+    ): ReactWrapper<HeaderControllerProps> {
+        override fun child(input: RBuilder, handler: RHandler<HeaderControllerProps>) {
             input.child(HeaderController::class) {
                 attrs {
                     documentControllers = this@Wrapper.documentControllers
@@ -62,7 +66,7 @@ class HeaderController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun HeaderControllerState.init(props: HeaderControllerProps) {
         structure = null
         documentPath = null
         transition = false
@@ -70,8 +74,8 @@ class HeaderController(
 
 
     override fun componentDidUpdate(
-        prevProps: Props,
-        prevState: State,
+        prevProps: HeaderControllerProps,
+        prevState: HeaderControllerState,
         snapshot: Any
     ) {
         if (state.documentPath != prevState.documentPath &&

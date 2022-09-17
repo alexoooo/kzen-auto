@@ -11,18 +11,19 @@ import styled.styledDiv
 import tech.kzen.auto.client.objects.document.graph.CellController
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface ReportBottomEgressProps: react.Props {
+    var egressColor: Color
+    var parentWidth: LinearDimension?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class ReportBottomEgress(
-    props: Props
+    props: ReportBottomEgressProps
 ):
-    RPureComponent<ReportBottomEgress.Props, react.State>(props)
+    RPureComponent<ReportBottomEgressProps, react.State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var egressColor: Color
-        var parentWidth: LinearDimension?
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         val parentWidth = props.parentWidth ?: CellController.cardWidth

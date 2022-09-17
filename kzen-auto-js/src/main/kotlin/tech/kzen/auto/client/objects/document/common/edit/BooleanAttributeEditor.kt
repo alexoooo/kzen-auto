@@ -5,7 +5,10 @@ import kotlinx.css.color
 import kotlinx.css.em
 import kotlinx.css.fontSize
 import org.w3c.dom.HTMLInputElement
-import react.*
+import react.Props
+import react.RBuilder
+import react.RPureComponent
+import react.State
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.material.MaterialInputLabel
@@ -16,31 +19,28 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface BooleanAttributeEditorProps: Props {
+    var objectLocation: ObjectLocation
+    var attributePath: AttributePath
+
+    var value: Boolean
+
+    var trueLabelOverride: String?
+    var falseLabelOverride: String?
+
+    var disabled: Boolean
+
+    var onChange: ((Boolean) -> Unit)?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class BooleanAttributeEditor(
-    props: Props
+    props: BooleanAttributeEditorProps
 ):
-    RPureComponent<BooleanAttributeEditor.Props, BooleanAttributeEditor.State>(props)
+    RPureComponent<BooleanAttributeEditorProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var objectLocation: ObjectLocation
-        var attributePath: AttributePath
-
-        var value: Boolean
-
-        var trueLabelOverride: String?
-        var falseLabelOverride: String?
-
-        var disabled: Boolean
-//        var invalid: Boolean
-
-        var onChange: ((Boolean) -> Unit)?
-    }
-
-
-    interface State: react.State
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun submitEditAsync(newValue: Boolean) {
         if (props.value == newValue) {

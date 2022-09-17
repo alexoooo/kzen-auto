@@ -7,6 +7,7 @@ import kotlinx.css.width
 import kotlinx.html.title
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import react.dom.attrs
 import react.dom.span
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
@@ -22,37 +23,26 @@ import kotlin.js.Json
 import kotlin.js.json
 
 
+//---------------------------------------------------------------------------------------------------------------------
+interface InputSelectedFormatControllerProps: react.Props {
+    var spec: InputSelectionSpec
+    var editDisabled: Boolean
+
+    var inputSelectedState: InputSelectedState
+    var inputStore: ReportInputStore
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class InputSelectedFormatController(
-    props: Props
+    props: InputSelectedFormatControllerProps
 ):
-    RPureComponent<InputSelectedFormatController.Props, InputSelectedFormatController.State>(props)
+    RPureComponent<InputSelectedFormatControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-//        var reportState: ReportState
-//        var dispatcher: ReportDispatcher
-        var spec: InputSelectionSpec
-        var editDisabled: Boolean
-//        var selected: PersistentSet<DataLocation>
-
-        var inputSelectedState: InputSelectedState
-        var inputStore: ReportInputStore
-    }
-
-
-    interface State: react.State {
-//        var loadedFormats: List<ProcessorDefinerDetail>?
-    }
-
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-//        loadedFormats = null
-    }
-
-
     override fun componentDidUpdate(
-        prevProps: Props,
+        prevProps: InputSelectedFormatControllerProps,
         prevState: State,
         snapshot: Any
     ) {

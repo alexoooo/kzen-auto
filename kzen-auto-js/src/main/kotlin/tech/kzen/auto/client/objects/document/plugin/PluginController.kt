@@ -23,11 +23,22 @@ import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 
 
+
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface PluginControllerState: State {
+    var clientState: SessionState?
+    var detailList: List<ReportDefinerDetail>?
+    var listingError: String?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class PluginController(
-    props: react.Props
+    props: Props
 ):
-    RPureComponent<react.Props, PluginController.State>(props),
+    RPureComponent<Props, PluginControllerState>(props),
     SessionGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -53,15 +64,6 @@ class PluginController(
 
             return documentPath.toMainObjectLocation()
         }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    interface State: react.State {
-        var clientState: SessionState?
-        var detailList: List<ReportDefinerDetail>?
-        var listingError: String?
-//        var mainObjectLocation: ObjectLocation?
     }
 
 
@@ -97,11 +99,10 @@ class PluginController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: react.Props) {
+    override fun PluginControllerState.init(props: Props) {
         clientState = null
         detailList = null
         listingError = null
-//        mainObjectLocation = null
     }
 
 
@@ -116,7 +117,7 @@ class PluginController(
     }
 
 
-    override fun componentDidUpdate(prevProps: react.Props, prevState: State, snapshot: Any) {
+    override fun componentDidUpdate(prevProps: Props, prevState: PluginControllerState, snapshot: Any) {
         val clientState = state.clientState
             ?: return
 

@@ -21,10 +21,25 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface StageControllerProps: Props {
+    var documentControllers: List<DocumentController>
+}
+
+
+external interface StageControllerState: State {
+    var structure: GraphStructure?
+    var documentPath: DocumentPath?
+    var transition: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class StageController(
-        props: Props
+        props: StageControllerProps
 ):
-        RPureComponent<StageController.Props, StageController.State>(props),
+        RPureComponent<StageControllerProps, StageControllerState>(props),
         LocalGraphStore.Observer,
         NavigationGlobal.Observer
 {
@@ -45,22 +60,9 @@ class StageController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var documentControllers: List<DocumentController>
-    }
-
-
-    interface State: react.State {
-        var structure: GraphStructure?
-        var documentPath: DocumentPath?
-        var transition: Boolean
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-            private val documentControllers: List<DocumentController>
+        private val documentControllers: List<DocumentController>
     ): ReactWrapper<Props> {
         override fun child(input: RBuilder, handler: RHandler<Props>) {
             input.child(StageController::class) {
@@ -75,7 +77,7 @@ class StageController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun StageControllerState.init(props: StageControllerProps) {
         structure = null
         documentPath = null
         transition = false
@@ -83,8 +85,8 @@ class StageController(
 
 
     override fun componentDidUpdate(
-        prevProps: Props,
-        prevState: State,
+        prevProps: StageControllerProps,
+        prevState: StageControllerState,
         snapshot: Any
     ) {
         if (state.documentPath != prevState.documentPath &&

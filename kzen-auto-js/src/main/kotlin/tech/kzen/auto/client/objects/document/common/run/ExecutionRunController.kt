@@ -1,42 +1,33 @@
 package tech.kzen.auto.client.objects.document.common.run
 
 import kotlinx.css.*
+import react.Props
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.reactStyle
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface ExecutionRunControllerProps: Props {
+    var thisRunning: Boolean
+    var thisSubmitting: Boolean
+    var otherRunning: Boolean
+
+    var outputTerminal: Boolean
+
+    var executionRunStore: ExecutionRunStore
+    var resetCallback: () -> Unit
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class ExecutionRunController(
-    props: Props
+    props: ExecutionRunControllerProps
 ):
-    RPureComponent<ExecutionRunController.Props, ExecutionRunController.State>(props)
+    RPureComponent<ExecutionRunControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props : react.Props {
-        var thisRunning: Boolean
-        var thisSubmitting: Boolean
-        var otherRunning: Boolean
-
-        var outputTerminal: Boolean
-
-        var executionRunStore: ExecutionRunStore
-        var resetCallback: () -> Unit
-//        var reportStore: ReportStore
-    }
-
-
-    interface State : react.State {
-//        var fabHover: Boolean
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-//        fabHover = false
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
 //    private fun onOuterEnter() {
 //        setState {

@@ -27,11 +27,29 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface ProjectControllerProps: Props {
+    var sidebarController: SidebarController.Wrapper
+    var headerController: HeaderController.Wrapper
+    var stageController: StageController.Wrapper
+}
+
+
+external interface ProjectControllerState: State {
+    var structure: GraphStructure?
+    var commandErrorMessage: String?
+    var commandErrorRequest: NotationCommand?
+
+    var headerHeight: Int?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class ProjectController(
-    props: Props
+    props: ProjectControllerProps
 ):
-    RPureComponent<ProjectController.Props, ProjectController.State>(props),
+    RPureComponent<ProjectControllerProps, ProjectControllerState>(props),
     LocalGraphStore.Observer,
     NavigationGlobal.Observer
 {
@@ -43,40 +61,19 @@ class ProjectController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private var headerElement: HTMLElement? = null
     private var headerElement: RefObject<HTMLElement> = createRef()
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var sidebarController: SidebarController.Wrapper
-//        var ribbonController: RibbonController.Wrapper
-        var headerController: HeaderController.Wrapper
-        var stageController: StageController.Wrapper
-    }
-
-
-    interface State: react.State {
-        var structure: GraphStructure?
-        var commandErrorMessage: String?
-        var commandErrorRequest: NotationCommand?
-
-        var headerHeight: Int?
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
         private val sidebarController: SidebarController.Wrapper,
-//        private val ribbonController: RibbonController.Wrapper,
         private val headerController: HeaderController.Wrapper,
         private val stageController: StageController.Wrapper
     ): ReactWrapper<Props> {
         override fun child(input: RBuilder, handler: RHandler<Props>) {
             input.child(ProjectController::class) {
                 attrs {
-//                    ribbonController = this@Wrapper.ribbonController
                     sidebarController = this@Wrapper.sidebarController
                     headerController = this@Wrapper.headerController
                     stageController = this@Wrapper.stageController
@@ -120,8 +117,8 @@ class ProjectController(
 
 
     override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: State,
+            prevProps: ProjectControllerProps,
+            prevState: ProjectControllerState,
             snapshot: Any
     ) {
         val height = headerElement.current?.clientHeight ?: 0
@@ -209,12 +206,6 @@ class ProjectController(
                     ref = headerElement
 
                     props.headerController.child(this) {}
-
-//                    props.ribbonController.child(this) {
-//                        attrs {
-//                            notation = graphNotation
-//                        }
-//                    }
                 }
             }
 

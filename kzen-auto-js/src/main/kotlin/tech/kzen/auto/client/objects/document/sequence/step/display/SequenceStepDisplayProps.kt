@@ -12,15 +12,12 @@ external interface SequenceStepDisplayProps: react.Props {
 
 data class SequenceStepDisplayPropsCommon(
     var clientState: SessionState,
-//        var graphStructure: GraphStructure,
     var objectLocation: ObjectLocation,
     var attributeNesting: AttributeNesting,
-//        var imperativeModel: ImperativeModel,
 
     var managed: Boolean = false,
     var first: Boolean = false,
-    var last: Boolean = false/*,
-        var active: Boolean = false*/
+    var last: Boolean = false
 ) {
     fun isRunning(): Boolean {
 //            return objectLocation == imperativeModel.running

@@ -4,6 +4,7 @@ import kotlinx.css.FontWeight
 import kotlinx.css.fontWeight
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import styled.css
 import styled.styledSpan
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
@@ -13,19 +14,20 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotVa
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface AnalysisPivotValueTypeControllerProps: react.Props {
+    var columnName: String
+    var pivotValueSpec: PivotValueColumnSpec
+    var analysisStore: ReportAnalysisStore
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class AnalysisPivotValueTypeController(
-    props: Props
+    props: AnalysisPivotValueTypeControllerProps
 ):
-    RPureComponent<AnalysisPivotValueTypeController.Props, react.State>(props)
+    RPureComponent<AnalysisPivotValueTypeControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var columnName: String
-        var pivotValueSpec: PivotValueColumnSpec
-        var analysisStore: ReportAnalysisStore
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun onTypeChange(valueTypes: Array<String>) {
         val oldTypes = props.pivotValueSpec.types

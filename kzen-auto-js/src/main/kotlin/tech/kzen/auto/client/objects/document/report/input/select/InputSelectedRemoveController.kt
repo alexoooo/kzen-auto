@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.input.select
 import kotlinx.css.*
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
@@ -13,23 +14,21 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
+//---------------------------------------------------------------------------------------------------------------------
+interface InputSelectedRemoveControllerProps: react.Props {
+    var mainLocation: ObjectLocation
+    var disabled: Boolean
+    var inputSelectedState: InputSelectedState
+    var inputStore: ReportInputStore
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class InputSelectedRemoveController(
-    props: Props
+    props: InputSelectedRemoveControllerProps
 ):
-    RPureComponent<InputSelectedRemoveController.Props, InputSelectedRemoveController.State>(props)
+    RPureComponent<InputSelectedRemoveControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var mainLocation: ObjectLocation
-        var disabled: Boolean
-        var inputSelectedState: InputSelectedState
-        var inputStore: ReportInputStore
-    }
-
-
-    interface State: react.State
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRemoveFromSelection() {
         val removedPaths = props.inputSelectedState.selectedChecked

@@ -14,10 +14,37 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 
 
+
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface TextAttributeEditorProps: Props {
+    var objectLocation: ObjectLocation
+    var attributePath: AttributePath
+
+    var value: Any
+    var type: TextAttributeEditor.Type?
+
+    var labelOverride: String?
+    var InputProps: Props?
+
+    var disabled: Boolean
+    var invalid: Boolean
+
+    var onChange: ((String) -> Unit)?
+}
+
+
+external interface TextAttributeEditorState: State {
+    var value: String
+    var pending: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class TextAttributeEditor(
-    props: Props
+    props: TextAttributeEditorProps
 ):
-    RPureComponent<TextAttributeEditor.Props, TextAttributeEditor.State>(props)
+    RPureComponent<TextAttributeEditorProps, TextAttributeEditorState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     enum class Type {
@@ -25,30 +52,6 @@ class TextAttributeEditor(
         MultilineText,
         Number
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var objectLocation: ObjectLocation
-        var attributePath: AttributePath
-
-        var value: Any
-        var type: Type?
-
-        var labelOverride: String?
-        var InputProps: react.Props?
-
-        var disabled: Boolean
-        var invalid: Boolean
-
-        var onChange: ((String) -> Unit)?
-    }
-
-
-    class State(
-        var value: String,
-        var pending: Boolean
-    ): react.State
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -60,15 +63,15 @@ class TextAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun TextAttributeEditorState.init(props: TextAttributeEditorProps) {
         value = stateText(props.value, props.type)
         pending = false
     }
 
 
     override fun componentDidUpdate(
-        prevProps: Props,
-        prevState: State,
+        prevProps: TextAttributeEditorProps,
+        prevState: TextAttributeEditorState,
         snapshot: Any
     ) {
         if (props.value == prevProps.value) {

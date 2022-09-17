@@ -28,31 +28,32 @@ import kotlin.math.max
 import kotlin.math.min
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface InputBrowserTableControllerProps: react.Props {
+    var mainLocation: ObjectLocation
+    var hasFilter: Boolean
+    var dataLocationInfos: List<DataLocationInfo>
+    var selectedDataLocation: Set<DataLocation>
+    var inputBrowserState: InputBrowserState
+    var inputStore: ReportInputStore
+}
+
+
+external interface InputBrowserTableControllerState: react.State {
+    var folders: List<DataLocationInfo>
+    var files: List<DataLocationInfo>
+    var previousFileIndex: Int
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class InputBrowserTableController(
-    props: Props
+    props: InputBrowserTableControllerProps
 ):
-    RPureComponent<InputBrowserTableController.Props, InputBrowserTableController.State>(props)
+    RPureComponent<InputBrowserTableControllerProps, InputBrowserTableControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var mainLocation: ObjectLocation
-        var hasFilter: Boolean
-        var dataLocationInfos: List<DataLocationInfo>
-        var selectedDataLocation: Set<DataLocation>
-        var inputBrowserState: InputBrowserState
-        var inputStore: ReportInputStore
-    }
-
-
-    interface State: react.State {
-        var folders: List<DataLocationInfo>
-        var files: List<DataLocationInfo>
-        var previousFileIndex: Int
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun InputBrowserTableControllerState.init(props: InputBrowserTableControllerProps) {
         val (folders, files) = props.dataLocationInfos.partition { it.directory }
         this.folders = folders
         this.files = files
@@ -61,8 +62,8 @@ class InputBrowserTableController(
 
 
     override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: State,
+            prevProps: InputBrowserTableControllerProps,
+            prevState: InputBrowserTableControllerState,
             snapshot: Any
     ) {
         if (props.dataLocationInfos != prevProps.dataLocationInfos) {

@@ -38,8 +38,22 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface ScriptControllerProps: react.Props {
+    var stepController: StepController.Wrapper
+    var scriptCommander: ScriptCommander
+}
+
+
+external interface ScriptControllerState: react.State {
+    var clientState: SessionState?
+    var creating: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class ScriptController:
-    RPureComponent<ScriptController.Props, ScriptController.State>(),
+    RPureComponent<ScriptControllerProps, ScriptControllerState>(),
     SessionGlobal.Observer,
     InsertionGlobal.Subscriber
 {
@@ -67,18 +81,6 @@ class ScriptController:
     }
 
 
-    interface Props: react.Props {
-        var stepController: StepController.Wrapper
-        var scriptCommander: ScriptCommander
-    }
-
-
-    interface State: react.State {
-        var clientState: SessionState?
-        var creating: Boolean
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
@@ -94,18 +96,18 @@ class ScriptController:
         }
 
 
-        override fun header(): ReactWrapper<react.Props> {
-            return object: ReactWrapper<react.Props> {
-                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
+        override fun header(): ReactWrapper<Props> {
+            return object: ReactWrapper<Props> {
+                override fun child(input: RBuilder, handler: RHandler<Props>) {
                     ribbonController.child(input) {}
                 }
             }
         }
 
 
-        override fun body(): ReactWrapper<react.Props> {
-            return object: ReactWrapper<react.Props> {
-                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
+        override fun body(): ReactWrapper<Props> {
+            return object: ReactWrapper<Props> {
+                override fun child(input: RBuilder, handler: RHandler<Props>) {
                     input.child(ScriptController::class) {
                         attrs {
                             this.stepController = this@Wrapper.stepController
@@ -121,7 +123,7 @@ class ScriptController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun ScriptControllerState.init(props: ScriptControllerProps) {
         clientState = null
         creating = false
     }
@@ -140,8 +142,8 @@ class ScriptController:
 
 
     override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: State,
+            prevProps: ScriptControllerProps,
+            prevState: ScriptControllerState,
             snapshot: Any
     ) {
 //        val clientState = state.clientState

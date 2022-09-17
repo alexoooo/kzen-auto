@@ -4,6 +4,7 @@ import kotlinx.css.*
 import kotlinx.js.jso
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import react.buildElement
 import styled.css
 import styled.styledDiv
@@ -16,23 +17,20 @@ import tech.kzen.auto.client.wrap.material.MaterialInputAdornment
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface OutputExportControllerProps: react.Props {
+    var outputExportSpec: OutputExportSpec
+    var runningOrLoading: Boolean
+    var outputStore: ReportOutputStore
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class OutputExportController(
-    props: Props
+    props: OutputExportControllerProps
 ):
-    RPureComponent<OutputExportController.Props, OutputExportController.State>(props)
+    RPureComponent<OutputExportControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var outputExportSpec: OutputExportSpec
-        var runningOrLoading: Boolean
-        var outputStore: ReportOutputStore
-    }
-
-
-    interface State: react.State {
-//        var settingsOpen: Boolean
-    }
-
 
     //-----------------------------------------------------------------------------------------------------------------
 //    private fun onFormatChange(format: String) {

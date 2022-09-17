@@ -4,6 +4,7 @@ import kotlinx.browser.document
 import kotlinx.css.*
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -17,20 +18,21 @@ import kotlin.js.Json
 import kotlin.js.json
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface AnalysisPivotRowListControllerProps: react.Props {
+    var spec: PivotSpec
+    var inputAndCalculatedColumns: HeaderListing?
+    var analysisStore: ReportAnalysisStore
+    var runningOrLoading: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class AnalysisPivotRowListController(
-    props: Props
+    props: AnalysisPivotRowListControllerProps
 ):
-    RPureComponent<AnalysisPivotRowListController.Props, react.State>(props)
+    RPureComponent<AnalysisPivotRowListControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var spec: PivotSpec
-        var inputAndCalculatedColumns: HeaderListing?
-        var analysisStore: ReportAnalysisStore
-        var runningOrLoading: Boolean
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun onOptionsChange(options: Array<ReactSelectOption>?) {
         val oldRows = props.spec.rows

@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.filter
 import kotlinx.css.*
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -19,33 +20,23 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface ReportFilterControllerProps: react.Props {
+    var filterSpec: FilterSpec
+    var runningOrLoading: Boolean
+    var filterStore: ReportFilterStore
+    var filterState: ReportFilterState
+    var inputAndCalculatedColumns: HeaderListing?
+    var tableSummary: TableSummary?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class ReportFilterController(
-    props: Props
+    props: ReportFilterControllerProps
 ):
-    RPureComponent<ReportFilterController.Props, ReportFilterController.State>(props)
+    RPureComponent<ReportFilterControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var filterSpec: FilterSpec
-        var runningOrLoading: Boolean
-        var filterStore: ReportFilterStore
-        var filterState: ReportFilterState
-        var inputAndCalculatedColumns: HeaderListing?
-        var tableSummary: TableSummary?
-    }
-
-
-    interface State: react.State {
-//        var adding: Boolean
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-//        adding = false
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun onSummaryRefresh() {
 //        props.dispatcher.dispatchAsync(SummaryLookupRequest)

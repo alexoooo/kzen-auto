@@ -15,46 +15,40 @@ import tech.kzen.lib.platform.collect.toPersistentList
 import kotlin.js.Json
 
 
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface MultiTextAttributeEditorProps: Props {
+    var objectLocation: ObjectLocation
+    var attributePath: AttributePath
+
+    var value: Collection<String>
+    var unique: Boolean
+
+    var labelOverride: String?
+    var InputProps: Props?
+    var style: Json?
+    var rows: Int?
+    var maxRows: Int?
+
+    var disabled: Boolean
+    var invalid: Boolean
+
+    var onChange: ((List<String>) -> Unit)?
+}
+
+
+external interface MultiTextAttributeEditorState: State {
+    var value: List<String>
+    var pending: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class MultiTextAttributeEditor(
-    props: Props
+    props: MultiTextAttributeEditorProps
 ):
-    RPureComponent<MultiTextAttributeEditor.Props, MultiTextAttributeEditor.State>(props)
+    RPureComponent<MultiTextAttributeEditorProps, MultiTextAttributeEditorState>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-//    enum class Type {
-//        PlainText,
-//        MultilineText,
-//        Number
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var objectLocation: ObjectLocation
-        var attributePath: AttributePath
-
-        var value: Collection<String>
-        var unique: Boolean
-
-        var labelOverride: String?
-        var InputProps: react.Props?
-        var style: Json?
-        var rows: Int?
-        var maxRows: Int?
-
-        var disabled: Boolean
-        var invalid: Boolean
-
-        var onChange: ((List<String>) -> Unit)?
-    }
-
-
-    interface State: react.State {
-        var value: List<String>
-        var pending: Boolean
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private var submitDebounce: FunctionWithDebounce = lodash.debounce({
         async {
@@ -64,15 +58,15 @@ class MultiTextAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun MultiTextAttributeEditorState.init(props: MultiTextAttributeEditorProps) {
         this.value = props.value.toList()
         pending = false
     }
 
 
     override fun componentDidUpdate(
-        prevProps: Props,
-        prevState: State,
+        prevProps: MultiTextAttributeEditorProps,
+        prevState: MultiTextAttributeEditorState,
         snapshot: Any
     ) {
         if (props.value == prevProps.value) {

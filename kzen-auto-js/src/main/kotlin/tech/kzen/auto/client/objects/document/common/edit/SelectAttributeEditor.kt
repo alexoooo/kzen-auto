@@ -4,7 +4,10 @@ import kotlinx.browser.document
 import kotlinx.css.em
 import kotlinx.css.fontSize
 import kotlinx.css.width
-import react.*
+import react.Props
+import react.RBuilder
+import react.RPureComponent
+import react.State
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.material.MaterialInputLabel
@@ -18,31 +21,29 @@ import kotlin.js.Json
 import kotlin.js.json
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface SelectAttributeEditorProps: Props {
+    var objectLocation: ObjectLocation
+    var attributePath: AttributePath
+
+    var value: String
+    var options: Map<String, String>
+
+    var labelOverride: String?
+
+    var disabled: Boolean
+    var invalid: Boolean
+
+    var onChange: ((String) -> Unit)?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class SelectAttributeEditor(
-    props: Props
+    props: SelectAttributeEditorProps
 ):
-    RPureComponent<SelectAttributeEditor.Props, SelectAttributeEditor.State>(props)
+    RPureComponent<SelectAttributeEditorProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var objectLocation: ObjectLocation
-        var attributePath: AttributePath
-
-        var value: String
-        var options: Map<String, String>
-
-        var labelOverride: String?
-
-        var disabled: Boolean
-        var invalid: Boolean
-
-        var onChange: ((String) -> Unit)?
-    }
-
-
-    interface State: react.State
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun submitEditAsync(newValue: String) {
         if (props.value == newValue) {

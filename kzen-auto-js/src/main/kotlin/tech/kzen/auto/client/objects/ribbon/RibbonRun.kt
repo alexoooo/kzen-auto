@@ -25,10 +25,18 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface RibbonRunState: State {
+    var clientState: SessionState?
+    var dropdownOpen: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class RibbonRun (
     props: Props
 ):
-    RPureComponent<RibbonRun.Props, RibbonRun.State>(props),
+    RPureComponent<Props, RibbonRunState>(props),
     SessionGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -37,27 +45,6 @@ class RibbonRun (
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-//            var actionTypes: List<ObjectLocation>,
-//            var ribbonGroups: List<RibbonGroup>,
-
-//            var navPath: DocumentPath?,
-//            var parameters: RequestParams,
-//
-//            var notation: GraphNotation
-    }
-
-
-    interface State: react.State {
-//            var active: Set<DocumentPath>,
-//            var selectedFramePaths: List<DocumentPath>,
-//            var executionModel: ImperativeModel?,
-
-        var clientState: SessionState?
-
-        var dropdownOpen: Boolean
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -65,7 +52,7 @@ class RibbonRun (
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun RibbonRunState.init(props: Props) {
 //        active = setOf()
 //        selectedFramePaths = listOf()
 //        executionModel = null

@@ -6,6 +6,7 @@ import kotlinx.css.fontSize
 import kotlinx.css.width
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.objects.document.report.input.select.model.InputSelectedState
 import tech.kzen.auto.client.wrap.material.MaterialInputLabel
@@ -19,36 +20,21 @@ import kotlin.js.Json
 import kotlin.js.json
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface InputSelectedTypeControllerProps: react.Props {
+    var spec: InputSelectionSpec
+    var editDisabled: Boolean
+    var inputSelectedState: InputSelectedState
+    var inputStore: ReportInputStore
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class InputSelectedTypeController(
-    props: Props
+    props: InputSelectedTypeControllerProps
 ):
-    RPureComponent<InputSelectedTypeController.Props, InputSelectedTypeController.State>(props)
+    RPureComponent<InputSelectedTypeControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var spec: InputSelectionSpec
-
-//        var reportState: ReportState
-//        var dispatcher: ReportDispatcher
-
-        var editDisabled: Boolean
-
-        var inputSelectedState: InputSelectedState
-        var inputStore: ReportInputStore
-    }
-
-
-    interface State: react.State {
-//        var loadedDataTypes: List<ClassName>?
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-//        loadedDataTypes = props.inputSelectedState.dataTypes
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun loadIfRequired() {
         if (props.inputSelectedState.dataTypes != null) {

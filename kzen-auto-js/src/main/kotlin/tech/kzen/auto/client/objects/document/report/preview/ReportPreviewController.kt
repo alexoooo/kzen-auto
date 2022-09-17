@@ -4,6 +4,7 @@ import kotlinx.css.*
 import kotlinx.css.properties.boxShadowInset
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import react.dom.tbody
 import react.dom.thead
 import react.dom.tr
@@ -22,26 +23,24 @@ import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
+//-----------------------------------------------------------------------------------------------------------------
+external interface ReportPreviewControllerProps: react.Props {
+    var previewSpec: PreviewSpec
+    var previewState: ReportPreviewState
+    var previewStore: ReportPreviewStore
+    var runningOrLoading: Boolean
+    var running: Boolean
+    var afterFilter: Boolean
+    var mainLocation: ObjectLocation
+}
+
+
+//-----------------------------------------------------------------------------------------------------------------
 class ReportPreviewController(
-    props: Props
+    props: ReportPreviewControllerProps
 ):
-    RPureComponent<ReportPreviewController.Props, ReportPreviewController.State>(props)
+    RPureComponent<ReportPreviewControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var previewSpec: PreviewSpec
-        var previewState: ReportPreviewState
-        var previewStore: ReportPreviewStore
-        var runningOrLoading: Boolean
-        var running: Boolean
-        var afterFilter: Boolean
-        var mainLocation: ObjectLocation
-    }
-
-
-    interface State: react.State
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRefresh() {
         props.previewStore.lookupSummaryWithFallbackAsync()

@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.input.browse
 import kotlinx.css.*
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import styled.css
 import styled.styledDiv
 import tech.kzen.auto.client.objects.document.report.input.browse.model.InputBrowserState
@@ -16,29 +17,22 @@ import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface InputBrowserActionControllerProps: react.Props {
+    var mainLocation: ObjectLocation
+    var dataLocationInfos: List<DataLocationInfo>
+    var selectedDataLocation: Set<DataLocation>
+    var inputBrowserState: InputBrowserState
+    var inputStore: ReportInputStore
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class InputBrowserActionController(
-    props: Props
+    props: InputBrowserActionControllerProps
 ):
-    RPureComponent<InputBrowserActionController.Props, InputBrowserActionController.State>(props)
+    RPureComponent<InputBrowserActionControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var mainLocation: ObjectLocation
-//        var hasFilter: Boolean
-        var dataLocationInfos: List<DataLocationInfo>
-        var selectedDataLocation: Set<DataLocation>
-//        var disabled: Boolean
-        var inputBrowserState: InputBrowserState
-        var inputStore: ReportInputStore
-    }
-
-
-    interface State: react.State {
-//        var textEdit: Boolean
-//        var editDir: String
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun onAddToSelection() {
         val addedPaths = checkedNotSelected()

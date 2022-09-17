@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.analysis
 import kotlinx.css.*
 import react.RBuilder
 import react.RPureComponent
+import react.State
 import styled.css
 import styled.styledDiv
 import styled.styledSpan
@@ -24,34 +25,25 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface ReportAnalysisControllerProps: react.Props {
+    var spec: AnalysisSpec
+    var inputAndCalculatedColumns: HeaderListing?
+    var analysisColumnInfo: AnalysisColumnInfo?
+    var runningOrLoading: Boolean
+    var analysisStore: ReportAnalysisStore
+    var inputStore: ReportInputStore
+    var outputStore: ReportOutputStore
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class ReportAnalysisController(
-    props: Props
+    props: ReportAnalysisControllerProps
 ):
-    RPureComponent<ReportAnalysisController.Props, ReportAnalysisController.State>(props)
+    RPureComponent<ReportAnalysisControllerProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var spec: AnalysisSpec
-        var inputAndCalculatedColumns: HeaderListing?
-        var analysisColumnInfo: AnalysisColumnInfo?
-        var runningOrLoading: Boolean
-        var analysisStore: ReportAnalysisStore
-        var inputStore: ReportInputStore
-        var outputStore: ReportOutputStore
-    }
-
-
-    interface State: react.State {
-//        var analysisType: AnalysisType
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
-//        analysisType = props.reportState.analysisSpec().type
-    }
-
-
     private fun onTypeChange(analysisType: AnalysisType) {
         props.analysisStore.setAnalysisTypeAsync(analysisType)
     }

@@ -15,28 +15,27 @@ import tech.kzen.auto.client.wrap.reactStyle
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface InputSelectedGroupControllerProps: Props {
+    var spec: InputSelectionSpec
+    var editDisabled: Boolean
+    var inputStore: ReportInputStore
+}
+
+
+external interface InputSelectedGroupControllerState: State {
+    var groupByText: String
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class InputSelectedGroupController(
-    props: Props
+    props: InputSelectedGroupControllerProps
 ):
-    RPureComponent<InputSelectedGroupController.Props, InputSelectedGroupController.State>(props)
+    RPureComponent<InputSelectedGroupControllerProps, InputSelectedGroupControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var spec: InputSelectionSpec
-//        var reportState: ReportState
-//        var dispatcher: ReportDispatcher
-        var editDisabled: Boolean
-        var inputStore: ReportInputStore
-    }
-
-
-    interface State: react.State {
-        var groupByText: String
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun InputSelectedGroupControllerState.init(props: InputSelectedGroupControllerProps) {
         groupByText = props.spec.groupBy
     }
 

@@ -10,20 +10,21 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 
 
+//---------------------------------------------------------------------------------------------------------------------
+interface AnalysisPivotValueListControllerProps: react.Props {
+    var spec: PivotSpec
+    var inputAndCalculatedColumns: HeaderListing?
+    var analysisStore: ReportAnalysisStore
+    var runningOrLoading: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class AnalysisPivotValueListController(
-    props: Props
+    props: AnalysisPivotValueListControllerProps
 ):
-    RPureComponent<AnalysisPivotValueListController.Props, react.State>(props)
+    RPureComponent<AnalysisPivotValueListControllerProps, react.State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var spec: PivotSpec
-        var inputAndCalculatedColumns: HeaderListing?
-        var analysisStore: ReportAnalysisStore
-        var runningOrLoading: Boolean
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun RBuilder.render() {
         styledDiv {

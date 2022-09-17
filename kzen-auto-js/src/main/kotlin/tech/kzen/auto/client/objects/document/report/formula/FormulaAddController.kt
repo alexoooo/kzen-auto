@@ -20,29 +20,30 @@ import tech.kzen.auto.client.wrap.material.MaterialTextField
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 
 
+//---------------------------------------------------------------------------------------------------------------------
+interface FormulaAddControllerProps: react.Props {
+    var formulaSpec: FormulaSpec
+    var formulaState: ReportFormulaState
+    var inputColumns: List<String>?
+    var runningOrLoading: Boolean
+    var formulaStore: ReportFormulaStore
+}
+
+
+interface FormulaAddControllerState: react.State {
+    var adding: Boolean
+    var selectedColumn: String?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class FormulaAddController(
-    props: Props
+    props: FormulaAddControllerProps
 ):
-    RPureComponent<FormulaAddController.Props, FormulaAddController.State>(props)
+    RPureComponent<FormulaAddControllerProps, FormulaAddControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var formulaSpec: FormulaSpec
-        var formulaState: ReportFormulaState
-        var inputColumns: List<String>?
-        var runningOrLoading: Boolean
-        var formulaStore: ReportFormulaStore
-    }
-
-
-    interface State: react.State {
-        var adding: Boolean
-        var selectedColumn: String?
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun FormulaAddControllerState.init(props: FormulaAddControllerProps) {
         adding = false
         selectedColumn = null
     }

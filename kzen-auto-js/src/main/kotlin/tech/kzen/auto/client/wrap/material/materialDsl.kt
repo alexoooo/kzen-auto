@@ -12,20 +12,20 @@ import kotlin.js.Json
 //}
 
 
-interface NestedInputProps: react.Props {
+external interface NestedInputProps: react.Props {
 //        val startAdornment: MaterialInputAdornment
-        val startAdornment: ReactElement<react.Props>
+    var startAdornment: ReactElement<react.Props>
 }
 
 class NestedInputLabelProps(
-        val style: Json? = null,
-        val shrink: Boolean? = null
+    val style: Json? = null,
+    val shrink: Boolean? = null
 )
 
 class FadeTimeout(
-        val appear: Int = 0,
-        val enter: Int = 0,
-        val exit: Int = 0
+    val appear: Int = 0,
+    val enter: Int = 0,
+    val exit: Int = 0
 )
 
 //class ButtonStyle(val backgroundColor: String, val color: String)

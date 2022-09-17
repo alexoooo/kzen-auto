@@ -3,7 +3,10 @@ package tech.kzen.auto.client.objects.document.report.output
 import kotlinx.css.*
 import kotlinx.css.properties.TextDecoration
 import kotlinx.css.properties.boxShadowInset
-import react.*
+import react.Props
+import react.RBuilder
+import react.RPureComponent
+import react.State
 import react.dom.attrs
 import react.dom.tbody
 import react.dom.thead
@@ -29,26 +32,24 @@ import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.util.FormatUtils
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface OutputTableControllerProps: Props {
+    var spec: OutputSpec
+    var analysisSpec: AnalysisSpec
+    var filteredColumns: HeaderListing?
+    var runningOrLoading: Boolean
+    var progress: ReportRunProgress?
+    var outputState: ReportOutputState
+    var outputStore: ReportOutputStore
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class OutputTableController(
-    props: Props
+    props: OutputTableControllerProps
 ):
-    RPureComponent<OutputTableController.Props, OutputTableController.State>(props)
+    RPureComponent<OutputTableControllerProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var spec: OutputSpec
-        var analysisSpec: AnalysisSpec
-        var filteredColumns: HeaderListing?
-        var runningOrLoading: Boolean
-        var progress: ReportRunProgress?
-        var outputState: ReportOutputState
-        var outputStore: ReportOutputStore
-    }
-
-
-    interface State: react.State {}
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun onPreviewRefresh() {
         props.outputStore.lookupOutputWithFallbackAsync()
@@ -96,6 +97,8 @@ class OutputTableController(
                     style = reactStyle {
                         borderWidth = 2.px
                         marginLeft = 0.5.em
+                        color = Color.black
+                        borderColor = Color("#c4c4c4")
                     }
                 }
 
@@ -129,6 +132,8 @@ class OutputTableController(
                         size = "small"
                         style = reactStyle {
                             borderWidth = 2.px
+                            color = Color.black
+                            borderColor = Color("#c4c4c4")
                         }
                     }
 

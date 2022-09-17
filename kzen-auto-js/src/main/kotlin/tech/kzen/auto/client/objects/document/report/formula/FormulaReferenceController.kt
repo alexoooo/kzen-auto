@@ -20,29 +20,30 @@ import kotlin.js.Json
 import kotlin.js.json
 
 
+//---------------------------------------------------------------------------------------------------------------------
+interface FormulaReferenceControllerProps: react.Props {
+    var inputColumns: List<String>
+    var editDisabled: Boolean
+    var onAdded: (String) -> Unit
+    var addLabel: String
+    var addIcon: String
+}
+
+
+interface FormulaReferenceControllerState: react.State {
+    var adding: Boolean
+    var selectedColumn: String?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class FormulaReferenceController(
-    props: Props
+    props: FormulaReferenceControllerProps
 ):
-    RPureComponent<FormulaReferenceController.Props, FormulaReferenceController.State>(props)
+    RPureComponent<FormulaReferenceControllerProps, FormulaReferenceControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var inputColumns: List<String>
-        var editDisabled: Boolean
-        var onAdded: (String) -> Unit
-        var addLabel: String
-        var addIcon: String
-    }
-
-
-    interface State: react.State {
-        var adding: Boolean
-        var selectedColumn: String?
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun FormulaReferenceControllerState.init(props: FormulaReferenceControllerProps) {
         adding = false
         selectedColumn = null
     }

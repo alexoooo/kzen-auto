@@ -14,46 +14,38 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
+//---------------------------------------------------------------------------------------------------------------------
+interface InputBrowserControllerProps: Props {
+    var mainLocation: ObjectLocation
+    var spec: InputBrowserSpec
+    var selectedDataLocation: Set<DataLocation>
+    var open: Boolean
+    var forceOpen: Boolean
+    var inputBrowserState: InputBrowserState
+    var inputStore: ReportInputStore
+}
+
+
+interface InputBrowserControllerState: State {
+    var requestPending: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class InputBrowserController(
-    props: Props
+    props: InputBrowserControllerProps
 ):
-    RPureComponent<InputBrowserController.Props, InputBrowserController.State>(props)
+    RPureComponent<InputBrowserControllerProps, InputBrowserControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var mainLocation: ObjectLocation
-        var spec: InputBrowserSpec
-        var selectedDataLocation: Set<DataLocation>
-        var open: Boolean
-        var forceOpen: Boolean
-//        var inputState: PipelineInputState
-        var inputBrowserState: InputBrowserState
-        var inputStore: ReportInputStore
-    }
-
-
-    interface State: react.State {
-        var requestPending: Boolean
-//        var inputBrowserInfo: InputBrowserInfo?
-//        var infoError: String?
-//        var infoLoading: Boolean
-//        var dirChangeError: String?
-//        var selected: PersistentSet<DataLocation>
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun InputBrowserControllerState.init(props: InputBrowserControllerProps) {
         requestPending = false
-//        inputBrowserInfo = null
-//        infoLoading = false
-//        selected = persistentSetOf()
     }
 
 
     override fun componentDidUpdate(
-        prevProps: Props,
-        prevState: State,
+        prevProps: InputBrowserControllerProps,
+        prevState: InputBrowserControllerState,
         snapshot: Any
     ) {
         if (props.open && props.inputBrowserState.browserInfo == null && ! state.requestPending) {

@@ -18,10 +18,29 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.summary.*
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface FilterItemControllerProps: react.Props {
+    var filterSpec: FilterSpec
+    var columnName: String
+    var runningOrLoading: Boolean
+    var inputAndCalculatedColumns: HeaderListing?
+    var tableSummary: TableSummary?
+    var filterStore: ReportFilterStore
+}
+
+
+external interface FilterItemControllerState: react.State {
+    var open: Boolean
+    var removeError: String?
+    var updateError: String?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class FilterItemController(
-    props: Props
+    props: FilterItemControllerProps
 ):
-    RPureComponent<FilterItemController.Props, FilterItemController.State>(props)
+    RPureComponent<FilterItemControllerProps, FilterItemControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -51,25 +70,7 @@ class FilterItemController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    interface Props: react.Props {
-        var filterSpec: FilterSpec
-        var columnName: String
-        var runningOrLoading: Boolean
-        var inputAndCalculatedColumns: HeaderListing?
-        var tableSummary: TableSummary?
-        var filterStore: ReportFilterStore
-    }
-
-
-    interface State: react.State {
-        var open: Boolean
-        var removeError: String?
-        var updateError: String?
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: Props) {
+    override fun FilterItemControllerState.init(props: FilterItemControllerProps) {
         open = false
         removeError = null
         updateError = null
