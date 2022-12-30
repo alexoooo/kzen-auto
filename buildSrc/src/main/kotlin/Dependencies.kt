@@ -1,18 +1,22 @@
-const val kotlinVersion = "1.7.10"
+const val kotlinVersion = "1.7.21"
+//const val kotlinVersion = "1.7.10"
 //const val kotlinVersion = "1.7.0"
 const val jvmTargetVersion = "18"
 const val javaVersion = 18
 const val jvmToolchainVersion = 18
 const val shadowVersion = "7.1.2"
-const val springBootVersion = "2.7.2"
-const val dependencyManagementVersion = "1.0.13.RELEASE"
+//const val springBootVersion = "2.7.4"
+const val springBootVersion = "3.0.0"
+const val dependencyManagementVersion = "1.0.14.RELEASE"
+const val annotationsApiVersion = "1.3.2"
 
 
 //const val kzenLibVersion = "0.25.0"
 const val kzenLibVersion = "0.25.1-SNAPSHOT"
 
 
-const val logbackVersion = "1.2.11"
+//const val logbackVersion = "1.2.11"
+const val logbackVersion = "1.4.5"
 const val jacksonModuleKotlin = "2.13.3"
 const val seleniumVersion = "4.4.0"
 const val commonsCompressVersion = "1.21"
@@ -44,12 +48,13 @@ const val reactSelectVersion = "5.4.0"
 const val iconifyReactVersion = "3.2.2"
 const val iconifyIconsVaadinVersion = "1.2.2"
 
-//const val wrapperKotlinVersion = "pre.344"
-const val wrapperKotlinVersion = "pre.370"
+const val wrapperKotlinVersion = "pre.465"
+//const val wrapperKotlinVersion = "pre.370"
 const val kotlinReactVersion = "18.2.0-$wrapperKotlinVersion"
 //const val kotlinReactVersion = "18.1.0-$wrapperKotlinVersion"
 const val kotlinReactDomVersion = "18.2.0-$wrapperKotlinVersion"
 //const val kotlinReactDomVersion = "18.1.0-$wrapperKotlinVersion"
-const val kotlinStyledVersion = "5.3.5-$wrapperKotlinVersion"
+//const val kotlinStyledVersion = "5.3.5-$wrapperKotlinVersion"
+const val kotlinStyledVersion = "1.2.1-$wrapperKotlinVersion"
 const val kotlinExtensionsVersion = "1.0.1-$wrapperKotlinVersion"
 const val kotlinCssVersion = "1.0.0-$wrapperKotlinVersion"

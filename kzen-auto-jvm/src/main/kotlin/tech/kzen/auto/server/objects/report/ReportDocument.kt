@@ -48,6 +48,7 @@ import tech.kzen.auto.server.service.v1.LogicHandle
 import tech.kzen.auto.server.service.v1.model.LogicDefinition
 import tech.kzen.auto.server.service.v1.model.LogicType
 import tech.kzen.auto.server.service.v1.model.TupleDefinition
+import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.DateTimeUtils
@@ -307,7 +308,7 @@ class ReportDocument(
 
         val pluginCoordinates = reportRunContext.datasetInfo.items.map { it.processorPluginCoordinate }.toSet()
         val classLoaderHandle = ServerContext.definitionRepository
-            .classLoaderHandle(pluginCoordinates, ClassLoader.getSystemClassLoader())
+            .classLoaderHandle(pluginCoordinates, ClassLoaderUtils.dynamicParentClassLoader())
 
         val dataType = input.selection.dataType
         val flatHeaderListing = reportRunContext.datasetInfo.headerSuperset()
@@ -467,7 +468,7 @@ class ReportDocument(
             val headerListing = cachedHeaderListing
                 ?: run {
                     val classLoaderHandle = ServerContext.definitionRepository
-                        .classLoaderHandle(setOf(pluginCoordinate), ClassLoader.getSystemClassLoader())
+                        .classLoaderHandle(setOf(pluginCoordinate), ClassLoaderUtils.dynamicParentClassLoader())
 
                     classLoaderHandle.use {
                         val processorDefinition = ServerContext.definitionRepository.define(

@@ -8,6 +8,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.material.MaterialTextField
+import tech.kzen.auto.client.wrap.material.NestedInputProps
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -25,7 +26,9 @@ external interface TextAttributeEditorProps: Props {
     var type: TextAttributeEditor.Type?
 
     var labelOverride: String?
-    var InputProps: Props?
+
+    @Suppress("PropertyName")
+    var InputProps: NestedInputProps?
 
     var disabled: Boolean
     var invalid: Boolean

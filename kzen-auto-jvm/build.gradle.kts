@@ -51,23 +51,7 @@ dependencies {
     implementation("com.sangupta:bloomfilter:$bloomFilterVersion")
     implementation("commons-io:commons-io:$commonsIoVersion")
     implementation("com.linkedin.migz:migz:$migzVersion")
-//    implementation("ch.randelshofer:fastdoubleparser:$fastDoubleParserVersion")
-
-//    <dependency>
-//    <groupId>org.jetbrains.kotlin</groupId>
-//    <artifactId>kotlin-scripting-jvm</artifactId>
-//    <version>${kotlin.version}</version>
-//    </dependency>
-//    <dependency>
-//    <groupId>org.jetbrains.kotlin</groupId>
-//    <artifactId>kotlin-scripting-jvm-host</artifactId>
-//    <version>${kotlin.version}</version>
-//    </dependency>
-//    <dependency>
-//    <groupId>org.jetbrains.kotlin</groupId>
-//    <artifactId>kotlin-scripting-compiler-embeddable</artifactId>
-//    <version>${kotlin.version}</version>
-//    </dependency>
+    implementation("javax.annotation:javax.annotation-api:$annotationsApiVersion")
 
     testImplementation(kotlin("test"))
 }

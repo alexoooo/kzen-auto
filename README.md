@@ -12,9 +12,9 @@ Dev mode (one process for client refresh, and one server process from IDE):
     - Everything expect `*.js` files is served by port 8081
 
 Dist:
-> ./gradlew build
+> ./gradlew shadowJar
 >
-> java -jar kzen-auto-jvm/build/libs/kzen-auto-jvm-*-boot.jar
+> java -jar kzen-auto-jvm/build/libs/kzen-auto-*-all.jar
 
 Web:
 > http://localhost:8080/

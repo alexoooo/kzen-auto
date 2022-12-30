@@ -34,7 +34,8 @@ dependencies {
 //    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$kotlinReactDomVersion")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom-legacy:$kotlinReactDomVersion")
 
-    implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:$kotlinStyledVersion")
+//    implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:$kotlinStyledVersion")
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-styled-next:$kotlinStyledVersion")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-extensions:$kotlinExtensionsVersion")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-css-js:$kotlinCssVersion")
 

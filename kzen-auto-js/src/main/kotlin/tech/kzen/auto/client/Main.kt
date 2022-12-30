@@ -1,8 +1,7 @@
 package tech.kzen.auto.client
 
-import kotlinx.browser.document
-import kotlinx.browser.window
-import kotlinx.dom.clear
+import browser.document
+import browser.window
 import react.dom.render
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
@@ -40,8 +39,16 @@ fun main() {
 
             val rootElement = document.getElementById("root")
                     ?: throw IllegalStateException("'root' element not found")
+            document.createElement("div")
 
-            rootElement.clear()
+            //rootElement.clear()
+            while (rootElement.hasChildNodes()) {
+                rootElement.removeChild(rootElement.firstChild!!)
+            }
+
+            // TODO: migrate to new version
+//            val root = createRoot(rootElement)
+//            root.render(<App tab="home" />);
 
             render(rootElement) {
                 rootInstance.child(this) {}

@@ -10,6 +10,7 @@ import tech.kzen.auto.common.util.data.FilePathJvm.toPath
 import tech.kzen.auto.plugin.definition.ReportDefiner
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.report.service.ReportUtils.asCommon
+import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.yaml.YamlList
@@ -71,7 +72,7 @@ class PluginDocument(
         return URLClassLoader(
             "plugin-${selfLocation.documentPath.name}",
             arrayOf(jarRoot.toURL()),
-            ClassLoader.getSystemClassLoader())
+            ClassLoaderUtils.dynamicParentClassLoader())
     }
 
 

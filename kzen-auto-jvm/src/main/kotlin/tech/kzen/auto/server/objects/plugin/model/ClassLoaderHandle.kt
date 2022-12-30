@@ -10,8 +10,6 @@ class ClassLoaderHandle(
     AutoCloseable
 {
     companion object {
-//        val globalHost = ofHost(ClassLoader.getSystemClassLoader())
-
         fun ofHost(parent: ClassLoader): ClassLoaderHandle {
             val classLoader = object : ClassLoader(parent) {}
             return ClassLoaderHandle(classLoader, listOf())

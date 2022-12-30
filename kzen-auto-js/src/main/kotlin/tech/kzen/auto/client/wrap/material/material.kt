@@ -185,6 +185,7 @@ external class MaterialTextField: Component<TextFieldProps, react.State> {
     override fun render(): ReactElement<TextFieldProps>?
 }
 
+@Suppress("PropertyName")
 external interface TextFieldProps: react.Props {
     var style: Json
 
@@ -196,8 +197,7 @@ external interface TextFieldProps: react.Props {
     var autoFocus: Boolean
     var inputRef: (e: HTMLInputElement?) -> Unit
 
-//    var InputProps: NestedInputProps
-    var InputProps: react.Props
+    var InputProps: NestedInputProps
     var InputLabelProps: NestedInputLabelProps
 
     var id: String
@@ -216,8 +216,8 @@ external interface TextFieldProps: react.Props {
 }
 
 
-//external class NestedInputProps : Component<MaterialInputLabelProps, react.State> {
-//    override fun render(): ReactElement?
+//external interface NestedInputProps : react.Props {
+//    var startAdornment: react.ReactNode?
 //}
 
 

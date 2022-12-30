@@ -85,7 +85,7 @@ class ClientRestApi(
 
 
     suspend fun readNotation(location: DocumentPath): String {
-        @Suppress("UNUSED_VARIABLE")
+        @Suppress("UnnecessaryVariable")
         val response = getOrPut(CommonRestApi.notationPrefix + location.asRelativeFile())
 
         return response
@@ -93,7 +93,6 @@ class ClientRestApi(
 
 
     suspend fun readResource(location: ResourceLocation): ImmutableByteArray {
-        @Suppress("UNUSED_VARIABLE")
         val response = getBytes(
                 CommonRestApi.resource,
                 CommonRestApi.paramDocumentPath to location.documentPath.asString(),

@@ -45,6 +45,7 @@ import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.auto.server.service.v1.model.*
+import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.auto.server.util.DisruptorUtils
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import java.nio.file.Files
@@ -186,7 +187,7 @@ class ReportExecution(
     private fun <T> datasetDefinition(datasetInfo: DatasetInfo): DatasetDefinition<T> {
         val pluginCoordinates = datasetInfo.items.map { it.processorPluginCoordinate }.toSet()
         val classLoaderHandle = ServerContext.definitionRepository
-            .classLoaderHandle(pluginCoordinates, ClassLoader.getSystemClassLoader())
+            .classLoaderHandle(pluginCoordinates, ClassLoaderUtils.dynamicParentClassLoader())
 
         val cache = mutableMapOf<PluginCoordinate, ReportDefinition<T>>()
         val builder = mutableListOf<FlatDataContentDefinition<T>>()

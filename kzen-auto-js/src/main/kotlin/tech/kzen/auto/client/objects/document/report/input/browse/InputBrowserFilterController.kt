@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.objects.document.report.input.browse
 
+import js.core.jso
 import kotlinx.css.em
 import kotlinx.css.width
-import kotlinx.js.jso
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
 import react.*
@@ -89,8 +89,7 @@ class InputBrowserFilterController(
                 size = "small"
 
                 InputProps = jso {
-                    @Suppress("UNUSED_VARIABLE")
-                    var startAdornment = buildElement {
+                    startAdornment = buildElement {
                         child(MaterialInputAdornment::class) {
                             attrs {
                                 position = "start"

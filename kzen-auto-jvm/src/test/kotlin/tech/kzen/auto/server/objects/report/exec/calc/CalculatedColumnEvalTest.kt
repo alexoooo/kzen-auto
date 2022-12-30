@@ -5,6 +5,7 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
+import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.platform.ClassNames
 import java.nio.file.Path
@@ -418,7 +419,7 @@ class CalculatedColumnEvalTest {
             formula,
             HeaderListing(columnNames),
             ClassNames.kotlinAny,
-            ClassLoader.getSystemClassLoader())
+            ClassLoaderUtils.dynamicParentClassLoader())
 
         val value = calculatedColumn.evaluate(
             Unit,

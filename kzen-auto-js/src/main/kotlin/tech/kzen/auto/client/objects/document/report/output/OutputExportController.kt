@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.output
 
+import js.core.jso
 import kotlinx.css.*
-import kotlinx.js.jso
 import react.RBuilder
 import react.RPureComponent
 import react.State
@@ -125,8 +125,7 @@ class OutputExportController(
                     labelOverride = "Export Path Pattern"
 
                     InputProps = jso {
-                        @Suppress("UNUSED_VARIABLE")
-                        var startAdornment = buildElement {
+                        startAdornment = buildElement {
                             child(MaterialInputAdornment::class) {
                                 attrs {
                                     position = "start"

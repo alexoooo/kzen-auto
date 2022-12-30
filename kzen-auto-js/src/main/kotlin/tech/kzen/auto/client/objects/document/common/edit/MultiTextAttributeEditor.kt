@@ -7,6 +7,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.material.MaterialTextField
+import tech.kzen.auto.client.wrap.material.NestedInputProps
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
@@ -17,6 +18,7 @@ import kotlin.js.Json
 
 
 //---------------------------------------------------------------------------------------------------------------------
+@Suppress("PropertyName")
 external interface MultiTextAttributeEditorProps: Props {
     var objectLocation: ObjectLocation
     var attributePath: AttributePath
@@ -25,7 +27,7 @@ external interface MultiTextAttributeEditorProps: Props {
     var unique: Boolean
 
     var labelOverride: String?
-    var InputProps: Props?
+    var InputProps: NestedInputProps?
     var style: Json?
     var rows: Int?
     var maxRows: Int?
