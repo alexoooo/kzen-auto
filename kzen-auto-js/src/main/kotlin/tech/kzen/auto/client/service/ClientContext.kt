@@ -2,6 +2,7 @@ package tech.kzen.auto.client.service
 
 import kotlinx.browser.window
 import tech.kzen.auto.client.codegen.KzenAutoJsModule
+//import tech.kzen.auto.client.codegen.KzenAutoJsModule
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
@@ -118,7 +119,7 @@ object ClientContext {
         // NB: pre-load, otherwise can have race condition
         seededNotationMedia.scan()
 
-        sessionGlobal.postConstruct(
-                navigationGlobal, executionRepository, directGraphStore, restClient)
+//        sessionGlobal.postConstruct(
+//                navigationGlobal, executionRepository, directGraphStore, restClient)
     }
 }

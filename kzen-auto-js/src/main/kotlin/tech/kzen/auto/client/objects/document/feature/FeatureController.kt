@@ -1,26 +1,29 @@
 package tech.kzen.auto.client.objects.document.feature
 
-import kotlinx.css.*
+import csstype.*
+import emotion.react.css
+import js.core.jso
+import mui.material.Button
+import mui.material.ButtonVariant
+import mui.material.Size
 import react.*
-import react.dom.attrs
-import react.dom.br
-import react.dom.hr
-import react.dom.img
-import styled.css
-import styled.styledDiv
-import styled.styledSpan
+import react.dom.html.ReactHTML.br
+import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.hr
+import react.dom.html.ReactHTML.img
+import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.cropper.CropperDetail
 import tech.kzen.auto.client.wrap.cropper.CropperWrapper
 import tech.kzen.auto.client.wrap.material.CameraAltIcon
 import tech.kzen.auto.client.wrap.material.DeleteIcon
-import tech.kzen.auto.client.wrap.material.MaterialButton
 import tech.kzen.auto.client.wrap.material.RefreshIcon
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
@@ -76,16 +79,18 @@ class FeatureController(
 
         override fun header(): ReactWrapper<react.Props> {
             return object: ReactWrapper<react.Props> {
-                override fun child(input: RBuilder, handler: RHandler<react.Props>) {}
+//                override fun child(builder: ChildrenBuilder, block: Props.() -> Unit) {}
+                override fun ChildrenBuilder.child(block: Props.() -> Unit) {}
             }
         }
 
 
         override fun body(): ReactWrapper<react.Props> {
             return object: ReactWrapper<react.Props> {
-                override fun child(input: RBuilder, handler: RHandler<react.Props>) {
-                    input.child(FeatureController::class) {
-                        handler()
+//                override fun child(builder: ChildrenBuilder, block: Props.() -> Unit) {
+                override fun ChildrenBuilder.child(block: Props.() -> Unit) {
+                    FeatureController::class.react {
+                        block()
                     }
                 }
             }
@@ -333,7 +338,7 @@ class FeatureController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun RBuilder.render() {
+    override fun ChildrenBuilder.render() {
         val documentPath = state.documentPath
             ?: return
 
@@ -343,9 +348,9 @@ class FeatureController(
         val documentNotation = graphStructure.graphNotation.documents[documentPath]!!
         val resources = documentNotation.resources!!
 
-        styledDiv {
+        div {
             css {
-                padding(1.em)
+                padding = 1.em
             }
 
             for (resource in resources.digests) {
@@ -353,12 +358,10 @@ class FeatureController(
                 val resourceUri = ClientContext.restClient.resourceUri(resourceLocation)
 
                 img {
-                    attrs {
-                        src = resourceUri
-                    }
+                    src = resourceUri
                 }
 
-                styledSpan {
+                span {
                     css {
                         marginLeft = 1.em
                     }
@@ -370,9 +373,9 @@ class FeatureController(
         }
 
 
-        styledDiv {
+        div {
             css {
-                padding(1.em, 1.em, 0.px, 1.em)
+                padding = Padding(1.em, 1.em, 0.px, 1.em)
             }
 
             val capturedDataUrl = state.capturedDataUrl
@@ -391,7 +394,7 @@ class FeatureController(
                 }
 
                 screenshotDataUrl != null -> {
-                    styledDiv {
+                    div {
                         css {
                             marginBottom = 0.5.em
                         }
@@ -408,34 +411,27 @@ class FeatureController(
     }
 
 
-    private fun RBuilder.renderDataUrl(dataUrl: String) {
+    private fun ChildrenBuilder.renderDataUrl(dataUrl: String) {
         img {
-            attrs {
-                src = dataUrl
-            }
+            src = dataUrl
         }
     }
 
 
-    private fun RBuilder.renderCapture() {
-        styledDiv {
-            child(MaterialButton::class) {
-                attrs {
-                    variant = "outlined"
-                    size = "small"
-
-                    onClick = ::onCapture
-
-                    style = reactStyle {
-                        backgroundColor = Color.white
-                    }
+    private fun ChildrenBuilder.renderCapture() {
+        div {
+            Button {
+                css {
+                    backgroundColor = NamedColor.white
                 }
+                variant = ButtonVariant.outlined
+                size = Size.small
 
-                child(CameraAltIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            marginRight = 0.25.em
-                        }
+                onClick = { onCapture() }
+
+                CameraAltIcon::class.react {
+                    style = jso {
+                        marginRight = 0.25.em
                     }
                 }
                 +"Capture"
@@ -444,29 +440,25 @@ class FeatureController(
     }
 
 
-    private fun RBuilder.renderSave() {
-        styledDiv {
+    private fun ChildrenBuilder.renderSave() {
+        div {
             css {
                 display = Display.inlineBlock
             }
 
-            child(MaterialButton::class) {
-                attrs {
-                    variant = "outlined"
-                    size = "small"
-
-                    onClick = ::onSave
-
-                    style = reactStyle {
-                        backgroundColor = Color.white
-                    }
+            Button {
+                css {
+                    backgroundColor = NamedColor.white
                 }
 
-                child(CameraAltIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            marginRight = 0.25.em
-                        }
+                variant = ButtonVariant.outlined
+                size = Size.small
+
+                onClick = { onSave() }
+
+                CameraAltIcon::class.react {
+                    style = jso {
+                        marginRight = 0.25.em
                     }
                 }
                 +"Save"
@@ -475,29 +467,24 @@ class FeatureController(
     }
 
 
-    private fun RBuilder.renderRefresh() {
-        styledDiv {
+    private fun ChildrenBuilder.renderRefresh() {
+        div {
             css {
                 display = Display.inlineBlock
             }
 
-            child(MaterialButton::class) {
-                attrs {
-                    variant = "outlined"
-                    size = "small"
-
-                    onClick = ::onRefresh
-
-                    style = reactStyle {
-                        backgroundColor = Color.white
-                    }
+            Button {
+                css {
+                    backgroundColor = NamedColor.white
                 }
+                variant = ButtonVariant.outlined
+                size = Size.small
 
-                child(RefreshIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            marginRight = 0.25.em
-                        }
+                onClick = { onRefresh() }
+
+                RefreshIcon::class.react {
+                    style = jso {
+                        marginRight = 0.25.em
                     }
                 }
                 +"Refresh Screenshot"
@@ -506,35 +493,30 @@ class FeatureController(
     }
 
 
-    private fun RBuilder.renderDelete(
+    private fun ChildrenBuilder.renderDelete(
             resourcePath: ResourcePath
     ) {
-        styledDiv {
+        div {
             css {
                 display = Display.inlineBlock
             }
 
-            child(MaterialButton::class) {
-                attrs {
-                    variant = "outlined"
-                    size = "small"
+            Button {
+                css {
+                    backgroundColor = NamedColor.white
+                }
+                variant = ButtonVariant.outlined
+                size = Size.small
 
-                    onClick = {
-                        onRemove(resourcePath)
-                    }
-
-                    style = reactStyle {
-                        backgroundColor = Color.white
-                    }
-
-                    title = "Delete"
+                onClick = {
+                    onRemove(resourcePath)
                 }
 
-                child(DeleteIcon::class) {
-                    attrs {
-                        style = reactStyle {
-                            marginRight = 0.25.em
-                        }
+                title = "Delete"
+
+                DeleteIcon::class.react {
+                    style = jso {
+                        marginRight = 0.25.em
                     }
                 }
             }
@@ -542,10 +524,10 @@ class FeatureController(
     }
 
 
-    private fun RBuilder.renderCropper(
+    private fun ChildrenBuilder.renderCropper(
             screenshotDataUrl: String
     ) {
-        styledDiv {
+        div {
             css {
                 width = 100.pct
                 height = 100.vh.minus(10.em)
@@ -553,21 +535,16 @@ class FeatureController(
                 maxHeight = 1024.px
             }
 
-            child(CropperWrapper::class) {
-                attrs {
-                    src = screenshotDataUrl
+            CropperWrapper::class.react {
+                src = screenshotDataUrl
 
-                    crop = {event ->
-                        @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
-                        val detail = event.detail as CropperDetail
-                        onCrop(detail)
-                    }
+                crop = {event ->
+                    @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
+                    val detail = event.detail as CropperDetail
+                    onCrop(detail)
                 }
 
                 ref = cropperWrapper
-//                ref {
-//                    cropperWrapper = it as? CropperWrapper
-//                }
             }
         }
     }

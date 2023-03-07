@@ -1,5 +1,6 @@
 # kzen-auto
-Desktop automation
+
+https://en.wikipedia.org/wiki/Robotic_process_automation
 
 Dev mode (one process for client refresh, and one server process from IDE):
 
@@ -18,4 +19,13 @@ Dist:
 
 Web:
 > http://localhost:8080/
+
+
+
+
+To auto-reload frontend:
+1) Run `tech.kzen.auto.server.dev.FrontendDevelopment` from IDE
+2) Run `./gradlew -t :kzen-auto-js:build -x test -PjsWatch` from CLI
+
+
 

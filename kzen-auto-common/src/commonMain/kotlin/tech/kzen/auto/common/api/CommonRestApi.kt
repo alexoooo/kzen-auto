@@ -2,11 +2,12 @@ package tech.kzen.auto.common.api
 
 
 object CommonRestApi {
+    // read document object model notation
     const val scan = "/scan"
     const val notationPrefix = "/notation/"
     const val resource = "/resource"
 
-
+    // modify document object model
     private const val commandPrefix = "/command/"
 
     private const val commandDocumentPrefix = "${commandPrefix}document/"
@@ -18,7 +19,6 @@ object CommonRestApi {
     const val commandObjectRemove = "${commandObjectPrefix}remove"
     const val commandObjectShift = "${commandObjectPrefix}shift"
     const val commandObjectRename = "${commandObjectPrefix}rename"
-//    const val commandObjectRelocate = "${commandObjectPrefix}relocate"
     const val commandObjectInsertInList = "${commandObjectPrefix}insert-in-list"
     const val commandObjectRemoveIn = "${commandObjectPrefix}remove-in"
 
@@ -72,33 +72,38 @@ object CommonRestApi {
 
 
     private const val actionPrefix = "/action/"
-    const val actionList = "${actionPrefix}list"
-    const val actionModel = "${actionPrefix}model"
-    const val actionStart = "${actionPrefix}start"
-    const val actionReturn = "${actionPrefix}return"
-    const val actionReset = "${actionPrefix}reset"
-    const val actionPerform = "${actionPrefix}perform"
+
+    // synchronous request/response
     const val actionDetached = "${actionPrefix}detached"
     const val actionDetachedDownload = "${actionPrefix}download"
-    const val fieldDigest = "digest"
 
-
-    private const val execPrefix = "/exec/"
-    const val execModel = "${execPrefix}model"
-    const val execReset = "${execPrefix}reset"
-    const val execPerform = "${execPrefix}perform"
-
+    // asynchronous background job
     private const val taskPrefix = "/task/"
     const val taskSubmit = "${taskPrefix}submit"
     const val taskCancel = "${taskPrefix}cancel"
-//    const val taskRequest = "${taskPrefix}request"
     const val taskLookup = "${taskPrefix}lookup"
     const val taskQuery = "${taskPrefix}query"
 
+    // managed execution graph
     private const val logicPrefix = "/logic/"
     const val logicStatus = "${logicPrefix}status"
     const val logicStart = "${logicPrefix}start"
     const val logicRequest = "${logicPrefix}request"
     const val logicCancel = "${logicPrefix}cancel"
     const val logicRun = "${logicPrefix}run"
+
+    // script (ad hoc)
+    const val actionList = "${actionPrefix}list"
+    const val actionModel = "${actionPrefix}model"
+    const val actionStart = "${actionPrefix}start"
+    const val actionReturn = "${actionPrefix}return"
+    const val actionReset = "${actionPrefix}reset"
+    const val actionPerform = "${actionPrefix}perform"
+    const val fieldDigest = "digest"
+
+    // dataflow (ad hoc)
+    private const val execPrefix = "/exec/"
+    const val execModel = "${execPrefix}model"
+    const val execReset = "${execPrefix}reset"
+    const val execPerform = "${execPrefix}perform"
 }

@@ -1,13 +1,13 @@
 package tech.kzen.auto.client.objects.document.sequence.step
 
-import kotlinx.css.em
-import react.RBuilder
-import react.RHandler
-import react.RPureComponent
+import csstype.em
+import react.ChildrenBuilder
 import react.State
+import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayWrapper
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.reflect.Reflect
@@ -42,15 +42,22 @@ class SequenceStepController(
             handle.wrapper = this
         }
 
-        override fun child(input: RBuilder, handler: RHandler<SequenceStepControllerProps>) {
-            input.child(SequenceStepController::class) {
-                attrs {
-                    this.stepDisplays = this@Wrapper.stepDisplays
-                }
-
-                handler()
+        override fun ChildrenBuilder.child(block: SequenceStepControllerProps.() -> Unit) {
+            SequenceStepController::class.react {
+                this.stepDisplays = this@Wrapper.stepDisplays
+                block()
             }
         }
+
+//        override fun child(input: RBuilder, handler: RHandler<SequenceStepControllerProps>) {
+//            input.child(SequenceStepController::class) {
+//                attrs {
+//                    this.stepDisplays = this@Wrapper.stepDisplays
+//                }
+//
+//                handler()
+//            }
+//        }
     }
 
 
@@ -64,7 +71,7 @@ class SequenceStepController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun RBuilder.render() {
+    override fun ChildrenBuilder.render() {
 //        +">> ${props.objectLocation.asString()}"
 
         val displayWrapperName = ObjectName(
@@ -75,9 +82,7 @@ class SequenceStepController(
                 ?: throw IllegalStateException("Step display not found: $displayWrapperName")
 
         displayWrapper.child(this) {
-            attrs {
-                common = props.common
-            }
+            common = props.common
         }
     }
 }

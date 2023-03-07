@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.wrap.cropper
 
-import org.w3c.dom.HTMLCanvasElement
-import org.w3c.dom.HTMLImageElement
+import web.html.HTMLCanvasElement
+import web.html.HTMLImageElement
 import kotlin.js.Json
 
 

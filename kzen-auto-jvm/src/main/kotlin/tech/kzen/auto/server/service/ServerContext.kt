@@ -1,6 +1,5 @@
 package tech.kzen.auto.server.service
 
-//import tech.kzen.auto.server.service.compile.EmbeddedKotlinCompiler
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveDataflowRepository
@@ -42,6 +41,7 @@ import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.notation.NotationReducer
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.common.service.store.DirectGraphStore
+import tech.kzen.lib.server.notation.ClasspathNotationMedia
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.GradleLocator
 
@@ -53,10 +53,12 @@ object ServerContext {
     private val fileLocator = GradleLocator()
     private val fileMedia = FileNotationMedia(fileLocator)
 
-    private val bootMedia = BootNotationMedia()
+//    private val bootMedia = BootNotationMedia()
 
-    val notationMedia: NotationMedia = MultiNotationMedia(listOf<NotationMedia>(
-            fileMedia, bootMedia))
+    val notationMedia: NotationMedia = MultiNotationMedia(listOf(
+//            fileMedia, bootMedia))
+        fileMedia,
+        ClasspathNotationMedia()))
 
     val yamlParser = YamlNotationParser()
 

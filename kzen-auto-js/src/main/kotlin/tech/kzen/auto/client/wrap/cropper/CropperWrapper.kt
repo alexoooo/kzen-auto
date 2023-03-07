@@ -1,32 +1,29 @@
 package tech.kzen.auto.client.wrap.cropper
 
-import kotlinx.css.*
-import org.w3c.dom.CustomEvent
-import org.w3c.dom.HTMLCanvasElement
-import org.w3c.dom.HTMLImageElement
-import react.RBuilder
-import react.RPureComponent
-import react.RefObject
-import react.createRef
-import react.dom.attrs
-import styled.css
-import styled.styledDiv
-import styled.styledImg
+import csstype.Position
+import csstype.number
+import csstype.pct
+import emotion.react.css
+import react.*
+import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.img
+import tech.kzen.auto.client.wrap.RPureComponent
+import web.events.CustomEvent
+import web.html.HTMLCanvasElement
+import web.html.HTMLImageElement
 import kotlin.js.json
 
 
 //-----------------------------------------------------------------------------------------------------------------
-external interface CropperWrapperProps: react.Props {
+external interface CropperWrapperProps: PropsWithRef<CropperWrapper> {
     var src: String?
-    var crop: (event: CustomEvent) -> Unit
+    var crop: (event: CustomEvent<*>) -> Unit
 }
 
 
 class CropperWrapper:
-        RPureComponent<CropperWrapperProps, react.State>()
+        RPureComponent<CropperWrapperProps, State>()
 {
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private var imageElement: RefObject<HTMLImageElement> = createRef()
     private var cropper: Cropper? = null
@@ -67,29 +64,24 @@ class CropperWrapper:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun RBuilder.render() {
-        styledDiv {
+    override fun ChildrenBuilder.render() {
+        div {
             css {
                 position = Position.relative
                 width = 100.pct
                 height = 100.pct
             }
 
-            styledImg {
+            img {
                 css {
-                    opacity = 0
+                    opacity = number(0.0)
                     maxWidth = 100.pct
                     maxHeight = 100.pct
                 }
 
-                attrs {
-                    src = props.src ?: "Screenshot"
-                }
+                src = props.src ?: "Screenshot"
 
                 ref = imageElement
-//                ref {
-//                    imageElement = it as? HTMLImageElement
-//                }
             }
         }
     }

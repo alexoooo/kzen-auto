@@ -4,7 +4,6 @@ package tech.kzen.auto.client.wrap.material
 
 import react.Component
 import react.ReactElement
-import kotlin.js.Json
 
 
 // see: https://material-ui.com/style/icons/
@@ -16,7 +15,9 @@ import kotlin.js.Json
 external interface IconProps: react.Props {
     var title: String
 //    var color: String
-    var style: Json
+
+//    var style: Json
+    var style: react.CSSProperties?
 
     var onClick: () -> Unit
 }

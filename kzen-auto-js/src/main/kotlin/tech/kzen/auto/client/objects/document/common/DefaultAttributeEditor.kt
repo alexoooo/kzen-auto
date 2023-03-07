@@ -2,11 +2,12 @@ package tech.kzen.auto.client.objects.document.common
 
 
 import react.*
-import react.dom.br
-import react.dom.div
+import react.dom.html.ReactHTML.br
+import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -48,13 +49,13 @@ class DefaultAttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-            objectLocation: ObjectLocation
+        objectLocation: ObjectLocation
     ):
-            AttributeEditorWrapper(objectLocation)
+        AttributeEditorWrapper(objectLocation)
     {
-        override fun child(input: RBuilder, handler: RHandler<AttributeEditorProps>)/*: ReactElement*/ {
-            input.child(DefaultAttributeEditor::class) {
-                handler()
+        override fun ChildrenBuilder.child(block: AttributeEditorProps.() -> Unit) {
+            DefaultAttributeEditor::class.react {
+                block()
             }
         }
     }
@@ -103,7 +104,7 @@ class DefaultAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun RBuilder.render() {
+    override fun ChildrenBuilder.render() {
         val graphStructure = props
             .clientState
             .graphStructure()
@@ -149,22 +150,20 @@ class DefaultAttributeEditor(
     }
 
 
-    private fun RBuilder.renderValueEditor(type: TypeMetadata) {
-        child(AttributePathValueEditor::class) {
-            attrs {
-                labelOverride = formattedLabel()
-                disabled = props.disabled
-                invalid = props.invalid
+    private fun ChildrenBuilder.renderValueEditor(type: TypeMetadata) {
+        AttributePathValueEditor::class.react {
+            labelOverride = formattedLabel()
+            disabled = props.disabled
+            invalid = props.invalid
 
-                clientState = props.clientState
-                objectLocation = props.objectLocation
-                attributePath = AttributePath.ofName(props.attributeName)
+            clientState = props.clientState
+            objectLocation = props.objectLocation
+            attributePath = AttributePath.ofName(props.attributeName)
 
-                valueType = type
+            valueType = type
 
-                onChange = {
-                    props.onChange?.invoke(it)
-                }
+            onChange = {
+                props.onChange?.invoke(it)
             }
 
             ref = attributePathValueEditor

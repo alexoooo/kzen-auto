@@ -1,22 +1,23 @@
 package tech.kzen.auto.client.objects.document.common
 
-import kotlinx.css.Color
-import kotlinx.css.color
-import kotlinx.css.em
-import kotlinx.css.fontSize
-import org.w3c.dom.HTMLInputElement
-import org.w3c.dom.HTMLTextAreaElement
-import react.*
+import csstype.NamedColor
+import csstype.em
+import js.core.jso
+import mui.material.*
+import react.ChildrenBuilder
+import react.PropsWithRef
+import react.ReactNode
+import react.State
+import react.dom.events.ChangeEvent
+import react.dom.onChange
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.lodash
-import tech.kzen.auto.client.wrap.material.MaterialInputLabel
-import tech.kzen.auto.client.wrap.material.MaterialSwitch
-import tech.kzen.auto.client.wrap.material.MaterialTextField
-import tech.kzen.auto.client.wrap.reactStyle
+import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -26,10 +27,12 @@ import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.collect.toPersistentList
+import web.html.HTMLInputElement
+import web.html.HTMLTextAreaElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface AttributePathValueEditorProps: Props {
+external interface AttributePathValueEditorProps: PropsWithRef<AttributePathValueEditor> {
     var labelOverride: String?
     var multilineOverride: Boolean?
     var disabled: Boolean
@@ -245,7 +248,7 @@ class AttributePathValueEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun RBuilder.render() {
+    override fun ChildrenBuilder.render() {
 //        +"## attributePath ${props.attributePath} - state.value ${state.value}"
 
         val type = props.valueType
@@ -278,107 +281,189 @@ class AttributePathValueEditor(
     }
 
 
-    private fun RBuilder.renderString(stateValue: String) {
+    private fun ChildrenBuilder.renderString(stateValue: String) {
         val multilineOverride = props.multilineOverride ?: false
-        child(MaterialTextField::class) {
-            attrs {
-                fullWidth = true
-                multiline = multilineOverride
-                size = "small"
 
-                label = formattedLabel()
-                value = stateValue
+        TextField {
+            fullWidth = true
+            multiline = multilineOverride
+            size = Size.small
 
-                // https://stackoverflow.com/questions/54052525/how-to-change-material-ui-textfield-bottom-and-label-color-on-error-and-on-focus
+            label = ReactNode(formattedLabel())
+            value = stateValue
+
+            // https://stackoverflow.com/questions/54052525/how-to-change-material-ui-textfield-bottom-and-label-color-on-error-and-on-focus
 //                InputLabelProps = NestedInputLabelProps(reactStyle {
 //                    color = Color("rgb(66, 66, 66)")
 //                })
 
-                onChange = {
-                    val value =
-                        if (multilineOverride) {
-                            (it.target as HTMLTextAreaElement).value
-                        }
-                        else {
-                            (it.target as HTMLInputElement).value
-                        }
+            onChange = {
+                val value =
+                    if (multilineOverride) {
+                        (it.target as HTMLTextAreaElement).value
+                    }
+                    else {
+                        (it.target as HTMLInputElement).value
+                    }
 
-                    onValueChange(value)
-                }
-
-                disabled = props.disabled
-                error = props.invalid
+                onValueChange(value)
             }
+
+            disabled = props.disabled
+            error = props.invalid
         }
+
+//        child(MaterialTextField::class.react) {
+//            fullWidth = true
+//            multiline = multilineOverride
+//            size = "small"
+//
+//            label = formattedLabel()
+//            value = stateValue
+//
+//            // https://stackoverflow.com/questions/54052525/how-to-change-material-ui-textfield-bottom-and-label-color-on-error-and-on-focus
+////                InputLabelProps = NestedInputLabelProps(reactStyle {
+////                    color = Color("rgb(66, 66, 66)")
+////                })
+//
+//            onChange = {
+//                val value =
+//                    if (multilineOverride) {
+//                        (it.target as HTMLTextAreaElement).value
+//                    }
+//                    else {
+//                        (it.target as HTMLInputElement).value
+//                    }
+//
+//                onValueChange(value)
+//            }
+//
+//            disabled = props.disabled
+//            error = props.invalid
+//        }
     }
 
 
-    private fun RBuilder.renderBoolean(stateValue: Boolean) {
+    private fun ChildrenBuilder.renderBoolean(stateValue: Boolean) {
         val inputId = "material-react-switch-id"
 
-        child(MaterialInputLabel::class) {
-            attrs {
-                htmlFor = inputId
+        InputLabel {
+            htmlFor = inputId
 
-                style = reactStyle {
-                    fontSize = 0.8.em
-                }
+            style = jso {
+                fontSize = 0.8.em
             }
 
             +formattedLabel()
         }
+//        child(MaterialInputLabel::class) {
+//            attrs {
+//                htmlFor = inputId
+//
+//                style = reactStyle {
+//                    fontSize = 0.8.em
+//                }
+//            }
+//
+//            +formattedLabel()
+//        }
 
-        child(MaterialSwitch::class) {
-            attrs {
-                id = inputId
+        Switch {
+            id = inputId
 
-                checked = stateValue
+            checked = stateValue
 
-                onChange = {
-                    val target = it.target as HTMLInputElement
-                    onValueChange(target.checked.toString())
-                }
+            onChange = { event: ChangeEvent<HTMLInputElement>, _: Boolean ->
+                val target = event.target
+                onValueChange(target.checked.toString())
+            }
 
-                color = "default"
+            color = SwitchColor.default
 
-                if (stateValue) {
-                    style = reactStyle {
+            if (stateValue) {
+                style = jso {
 //                        this.color = Color("#8CBAE8")
-                        this.color = Color.black
-                    }
+                    this.color = NamedColor.black
                 }
             }
         }
+
+//        child(MaterialSwitch::class) {
+//            attrs {
+//                id = inputId
+//
+//                checked = stateValue
+//
+//                onChange = {
+//                    val target = it.target as HTMLInputElement
+//                    onValueChange(target.checked.toString())
+//                }
+//
+//                color = "default"
+//
+//                if (stateValue) {
+//                    style = reactStyle {
+////                        this.color = Color("#8CBAE8")
+//                        this.color = Color.black
+//                    }
+//                }
+//            }
+//        }
     }
 
 
-    private fun RBuilder.renderListOfPrimitive(stateValues: List<String>) {
-        child(MaterialTextField::class) {
-            attrs {
-                fullWidth = true
-                multiline = true
-                size = "small"
+    private fun ChildrenBuilder.renderListOfPrimitive(stateValues: List<String>) {
+        TextField {
+            fullWidth = true
+            multiline = true
+            size = Size.small
 
-                label = formattedLabel() + " (one per line)"
-                value = stateValues.joinToString("\n")
+            label = ReactNode(formattedLabel() + " (one per line)")
+            value = stateValues.joinToString("\n")
 
-                onChange = {
-                    val target = it.target as HTMLTextAreaElement
-                    val lines = target.value.split(Regex("\\n+"))
-                    val values =
-                        if (lines.size == 1 && lines[0].isEmpty()) {
-                            listOf()
-                        }
-                        else {
-                            lines
-                        }
+            onChange = {
+                val target = it.target as HTMLTextAreaElement
+                val lines = target.value.split(Regex("\\n+"))
+                val values =
+                    if (lines.size == 1 && lines[0].isEmpty()) {
+                        listOf()
+                    }
+                    else {
+                        lines
+                    }
 
-                    onValuesChange(values)
-                }
-
-                disabled = props.disabled
-                error = props.invalid
+                onValuesChange(values)
             }
+
+            disabled = props.disabled
+            error = props.invalid
         }
+//        child(MaterialTextField::class) {
+//            attrs {
+//                fullWidth = true
+//                multiline = true
+//                size = "small"
+//
+//                label = formattedLabel() + " (one per line)"
+//                value = stateValues.joinToString("\n")
+//
+//                onChange = {
+//                    val target = it.target as HTMLTextAreaElement
+//                    val lines = target.value.split(Regex("\\n+"))
+//                    val values =
+//                        if (lines.size == 1 && lines[0].isEmpty()) {
+//                            listOf()
+//                        }
+//                        else {
+//                            lines
+//                        }
+//
+//                    onValuesChange(values)
+//                }
+//
+//                disabled = props.disabled
+//                error = props.invalid
+//            }
+//        }
     }
 }

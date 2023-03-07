@@ -1,17 +1,18 @@
 
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
+//import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 
 plugins {
     kotlin("jvm")
-    id("org.springframework.boot") version springBootVersion
-    id("io.spring.dependency-management") version dependencyManagementVersion
+    application
 
-    id("com.github.johnrengelman.shadow") version shadowVersion
+//    id("org.springframework.boot") version springBootVersion
+//    id("io.spring.dependency-management") version dependencyManagementVersion
 
-    kotlin("plugin.spring") version kotlinVersion
+//    id("com.github.johnrengelman.shadow") version shadowVersion
+
+//    kotlin("plugin.spring") version kotlinVersion
     `maven-publish`
 }
 
@@ -30,7 +31,7 @@ dependencies {
 //    implementation("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
     api("tech.kzen.lib:kzen-lib-jvm:$kzenLibVersion")
 
-    api("org.springframework.boot:spring-boot-starter-webflux")
+//    api("org.springframework.boot:spring-boot-starter-webflux")
 
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
 
@@ -40,7 +41,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:$kotlinVersion")
 
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
-    implementation("org.jetbrains.kotlin-wrappers:kotlin-css-jvm:$kotlinCssVersion")
+//    implementation("org.jetbrains.kotlin-wrappers:kotlin-css-jvm:$kotlinCssVersion")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
     api("org.seleniumhq.selenium:selenium-java:$seleniumVersion")
     implementation("org.apache.commons:commons-compress:$commonsCompressVersion")
@@ -53,17 +54,30 @@ dependencies {
     implementation("com.linkedin.migz:migz:$migzVersion")
     implementation("javax.annotation:javax.annotation-api:$annotationsApiVersion")
 
+    implementation("io.ktor:ktor-server-netty:$ktorVersion")
+    implementation("io.ktor:ktor-server-html-builder-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
+//    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-jackson:$ktorVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:$kotlinxHtmlVersion")
+
     testImplementation(kotlin("test"))
 }
 
 
+//tasks.named<Copy>("jvmProcessResources") {
+//    val jsBrowserDistribution = tasks.named("jsBrowserDistribution")
+//    from(jsBrowserDistribution)
+//}
 tasks.withType<ProcessResources> {
     val jsProject = project(":kzen-auto-js")
-    val task = jsProject.tasks.getByName("browserProductionWebpack") as KotlinWebpack
+    val task = jsProject.tasks.getByName("browserProductionWebpack") as org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
+//    val task = jsProject.tasks.getByName("jsBrowserDistribution")
 
     from(task.destinationDirectory) {
-        into("public")
+        into("static")
     }
+//    from(task)
 
     dependsOn(task)
 }
@@ -87,17 +101,24 @@ tasks.getByName<Jar>("jar") {
 }
 
 
+
+application {
+    mainClass.set("tech.kzen.auto.server.KzenAutoMainKt")
+    applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true")
+}
+
+
 // https://discuss.kotlinlang.org/t/kotlin-compiler-embeddable-exception-on-kotlin-script-evaluation/6547/7
 // https://shareablecode.com/snippets/example-build-gradle-kt-to-build-a-shadow-jar-for-java-and-kotlin-application-ko-TYWV-i5yf
-tasks.named<ShadowJar>("shadowJar") {
-    archiveBaseName.set("kzen-auto")
-    isZip64 = true
-    mergeServiceFiles()
-    manifest {
-        // For: KzenAutoMain.kt
-        attributes(mapOf("Main-Class" to "tech.kzen.auto.server.KzenAutoMainKt"))
-    }
-}
+//tasks.named<ShadowJar>("shadowJar") {
+//    archiveBaseName.set("kzen-auto")
+//    isZip64 = true
+//    mergeServiceFiles()
+//    manifest {
+//        // For: KzenAutoMain.kt
+//        attributes(mapOf("Main-Class" to "tech.kzen.auto.server.KzenAutoMainKt"))
+//    }
+//}
 
 //tasks.getByName<BootJar>("bootJar") {
 //    archiveClassifier.set("boot")

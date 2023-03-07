@@ -38,7 +38,7 @@ kotlin {
                 api("tech.kzen.lib:kzen-lib-common:$kzenLibVersion")
 
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
-                implementation("org.jetbrains.kotlin-wrappers:kotlin-css:$kotlinCssVersion")
+//                implementation("org.jetbrains.kotlin-wrappers:kotlin-css:$kotlinCssVersion")
             }
         }
 
@@ -56,7 +56,7 @@ kotlin {
                 api("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
 
                 implementation("ch.qos.logback:logback-classic:$logbackVersion")
-                implementation("org.jetbrains.kotlin-wrappers:kotlin-css-jvm:$kotlinCssVersion")
+//                implementation("org.jetbrains.kotlin-wrappers:kotlin-css-jvm:$kotlinCssVersion")
             }
         }
 
