@@ -36,8 +36,8 @@ const val lodashVersion = "4.17.21"
 const val cropperJsVersion = "1.5.13"
 
 //const val muiMaterialVersion = "5.10.0"
-const val muiIconsVersion = "5.8.4"
-const val muiStylesVersion = "5.9.3"
+const val muiIconsVersion = "5.11.11"
+//const val muiStylesVersion = "5.9.3"
 //const val emotionStyledVersion = "11.10.0"
 //const val emotionReactVersion = "11.10.0"
 

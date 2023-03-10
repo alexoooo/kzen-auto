@@ -31,20 +31,21 @@ import kotlin.js.Json
 import kotlin.js.json
 
 
+//---------------------------------------------------------------------------------------------------------------------
+external interface SelectStepEditorState: State {
+    var value: ObjectLocation?
+    var renaming: Boolean
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class SelectStepEditor(
     props: AttributeEditorProps
 ):
-    RPureComponent<AttributeEditorProps, SelectStepEditor.State>(props),
+    RPureComponent<AttributeEditorProps, SelectStepEditorState>(props),
     LocalGraphStore.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    class State(
-        var value: ObjectLocation?,
-        var renaming: Boolean
-    ): react.State
-
-
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
@@ -61,7 +62,7 @@ class SelectStepEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun State.init(props: AttributeEditorProps) {
+    override fun SelectStepEditorState.init(props: AttributeEditorProps) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
         @Suppress("MoveVariableDeclarationIntoWhen")
@@ -87,9 +88,9 @@ class SelectStepEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
-            prevProps: AttributeEditorProps,
-            prevState: State,
-            snapshot: Any
+        prevProps: AttributeEditorProps,
+        prevState: SelectStepEditorState,
+        snapshot: Any
     ) {
         if (state.value != prevState.value) {
             if (state.renaming) {

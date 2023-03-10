@@ -538,7 +538,7 @@ class FeatureController(
             CropperWrapper::class.react {
                 src = screenshotDataUrl
 
-                crop = {event ->
+                crop = { event ->
                     @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
                     val detail = event.detail as CropperDetail
                     onCrop(detail)

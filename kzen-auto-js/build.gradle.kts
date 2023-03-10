@@ -66,7 +66,7 @@ dependencies {
 ////    implementation(npm("@material-ui/icons", materialUiIconsVersion))
 ////    implementation(npm("@material-ui/lab", materialUiLabVersion))
 //    implementation(npm("@mui/material", muiMaterialVersion))
-//    implementation(npm("@mui/icons-material", muiIconsVersion))
+    implementation(npm("@mui/icons-material", muiIconsVersion))
 //    implementation(npm("@mui/styles", muiStylesVersion))
 //    implementation(npm("@emotion/styled", emotionStyledVersion))
 //    implementation(npm("@emotion/react", emotionReactVersion))
