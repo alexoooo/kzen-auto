@@ -1,81 +1,79 @@
 package tech.kzen.auto.client.objects.document.graph.edge
-//
-//import kotlinx.css.*
-//import kotlinx.css.properties.borderLeft
-//import kotlinx.css.properties.borderRight
-//import kotlinx.css.properties.borderTop
-//import react.RBuilder
-//import react.RPureComponent
-//import styled.css
-//import styled.styledDiv
-//import tech.kzen.auto.client.objects.document.graph.CellController
-//import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
-//import tech.kzen.lib.common.model.attribute.AttributeName
-//
-//
-////---------------------------------------------------------------------------------------------------------------------
-//external interface TopIngressProps: react.Props {
-//    var attributeName: AttributeName?
-//    var ingressColor: Color
-//    var parentWidth: LinearDimension?
-//}
-//
-//
-////---------------------------------------------------------------------------------------------------------------------
-//class TopIngress(
-//        props: TopIngressProps
-//):
-//        RPureComponent<TopIngressProps, react.State>(props)
-//{
-//    //-----------------------------------------------------------------------------------------------------------------
-//    override fun RBuilder.render() {
-//        val parentWidth = props.parentWidth ?: CellController.cardWidth
-//        val halfWidth = parentWidth.div(2)
-//
-//        styledDiv {
-//            css {
-//                width = halfWidth.plus(CellController.arrowSide)
-//                height = CellController.ingressLength
-//            }
-//
-//            styledDiv {
-//                css {
-//                    width = 0.px
-//                    height = 0.px
-//
-//                    borderTop(CellController.arrowSide, BorderStyle.solid, props.ingressColor)
-//                    borderLeft(CellController.arrowSide, BorderStyle.solid, Color.transparent)
-//                    borderRight(CellController.arrowSide, BorderStyle.solid, Color.transparent)
-//
-//                    float = Float.right
-//                }
-//            }
-//
-//            styledDiv {
-//                css {
-//                    backgroundColor = props.ingressColor
-//
-//                    width = CellController.arrowSide
-//                    height = CellController.arrowSide//.plus(1.px)
-//                    marginRight = (CellController.arrowSide.plus(CellController.cardHorizontalMargin)).unaryMinus()
-//
-//                    float = Float.right
-//                }
-//            }
-//
-//            val attributeName = props.attributeName
-//            if (attributeName != null &&
-//                    attributeName != DataflowUtils.mainInputAttributeName) {
-//                styledDiv {
-//                    css {
-//                        float = Float.right
-//                        height = 1.em
-//                        marginTop = 0.5.em
-//                    }
-//
-//                    +attributeName.value
-//                }
-//            }
-//        }
-//    }
-//}
+
+import csstype.*
+import emotion.react.css
+import react.ChildrenBuilder
+import react.State
+import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.graph.CellController
+import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
+import tech.kzen.lib.common.model.attribute.AttributeName
+
+
+//---------------------------------------------------------------------------------------------------------------------
+external interface TopIngressProps: react.Props {
+    var attributeName: AttributeName?
+    var ingressColor: Color
+    var parentWidth: Length?
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
+class TopIngress(
+        props: TopIngressProps
+):
+        RPureComponent<TopIngressProps, State>(props)
+{
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun ChildrenBuilder.render() {
+        val parentWidth = props.parentWidth ?: CellController.cardWidth
+        val halfWidth = parentWidth.div(2)
+
+        div {
+            css {
+                width = halfWidth.plus(CellController.arrowSide)
+                height = CellController.ingressLength
+            }
+
+            div {
+                css {
+                    width = 0.px
+                    height = 0.px
+
+                    borderTop = Border(CellController.arrowSide, LineStyle.solid, props.ingressColor)
+                    borderLeft = Border(CellController.arrowSide, LineStyle.solid, NamedColor.transparent)
+                    borderRight = Border(CellController.arrowSide, LineStyle.solid, NamedColor.transparent)
+
+                    float = csstype.Float.right
+                }
+            }
+
+            div {
+                css {
+                    backgroundColor = props.ingressColor
+
+                    width = CellController.arrowSide
+                    height = CellController.arrowSide//.plus(1.px)
+                    marginRight = (CellController.arrowSide.plus(CellController.cardHorizontalMargin)).unaryMinus()
+
+                    float = csstype.Float.right
+                }
+            }
+
+            val attributeName = props.attributeName
+            if (attributeName != null &&
+                    attributeName != DataflowUtils.mainInputAttributeName) {
+                div {
+                    css {
+                        float = Float.right
+                        height = 1.em
+                        marginTop = 0.5.em
+                    }
+
+                    +attributeName.value
+                }
+            }
+        }
+    }
+}

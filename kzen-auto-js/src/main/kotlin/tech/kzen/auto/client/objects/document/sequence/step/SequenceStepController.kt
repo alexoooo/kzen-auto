@@ -48,16 +48,6 @@ class SequenceStepController(
                 block()
             }
         }
-
-//        override fun child(input: RBuilder, handler: RHandler<SequenceStepControllerProps>) {
-//            input.child(SequenceStepController::class) {
-//                attrs {
-//                    this.stepDisplays = this@Wrapper.stepDisplays
-//                }
-//
-//                handler()
-//            }
-//        }
     }
 
 

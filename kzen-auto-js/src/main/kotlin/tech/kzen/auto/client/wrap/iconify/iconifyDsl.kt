@@ -1,12 +1,11 @@
 package tech.kzen.auto.client.wrap.iconify
-//
-//import react.RBuilder
-//
-//
-//fun RBuilder.iconify(module: IconifyIconModule) {
-//    child(IconifyIcon::class) {
-//        attrs {
-//            icon = module.default
-//        }
-//    }
-//}
+
+import react.ChildrenBuilder
+import react.react
+
+
+fun ChildrenBuilder.iconify(module: IconifyIconModule) {
+    IconifyIcon::class.react {
+        icon = module.default
+    }
+}

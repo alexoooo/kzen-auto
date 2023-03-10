@@ -3,6 +3,8 @@ package tech.kzen.auto.client.wrap
 
 import js.core.Object
 import js.core.jso
+import mui.material.InputBaseProps
+import mui.material.TextFieldProps
 import react.*
 
 
@@ -53,3 +55,11 @@ abstract class RPureComponent<P : Props, S : State> : PureComponent<P, S> {
 fun <S : State> PureComponent<*, S>.setState(buildState: S.() -> Unit) {
     setState({ Object.assign(it, buildState) })
 }
+
+
+
+inline var TextFieldProps.InputProps: InputBaseProps
+    get() = TODO("Prop is write-only!")
+    set(value) {
+        asDynamic().InputProps = value
+    }
