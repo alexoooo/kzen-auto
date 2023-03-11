@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.wrap
 
 
-import js.core.Object
 import js.core.jso
 import mui.material.InputBaseProps
 import mui.material.TextFieldProps
@@ -28,7 +27,11 @@ abstract class RComponent<P : Props, S : State> : Component<P, S> {
 }
 
 fun <S : State> Component<*, S>.setState(buildState: S.() -> Unit) {
-    setState({ Object.assign(it, buildState) })
+    val partialState: S = jso {
+        buildState()
+    }
+    setState(partialState)
+//    setState({ Object.assign(it, buildState) })
 }
 
 
@@ -53,7 +56,11 @@ abstract class RPureComponent<P : Props, S : State> : PureComponent<P, S> {
 
 
 fun <S : State> PureComponent<*, S>.setState(buildState: S.() -> Unit) {
-    setState({ Object.assign(it, buildState) })
+    val partialState: S = jso {
+        buildState()
+    }
+    setState(partialState)
+//    setState({ Object.assign(it, buildState) })
 }
 
 

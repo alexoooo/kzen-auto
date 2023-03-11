@@ -14,14 +14,14 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.html.HTML
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.api.staticResourceDir
+import tech.kzen.auto.common.api.staticResourcePath
 import tech.kzen.auto.server.api.RestHandler
 import tech.kzen.auto.server.backend.indexPage
 import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.util.ImmutableByteArray
 
 
-const val staticResourceName = "static"
-const val staticResourcePath = "/$staticResourceName"
 const val jsFileName = "kzen-auto-js.js"
 const val jsResourcePath = "$staticResourcePath/$jsFileName"
 
@@ -88,7 +88,7 @@ private fun Routing.routeRequests(
     }
 
     static(staticResourcePath) {
-        resources(staticResourceName)
+        resources(staticResourceDir)
     }
 
     routeNotationQuery(restHandler)

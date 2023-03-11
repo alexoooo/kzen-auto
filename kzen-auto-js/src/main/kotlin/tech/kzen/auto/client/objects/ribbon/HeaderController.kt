@@ -15,6 +15,7 @@ import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.api.staticResourcePath
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.platform.decodeURIComponent
@@ -190,7 +191,7 @@ class HeaderController(
             href = "/"
 
             img {
-                src = "logo.png"
+                src = "$staticResourcePath/logo.png"
 
                 css {
                     height = 42.px

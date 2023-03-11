@@ -119,7 +119,7 @@ object ClientContext {
         // NB: pre-load, otherwise can have race condition
         seededNotationMedia.scan()
 
-//        sessionGlobal.postConstruct(
-//                navigationGlobal, executionRepository, directGraphStore, restClient)
+        sessionGlobal.postConstruct(
+                navigationGlobal, executionRepository, directGraphStore, restClient)
     }
 }

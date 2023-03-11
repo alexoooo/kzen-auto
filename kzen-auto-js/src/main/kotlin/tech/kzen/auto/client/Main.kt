@@ -16,7 +16,7 @@ import web.window.window
 
 
 fun main() {
-    console.log("^^^ main!!")
+//    console.log("^^^ main!!")
     ClientContext.init()
 
     fun emptyRootElement(): HTMLElement {

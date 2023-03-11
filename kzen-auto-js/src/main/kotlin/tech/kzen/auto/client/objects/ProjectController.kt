@@ -131,6 +131,7 @@ class ProjectController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+//        console.log("^^^ onCommandSuccess", event, graphDefinition)
         setState {
             structure = graphDefinition.graphStructure
             commandErrorMessage = null
@@ -148,6 +149,7 @@ class ProjectController(
 
 
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
+//        console.log("^^^ onStoreRefresh: " + graphDefinition.graphStructure)
         setState {
             structure = graphDefinition.graphStructure
         }
@@ -169,15 +171,13 @@ class ProjectController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        +"Hello, world bar!"
-
-//        val graphNotation = state.structure?.graphNotation
-//        if (graphNotation == null) {
-//            +"Loading..."
-//        }
-//        else {
-//            renderBody(graphNotation)
-//        }
+        val graphNotation = state.structure?.graphNotation
+        if (graphNotation == null) {
+            +"Loading..."
+        }
+        else {
+            renderBody(graphNotation)
+        }
     }
 
 
@@ -204,7 +204,6 @@ class ProjectController(
 
                 div {
                     ref = headerElement
-
                     props.headerController.child(this) {}
                 }
             }
@@ -222,7 +221,8 @@ class ProjectController(
                     overflow = Auto.auto
                 }
 
-                props.sidebarController.child(this) {}
+                +"[Sidebar]"
+//                props.sidebarController.child(this) {}
             }
         }
 
@@ -231,7 +231,6 @@ class ProjectController(
             css {
                 marginTop = headerHeight
                 marginLeft = sidebarWidth
-//                position = Position.relative
             }
 
             if (state.commandErrorMessage != null) {
@@ -247,9 +246,10 @@ class ProjectController(
                 stageTop = headerHeight,
                 stageLeft = sidebarWidth)
 
-            StageController.StageContext.Provider(context) {
-                props.stageController.child(this) {}
-            }
+            +"[Stage]"
+//            StageController.StageContext.Provider(context) {
+//                props.stageController.child(this) {}
+//            }
         }
     }
 }

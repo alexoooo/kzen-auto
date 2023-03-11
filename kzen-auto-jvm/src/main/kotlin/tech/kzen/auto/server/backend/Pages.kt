@@ -2,8 +2,8 @@ package tech.kzen.auto.server.backend
 
 import kotlinx.html.*
 import tech.kzen.auto.common.api.rootHtmlElementId
+import tech.kzen.auto.common.api.staticResourcePath
 import tech.kzen.auto.server.jsResourcePath
-import tech.kzen.auto.server.staticResourcePath
 
 
 //object Pages
