@@ -303,6 +303,7 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
+//        +"[Folder]"
         renderFolderItem()
         renderSubItems()
     }
@@ -324,13 +325,11 @@ class SidebarFolder(
                 onMouseOut(true)
             }
 
-//            val iconWidth = 22.px
             val iconWidth = 24.px
 
             div {
                 css {
                     position = Position.absolute
-//                    width = 100.pct
                     top = 0.px
                     left = 0.px
 
@@ -343,7 +342,6 @@ class SidebarFolder(
             div {
                 css {
                     position = Position.absolute
-//                    width = 100.pct
                     top = 0.px
                     left = iconWidth
                     width = 100.pct.minus(iconWidth)
@@ -360,38 +358,9 @@ class SidebarFolder(
                     position = Position.absolute
                     top = 0.px
                     right = 0.px
-
-//                    backgroundColor = Color.blue
                 }
-
                 ref = this@SidebarFolder.menuAnchorRef
-
                 renderOptionsMenu()
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderSubItems() {
-        val mainDocuments = state.mainDocuments
-
-        if (mainDocuments.isEmpty()) {
-            div {
-                css {
-                    marginLeft = SidebarFolder.indent
-                }
-                +"(Empty)"
-            }
-        }
-        else {
-            for (documentPath in mainDocuments) {
-                SidebarFile::class.react {
-                    key = documentPath.asString()
-
-                    structure = props.graphStructure
-                    this.documentPath = documentPath
-                    selected = (documentPath == props.selectedDocumentPath)
-                }
             }
         }
     }
@@ -432,9 +401,14 @@ class SidebarFolder(
         Menu {
             open = state.optionsOpen
             onClose = ::onOptionsCancel
-            anchorEl = {
-                menuAnchorRef.current!!
-            }
+
+            anchorEl =
+                if (menuAnchorRef.current != null) {
+                    { _ -> menuAnchorRef.current!! }
+                }
+                else {
+                    null
+                }
 
             renderMenuItems()
         }
@@ -472,6 +446,31 @@ class SidebarFolder(
                 }
 
                 +"New $title..."
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderSubItems() {
+        val mainDocuments = state.mainDocuments
+
+        if (mainDocuments.isEmpty()) {
+            div {
+                css {
+                    marginLeft = SidebarFolder.indent
+                }
+                +"(Empty)"
+            }
+        }
+        else {
+            for (documentPath in mainDocuments) {
+                SidebarFile::class.react {
+                    key = documentPath.asString()
+
+                    structure = props.graphStructure
+                    this.documentPath = documentPath
+                    selected = (documentPath == props.selectedDocumentPath)
+                }
             }
         }
     }

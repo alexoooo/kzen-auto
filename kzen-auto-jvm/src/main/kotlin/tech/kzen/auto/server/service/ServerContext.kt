@@ -8,6 +8,7 @@ import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageIns
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.service.GraphInstanceCreator
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.codegen.KzenAutoJvmModule
 import tech.kzen.auto.server.objects.plugin.PluginReportDefinitionRepository
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
@@ -35,8 +36,8 @@ import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
-import tech.kzen.lib.common.service.media.MultiNotationMedia
 import tech.kzen.lib.common.service.media.NotationMedia
+import tech.kzen.lib.common.service.media.ReadWriteNotationMedia
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.notation.NotationReducer
 import tech.kzen.lib.common.service.parse.YamlNotationParser
@@ -51,14 +52,14 @@ object ServerContext {
     private val notationMetadataReader = NotationMetadataReader()
 
     private val fileLocator = GradleLocator()
-    private val fileMedia = FileNotationMedia(fileLocator)
+    private val fileMedia = FileNotationMedia(
+        fileLocator, require = listOf(AutoConventions.autoMainDocumentNesting))
 
-//    private val bootMedia = BootNotationMedia()
+    private val classpathNotationMedia = ClasspathNotationMedia(
+        exclude = listOf(AutoConventions.autoMainDocumentNesting))
 
-    val notationMedia: NotationMedia = MultiNotationMedia(listOf(
-//            fileMedia, bootMedia))
-        fileMedia,
-        ClasspathNotationMedia()))
+    val notationMedia: NotationMedia = ReadWriteNotationMedia(
+        fileMedia, classpathNotationMedia)
 
     val yamlParser = YamlNotationParser()
 

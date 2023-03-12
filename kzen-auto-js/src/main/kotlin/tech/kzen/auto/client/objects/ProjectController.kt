@@ -40,7 +40,6 @@ external interface ProjectControllerState: State {
     var structure: GraphStructure?
     var commandErrorMessage: String?
     var commandErrorRequest: NotationCommand?
-
     var headerHeight: Int?
 }
 
@@ -140,7 +139,7 @@ class ProjectController(
 
 
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {
-//        console.log("^^^ onCommandFailure", command.toString(), cause)
+        console.log("^^^ onCommandFailure", command.toString(), cause)
         setState {
             commandErrorRequest = command
             commandErrorMessage = "${cause.message}"
@@ -221,8 +220,7 @@ class ProjectController(
                     overflow = Auto.auto
                 }
 
-                +"[Sidebar]"
-//                props.sidebarController.child(this) {}
+                props.sidebarController.child(this) {}
             }
         }
 
@@ -246,10 +244,10 @@ class ProjectController(
                 stageTop = headerHeight,
                 stageLeft = sidebarWidth)
 
-            +"[Stage]"
-//            StageController.StageContext.Provider(context) {
-//                props.stageController.child(this) {}
-//            }
+//            +"[Stage]"
+            StageController.StageContext.Provider(context) {
+                props.stageController.child(this) {}
+            }
         }
     }
 }

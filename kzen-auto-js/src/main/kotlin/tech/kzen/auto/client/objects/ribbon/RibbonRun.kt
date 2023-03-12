@@ -219,12 +219,15 @@ class RibbonRun (
         Menu {
             open = state.dropdownOpen
 
-//                onClose = ::onOptionsCancel
             onClose = ::onOptionsClose
 
-            anchorEl = {
-                dropdownAnchorRef.current!!
-            }
+            anchorEl = dropdownAnchorRef.current?.let { { _ -> it } }
+//                if (dropdownAnchorRef.current != null) {
+//                    { _ -> dropdownAnchorRef.current!! }
+//                }
+//                else {
+//                    null
+//                }
 
             div {
                 css {

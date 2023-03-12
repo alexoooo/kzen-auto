@@ -10,13 +10,18 @@ import tech.kzen.lib.common.util.ImmutableByteArray
 
 
 class ClientRestNotationMedia(
-        private val restClient: ClientRestApi
+    private val restClient: ClientRestApi
 ): NotationMedia {
     //-----------------------------------------------------------------------------------------------------------------
     private val documentCache = DigestCache<String>(128)
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun isReadOnly(): Boolean {
+        return true
+    }
+
+
     override suspend fun scan(): NotationScan {
         return restClient.scanNotation()
     }
@@ -76,6 +81,6 @@ class ClientRestNotationMedia(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun invalidate() {
-        // NB: no caching here
+        documentCache.clear()
     }
 }

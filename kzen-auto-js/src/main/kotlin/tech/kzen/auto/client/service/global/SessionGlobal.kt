@@ -1,8 +1,11 @@
 package tech.kzen.auto.client.service.global
 
 //import tech.kzen.auto.client.objects.ribbon.RibbonRun
+import tech.kzen.auto.client.objects.ribbon.RibbonRun
+import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.NavigationRoute
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.util.RequestParams
@@ -58,29 +61,29 @@ class SessionGlobal:
     override fun handleNavigation(documentPath: DocumentPath?, parameters: RequestParams) {
         navigationRoute = NavigationRoute(documentPath, parameters)
 
-//        val selected = parameters.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
-//        if (selected != null) {
-//            async {
-//                imperativeModel = ClientContext.executionRepository.executionModel(
-//                        selected, graphDefinitionAttempt!!.graphStructure)
-//                publishIfReady()
+        val selected = parameters.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
+        if (selected != null) {
+            async {
+                imperativeModel = ClientContext.executionRepository.executionModel(
+                        selected, graphDefinitionAttempt!!.graphStructure)
+                publishIfReady()
+            }
+        }
+        else {
+//            val isScript = ScriptDocument.isScript(
+//                    graphDefinitionAttempt!!.successful.graphStructure.graphNotation.documents.values[documentPath]!!)
+//
+//            if (documentPath != null && isScript) {
+//                async {
+//                    ClientContext.executionRepository.executionModel(
+//                            documentPath, graphDefinitionAttempt!!.successful.graphStructure)
+//                    publishIfReady()
+//                }
 //            }
-//        }
-//        else {
-////            val isScript = ScriptDocument.isScript(
-////                    graphDefinitionAttempt!!.successful.graphStructure.graphNotation.documents.values[documentPath]!!)
-////
-////            if (documentPath != null && isScript) {
-////                async {
-////                    ClientContext.executionRepository.executionModel(
-////                            documentPath, graphDefinitionAttempt!!.successful.graphStructure)
-////                    publishIfReady()
-////                }
-////            }
-////            else {
-//                publishIfReady()
-////            }
-//        }
+//            else {
+                publishIfReady()
+//            }
+        }
     }
 
 
@@ -169,14 +172,14 @@ class SessionGlobal:
         val navigation = navigationRoute
                 ?: return
 
-//        val selected = navigation.requestParams.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
-//
-//        sessionState = SessionState(
-//                definition,
-//                navigation,
-//                imperativeModel,
-//                selected,
-//                runningHosts)
+        val selected = navigation.requestParams.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
+
+        sessionState = SessionState(
+                definition,
+                navigation,
+                imperativeModel,
+                selected,
+                runningHosts)
 
         for (observer in observers) {
             observer.onClientState(sessionState!!)

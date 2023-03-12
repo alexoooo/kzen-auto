@@ -348,9 +348,14 @@ class SidebarFile(
         Menu {
             open = state.optionsOpen
             onClose = ::onOptionsCancel
-            anchorEl = {
-                menuAnchorRef.current!!
-            }
+
+            anchorEl =
+                if (menuAnchorRef.current != null) {
+                    { _ -> menuAnchorRef.current!! }
+                }
+                else {
+                    null
+                }
 
             renderMenuItems()
         }

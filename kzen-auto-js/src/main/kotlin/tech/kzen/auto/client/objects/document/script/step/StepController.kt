@@ -45,7 +45,6 @@ class StepController(
             ReactWrapper<StepControllerProps>
     {
         init {
-            println("$#@$#@ --")
             handle.wrapper = this
         }
 
