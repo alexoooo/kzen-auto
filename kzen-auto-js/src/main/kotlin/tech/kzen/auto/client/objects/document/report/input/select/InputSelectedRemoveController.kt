@@ -20,7 +20,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 //---------------------------------------------------------------------------------------------------------------------
-interface InputSelectedRemoveControllerProps: react.Props {
+external interface InputSelectedRemoveControllerProps: react.Props {
     var mainLocation: ObjectLocation
     var disabled: Boolean
     var inputSelectedState: InputSelectedState

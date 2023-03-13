@@ -20,7 +20,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 //---------------------------------------------------------------------------------------------------------------------
-interface InputBrowserControllerProps: Props {
+external interface InputBrowserControllerProps: Props {
     var mainLocation: ObjectLocation
     var spec: InputBrowserSpec
     var selectedDataLocation: Set<DataLocation>
@@ -31,7 +31,7 @@ interface InputBrowserControllerProps: Props {
 }
 
 
-interface InputBrowserControllerState: State {
+external interface InputBrowserControllerState: State {
     var requestPending: Boolean
 }
 

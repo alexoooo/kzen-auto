@@ -385,6 +385,7 @@ class InputSelectedTableController(
                     }
 
                     this.checked = checked
+                    readOnly = true
                 }
 
 //                styledInput(InputType.checkBox) {

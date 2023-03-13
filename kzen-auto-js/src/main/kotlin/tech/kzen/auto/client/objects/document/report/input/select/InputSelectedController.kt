@@ -24,7 +24,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
 //---------------------------------------------------------------------------------------------------------------------
-interface InputSelectedControllerProps: Props {
+external interface InputSelectedControllerProps: Props {
     var mainLocation: ObjectLocation
     var spec: InputSelectionSpec
     var browserOpen: Boolean
@@ -35,7 +35,7 @@ interface InputSelectedControllerProps: Props {
 }
 
 
-interface InputSelectedControllerState: State {
+external interface InputSelectedControllerState: State {
     var showDetails: Boolean
     var showGroupBy: Boolean
 }
@@ -169,8 +169,8 @@ class InputSelectedController(
                     display = Display.inlineBlock
                     marginTop = 18.px
                 }
-                renderGroupByToggle()
-                renderDetailToggle()
+//                renderGroupByToggle()
+//                renderDetailToggle()
             }
         }
     }

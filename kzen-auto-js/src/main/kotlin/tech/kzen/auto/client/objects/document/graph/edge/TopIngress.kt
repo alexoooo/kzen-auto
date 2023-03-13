@@ -21,10 +21,18 @@ external interface TopIngressProps: react.Props {
 
 //---------------------------------------------------------------------------------------------------------------------
 class TopIngress(
-        props: TopIngressProps
+    props: TopIngressProps
 ):
-        RPureComponent<TopIngressProps, State>(props)
+    RPureComponent<TopIngressProps, State>(props)
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val arrowPullBack: Length = 3.em.unaryMinus()
+//            (CellController.arrowSide.plus(CellController.cardHorizontalMargin)).unaryMinus()
+//            (-3).em
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val parentWidth = props.parentWidth ?: CellController.cardWidth
@@ -45,7 +53,7 @@ class TopIngress(
                     borderLeft = Border(CellController.arrowSide, LineStyle.solid, NamedColor.transparent)
                     borderRight = Border(CellController.arrowSide, LineStyle.solid, NamedColor.transparent)
 
-                    float = csstype.Float.right
+                    float = Float.right
                 }
             }
 
@@ -54,16 +62,19 @@ class TopIngress(
                     backgroundColor = props.ingressColor
 
                     width = CellController.arrowSide
-                    height = CellController.arrowSide//.plus(1.px)
-                    marginRight = (CellController.arrowSide.plus(CellController.cardHorizontalMargin)).unaryMinus()
+                    height = CellController.arrowSide
+//                    marginRight = (CellController.arrowSide.plus(CellController.cardHorizontalMargin)).unaryMinus()
+                    marginRight = arrowPullBack
+//                    marginRight = 3.em.unaryMinus()
 
-                    float = csstype.Float.right
+                    float = Float.right
                 }
             }
 
             val attributeName = props.attributeName
             if (attributeName != null &&
-                    attributeName != DataflowUtils.mainInputAttributeName) {
+                    attributeName != DataflowUtils.mainInputAttributeName
+            ) {
                 div {
                     css {
                         float = Float.right

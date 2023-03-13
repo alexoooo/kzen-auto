@@ -24,7 +24,7 @@ import web.html.HTMLInputElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
-interface FormulaAddControllerProps: react.Props {
+external interface FormulaAddControllerProps: react.Props {
     var formulaSpec: FormulaSpec
     var formulaState: ReportFormulaState
     var inputColumns: List<String>?
@@ -33,7 +33,7 @@ interface FormulaAddControllerProps: react.Props {
 }
 
 
-interface FormulaAddControllerState: react.State {
+external interface FormulaAddControllerState: react.State {
     var adding: Boolean
     var selectedColumn: String?
 }

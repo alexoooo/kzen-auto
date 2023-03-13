@@ -637,9 +637,7 @@ class VertexController(
         Menu {
             open = state.optionsOpen
             onClose = ::onOptionsCancel
-            anchorEl = {
-                menuAnchorRef.current!!
-            }
+            anchorEl = menuAnchorRef.current?.let { { _ -> it } }
 
             renderMenuItems()
         }

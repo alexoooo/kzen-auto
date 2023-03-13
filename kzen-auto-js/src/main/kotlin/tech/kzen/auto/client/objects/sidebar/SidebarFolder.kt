@@ -401,15 +401,7 @@ class SidebarFolder(
         Menu {
             open = state.optionsOpen
             onClose = ::onOptionsCancel
-
-            anchorEl =
-                if (menuAnchorRef.current != null) {
-                    { _ -> menuAnchorRef.current!! }
-                }
-                else {
-                    null
-                }
-
+            anchorEl = menuAnchorRef.current?.let { { _ -> it } }
             renderMenuItems()
         }
     }

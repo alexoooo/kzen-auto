@@ -21,7 +21,7 @@ import kotlin.js.json
 
 
 //---------------------------------------------------------------------------------------------------------------------
-interface InputSelectedFormatControllerProps: react.Props {
+external interface InputSelectedFormatControllerProps: react.Props {
     var spec: InputSelectionSpec
     var editDisabled: Boolean
 

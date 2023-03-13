@@ -15,6 +15,7 @@ kotlin {
         useCommonJs()
         binaries.executable()
 
+
         browser {
             val webpackMode =
                 if (devMode) {
@@ -28,6 +29,11 @@ kotlin {
                 mode = webpackMode
             }
         }
+
+        // TODO: how to pass NODE_OPTIONS to nodejs to avoid "Allocation failed"
+//        nodejs {
+//            nodeOptions = ["--max-old-space-size=4096"]
+//        }
     }
 }
 

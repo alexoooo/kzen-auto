@@ -622,34 +622,35 @@ class EdgeController(
     private fun ChildrenBuilder.renderIngressRight(
             cardColor: Color
     ) {
-        div {
-            css {
-                display = Display.inlineBlock
-                backgroundColor = cardColor
-//                backgroundColor = Color.burlyWood
-
-                width = CellController.cardWidth.div(2)
-                        .minus(CellController.arrowSide).plus(3.px)
-
-                height = 2.em
-            }
-        }
-
-        div {
-            css {
-                display = Display.inlineBlock
-
-                width = 0.px
-                height = 0.px
-
-                borderRight = Border(2.em, LineStyle.solid, cardColor)
-                borderTop = Border(2.em, LineStyle.solid, NamedColor.transparent)
-                borderBottom = Border(2.em, LineStyle.solid, NamedColor.transparent)
-
-                marginTop = (-3).em.minus(3.px)
-                marginBottom = (-1).em
-                float = Float.right
-            }
-        }
+        +"<-"
+//        div {
+//            css {
+//                display = Display.inlineBlock
+//                backgroundColor = cardColor
+////                backgroundColor = Color.burlyWood
+//
+//                width = CellController.cardWidth.div(2)
+//                        .minus(CellController.arrowSide).plus(3.px)
+//
+//                height = 2.em
+//            }
+//        }
+//
+//        div {
+//            css {
+//                display = Display.inlineBlock
+//
+//                width = 0.px
+//                height = 0.px
+//
+//                borderRight = Border(2.em, LineStyle.solid, cardColor)
+//                borderTop = Border(2.em, LineStyle.solid, NamedColor.transparent)
+//                borderBottom = Border(2.em, LineStyle.solid, NamedColor.transparent)
+//
+//                marginTop = (-3).em.minus(3.px)
+//                marginBottom = (-1).em
+//                float = Float.right
+//            }
+//        }
     }
 }

@@ -75,7 +75,6 @@ class StepHeader(
     }
 
 
-
     class HoverSignal {
         private var callback: StepHeader? = null
 
@@ -438,31 +437,20 @@ class StepHeader(
                 }
             }
 
-            onMouseOver = {
-                onMouseOver(false)
-            }
-
-            onMouseOut = {
-                onMouseOut(false)
-            }
+            onMouseOver = { onMouseOver(false) }
+            onMouseOut = { onMouseOut(false) }
 
             IconButton {
                 title = "Options..."
                 onClick = { onOptionsOpen() }
-
                 MoreVertIcon::class.react {}
             }
         }
 
         Menu {
             open = state.optionsOpen
-
             onClose = ::onOptionsCancel
-
-            anchorEl = {
-                menuAnchorRef.current!!
-            }
-
+            anchorEl = menuAnchorRef.current?.let { { _ -> it } }
             renderMenuItems()
         }
     }

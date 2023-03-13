@@ -427,6 +427,7 @@ class InputBrowserTableController(
                         }
 
                         this.checked = checked
+                        this.readOnly = true
 //                        this.onChange = {}
 
 //                        // https://github.com/JetBrains/kotlin-wrappers/issues/35#issuecomment-723471655
