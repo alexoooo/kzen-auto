@@ -1,13 +1,15 @@
 package tech.kzen.auto.client.objects.document.report.input.browse
 
+import csstype.Color
 import csstype.Display
+import csstype.NamedColor
 import csstype.em
-import csstype.px
 import emotion.react.css
 import js.core.jso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
@@ -84,9 +86,11 @@ class InputBrowserActionController(
                 variant = ButtonVariant.outlined
                 size = Size.small
 
-                css {
+                sx {
                     marginRight = 1.em
-                    borderWidth = 2.px
+//                    borderWidth = 2.px
+                    color = NamedColor.black
+                    borderColor = Color("#777777")
                 }
 
                 onClick = {
@@ -132,8 +136,10 @@ class InputBrowserActionController(
                 variant = ButtonVariant.outlined
                 size = Size.small
 
-                css {
-                    borderWidth = 2.px
+                sx {
+//                    borderWidth = 2.px
+                    color = NamedColor.black
+                    borderColor = Color("#777777")
                 }
 
                 onClick = {

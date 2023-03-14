@@ -6,6 +6,7 @@ import js.core.jso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
@@ -188,9 +189,10 @@ class ReportPreviewController(
                 onRefresh()
             }
 
-            css {
-                borderWidth = 2.px
+            sx {
                 marginLeft = 0.5.em
+                color = NamedColor.black
+                borderColor = Color("#777777")
             }
 
             RefreshIcon::class.react {

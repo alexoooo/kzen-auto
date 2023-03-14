@@ -234,7 +234,6 @@ class ReportInputController(
                 }
                 color = NamedColor.black
                 borderColor = Color("#777777")
-//                marginTop = 0.px
             }
 
             onClick = {

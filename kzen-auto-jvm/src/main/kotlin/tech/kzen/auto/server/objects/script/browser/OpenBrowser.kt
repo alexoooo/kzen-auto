@@ -51,6 +51,9 @@ class OpenBrowser(
                     chromeOptions.addExtensions(asFile)
                 }
 
+                // https://stackoverflow.com/questions/75678572/java-io-ioexception-invalid-status-code-403-text-forbidden
+                chromeOptions.addArguments("--remote-allow-origins=*")
+
                 ChromeDriver(chromeOptions)
             }
 

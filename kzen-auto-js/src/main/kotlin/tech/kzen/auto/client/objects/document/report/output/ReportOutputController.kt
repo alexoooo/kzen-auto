@@ -5,6 +5,7 @@ import emotion.react.css
 import js.core.jso
 import mui.material.*
 import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -65,8 +66,9 @@ class ReportOutputController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onSettingsToggle() {
+        val toggle = ! state.settingsOpen
         setState {
-            settingsOpen = ! settingsOpen
+            settingsOpen = toggle
         }
     }
 
@@ -252,16 +254,16 @@ class ReportOutputController(
                 onSettingsToggle()
             }
 
-            css {
+            sx {
                 marginLeft = 1.em
-                borderWidth = 2.px
+//                borderWidth = 2.px
                 marginTop = (-10).px
 
                 if (state.settingsOpen) {
                     backgroundColor = ReportController.selectedColor
                 }
                 color = NamedColor.black
-                borderColor = Color("#c4c4c4")
+                borderColor = Color("#777777")
             }
 
             SettingsIcon::class.react {}

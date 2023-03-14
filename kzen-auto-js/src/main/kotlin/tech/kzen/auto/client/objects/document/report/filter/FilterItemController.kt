@@ -127,8 +127,9 @@ class FilterItemController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onOpenToggle() {
+        val toggle = ! state.open
         setState {
-            open = ! open
+            open = toggle
         }
     }
 

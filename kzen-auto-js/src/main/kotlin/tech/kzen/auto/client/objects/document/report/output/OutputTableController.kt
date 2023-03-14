@@ -6,6 +6,7 @@ import js.core.jso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -93,11 +94,12 @@ class OutputTableController(
             Button {
                 variant = ButtonVariant.outlined
                 size = Size.small
-                css {
-                    borderWidth = 2.px
+                sx {
+//                    borderWidth = 2.px
                     marginLeft = 0.5.em
                     color = NamedColor.black
-                    borderColor = Color("#c4c4c4")
+//                    borderColor = Color("#c4c4c4")
+                    borderColor = Color("#777777")
                 }
 
                 onClick = {
@@ -127,10 +129,11 @@ class OutputTableController(
                 Button {
                     variant = ButtonVariant.outlined
                     size = Size.small
-                    css {
-                        borderWidth = 2.px
+                    sx {
+//                        borderWidth = 2.px
                         color = NamedColor.black
-                        borderColor = Color("#c4c4c4")
+//                        borderColor = Color("#c4c4c4")
+                        borderColor = Color("#777777")
                     }
 
                     CloudDownloadIcon::class.react {

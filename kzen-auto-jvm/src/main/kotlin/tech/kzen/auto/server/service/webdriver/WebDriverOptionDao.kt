@@ -7,8 +7,7 @@ import tech.kzen.auto.server.service.webdriver.model.WebDriverOption
 import java.net.URI
 
 
-// TODO: test on Mac
-// TODO: check for "latest" version
+// TODO: https://bonigarcia.dev/webdrivermanager/
 class WebDriverOptionDao {
     // NB: chromedriver distribution has changed - https://stackoverflow.com/a/55266105
     private val options: List<WebDriverOption> = listOf(

@@ -5,6 +5,7 @@ import emotion.react.css
 import js.core.jso
 import mui.material.*
 import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
 import react.ReactNode
 import react.dom.html.ReactHTML.a
@@ -338,7 +339,7 @@ class RibbonController(
                     }
                 }
 
-                css {
+                sx {
                     if (state.type == ribbonTool.delegate) {
                         color = NamedColor.white
                         backgroundColor = Color("#649fff")

@@ -6,6 +6,7 @@ import js.core.jso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -56,15 +57,17 @@ class InputSelectedController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onToggleFolders() {
+        val toggle = ! state.showDetails
         setState {
-            showDetails = ! showDetails
+            showDetails = toggle
         }
     }
 
 
     private fun onToggleGroupBy() {
+        val toggle = ! state.showGroupBy
         setState {
-            showGroupBy = ! showGroupBy
+            showGroupBy = toggle
         }
     }
 
@@ -169,8 +172,8 @@ class InputSelectedController(
                     display = Display.inlineBlock
                     marginTop = 18.px
                 }
-//                renderGroupByToggle()
-//                renderDetailToggle()
+                renderGroupByToggle()
+                renderDetailToggle()
             }
         }
     }
@@ -181,17 +184,16 @@ class InputSelectedController(
             variant = ButtonVariant.outlined
             size = Size.small
 
-            onClick = {
-                onToggleGroupBy()
-            }
+            onClick = { onToggleGroupBy() }
 
-            css {
+            sx {
                 if (state.showGroupBy) {
                     backgroundColor = ReportController.selectedColor
                 }
-                borderWidth = 2.px
+//                borderWidth = 2.px
                 color = NamedColor.black
-                borderColor = Color("#c4c4c4")
+//                borderColor = Color("#c4c4c4")
+                borderColor = Color("#777777")
             }
 
             title =
@@ -216,22 +218,20 @@ class InputSelectedController(
     private fun ChildrenBuilder.renderDetailToggle() {
         Button {
             variant = ButtonVariant.outlined
-            size = mui.material.Size.small
+            size = Size.small
 
-            onClick = {
-                onToggleFolders()
-            }
+            onClick = {  onToggleFolders() }
 
-//                color = "inherit"
-            css {
+            sx {
                 marginLeft = 1.em
 
                 if (state.showDetails) {
                     backgroundColor = ReportController.selectedColor
                 }
-                borderWidth = 2.px
+//                borderWidth = 2.px
                 color = NamedColor.black
-                borderColor = Color("#c4c4c4")
+//                borderColor = Color("#c4c4c4")
+                borderColor = Color("#777777")
             }
 
             title =
