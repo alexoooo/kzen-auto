@@ -5,6 +5,7 @@ import emotion.react.css
 import js.core.jso
 import mui.material.*
 import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -95,8 +96,12 @@ class ReportInputController(
             return
         }
 
+        // TODO: updating state from state, is that a problem?
+        val toggled = ! state.browserOpen
+        console.log("$@#$#@ onToggleBrowser - $toggled")
+
         setState {
-            browserOpen = ! browserOpen
+            this.browserOpen = toggled
         }
     }
 
@@ -222,14 +227,14 @@ class ReportInputController(
         Button {
             variant = ButtonVariant.outlined
             size = Size.small
-            css {
+
+            sx {
                 if (isBrowserOpen()) {
                     backgroundColor = ReportController.selectedColor
                 }
-                borderWidth = 2.px
-                marginTop = 0.px
                 color = NamedColor.black
-                borderColor = Color("#c4c4c4")
+                borderColor = Color("#777777")
+//                marginTop = 0.px
             }
 
             onClick = {

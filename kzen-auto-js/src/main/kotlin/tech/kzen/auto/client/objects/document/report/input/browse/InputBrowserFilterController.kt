@@ -86,10 +86,10 @@ class InputBrowserFilterController(
             }
 
 
-            val adornment = InputAdornment.create {
-                position = mui.material.InputAdornmentPosition.start
-                +"kg"
-            }
+//            val adornment = InputAdornment.create {
+//                position = mui.material.InputAdornmentPosition.start
+//                +"kg"
+//            }
 
             InputProps = jso {
                 startAdornment = InputAdornment.create {

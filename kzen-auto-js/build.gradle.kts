@@ -15,7 +15,6 @@ kotlin {
         useCommonJs()
         binaries.executable()
 
-
         browser {
             val webpackMode =
                 if (devMode) {
@@ -27,6 +26,15 @@ kotlin {
 
             commonWebpackConfig {
                 mode = webpackMode
+            }
+        }
+
+        // TODO: remove once browserDevelopmentWebpack works in continuous mode
+        if (devMode) {
+            compilations.all {
+                compileTaskProvider.configure {
+                    compilerOptions.freeCompilerArgs.add("-Xir-minimized-member-names=false")
+                }
             }
         }
 

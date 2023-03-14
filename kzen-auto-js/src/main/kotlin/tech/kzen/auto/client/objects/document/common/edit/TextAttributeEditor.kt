@@ -3,8 +3,6 @@ package tech.kzen.auto.client.objects.document.common.edit
 import mui.material.InputBaseProps
 import mui.material.Size
 import mui.material.TextField
-import org.w3c.dom.HTMLInputElement
-import org.w3c.dom.HTMLTextAreaElement
 import react.*
 import react.dom.onChange
 import tech.kzen.auto.client.service.ClientContext
@@ -14,6 +12,8 @@ import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import web.html.HTMLInputElement
+import web.html.HTMLTextAreaElement
 
 
 //---------------------------------------------------------------------------------------------------------------------

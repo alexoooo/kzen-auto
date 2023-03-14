@@ -1,9 +1,10 @@
 package tech.kzen.auto.client.wrap.select
 
 
-class ReactSelectOption(
-        val value: String,
-        val label: String)
+external interface ReactSelectOption {
+        var value: String
+        var label: String
+}
 
 
 //fun RBuilder.materialReactSelectController(props: react.Props): ReactElement =

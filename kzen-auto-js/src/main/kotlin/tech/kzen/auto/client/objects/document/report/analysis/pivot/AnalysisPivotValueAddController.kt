@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.analysis.pivot
 import csstype.Display
 import csstype.em
 import emotion.react.css
+import js.core.jso
 import kotlinx.browser.document
 import mui.material.IconButton
 import mui.material.InputLabel
@@ -140,7 +141,13 @@ class AnalysisPivotValueAddController(
         }
 
         val selectOptions = unusedOptions
-            .map { ReactSelectOption(it, it) }
+            .map {
+                val option: ReactSelectOption = jso {
+                    value = it
+                    label = it
+                }
+                option
+            }
             .toTypedArray()
 
         ReactSelect::class.react {

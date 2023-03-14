@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.report.input.select
 
 import csstype.em
 import emotion.react.css
+import js.core.jso
 import kotlinx.browser.document
 import mui.material.InputLabel
 import react.ChildrenBuilder
@@ -100,7 +101,11 @@ class InputSelectedFormatController(
         val classNamesLabels = when {
             loadedFormats != null -> {
                 val loadedOptions = loadedFormats.map {
-                    ReactSelectOption(it.coordinate.asString(), typeLabel(it))
+                    val option: ReactSelectOption = jso {
+                        value = it.coordinate.asString()
+                        label = typeLabel(it)
+                    }
+                    option
                 }
 
                 if (loadedOptions.size <= 1) {
@@ -108,14 +113,25 @@ class InputSelectedFormatController(
                 }
                 else {
                     listOf(
-                        ReactSelectOption(CommonPluginCoordinate.defaultName, "Default")
+                        run {
+                            val option: ReactSelectOption = jso {
+                                value = CommonPluginCoordinate.defaultName
+                                label = "Default"
+                            }
+                            option
+                        }
                     ) + loadedOptions
                 }
             }
 
             selectionProcessorDefinitionCoordinates != null ->
-                selectionProcessorDefinitionCoordinates
-                    .map { ReactSelectOption(it.name, it.asString()) }
+                selectionProcessorDefinitionCoordinates.map {
+                    val option: ReactSelectOption = jso {
+                        value = it.name
+                        label = it.asString()
+                    }
+                    option
+                }
 
             else ->
                 listOf()

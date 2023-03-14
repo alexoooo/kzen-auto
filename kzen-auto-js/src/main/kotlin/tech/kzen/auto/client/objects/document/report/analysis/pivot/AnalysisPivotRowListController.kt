@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.analysis.pivot
 import csstype.LineStyle
 import csstype.em
 import emotion.react.css
+import js.core.jso
 import kotlinx.browser.document
 import react.ChildrenBuilder
 import react.State
@@ -86,9 +87,21 @@ class AnalysisPivotRowListController(
             ReactSelectMulti::class.react {
                 isMulti = true
 
-                value = props.spec.rows.values.map { ReactSelectOption(it, it) }.toTypedArray()
+                value = props.spec.rows.values.map {
+                    val option: ReactSelectOption = jso {
+                        value = it
+                        label = it
+                    }
+                    option
+                }.toTypedArray()
 
-                options = columnListing.values.map { ReactSelectOption(it, it) }.toTypedArray()
+                options = columnListing.values.map {
+                    val option: ReactSelectOption = jso {
+                        value = it
+                        label = it
+                    }
+                    option
+                }.toTypedArray()
 
                 onChange = {
                     onOptionsChange(it)

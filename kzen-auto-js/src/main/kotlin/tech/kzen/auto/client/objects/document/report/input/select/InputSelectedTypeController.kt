@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.report.input.select
 
 import csstype.em
 import emotion.react.css
+import js.core.jso
 import kotlinx.browser.document
 import mui.material.InputLabel
 import react.ChildrenBuilder
@@ -88,13 +89,20 @@ class InputSelectedTypeController(
         }
 
         val dataType = props.spec.dataType
-        val selectedOption = ReactSelectOption(dataType.asString(), typeLabel(dataType))
+        val selectedOption: ReactSelectOption = jso {
+            value = dataType.asString()
+            label = typeLabel(dataType)
+        }
 
         val loadedDataTypes = props.inputSelectedState.dataTypes
 
         val classNamesLabels =
             loadedDataTypes?.map {
-                ReactSelectOption(it.asString(), typeLabel(it))
+                val option: ReactSelectOption = jso {
+                    value = it.asString()
+                    label = typeLabel(it)
+                }
+                option
             }
             ?: listOf(selectedOption)
 

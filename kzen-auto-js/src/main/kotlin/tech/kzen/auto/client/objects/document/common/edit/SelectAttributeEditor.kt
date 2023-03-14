@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.common.edit
 
 import csstype.em
 import emotion.react.css
+import js.core.jso
 import kotlinx.browser.document
 import mui.material.InputLabel
 import react.ChildrenBuilder
@@ -88,10 +89,17 @@ class SelectAttributeEditor(
             +formattedLabel()
         }
 
-        val selectedOption = ReactSelectOption(props.value, props.options[props.value] ?: props.value)
+        val selectedOption: ReactSelectOption = jso {
+            value = props.value
+            label = props.options[props.value] ?: props.value
+        }
 
         val reactSelectOptions = props.options.map {
-            ReactSelectOption(it.key, it.value)
+            val option: ReactSelectOption = jso {
+                value = it.key
+                label = it.value
+            }
+            option
         }
 
         val selectOptions = reactSelectOptions.toTypedArray()

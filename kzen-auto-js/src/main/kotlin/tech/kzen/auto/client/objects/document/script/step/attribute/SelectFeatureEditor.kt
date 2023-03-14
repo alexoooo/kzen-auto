@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.script.step.attribute
 
 import csstype.em
 import emotion.react.css
+import js.core.jso
 import kotlinx.browser.document
 import mui.material.InputLabel
 import react.*
@@ -191,7 +192,13 @@ class SelectFeatureEditor(
 //                props.objectLocation, props.attributeName)
 
         val selectOptions = options()
-                .map { ReactSelectOption(it.asString(), it.documentPath.name.value) }
+                .map {
+                    val option: ReactSelectOption = jso {
+                        value = it.asString()
+                        label = it.documentPath.name.value
+                    }
+                    option
+                }
                 .toTypedArray()
 
 //        +"!! ${selectOptions.map { it.value }}"

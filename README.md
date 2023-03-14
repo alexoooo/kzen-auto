@@ -29,4 +29,8 @@ To auto-reload frontend:
 2) Run `./gradlew -t :kzen-auto-js:build -x test -PjsWatch` from CLI
 
 
+TODO:
+Run `./gradlew -t :kzen-auto-js:browserDevelopmentWebpack -x test -PjsWatch` from CLI
+
+
 

@@ -20,37 +20,37 @@ class WebDriverOptionDao {
 //                    URI("https://chromedriver.storage.googleapis.com/77.0.3865.40/chromedriver_linux64.zip")
 //            ),
 
-            WebDriverOption(
-                    BrowserLauncher.Firefox,
-                    OperatingSystem.Linux,
-                    CpuArchitecture.X86_64,
-                    "0.32.0",
-                    URI("https://github.com/mozilla/geckodriver/releases/download/v0.32.0/geckodriver-v0.32.0-linux64.tar.gz")
-            ),
+        WebDriverOption(
+            BrowserLauncher.Firefox,
+            OperatingSystem.Linux,
+            CpuArchitecture.X86_64,
+            "0.32.2",
+            URI("https://github.com/mozilla/geckodriver/releases/download/v0.32.2/geckodriver-v0.32.2-linux64.tar.gz")
+        ),
 
-            WebDriverOption(
-                    BrowserLauncher.GoogleChrome,
-                    OperatingSystem.Windows,
-                    CpuArchitecture.X86_32,
-                    "108.0.5359.71",
-                    URI("https://chromedriver.storage.googleapis.com/108.0.5359.71/chromedriver_win32.zip")
-            ),
+        WebDriverOption(
+            BrowserLauncher.GoogleChrome,
+            OperatingSystem.Windows,
+            CpuArchitecture.X86_32,
+            "111.0.5563.64",
+            URI("https://chromedriver.storage.googleapis.com/111.0.5563.64/chromedriver_win32.zip")
+        ),
 
-            WebDriverOption(
-                    BrowserLauncher.GoogleChrome,
-                    OperatingSystem.Windows,
-                    CpuArchitecture.X86_64,
-                    "104.0.5112.79",
-                    URI("https://chromedriver.storage.googleapis.com/108.0.5359.71/chromedriver_win32.zip")
-            ),
+        WebDriverOption(
+            BrowserLauncher.GoogleChrome,
+            OperatingSystem.Windows,
+            CpuArchitecture.X86_64,
+            "111.0.5563.64",
+            URI("https://chromedriver.storage.googleapis.com/111.0.5563.64/chromedriver_win32.zip")
+        ),
 
-            WebDriverOption(
-                    BrowserLauncher.GoogleChrome,
-                    OperatingSystem.OsX,
-                    CpuArchitecture.X86_64,
-                    "104.0.5112.79",
-                    URI("https://chromedriver.storage.googleapis.com/108.0.5359.71/chromedriver_mac64.zip")
-            ))
+        WebDriverOption(
+            BrowserLauncher.GoogleChrome,
+            OperatingSystem.OsX,
+            CpuArchitecture.X86_64,
+            "111.0.5563.64",
+            URI("https://chromedriver.storage.googleapis.com/111.0.5563.64/chromedriver_mac64.zip")
+        ))
 
 
     fun latest(

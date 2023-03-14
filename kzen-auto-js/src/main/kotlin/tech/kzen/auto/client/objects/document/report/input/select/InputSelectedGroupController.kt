@@ -4,7 +4,6 @@ import csstype.em
 import emotion.react.css
 import mui.material.Size
 import mui.material.TextField
-import org.w3c.dom.HTMLInputElement
 import react.ChildrenBuilder
 import react.Props
 import react.ReactNode
@@ -18,6 +17,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
+import web.html.HTMLInputElement
 
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.script.step.attribute
 
 import csstype.em
 import emotion.react.css
+import js.core.jso
 import kotlinx.browser.document
 import mui.material.InputLabel
 import react.*
@@ -65,9 +66,9 @@ class SelectStepEditor(
     override fun SelectStepEditorState.init(props: AttributeEditorProps) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
-        @Suppress("MoveVariableDeclarationIntoWhen")
         val attributeNotation = props.clientState.graphStructure().graphNotation
             .firstAttribute(props.objectLocation, props.attributeName)
+        console.log("SelectStepEditorState.init | attributeNotation - $attributeNotation")
 
         val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 
@@ -187,8 +188,14 @@ class SelectStepEditor(
 //        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
 //                props.objectLocation, props.attributeName)
 
-        val selectOptions = predecessors()
-                .map { ReactSelectOption(it.asString(), it.objectPath.name.value) }
+        val selectOptions: Array<ReactSelectOption> = predecessors()
+                .map { location ->
+                    val option: ReactSelectOption = jso {
+                        this.value = location.asString()
+                        this.label = location.objectPath.name.value
+                    }
+                    option
+                }
                 .toTypedArray()
 
 //        +"^^ SELECT: ${props.attributeName} - $attributeNotation - ${selectOptions.map { it.value }}"
@@ -205,10 +212,12 @@ class SelectStepEditor(
             +formattedLabel()
         }
 
+        val selectedValue = selectOptions.find { it.value == state.value?.asString() }
+        console.log("### ReactSelect !!!", state.value, selectedValue, selectOptions)
+
         ReactSelect::class.react {
             id = selectId
-
-            value = selectOptions.find { it.value == state.value?.asString() }
+            value = selectedValue
             options = selectOptions
 
             onChange = {
