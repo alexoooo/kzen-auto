@@ -1,18 +1,9 @@
-
-//import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+@file:Suppress("UnstableApiUsage")
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 
 plugins {
     kotlin("jvm")
-    application
-
-//    id("org.springframework.boot") version springBootVersion
-//    id("io.spring.dependency-management") version dependencyManagementVersion
-
-//    id("com.github.johnrengelman.shadow") version shadowVersion
-
-//    kotlin("plugin.spring") version kotlinVersion
     `maven-publish`
 }
 
@@ -65,19 +56,13 @@ dependencies {
 }
 
 
-//tasks.named<Copy>("jvmProcessResources") {
-//    val jsBrowserDistribution = tasks.named("jsBrowserDistribution")
-//    from(jsBrowserDistribution)
-//}
 tasks.withType<ProcessResources> {
     val jsProject = project(":kzen-auto-js")
     val task = jsProject.tasks.getByName("browserProductionWebpack") as org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
-//    val task = jsProject.tasks.getByName("jsBrowserDistribution")
 
     from(task.destinationDirectory) {
         into("static")
     }
-//    from(task)
 
     dependsOn(task)
 }
@@ -96,44 +81,34 @@ tasks.compileJava {
 }
 
 
+val dependenciesDir = "dependencies"
+task("copyDependencies", Copy::class) {
+    from(configurations.default).into("$buildDir/libs/$dependenciesDir")
+}
+
+
 tasks.getByName<Jar>("jar") {
-    enabled = true
+    val jvmProject = project(":kzen-auto-jvm")
+    val copyDependenciesTask = jvmProject.tasks.getByName("copyDependencies") as Copy
+    dependsOn(copyDependenciesTask)
+
+    manifest {
+        attributes["Main-Class"] = "tech.kzen.auto.server.KzenAutoMainKt"
+        attributes["Class-Path"] = configurations
+            .runtimeClasspath
+            .get()
+            .joinToString(separator = " ") { file ->
+                "$dependenciesDir/${file.name}"
+            }
+    }
 }
-
-
-
-application {
-    mainClass.set("tech.kzen.auto.server.KzenAutoMainKt")
-    applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true")
-}
-
-
-// https://discuss.kotlinlang.org/t/kotlin-compiler-embeddable-exception-on-kotlin-script-evaluation/6547/7
-// https://shareablecode.com/snippets/example-build-gradle-kt-to-build-a-shadow-jar-for-java-and-kotlin-application-ko-TYWV-i5yf
-//tasks.named<ShadowJar>("shadowJar") {
-//    archiveBaseName.set("kzen-auto")
-//    isZip64 = true
-//    mergeServiceFiles()
-//    manifest {
-//        // For: KzenAutoMain.kt
-//        attributes(mapOf("Main-Class" to "tech.kzen.auto.server.KzenAutoMainKt"))
-//    }
-//}
-
-//tasks.getByName<BootJar>("bootJar") {
-//    archiveClassifier.set("boot")
-//
-//    // https://discuss.kotlinlang.org/t/kotlin-compiler-embeddable-exception-on-kotlin-script-evaluation/6547/6
-//    // https://github.com/sdeleuze/kotlin-script-templating
-////    requiresUnpack("**/kotlin-compiler-*.jar")
-//    requiresUnpack("**/*.jar")
-//}
 
 
 val sourcesJar by tasks.registering(Jar::class) {
     archiveClassifier.set("sources")
     from(sourceSets.main.get().allSource)
 }
+
 
 publishing {
     repositories {

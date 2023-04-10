@@ -1,4 +1,4 @@
-const val kotlinVersion = "1.8.10"
+const val kotlinVersion = "1.8.20"
 const val jvmTargetVersion = "19"
 const val javaVersion = 19
 const val jvmToolchainVersion = 19
@@ -6,7 +6,7 @@ const val jvmToolchainVersion = 19
 //const val springBootVersion = "3.0.0"
 //const val dependencyManagementVersion = "1.0.14.RELEASE"
 const val annotationsApiVersion = "1.3.2"
-const val ktorVersion = "2.2.3"
+const val ktorVersion = "2.2.4"
 
 
 //const val kzenLibVersion = "0.25.0"
@@ -45,7 +45,7 @@ const val reactSelectVersion = "5.7.0"
 const val iconifyReactVersion = "4.1.0"
 const val iconifyIconsVaadinVersion = "1.2.4"
 
-const val wrapperKotlinVersion = "pre.508"
+const val wrapperKotlinVersion = "pre.531"
 const val kotlinReactVersion = "18.2.0-$wrapperKotlinVersion"
 const val kotlinReactDomVersion = "18.2.0-$wrapperKotlinVersion"
 const val kotlinEmotionVersion = "11.10.6-$wrapperKotlinVersion"

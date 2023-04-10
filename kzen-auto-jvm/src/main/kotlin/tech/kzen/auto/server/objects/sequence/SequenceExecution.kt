@@ -23,7 +23,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 
 class SequenceExecution(
     private val documentPath: DocumentPath,
-    private val root: ObjectLocation,
+    private val objectLocation: ObjectLocation,
     private val logicHandle: LogicHandle,
     private val logicTraceHandle: LogicTraceHandle,
     private val runExecutionId: LogicRunExecutionId
@@ -63,8 +63,8 @@ class SequenceExecution(
         val stepContext = StepContext(
             logicControl, activeSequenceModel, logicHandleFacade, logicTraceHandle, graphInstance)
 
-        val step = graphInstance[root]!!.reference as SequenceStep
-        val model = activeSequenceModel.steps.getOrPut(root) { ActiveStepModel() }
+        val step = graphInstance[objectLocation]!!.reference as SequenceStep
+        val model = activeSequenceModel.steps.getOrPut(objectLocation) { ActiveStepModel() }
 
         try {
             val stepValue = step.continueOrStart(stepContext)

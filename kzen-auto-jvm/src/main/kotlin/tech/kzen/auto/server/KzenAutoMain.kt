@@ -54,7 +54,7 @@ private fun runEmbeddedServer() {
 
 
 fun Application.ktorMain() {
-    println("developmentMode: " + environment.developmentMode)
+//    println("developmentMode: " + environment.developmentMode)
 
     install(ContentNegotiation) {
         jackson()

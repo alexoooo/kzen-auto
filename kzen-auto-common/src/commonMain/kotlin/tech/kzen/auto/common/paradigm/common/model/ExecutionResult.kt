@@ -12,7 +12,6 @@ sealed class ExecutionResult
         const val valueKey = "value"
         const val detailKey = "detail"
 
-        @Suppress("UNCHECKED_CAST")
         fun fromJsonCollection(collection: Map<String, Any?>): ExecutionResult {
             val error = collection[errorKey]
 
@@ -76,6 +75,7 @@ data class ExecutionFailure(
             return ofException("", throwable)
         }
 
+        @Suppress("MemberVisibilityCanBePrivate")
         fun ofException(userMessage: String, throwable: Throwable): ExecutionFailure {
             val errorName = throwable::class
                 .simpleName

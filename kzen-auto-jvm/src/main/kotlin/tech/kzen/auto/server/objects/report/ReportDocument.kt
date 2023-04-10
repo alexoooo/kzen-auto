@@ -150,7 +150,7 @@ class ReportDocument(
         return ExecutionDownloadResult(
             TableReportOutput.downloadCsvOffline(reportRunContext),
             filename,
-            tech.kzen.auto.server.objects.report.ReportDocument.Companion.mimeTypeCsv
+            mimeTypeCsv
         )
     }
 

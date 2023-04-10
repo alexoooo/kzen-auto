@@ -52,7 +52,7 @@ class SequenceStepController(
 
 
     /**
-     * NB: lazy reference to avoid loop with nested steps
+     * NB: lazy reference to avoid reference cycle with nested steps
      */
     @Reflect
     class Handle {
