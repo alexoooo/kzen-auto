@@ -21,7 +21,7 @@ fun main() {
 
     fun emptyRootElement(): HTMLElement {
         val rootElement = document.getElementById(rootHtmlElementId)
-            ?: throw IllegalStateException("'root' element not found")
+            ?: throw IllegalStateException("'$rootHtmlElementId' element not found")
 
         while (rootElement.hasChildNodes()) {
             rootElement.removeChild(rootElement.firstChild!!)

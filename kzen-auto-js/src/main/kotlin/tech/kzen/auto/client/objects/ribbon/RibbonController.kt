@@ -20,6 +20,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.iconClassForName
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.api.staticResourcePath
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.common.util.RequestParams
@@ -56,7 +57,6 @@ external interface RibbonControllerState: react.State {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-@Suppress("unused")
 class RibbonController(
     props: RibbonControllerProps
 ):
@@ -242,7 +242,7 @@ class RibbonController(
                     height = 42.px
                 }
 
-                src = "logo.png"
+                src = "$staticResourcePath/logo.png"
                 title = "Kzen (home)"
             }
         }

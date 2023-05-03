@@ -2,9 +2,6 @@ const val kotlinVersion = "1.8.20"
 const val jvmTargetVersion = "19"
 const val javaVersion = 19
 const val jvmToolchainVersion = 19
-//const val shadowVersion = "7.1.2"
-//const val springBootVersion = "3.0.0"
-//const val dependencyManagementVersion = "1.0.14.RELEASE"
 const val annotationsApiVersion = "1.3.2"
 const val ktorVersion = "2.2.4"
 
@@ -27,7 +24,7 @@ const val commonsIoVersion = "2.11.0"
 const val migzVersion = "2.0.beta-1"
 
 
-const val reactVersion = "18.2.0"
+//const val reactVersion = "18.2.0"
 //const val inlineStylePrefixerVersion = "6.0.1"
 //const val styledComponentsVersion = "5.3.5"
 const val kotlinxDatetimeVersion = "0.4.0"

@@ -10,7 +10,7 @@ plugins {
 
 kotlin {
     jvmToolchain {
-        (this as JavaToolchainSpec).languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion))
+        languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion))
     }
 }
 
@@ -22,17 +22,13 @@ dependencies {
 //    implementation("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
     api("tech.kzen.lib:kzen-lib-jvm:$kzenLibVersion")
 
-//    api("org.springframework.boot:spring-boot-starter-webflux")
-
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
 
-//    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-scripting-jvm:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-scripting-jvm-host:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:$kotlinVersion")
 
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
-//    implementation("org.jetbrains.kotlin-wrappers:kotlin-css-jvm:$kotlinCssVersion")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
     api("org.seleniumhq.selenium:selenium-java:$seleniumVersion")
     implementation("org.apache.commons:commons-compress:$commonsCompressVersion")

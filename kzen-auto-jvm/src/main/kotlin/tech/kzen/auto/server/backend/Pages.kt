@@ -3,16 +3,15 @@ package tech.kzen.auto.server.backend
 import kotlinx.html.*
 import tech.kzen.auto.common.api.rootHtmlElementId
 import tech.kzen.auto.common.api.staticResourcePath
-import tech.kzen.auto.server.jsResourcePath
-
-
-//object Pages
+import tech.kzen.auto.server.KzenAutoConfig
 
 
 //---------------------------------------------------------------------------------------------------------------------
-fun HTML.indexPage() {
+fun HTML.indexPage(
+    kzenAutoConfig: KzenAutoConfig
+) {
     head {
-        title("Kzen Auto")
+        title("Kzen")
         meta {
             charset = "UTF-8"
         }
@@ -24,7 +23,7 @@ fun HTML.indexPage() {
         // see: https://www.npmjs.com/package/react-cropper#installation
         link("$staticResourcePath/cropper.css", "stylesheet", "text/css")
 
-        script("text/javascript", jsResourcePath) {
+        script("text/javascript", kzenAutoConfig.jsResourcePath()) {
             defer = true
         }
     }

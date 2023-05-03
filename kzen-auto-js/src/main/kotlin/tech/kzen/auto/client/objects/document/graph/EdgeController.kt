@@ -312,12 +312,8 @@ class EdgeController(
 
         return when {
             isSending ->
-                if (isRunning) {
-                    goldLight20
-                }
-                else {
-                    NamedColor.gold
-                }
+                if (isRunning) goldLight20
+                else NamedColor.gold
 
             isInFlight ->
                 goldLight50

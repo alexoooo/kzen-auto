@@ -38,7 +38,7 @@ kotlin {
             }
         }
 
-        // TODO: how to pass NODE_OPTIONS to nodejs to avoid "Allocation failed"
+        // TODO: how to pass NODE_OPTIONS to nodejs to avoid "Allocation failed"?
 //        nodejs {
 //            nodeOptions = ["--max-old-space-size=4096"]
 //        }
@@ -60,30 +60,13 @@ dependencies {
     implementation("org.jetbrains.kotlin-wrappers:kotlin-emotion:$kotlinEmotionVersion")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-mui:$kotlinMuiVersion")
 
-////    implementation("org.jetbrains.kotlin-wrappers:kotlin-react:$kotlinReactVersion")
-//    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-legacy:$kotlinReactVersion")
-////    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$kotlinReactDomVersion")
-//    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom-legacy:$kotlinReactDomVersion")
-//
 ////    implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:$kotlinStyledVersion")
 //    implementation("org.jetbrains.kotlin-wrappers:kotlin-styled-next:$kotlinStyledVersion")
 //    implementation("org.jetbrains.kotlin-wrappers:kotlin-extensions:$kotlinExtensionsVersion")
 //    implementation("org.jetbrains.kotlin-wrappers:kotlin-css-js:$kotlinCssVersion")
 //
-//    implementation(npm("react", reactVersion))
-//    implementation(npm("react-dom", reactVersion))
-//    implementation(npm("react-is", reactVersion))
-//    implementation(npm("inline-style-prefixer", inlineStylePrefixerVersion))
-//    implementation(npm("styled-components", styledComponentsVersion))
-//
-////    implementation(npm("@material-ui/core", materialUiCoreVersion))
-////    implementation(npm("@material-ui/icons", materialUiIconsVersion))
 ////    implementation(npm("@material-ui/lab", materialUiLabVersion))
-//    implementation(npm("@mui/material", muiMaterialVersion))
     implementation(npm("@mui/icons-material", muiIconsVersion))
-//    implementation(npm("@mui/styles", muiStylesVersion))
-//    implementation(npm("@emotion/styled", emotionStyledVersion))
-//    implementation(npm("@emotion/react", emotionReactVersion))
 
     implementation(npm("cropperjs", cropperJsVersion))
     implementation(npm("lodash", lodashVersion))
@@ -113,7 +96,6 @@ publishing {
 
     publications {
         create<MavenPublication>("js") {
-//            println("Components: " + components.asMap.keys)
             from(components["kotlin"])
         }
     }

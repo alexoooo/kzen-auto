@@ -12,7 +12,6 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.html.HTML
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.api.staticResourceDir
 import tech.kzen.auto.common.api.staticResourcePath
@@ -22,40 +21,63 @@ import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.lib.common.util.ImmutableByteArray
 
 
-const val jsFileName = "kzen-auto-js.js"
-const val jsResourcePath = "$staticResourcePath/$jsFileName"
+//---------------------------------------------------------------------------------------------------------------------
+data class KzenAutoConfig(
+    val jsModuleName: String,
+    val port: Int = 80,
+    val host: String = "127.0.0.1"
+) {
+    fun jsFileName(): String {
+        return "$jsModuleName.js"
+    }
+
+    fun jsResourcePath(): String {
+        return "$staticResourcePath/${jsFileName()}"
+    }
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
+const val kzenAutoJsModuleName = "kzen-auto-js"
+//const val jsResourcePath = "$staticResourcePath/$jsFileName"
 
 private const val indexFileName = "index.html"
 private const val indexFilePath = "/$indexFileName"
 
 
+//---------------------------------------------------------------------------------------------------------------------
 fun main() {
-    kzenAutoInit()
-    runEmbeddedServer()
+    kzenAutoMain(KzenAutoConfig(
+        jsModuleName = kzenAutoJsModuleName,
+        port = 8080,
+        host = "127.0.0.1"
+    ))
 }
 
 
+//---------------------------------------------------------------------------------------------------------------------
 fun kzenAutoInit() {
-    // NB: disable headless mode
-    // https://stackoverflow.com/questions/40016683/spring-boot-forcing-headless-mode
+    // disable headless mode for Robot-based automation
     System.setProperty("java.awt.headless", "false")
 }
 
 
-private fun runEmbeddedServer() {
+fun kzenAutoMain(kzenAutoConfig: KzenAutoConfig) {
+    kzenAutoInit()
+
     embeddedServer(
         Netty,
-        port = 8080,
-        host = "127.0.0.1"
+        port = kzenAutoConfig.port,
+        host = kzenAutoConfig.host
     ) {
-        ktorMain()
+        ktorMain(kzenAutoConfig)
     }.start(wait = true)
 }
 
 
-fun Application.ktorMain() {
-//    println("developmentMode: " + environment.developmentMode)
-
+fun Application.ktorMain(
+    kzenAutoConfig: KzenAutoConfig
+) {
     install(ContentNegotiation) {
         jackson()
     }
@@ -64,7 +86,7 @@ fun Application.ktorMain() {
     try {
         val restHandler = RestHandler()
         routing {
-            routeRequests(restHandler)
+            routeRequests(restHandler, kzenAutoConfig)
         }
     }
     finally {
@@ -73,18 +95,18 @@ fun Application.ktorMain() {
 }
 
 
+//---------------------------------------------------------------------------------------------------------------------
 private fun Routing.routeRequests(
-    restHandler: RestHandler
+    restHandler: RestHandler,
+    kzenAutoConfig: KzenAutoConfig
 ) {
     get("/") {
-//        call.respondRedirect("index.html")
         call.respondRedirect(indexFileName)
     }
     get(indexFilePath) {
-        call.respondHtml(HttpStatusCode.OK, HTML::indexPage)
-//        call.respondHtml(HttpStatusCode.OK) {
-//            Pages.index()
-//        }
+        call.respondHtml(HttpStatusCode.OK) {
+            indexPage(kzenAutoConfig)
+        }
     }
 
     static(staticResourcePath) {
