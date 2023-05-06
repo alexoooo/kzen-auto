@@ -18,6 +18,7 @@ import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.definition.ReportDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
+import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 import tech.kzen.auto.server.objects.report.exec.ReportInputPipeline
@@ -41,7 +42,6 @@ import tech.kzen.auto.server.objects.report.exec.trace.ReportInputTrace
 import tech.kzen.auto.server.objects.report.exec.trace.ReportOutputTrace
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
-import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.auto.server.service.v1.model.*
@@ -186,7 +186,7 @@ class ReportExecution(
 
     private fun <T> datasetDefinition(datasetInfo: DatasetInfo): DatasetDefinition<T> {
         val pluginCoordinates = datasetInfo.items.map { it.processorPluginCoordinate }.toSet()
-        val classLoaderHandle = ServerContext.definitionRepository
+        val classLoaderHandle = KzenAutoContext.global().definitionRepository
             .classLoaderHandle(pluginCoordinates, ClassLoaderUtils.dynamicParentClassLoader())
 
         val cache = mutableMapOf<PluginCoordinate, ReportDefinition<T>>()
@@ -217,7 +217,7 @@ class ReportExecution(
         processorDefinitionCoordinate: PluginCoordinate,
         classLoaderHandle: ClassLoaderHandle
     ): ReportDefinition<T> {
-        val definition = ServerContext.definitionRepository.define(
+        val definition = KzenAutoContext.global().definitionRepository.define(
             processorDefinitionCoordinate, classLoaderHandle)
 
         @Suppress("UNCHECKED_CAST")
@@ -421,7 +421,7 @@ class ReportExecution(
             initialReportRunContext.dataType,
             initialReportRunContext.formula,
             classLoaderHandle.classLoader,
-            ServerContext.calculatedColumnEval)
+            KzenAutoContext.global().calculatedColumnEval)
 
         var builder = recordDisruptor.handleEventsWith(formulas)
 

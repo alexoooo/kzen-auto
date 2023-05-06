@@ -10,10 +10,10 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.common.util.data.FilePathJvm.toPath
+import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
 import tech.kzen.auto.server.objects.report.model.GroupPattern
 import tech.kzen.auto.server.objects.report.service.ReportUtils.asCommon
-import tech.kzen.auto.server.service.ServerContext
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
@@ -78,7 +78,7 @@ class FileListingAction {
             val path = inputDataSpec.location.filePath!!.toPath()
             val dataLocationInfo = toFileInfo(path)
 
-            val processorDefinitionMetadata = ServerContext.definitionRepository.metadata(
+            val processorDefinitionMetadata = KzenAutoContext.global().definitionRepository.metadata(
                 inputDataSpec.processorDefinitionCoordinate.asPluginCoordinate())
 
             val dataEncodingSpec = ReportUtils.encoding(inputDataSpec, processorDefinitionMetadata)

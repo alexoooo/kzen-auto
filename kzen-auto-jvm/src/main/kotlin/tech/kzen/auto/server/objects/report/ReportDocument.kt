@@ -24,6 +24,7 @@ import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
+import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
@@ -40,7 +41,6 @@ import tech.kzen.auto.server.objects.report.service.ReportUtils
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
-import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.Logic
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
@@ -158,7 +158,7 @@ class ReportDocument(
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun actionBrowserInfo(): ExecutionResult {
         val absoluteDir = input.browser.directory.normalize()
-        val inputPaths = ServerContext.fileListingAction.scanInfo(
+        val inputPaths = KzenAutoContext.global().fileListingAction.scanInfo(
             input.browser.directory, input.browser.filter)
 
         val inputInfo = InputBrowserInfo(
@@ -176,7 +176,8 @@ class ReportDocument(
 
         val inputDataSpecs = mutableListOf<InputDataSpec>()
         for (dataLocation in dataLocations) {
-            val defaultCoordinate = ServerContext.definitionRepository
+            val defaultCoordinate = KzenAutoContext.global()
+                .definitionRepository
                 .find(dataType, dataLocation)
                 .map { it.coordinate }
                 .firstOrNull()
@@ -196,7 +197,8 @@ class ReportDocument(
         val groupPattern = GroupPattern.parse(input.selection.groupBy)
             ?: return ExecutionFailure("Group By pattern error: ${input.selection.groupBy}")
 
-        val inputSelectionInfo = ServerContext.fileListingAction
+        val inputSelectionInfo = KzenAutoContext.global()
+            .fileListingAction
             .selectionInfo(input.selection, groupPattern)
             .sorted()
 
@@ -206,7 +208,8 @@ class ReportDocument(
 
 
     private fun actionDataTypes(): ExecutionResult {
-        val dataTypes = ServerContext.definitionRepository
+        val dataTypes = KzenAutoContext.global()
+            .definitionRepository
             .listMetadata()
             .map { it.payloadType }
             .toSet()
@@ -220,7 +223,8 @@ class ReportDocument(
     private fun actionTypeFormats(): ExecutionResult {
         val dataType = input.selection.dataType
 
-        val processorDefinerDetails = ServerContext.definitionRepository
+        val processorDefinerDetails = KzenAutoContext.global()
+            .definitionRepository
             .listMetadata()
             .filter { it.payloadType == dataType }
             .map { it.toProcessorDefinerDetail() }
@@ -261,9 +265,9 @@ class ReportDocument(
         val reportRunContext = reportRunContext()
             ?: return ExecutionFailure("Missing run")
 
-        val outputInfo = tech.kzen.auto.server.objects.report.ReportExecution.Companion.outputInfoOffline(
+        val outputInfo = ReportExecution.outputInfoOffline(
             reportRunContext,
-            ServerContext.reportWorkPool
+            KzenAutoContext.global().reportWorkPool
         )
 
         return ExecutionSuccess.ofValue(
@@ -294,7 +298,7 @@ class ReportDocument(
 
         val combinedParams = runExecutionParams.addAll(pivotValueParams)
 
-        return ServerContext.serverLogicController.request(
+        return KzenAutoContext.global().serverLogicController.request(
             runId,
             executionId,
             ExecutionRequest(combinedParams, null))
@@ -307,7 +311,7 @@ class ReportDocument(
             ?: return ExecutionFailure("Missing run")
 
         val pluginCoordinates = reportRunContext.datasetInfo.items.map { it.processorPluginCoordinate }.toSet()
-        val classLoaderHandle = ServerContext.definitionRepository
+        val classLoaderHandle = KzenAutoContext.global().definitionRepository
             .classLoaderHandle(pluginCoordinates, ClassLoaderUtils.dynamicParentClassLoader())
 
         val dataType = input.selection.dataType
@@ -317,7 +321,7 @@ class ReportDocument(
             val errors: Map<String, String> = reportRunContext.formula
                 .formulas
                 .mapValues { formula ->
-                    ServerContext.calculatedColumnEval.validate(
+                    KzenAutoContext.global().calculatedColumnEval.validate(
                         formula.key,
                         formula.value,
                         flatHeaderListing,
@@ -363,7 +367,7 @@ class ReportDocument(
             CommonRestApi.paramExecutionId to executionId.value
         )
 
-        return ServerContext.serverLogicController.request(
+        return KzenAutoContext.global().serverLogicController.request(
             runId,
             executionId,
             ExecutionRequest(runExecutionParams, null))
@@ -387,12 +391,12 @@ class ReportDocument(
         val reportRunContext = reportRunContext()
             ?: throw IllegalStateException("Unable to create context")
 
-        ServerContext.reportWorkPool.prepareRunDir(reportRunContext.runDir, logicRunExecutionId)
+        KzenAutoContext.global().reportWorkPool.prepareRunDir(reportRunContext.runDir, logicRunExecutionId)
 
         var success = false
         try {
             val reportExecution = ReportExecution(
-                reportRunContext, ServerContext.reportWorkPool, logicTraceHandle, logicRunExecutionId)
+                reportRunContext, KzenAutoContext.global().reportWorkPool, logicTraceHandle, logicRunExecutionId)
 
             reportExecution.init(logicControl)
 
@@ -401,7 +405,7 @@ class ReportDocument(
         }
         finally {
             if (! success) {
-                ServerContext.reportWorkPool.updateRunStatus(reportRunContext.runDir, OutputStatus.Failed)
+                KzenAutoContext.global().reportWorkPool.updateRunStatus(reportRunContext.runDir, OutputStatus.Failed)
             }
         }
     }
@@ -438,7 +442,7 @@ class ReportDocument(
             output)
         val reportRunSignature = withoutRunDir.toSignature()
 
-        val runDir = ServerContext.reportWorkPool.resolveRunDir(reportRunSignature, reportDir)
+        val runDir = KzenAutoContext.global().reportWorkPool.resolveRunDir(reportRunSignature, reportDir)
 
         return withoutRunDir.copy(
             runDir = runDir.toAbsolutePath().normalize())
@@ -454,7 +458,7 @@ class ReportDocument(
             val dataLocation = inputDataSpec.location
 
             val pluginCoordinate = inputDataSpec.processorDefinitionCoordinate.asPluginCoordinate()
-            val processorDefinitionMetadata = ServerContext.definitionRepository.metadata(pluginCoordinate)
+            val processorDefinitionMetadata = KzenAutoContext.global().definitionRepository.metadata(pluginCoordinate)
                 ?: return null
 
             val dataEncoding = ReportUtils.encodingWithMetadata(inputDataSpec, processorDefinitionMetadata)
@@ -462,19 +466,19 @@ class ReportDocument(
             val flatDataLocation = FlatDataLocation(
                 dataLocation, dataEncoding)
 
-            val cachedHeaderListing = ServerContext.columnListingAction.cachedHeaderListing(
+            val cachedHeaderListing = KzenAutoContext.global().columnListingAction.cachedHeaderListing(
                 dataLocation, pluginCoordinate)
 
             val headerListing = cachedHeaderListing
                 ?: run {
-                    val classLoaderHandle = ServerContext.definitionRepository
+                    val classLoaderHandle = KzenAutoContext.global().definitionRepository
                         .classLoaderHandle(setOf(pluginCoordinate), ClassLoaderUtils.dynamicParentClassLoader())
 
                     classLoaderHandle.use {
-                        val processorDefinition = ServerContext.definitionRepository.define(
+                        val processorDefinition = KzenAutoContext.global().definitionRepository.define(
                             pluginCoordinate, it)
 
-                        ServerContext.columnListingAction.headerListing(
+                        KzenAutoContext.global().columnListingAction.headerListing(
                             FlatDataHeaderDefinition(
                                 flatDataLocation,
                                 FileFlatDataSource(),

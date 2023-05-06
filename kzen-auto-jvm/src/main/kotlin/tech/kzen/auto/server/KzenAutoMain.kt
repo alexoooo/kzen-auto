@@ -17,24 +17,9 @@ import tech.kzen.auto.common.api.staticResourceDir
 import tech.kzen.auto.common.api.staticResourcePath
 import tech.kzen.auto.server.api.RestHandler
 import tech.kzen.auto.server.backend.indexPage
-import tech.kzen.auto.server.service.ServerContext
+import tech.kzen.auto.server.context.KzenAutoConfig
+import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.lib.common.util.ImmutableByteArray
-
-
-//---------------------------------------------------------------------------------------------------------------------
-data class KzenAutoConfig(
-    val jsModuleName: String,
-    val port: Int = 80,
-    val host: String = "127.0.0.1"
-) {
-    fun jsFileName(): String {
-        return "$jsModuleName.js"
-    }
-
-    fun jsResourcePath(): String {
-        return "$staticResourcePath/${jsFileName()}"
-    }
-}
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -46,66 +31,72 @@ private const val indexFilePath = "/$indexFileName"
 
 
 //---------------------------------------------------------------------------------------------------------------------
-fun main() {
-    kzenAutoMain(KzenAutoConfig(
-        jsModuleName = kzenAutoJsModuleName,
-        port = 8080,
-        host = "127.0.0.1"
-    ))
+fun main(args: Array<String>) {
+    val context = kzenAutoInit(args, kzenAutoJsModuleName)
+    kzenAutoMain(context)
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
-fun kzenAutoInit() {
+fun kzenAutoInit(args: Array<String>, jsModuleName: String): KzenAutoContext {
     // disable headless mode for Robot-based automation
     System.setProperty("java.awt.headless", "false")
+
+    val port = KzenAutoConfig.readPort(args) ?: 8080
+
+    val config = KzenAutoConfig(
+        jsModuleName = jsModuleName,
+        port = port,
+        host = "127.0.0.1")
+
+    val context = KzenAutoContext(config)
+
+    context.init()
+
+    Runtime.getRuntime().addShutdownHook(Thread {
+        context.close()
+    })
+
+    KzenAutoContext.setGlobal(context)
+
+    return context
 }
 
 
-fun kzenAutoMain(kzenAutoConfig: KzenAutoConfig) {
-    kzenAutoInit()
-
+fun kzenAutoMain(context: KzenAutoContext) {
     embeddedServer(
         Netty,
-        port = kzenAutoConfig.port,
-        host = kzenAutoConfig.host
+        port = context.config.port,
+        host = context.config.host
     ) {
-        ktorMain(kzenAutoConfig)
+        ktorMain(context)
     }.start(wait = true)
 }
 
 
 fun Application.ktorMain(
-    kzenAutoConfig: KzenAutoConfig
+    context: KzenAutoContext
 ) {
     install(ContentNegotiation) {
         jackson()
     }
 
-    ServerContext.init()
-    try {
-        val restHandler = RestHandler()
-        routing {
-            routeRequests(restHandler, kzenAutoConfig)
-        }
-    }
-    finally {
-        ServerContext.close()
+    routing {
+        routeRequests(context)
     }
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 private fun Routing.routeRequests(
-    restHandler: RestHandler,
-    kzenAutoConfig: KzenAutoConfig
+    context: KzenAutoContext
 ) {
     get("/") {
         call.respondRedirect(indexFileName)
     }
     get(indexFilePath) {
         call.respondHtml(HttpStatusCode.OK) {
-            indexPage(kzenAutoConfig)
+            indexPage(context.config)
         }
     }
 
@@ -113,15 +104,15 @@ private fun Routing.routeRequests(
         resources(staticResourceDir)
     }
 
-    routeNotationQuery(restHandler)
-    routeNotationCommands(restHandler)
+    routeNotationQuery(context.restHandler)
+    routeNotationCommands(context.restHandler)
 
-    routeDetached(restHandler)
-    routeTask(restHandler)
-    routeLogic(restHandler)
+    routeDetached(context.restHandler)
+    routeTask(context.restHandler)
+    routeLogic(context.restHandler)
 
-    routeScript(restHandler)
-    routeDataflow(restHandler)
+    routeScript(context.restHandler)
+    routeDataflow(context.restHandler)
 }
 
 

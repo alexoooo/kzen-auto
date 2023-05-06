@@ -11,27 +11,25 @@ class DownloadClient {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val logger = LoggerFactory.getLogger(DownloadClient::class.java)!!
-    }
 
+        init {
+            // TODO: implement proper certificate management
+            // https://stackoverflow.com/a/24501156
 
-    //-----------------------------------------------------------------------------------------------------------------
-    // TODO: implement proper certificate management
-    fun initialize() {
-        // https://stackoverflow.com/a/24501156
+            val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+                override fun getAcceptedIssuers(): Array<X509Certificate>? = null
+                override fun checkClientTrusted(certs: Array<X509Certificate>, authType: String) {}
+                override fun checkServerTrusted(certs: Array<X509Certificate>, authType: String) {}
+            })
 
-        val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
-            override fun getAcceptedIssuers(): Array<X509Certificate>? = null
-            override fun checkClientTrusted(certs: Array<X509Certificate>, authType: String) {}
-            override fun checkServerTrusted(certs: Array<X509Certificate>, authType: String) {}
-        })
+            val sc = SSLContext.getInstance("SSL")
+            sc.init(null, trustAllCerts, java.security.SecureRandom())
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.socketFactory)
 
-        val sc = SSLContext.getInstance("SSL")
-        sc.init(null, trustAllCerts, java.security.SecureRandom())
-        HttpsURLConnection.setDefaultSSLSocketFactory(sc.socketFactory)
+            val allHostsValid = HostnameVerifier { _, _ -> true }
 
-        val allHostsValid = HostnameVerifier { _, _ -> true }
-
-        HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid)
+            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid)
+        }
     }
 
 

@@ -4,6 +4,7 @@ import csstype.*
 import emotion.react.css
 import mui.material.CardContent
 import mui.material.Paper
+import mui.system.sx
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
@@ -134,7 +135,7 @@ class DefaultStepDisplay(
             .objectMetadata[props.common.objectLocation]!!
 
         Paper {
-            css {
+            sx {
                 val cardColor = when (imperativeState?.phase(isRunning)) {
                     ImperativePhase.Pending ->
                         if (isNextToRun) {

@@ -8,7 +8,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.imperative.api.ScriptStep
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.server.service.ServerContext
+import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.service.webdriver.model.BrowserLauncher
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.reflect.Reflect
@@ -25,12 +25,12 @@ class OpenBrowser(
     ): ExecutionResult {
         closeIfAlreadyOpen()
 
-        val webDriverOption = ServerContext.webDriverRepo.latest(BrowserLauncher.GoogleChrome)
-                ?: ServerContext.webDriverRepo.latest(BrowserLauncher.Firefox)
+        val webDriverOption = KzenAutoContext.global().webDriverRepo.latest(BrowserLauncher.GoogleChrome)
+                ?: KzenAutoContext.global().webDriverRepo.latest(BrowserLauncher.Firefox)
                 ?: throw IllegalStateException("Unable to find browser for current OS / architecture")
 //        println("webDriverOption: $webDriverOption")
 
-        val binary = ServerContext.webDriverInstaller.install(webDriverOption)
+        val binary = KzenAutoContext.global().webDriverInstaller.install(webDriverOption)
 
         System.setProperty(
                 webDriverOption.browserLauncher.driverSystemProperty,
@@ -65,7 +65,7 @@ class OpenBrowser(
 //                throw IllegalStateException("Unknown web driver: $webDriverOption")
         }
 
-        ServerContext.webDriverContext.set(driver)
+        KzenAutoContext.global().webDriverContext.set(driver)
 
         return ExecutionSuccess.empty
     }
@@ -73,6 +73,6 @@ class OpenBrowser(
 
     private fun closeIfAlreadyOpen() {
         // https://github.com/alexoooo/kzen-shell/issues/11
-        ServerContext.webDriverContext.quit()
+        KzenAutoContext.global().webDriverContext.quit()
     }
 }

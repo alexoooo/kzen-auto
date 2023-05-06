@@ -3,12 +3,12 @@ package tech.kzen.auto.server.objects.sequence
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
+import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.ActiveSequenceModel
 import tech.kzen.auto.server.objects.sequence.model.ActiveStepModel
 import tech.kzen.auto.server.objects.sequence.model.StepContext
-import tech.kzen.auto.server.service.ServerContext
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.auto.server.service.v1.LogicHandle
@@ -55,7 +55,7 @@ class SequenceExecution(
     ): LogicResult {
         logger.info("{} - run - {}", documentPath, logicControl.pollCommand())
 
-        val graphInstance = ServerContext.graphCreator.createGraph(
+        val graphInstance = KzenAutoContext.global().graphCreator.createGraph(
             graphDefinition.filterTransitive(documentPath))
 
         val activeSequenceModel = ActiveSequenceModel()

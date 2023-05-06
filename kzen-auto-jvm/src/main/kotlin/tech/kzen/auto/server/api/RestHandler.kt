@@ -11,14 +11,18 @@ import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunResponse
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
+import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
+import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
-import tech.kzen.auto.server.service.ServerContext
+import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
+import tech.kzen.auto.server.service.exec.ModelTaskRepository
+import tech.kzen.auto.server.service.v1.impl.ServerLogicController
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -34,6 +38,9 @@ import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
+import tech.kzen.lib.common.service.media.NotationMedia
+import tech.kzen.lib.common.service.parse.YamlNotationParser
+import tech.kzen.lib.common.service.store.DirectGraphStore
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.ImmutableByteArray
 import java.net.URI
@@ -43,8 +50,16 @@ import java.nio.file.Paths
 import java.util.stream.Collectors
 
 
-// TODO: refactor
-class RestHandler {
+class RestHandler(
+    private val notationMedia: NotationMedia,
+    private val yamlNotationParser: YamlNotationParser,
+    private val graphStore: DirectGraphStore,
+    private val executionRepository: ExecutionRepository,
+    private val detachedExecutor: ModelDetachedExecutor,
+    private val visualDataflowRepository: VisualDataflowRepository,
+    private val modelTaskRepository: ModelTaskRepository,
+    private val serverLogicController: ServerLogicController
+) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val classPathRoots = listOf(
@@ -123,11 +138,11 @@ class RestHandler {
 
     fun scan(fresh: Boolean): Map<String, Any> {
         if (fresh) {
-            ServerContext.notationMedia.invalidate()
+            notationMedia.invalidate()
         }
 
         val documentTree = runBlocking {
-            ServerContext.notationMedia.scan()
+            notationMedia.scan()
         }
 
         val asMap = mutableMapOf<String, Any>()
@@ -156,7 +171,7 @@ class RestHandler {
         val resourceLocation = ResourceLocation(documentPath, resourcePath)
 
         val resourceContents = runBlocking {
-            ServerContext.notationMedia.readResource(resourceLocation)
+            notationMedia.readResource(resourceLocation)
         }
 
         return resourceContents.toByteArray()
@@ -175,7 +190,7 @@ class RestHandler {
 
         val parsedNotationPath = DocumentPath.parse(decodedNotationPath)
         val notationText = runBlocking {
-            ServerContext.notationMedia.readDocument(parsedNotationPath)
+            notationMedia.readDocument(parsedNotationPath)
         }
         return notationText
     }
@@ -187,7 +202,7 @@ class RestHandler {
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
         val documentBody = parameters.getParam(CommonRestApi.paramDocumentNotation) {
-            ServerContext.yamlParser.parseDocumentObjects(it)
+            yamlNotationParser.parseDocumentObjects(it)
         }
 
         val command = CreateDocumentCommand(documentPath, documentBody)
@@ -216,7 +231,7 @@ class RestHandler {
             CommonRestApi.paramPositionIndex, PositionRelation::parse)
 
         val objectNotation: ObjectNotation = parameters.getParam(
-            CommonRestApi.paramObjectNotation, ServerContext.yamlParser::parseObject)
+            CommonRestApi.paramObjectNotation, yamlNotationParser::parseObject)
 
         val command = AddObjectCommand(
             ObjectLocation(documentPath, objectPath),
@@ -297,7 +312,7 @@ class RestHandler {
             CommonRestApi.paramSecondaryPosition, PositionRelation::parse)
 
         val objectNotation: ObjectNotation = parameters.getParam(
-            CommonRestApi.paramObjectNotation, ServerContext.yamlParser::parseObject)
+            CommonRestApi.paramObjectNotation, yamlNotationParser::parseObject)
 
         val command = InsertObjectInListAttributeCommand(
             ObjectLocation(documentPath, containingObjectPath),
@@ -341,7 +356,7 @@ class RestHandler {
             CommonRestApi.paramAttributeName, AttributeName::parse)
 
         val attributeNotation: AttributeNotation = parameters.getParam(
-            CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
+            CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
         val command = UpsertAttributeCommand(
             ObjectLocation(documentPath, objectPath),
@@ -363,7 +378,7 @@ class RestHandler {
             CommonRestApi.paramAttributePath, AttributePath::parse)
 
         val attributeNotation: AttributeNotation = parameters.getParam(
-            CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
+            CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
         val command = UpdateInAttributeCommand(
             ObjectLocation(documentPath, objectPath),
@@ -388,7 +403,7 @@ class RestHandler {
             CommonRestApi.paramAttributeNesting, AttributeNesting::parse)
 
         val attributeNotation: AttributeNotation = parameters.getParam(
-            CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
+            CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
         val command = UpdateAllNestingsInAttributeCommand(
             ObjectLocation(documentPath, objectPath),
@@ -414,7 +429,7 @@ class RestHandler {
             CommonRestApi.paramAttributeNesting, AttributeNesting::parse)
 
         val attributeNotations: List<AttributeNotation> = parameters.getParamList(
-            CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
+            CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
         require(attributeNestings.size == attributeNotations.size)
 
@@ -443,7 +458,7 @@ class RestHandler {
             CommonRestApi.paramPositionIndex, PositionRelation::parse)
 
         val itemNotation: AttributeNotation = parameters.getParam(
-            CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
+            CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
         val command = InsertListItemInAttributeCommand(
             ObjectLocation(documentPath, objectPath),
@@ -469,7 +484,7 @@ class RestHandler {
             CommonRestApi.paramPositionIndex, PositionRelation::parse)
 
         val itemNotations: List<AttributeNotation> = parameters.getParamList(
-            CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
+            CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
         val command = InsertAllListItemsInAttributeCommand(
             ObjectLocation(documentPath, objectPath),
@@ -498,7 +513,7 @@ class RestHandler {
             CommonRestApi.paramAttributeKey, AttributeSegment::parse)
 
         val valueNotation: AttributeNotation = parameters.getParam(
-            CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
+            CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
         val createAncestorsIfAbsent: Boolean = parameters
             .getParamOrNull(CommonRestApi.paramAttributeCreateContainer) { value -> value == "true" }
@@ -550,7 +565,7 @@ class RestHandler {
             CommonRestApi.paramAttributePath, AttributePath::parse)
 
         val itemNotation: AttributeNotation = parameters.getParam(
-            CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
+            CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
         val removeContainerIfEmpty: Boolean = parameters
             .getParamOrNull(CommonRestApi.paramAttributeCleanupContainer) { i -> i == "true"}
@@ -577,7 +592,7 @@ class RestHandler {
             CommonRestApi.paramAttributePath, AttributePath::parse)
 
         val itemNotations: List<AttributeNotation> = parameters.getParamList(
-            CommonRestApi.paramAttributeNotation, ServerContext.yamlParser::parseAttribute)
+            CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
         val removeContainerIfEmpty: Boolean = parameters
             .getParamOrNull(CommonRestApi.paramAttributeCleanupContainer) { i -> i == "true"}
@@ -715,20 +730,20 @@ class RestHandler {
     private fun applyCommand(command: NotationCommand): Digest {
         return runBlocking {
             try {
-                ServerContext.graphStore.apply(command)
+                graphStore.apply(command)
             }
             catch (e: Exception) {
                 e.printStackTrace()
             }
 
-            ServerContext.graphStore.digest()
+            graphStore.digest()
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun actionList(): List<String> {
-        val activeScripts = ServerContext.executionRepository.activeScripts()
+        val activeScripts = executionRepository.activeScripts()
         return activeScripts.map { it.asString() }
     }
 
@@ -738,8 +753,8 @@ class RestHandler {
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
         val executionModel = runBlocking {
-            val graphStructure = ServerContext.graphStore.graphStructure()
-            ServerContext.executionRepository.executionModel(documentPath, graphStructure)
+            val graphStructure = graphStore.graphStructure()
+            executionRepository.executionModel(documentPath, graphStructure)
         }
 
         return ImperativeModel.toCollection(executionModel)
@@ -751,11 +766,11 @@ class RestHandler {
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
         val digest = runBlocking {
-            val graphStructure = ServerContext.graphStore
+            val graphStructure = graphStore
                     .graphStructure()
                     .filter(AutoConventions.serverAllowed)
 
-            ServerContext.executionRepository.start(
+            executionRepository.start(
                 documentPath, graphStructure)
         }
 
@@ -768,13 +783,12 @@ class RestHandler {
             CommonRestApi.paramHostDocumentPath, DocumentPath::parse)
 
         val digest = runBlocking {
-            val graphStructure = ServerContext.graphStore
+            val graphStructure = graphStore
                     .graphStructure()
                     .filter(AutoConventions.serverAllowed)
 
-            ServerContext.executionRepository.returnFrame(
-                hostDocumentPath, graphStructure
-            )
+            executionRepository.returnFrame(
+                hostDocumentPath, graphStructure)
         }
 
         return digest.asString()
@@ -786,7 +800,7 @@ class RestHandler {
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
         runBlocking {
-            ServerContext.executionRepository.reset(documentPath)
+            executionRepository.reset(documentPath)
         }
     }
 
@@ -804,8 +818,8 @@ class RestHandler {
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
         val execution: ImperativeResponse = runBlocking {
-            val graphStructure = ServerContext.graphStore.graphStructure()
-            ServerContext.executionRepository.execute(
+            val graphStructure = graphStore.graphStructure()
+            executionRepository.execute(
                 hostDocumentPath, objectLocation, graphStructure)
         }
 
@@ -840,7 +854,7 @@ class RestHandler {
             RequestParams(detachedParams), body)
 
         val execution: ExecutionResult = runBlocking {
-            ServerContext.detachedExecutor.execute(
+            detachedExecutor.execute(
                 objectLocation, detachedRequest)
         }
 
@@ -872,7 +886,7 @@ class RestHandler {
         val detachedRequest = ExecutionRequest(RequestParams(params), body)
 
         val execution: ExecutionDownloadResult = runBlocking {
-            ServerContext.detachedExecutor.executeDownload(
+            detachedExecutor.executeDownload(
                 objectLocation, detachedRequest)
         }
 
@@ -889,7 +903,7 @@ class RestHandler {
             CommonRestApi.paramObjectPath, ObjectPath::parse)
 
         val visualDataflowModel = runBlocking {
-            ServerContext.visualDataflowRepository.get(documentPath)
+            visualDataflowRepository.get(documentPath)
         }
 
         val result =
@@ -913,7 +927,7 @@ class RestHandler {
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
         val visualDataflowModel = runBlocking {
-            ServerContext.visualDataflowRepository.reset(documentPath)
+            visualDataflowRepository.reset(documentPath)
         }
 
         return VisualDataflowModel.toJsonCollection(visualDataflowModel)
@@ -930,7 +944,7 @@ class RestHandler {
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
         val transition: VisualVertexTransition = runBlocking {
-            ServerContext.visualDataflowRepository.execute(documentPath, objectLocation)
+            visualDataflowRepository.execute(documentPath, objectLocation)
         }
 
         return VisualVertexTransition.toCollection(transition)
@@ -959,7 +973,7 @@ class RestHandler {
         val detachedRequest = ExecutionRequest(RequestParams(params), null)
 
         val execution: TaskModel = runBlocking {
-            ServerContext.modelTaskRepository.submit(
+            modelTaskRepository.submit(
                 objectLocation,
                 detachedRequest)
         }
@@ -973,7 +987,7 @@ class RestHandler {
             .getParam(CommonRestApi.paramTaskId) { TaskId(it) }
 
         val model: TaskModel = runBlocking {
-            ServerContext.modelTaskRepository.query(taskId)
+            modelTaskRepository.query(taskId)
         }
             ?: return null
 
@@ -986,7 +1000,7 @@ class RestHandler {
             .getParam(CommonRestApi.paramTaskId) { TaskId(it) }
 
         val model: TaskModel = runBlocking {
-            ServerContext.modelTaskRepository.cancel(taskId)
+            modelTaskRepository.cancel(taskId)
         }
             ?: return null
 
@@ -1004,7 +1018,7 @@ class RestHandler {
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
         val tasks: Set<TaskId> = runBlocking {
-            ServerContext.modelTaskRepository.lookupActive(objectLocation)
+            modelTaskRepository.lookupActive(objectLocation)
         }
 
         return tasks.map { it.identifier }
@@ -1013,7 +1027,7 @@ class RestHandler {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun logicStatus(): Map<String, Any> {
-        return ServerContext.serverLogicController.status().toCollection()
+        return serverLogicController.status().toCollection()
     }
 
 
@@ -1027,19 +1041,16 @@ class RestHandler {
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
         val graphDefinitionAttempt = runBlocking {
-            ServerContext.graphStore.graphDefinition()
+            graphStore.graphDefinition()
         }
 
         val logicRunId = runBlocking {
-            ServerContext.serverLogicController.start(objectLocation, graphDefinitionAttempt)
+            serverLogicController.start(objectLocation, graphDefinitionAttempt)
         }
+            ?: return null
 
-        @Suppress("FoldInitializerAndIfToElvis")
-        if (logicRunId == null) {
-            return null
-        }
         val response = runBlocking {
-            ServerContext.serverLogicController.continueOrStart(logicRunId, graphDefinitionAttempt)
+            serverLogicController.continueOrStart(logicRunId, graphDefinitionAttempt)
         }
 
         if (response != LogicRunResponse.Submitted) {
@@ -1071,7 +1082,7 @@ class RestHandler {
         val request = ExecutionRequest(RequestParams(params), null)
 
         val result: ExecutionResult = runBlocking {
-            ServerContext.serverLogicController.request(
+            serverLogicController.request(
                 runId,
                 executionId,
                 request)
@@ -1087,7 +1098,7 @@ class RestHandler {
         }
 
         val response = runBlocking {
-            ServerContext.serverLogicController.cancel(runId)
+            serverLogicController.cancel(runId)
         }
 
         return response.name
@@ -1100,7 +1111,7 @@ class RestHandler {
         }
 
         val response = runBlocking {
-            ServerContext.serverLogicController.continueOrStart(runId)
+            serverLogicController.continueOrStart(runId)
         }
 
         return response.name

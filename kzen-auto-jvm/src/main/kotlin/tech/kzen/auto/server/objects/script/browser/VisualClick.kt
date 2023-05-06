@@ -5,7 +5,7 @@ import tech.kzen.auto.common.objects.document.feature.TargetSpec
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.imperative.api.ScriptStep
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.server.service.ServerContext
+import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.service.vision.VisionUtils
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.reflect.Reflect
@@ -19,10 +19,10 @@ class VisualClick(
             imperativeModel: ImperativeModel,
             graphInstance: GraphInstance
     ): ExecutionResult {
-        val driver = ServerContext.webDriverContext.get()
+        val driver = KzenAutoContext.global().webDriverContext.get()
 
         val targetLocation = VisionUtils.locateElement(
-                target, driver, ServerContext.notationMedia)
+                target, driver, KzenAutoContext.global().notationMedia)
 
         if (targetLocation.isError()) {
             return ExecutionFailure(targetLocation.error!!)

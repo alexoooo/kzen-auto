@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.service
+package tech.kzen.auto.server.context
 
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
@@ -9,6 +9,7 @@ import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepo
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.service.GraphInstanceCreator
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.auto.server.api.RestHandler
 import tech.kzen.auto.server.codegen.KzenAutoJvmModule
 import tech.kzen.auto.server.objects.plugin.PluginReportDefinitionRepository
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
@@ -19,6 +20,7 @@ import tech.kzen.auto.server.objects.report.service.ColumnListingAction
 import tech.kzen.auto.server.objects.report.service.FileListingAction
 import tech.kzen.auto.server.objects.report.service.FilterIndex
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
+import tech.kzen.auto.server.service.DownloadClient
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
 import tech.kzen.auto.server.service.exec.EmptyExecutionInitializer
@@ -47,7 +49,41 @@ import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.GradleLocator
 
 
-object ServerContext {
+class KzenAutoContext(
+    val config: KzenAutoConfig
+) {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        init {
+            KzenLibCommonModule.register()
+            KzenAutoCommonModule.register()
+            KzenAutoJvmModule.register()
+        }
+
+        private var global: KzenAutoContext? = null
+
+        fun setGlobal(context: KzenAutoContext) {
+            check(global == null) { "Already set" }
+            global = context
+        }
+
+        fun clearGlobal() {
+            check(global != null) { "Not set" }
+            global = null
+        }
+
+
+        /**
+         * Kzen implements a dynamic dependency injection container, but it can be useful to separately
+         *  perform static dependency injection (KzenAutoContext) as a bootstrap.
+         * This method allows Kzen-managed instances to access the KzenAutoContext.
+         */
+        fun global(): KzenAutoContext {
+            return global!!
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private val notationMetadataReader = NotationMetadataReader()
 
@@ -59,7 +95,8 @@ object ServerContext {
         exclude = listOf(AutoConventions.autoMainDocumentNesting))
 
     val notationMedia: NotationMedia = ReadWriteNotationMedia(
-        fileMedia, classpathNotationMedia)
+        fileMedia, classpathNotationMedia
+    )
 
     val yamlParser = YamlNotationParser()
 
@@ -72,13 +109,16 @@ object ServerContext {
             yamlParser,
             notationMetadataReader,
             graphDefiner,
-            notationReducer)
+            notationReducer
+    )
 
     val actionExecutor = ModelActionExecutor(
-            graphStore, graphCreator)
+            graphStore, graphCreator
+    )
 
     val detachedExecutor = ModelDetachedExecutor(
-            graphStore, graphCreator)
+            graphStore, graphCreator
+    )
 
     val executionRepository = ExecutionRepository(
             EmptyExecutionInitializer,
@@ -95,7 +135,8 @@ object ServerContext {
     private val activeDataflowRepository = ActiveDataflowRepository(
             graphInstanceCreator,
             dataflowMessageInspector,
-            graphStore)
+            graphStore
+    )
 
     private val activeVisualProvider = ActiveVisualProvider(
             activeDataflowRepository)
@@ -119,8 +160,7 @@ object ServerContext {
     private val basicDefinitionRepository = HostReportDefinitionRepository(listOf(
         CsvReportDefiner(),
         TsvReportDefiner(),
-        TextReportDefiner()
-    ))
+        TextReportDefiner()))
 
     private val pluginProcessorDefinitionRepository = PluginReportDefinitionRepository(
          graphStore, graphDefiner, graphCreator)
@@ -132,6 +172,16 @@ object ServerContext {
     val serverLogicController = ServerLogicController(
         graphStore, graphCreator)
 
+    val restHandler = RestHandler(
+        notationMedia,
+        yamlParser,
+        graphStore,
+        executionRepository,
+        detachedExecutor,
+        visualDataflowRepository,
+        modelTaskRepository,
+        serverLogicController)
+
 
     //-----------------------------------------------------------------------------------------------------------------
     private val downloadClient = DownloadClient()
@@ -142,13 +192,7 @@ object ServerContext {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    init {
-        KzenLibCommonModule.register()
-        KzenAutoCommonModule.register()
-        KzenAutoJvmModule.register()
-
-        downloadClient.initialize()
-
+    fun init() {
         runBlocking {
             graphStore.observe(executionRepository)
             graphStore.observe(activeDataflowRepository)
@@ -157,11 +201,6 @@ object ServerContext {
         }
     }
 
-
-    //-----------------------------------------------------------------------------------------------------------------
-    fun init() {
-        // NB: trigger above init block, if not already triggered
-    }
 
     fun close() {
         webDriverContext.quit()

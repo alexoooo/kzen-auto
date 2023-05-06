@@ -6,6 +6,7 @@ import js.core.jso
 import mui.material.IconButton
 import react.ChildrenBuilder
 import react.Props
+import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.react
@@ -40,13 +41,13 @@ import tech.kzen.lib.platform.collect.persistentListOf
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface ScriptControllerProps: react.Props {
+external interface ScriptControllerProps: Props {
     var stepController: StepController.Wrapper
     var scriptCommander: ScriptCommander
 }
 
 
-external interface ScriptControllerState: react.State {
+external interface ScriptControllerState: State {
     var clientState: SessionState?
     var creating: Boolean
 }

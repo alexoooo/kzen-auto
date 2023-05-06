@@ -7,7 +7,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.auto.common.paradigm.imperative.api.ScriptStep
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.server.service.ServerContext
+import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -20,7 +20,7 @@ class GoTo(
             imperativeModel: ImperativeModel,
             graphInstance: GraphInstance
     ): ExecutionResult {
-        val driver = ServerContext.webDriverContext.get()
+        val driver = KzenAutoContext.global().webDriverContext.get()
 
         driver.get(location)
 
