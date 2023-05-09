@@ -6,8 +6,7 @@ const val annotationsApiVersion = "1.3.2"
 const val ktorVersion = "2.2.4"
 
 
-//const val kzenLibVersion = "0.25.0"
-const val kzenLibVersion = "0.25.1-SNAPSHOT"
+const val kzenLibVersion = "0.26.0"
 
 
 const val logbackVersion = "1.4.5"
