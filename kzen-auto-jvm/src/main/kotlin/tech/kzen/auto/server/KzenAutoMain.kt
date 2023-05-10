@@ -375,9 +375,18 @@ private fun Routing.routeDetached(
         call.respond(response)
     }
     put(CommonRestApi.actionDetached) {
-        val bytes = call.receiveNullable<ByteArray>()
-        val wrappedBytes = bytes?.let { ImmutableByteArray.wrap(it) }
-        val formParameters = call.receiveParameters()
+        val formParameters: Parameters
+        val wrappedBytes: ImmutableByteArray?
+
+        if (call.request.isMultipart()) {
+            TODO("Multipart not implemented (yet)")
+        }
+        else {
+            formParameters = call.receiveParameters()
+            wrappedBytes = null
+        }
+
+        @Suppress("KotlinConstantConditions")
         val response = restHandler.actionDetached(formParameters, wrappedBytes)
         call.respond(response)
     }
@@ -387,7 +396,7 @@ private fun Routing.routeDetached(
         val response = restHandler.actionDetachedDownload(call.parameters, wrappedBytes)
 
         val attachmentFilename = "attachment; filename*=utf-8''" + response.fileName
-        call.response.header("Content-Disposition", attachmentFilename)
+        call.response.header(HttpHeaders.ContentDisposition, attachmentFilename)
 
         call.respondOutputStream(
             ContentType.parse(response.mimeType)
