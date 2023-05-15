@@ -19,7 +19,6 @@ data class SequenceState(
     val run: ExecutionRunState = ExecutionRunState(),
 
     val globalError: String? = null
-
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

@@ -14,6 +14,7 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.run.ExecutionRunController
 import tech.kzen.auto.client.objects.document.script.step.StepController
+import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
 import tech.kzen.auto.client.objects.document.sequence.step.SequenceStepController
@@ -23,11 +24,13 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.material.ArrowDownwardIcon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -44,6 +47,7 @@ import tech.kzen.lib.platform.collect.persistentListOf
 //-----------------------------------------------------------------------------------------------------------------
 external interface SequenceControllerProps: Props {
     var stepController: SequenceStepController.Wrapper
+    var sequenceCommander: SequenceCommander
 }
 
 
@@ -90,6 +94,7 @@ class SequenceController:
     class Wrapper(
         private val archetype: ObjectLocation,
         private val stepController: SequenceStepController.Wrapper,
+        private val sequenceCommander: SequenceCommander,
         private val ribbonController: RibbonController.Wrapper
     ):
         DocumentController
@@ -113,6 +118,7 @@ class SequenceController:
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     SequenceController::class.react {
                         this.stepController = this@Wrapper.stepController
+                        this.sequenceCommander = this@Wrapper.sequenceCommander
                         block()
                     }
                 }
@@ -200,19 +206,19 @@ class SequenceController:
         val containingObjectLocation = ObjectLocation(
                 documentPath, NotationConventions.mainObjectPath)
 
-//        val commands = props.scriptCommander.createCommands(
-//                containingObjectLocation,
-//                ScriptDocument.stepsAttributePath,
-//                index,
-//                archetypeObjectLocation,
-//                clientState.graphDefinitionAttempt.graphStructure
-//        )
+        val commands = props.sequenceCommander.createCommands(
+            containingObjectLocation,
+            SequenceConventions.stepsAttributePath,
+            index,
+            archetypeObjectLocation,
+            clientState.graphDefinitionAttempt.graphStructure
+        )
 
-//        async {
-//            for (command in commands) {
-//                ClientContext.mirroredGraphStore.apply(command)
-//            }
-//        }
+        async {
+            for (command in commands) {
+                ClientContext.mirroredGraphStore.apply(command)
+            }
+        }
     }
 
 
@@ -235,6 +241,7 @@ class SequenceController:
 //                ?: ClientContext.executionRepository.emptyState(
 //                        documentPath, clientState.graphDefinitionAttempt.graphStructure)
 
+//        +"boo: [${state.sequenceState}]"
         val sequenceState = state.sequenceState
             ?: return
 
@@ -242,14 +249,14 @@ class SequenceController:
             if (sequenceState.globalError != null) {
                 +"Error: ${sequenceState.globalError}"
             }
-            else if (sequenceState.progress.mostRecentTrace == null) {
+            else if (! sequenceState.progress.loaded) {
                 +"Loading..."
             }
-            else if (sequenceState.progress.mostRecentTrace.logicRunExecutionId == null) {
+            else if (sequenceState.progress.logicRunExecutionId == null) {
                 +"Did not run yet"
             }
             else {
-                +"Most recent LogicRunExecutionId: ${sequenceState.progress.mostRecentTrace.logicRunExecutionId}"
+                +"Most recent LogicRunExecutionId: ${sequenceState.progress.logicRunExecutionId} - ${sequenceState.progress.logicTraceSnapshot}"
             }
         }
 
@@ -258,7 +265,7 @@ class SequenceController:
                 marginLeft = 2.em
             }
 
-            steps(clientState/*, imperativeModel*/)
+            steps(clientState, )
         }
 
         runController(clientState/*, imperativeModel*/)
@@ -267,8 +274,7 @@ class SequenceController:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.steps(
-            clientState: SessionState,
-//            imperativeModel: ImperativeModel
+            clientState: SessionState
     ) {
         val graphStructure: GraphStructure = clientState.graphDefinitionAttempt.graphStructure
         val documentPath: DocumentPath = clientState.navigationRoute.documentPath!!
@@ -415,11 +421,18 @@ class SequenceController:
         span {
             key = objectLocation.toReference().asString()
 
+            val progressValue = state
+                .sequenceState
+                ?.progress
+                ?.logicTraceSnapshot
+                ?.filter(LogicTracePath.ofObjectLocation(objectLocation))
+
             props.stepController.child(this) {
                 common = SequenceStepDisplayPropsCommon(
                     state.clientState!!,
                     objectLocation,
                     AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
+                    progressValue,
 //                        imperativeModel,
                     first = index == 0,
                     last = index == stepCount - 1)

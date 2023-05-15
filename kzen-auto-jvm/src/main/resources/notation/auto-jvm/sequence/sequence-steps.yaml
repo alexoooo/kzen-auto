@@ -23,6 +23,7 @@ DisplayValueStep:
     text:
       is: ObjectLocation
       by: Nominal
+      editor: SelectSequenceStepEditor
     selfLocation: SelfLocation
 
 

@@ -3,9 +3,7 @@ package tech.kzen.auto.common.paradigm.common.v1.model
 
 data class LogicRunInfo(
     val id: LogicRunId,
-
     val frame: LogicRunFrameInfo,
-
     val state: LogicRunState
 ) {
     companion object {

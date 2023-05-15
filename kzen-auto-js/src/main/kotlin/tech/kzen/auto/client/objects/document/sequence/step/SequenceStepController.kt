@@ -13,11 +13,12 @@ import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.reflect.Reflect
 
 
-external interface SequenceStepControllerProps : react.Props {
+external interface SequenceStepControllerProps: react.Props {
     var stepDisplays: List<SequenceStepDisplayWrapper>
 
     var common: SequenceStepDisplayPropsCommon
 }
+
 
 class SequenceStepController(
         props: SequenceStepControllerProps

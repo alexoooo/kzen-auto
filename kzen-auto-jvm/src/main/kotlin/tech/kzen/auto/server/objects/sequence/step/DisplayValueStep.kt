@@ -5,10 +5,7 @@ import tech.kzen.auto.common.paradigm.common.model.TextExecutionValue
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
-import tech.kzen.auto.server.service.v1.model.LogicResult
-import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
-import tech.kzen.auto.server.service.v1.model.TupleDefinition
-import tech.kzen.auto.server.service.v1.model.TupleValue
+import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -44,7 +41,22 @@ class DisplayValueStep(
 //        val value = result?.value ?: NullExecutionValue
         logger.info("foo: {} - {}", text, value)
 
-        val executionValue = TextExecutionValue(value.toString())
+        val mainValue =
+            if (value is List<*>) {
+                val components = value.filterIsInstance<TupleComponentValue>()
+                components.find { it.name == TupleComponentName.main }?.value
+            }
+            else {
+                null
+            }
+
+        val executionValue =
+            if (mainValue != null) {
+                TextExecutionValue(mainValue.toString())
+            }
+            else {
+                TextExecutionValue(value.toString())
+            }
 
         stepContext.logicTraceHandle.set(
             logicTracePath,

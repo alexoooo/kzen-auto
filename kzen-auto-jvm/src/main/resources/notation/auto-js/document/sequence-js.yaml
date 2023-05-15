@@ -1,0 +1,88 @@
+
+#######################################################################################################################
+
+SequenceController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.sequence.SequenceController$Wrapper
+  archetype: Sequence
+  stepController: SequenceStepController
+  sequenceCommander: SequenceCommander
+  ribbonController: RibbonController
+
+
+SequenceCommander:
+  class: tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
+  meta:
+    stepCommanders: ChildList
+
+
+SequenceStepCommander:
+  abstract: true
+  is: ParentPointer
+  class: tech.kzen.auto.client.objects.document.sequence.command.StepCommander
+
+
+################################################################
+
+SequenceStepController:
+  class: tech.kzen.auto.client.objects.document.sequence.step.SequenceStepController$Wrapper
+  handle: SequenceStepControllerHandle
+  meta:
+    stepDisplays:
+      is: List
+      of: SequenceStepDisplay
+      by: Autowired
+
+
+SequenceStepControllerHandle:
+  class: tech.kzen.auto.client.objects.document.sequence.step.SequenceStepController$Handle
+
+
+SequenceStepDisplay:
+  abstract: true
+  class: tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayWrapper
+  attributeController: AttributeController
+  meta:
+    objectLocation:
+      is: ObjectLocation
+      by: Self
+
+
+SequenceStepDisplayDefault:
+  is: SequenceStepDisplay
+  class: tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayDefault$Wrapper
+
+
+#######################################################################################################################
+
+
+SelectSequenceStepEditor:
+  is: AttributeEditorWrapper
+  class: tech.kzen.auto.client.objects.document.sequence.step.attribute.SelectSequenceStepEditor$Wrapper
+
+
+
+
+#######################################################################################################################
+SequenceGroup_InputOutput:
+  is: RibbonGroup
+  title: "Input / Output"
+  archetype: Sequence
+
+
+BooleanLiteralStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_InputOutput
+  delegate: BooleanLiteralStep
+
+
+DisplayValueStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_InputOutput
+  delegate: DisplayValueStep
+
+
+InvokeSequenceStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_InputOutput
+  delegate: InvokeSequenceStep

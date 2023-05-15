@@ -9,7 +9,12 @@ import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicConventions
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceQuery
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceSnapshot
 
 
 class SequenceProgressStore(
@@ -17,23 +22,104 @@ class SequenceProgressStore(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun init() {
-        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
-        val result = mostRecentQuery()
-
-        when (result) {
-            is ClientError ->
-                sequenceStore.update { state -> state
-                    .withGlobalError(result.message)
+        val logicRunExecutionId = mostRecent()
+        if (logicRunExecutionId == null) {
+            sequenceStore.update { state -> state
+                .withProgressSuccess {
+                    it.copy(
+                        logicTraceSnapshot = null,
+                        loaded = true
+                    )
                 }
+            }
+            return
+        }
 
-            is ClientSuccess ->
+        val logicTraceQuery = LogicTraceQuery(LogicTracePath.root)
+
+        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
+        val progressResult = progressQuery(
+            logicRunExecutionId.logicRunId, logicRunExecutionId.logicExecutionId, logicTraceQuery)
+
+        when (progressResult) {
+            is ClientError -> {
                 sequenceStore.update { state -> state
+                    .withGlobalError(progressResult.message)
                     .withProgressSuccess {
                         it.copy(
-                            mostRecentTrace = result.value
+                            logicTraceSnapshot = null,
+                            loaded = true
                         )
                     }
                 }
+            }
+
+            is ClientSuccess -> {
+                sequenceStore.update { state -> state
+                    .withProgressSuccess {
+                        it.copy(
+                            logicTraceSnapshot = progressResult.value,
+                            loaded = true
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+
+    private suspend fun progressQuery(
+        logicRunId: LogicRunId,
+        logicExecutionId: LogicExecutionId,
+        logicTraceQuery: LogicTraceQuery
+    ): ClientResult<LogicTraceSnapshot> {
+        val result = ClientContext.restClient.performDetached(
+            LogicConventions.logicTraceStoreLocation,
+            CommonRestApi.paramAction to LogicConventions.actionLookup,
+            CommonRestApi.paramRunId to logicRunId.value,
+            CommonRestApi.paramExecutionId to logicExecutionId.value,
+            LogicConventions.paramQuery to logicTraceQuery.asString()
+        )
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val resultValue = result.value.get() as Map<String, Map<String, Any>>
+
+                val inputBrowserInfo = LogicTraceSnapshot.ofCollection(resultValue)
+                ClientResult.ofSuccess(inputBrowserInfo)
+            }
+
+            is ExecutionFailure ->
+                ClientResult.ofError(result.errorMessage)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun mostRecent(): LogicRunExecutionId? {
+        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
+        val mostRecentResult = mostRecentQuery()
+
+        return when (mostRecentResult) {
+            is ClientError -> {
+                sequenceStore.update { state -> state
+                    .withGlobalError(mostRecentResult.message)
+                }
+                null
+            }
+
+            is ClientSuccess -> {
+                sequenceStore.update { state -> state
+                    .withProgressSuccess {
+                        it.copy(
+                            logicRunExecutionId = mostRecentResult.value.logicRunExecutionId
+                        )
+                    }
+                }
+
+                mostRecentResult.value.logicRunExecutionId
+            }
         }
     }
 

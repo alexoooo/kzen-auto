@@ -24,4 +24,10 @@ data class LogicTraceSnapshot(
             .map { it.key.asString() to it.value.toJsonCollection() }
             .toMap()
     }
+
+
+    fun filter(startsWith: LogicTracePath): LogicTraceSnapshot {
+        val filtered = values.filterKeys { i -> i.startsWith(startsWith) }
+        return LogicTraceSnapshot(filtered)
+    }
 }

@@ -223,7 +223,7 @@ class ReportRunStore(
     suspend fun lookupProgress(runExecutionId: LogicRunExecutionId) {
         val logicTraceQuery = LogicTraceQuery(LogicTracePath.root)
 
-        @Suppress("MoveVariableDeclarationIntoWhen")
+        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
         val result = progressQuery(runExecutionId.logicRunId, runExecutionId.logicExecutionId, logicTraceQuery)
 
         when (result) {

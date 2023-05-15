@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.sequence.step.display
 
 import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
@@ -14,6 +15,7 @@ data class SequenceStepDisplayPropsCommon(
     var clientState: SessionState,
     var objectLocation: ObjectLocation,
     var attributeNesting: AttributeNesting,
+    var logicTraceSnapshot: LogicTraceSnapshot?,
 
     var managed: Boolean = false,
     var first: Boolean = false,

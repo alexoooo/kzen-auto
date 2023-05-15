@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.sequence.model
 import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.common.run.ExecutionRunStore
 import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressStore
+import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
@@ -66,14 +67,13 @@ class SequenceStore: SessionGlobal.Observer {
     private val progressStore = SequenceProgressStore(this)
 
 
-
     //-----------------------------------------------------------------------------------------------------------------
     fun didMount(subscriber: Observer) {
         this.observer = subscriber
         mounted = true
 
         async {
-//            ClientContext.sessionGlobal.observe(this)
+            ClientContext.sessionGlobal.observe(this)
         }
     }
 
@@ -83,7 +83,7 @@ class SequenceStore: SessionGlobal.Observer {
         mounted = false
         state = null
 
-//        ClientContext.sessionGlobal.unobserve(this)
+        ClientContext.sessionGlobal.unobserve(this)
         cancelRefresh()
     }
 

@@ -9,16 +9,6 @@ ScriptController:
   scriptCommander: ScriptCommander
   ribbonController: RibbonController
 
-
-SequenceController:
-  is: DocumentController
-  class: tech.kzen.auto.client.objects.document.sequence.SequenceController$Wrapper
-  archetype: Sequence
-  stepController: SequenceStepController
-#  scriptCommander: ScriptCommander
-  ribbonController: RibbonController
-
-
 ################################################################
 
 
@@ -101,37 +91,6 @@ MappingStepDisplay:
 #MappingItemDisplay:
 #  is: StepDisplay
 #  class: tech.kzen.auto.client.objects.document.script.step.display.control.MappingItemDisplay$Wrapper
-
-
-################################################################
-
-SequenceStepController:
-  class: tech.kzen.auto.client.objects.document.sequence.step.SequenceStepController$Wrapper
-  handle: SequenceStepControllerHandle
-  meta:
-    stepDisplays:
-      is: List
-      of: SequenceStepDisplay
-      by: Autowired
-
-
-SequenceStepControllerHandle:
-  class: tech.kzen.auto.client.objects.document.sequence.step.SequenceStepController$Handle
-
-
-SequenceStepDisplay:
-  abstract: true
-  class: tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayWrapper
-  attributeController: AttributeController
-  meta:
-    objectLocation:
-      is: ObjectLocation
-      by: Self
-
-
-SequenceStepDisplayDefault:
-  is: SequenceStepDisplay
-  class: tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayDefault$Wrapper
 
 
 ################################################################

@@ -7,16 +7,18 @@ import csstype.pct
 import emotion.react.css
 import mui.material.CardContent
 import mui.material.Paper
-import react.*
+import react.ChildrenBuilder
+import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
 import react.dom.html.ReactHTML.span
+import react.react
 import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.paradigm.common.model.*
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -167,7 +169,8 @@ class SequenceStepDisplayDefault(
                     objectLocation = props.common.objectLocation
                     graphStructure = props.common.clientState.graphStructure()
 
-                    this.imperativeState = imperativeState
+//                    this.imperativeState = imperativeState
+                    this.imperativeState = null
                     this.isRunning = isRunning
 
                     managed = props.common.managed
@@ -180,7 +183,13 @@ class SequenceStepDisplayDefault(
                         marginBottom = (-1.5).em
                     }
 
-                    renderBody(objectMetadata, imperativeState)
+                    val progress = props
+                        .common
+                        .logicTraceSnapshot
+                        ?.values
+                        ?.get(LogicTracePath.ofObjectLocation(props.common.objectLocation))
+
+                    renderBody(objectMetadata, progress)
                 }
             }
         }
@@ -190,7 +199,8 @@ class SequenceStepDisplayDefault(
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderBody(
             objectMetadata: ObjectMetadata,
-            imperativeState: ImperativeState?
+//            imperativeState: ImperativeState?
+            value: ExecutionValue?
     ) {
         for (e in objectMetadata.attributes.values) {
             if (AutoConventions.isManaged(e.key) || props.common.managed) {
@@ -206,13 +216,13 @@ class SequenceStepDisplayDefault(
             }
         }
 
-        (imperativeState?.previous as? ExecutionSuccess)?.value?.let {
+        value?.let {
             renderValue(it)
         }
 
-        (imperativeState?.previous as? ExecutionSuccess)?.detail?.let {
-            renderDetail(it)
-        }
+//        (imperativeState?.previous as? ExecutionSuccess)?.detail?.let {
+//            renderDetail(it)
+//        }
     }
 
 
