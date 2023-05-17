@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.objects.sequence.step
 
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
+import tech.kzen.auto.common.paradigm.sequence.StepTrace
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.ActiveStepModel
 import tech.kzen.auto.server.objects.sequence.model.StepContext
@@ -27,10 +29,24 @@ class MultiSequenceStep(
             val step = stepContext.graphInstance[stepLocation]!!.reference as SequenceStep
             val model = stepContext.activeSequenceModel.steps.getOrPut(stepLocation) { ActiveStepModel() }
 
+            val logicTracePath = LogicTracePath.ofObjectLocation(stepLocation)
+            model.traceState = StepTrace.State.Running
+            stepContext.logicTraceHandle.set(
+                logicTracePath,
+                model.trace().asExecutionValue())
+
             val result = step.continueOrStart(stepContext)
             if (result is LogicResultSuccess) {
                 model.value = result.value.components
             }
+            else {
+                TODO("Not implemented (yet): $result")
+            }
+
+            model.traceState = StepTrace.State.Done
+            stepContext.logicTraceHandle.set(
+                logicTracePath,
+                model.trace().asExecutionValue())
         }
 
         return LogicResultSuccess(TupleValue.empty)

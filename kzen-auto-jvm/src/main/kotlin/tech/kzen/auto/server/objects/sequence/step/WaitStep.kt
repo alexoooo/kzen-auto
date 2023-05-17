@@ -41,17 +41,26 @@ class WaitStep(
     ): LogicResult {
         logger.info("{} - milliseconds = {}", selfLocation, milliseconds)
 
+        val activeModel = stepContext.activeSequenceModel.steps[selfLocation]!!
+
+        activeModel.detail = ExecutionValue.of("Waiting for $milliseconds milliseconds")
+
         stepContext.logicTraceHandle.set(
             logicTracePath,
-            ExecutionValue.of("Waiting for $milliseconds milliseconds"))
+            activeModel.trace().asExecutionValue())
+
+//        stepContext.logicTraceHandle.set(
+//            logicTracePath,
+//            ExecutionValue.of("Waiting for $milliseconds milliseconds"))
 
         Thread.sleep(milliseconds)
 
-        stepContext.logicTraceHandle.set(
-            logicTracePath,
-            ExecutionValue.of("Finished waiting for $milliseconds milliseconds"))
+        activeModel.detail = ExecutionValue.of("Finished waiting for $milliseconds milliseconds")
 
-        return LogicResultSuccess(
-            TupleValue.ofMain(milliseconds))
+//        stepContext.logicTraceHandle.set(
+//            logicTracePath,
+//            ExecutionValue.of("Finished waiting for $milliseconds milliseconds"))
+
+        return LogicResultSuccess(TupleValue.empty)
     }
 }

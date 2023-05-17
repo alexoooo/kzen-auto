@@ -6,9 +6,7 @@ import mui.material.*
 import mui.system.sx
 import react.ChildrenBuilder
 import react.ReactNode
-import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.img
 import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
@@ -18,7 +16,6 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.iconClassForName
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.api.staticResourcePath
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.common.util.RequestParams
@@ -33,7 +30,6 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 import web.cssom.Color
 import web.cssom.NamedColor
 import web.cssom.em
-import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -123,6 +119,7 @@ class RibbonController(
         }
 
         if (state.documentPath == null) {
+            println("%%%% componentDidUpdate reset")
             setState {
                 updatePending = false
                 type = null
@@ -139,12 +136,13 @@ class RibbonController(
                 notation, state.documentPath!!
             ) ?: return
 
-
             val documentRibbonGroups = props
                     .ribbonGroups
                     .filter { it.archetype.objectPath.name == typeName }
 
-//            console.log("^^^^^ 00!! - typeName $typeName - $documentRibbonGroups")
+            if (documentRibbonGroups == prevState.currentRibbonGroups) {
+                return
+            }
 
             setState {
                 updatePending = false
@@ -234,22 +232,6 @@ class RibbonController(
     }
 
 
-    private fun ChildrenBuilder.renderLogo() {
-        a {
-            href = "/"
-
-            img {
-                css {
-                    height = 42.px
-                }
-
-                src = "$staticResourcePath/logo.png"
-                title = "Kzen (home)"
-            }
-        }
-    }
-
-
     private fun ChildrenBuilder.renderTabs() {
         Tabs {
             textColor = TabsTextColor.inherit
@@ -271,54 +253,7 @@ class RibbonController(
     }
 
 
-//    private fun ChildrenBuilder.renderRightFloat() {
-//        renderTitle()
-//        renderRunNavigation()
-//    }
-
-
-//    private fun ChildrenBuilder.renderTitle() {
-//        val projectTitle =
-//                if (ClientContext.baseUrl.isEmpty()) {
-//                    "Running in dev mode"
-//                }
-//                else {
-//                    decodeURIComponent(ClientContext.baseUrl).substringAfter("/")
-//                }
-//
-//        div {
-//            css {
-//                marginTop = 0.5.em
-//                marginRight = 0.5.em
-//                fontSize = 1.5.em
-//                color = NamedColor.gray
-//                fontStyle = FontStyle.italic
-//                display = Display.inlineBlock
-//            }
-//            title = "Project name"
-//
-//            +projectTitle
-//        }
-//    }
-//
-//
-//    private fun ChildrenBuilder.renderRunNavigation() {
-//        div {
-//            css {
-//                display = Display.inlineBlock
-//            }
-//
-//            RibbonRun::class.react {
-////                navPath = state.documentPath
-////                parameters = state.parameters
-////                notation = props.notation
-//            }
-//        }
-//    }
-
-
     private fun ChildrenBuilder.renderSubActions() {
-//        +"SubActions"
         if (state.currentRibbonGroups.isEmpty()) {
             return
         }

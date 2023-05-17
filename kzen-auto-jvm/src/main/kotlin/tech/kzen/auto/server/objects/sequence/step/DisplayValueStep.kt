@@ -13,7 +13,7 @@ import tech.kzen.lib.common.reflect.Reflect
 @Reflect
 class DisplayValueStep(
     private val text: ObjectLocation,
-    selfLocation: ObjectLocation
+    private val selfLocation: ObjectLocation
 ): SequenceStep {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -27,19 +27,20 @@ class DisplayValueStep(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.ofVoidWithDetail()
+//        return TupleDefinition.ofVoidWithDetail()
+        return TupleDefinition.empty
     }
 
 
     override fun continueOrStart(stepContext: StepContext): LogicResult {
         val step = stepContext.activeSequenceModel.steps[text]
-        val value = step?.value ?: 0
+        val value = step?.value
 
 //        val frame = imperativeModel.findLast(text)
 //        val state = frame?.states?.get(text.objectPath)
 //        val result = state?.previous as? ExecutionSuccess
 //        val value = result?.value ?: NullExecutionValue
-        logger.info("foo: {} - {}", text, value)
+//        logger.info("foo: {} - {}", text, value)
 
         val mainValue =
             if (value is List<*>) {
@@ -58,12 +59,19 @@ class DisplayValueStep(
                 TextExecutionValue(value.toString())
             }
 
+//        stepContext.logicTraceHandle.set(
+//            logicTracePath,
+//            executionValue)
+
+        val activeModel = stepContext.activeSequenceModel.steps[selfLocation]!!
+        activeModel.detail = executionValue
         stepContext.logicTraceHandle.set(
             logicTracePath,
-            executionValue)
+            activeModel.trace().asExecutionValue())
 
-        return LogicResultSuccess(
-            TupleValue.ofVoidWithDetail(executionValue))
+//        return LogicResultSuccess(
+//            TupleValue.ofVoidWithDetail(executionValue))
+        return LogicResultSuccess(TupleValue.empty)
     }
 
 //    override suspend fun perform(

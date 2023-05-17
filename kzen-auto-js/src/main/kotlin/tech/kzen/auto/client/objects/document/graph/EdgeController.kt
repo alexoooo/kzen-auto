@@ -53,9 +53,9 @@ external interface EdgeControllerState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 class EdgeController(
-        props: EdgeControllerProps
+    props: EdgeControllerProps
 ):
-        RPureComponent<EdgeControllerProps, EdgeControllerState>(props)
+    RPureComponent<EdgeControllerProps, EdgeControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

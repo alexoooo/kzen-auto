@@ -38,9 +38,11 @@ class BooleanLiteralStep(
     ): LogicResult {
         logger.info("{} - value = {}", selfLocation, value)
 
+        val activeModel = stepContext.activeSequenceModel.steps[selfLocation]!!
+        activeModel.displayValue = ExecutionValue.of(value)
         stepContext.logicTraceHandle.set(
             logicTracePath,
-            ExecutionValue.of(value))
+            activeModel.trace().asExecutionValue())
 
         return LogicResultSuccess(
             TupleValue.ofMain(value))

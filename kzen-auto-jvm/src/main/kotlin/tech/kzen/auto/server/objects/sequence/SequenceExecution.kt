@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.sequence
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
+import tech.kzen.auto.common.paradigm.sequence.StepTrace
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
@@ -66,6 +67,7 @@ class SequenceExecution(
         val step = graphInstance[objectLocation]!!.reference as SequenceStep
         val model = activeSequenceModel.steps.getOrPut(objectLocation) { ActiveStepModel() }
 
+        model.traceState = StepTrace.State.Active
         try {
             val stepValue = step.continueOrStart(stepContext)
             model.value = stepValue
@@ -73,9 +75,9 @@ class SequenceExecution(
         catch (e: Throwable) {
             model.error = ExecutionFailure.ofException(e).errorMessage
         }
+        model.traceState = StepTrace.State.Done
 
-        return LogicResultSuccess(TupleValue.ofMain(
-            "foo"))
+        return LogicResultSuccess(TupleValue.empty)
     }
 
 

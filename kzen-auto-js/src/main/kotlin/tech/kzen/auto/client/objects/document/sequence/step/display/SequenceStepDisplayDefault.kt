@@ -1,12 +1,9 @@
 package tech.kzen.auto.client.objects.document.sequence.step.display
 
-import web.cssom.Color
-import web.cssom.Padding
-import web.cssom.em
-import web.cssom.pct
 import emotion.react.css
 import mui.material.CardContent
 import mui.material.Paper
+import mui.system.sx
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
@@ -14,18 +11,20 @@ import react.dom.html.ReactHTML.img
 import react.dom.html.ReactHTML.span
 import react.react
 import tech.kzen.auto.client.objects.document.common.AttributeController
+import tech.kzen.auto.client.objects.document.graph.EdgeController
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
+import tech.kzen.auto.common.paradigm.sequence.StepTrace
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.IoUtils
-
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -131,6 +130,13 @@ class SequenceStepDisplayDefault(
             .graphMetadata
             .objectMetadata[props.common.objectLocation]!!
 
+        val trace = props
+            .common
+            .logicTraceSnapshot
+            ?.values
+            ?.get(LogicTracePath.ofObjectLocation(props.common.objectLocation))
+            ?.let { StepTrace.ofExecutionValue(it) }
+
 //        val reactStyles = reactStyle {
 //            val cardColor = when (imperativeState?.phase(isRunning)) {
 //                ImperativePhase.Pending ->
@@ -161,6 +167,18 @@ class SequenceStepDisplayDefault(
 //        }
 
         Paper {
+            val state = trace?.state ?: StepTrace.State.Idle
+
+            sx {
+                backgroundColor = when (state) {
+                    StepTrace.State.Idle -> NamedColor.white
+                    StepTrace.State.Next -> EdgeController.goldLight50
+                    StepTrace.State.Active -> EdgeController.goldLight90
+                    StepTrace.State.Running -> NamedColor.gold
+                    StepTrace.State.Done -> Color("#00b467")
+                }
+            }
+
             CardContent {
                 StepHeader::class.react {
                     hoverSignal = this@SequenceStepDisplayDefault.hoverSignal
@@ -183,13 +201,7 @@ class SequenceStepDisplayDefault(
                         marginBottom = (-1.5).em
                     }
 
-                    val progress = props
-                        .common
-                        .logicTraceSnapshot
-                        ?.values
-                        ?.get(LogicTracePath.ofObjectLocation(props.common.objectLocation))
-
-                    renderBody(objectMetadata, progress)
+                    renderBody(objectMetadata, trace)
                 }
             }
         }
@@ -198,9 +210,8 @@ class SequenceStepDisplayDefault(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderBody(
-            objectMetadata: ObjectMetadata,
-//            imperativeState: ImperativeState?
-            value: ExecutionValue?
+        objectMetadata: ObjectMetadata,
+        trace: StepTrace?
     ) {
         for (e in objectMetadata.attributes.values) {
             if (AutoConventions.isManaged(e.key) || props.common.managed) {
@@ -216,13 +227,12 @@ class SequenceStepDisplayDefault(
             }
         }
 
-        value?.let {
-            renderValue(it)
+        if (trace == null) {
+            return
         }
 
-//        (imperativeState?.previous as? ExecutionSuccess)?.detail?.let {
-//            renderDetail(it)
-//        }
+        renderValue(trace.displayValue)
+        renderDetail(trace.detail)
     }
 
 
