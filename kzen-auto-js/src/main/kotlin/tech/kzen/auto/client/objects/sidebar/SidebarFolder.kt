@@ -6,6 +6,7 @@ import js.core.jso
 import mui.material.IconButton
 import mui.material.Menu
 import mui.material.MenuItem
+import mui.system.sx
 import react.ChildrenBuilder
 import react.RefObject
 import react.createRef
@@ -389,7 +390,7 @@ class SidebarFolder(
                 title = "Project options..."
                 onClick = { onOptionsOpen() }
 
-                css {
+                sx {
                     marginTop = (-13).px
                     marginRight = (-16).px
                 }

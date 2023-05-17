@@ -1,10 +1,12 @@
 package tech.kzen.auto.client.objects.ribbon
 
-import csstype.*
+import csstype.Color
+import csstype.NamedColor
+import csstype.em
+import csstype.px
 import emotion.react.css
 import js.core.jso
 import mui.material.*
-import mui.material.Size
 import mui.system.sx
 import react.ChildrenBuilder
 import react.ReactNode
@@ -24,7 +26,6 @@ import tech.kzen.auto.common.api.staticResourcePath
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.common.util.RequestParams
-import tech.kzen.auto.platform.decodeURIComponent
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -270,50 +271,50 @@ class RibbonController(
     }
 
 
-    private fun ChildrenBuilder.renderRightFloat() {
-        renderTitle()
-        renderRunNavigation()
-    }
+//    private fun ChildrenBuilder.renderRightFloat() {
+//        renderTitle()
+//        renderRunNavigation()
+//    }
 
 
-    private fun ChildrenBuilder.renderTitle() {
-        val projectTitle =
-                if (ClientContext.baseUrl.isEmpty()) {
-                    "Running in dev mode"
-                }
-                else {
-                    decodeURIComponent(ClientContext.baseUrl).substringAfter("/")
-                }
-
-        div {
-            css {
-                marginTop = 0.5.em
-                marginRight = 0.5.em
-                fontSize = 1.5.em
-                color = NamedColor.gray
-                fontStyle = FontStyle.italic
-                display = Display.inlineBlock
-            }
-            title = "Project name"
-
-            +projectTitle
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderRunNavigation() {
-        div {
-            css {
-                display = Display.inlineBlock
-            }
-
-            RibbonRun::class.react {
-//                navPath = state.documentPath
-//                parameters = state.parameters
-//                notation = props.notation
-            }
-        }
-    }
+//    private fun ChildrenBuilder.renderTitle() {
+//        val projectTitle =
+//                if (ClientContext.baseUrl.isEmpty()) {
+//                    "Running in dev mode"
+//                }
+//                else {
+//                    decodeURIComponent(ClientContext.baseUrl).substringAfter("/")
+//                }
+//
+//        div {
+//            css {
+//                marginTop = 0.5.em
+//                marginRight = 0.5.em
+//                fontSize = 1.5.em
+//                color = NamedColor.gray
+//                fontStyle = FontStyle.italic
+//                display = Display.inlineBlock
+//            }
+//            title = "Project name"
+//
+//            +projectTitle
+//        }
+//    }
+//
+//
+//    private fun ChildrenBuilder.renderRunNavigation() {
+//        div {
+//            css {
+//                display = Display.inlineBlock
+//            }
+//
+//            RibbonRun::class.react {
+////                navPath = state.documentPath
+////                parameters = state.parameters
+////                notation = props.notation
+//            }
+//        }
+//    }
 
 
     private fun ChildrenBuilder.renderSubActions() {

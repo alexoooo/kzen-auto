@@ -132,9 +132,7 @@ class ReportAnalysisController(
                     value = props.spec.type.name
                     exclusive = true
                     onChange = { _, v ->
-                        if (v is String) {
-                            onTypeChange(AnalysisType.valueOf(v))
-                        }
+                        onTypeChange(AnalysisType.valueOf(v as String))
                     }
 
                     ToggleButton {

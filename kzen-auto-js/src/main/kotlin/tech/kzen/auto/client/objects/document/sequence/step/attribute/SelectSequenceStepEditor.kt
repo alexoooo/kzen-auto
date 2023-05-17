@@ -215,7 +215,7 @@ class SelectSequenceStepEditor(
         }
 
         val selectedValue = selectOptions.find { it.value == state.value?.asString() }
-        console.log("### ReactSelect !!!", state.value, selectedValue, selectOptions)
+//        console.log("### ReactSelect !!!", state.value, selectedValue, selectOptions)
 
         ReactSelect::class.react {
             id = selectId

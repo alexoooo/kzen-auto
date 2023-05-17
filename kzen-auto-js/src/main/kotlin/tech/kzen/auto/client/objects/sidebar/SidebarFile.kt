@@ -6,6 +6,7 @@ import js.core.jso
 import mui.material.IconButton
 import mui.material.Menu
 import mui.material.MenuItem
+import mui.system.sx
 import react.*
 import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
@@ -336,7 +337,7 @@ class SidebarFile(
                 title = "Options..."
                 onClick = { onOptionsOpen() }
 
-                css {
+                sx {
                     marginTop = (-13).px
                     marginRight = (-16).px
                 }

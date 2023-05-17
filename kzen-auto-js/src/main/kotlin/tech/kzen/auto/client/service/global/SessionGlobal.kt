@@ -1,8 +1,9 @@
 package tech.kzen.auto.client.service.global
 
-//import tech.kzen.auto.client.objects.ribbon.RibbonRun
 import tech.kzen.auto.client.objects.ribbon.RibbonRun
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.logic.ClientLogicGlobal
+import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
@@ -22,6 +23,7 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 class SessionGlobal:
         NavigationGlobal.Observer,
         ExecutionRepository.Observer,
+        ClientLogicGlobal.Observer,
         LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -36,24 +38,31 @@ class SessionGlobal:
 
     private var graphDefinitionAttempt: GraphDefinitionAttempt? = null
     private var navigationRoute: NavigationRoute? = null
+
+    private var clientLogicState: ClientLogicState? = null
+
 //    private val imperativeModels = mutableMapOf<DocumentPath, ImperativeModel>()
     private var imperativeModel: ImperativeModel? = null
     private var runningHosts = setOf<DocumentPath>()
 
 
+
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun postConstruct(
             navigationGlobal: NavigationGlobal,
-            executionRepository: ExecutionRepository,
             localGraphStore: LocalGraphStore,
-            clientRestApi: ClientRestApi
+            clientLogicGlobal: ClientLogicGlobal,
+            clientRestApi: ClientRestApi,
+            executionRepository: ExecutionRepository
     ) {
         runningHosts = clientRestApi.runningHosts().toSet()
 //        console.log("%%%%% runningHosts - $runningHosts")
 
         localGraphStore.observe(this)
-        executionRepository.observe(this)
         navigationGlobal.observe(this)
+        clientLogicGlobal.observe(this)
+
+        executionRepository.observe(this)
     }
 
 
@@ -149,6 +158,12 @@ class SessionGlobal:
     }
 
 
+    override fun onLogic(clientLogicState: ClientLogicState) {
+        this.clientLogicState = clientLogicState
+        publishIfReady()
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun observe(observer: Observer) {
         observers.add(observer)
@@ -167,26 +182,26 @@ class SessionGlobal:
 
     private fun publishIfReady() {
         val definition = graphDefinitionAttempt
-                ?: return
+            ?: return
 
         val navigation = navigationRoute
-                ?: return
+            ?: return
+
+        val logicState = clientLogicState
+            ?: return
 
         val selected = navigation.requestParams.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
 
         sessionState = SessionState(
-                definition,
-                navigation,
-                imperativeModel,
-                selected,
-                runningHosts)
+            definition,
+            navigation,
+            logicState,
+            imperativeModel,
+            selected,
+            runningHosts)
 
         for (observer in observers) {
             observer.onClientState(sessionState!!)
         }
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-
 }

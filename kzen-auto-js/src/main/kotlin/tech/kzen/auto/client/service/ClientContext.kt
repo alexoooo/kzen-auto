@@ -7,6 +7,7 @@ import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.global.SessionGlobal
+import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.rest.*
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
@@ -96,6 +97,9 @@ object ClientContext {
             executionLoop,
             visualDataflowLoop)
 
+    val clientLogicGlobal = ClientLogicGlobal(
+        restClient)
+
     val sessionGlobal = SessionGlobal()
 
 
@@ -116,10 +120,12 @@ object ClientContext {
         executionRepository.observe(executionLoop)
         visualDataflowRepository.observe(visualDataflowLoop)
 
+        clientLogicGlobal.init()
+
         // NB: pre-load, otherwise can have race condition
         seededNotationMedia.scan()
 
         sessionGlobal.postConstruct(
-                navigationGlobal, executionRepository, directGraphStore, restClient)
+                navigationGlobal, directGraphStore, clientLogicGlobal, restClient, executionRepository)
     }
 }

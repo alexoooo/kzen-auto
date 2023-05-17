@@ -241,7 +241,8 @@ class HeaderController(
                 display = Display.inlineBlock
             }
 
-            RibbonRun::class.react {
+            RibbonLogicRun::class.react {
+//            RibbonRun::class.react {
 //                navPath = state.documentPath
 //                parameters = state.parameters
 //                notation = props.notation
