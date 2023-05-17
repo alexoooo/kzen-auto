@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.script.step.header
 
-import csstype.*
 import emotion.react.css
 import kotlinx.coroutines.delay
 import mui.material.IconButton
@@ -27,6 +26,7 @@ import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenameObjectRefactorCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
+import web.cssom.*
 import web.html.HTMLInputElement
 
 
@@ -348,7 +348,7 @@ class StepNameEditor(
         div {
             css {
                 marginTop = (-3).px
-                float = csstype.Float.right
+                float = Float.right
             }
 
             IconButton {

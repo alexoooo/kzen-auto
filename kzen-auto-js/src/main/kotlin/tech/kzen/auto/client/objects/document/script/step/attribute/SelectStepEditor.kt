@@ -1,11 +1,12 @@
 package tech.kzen.auto.client.objects.document.script.step.attribute
 
-import csstype.em
 import emotion.react.css
 import js.core.jso
 import kotlinx.browser.document
 import mui.material.InputLabel
-import react.*
+import react.ChildrenBuilder
+import react.State
+import react.react
 import tech.kzen.auto.client.objects.document.common.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
@@ -28,6 +29,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedObjectRefactorE
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import web.cssom.em
 import kotlin.js.Json
 import kotlin.js.json
 
@@ -68,7 +70,7 @@ class SelectStepEditor(
 
         val attributeNotation = props.clientState.graphStructure().graphNotation
             .firstAttribute(props.objectLocation, props.attributeName)
-        console.log("SelectStepEditorState.init | attributeNotation - $attributeNotation")
+//        console.log("SelectStepEditorState.init | attributeNotation - $attributeNotation")
 
         val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 

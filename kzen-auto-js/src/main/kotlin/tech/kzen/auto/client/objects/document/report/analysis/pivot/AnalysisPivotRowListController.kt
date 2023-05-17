@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.analysis.pivot
 
-import csstype.LineStyle
-import csstype.em
+import web.cssom.LineStyle
+import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import kotlinx.browser.document

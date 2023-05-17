@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.step.display.control
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import react.ChildrenBuilder

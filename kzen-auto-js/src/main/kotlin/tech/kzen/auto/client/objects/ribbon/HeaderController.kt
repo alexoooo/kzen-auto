@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.ribbon
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.a

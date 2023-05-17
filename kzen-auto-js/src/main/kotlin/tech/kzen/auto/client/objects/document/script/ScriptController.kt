@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.script
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import mui.material.IconButton

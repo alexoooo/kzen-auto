@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
-import csstype.NamedColor
-import csstype.em
+import web.cssom.NamedColor
+import web.cssom.em
 import emotion.react.css
 import mui.material.InputLabel
 import mui.material.Switch

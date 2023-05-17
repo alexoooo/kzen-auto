@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.sequence
 
-import csstype.*
 import emotion.react.css
 import js.core.jso
 import mui.material.IconButton
@@ -42,6 +41,7 @@ import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.collect.persistentListOf
+import web.cssom.*
 
 
 //-----------------------------------------------------------------------------------------------------------------

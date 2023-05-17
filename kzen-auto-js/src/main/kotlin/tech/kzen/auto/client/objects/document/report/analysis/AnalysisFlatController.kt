@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.analysis
 
-import csstype.*
+import csstype.PropertiesBuilder
 import emotion.react.css
 import js.core.jso
 import react.ChildrenBuilder
@@ -22,6 +22,7 @@ import tech.kzen.auto.client.wrap.material.CheckIcon
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisFlatDataSpec
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

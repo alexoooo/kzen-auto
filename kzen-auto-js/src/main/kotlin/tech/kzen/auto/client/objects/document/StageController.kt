@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.objects.document
 
-import csstype.Length
-import csstype.em
-import csstype.px
+import web.cssom.Length
+import web.cssom.em
+import web.cssom.px
 import emotion.react.css
 import react.*
 import react.dom.html.ReactHTML.div

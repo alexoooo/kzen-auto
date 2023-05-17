@@ -62,8 +62,8 @@ SelectSequenceStepEditor:
 
 
 
-
 #######################################################################################################################
+
 SequenceGroup_InputOutput:
   is: RibbonGroup
   title: "Input / Output"
@@ -86,3 +86,16 @@ InvokeSequenceStepTool:
   is: RibbonTool
   parent: SequenceGroup_InputOutput
   delegate: InvokeSequenceStep
+
+################################################################
+
+SequenceGroup_LogicControl:
+  is: RibbonGroup
+  title: "Logic / Control"
+  archetype: Sequence
+
+
+WaitStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_LogicControl
+  delegate: WaitStep

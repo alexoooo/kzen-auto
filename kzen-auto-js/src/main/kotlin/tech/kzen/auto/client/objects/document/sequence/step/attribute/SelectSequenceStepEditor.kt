@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.sequence.step.attribute
 
-import csstype.em
 import emotion.react.css
 import js.core.jso
 import kotlinx.browser.document
@@ -30,6 +29,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedObjectRefactorE
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import web.cssom.em
 import kotlin.js.Json
 import kotlin.js.json
 
@@ -70,7 +70,7 @@ class SelectSequenceStepEditor(
 
         val attributeNotation = props.clientState.graphStructure().graphNotation
             .firstAttribute(props.objectLocation, props.attributeName)
-        console.log("SelectSequenceStepEditorState.init | attributeNotation - $attributeNotation")
+//        console.log("SelectSequenceStepEditorState.init | attributeNotation - $attributeNotation")
 
         val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 

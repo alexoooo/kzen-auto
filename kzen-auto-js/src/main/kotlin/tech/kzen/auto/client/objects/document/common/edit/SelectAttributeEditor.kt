@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
-import csstype.em
+import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import kotlinx.browser.document

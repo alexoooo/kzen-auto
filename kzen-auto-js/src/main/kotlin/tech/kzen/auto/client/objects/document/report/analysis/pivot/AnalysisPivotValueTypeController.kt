@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.analysis.pivot
 
-import csstype.FontWeight
+import web.cssom.FontWeight
 import emotion.react.css
 import mui.material.Size
 import mui.material.ToggleButton

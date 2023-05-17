@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.widget
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import react.ChildrenBuilder
 import react.State

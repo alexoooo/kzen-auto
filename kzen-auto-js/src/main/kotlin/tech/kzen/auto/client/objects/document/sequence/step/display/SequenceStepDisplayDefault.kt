@@ -1,9 +1,9 @@
 package tech.kzen.auto.client.objects.document.sequence.step.display
 
-import csstype.Color
-import csstype.Padding
-import csstype.em
-import csstype.pct
+import web.cssom.Color
+import web.cssom.Padding
+import web.cssom.em
+import web.cssom.pct
 import emotion.react.css
 import mui.material.CardContent
 import mui.material.Paper

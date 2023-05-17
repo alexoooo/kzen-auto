@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.sidebar
 
-import csstype.em
+import web.cssom.em
 import emotion.react.css
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div

@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.objects.document.report.analysis.pivot
 
-import csstype.Float
-import csstype.em
-import csstype.pct
+import web.cssom.Float
+import web.cssom.em
+import web.cssom.pct
 import emotion.react.css
 import mui.material.IconButton
 import mui.material.Size

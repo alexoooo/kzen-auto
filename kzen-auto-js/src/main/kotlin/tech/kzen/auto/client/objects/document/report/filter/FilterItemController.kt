@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.filter
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import mui.material.*
 import mui.material.Size

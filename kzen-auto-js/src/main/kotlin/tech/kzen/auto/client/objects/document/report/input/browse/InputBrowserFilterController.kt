@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.input.browse
 
-import csstype.em
+import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import mui.material.InputAdornment

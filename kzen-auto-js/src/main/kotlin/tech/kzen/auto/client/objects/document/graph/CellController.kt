@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.objects.document.graph
 
-import csstype.em
-import csstype.plus
-import csstype.times
+import web.cssom.em
+import web.cssom.plus
+import web.cssom.times
 import react.ChildrenBuilder
 import react.Props
 import react.State

@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.input
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import mui.material.*
@@ -27,8 +27,6 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.lib.common.model.locate.ObjectLocation
-
-
 
 
 //---------------------------------------------------------------------------------------------------------------------

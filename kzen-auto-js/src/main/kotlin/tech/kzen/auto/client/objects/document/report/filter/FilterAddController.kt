@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.filter
 
-import csstype.Display
-import csstype.em
+import web.cssom.Display
+import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import kotlinx.browser.document

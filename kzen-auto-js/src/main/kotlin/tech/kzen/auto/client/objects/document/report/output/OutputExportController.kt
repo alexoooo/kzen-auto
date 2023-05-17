@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.objects.document.report.output
 
-import csstype.Display
-import csstype.em
-import csstype.pct
+import web.cssom.Display
+import web.cssom.em
+import web.cssom.pct
 import emotion.react.css
 import js.core.jso
 import mui.material.InputAdornment

@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.step.display
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import mui.material.CardContent
 import mui.material.Paper

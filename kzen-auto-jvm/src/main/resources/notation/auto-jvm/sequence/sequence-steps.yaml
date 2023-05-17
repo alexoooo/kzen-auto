@@ -1,4 +1,5 @@
 
+#######################################################################################################################
 
 BooleanLiteralStep:
   abstract: true
@@ -52,3 +53,18 @@ MultiSequenceStep:
       is: List
       of: SequenceStep
       by: Nominal
+
+
+#######################################################################################################################
+
+WaitStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.WaitStep
+  icon: Timer
+  title: "Wait"
+  milliseconds: 1000
+  meta:
+    milliseconds: Long
+    selfLocation: SelfLocation
+

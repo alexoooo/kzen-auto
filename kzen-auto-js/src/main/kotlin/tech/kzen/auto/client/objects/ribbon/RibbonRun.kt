@@ -1,9 +1,5 @@
 package tech.kzen.auto.client.objects.ribbon
 
-import csstype.Globals
-import csstype.NamedColor
-import csstype.em
-import csstype.pct
 import emotion.react.css
 import mui.material.IconButton
 import mui.material.Menu
@@ -23,6 +19,10 @@ import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import web.cssom.Globals
+import web.cssom.NamedColor
+import web.cssom.em
+import web.cssom.pct
 import web.html.HTMLElement
 
 
@@ -104,50 +104,6 @@ class RibbonRun (
             onStoppedRunning()
         }
     }
-
-
-//    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
-//
-//    }
-
-
-//    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel) {
-//        val active = state.active
-//
-//        val modifiedActive =
-//                if (executionModel.isActive()) {
-//                    active + host
-//                }
-//                else {
-//                    active - host
-//                }
-//
-////        console.log("^^^ onExecutionModel: " +
-////                "$active / $modifiedActive - $host - ${executionModel.isActive()} - $executionModel")
-//
-//        val selected = props.parameters.get(runningKey)?.let { DocumentPath.parse(it) }
-//
-//        val selectedFramePaths =
-//                if (executionModel.frames.firstOrNull()?.path == selected) {
-//                    executionModel.frames.map { it.path }
-//                }
-//                else {
-//                    state.selectedFramePaths
-//                }
-//
-//        if (active != modifiedActive ||
-//                state.selectedFramePaths != selectedFramePaths)
-//        {
-//            setState {
-//                this.active = modifiedActive
-//                this.selectedFramePaths = selectedFramePaths
-//            }
-//
-//            if (props.parameters.values.isEmpty()) {
-//                onInitialRunning(host)
-//            }
-//        }
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

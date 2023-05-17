@@ -1,12 +1,13 @@
 package tech.kzen.auto.client.objects.document.graph.edge
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.graph.CellController
 import tech.kzen.auto.client.wrap.RPureComponent
+
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface BottomEgressProps: react.Props {

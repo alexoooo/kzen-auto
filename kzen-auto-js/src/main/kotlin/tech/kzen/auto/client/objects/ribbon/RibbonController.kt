@@ -1,9 +1,5 @@
 package tech.kzen.auto.client.objects.ribbon
 
-import csstype.Color
-import csstype.NamedColor
-import csstype.em
-import csstype.px
 import emotion.react.css
 import js.core.jso
 import mui.material.*
@@ -34,6 +30,10 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import web.cssom.Color
+import web.cssom.NamedColor
+import web.cssom.em
+import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------

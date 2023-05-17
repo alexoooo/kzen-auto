@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.plugin
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import react.*
 import react.dom.html.ReactHTML.div
@@ -22,8 +22,6 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
-
-
 
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.common
 
-import csstype.NamedColor
-import csstype.em
+import web.cssom.NamedColor
+import web.cssom.em
 import js.core.jso
 import mui.material.*
 import react.ChildrenBuilder

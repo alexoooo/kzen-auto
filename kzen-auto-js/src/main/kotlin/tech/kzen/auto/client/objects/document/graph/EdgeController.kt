@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.graph
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import mui.material.IconButton
 import react.ChildrenBuilder

@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.graph
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import mui.material.IconButton
@@ -41,8 +41,6 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectInAttribut
 import tech.kzen.lib.common.service.notation.NotationConventions
 import web.dom.Element
 import kotlin.js.Date
-
-
 
 
 //---------------------------------------------------------------------------------------------------------------------

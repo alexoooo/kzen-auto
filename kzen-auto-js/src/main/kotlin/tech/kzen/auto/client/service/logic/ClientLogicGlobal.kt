@@ -51,7 +51,7 @@ class ClientLogicGlobal(
     suspend fun init() {
         lookupStatus()
 
-        val running = isRunning()
+        val running = isActive()
 
         clientLogicState = clientLogicState.copy(
             pending = ClientLogicState.Pending.None)
@@ -64,7 +64,7 @@ class ClientLogicGlobal(
     }
 
 
-    private fun isRunning(): Boolean {
+    private fun isActive(): Boolean {
         return clientLogicState.logicStatus?.active != null
     }
 
@@ -92,11 +92,12 @@ class ClientLogicGlobal(
 
 
     private fun scheduleRefresh() {
+        val running = isActive()
+//        println("#@%$ scheduleRefresh - $running")
+
         if (refreshPending) {
             return
         }
-
-        val running = isRunning()
 
         if (running) {
             refreshPending = true

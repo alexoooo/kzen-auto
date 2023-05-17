@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.step.display.control
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import mui.material.IconButton
@@ -31,7 +31,6 @@ import tech.kzen.lib.common.model.locate.ObjectReference
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.platform.collect.persistentListOf
-
 
 
 //---------------------------------------------------------------------------------------------------------------------

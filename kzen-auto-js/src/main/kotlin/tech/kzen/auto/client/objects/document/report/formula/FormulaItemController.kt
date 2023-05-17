@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.formula
 
-import csstype.VerticalAlign
-import csstype.em
+import web.cssom.VerticalAlign
+import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import mui.material.IconButton

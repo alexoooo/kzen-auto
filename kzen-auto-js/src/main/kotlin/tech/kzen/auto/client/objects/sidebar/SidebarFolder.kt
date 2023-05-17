@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.sidebar
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import mui.material.IconButton
@@ -32,8 +32,6 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 import web.html.HTMLElement
 import kotlin.js.Date
 import kotlin.random.Random
-
-
 
 
 //---------------------------------------------------------------------------------------------------------------------

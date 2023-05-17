@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.preview
 
-import csstype.*
+import csstype.PropertiesBuilder
 import emotion.react.css
 import js.core.jso
 import mui.material.Button
@@ -29,6 +29,7 @@ import tech.kzen.auto.client.wrap.material.RefreshIcon
 import tech.kzen.auto.client.wrap.material.VisibilityIcon
 import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import web.cssom.*
 
 
 //-----------------------------------------------------------------------------------------------------------------

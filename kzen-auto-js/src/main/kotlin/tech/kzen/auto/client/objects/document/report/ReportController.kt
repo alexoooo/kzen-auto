@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import react.*
 import react.dom.html.ReactHTML.div

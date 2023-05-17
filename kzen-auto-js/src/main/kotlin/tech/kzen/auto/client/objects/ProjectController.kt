@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects
 
-import csstype.*
 import emotion.react.css
 import kotlinx.browser.window
 import kotlinx.coroutines.delay
@@ -25,6 +24,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import web.cssom.*
 import web.html.HTMLElement
 
 

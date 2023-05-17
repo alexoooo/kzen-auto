@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.sequence.step
 
-import csstype.em
+import web.cssom.em
 import react.ChildrenBuilder
 import react.State
 import react.react

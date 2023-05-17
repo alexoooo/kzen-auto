@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.formula
 
-import csstype.Display
-import csstype.em
+import web.cssom.Display
+import web.cssom.em
 import emotion.react.css
 import mui.material.IconButton
 import mui.material.Size

@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.objects.document.script
 
-import csstype.NamedColor
-import csstype.Visibility
-import csstype.em
+import web.cssom.NamedColor
+import web.cssom.Visibility
+import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import kotlinx.coroutines.delay

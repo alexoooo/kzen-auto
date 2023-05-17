@@ -1,9 +1,9 @@
 package tech.kzen.auto.client.objects.document.report.input.browse
 
-import csstype.Color
-import csstype.Display
-import csstype.NamedColor
-import csstype.em
+import web.cssom.Color
+import web.cssom.Display
+import web.cssom.NamedColor
+import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import mui.material.Button

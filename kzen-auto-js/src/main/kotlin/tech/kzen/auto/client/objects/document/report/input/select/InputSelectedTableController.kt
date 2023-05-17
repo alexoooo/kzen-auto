@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.input.select
 
-import csstype.*
+import web.cssom.*
 import emotion.react.css
 import mui.material.Checkbox
 import react.*
