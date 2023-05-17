@@ -21,7 +21,7 @@ class SequenceProgressStore(
     private val sequenceStore: SequenceStore
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun init() {
+    suspend fun refresh() {
         val logicRunExecutionId = mostRecent()
         if (logicRunExecutionId == null) {
             sequenceStore.update { state -> state
@@ -141,6 +141,92 @@ class SequenceProgressStore(
 
                 val resultValue = resultCollection?.let { LogicRunExecutionId.ofCollection(it) }
                 ClientResult.ofSuccess(SequenceProgressState.MostRecentResult(resultValue))
+            }
+
+            is ExecutionFailure ->
+                ClientResult.ofError(result.errorMessage)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun clear() {
+        val logicRunExecutionId = mostRecent()
+        if (logicRunExecutionId == null) {
+            sequenceStore.update { state -> state
+                .withProgressSuccess {
+                    it.copy(
+                        logicRunExecutionId = null,
+                        logicTraceSnapshot = null)
+                }
+            }
+            return
+        }
+
+        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
+        val clearResult = clearCommand()
+
+        when (clearResult) {
+            is ClientError -> {
+                sequenceStore.update { state -> state
+                    .withGlobalError(clearResult.message)
+                }
+            }
+
+            is ClientSuccess -> {
+                sequenceStore.update { state -> state
+                    .withProgressSuccess {
+                        it.copy(
+                            logicRunExecutionId = null,
+                            logicTraceSnapshot = null)
+                    }
+                }
+            }
+        }
+    }
+
+//
+//    private suspend fun mostRecent(): LogicRunExecutionId? {
+//        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
+//        val mostRecentResult = mostRecentQuery()
+//
+//        return when (mostRecentResult) {
+//            is ClientError -> {
+//                sequenceStore.update { state -> state
+//                    .withGlobalError(mostRecentResult.message)
+//                }
+//                null
+//            }
+//
+//            is ClientSuccess -> {
+//                sequenceStore.update { state -> state
+//                    .withProgressSuccess {
+//                        it.copy(
+//                            logicRunExecutionId = mostRecentResult.value.logicRunExecutionId
+//                        )
+//                    }
+//                }
+//
+//                mostRecentResult.value.logicRunExecutionId
+//            }
+//        }
+//    }
+
+
+    private suspend fun clearCommand(): ClientResult<Boolean> {
+        val mainLocation = sequenceStore.mainLocation()
+
+        val result = ClientContext.restClient.performDetached(
+            LogicConventions.logicTraceStoreLocation,
+            CommonRestApi.paramAction to LogicConventions.actionReset,
+            LogicConventions.paramSubDocumentPath to mainLocation.documentPath.asString(),
+            LogicConventions.paramSubObjectPath to mainLocation.objectPath.asString()
+        )
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                val resultValue = result.value.get() as Boolean
+                ClientResult.ofSuccess(resultValue)
             }
 
             is ExecutionFailure ->

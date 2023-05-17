@@ -11,11 +11,11 @@ import react.dom.html.ReactHTML.span
 import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.objects.document.common.run.ExecutionRunController
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
+import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressController
 import tech.kzen.auto.client.objects.document.sequence.step.SequenceStepController
 import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.ribbon.RibbonController
@@ -188,7 +188,6 @@ class SequenceController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: SessionState) {
-//        console.log("#!#@!#@! onClientState - ${clientState.imperativeModel}")
         setState {
             this.clientState = clientState
         }
@@ -237,26 +236,12 @@ class SequenceController:
             return
         }
 
-//        val imperativeModel = clientState.imperativeModel
-//                ?: ClientContext.executionRepository.emptyState(
-//                        documentPath, clientState.graphDefinitionAttempt.graphStructure)
-
-//        +"boo: [${state.sequenceState}]"
         val sequenceState = state.sequenceState
             ?: return
 
-        div {
-            if (sequenceState.globalError != null) {
+        if (sequenceState.globalError != null) {
+            div {
                 +"Error: ${sequenceState.globalError}"
-            }
-            else if (! sequenceState.progress.loaded) {
-                +"Loading..."
-            }
-            else if (sequenceState.progress.logicRunExecutionId == null) {
-                +"Did not run yet"
-            }
-            else {
-                +"Most recent LogicRunExecutionId: ${sequenceState.progress.logicRunExecutionId} - ${sequenceState.progress.logicTraceSnapshot}"
             }
         }
 
@@ -265,16 +250,16 @@ class SequenceController:
                 marginLeft = 2.em
             }
 
-            steps(clientState, )
+            steps(clientState)
         }
 
-        runController(clientState/*, imperativeModel*/)
+        runController(clientState, sequenceState)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.steps(
-            clientState: SessionState
+        clientState: SessionState
     ) {
         val graphStructure: GraphStructure = clientState.graphDefinitionAttempt.graphStructure
         val documentPath: DocumentPath = clientState.navigationRoute.documentPath!!
@@ -303,7 +288,7 @@ class SequenceController:
                 css {
                     paddingLeft = 1.em
                 }
-                nonEmptySteps(documentPath, stepLocations/*, imperativeModel*/)
+                nonEmptySteps(documentPath, stepLocations)
             }
         }
     }
@@ -311,12 +296,8 @@ class SequenceController:
 
     private fun ChildrenBuilder.nonEmptySteps(
             documentPath: DocumentPath,
-            stepLocations: List<ObjectLocation>,
-//            imperativeModel: ImperativeModel
+            stepLocations: List<ObjectLocation>
     ) {
-//        +"nonEmptySteps: $stepLocations"
-//        +"imperativeModel: running ${imperativeModel.running}"
-
         insertionPoint(0)
 
         div {
@@ -332,7 +313,6 @@ class SequenceController:
                 renderStep(
                         index,
                         keyLocation,
-//                        imperativeModel,
                         stepLocations.size)
 
                 if (index < stepLocations.size - 1) {
@@ -415,7 +395,6 @@ class SequenceController:
     private fun ChildrenBuilder.renderStep(
             index: Int,
             objectLocation: ObjectLocation,
-//            imperativeModel: ImperativeModel,
             stepCount: Int
     ) {
         span {
@@ -433,7 +412,6 @@ class SequenceController:
                     objectLocation,
                     AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
                     progressValue,
-//                        imperativeModel,
                     first = index == 0,
                     last = index == stepCount - 1)
             }
@@ -443,8 +421,8 @@ class SequenceController:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.runController(
-            clientState: SessionState,
-//            imperativeModel: ImperativeModel
+        clientState: SessionState,
+        sequenceState: SequenceState
     ) {
         div {
             css {
@@ -455,14 +433,10 @@ class SequenceController:
                 marginBottom = 2.em
             }
 
-            val runSate = store.state().run
-            ExecutionRunController::class.react {
-                thisRunning = runSate.logicStatus?.active != null
-                thisSubmitting = runSate.submitting()
-                otherRunning = runSate.otherRunning
-
-                outputTerminal = false
-                executionRunStore = store.run
+            SequenceProgressController::class.react {
+                active = clientState.clientLogicState.isActive()
+                hasProgress = sequenceState.progress.hasProgress()
+                sequenceProgressStore = store.progressStore
             }
         }
     }

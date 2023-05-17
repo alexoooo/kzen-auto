@@ -23,6 +23,7 @@ object LogicConventions {
 //    const val paramAction = "action"
     const val actionLookup = "lookup"
     const val actionMostRecent = "recent"
+    const val actionReset = "reset"
 
     const val paramSubDocumentPath = "sub-path"
     const val paramSubObjectPath = "sub-object"

@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.sequence.model
 
-import tech.kzen.auto.client.objects.document.common.run.ExecutionRunState
 import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressState
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
@@ -16,7 +15,7 @@ data class SequenceState(
 
     val progress: SequenceProgressState = SequenceProgressState(),
 
-    val run: ExecutionRunState = ExecutionRunState(),
+//    val run: ExecutionRunState = ExecutionRunState(),
 
     val globalError: String? = null
 ) {

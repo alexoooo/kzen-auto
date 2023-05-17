@@ -12,6 +12,11 @@ interface LogicTrace {
     ): LogicRunExecutionId?
 
 
+    fun clear(
+        objectLocation: ObjectLocation
+    ): Boolean
+
+
     fun lookup(
         logicRunExecutionId: LogicRunExecutionId,
         logicTraceQuery: LogicTraceQuery

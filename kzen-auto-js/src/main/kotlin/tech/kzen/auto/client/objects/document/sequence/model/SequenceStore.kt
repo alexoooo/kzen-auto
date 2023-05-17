@@ -1,14 +1,12 @@
 package tech.kzen.auto.client.objects.document.sequence.model
 
 import kotlinx.coroutines.delay
-import tech.kzen.auto.client.objects.document.common.run.ExecutionRunStore
+import kotlinx.datetime.internal.JSJoda.Instant
 import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressStore
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.FunctionWithDebounce
-import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
@@ -33,16 +31,17 @@ class SequenceStore: SessionGlobal.Observer {
     private var mounted = false
     private var state: SequenceState? = null
 
+    private var previousLogicTime: Instant = Instant.MIN
 
-    private var refreshPending: Boolean = false
-    private var previousRunning: Boolean = false
-    private val refreshDebounce: FunctionWithDebounce = lodash.debounce({
-        refreshPending = false
-        async {
-            refresh()
-            scheduleRefresh()
-        }
-    }, debounceMillis)
+//    private var refreshPending: Boolean = false
+//    private var previousRunning: Boolean = false
+//    private val refreshDebounce: FunctionWithDebounce = lodash.debounce({
+//        refreshPending = false
+//        async {
+//            refresh()
+//            scheduleRefresh()
+//        }
+//    }, debounceMillis)
 
 
 //    val input = ReportInputStore(this)
@@ -51,20 +50,20 @@ class SequenceStore: SessionGlobal.Observer {
 //    val analysis = ReportAnalysisStore(this)
 //    val previewFiltered = ReportPreviewStore(this)
 //    val output = ReportOutputStore(this)
-    val run = ExecutionRunStore(
-        { state?.run!! },
-        { state?.mainLocation!! },
-        {
-            state = state!!.copy(
-                run = it(state!!.run))
-        },
-        {
-//            console.log("refresh - $it")
-        }
-    )
+//    val run = ExecutionRunStore(
+//        { state?.run!! },
+//        { state?.mainLocation!! },
+//        {
+//            state = state!!.copy(
+//                run = it(state!!.run))
+//        },
+//        {
+////            console.log("refresh - $it")
+//        }
+//    )
 
 
-    private val progressStore = SequenceProgressStore(this)
+    val progressStore = SequenceProgressStore(this)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -84,7 +83,7 @@ class SequenceStore: SessionGlobal.Observer {
         state = null
 
         ClientContext.sessionGlobal.unobserve(this)
-        cancelRefresh()
+//        cancelRefresh()
     }
 
 
@@ -120,8 +119,14 @@ class SequenceStore: SessionGlobal.Observer {
         }
 
         if (initial) {
-            cancelRefresh()
-            initAsync()
+//            cancelRefresh()
+            refreshProgressAsync()
+        }
+        else {
+            val logicTime = clientState.clientLogicState.logicStatus?.time ?: Instant.MIN
+            if (previousLogicTime != logicTime) {
+                refreshProgressAsync()
+            }
         }
     }
 
@@ -140,29 +145,16 @@ class SequenceStore: SessionGlobal.Observer {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun initAsync() {
+    private fun refreshProgressAsync() {
         async {
             delay(10)
             if (state == null) {
                 return@async
             }
-
-//            output.init()
-//            run.init()
-//            input.init()
-//            formula.validateAsync()
-//            previewFiltered.init()
-
-            progressStore.init()
-
-            run.open()
+            progressStore.refresh()
         }
     }
 
-
-    private suspend fun refresh() {
-        run.refresh()
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -187,7 +179,7 @@ class SequenceStore: SessionGlobal.Observer {
         if (state != updated) {
             state = updated
             observer?.onSequenceState(updated)
-            scheduleRefresh()
+//            scheduleRefresh()
         }
     }
 
@@ -196,36 +188,35 @@ class SequenceStore: SessionGlobal.Observer {
         if (this.state != state) {
             this.state = state
             observer?.onSequenceState(state)
-            scheduleRefresh()
+//            scheduleRefresh()
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun scheduleRefresh() {
-        val running = state?.run?.logicStatus?.active != null
-
-        if (refreshPending) {
-            return
-        }
-
-        if (running) {
-            refreshPending = true
-            refreshDebounce.apply()
-        }
-        else if (previousRunning) {
-            println("ReportStore - previousRunning")
-            cancelRefresh()
-//            output.lookupOutputWithFallbackAsync()
-//            run.lookupProgressOfflineAsync()
-//            previewFiltered.lookupSummaryWithFallbackAsync()
-        }
-        previousRunning = running
-    }
-
-
-    private fun cancelRefresh() {
-        refreshDebounce.cancel()
-        refreshPending = false
-    }
+//    private fun scheduleRefresh() {
+//        val running = state?.run?.logicStatus?.active != null
+//
+//        if (refreshPending) {
+//            return
+//        }
+//
+//        if (running) {
+//            refreshPending = true
+//            refreshDebounce.apply()
+//        }
+//        else if (previousRunning) {
+//            cancelRefresh()
+////            output.lookupOutputWithFallbackAsync()
+////            run.lookupProgressOfflineAsync()
+////            previewFiltered.lookupSummaryWithFallbackAsync()
+//        }
+//        previousRunning = running
+//    }
+//
+//
+//    private fun cancelRefresh() {
+//        refreshDebounce.cancel()
+//        refreshPending = false
+//    }
 }

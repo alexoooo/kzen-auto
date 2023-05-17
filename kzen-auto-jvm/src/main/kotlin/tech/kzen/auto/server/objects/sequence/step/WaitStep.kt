@@ -43,9 +43,13 @@ class WaitStep(
 
         stepContext.logicTraceHandle.set(
             logicTracePath,
-            ExecutionValue.of(milliseconds))
+            ExecutionValue.of("Waiting for $milliseconds milliseconds"))
 
         Thread.sleep(milliseconds)
+
+        stepContext.logicTraceHandle.set(
+            logicTracePath,
+            ExecutionValue.of("Finished waiting for $milliseconds milliseconds"))
 
         return LogicResultSuccess(
             TupleValue.ofMain(milliseconds))

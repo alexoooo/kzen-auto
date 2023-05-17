@@ -119,6 +119,20 @@ object LogicTraceStore:
                     snapshot.asCollection()))
             }
 
+            LogicConventions.actionReset -> {
+                val documentPath: DocumentPath = request.getSingle(LogicConventions.paramSubDocumentPath)
+                    ?.let { DocumentPath.parse(it) }
+                    ?: return ExecutionResult.failure("Document path missing: '${LogicConventions.paramSubDocumentPath}'")
+
+                val objectPath: ObjectPath = request.getSingle(LogicConventions.paramSubObjectPath)
+                    ?.let { ObjectPath.parse(it) }
+                    ?: return ExecutionResult.failure("Object path missing: '${LogicConventions.paramSubObjectPath}'")
+
+                val objectLocation = ObjectLocation(documentPath, objectPath)
+                val cleared = clear(objectLocation)
+
+                ExecutionSuccess.ofValue(ExecutionValue.of(cleared))
+            }
             else ->
                 ExecutionResult.failure("Unknown logic trace action: '$action'")
         }
@@ -128,6 +142,11 @@ object LogicTraceStore:
     //-----------------------------------------------------------------------------------------------------------------
     override fun mostRecent(objectLocation: ObjectLocation): LogicRunExecutionId? {
         return objectLocationHistory[objectLocation]
+    }
+
+
+    override fun clear(objectLocation: ObjectLocation): Boolean {
+        return objectLocationHistory.remove(objectLocation) != null
     }
 
 

@@ -12,4 +12,8 @@ data class SequenceProgressState(
     data class MostRecentResult(
         val logicRunExecutionId: LogicRunExecutionId?
     )
+
+    fun hasProgress(): Boolean {
+        return logicRunExecutionId != null
+    }
 }
