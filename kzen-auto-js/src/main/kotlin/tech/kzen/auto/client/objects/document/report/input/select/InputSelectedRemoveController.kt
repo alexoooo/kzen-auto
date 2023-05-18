@@ -1,9 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.input.select
 
-import web.cssom.Color
-import web.cssom.Display
-import web.cssom.NamedColor
-import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import mui.material.Button
@@ -19,6 +15,10 @@ import tech.kzen.auto.client.objects.document.report.input.select.model.InputSel
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.RemoveCircleOutlineIcon
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import web.cssom.Color
+import web.cssom.Display
+import web.cssom.NamedColor
+import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -31,7 +31,7 @@ data class StepTrace(
     //-----------------------------------------------------------------------------------------------------------------
     enum class State {
         Idle,
-        Next,
+//        Next,
         Active,
         Running,
         Done

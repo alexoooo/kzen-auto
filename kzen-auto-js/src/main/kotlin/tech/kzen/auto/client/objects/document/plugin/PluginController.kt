@@ -1,11 +1,13 @@
 package tech.kzen.auto.client.objects.document.plugin
 
-import web.cssom.*
 import emotion.react.css
-import react.*
+import react.ChildrenBuilder
+import react.Props
+import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.h2
 import react.dom.html.ReactHTML.span
+import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
@@ -22,6 +24,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.input.browse
 
-import web.cssom.*
 import emotion.react.css
 import react.ChildrenBuilder
 import react.Props
@@ -17,6 +16,7 @@ import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputBrowserSpec
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

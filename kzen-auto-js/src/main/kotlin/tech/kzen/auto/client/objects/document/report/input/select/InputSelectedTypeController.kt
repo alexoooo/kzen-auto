@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.input.select
 
-import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import kotlinx.browser.document
@@ -16,6 +15,7 @@ import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
 import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames.topLevelWords
+import web.cssom.em
 import kotlin.js.Json
 import kotlin.js.json
 

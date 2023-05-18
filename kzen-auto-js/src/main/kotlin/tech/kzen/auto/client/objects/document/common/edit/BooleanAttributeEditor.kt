@@ -1,7 +1,5 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
-import web.cssom.NamedColor
-import web.cssom.em
 import emotion.react.css
 import mui.material.InputLabel
 import mui.material.Switch
@@ -15,6 +13,8 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import web.cssom.NamedColor
+import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------

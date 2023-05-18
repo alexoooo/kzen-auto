@@ -6,6 +6,7 @@ import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunResponse
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
 
@@ -137,6 +138,102 @@ class ClientLogicGlobal(
             if (logicRunId == null) {
                 clientLogicState = clientLogicState.copy(
                     controlError = "Unable to start")
+            }
+            else {
+                delay(10)
+                lookupStatus()
+                scheduleRefresh()
+            }
+
+            publish()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun stopAsync() {
+        val logicRunId = clientLogicState.logicStatus?.active?.id
+            ?: return
+
+        clientLogicState = clientLogicState.copy(
+            pending = ClientLogicState.Pending.Cancel,
+            controlError = null)
+        publish()
+
+        async {
+            delay(1)
+            val response = ClientContext.restClient.logicCancel(logicRunId)
+
+            clientLogicState = clientLogicState.copy(
+                pending = ClientLogicState.Pending.None)
+
+            if (response != LogicRunResponse.Submitted) {
+                clientLogicState = clientLogicState.copy(
+                    controlError = "Unable to stop")
+            }
+            else {
+                delay(10)
+                lookupStatus()
+                scheduleRefresh()
+            }
+
+            publish()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun pauseAsync() {
+        val logicRunId = clientLogicState.logicStatus?.active?.id
+            ?: return
+
+        clientLogicState = clientLogicState.copy(
+            pending = ClientLogicState.Pending.Pause,
+            controlError = null)
+        publish()
+
+        async {
+            delay(1)
+            val response = ClientContext.restClient.logicPause(logicRunId)
+
+            clientLogicState = clientLogicState.copy(
+                pending = ClientLogicState.Pending.None)
+
+            if (response != LogicRunResponse.Submitted) {
+                clientLogicState = clientLogicState.copy(
+                    controlError = "Unable to stop")
+            }
+            else {
+                delay(10)
+                lookupStatus()
+                scheduleRefresh()
+            }
+
+            publish()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun continueRunAsync() {
+        val logicRunId = clientLogicState.logicStatus?.active?.id
+            ?: return
+
+        clientLogicState = clientLogicState.copy(
+            pending = ClientLogicState.Pending.Pause,
+            controlError = null)
+        publish()
+
+        async {
+            delay(1)
+            val response = ClientContext.restClient.logicContinueRun(logicRunId)
+
+            clientLogicState = clientLogicState.copy(
+                pending = ClientLogicState.Pending.None)
+
+            if (response != LogicRunResponse.Submitted) {
+                clientLogicState = clientLogicState.copy(
+                    controlError = "Unable to stop")
             }
             else {
                 delay(10)

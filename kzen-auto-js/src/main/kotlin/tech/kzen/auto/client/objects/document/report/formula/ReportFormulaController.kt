@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.formula
 
-import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import mui.material.CircularProgress
@@ -15,6 +14,7 @@ import tech.kzen.auto.client.objects.document.report.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.FunctionsIcon
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

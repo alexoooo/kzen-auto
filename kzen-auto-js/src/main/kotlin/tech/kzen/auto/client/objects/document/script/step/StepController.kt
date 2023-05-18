@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.script.step
 
-import web.cssom.em
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -12,8 +11,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.reflect.Reflect
-
-
+import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------

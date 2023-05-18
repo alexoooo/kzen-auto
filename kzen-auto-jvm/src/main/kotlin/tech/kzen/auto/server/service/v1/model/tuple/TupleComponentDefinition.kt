@@ -1,6 +1,7 @@
-package tech.kzen.auto.server.service.v1.model
+package tech.kzen.auto.server.service.v1.model.tuple
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.auto.server.service.v1.model.LogicType
 
 
 data class TupleComponentDefinition(

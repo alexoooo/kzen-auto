@@ -15,20 +15,22 @@ data class SequenceStepDisplayPropsCommon(
     var clientState: SessionState,
     var objectLocation: ObjectLocation,
     var attributeNesting: AttributeNesting,
+
     var logicTraceSnapshot: LogicTraceSnapshot?,
+    var nextToRun: ObjectLocation?,
 
     var managed: Boolean = false,
     var first: Boolean = false,
     var last: Boolean = false
 ) {
-    fun isRunning(): Boolean {
-//            return objectLocation == imperativeModel.running
-        return false
-    }
-
-    fun isActive(): Boolean {
-//            return clientState.activeHost != null &&
-//                    imperativeModel.frames.any { it.path == clientState.navigationRoute.documentPath }
-        return false
-    }
+//    fun isRunning(): Boolean {
+////            return objectLocation == imperativeModel.running
+//        return false
+//    }
+//
+//    fun isActive(): Boolean {
+////            return clientState.activeHost != null &&
+////                    imperativeModel.frames.any { it.path == clientState.navigationRoute.documentPath }
+//        return false
+//    }
 }

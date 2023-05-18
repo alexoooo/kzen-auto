@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.filter
 
-import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import mui.material.Button
@@ -21,6 +20,7 @@ import tech.kzen.auto.client.wrap.material.RefreshIcon
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

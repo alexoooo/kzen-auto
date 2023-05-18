@@ -29,7 +29,9 @@ interface LogicController {
 
 
     fun cancel(runId: LogicRunId): LogicRunResponse
-//    fun pause(runId: LogicRunId): LogicRunResponse
+
+
+    fun pause(runId: LogicRunId): LogicRunResponse
 
 
     fun continueOrStart(

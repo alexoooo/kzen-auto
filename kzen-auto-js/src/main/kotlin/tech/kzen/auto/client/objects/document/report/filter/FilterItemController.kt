@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.filter
 
-import web.cssom.*
 import emotion.react.css
 import mui.material.*
 import mui.material.Size
@@ -27,6 +26,7 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterSpe
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.summary.*
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

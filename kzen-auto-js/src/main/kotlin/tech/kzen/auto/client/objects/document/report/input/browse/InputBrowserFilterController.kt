@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.input.browse
 
-import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import mui.material.InputAdornment
@@ -15,6 +14,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.SearchIcon
 import tech.kzen.auto.common.objects.document.report.spec.input.InputBrowserSpec
+import web.cssom.em
 import web.html.HTMLDivElement
 import web.html.HTMLInputElement
 

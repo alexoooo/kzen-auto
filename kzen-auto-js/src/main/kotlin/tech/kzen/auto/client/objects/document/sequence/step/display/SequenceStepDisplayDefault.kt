@@ -104,25 +104,6 @@ class SequenceStepDisplayDefault(
 
 
     private fun ChildrenBuilder.renderCard() {
-        val imperativeState =
-//                if (! props.common.isActive()) {
-                    null
-//                }
-//                else {
-//                    props
-//                            .common
-//                            .imperativeModel
-//                            .frames
-//                            .lastOrNull()
-//                            ?.states
-//                            ?.get(props.common.objectLocation.objectPath)
-//                }
-
-        val isRunning = props.common.isRunning()
-//        val nextToRun = ImperativeUtils.next(
-//                props.common.clientState.graphStructure(), props.common.imperativeModel)
-//        val isNextToRun = props.common.objectLocation == nextToRun
-
         val objectMetadata = props
             .common
             .clientState
@@ -137,46 +118,22 @@ class SequenceStepDisplayDefault(
             ?.get(LogicTracePath.ofObjectLocation(props.common.objectLocation))
             ?.let { StepTrace.ofExecutionValue(it) }
 
-//        val reactStyles = reactStyle {
-//            val cardColor = when (imperativeState?.phase(isRunning)) {
-//                ImperativePhase.Pending ->
-//                    if (isNextToRun) {
-//                        Color.gold.lighten(50)
-//                    }
-//                    else {
-//                        Color.white
-//                    }
-//
-//                ImperativePhase.Running ->
-//                    Color.gold
-//
-//                ImperativePhase.Success ->
-//                    Color("#00b467")
-//
-//                ImperativePhase.Error ->
-//                    Color.red
-//
-//                null ->
-//                    Color.white
-////                    Color.gray
-//            }
-//
-//            backgroundColor = cardColor
-//
-//            width = StepController.width
-//        }
+        val nextToRun = props.common.nextToRun == props.common.objectLocation
 
         Paper {
             val state = trace?.state ?: StepTrace.State.Idle
 
             sx {
-                backgroundColor = when (state) {
-                    StepTrace.State.Idle -> NamedColor.white
-                    StepTrace.State.Next -> EdgeController.goldLight50
-                    StepTrace.State.Active -> EdgeController.goldLight90
-                    StepTrace.State.Running -> NamedColor.gold
-                    StepTrace.State.Done -> Color("#00b467")
-                }
+                backgroundColor =
+                    if (nextToRun) {
+                        EdgeController.goldLight50
+                    }
+                    else when (state) {
+                        StepTrace.State.Idle -> NamedColor.white
+                        StepTrace.State.Active -> EdgeController.goldLight90
+                        StepTrace.State.Running -> NamedColor.gold
+                        StepTrace.State.Done -> Color("#00b467")
+                    }
             }
 
             CardContent {
@@ -189,7 +146,7 @@ class SequenceStepDisplayDefault(
 
 //                    this.imperativeState = imperativeState
                     this.imperativeState = null
-                    this.isRunning = isRunning
+//                    this.isRunning = isRunning
 
                     managed = props.common.managed
                     first = props.common.first

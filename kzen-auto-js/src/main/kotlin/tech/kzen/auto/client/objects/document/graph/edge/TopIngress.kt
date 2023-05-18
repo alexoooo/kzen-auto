@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.graph.edge
 
-import web.cssom.*
 import emotion.react.css
 import react.ChildrenBuilder
 import react.State
@@ -9,6 +8,7 @@ import tech.kzen.auto.client.objects.document.graph.CellController
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

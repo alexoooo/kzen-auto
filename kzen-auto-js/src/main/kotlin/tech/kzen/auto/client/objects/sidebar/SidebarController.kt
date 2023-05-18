@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.sidebar
 
-import web.cssom.em
 import emotion.react.css
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
@@ -21,6 +20,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import web.cssom.em
 
 
 //-----------------------------------------------------------------------------------------------------------------

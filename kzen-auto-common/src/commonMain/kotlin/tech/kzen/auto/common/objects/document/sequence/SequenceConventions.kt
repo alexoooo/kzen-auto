@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.sequence
 
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -10,6 +11,8 @@ object SequenceConventions {
 
     val stepsAttributeName = AttributeName("steps")
     val stepsAttributePath = AttributePath.ofName(stepsAttributeName)
+
+    val nextStepTracePath = LogicTracePath(listOf("next-step"))
 
 //    private const val inputKey = "input"
 //    val inputAttributeName = AttributeName(inputKey)

@@ -15,7 +15,6 @@ import react.react
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.CssClasses
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.CancelIcon
 import tech.kzen.auto.client.wrap.material.SaveIcon
@@ -35,9 +34,9 @@ external interface StepNameEditorProps: react.Props {
     var objectLocation: ObjectLocation
     var notation: GraphNotation
     var description: String
-    var intentToRun: Boolean
+//    var intentToRun: Boolean
 
-    var runCallback: () -> Unit
+//    var runCallback: () -> Unit
     var editSignal: StepNameEditor.EditSignal
 }
 
@@ -214,17 +213,17 @@ class StepNameEditor(
     }
 
 
-    private fun onRun() {
-        props.runCallback()
-    }
-
-    private fun onRunEnter() {
-        ClientContext.executionIntentGlobal.set(props.objectLocation)
-    }
-
-    private fun onRunLeave() {
-        ClientContext.executionIntentGlobal.clearIf(props.objectLocation)
-    }
+//    private fun onRun() {
+//        props.runCallback()
+//    }
+//
+//    private fun onRunEnter() {
+//        ClientContext.executionIntentGlobal.set(props.objectLocation)
+//    }
+//
+//    private fun onRunLeave() {
+//        ClientContext.executionIntentGlobal.clearIf(props.objectLocation)
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -258,22 +257,22 @@ class StepNameEditor(
 
             title = props.description
 
-            onMouseOver = {
-                onRunEnter()
-            }
-
-            onMouseOut = {
-                onRunLeave()
-            }
-
-            onClick = {
-                onRun()
-            }
+//            onMouseOver = {
+//                onRunEnter()
+//            }
+//
+//            onMouseOut = {
+//                onRunLeave()
+//            }
+//
+//            onClick = {
+//                onRun()
+//            }
 
             span {
-                if (props.intentToRun) {
-                    className = ClassName(CssClasses.glowingText)
-                }
+//                if (props.intentToRun) {
+//                    className = ClassName(CssClasses.glowingText)
+//                }
 
                 css {
                     width = 100.pct

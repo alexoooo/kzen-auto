@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.analysis
 
-import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import mui.material.Size
@@ -25,6 +24,7 @@ import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

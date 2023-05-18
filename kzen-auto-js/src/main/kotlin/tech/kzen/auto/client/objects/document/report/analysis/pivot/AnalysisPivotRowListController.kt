@@ -1,7 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.analysis.pivot
 
-import web.cssom.LineStyle
-import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import kotlinx.browser.document
@@ -17,6 +15,8 @@ import tech.kzen.auto.client.wrap.select.ReactSelectMulti
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
+import web.cssom.LineStyle
+import web.cssom.em
 import kotlin.js.Json
 import kotlin.js.json
 

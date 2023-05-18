@@ -1,8 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.formula
 
-import web.cssom.Display
-import web.cssom.WhiteSpace
-import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import kotlinx.browser.document
@@ -17,6 +14,9 @@ import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState
+import web.cssom.Display
+import web.cssom.WhiteSpace
+import web.cssom.em
 import kotlin.js.Json
 import kotlin.js.json
 

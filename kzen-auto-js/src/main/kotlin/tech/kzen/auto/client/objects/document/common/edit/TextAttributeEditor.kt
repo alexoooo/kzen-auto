@@ -3,7 +3,10 @@ package tech.kzen.auto.client.objects.document.common.edit
 import mui.material.InputBaseProps
 import mui.material.Size
 import mui.material.TextField
-import react.*
+import react.ChildrenBuilder
+import react.Props
+import react.ReactNode
+import react.State
 import react.dom.onChange
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async

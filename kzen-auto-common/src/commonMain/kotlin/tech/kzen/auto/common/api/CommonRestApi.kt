@@ -90,7 +90,8 @@ object CommonRestApi {
     const val logicStart = "${logicPrefix}start"
     const val logicRequest = "${logicPrefix}request"
     const val logicCancel = "${logicPrefix}cancel"
-    const val logicRun = "${logicPrefix}run"
+    const val logicPause = "${logicPrefix}pause"
+    const val logicContinueRun = "${logicPrefix}run"
 
     // script (ad hoc)
     const val actionList = "${actionPrefix}list"

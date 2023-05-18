@@ -1,7 +1,5 @@
 package tech.kzen.auto.client.objects.document.common
 
-import web.cssom.NamedColor
-import web.cssom.em
 import js.core.jso
 import mui.material.*
 import react.ChildrenBuilder
@@ -27,6 +25,8 @@ import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.collect.toPersistentList
+import web.cssom.NamedColor
+import web.cssom.em
 import web.html.HTMLInputElement
 import web.html.HTMLTextAreaElement
 

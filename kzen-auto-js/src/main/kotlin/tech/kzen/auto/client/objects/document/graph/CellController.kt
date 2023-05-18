@@ -1,8 +1,5 @@
 package tech.kzen.auto.client.objects.document.graph
 
-import web.cssom.em
-import web.cssom.plus
-import web.cssom.times
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -22,6 +19,9 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescri
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import web.cssom.em
+import web.cssom.plus
+import web.cssom.times
 
 
 //---------------------------------------------------------------------------------------------------------------------

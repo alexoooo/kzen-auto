@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.sidebar
 
-import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import mui.material.IconButton
@@ -29,6 +28,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.DeleteDocumentCommand
+import web.cssom.*
 import web.html.HTMLElement
 import kotlin.js.Date
 

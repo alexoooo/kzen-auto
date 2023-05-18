@@ -39,7 +39,7 @@ class RibbonLogicRun (
 //        const val runningKey = "running"
 
         private const val actionStep = "step"
-        private const val actionRun = "run"
+        private const val actionRunOrPause = "run-pause"
         private const val actionStop = "stop"
     }
 
@@ -135,11 +135,23 @@ class RibbonLogicRun (
     }
 
 
-    private fun onAction(action: String) {
+    private fun onAction(action: String, active: Boolean, executing: Boolean) {
         when (action) {
-            actionRun -> {
-                val mainObjectLocation = state.clientState!!.navigationRoute.documentPath!!.toMainObjectLocation()
-                ClientContext.clientLogicGlobal.startAndRunAsync(mainObjectLocation)
+            actionRunOrPause -> {
+                if (executing) {
+                    ClientContext.clientLogicGlobal.pauseAsync()
+                }
+                else if (active) {
+                    ClientContext.clientLogicGlobal.continueRunAsync()
+                }
+                else {
+                    val mainObjectLocation = state.clientState!!.navigationRoute.documentPath!!.toMainObjectLocation()
+                    ClientContext.clientLogicGlobal.startAndRunAsync(mainObjectLocation)
+                }
+            }
+
+            actionStop -> {
+                ClientContext.clientLogicGlobal.stopAsync()
             }
 
             else -> {
@@ -149,7 +161,6 @@ class RibbonLogicRun (
 
 //        println("%%%% action: $action")
     }
-
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -168,7 +179,10 @@ class RibbonLogicRun (
     private fun ChildrenBuilder.renderControls(
         clientLogicState: ClientLogicState
     ) {
+//        println("#### renderControls: ${clientLogicState.logicStatus?.active?.state}")
+
         val active = clientLogicState.logicStatus?.active != null
+        val executing = clientLogicState.logicStatus?.active?.state?.isExecuting() ?: false
         val runnable = true
 
         ToggleButtonGroup {
@@ -176,7 +190,7 @@ class RibbonLogicRun (
             exclusive = true
 
             onChange = { _, v ->
-                onAction(v as String)
+                onAction(v as String, active, executing)
             }
 
             if (! active && ! runnable) {
@@ -185,8 +199,8 @@ class RibbonLogicRun (
             }
 
             renderStepButton()
-            renderRunPauseButton(active, runnable)
-            renderStopButton()
+            renderRunPauseButton(active, executing, runnable)
+            renderStopButton(active)
         }
 
         renderDetailsToggle(active)
@@ -202,7 +216,6 @@ class RibbonLogicRun (
             sx {
                 height = 34.px
                 color = NamedColor.black
-                borderWidth = 2.px
             }
 
             title = "Step"
@@ -221,10 +234,11 @@ class RibbonLogicRun (
 
     private fun ChildrenBuilder.renderRunPauseButton(
         active: Boolean,
+        executing: Boolean,
         runnable: Boolean
     ) {
         ToggleButton {
-            value = actionRun
+            value = actionRunOrPause
             disabled = ! active && ! runnable
             size = Size.medium
 
@@ -234,11 +248,17 @@ class RibbonLogicRun (
 //                borderWidth = 2.px
             }
 
-            if (active) {
+            if (executing) {
                 title = "Pause"
             }
             else if (runnable) {
-                title = "Run"
+                title =
+                    if (active) {
+                        "Continue running"
+                    }
+                    else {
+                        "Run"
+                    }
             }
 
             span {
@@ -247,7 +267,7 @@ class RibbonLogicRun (
                     marginRight = 0.25.em
                     marginBottom = (-0.25).em
                 }
-                if (active) {
+                if (executing) {
                     PauseIcon::class.react {}
                 }
                 else {
@@ -258,16 +278,15 @@ class RibbonLogicRun (
     }
 
 
-    private fun ChildrenBuilder.renderStopButton() {
+    private fun ChildrenBuilder.renderStopButton(active: Boolean) {
         ToggleButton {
             value = actionStop
-            disabled = true
+            disabled = ! active
             size = Size.medium
 
             sx {
                 height = 34.px
                 color = NamedColor.black
-                borderWidth = 2.px
             }
 
             title = "Stop"
@@ -291,7 +310,7 @@ class RibbonLogicRun (
 
             title =
                 if (active) {
-                    "Details"
+                    "Run details"
                 }
                 else {
                     "Nothing is running"
@@ -300,16 +319,16 @@ class RibbonLogicRun (
             IconButton {
                 sx {
                     marginTop = (-13).px
+
+                    if (active) {
+                        color = NamedColor.black
+                    }
                 }
 
                 disabled = ! active
 
                 if (active) {
                     onClick = { onOptionsOpen() }
-
-                    sx {
-                        color = NamedColor.black
-                    }
                 }
 
                 ExpandMoreIcon::class.react {}

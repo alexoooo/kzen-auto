@@ -448,7 +448,6 @@ class ClientRestApi(
         @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toList(responseJson) as List<String>
 
-        @Suppress("UNCHECKED_CAST")
         return responseCollection.map { DocumentPath.parse(it) }
     }
 
@@ -461,7 +460,6 @@ class ClientRestApi(
         val responseJson = JSON.parse<Json>(responseText)
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
-        @Suppress("UNCHECKED_CAST")
         return ImperativeModel.fromCollection(
                 responseCollection)
     }
@@ -493,7 +491,6 @@ class ClientRestApi(
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
 
-        @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
         return ImperativeResponse.fromCollection(responseCollection)
@@ -519,7 +516,6 @@ class ClientRestApi(
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 *parameters)
 
-        @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
         return ExecutionResult.fromJsonCollection(responseCollection)
@@ -538,7 +534,6 @@ class ClientRestApi(
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
                 *parameters)
 
-        @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
         return ExecutionResult.fromJsonCollection(responseCollection)
@@ -714,7 +709,6 @@ class ClientRestApi(
             CommonRestApi.paramExecutionId to executionId.value,
             *parameters)
 
-        @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
         return ExecutionResult.fromJsonCollection(responseCollection)
@@ -732,11 +726,22 @@ class ClientRestApi(
     }
 
 
-    suspend fun logicRun(
+    suspend fun logicPause(
         runId: LogicRunId
     ): LogicRunResponse {
         val response = getOrPut(
-            CommonRestApi.logicRun,
+            CommonRestApi.logicPause,
+            CommonRestApi.paramRunId to runId.value)
+
+        return LogicRunResponse.valueOf(response)
+    }
+
+
+    suspend fun logicContinueRun(
+        runId: LogicRunId
+    ): LogicRunResponse {
+        val response = getOrPut(
+            CommonRestApi.logicContinueRun,
             CommonRestApi.paramRunId to runId.value)
 
         return LogicRunResponse.valueOf(response)

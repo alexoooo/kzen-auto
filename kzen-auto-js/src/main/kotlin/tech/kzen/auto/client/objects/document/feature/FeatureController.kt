@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.feature
 
-import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import mui.material.Button
@@ -42,6 +41,7 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.platform.DateTimeUtils
 import tech.kzen.lib.platform.IoUtils
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

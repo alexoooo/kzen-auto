@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.analysis.pivot
 
-import web.cssom.em
 import emotion.react.css
 import react.ChildrenBuilder
 import react.Props
@@ -11,6 +10,7 @@ import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalys
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
+import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -406,12 +406,24 @@ class SequenceController:
                 ?.logicTraceSnapshot
                 ?.filter(LogicTracePath.ofObjectLocation(objectLocation))
 
+            val nextToRun = state
+                .sequenceState
+                ?.progress
+                ?.logicTraceSnapshot
+                ?.values
+                ?.get(SequenceConventions.nextStepTracePath)
+                ?.get()
+                ?.let {
+                    ObjectLocation.parse(it as String)
+                }
+
             props.stepController.child(this) {
                 common = SequenceStepDisplayPropsCommon(
                     state.clientState!!,
                     objectLocation,
                     AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
                     progressValue,
+                    nextToRun,
                     first = index == 0,
                     last = index == stepCount - 1)
             }

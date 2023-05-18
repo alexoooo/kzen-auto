@@ -1,15 +1,17 @@
 package tech.kzen.auto.client.objects.document.graph
 
-import web.cssom.*
 import emotion.react.css
 import mui.material.IconButton
-import react.*
+import react.ChildrenBuilder
+import react.Props
+import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.dom.html.ReactHTML.table
 import react.dom.html.ReactHTML.tbody
 import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.tr
+import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.AttributeController
@@ -45,6 +47,7 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.collect.persistentListOf
 import tech.kzen.lib.platform.collect.persistentMapOf
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

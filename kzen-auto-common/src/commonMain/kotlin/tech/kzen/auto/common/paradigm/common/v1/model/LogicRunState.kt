@@ -8,5 +8,11 @@ enum class LogicRunState {
     Pausing,
     Paused,
 
-    Cancelling
+    Cancelling;
+
+
+    fun isExecuting(): Boolean {
+        return this == Running ||
+                this == Stepping
+    }
 }

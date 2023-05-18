@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.service.v1.model
 
+import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
+
 
 sealed class LogicResult {
     abstract fun isTerminal(): Boolean

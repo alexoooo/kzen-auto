@@ -1,9 +1,10 @@
 package tech.kzen.auto.client.objects.document.report.input.select
 
-import web.cssom.*
 import emotion.react.css
 import mui.material.Checkbox
-import react.*
+import react.ChildrenBuilder
+import react.Props
+import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.input
 import react.dom.html.ReactHTML.span
@@ -28,6 +29,7 @@ import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.platform.collect.persistentSetOf
 import tech.kzen.lib.platform.collect.toPersistentSet
+import web.cssom.*
 import web.html.InputType
 import kotlin.math.max
 import kotlin.math.min

@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.graph
 
-import web.cssom.*
 import emotion.react.css
 import mui.material.IconButton
 import react.ChildrenBuilder
@@ -31,6 +30,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveInAttributeCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

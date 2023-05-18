@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.script.step.display.control
 
-import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import react.ChildrenBuilder
@@ -30,6 +29,7 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -153,7 +153,7 @@ class ConditionalStepDisplay(
                             this@ConditionalStepDisplay.onMouseOut(it)
                         }
 
-                        renderHeader(isNextToRun, imperativeState, isRunning)
+                        renderHeader(isNextToRun, imperativeState/*, isRunning*/)
                     }
 
                     td {}
@@ -208,7 +208,7 @@ class ConditionalStepDisplay(
     private fun ChildrenBuilder.renderHeader(
             isNextToRun: Boolean,
             imperativeState: ImperativeState?,
-            isRunning: Boolean
+//            isRunning: Boolean
     ) {
         div {
             css {
@@ -238,7 +238,7 @@ class ConditionalStepDisplay(
                 graphStructure = props.common.clientState.graphStructure()
 
                 this.imperativeState = imperativeState
-                this.isRunning = isRunning
+//                this.isRunning = isRunning
             }
         }
     }

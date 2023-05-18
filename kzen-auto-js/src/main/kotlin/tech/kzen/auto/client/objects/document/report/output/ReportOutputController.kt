@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.output
 
-import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import mui.material.*
@@ -27,6 +26,7 @@ import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

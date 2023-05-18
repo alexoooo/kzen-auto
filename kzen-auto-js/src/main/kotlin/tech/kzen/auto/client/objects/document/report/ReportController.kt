@@ -1,9 +1,10 @@
 package tech.kzen.auto.client.objects.document.report
 
-import web.cssom.*
 import emotion.react.css
-import react.*
+import react.ChildrenBuilder
+import react.Props
 import react.dom.html.ReactHTML.div
+import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.report.analysis.ReportAnalysisController
@@ -20,6 +21,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

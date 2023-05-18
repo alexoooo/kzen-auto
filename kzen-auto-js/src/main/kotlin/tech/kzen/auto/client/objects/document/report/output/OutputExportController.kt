@@ -1,8 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.output
 
-import web.cssom.Display
-import web.cssom.em
-import web.cssom.pct
 import emotion.react.css
 import js.core.jso
 import mui.material.InputAdornment
@@ -19,6 +16,9 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconFile
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
+import web.cssom.Display
+import web.cssom.em
+import web.cssom.pct
 
 
 //---------------------------------------------------------------------------------------------------------------------

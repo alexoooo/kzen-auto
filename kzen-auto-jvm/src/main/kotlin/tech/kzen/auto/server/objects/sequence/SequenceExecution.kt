@@ -10,18 +10,17 @@ import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.ActiveSequenceModel
 import tech.kzen.auto.server.objects.sequence.model.ActiveStepModel
 import tech.kzen.auto.server.objects.sequence.model.StepContext
-import tech.kzen.auto.server.service.v1.LogicControl
-import tech.kzen.auto.server.service.v1.LogicExecution
-import tech.kzen.auto.server.service.v1.LogicHandle
-import tech.kzen.auto.server.service.v1.LogicHandleFacade
-import tech.kzen.auto.server.service.v1.model.LogicResult
-import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
-import tech.kzen.auto.server.service.v1.model.TupleValue
+import tech.kzen.auto.server.service.v1.*
+import tech.kzen.auto.server.service.v1.model.*
+import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.locate.ObjectLocationMap
 
 
+@Suppress("CanBeParameter")
 class SequenceExecution(
     private val documentPath: DocumentPath,
     private val objectLocation: ObjectLocation,
@@ -38,8 +37,16 @@ class SequenceExecution(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun init(logicControl: LogicControl) {
+    private val logicHandleFacade = LogicHandleFacade(runExecutionId, logicHandle)
 
+    private var activeSequenceModel = ActiveSequenceModel()
+    private var previousGraphInstance = GraphInstance(ObjectLocationMap.empty())
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun init(logicControl: LogicControl) {
+        activeSequenceModel = ActiveSequenceModel()
+        previousGraphInstance = GraphInstance(ObjectLocationMap.empty())
     }
 
 
@@ -54,13 +61,39 @@ class SequenceExecution(
         logicControl: LogicControl,
         graphDefinition: GraphDefinition
     ): LogicResult {
-        logger.info("{} - run - {}", documentPath, logicControl.pollCommand())
+        val command = logicControl.pollCommand()
+        logger.info("{} - run - {}", documentPath, command)
+
+        if (command == LogicCommand.Cancel) {
+            return LogicResultCancelled
+        }
+        else if (command == LogicCommand.Pause) {
+            return LogicResultPaused
+        }
 
         val graphInstance = KzenAutoContext.global().graphCreator.createGraph(
             graphDefinition.filterTransitive(documentPath))
 
-        val activeSequenceModel = ActiveSequenceModel()
-        val logicHandleFacade = LogicHandleFacade(runExecutionId, logicHandle)
+        // TODO: handle rename refactoring
+        activeSequenceModel.steps.keys.retainAll(graphInstance.keys)
+
+        for (objectLocation in graphInstance.keys) {
+            val previousInstance = previousGraphInstance[objectLocation]
+                ?.reference as? StatefulLogicElement<*>
+                ?: continue
+
+            val currentInstance = graphInstance[objectLocation]!!
+                .reference as? StatefulLogicElement<*>
+                ?: continue
+
+            if (previousInstance.javaClass != currentInstance.javaClass) {
+                continue
+            }
+
+            loadStateUnchecked(currentInstance, previousInstance)
+        }
+        previousGraphInstance = graphInstance
+
         val stepContext = StepContext(
             logicControl, activeSequenceModel, logicHandleFacade, logicTraceHandle, graphInstance)
 
@@ -68,16 +101,25 @@ class SequenceExecution(
         val model = activeSequenceModel.steps.getOrPut(objectLocation) { ActiveStepModel() }
 
         model.traceState = StepTrace.State.Active
+
+        var stepValue: LogicResult
         try {
-            val stepValue = step.continueOrStart(stepContext)
+            stepValue = step.continueOrStart(stepContext)
             model.value = stepValue
         }
         catch (e: Throwable) {
             model.error = ExecutionFailure.ofException(e).errorMessage
+            stepValue = LogicResultFailed(model.error!!)
         }
         model.traceState = StepTrace.State.Done
 
-        return LogicResultSuccess(TupleValue.empty)
+        return stepValue
+    }
+
+
+    private fun loadStateUnchecked(a: StatefulLogicElement<*>, b: StatefulLogicElement<*>) {
+        @Suppress("UNCHECKED_CAST")
+        (a as StatefulLogicElement<Any>).loadState(b)
     }
 
 

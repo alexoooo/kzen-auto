@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.service.v1.model
+package tech.kzen.auto.server.service.v1.model.tuple
 
 
 data class TupleComponentName(

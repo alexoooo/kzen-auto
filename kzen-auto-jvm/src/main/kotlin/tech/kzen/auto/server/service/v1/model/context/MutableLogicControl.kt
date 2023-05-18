@@ -39,6 +39,11 @@ class MutableLogicControl(
     }
 
 
+    fun commandUnpause(): Boolean {
+        return command.compareAndSet(LogicCommand.Pause, LogicCommand.None)
+    }
+
+
     fun publishRequest(request: ExecutionRequest): ExecutionResult {
         val subscriber = requestSubscriber.get()
             ?: return ExecutionResult.failure("No request listener")

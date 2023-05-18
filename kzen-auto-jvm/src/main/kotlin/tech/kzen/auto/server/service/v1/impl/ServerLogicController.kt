@@ -14,9 +14,9 @@ import tech.kzen.auto.server.service.v1.LogicExecutionFacade
 import tech.kzen.auto.server.service.v1.LogicExecutionListener
 import tech.kzen.auto.server.service.v1.LogicHandle
 import tech.kzen.auto.server.service.v1.model.LogicResultFailed
-import tech.kzen.auto.server.service.v1.model.TupleValue
 import tech.kzen.auto.server.service.v1.model.context.LogicFrame
 import tech.kzen.auto.server.service.v1.model.context.MutableLogicControl
+import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
@@ -41,6 +41,10 @@ class ServerLogicController(
         val objectStableMapper: ObjectStableMapper
     ) {
         var cancelRequested: Boolean = false
+        var pauseRequested: Boolean = false
+
+        @Volatile
+        var paused: Boolean = false
     }
 
 
@@ -55,6 +59,12 @@ class ServerLogicController(
             val runState =
                 if (it.cancelRequested) {
                     LogicRunState.Cancelling
+                }
+                else if (it.paused) {
+                    LogicRunState.Paused
+                }
+                else if (it.pauseRequested) {
+                    LogicRunState.Pausing
                 }
                 else {
                     LogicRunState.Running
@@ -116,7 +126,7 @@ class ServerLogicController(
         val rootInstance = rootGraphInstance.objectInstances[root]?.reference
             ?: return null
 
-        val mutableLogicControl = MutableLogicControl()
+        val commonMutableLogicControl = MutableLogicControl()
 
         val logicHandle: LogicHandle = object: LogicHandle {
             override fun start(
@@ -129,7 +139,7 @@ class ServerLogicController(
                 }
 
                 val logicExecutionFacadeImpl = LogicExecutionFacadeImpl(
-                    successfulGraphDefinition, mutableLogicControl, listener)
+                    successfulGraphDefinition, commonMutableLogicControl, listener)
 
                 val currentState = checkNotNull(stateOrNull)
                 check(currentState.runId == runId)
@@ -145,9 +155,9 @@ class ServerLogicController(
                     stableObjectLocation,
                     executionId,
                     logicExecution,
-                    LogicRunFrameState.Ready,
+//                    LogicRunFrameState.Ready,
                     dependencies,
-                    mutableLogicControl
+                    commonMutableLogicControl
                 ))
 
                 return logicExecutionFacadeImpl
@@ -159,7 +169,7 @@ class ServerLogicController(
         val logic = rootInstance as Logic
         val execution =
             try {
-                logic.execute(logicHandle, logicTraceHandle, runExecutionId, mutableLogicControl)
+                logic.execute(logicHandle, logicTraceHandle, runExecutionId, commonMutableLogicControl)
             }
             catch (e: Exception) {
                 logger.warn("Execution error: {}", root, e)
@@ -172,9 +182,9 @@ class ServerLogicController(
                 objectStableMapper.objectStableId(root),
                 executionId,
                 execution,
-                LogicRunFrameState.Ready,
+//                LogicRunFrameState.Ready,
                 mutableListOf(),
-                mutableLogicControl
+                commonMutableLogicControl
             ),
             objectStableMapper
         )
@@ -214,7 +224,31 @@ class ServerLogicController(
             return LogicRunResponse.RunIdMismatch
         }
 
-        state.frame.control.commandCancel()
+        state.cancelRequested = true
+
+        if (state.paused) {
+            state.frame.execution.close(false)
+            clearState()
+        }
+        else {
+            state.frame.control.commandCancel()
+        }
+
+        return LogicRunResponse.Submitted
+    }
+
+
+    @Synchronized
+    override fun pause(runId: LogicRunId): LogicRunResponse {
+        val state = stateOrNull
+            ?: return LogicRunResponse.NotFound
+
+        if (state.runId != runId) {
+            return LogicRunResponse.RunIdMismatch
+        }
+
+        state.pauseRequested = true
+        state.frame.control.commandPause()
 
         return LogicRunResponse.Submitted
     }
@@ -233,6 +267,11 @@ class ServerLogicController(
         if (state.runId != runId) {
             return LogicRunResponse.RunIdMismatch
         }
+
+        check(! state.cancelRequested) { "Can't start, stop already requested" }
+        state.pauseRequested = false
+        state.paused = false
+        state.frame.control.commandUnpause()
 
         val ready = state.frame.execution.beforeStart(TupleValue.empty)
         if (! ready) {
@@ -255,6 +294,9 @@ class ServerLogicController(
             if (result.isTerminal()) {
                 state.frame.execution.close(result is LogicResultFailed)
                 clearState()
+            }
+            else {
+                state.paused = true
             }
         }.start()
 

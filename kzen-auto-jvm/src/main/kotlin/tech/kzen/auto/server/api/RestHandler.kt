@@ -1105,7 +1105,20 @@ class RestHandler(
     }
 
 
-    fun logicRun(parameters: Parameters): String {
+    fun logicPause(parameters: Parameters): String {
+        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
+            value -> LogicRunId(value)
+        }
+
+        val response = runBlocking {
+            serverLogicController.pause(runId)
+        }
+
+        return response.name
+    }
+
+
+    fun logicContinueRun(parameters: Parameters): String {
         val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
             value -> LogicRunId(value)
         }

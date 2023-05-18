@@ -1,16 +1,15 @@
 package tech.kzen.auto.client.objects.document.script.step.header
 
-import web.cssom.*
 import emotion.react.css
 import js.core.jso
 import mui.material.IconButton
 import mui.material.Menu
 import mui.material.MenuItem
+import mui.system.sx
 import react.*
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.*
@@ -24,6 +23,7 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftInAttributeCommand
+import web.cssom.*
 import web.html.HTMLElement
 import kotlin.js.Date
 
@@ -38,7 +38,7 @@ external interface StepHeaderProps : Props {
     var graphStructure: GraphStructure
 
     var imperativeState: ImperativeState?
-    var isRunning: Boolean
+//    var isRunning: Boolean
 
     var managed: Boolean
     var first: Boolean
@@ -49,7 +49,7 @@ external interface StepHeaderProps : Props {
 external interface StepHeaderState: State {
     var hoverCard: Boolean
     var hoverMenu: Boolean
-    var intentToRun: Boolean
+//    var intentToRun: Boolean
 
     var optionsOpen: Boolean
 }
@@ -57,10 +57,10 @@ external interface StepHeaderState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 class StepHeader(
-        props: StepHeaderProps
+    props: StepHeaderProps
 ):
-        RPureComponent<StepHeaderProps, StepHeaderState>(props),
-        ExecutionIntentGlobal.Observer
+    RPureComponent<StepHeaderProps, StepHeaderState>(props)//,
+//    ExecutionIntentGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -114,7 +114,7 @@ class StepHeader(
     //-----------------------------------------------------------------------------------------------------------------
     override fun StepHeaderState.init(props: StepHeaderProps) {
         hoverMenu = false
-        intentToRun = false
+//        intentToRun = false
 
         optionsOpen = false
     }
@@ -122,44 +122,44 @@ class StepHeader(
 
     override fun componentDidMount() {
         props.hoverSignal.attach(this)
-        ClientContext.executionIntentGlobal.observe(this)
+//        ClientContext.executionIntentGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
         props.hoverSignal.detach()
         optionCompletedTime = null
-        ClientContext.executionIntentGlobal.unobserve(this)
+//        ClientContext.executionIntentGlobal.unobserve(this)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onExecutionIntent(actionLocation: ObjectLocation?) {
-        setState {
-            intentToRun = actionLocation == props.objectLocation
-        }
-    }
+//    override fun onExecutionIntent(actionLocation: ObjectLocation?) {
+//        setState {
+//            intentToRun = actionLocation == props.objectLocation
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onRun() {
-        async {
-            ClientContext.executionRepository.execute(
-                    props.objectLocation.documentPath,
-                    props.objectLocation,
-                    props.graphStructure)
-        }
-    }
-
-
-    private fun onRunEnter() {
-        ClientContext.executionIntentGlobal.set(props.objectLocation)
-    }
-
-
-    private fun onRunLeave() {
-        ClientContext.executionIntentGlobal.clearIf(props.objectLocation)
-    }
+//    private fun onRun() {
+//        async {
+//            ClientContext.executionRepository.execute(
+//                    props.objectLocation.documentPath,
+//                    props.objectLocation,
+//                    props.graphStructure)
+//        }
+//    }
+//
+//
+//    private fun onRunEnter() {
+//        ClientContext.executionIntentGlobal.set(props.objectLocation)
+//    }
+//
+//
+//    private fun onRunLeave() {
+//        ClientContext.executionIntentGlobal.clearIf(props.objectLocation)
+//    }
 
 
     private fun onMouseOver(cardOrActions: Boolean) {
@@ -344,9 +344,9 @@ class StepHeader(
                     notation = props.graphStructure.graphNotation
 
                     description = actionDescription
-                    intentToRun = state.intentToRun
+//                    intentToRun = state.intentToRun
 
-                    runCallback = ::onRun
+//                    runCallback = ::onRun
                     editSignal = this@StepHeader.editSignal
                 }
             }
@@ -377,12 +377,12 @@ class StepHeader(
                 ?: defaultRunIcon
 
         val highlight =
-                if (state.intentToRun && ! props.isRunning) {
-                    Color("rgba(255, 215, 0, 0.5)")
-                }
-                else {
+//                if (state.intentToRun && ! props.isRunning) {
+//                    Color("rgba(255, 215, 0, 0.5)")
+//                }
+//                else {
                     Color("rgba(255, 255, 255, 0.5)")
-                }
+//                }
 
         IconButton {
             if (actionDescription.isNotEmpty()) {
@@ -390,7 +390,7 @@ class StepHeader(
             }
 
             val overfill = 8.px
-            css {
+            sx {
                 marginLeft = overfill
                 width = runIconWidth.plus(overfill)
                 height = runIconWidth.plus(overfill)
@@ -400,9 +400,9 @@ class StepHeader(
                 position = Position.relative
             }
 
-            onClick = { onRun() }
-            onMouseOver = { onRunEnter() }
-            onMouseOut = { onRunLeave() }
+//            onClick = { onRun() }
+//            onMouseOver = { onRunEnter() }
+//            onMouseOut = { onRunLeave() }
 
             iconClassForName(icon).react {
                 style = jso {

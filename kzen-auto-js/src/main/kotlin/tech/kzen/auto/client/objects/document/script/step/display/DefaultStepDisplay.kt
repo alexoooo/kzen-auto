@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.script.step.display
 
-import web.cssom.*
 import emotion.react.css
 import mui.material.CardContent
 import mui.material.Paper
@@ -26,6 +25,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.IoUtils
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -172,7 +172,7 @@ class DefaultStepDisplay(
                     graphStructure = props.common.clientState.graphStructure()
 
                     this.imperativeState = imperativeState
-                    this.isRunning = isRunning
+//                    this.isRunning = isRunning
 
                     managed = props.common.managed
                     first = props.common.first

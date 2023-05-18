@@ -1,7 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.formula
 
-import web.cssom.Display
-import web.cssom.em
 import emotion.react.css
 import mui.material.IconButton
 import mui.material.Size
@@ -20,6 +18,8 @@ import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.material.CancelIcon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import web.cssom.Display
+import web.cssom.em
 import web.html.HTMLInputElement
 
 

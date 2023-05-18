@@ -1,8 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.analysis.pivot
 
-import web.cssom.Float
-import web.cssom.em
-import web.cssom.pct
 import emotion.react.css
 import mui.material.IconButton
 import mui.material.Size
@@ -13,6 +10,9 @@ import react.react
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.DeleteIcon
+import web.cssom.Float
+import web.cssom.em
+import web.cssom.pct
 
 
 //---------------------------------------------------------------------------------------------------------------------

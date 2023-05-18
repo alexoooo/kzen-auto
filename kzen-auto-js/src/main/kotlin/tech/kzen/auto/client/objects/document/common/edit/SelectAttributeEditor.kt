@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
-import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import kotlinx.browser.document
@@ -17,6 +16,7 @@ import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import web.cssom.em
 import kotlin.js.Json
 import kotlin.js.json
 

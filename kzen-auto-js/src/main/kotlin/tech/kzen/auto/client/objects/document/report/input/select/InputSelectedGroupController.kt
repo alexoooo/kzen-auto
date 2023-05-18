@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.input.select
 
-import web.cssom.em
 import emotion.react.css
 import mui.material.Size
 import mui.material.TextField
@@ -17,6 +16,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
+import web.cssom.em
 import web.html.HTMLInputElement
 
 

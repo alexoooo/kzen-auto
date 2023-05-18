@@ -1,7 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.formula
 
-import web.cssom.VerticalAlign
-import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import mui.material.IconButton
@@ -26,6 +24,8 @@ import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import web.cssom.VerticalAlign
+import web.cssom.em
 import web.html.HTMLTextAreaElement
 
 

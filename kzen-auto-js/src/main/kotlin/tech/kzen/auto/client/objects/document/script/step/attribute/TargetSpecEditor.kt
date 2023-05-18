@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.script.step.attribute
 
-import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import kotlinx.browser.document
@@ -8,9 +7,11 @@ import mui.material.MenuItem
 import mui.material.Select
 import mui.material.Size
 import mui.material.TextField
-import react.*
+import react.ChildrenBuilder
+import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.onChange
+import react.react
 import tech.kzen.auto.client.objects.document.common.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
 import tech.kzen.auto.client.service.ClientContext
@@ -42,6 +43,7 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.toPersistentMap
+import web.cssom.em
 import web.html.HTMLInputElement
 import kotlin.js.Json
 import kotlin.js.json

@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.analysis.pivot
 
-import web.cssom.FontWeight
 import emotion.react.css
 import mui.material.Size
 import mui.material.ToggleButton
@@ -12,6 +11,7 @@ import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalys
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueColumnSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
+import web.cssom.FontWeight
 
 
 //---------------------------------------------------------------------------------------------------------------------

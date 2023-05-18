@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.sidebar
 
-import web.cssom.*
 import emotion.react.css
 import mui.material.IconButton
 import mui.material.Size
@@ -19,6 +18,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenameDocumentRefactorCommand
+import web.cssom.*
 import web.html.HTMLInputElement
 
 

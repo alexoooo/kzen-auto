@@ -1,8 +1,5 @@
 package tech.kzen.auto.client.objects.document.graph
 
-import web.cssom.NamedColor
-import web.cssom.Visibility
-import web.cssom.em
 import emotion.react.css
 import js.core.jso
 import mui.material.Fab
@@ -18,6 +15,9 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.GraphStructure
+import web.cssom.NamedColor
+import web.cssom.Visibility
+import web.cssom.em
 import kotlin.reflect.KClass
 
 

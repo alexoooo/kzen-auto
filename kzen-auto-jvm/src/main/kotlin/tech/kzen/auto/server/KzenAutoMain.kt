@@ -140,8 +140,12 @@ private fun Routing.routeLogic(
         val response = restHandler.logicCancel(call.parameters)
         call.respondText(response)
     }
-    get(CommonRestApi.logicRun) {
-        val response = restHandler.logicRun(call.parameters)
+    get(CommonRestApi.logicPause) {
+        val response = restHandler.logicPause(call.parameters)
+        call.respondText(response)
+    }
+    get(CommonRestApi.logicContinueRun) {
+        val response = restHandler.logicContinueRun(call.parameters)
         call.respondText(response)
     }
 }
