@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.service.vision
 
+import kotlinx.coroutines.runBlocking
 import org.openqa.selenium.By
 import org.openqa.selenium.JavascriptExecutor
 import org.openqa.selenium.OutputType
@@ -16,8 +17,8 @@ import javax.imageio.ImageIO
 
 object VisionUtils {
     data class Result(
-            val webElement: WebElement?,
-            val error: String?
+        val webElement: WebElement?,
+        val error: String?
     ) {
         init {
             require(webElement == null && error != null ||
@@ -30,10 +31,10 @@ object VisionUtils {
     }
 
 
-    suspend fun locateElement(
-            target: TargetSpec,
-            driver: RemoteWebDriver,
-            notationMedia: NotationMedia
+    fun locateElement(
+        target: TargetSpec,
+        driver: RemoteWebDriver,
+        notationMedia: NotationMedia
     ): Result {
         val element = when (target) {
             FocusTarget ->
@@ -93,7 +94,7 @@ object VisionUtils {
     }
 
 
-    suspend fun locateElement(
+    fun locateElement(
             target: FeatureDocument,
             driver: RemoteWebDriver,
             notationMedia: NotationMedia
@@ -156,7 +157,7 @@ object VisionUtils {
     }
 
 
-    suspend fun locateAll(
+    fun locateAll(
             target: FeatureDocument,
             screenshotGrid: RgbGrid,
             notationMedia: NotationMedia
@@ -168,7 +169,9 @@ object VisionUtils {
 
         for (resourcePath in resourceListing.digests.keys) {
             val resourceLocation = ResourceLocation(documentPath, resourcePath)
-            val cropPngBytes = notationMedia.readResource(resourceLocation)
+            val cropPngBytes = runBlocking {
+                notationMedia.readResource(resourceLocation)
+            }
             val cropImage = ImageIO.read(cropPngBytes.toInputStream())
             val cropGrid = RgbGrid.ofImage(cropImage)
             val cropMatches = locate(screenshotGrid, cropGrid)

@@ -106,3 +106,68 @@ BrowserGetStep:
   meta:
     location: String
     selfLocation: SelfLocation
+
+
+BrowserClickStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.browser.BrowserClickStep
+  icon: TouchApp
+  title: "Click"
+  target:
+    type: Focus
+  meta:
+    target: TargetSpec
+    selfLocation: SelfLocation
+
+
+BrowserWriteStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.browser.BrowserWriteStep
+  icon: Keyboard
+  title: "Write"
+  description: "Send text into input field"
+  text: ""
+  target:
+    type: Focus
+  meta:
+    text: String
+    target: TargetSpec
+    selfLocation: SelfLocation
+
+
+BrowserSubmitStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.browser.BrowserSubmitStep
+  icon: Send
+  title: "Submit"
+  target:
+    type: Focus
+  meta:
+    target: TargetSpec
+    selfLocation: SelfLocation
+
+
+BrowserEscapeStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.browser.BrowserEscapeStep
+  icon: CancelPresentation
+  title: "Escape"
+  meta:
+    selfLocation: SelfLocation
+
+
+#BrowserFocusStep:
+#  abstract: true
+#  is: SequenceStep
+#  class: tech.kzen.auto.server.objects.sequence.step.browser.BrowserEscapeStep
+#  icon: CancelPresentation
+#  title: "Focus"
+#  target:
+#    type: Focus
+#  meta:
+#    target: TargetSpec
+#    selfLocation: SelfLocation

@@ -128,3 +128,29 @@ BrowserGetStepTool:
   delegate: BrowserGetStep
 
 
+BrowserWriteStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_Browser
+  delegate: BrowserWriteStep
+
+
+BrowserClickStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_Browser
+  delegate: BrowserClickStep
+
+
+BrowserSubmitStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_Browser
+  delegate: BrowserSubmitStep
+
+
+BrowserEscapeStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_Browser
+  delegate: BrowserEscapeStep
+
+
+
+

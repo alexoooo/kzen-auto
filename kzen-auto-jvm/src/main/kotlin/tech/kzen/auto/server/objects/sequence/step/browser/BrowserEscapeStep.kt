@@ -1,5 +1,9 @@
 package tech.kzen.auto.server.objects.sequence.step.browser
 
+import org.openqa.selenium.Keys
+import org.openqa.selenium.OutputType
+import org.openqa.selenium.interactions.Actions
+import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
@@ -12,7 +16,7 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class BrowserCloseStep(
+class BrowserEscapeStep(
     selfLocation: ObjectLocation
 ):
     TracingSequenceStep(selfLocation)
@@ -26,10 +30,12 @@ class BrowserCloseStep(
     override fun continueOrStart(
         stepContext: StepContext
     ): LogicResult {
-        Thread.sleep(250)
-        KzenAutoContext.global().webDriverContext.quit()
+        val driver = KzenAutoContext.global().webDriverContext.get()
 
-        traceDetail(stepContext, "Browser closed")
+        Actions(driver).sendKeys(Keys.ESCAPE).build().perform()
+
+        val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
+        traceDetail(stepContext, BinaryExecutionValue(screenshotPng))
 
         return LogicResultSuccess(TupleValue.empty)
     }
