@@ -67,9 +67,6 @@ class SequenceExecution(
         if (command == LogicCommand.Cancel) {
             return LogicResultCancelled
         }
-        else if (command == LogicCommand.Pause) {
-            return LogicResultPaused
-        }
 
         val graphInstance = KzenAutoContext.global().graphCreator.createGraph(
             graphDefinition.filterTransitive(documentPath))
@@ -111,7 +108,10 @@ class SequenceExecution(
             model.error = ExecutionFailure.ofException(e).errorMessage
             stepValue = LogicResultFailed(model.error!!)
         }
-        model.traceState = StepTrace.State.Done
+
+        if (stepValue is LogicResultSuccess) {
+            model.traceState = StepTrace.State.Done
+        }
 
         return stepValue
     }

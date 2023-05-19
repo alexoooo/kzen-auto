@@ -32,8 +32,8 @@ InvokeSequenceStep:
   abstract: true
   is: SequenceStep
   class: tech.kzen.auto.server.objects.sequence.step.InvokeSequenceStep
-  icon: ToggleOn
-  title: "Invoke Sequence"
+  icon: TransitEnterexit
+  title: "Run"
   sequence: ""
   meta:
     sequence:

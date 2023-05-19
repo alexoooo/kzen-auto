@@ -28,6 +28,7 @@ class MultiSequenceStep(
 
 
     override fun continueOrStart(stepContext: StepContext): LogicResult {
+        var first = true
         while (true) {
             val nextToRun = getAndPublishNextToRun(stepContext)
                 ?: return LogicResultSuccess(TupleValue.empty)
@@ -36,8 +37,11 @@ class MultiSequenceStep(
             if (logicCommand == LogicCommand.Cancel) {
                 return LogicResultCancelled
             }
-            else if (logicCommand == LogicCommand.Pause) {
+            else if (! first && logicCommand == LogicCommand.Pause) {
                 return LogicResultPaused
+            }
+            else {
+                first = false
             }
 
             val model = stepContext.activeSequenceModel.steps.getOrPut(nextToRun) { ActiveStepModel() }

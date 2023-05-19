@@ -100,9 +100,7 @@ private fun Routing.routeRequests(
         }
     }
 
-    static(staticResourcePath) {
-        resources(staticResourceDir)
-    }
+    staticResources(staticResourcePath, staticResourceDir)
 
     routeNotationQuery(context.restHandler)
     routeNotationCommands(context.restHandler)
@@ -123,8 +121,17 @@ private fun Routing.routeLogic(
         val response = restHandler.logicStatus()
         call.respond(response)
     }
-    get(CommonRestApi.logicStart) {
-        val response = restHandler.logicStart(call.parameters)
+    get(CommonRestApi.logicStartAndRun) {
+        val response = restHandler.logicStart(call.parameters, false)
+        if (response == null) {
+            call.response.status(HttpStatusCode.BadRequest)
+        }
+        else {
+            call.respondText(response)
+        }
+    }
+    get(CommonRestApi.logicStartAndStep) {
+        val response = restHandler.logicStart(call.parameters, true)
         if (response == null) {
             call.response.status(HttpStatusCode.BadRequest)
         }
@@ -146,6 +153,10 @@ private fun Routing.routeLogic(
     }
     get(CommonRestApi.logicContinueRun) {
         val response = restHandler.logicContinueRun(call.parameters)
+        call.respondText(response)
+    }
+    get(CommonRestApi.logicContinueStep) {
+        val response = restHandler.logicContinueStep(call.parameters)
         call.respondText(response)
     }
 }

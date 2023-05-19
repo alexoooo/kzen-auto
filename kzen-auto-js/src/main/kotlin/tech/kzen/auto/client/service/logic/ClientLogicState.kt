@@ -19,6 +19,11 @@ data class ClientLogicState(
 
 
     fun isActive(): Boolean {
-        return logicStatus?.active !=  null
+        return logicStatus?.active != null
+    }
+
+
+    fun isExecuting(): Boolean {
+        return logicStatus?.active?.state?.isExecuting() ?: false
     }
 }

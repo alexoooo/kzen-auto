@@ -683,11 +683,26 @@ class ClientRestApi(
     }
 
 
-    suspend fun logicStart(
+    suspend fun logicStartAndRun(
         objectLocation: ObjectLocation
     ): LogicRunId? {
         val response = getOrPut(
-            CommonRestApi.logicStart,
+            CommonRestApi.logicStartAndRun,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+
+        return when {
+            response.isEmpty() -> null
+            else -> LogicRunId(response)
+        }
+    }
+
+
+    suspend fun logicStartAndStep(
+        objectLocation: ObjectLocation
+    ): LogicRunId? {
+        val response = getOrPut(
+            CommonRestApi.logicStartAndStep,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
 
@@ -742,6 +757,17 @@ class ClientRestApi(
     ): LogicRunResponse {
         val response = getOrPut(
             CommonRestApi.logicContinueRun,
+            CommonRestApi.paramRunId to runId.value)
+
+        return LogicRunResponse.valueOf(response)
+    }
+
+
+    suspend fun logicStep(
+        runId: LogicRunId
+    ): LogicRunResponse {
+        val response = getOrPut(
+            CommonRestApi.logicContinueStep,
             CommonRestApi.paramRunId to runId.value)
 
         return LogicRunResponse.valueOf(response)

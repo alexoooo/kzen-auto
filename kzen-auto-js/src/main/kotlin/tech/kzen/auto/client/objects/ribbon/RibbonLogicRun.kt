@@ -146,12 +146,22 @@ class RibbonLogicRun (
                 }
                 else {
                     val mainObjectLocation = state.clientState!!.navigationRoute.documentPath!!.toMainObjectLocation()
-                    ClientContext.clientLogicGlobal.startAndRunAsync(mainObjectLocation)
+                    ClientContext.clientLogicGlobal.startAndRunAsync(mainObjectLocation, false)
                 }
             }
 
             actionStop -> {
                 ClientContext.clientLogicGlobal.stopAsync()
+            }
+
+            actionStep -> {
+                if (active) {
+                    ClientContext.clientLogicGlobal.stepAsync()
+                }
+                else {
+                    val mainObjectLocation = state.clientState!!.navigationRoute.documentPath!!.toMainObjectLocation()
+                    ClientContext.clientLogicGlobal.startAndRunAsync(mainObjectLocation, true)
+                }
             }
 
             else -> {
@@ -181,8 +191,8 @@ class RibbonLogicRun (
     ) {
 //        println("#### renderControls: ${clientLogicState.logicStatus?.active?.state}")
 
-        val active = clientLogicState.logicStatus?.active != null
-        val executing = clientLogicState.logicStatus?.active?.state?.isExecuting() ?: false
+        val active = clientLogicState.isActive()
+        val executing = clientLogicState.isExecuting()
         val runnable = true
 
         ToggleButtonGroup {
@@ -198,7 +208,7 @@ class RibbonLogicRun (
                 disabled = true
             }
 
-            renderStepButton()
+            renderStepButton(active, executing, runnable)
             renderRunPauseButton(active, executing, runnable)
             renderStopButton(active)
         }
@@ -207,10 +217,16 @@ class RibbonLogicRun (
     }
 
 
-    private fun ChildrenBuilder.renderStepButton() {
+    private fun ChildrenBuilder.renderStepButton(
+        active: Boolean,
+        executing: Boolean,
+        runnable: Boolean
+    ) {
         ToggleButton {
             value = actionStep
-            disabled = true
+
+            disabled = ! (active && ! executing || ! active && runnable)
+
             size = Size.medium
 
             sx {
@@ -245,7 +261,6 @@ class RibbonLogicRun (
             sx {
                 height = 34.px
                 color = NamedColor.black
-//                borderWidth = 2.px
             }
 
             if (executing) {

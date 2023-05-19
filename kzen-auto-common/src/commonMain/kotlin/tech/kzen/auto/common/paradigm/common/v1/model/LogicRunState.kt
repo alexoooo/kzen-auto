@@ -12,7 +12,6 @@ enum class LogicRunState {
 
 
     fun isExecuting(): Boolean {
-        return this == Running ||
-                this == Stepping
+        return this != Paused
     }
 }

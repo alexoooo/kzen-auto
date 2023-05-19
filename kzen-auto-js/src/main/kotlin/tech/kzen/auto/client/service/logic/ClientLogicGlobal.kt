@@ -52,7 +52,7 @@ class ClientLogicGlobal(
     suspend fun init() {
         lookupStatus()
 
-        val running = isActive()
+        val running = clientLogicState.isExecuting()
 
         clientLogicState = clientLogicState.copy(
             pending = ClientLogicState.Pending.None)
@@ -62,11 +62,6 @@ class ClientLogicGlobal(
         if (running) {
             scheduleRefresh()
         }
-    }
-
-
-    private fun isActive(): Boolean {
-        return clientLogicState.logicStatus?.active != null
     }
 
 
@@ -93,7 +88,7 @@ class ClientLogicGlobal(
 
 
     private fun scheduleRefresh() {
-        val running = isActive()
+        val running = clientLogicState.isExecuting()
 //        println("#@%$ scheduleRefresh - $running")
 
         if (refreshPending) {
@@ -118,7 +113,7 @@ class ClientLogicGlobal(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun startAndRunAsync(mainLocation: ObjectLocation) {
+    fun startAndRunAsync(mainLocation: ObjectLocation, paused: Boolean) {
         require(! clientLogicState.isActive()) {
             "Already running"
         }
@@ -130,7 +125,13 @@ class ClientLogicGlobal(
 
         async {
             delay(1)
-            val logicRunId = ClientContext.restClient.logicStart(mainLocation)
+            val logicRunId =
+                if (paused) {
+                    ClientContext.restClient.logicStartAndStep(mainLocation)
+                }
+                else {
+                    ClientContext.restClient.logicStartAndRun(mainLocation)
+                }
 
             clientLogicState = clientLogicState.copy(
                 pending = ClientLogicState.Pending.None)
@@ -138,38 +139,6 @@ class ClientLogicGlobal(
             if (logicRunId == null) {
                 clientLogicState = clientLogicState.copy(
                     controlError = "Unable to start")
-            }
-            else {
-                delay(10)
-                lookupStatus()
-                scheduleRefresh()
-            }
-
-            publish()
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    fun stopAsync() {
-        val logicRunId = clientLogicState.logicStatus?.active?.id
-            ?: return
-
-        clientLogicState = clientLogicState.copy(
-            pending = ClientLogicState.Pending.Cancel,
-            controlError = null)
-        publish()
-
-        async {
-            delay(1)
-            val response = ClientContext.restClient.logicCancel(logicRunId)
-
-            clientLogicState = clientLogicState.copy(
-                pending = ClientLogicState.Pending.None)
-
-            if (response != LogicRunResponse.Submitted) {
-                clientLogicState = clientLogicState.copy(
-                    controlError = "Unable to stop")
             }
             else {
                 delay(10)
@@ -227,6 +196,70 @@ class ClientLogicGlobal(
         async {
             delay(1)
             val response = ClientContext.restClient.logicContinueRun(logicRunId)
+
+            clientLogicState = clientLogicState.copy(
+                pending = ClientLogicState.Pending.None)
+
+            if (response != LogicRunResponse.Submitted) {
+                clientLogicState = clientLogicState.copy(
+                    controlError = "Unable to stop")
+            }
+            else {
+                delay(10)
+                lookupStatus()
+                scheduleRefresh()
+            }
+
+            publish()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun stepAsync() {
+        val logicRunId = clientLogicState.logicStatus?.active?.id
+            ?: return
+
+        clientLogicState = clientLogicState.copy(
+            pending = ClientLogicState.Pending.Step,
+            controlError = null)
+        publish()
+
+        async {
+            delay(1)
+            val response = ClientContext.restClient.logicStep(logicRunId)
+
+            clientLogicState = clientLogicState.copy(
+                pending = ClientLogicState.Pending.None)
+
+            if (response != LogicRunResponse.Submitted) {
+                clientLogicState = clientLogicState.copy(
+                    controlError = "Unable to step")
+            }
+            else {
+                delay(10)
+                lookupStatus()
+                scheduleRefresh()
+            }
+
+            publish()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun stopAsync() {
+        val logicRunId = clientLogicState.logicStatus?.active?.id
+            ?: return
+
+        clientLogicState = clientLogicState.copy(
+            pending = ClientLogicState.Pending.Cancel,
+            controlError = null)
+        publish()
+
+        async {
+            delay(1)
+            val response = ClientContext.restClient.logicCancel(logicRunId)
 
             clientLogicState = clientLogicState.copy(
                 pending = ClientLogicState.Pending.None)

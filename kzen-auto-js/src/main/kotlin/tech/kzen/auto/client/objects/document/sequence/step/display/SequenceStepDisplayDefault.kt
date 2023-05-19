@@ -121,18 +121,24 @@ class SequenceStepDisplayDefault(
         val nextToRun = props.common.nextToRun == props.common.objectLocation
 
         Paper {
-            val state = trace?.state ?: StepTrace.State.Idle
+            val traceState = trace?.state ?: StepTrace.State.Idle
 
             sx {
                 backgroundColor =
-                    if (nextToRun) {
+                    if (traceState == StepTrace.State.Running) {
+                        NamedColor.gold
+                    }
+                    else if (traceState == StepTrace.State.Active) {
+                        EdgeController.goldLight90
+                    }
+                    else if (traceState == StepTrace.State.Done) {
+                        Color("#00b467")
+                    }
+                    else if (nextToRun) {
                         EdgeController.goldLight50
                     }
-                    else when (state) {
-                        StepTrace.State.Idle -> NamedColor.white
-                        StepTrace.State.Active -> EdgeController.goldLight90
-                        StepTrace.State.Running -> NamedColor.gold
-                        StepTrace.State.Done -> Color("#00b467")
+                    else {
+                        NamedColor.white
                     }
             }
 

@@ -92,7 +92,7 @@ class ReportRunStore(
 
         async {
             delay(1)
-            val logicRunId = ClientContext.restClient.logicStart(
+            val logicRunId = ClientContext.restClient.logicStartAndRun(
                 store.mainLocation())
 
             if (logicRunId == null) {

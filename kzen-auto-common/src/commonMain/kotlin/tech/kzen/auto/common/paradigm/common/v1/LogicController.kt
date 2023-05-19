@@ -14,9 +14,8 @@ interface LogicController {
     fun status(): LogicStatus
 
 
-    suspend fun start(
+    fun start(
         root: ObjectLocation,
-//        request: ExecutionRequest,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt? = null
     ): LogicRunId?
 
@@ -36,7 +35,18 @@ interface LogicController {
 
     fun continueOrStart(
         runId: LogicRunId,
-        graphDefinitionSnapshot: GraphDefinitionAttempt? = null
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt? = null
     ): LogicRunResponse
-//    fun step(runId: LogicRunId): LogicRunResponse
+
+
+    fun step(
+        runId: LogicRunId,
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt? = null
+    ): LogicRunResponse
+
+
+//    suspend fun startStep(
+//        root: ObjectLocation,
+//        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt? = null
+//    ): LogicRunId?
 }

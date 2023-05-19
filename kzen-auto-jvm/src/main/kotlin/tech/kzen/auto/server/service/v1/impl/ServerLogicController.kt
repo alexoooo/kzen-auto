@@ -13,6 +13,7 @@ import tech.kzen.auto.server.service.v1.Logic
 import tech.kzen.auto.server.service.v1.LogicExecutionFacade
 import tech.kzen.auto.server.service.v1.LogicExecutionListener
 import tech.kzen.auto.server.service.v1.LogicHandle
+import tech.kzen.auto.server.service.v1.model.LogicCommand
 import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.context.LogicFrame
 import tech.kzen.auto.server.service.v1.model.context.MutableLogicControl
@@ -45,6 +46,12 @@ class ServerLogicController(
 
         @Volatile
         var paused: Boolean = false
+
+        @Volatile
+        var stepping: Boolean = false
+
+        @Volatile
+        var running: Boolean = false
     }
 
 
@@ -59,6 +66,9 @@ class ServerLogicController(
             val runState =
                 if (it.cancelRequested) {
                     LogicRunState.Cancelling
+                }
+                else if (it.stepping) {
+                    LogicRunState.Stepping
                 }
                 else if (it.paused) {
                     LogicRunState.Paused
@@ -84,16 +94,8 @@ class ServerLogicController(
     }
 
 
-    override suspend fun start(
-        root: ObjectLocation,
-        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
-    ): LogicRunId? {
-        return startSynchronized(root, snapshotGraphDefinitionAttempt)
-    }
-
-
     @Synchronized
-    private fun startSynchronized(
+    override fun start(
         root: ObjectLocation,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunId? {
@@ -247,8 +249,14 @@ class ServerLogicController(
             return LogicRunResponse.RunIdMismatch
         }
 
+        check(! state.paused) { "Already paused" }
+
         state.pauseRequested = true
         state.frame.control.commandPause()
+
+        if (! state.running) {
+            state.paused = true
+        }
 
         return LogicRunResponse.Submitted
     }
@@ -257,7 +265,7 @@ class ServerLogicController(
     @Synchronized
     override fun continueOrStart(
         runId: LogicRunId,
-        graphDefinitionSnapshot: GraphDefinitionAttempt?
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ):
         LogicRunResponse
     {
@@ -268,7 +276,8 @@ class ServerLogicController(
             return LogicRunResponse.RunIdMismatch
         }
 
-        check(! state.cancelRequested) { "Can't start, stop already requested" }
+        check(! state.running) { "Can't run, already running" }
+        check(! state.cancelRequested) { "Can't run, stop already requested" }
         state.pauseRequested = false
         state.paused = false
         state.frame.control.commandUnpause()
@@ -278,7 +287,9 @@ class ServerLogicController(
             return LogicRunResponse.UnableToStart
         }
 
-        val graphDefinitionAttempt = graphDefinitionAttempt(graphDefinitionSnapshot)
+        val graphDefinitionAttempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
+
+        state.running = true
 
         Thread {
             val result =
@@ -290,6 +301,8 @@ class ServerLogicController(
                     logger.warn("Execution failed", t)
                     LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
                 }
+
+            state.running = false
 
             if (result.isTerminal()) {
                 state.frame.execution.close(result is LogicResultFailed)
@@ -304,6 +317,58 @@ class ServerLogicController(
     }
 
 
+    override fun step(
+        runId: LogicRunId,
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
+    ): LogicRunResponse {
+        val state = stateOrNull
+            ?: return LogicRunResponse.NotFound
+
+        if (state.runId != runId) {
+            return LogicRunResponse.RunIdMismatch
+        }
+
+        // NB: "stepping" is just the same as running, but with the pause pre-selected
+        check(! state.stepping) { "Can't step, already stepping" }
+        check(! state.cancelRequested) { "Can't step, stop already requested" }
+        check(state.pauseRequested) { "Must be paused in order to step" }
+        check(state.paused) { "Must be paused in order to step" }
+        state.stepping = true
+
+        val command = state.frame.control.pollCommand()
+        check(command == LogicCommand.Pause) { "Must be paused in order to step" }
+
+        val ready = state.frame.execution.beforeStart(TupleValue.empty)
+        if (! ready) {
+            return LogicRunResponse.UnableToStart
+        }
+
+        val graphDefinitionAttempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
+
+        Thread {
+            val result =
+                try {
+                    state.frame.execution.continueOrStart(
+                        state.frame.control, graphDefinitionAttempt.successful())
+                }
+                catch (t: Throwable) {
+                    logger.warn("Execution failed", t)
+                    LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
+                }
+
+            state.stepping = false
+
+            if (result.isTerminal()) {
+                state.frame.execution.close(result is LogicResultFailed)
+                clearState()
+            }
+        }.start()
+
+        return LogicRunResponse.Submitted
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun graphDefinitionAttempt(
         snapshot: GraphDefinitionAttempt?
     ): GraphDefinitionAttempt {

@@ -38,6 +38,8 @@ class SequenceProgressController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
+        //+"${props.active} - ${props.hasProgress}"
+
         if (props.active || ! props.hasProgress) {
             return
         }

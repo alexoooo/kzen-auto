@@ -87,11 +87,13 @@ object CommonRestApi {
     // managed execution graph
     private const val logicPrefix = "/logic/"
     const val logicStatus = "${logicPrefix}status"
-    const val logicStart = "${logicPrefix}start"
+    const val logicStartAndRun = "${logicPrefix}startRun"
     const val logicRequest = "${logicPrefix}request"
     const val logicCancel = "${logicPrefix}cancel"
     const val logicPause = "${logicPrefix}pause"
     const val logicContinueRun = "${logicPrefix}run"
+    const val logicContinueStep = "${logicPrefix}step"
+    const val logicStartAndStep = "${logicPrefix}startStep"
 
     // script (ad hoc)
     const val actionList = "${actionPrefix}list"

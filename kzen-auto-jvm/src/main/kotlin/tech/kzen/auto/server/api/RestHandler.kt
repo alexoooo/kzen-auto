@@ -44,10 +44,6 @@ import tech.kzen.lib.common.service.store.DirectGraphStore
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.ImmutableByteArray
 import java.net.URI
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.util.stream.Collectors
 
 
 class RestHandler(
@@ -62,70 +58,70 @@ class RestHandler(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val classPathRoots = listOf(
-            URI("classpath:/public/")
-        )
+//        val classPathRoots = listOf(
+//            URI("classpath:/public/")
+//        )
+//
+//        val resourceDirectories = discoverResourceDirectories()
 
-        val resourceDirectories = discoverResourceDirectories()
+//        private const val cssExtension = "css"
 
-        private const val cssExtension = "css"
-
-        val allowedExtensions = listOf(
-            "html",
-            "js",
-            cssExtension,
-            "svg",
-            "png",
-            "ico"
-        )
+//        val allowedExtensions = listOf(
+//            "html",
+//            "js",
+//            cssExtension,
+//            "svg",
+//            "png",
+//            "ico"
+//        )
 
 //        private val cssMediaType = MediaType.valueOf("text/css")
 
 
-        private const val jvmSuffix = "-jvm"
+//        private const val jvmSuffix = "-jvm"
 
-        private fun discoverResourceDirectories(): List<Path> {
-            val builder = mutableListOf<Path>()
-
-            // TODO: consolidate with GradleLocator?
-
-            val projectRoot =
-                    if (Files.exists(Paths.get("src"))) {
-                        ".."
-                    }
-                    else {
-                        "."
-                    }
-
-            val projectName: String? = Files.list(Paths.get(projectRoot)).use { files ->
-                val list = files.collect(Collectors.toList())
-
-                val jvmModule = list.firstOrNull { it.fileName.toString().endsWith(jvmSuffix)}
-                if (jvmModule == null) {
-                    null
-                }
-                else {
-                    val filename = jvmModule.fileName.toString()
-
-                    filename.substring(0 until filename.length - jvmSuffix.length)
-                }
-            }
-
-            if (projectName != null) {
-                // IntelliJ and typical commandline working dir is project root
-                builder.add(Paths.get("$projectName-jvm/src/main/resources/public/"))
-                builder.add(Paths.get("$projectName-js/build/distributions/"))
-
-                // Eclipse and Gradle default active working directory is the module
-                builder.add(Paths.get("src/main/resources/public/"))
-                builder.add(Paths.get("../$projectName-js/build/distributions/"))
-            }
-            else {
-                builder.add(Paths.get("static/"))
-            }
-
-            return builder
-        }
+//        private fun discoverResourceDirectories(): List<Path> {
+//            val builder = mutableListOf<Path>()
+//
+//            // TODO: consolidate with GradleLocator?
+//
+//            val projectRoot =
+//                    if (Files.exists(Paths.get("src"))) {
+//                        ".."
+//                    }
+//                    else {
+//                        "."
+//                    }
+//
+//            val projectName: String? = Files.list(Paths.get(projectRoot)).use { files ->
+//                val list = files.collect(Collectors.toList())
+//
+//                val jvmModule = list.firstOrNull { it.fileName.toString().endsWith(jvmSuffix)}
+//                if (jvmModule == null) {
+//                    null
+//                }
+//                else {
+//                    val filename = jvmModule.fileName.toString()
+//
+//                    filename.substring(0 until filename.length - jvmSuffix.length)
+//                }
+//            }
+//
+//            if (projectName != null) {
+//                // IntelliJ and typical commandline working dir is project root
+//                builder.add(Paths.get("$projectName-jvm/src/main/resources/public/"))
+//                builder.add(Paths.get("$projectName-js/build/distributions/"))
+//
+//                // Eclipse and Gradle default active working directory is the module
+//                builder.add(Paths.get("src/main/resources/public/"))
+//                builder.add(Paths.get("../$projectName-js/build/distributions/"))
+//            }
+//            else {
+//                builder.add(Paths.get("static/"))
+//            }
+//
+//            return builder
+//        }
     }
 
 
@@ -1031,7 +1027,7 @@ class RestHandler(
     }
 
 
-    fun logicStart(parameters: Parameters): String? {
+    fun logicStart(parameters: Parameters, paused: Boolean): String? {
         val documentPath: DocumentPath = parameters.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
@@ -1050,7 +1046,14 @@ class RestHandler(
             ?: return null
 
         val response = runBlocking {
-            serverLogicController.continueOrStart(logicRunId, graphDefinitionAttempt)
+            if (paused) {
+                serverLogicController.pause(logicRunId)
+
+                serverLogicController.step(logicRunId, graphDefinitionAttempt)
+            }
+            else {
+                serverLogicController.continueOrStart(logicRunId, graphDefinitionAttempt)
+            }
         }
 
         if (response != LogicRunResponse.Submitted) {
@@ -1129,6 +1132,32 @@ class RestHandler(
 
         return response.name
     }
+
+
+    fun logicContinueStep(parameters: Parameters): String {
+        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
+            value -> LogicRunId(value)
+        }
+
+        val response = runBlocking {
+            serverLogicController.step(runId)
+        }
+
+        return response.name
+    }
+
+
+//    fun logicStartStep(parameters: Parameters): String {
+//        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
+//            value -> LogicRunId(value)
+//        }
+//
+//        val response = runBlocking {
+//            serverLogicController.step(runId)
+//        }
+//
+//        return response.name
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

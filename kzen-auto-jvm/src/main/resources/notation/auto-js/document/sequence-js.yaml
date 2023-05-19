@@ -82,11 +82,6 @@ DisplayValueStepTool:
   delegate: DisplayValueStep
 
 
-InvokeSequenceStepTool:
-  is: RibbonTool
-  parent: SequenceGroup_InputOutput
-  delegate: InvokeSequenceStep
-
 ################################################################
 
 SequenceGroup_LogicControl:
@@ -99,3 +94,9 @@ WaitStepTool:
   is: RibbonTool
   parent: SequenceGroup_LogicControl
   delegate: WaitStep
+
+
+InvokeSequenceStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_LogicControl
+  delegate: InvokeSequenceStep
