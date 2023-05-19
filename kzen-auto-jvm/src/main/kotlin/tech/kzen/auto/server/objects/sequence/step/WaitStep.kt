@@ -1,9 +1,7 @@
 package tech.kzen.auto.server.objects.sequence.step
 
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
-import tech.kzen.auto.server.objects.sequence.api.SequenceStep
+import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
@@ -18,16 +16,12 @@ class WaitStep(
     private val milliseconds: Long,
     private val selfLocation: ObjectLocation
 ):
-    SequenceStep
+    TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val logger = LoggerFactory.getLogger(WaitStep::class.java)
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private val logicTracePath = LogicTracePath.ofObjectLocation(selfLocation)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -41,25 +35,11 @@ class WaitStep(
     ): LogicResult {
         logger.info("{} - milliseconds = {}", selfLocation, milliseconds)
 
-        val activeModel = stepContext.activeSequenceModel.steps[selfLocation]!!
-
-        activeModel.detail = ExecutionValue.of("Waiting for $milliseconds milliseconds")
-
-        stepContext.logicTraceHandle.set(
-            logicTracePath,
-            activeModel.trace().asExecutionValue())
-
-//        stepContext.logicTraceHandle.set(
-//            logicTracePath,
-//            ExecutionValue.of("Waiting for $milliseconds milliseconds"))
+        traceDetail(stepContext, "Waiting for $milliseconds milliseconds")
 
         Thread.sleep(milliseconds)
 
-        activeModel.detail = ExecutionValue.of("Finished waiting for $milliseconds milliseconds")
-
-//        stepContext.logicTraceHandle.set(
-//            logicTracePath,
-//            ExecutionValue.of("Finished waiting for $milliseconds milliseconds"))
+        traceDetail(stepContext, "Finished waiting for $milliseconds milliseconds")
 
         return LogicResultSuccess(TupleValue.empty)
     }

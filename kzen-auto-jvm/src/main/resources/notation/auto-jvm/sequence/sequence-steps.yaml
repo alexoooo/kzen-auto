@@ -28,17 +28,7 @@ DisplayValueStep:
     selfLocation: SelfLocation
 
 
-InvokeSequenceStep:
-  abstract: true
-  is: SequenceStep
-  class: tech.kzen.auto.server.objects.sequence.step.InvokeSequenceStep
-  icon: TransitEnterexit
-  title: "Run"
-  sequence: ""
-  meta:
-    sequence:
-      is: ObjectLocation
-      by: Nominal
+#######################################################################################################################
 
 
 MultiSequenceStep:
@@ -55,7 +45,18 @@ MultiSequenceStep:
       by: Nominal
 
 
-#######################################################################################################################
+InvokeSequenceStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.InvokeSequenceStep
+  icon: TransitEnterexit
+  title: "Run"
+  sequence: ""
+  meta:
+    sequence:
+      is: ObjectLocation
+      by: Nominal
+
 
 WaitStep:
   abstract: true
@@ -68,3 +69,40 @@ WaitStep:
     milliseconds: Long
     selfLocation: SelfLocation
 
+
+#######################################################################################################################
+
+
+BrowserOpenStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.browser.BrowserOpenStep
+  icon: OpenInNew
+  title: "Open browser"
+  description: "Open a new browser window (existing one will be closed)"
+  meta:
+    selfLocation: SelfLocation
+
+
+BrowserCloseStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.browser.BrowserCloseStep
+  icon: Close
+  title: "Close browser"
+  description: "Close the browser window"
+  meta:
+    selfLocation: SelfLocation
+
+
+BrowserGetStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.browser.BrowserGetStep
+  icon: Http
+  title: "Browse to URL"
+  description: "Navigate to a new URL"
+  location: "https://www.google.com/"
+  meta:
+    location: String
+    selfLocation: SelfLocation

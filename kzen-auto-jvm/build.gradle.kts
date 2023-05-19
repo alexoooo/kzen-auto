@@ -31,6 +31,7 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
     api("org.seleniumhq.selenium:selenium-java:$seleniumVersion")
+    implementation("io.github.bonigarcia:webdrivermanager:$webdrivermanagerVersion")
     implementation("org.apache.commons:commons-compress:$commonsCompressVersion")
     implementation("it.unimi.dsi:fastutil-core:$fastutilVersion")
     implementation("io.lacuna:bifurcan:$bifurcanVersion")

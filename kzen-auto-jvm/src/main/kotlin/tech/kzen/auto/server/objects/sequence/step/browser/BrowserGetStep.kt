@@ -1,11 +1,12 @@
-package tech.kzen.auto.server.objects.sequence.step
+package tech.kzen.auto.server.objects.sequence.step.browser
 
-import org.slf4j.LoggerFactory
+import org.openqa.selenium.OutputType
+import tech.kzen.auto.common.paradigm.common.model.BinaryExecutionValue
+import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
-import tech.kzen.auto.server.service.v1.model.LogicType
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -13,32 +14,28 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class BooleanLiteralStep(
-    private val value: Boolean,
-    private val selfLocation: ObjectLocation
+class BrowserGetStep(
+    private val location: String,
+    selfLocation: ObjectLocation
 ):
     TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val logger = LoggerFactory.getLogger(BooleanLiteralStep::class.java)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.ofMain(LogicType.boolean)
+        return TupleDefinition.empty
     }
 
 
     override fun continueOrStart(
         stepContext: StepContext
     ): LogicResult {
-        logger.info("{} - value = {}", selfLocation, value)
+        val driver = KzenAutoContext.global().webDriverContext.get()
 
-        traceValue(stepContext, value)
+        driver.get(location)
 
-        return LogicResultSuccess(
-            TupleValue.ofMain(value))
+        val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
+        traceDetail(stepContext, BinaryExecutionValue(screenshotPng))
+
+        return LogicResultSuccess(TupleValue.empty)
     }
 }

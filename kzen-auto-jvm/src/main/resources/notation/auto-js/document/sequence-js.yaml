@@ -100,3 +100,31 @@ InvokeSequenceStepTool:
   is: RibbonTool
   parent: SequenceGroup_LogicControl
   delegate: InvokeSequenceStep
+
+
+################################################################
+
+SequenceGroup_Browser:
+  is: RibbonGroup
+  title: "Browser"
+  archetype: Sequence
+
+
+BrowserOpenStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_Browser
+  delegate: BrowserOpenStep
+
+
+BrowserCloseStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_Browser
+  delegate: BrowserCloseStep
+
+
+BrowserGetStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_Browser
+  delegate: BrowserGetStep
+
+

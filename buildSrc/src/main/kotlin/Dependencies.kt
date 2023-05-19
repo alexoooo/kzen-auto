@@ -11,7 +11,6 @@ const val kzenLibVersion = "0.27.0-SNAPSHOT"
 
 const val logbackVersion = "1.4.7"
 const val jacksonModuleKotlin = "2.15.0"
-const val seleniumVersion = "4.9.1"
 const val commonsCompressVersion = "1.23.0"
 const val fastutilVersion = "8.5.12"
 const val bifurcanVersion = "0.2.0-alpha6"
@@ -21,6 +20,9 @@ const val disruptorVersion = "3.4.4"
 const val bloomFilterVersion = "0.9.0"
 const val commonsIoVersion = "2.11.0"
 const val migzVersion = "2.0.beta-1"
+
+const val seleniumVersion = "4.9.1"
+const val webdrivermanagerVersion = "5.3.3"
 
 
 //const val reactVersion = "18.2.0"

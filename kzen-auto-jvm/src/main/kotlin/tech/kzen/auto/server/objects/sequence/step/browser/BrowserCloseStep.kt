@@ -1,11 +1,10 @@
-package tech.kzen.auto.server.objects.sequence.step
+package tech.kzen.auto.server.objects.sequence.step.browser
 
-import org.slf4j.LoggerFactory
+import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
-import tech.kzen.auto.server.service.v1.model.LogicType
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.locate.ObjectLocation
@@ -13,32 +12,24 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class BooleanLiteralStep(
-    private val value: Boolean,
-    private val selfLocation: ObjectLocation
+class BrowserCloseStep(
+    selfLocation: ObjectLocation
 ):
     TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val logger = LoggerFactory.getLogger(BooleanLiteralStep::class.java)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.ofMain(LogicType.boolean)
+        return TupleDefinition.empty
     }
 
 
     override fun continueOrStart(
         stepContext: StepContext
     ): LogicResult {
-        logger.info("{} - value = {}", selfLocation, value)
+        KzenAutoContext.global().webDriverContext.quit()
 
-        traceValue(stepContext, value)
+        traceDetail(stepContext, "Browser closed")
 
-        return LogicResultSuccess(
-            TupleValue.ofMain(value))
+        return LogicResultSuccess(TupleValue.empty)
     }
 }
