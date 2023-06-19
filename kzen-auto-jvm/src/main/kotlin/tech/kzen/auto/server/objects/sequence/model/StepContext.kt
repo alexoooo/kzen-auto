@@ -11,5 +11,6 @@ data class StepContext(
     val activeSequenceModel: ActiveSequenceModel,
     val logicHandleFacade: LogicHandleFacade,
     val logicTraceHandle: LogicTraceHandle,
-    val graphInstance: GraphInstance
+    val graphInstance: GraphInstance,
+//    val topLevel: Boolean
 )

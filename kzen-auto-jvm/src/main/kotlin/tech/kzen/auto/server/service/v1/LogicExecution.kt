@@ -10,7 +10,10 @@ interface LogicExecution {
      * Initialize for next execution
      * @return false if something went wrong
      */
-    fun beforeStart(arguments: TupleValue): Boolean
+    fun beforeStart(
+        arguments: TupleValue,
+//        topLevel: Boolean
+    ): Boolean
 
 
     /**

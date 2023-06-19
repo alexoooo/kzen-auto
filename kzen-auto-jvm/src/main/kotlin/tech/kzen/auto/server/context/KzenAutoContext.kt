@@ -88,15 +88,32 @@ class KzenAutoContext(
     private val notationMetadataReader = NotationMetadataReader()
 
     private val fileLocator = GradleLocator()
+
+    // TODO: don't require autoMainDocumentNesting, but detect it instead and use classpath if it's not there
     private val fileMedia = FileNotationMedia(
         fileLocator, require = listOf(AutoConventions.autoMainDocumentNesting))
+//        fileLocator)
 
     private val classpathNotationMedia = ClasspathNotationMedia(
         exclude = listOf(AutoConventions.autoMainDocumentNesting))
 
+    private val readOnlyMedia: NotationMedia =
+        classpathNotationMedia
+//    private val readOnlyMedia: NotationMedia = run {
+//        val fileScan = runBlocking {
+//            fileMedia.scan()
+//        }
+//
+//        if (fileScan.documents.contains(AutoConventions.autoMainDocumentNesting)) {
+//            MapNotationMedia()
+//        }
+//        else {
+//            classpathNotationMedia
+//        }
+//    }
+
     val notationMedia: NotationMedia = ReadWriteNotationMedia(
-        fileMedia, classpathNotationMedia
-    )
+        fileMedia, readOnlyMedia)
 
     val yamlParser = YamlNotationParser()
 
@@ -109,16 +126,13 @@ class KzenAutoContext(
             yamlParser,
             notationMetadataReader,
             graphDefiner,
-            notationReducer
-    )
+            notationReducer)
 
     val actionExecutor = ModelActionExecutor(
-            graphStore, graphCreator
-    )
+            graphStore, graphCreator)
 
     val detachedExecutor = ModelDetachedExecutor(
-            graphStore, graphCreator
-    )
+            graphStore, graphCreator)
 
     val executionRepository = ExecutionRepository(
             EmptyExecutionInitializer,
@@ -135,8 +149,7 @@ class KzenAutoContext(
     private val activeDataflowRepository = ActiveDataflowRepository(
             graphInstanceCreator,
             dataflowMessageInspector,
-            graphStore
-    )
+            graphStore)
 
     private val activeVisualProvider = ActiveVisualProvider(
             activeDataflowRepository)

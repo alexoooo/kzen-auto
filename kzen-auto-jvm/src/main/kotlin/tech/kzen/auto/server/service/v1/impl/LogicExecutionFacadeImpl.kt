@@ -74,7 +74,7 @@ class LogicExecutionFacadeImpl(
 
 
     override fun beforeStart(arguments: TupleValue): Boolean {
-        return logicExecution!!.beforeStart(arguments)
+        return logicExecution!!.beforeStart(arguments/*, false*/)
     }
 
 

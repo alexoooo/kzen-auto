@@ -282,7 +282,8 @@ class ServerLogicController(
         state.paused = false
         state.frame.control.commandUnpause()
 
-        val ready = state.frame.execution.beforeStart(TupleValue.empty)
+//        val topLevel = state.frame.dependencies.isEmpty()
+        val ready = state.frame.execution.beforeStart(TupleValue.empty/*, topLevel*/)
         if (! ready) {
             return LogicRunResponse.UnableToStart
         }
@@ -338,7 +339,8 @@ class ServerLogicController(
         val command = state.frame.control.pollCommand()
         check(command == LogicCommand.Pause) { "Must be paused in order to step" }
 
-        val ready = state.frame.execution.beforeStart(TupleValue.empty)
+//        val topLevel = state.frame.dependencies.isEmpty()
+        val ready = state.frame.execution.beforeStart(TupleValue.empty/*, topLevel*/)
         if (! ready) {
             return LogicRunResponse.UnableToStart
         }

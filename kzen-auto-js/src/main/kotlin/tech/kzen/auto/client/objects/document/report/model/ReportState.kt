@@ -35,6 +35,8 @@ data class ReportState(
     val output: ReportOutputState = ReportOutputState(),
     val run: ReportRunState = ReportRunState(),
     val notationError: String? = null,
+
+    @Suppress("PropertyName")
     val _cache: ReportStateCache = ReportStateCache()
 ) {
     //-----------------------------------------------------------------------------------------------------------------

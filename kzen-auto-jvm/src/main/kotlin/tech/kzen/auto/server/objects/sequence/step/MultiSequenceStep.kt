@@ -28,7 +28,10 @@ class MultiSequenceStep(
 
 
     override fun continueOrStart(stepContext: StepContext): LogicResult {
-        var first = true
+        // TODO: handle step-into via RunStep while paused
+//        var executeNextIfPaused = stepContext.topLevel
+        var executeNextIfPaused = true
+
         while (true) {
             val nextToRun = getAndPublishNextToRun(stepContext)
                 ?: return LogicResultSuccess(TupleValue.empty)
@@ -37,34 +40,62 @@ class MultiSequenceStep(
             if (logicCommand == LogicCommand.Cancel) {
                 return LogicResultCancelled
             }
-            else if (! first && logicCommand == LogicCommand.Pause) {
+            else if (! executeNextIfPaused && logicCommand == LogicCommand.Pause) {
                 return LogicResultPaused
             }
             else {
-                first = false
+                executeNextIfPaused = false
             }
 
-            val model = stepContext.activeSequenceModel.steps.getOrPut(nextToRun) { ActiveStepModel() }
+            val stepModel = stepContext.activeSequenceModel.steps.getOrPut(nextToRun) { ActiveStepModel() }
             val step = stepContext.graphInstance[nextToRun]!!.reference as SequenceStep
 
             val logicTracePath = LogicTracePath.ofObjectLocation(nextToRun)
-            model.traceState = StepTrace.State.Running
+            stepModel.traceState = StepTrace.State.Running
             stepContext.logicTraceHandle.set(
                 logicTracePath,
-                model.trace().asExecutionValue())
+                stepModel.trace().asExecutionValue())
 
+            @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
             val result = step.continueOrStart(stepContext)
-            if (result is LogicResultSuccess) {
-                model.value = result.value.components
-            }
-            else {
-                TODO("Not implemented (yet): $result")
-            }
 
-            model.traceState = StepTrace.State.Done
-            stepContext.logicTraceHandle.set(
-                logicTracePath,
-                model.trace().asExecutionValue())
+            when (result) {
+                is LogicResultSuccess -> {
+                    stepModel.value = result.value.components
+                    stepModel.traceState = StepTrace.State.Done
+                    stepContext.logicTraceHandle.set(
+                        logicTracePath,
+                        stepModel.trace().asExecutionValue())
+                }
+
+                is LogicResultFailed -> {
+                    stepModel.error = result.message
+//                    stepModel.detail = TextExecutionValue("Failed")
+                    stepModel.traceState = StepTrace.State.Done
+                    stepContext.logicTraceHandle.set(
+                        logicTracePath,
+                        stepModel.trace().asExecutionValue())
+                    return result
+                }
+
+                LogicResultCancelled -> {
+                    stepModel.traceState = StepTrace.State.Done
+//                    stepModel.detail = TextExecutionValue("Stopped")
+                    stepContext.logicTraceHandle.set(
+                        logicTracePath,
+                        stepModel.trace().asExecutionValue())
+                    return result
+                }
+
+                LogicResultPaused -> {
+                    stepModel.traceState = StepTrace.State.Running
+//                    stepModel.detail = TextExecutionValue("Paused")
+                    stepContext.logicTraceHandle.set(
+                        logicTracePath,
+                        stepModel.trace().asExecutionValue())
+                    return result
+                }
+            }
         }
     }
 

@@ -45,17 +45,19 @@ MultiSequenceStep:
       by: Nominal
 
 
-InvokeSequenceStep:
+RunStep:
   abstract: true
   is: SequenceStep
-  class: tech.kzen.auto.server.objects.sequence.step.InvokeSequenceStep
-  icon: TransitEnterexit
+  class: tech.kzen.auto.server.objects.sequence.step.RunStep
+  icon: PlayArrow
   title: "Run"
-  sequence: ""
+  instructions: ""
   meta:
-    sequence:
+    instructions:
       is: ObjectLocation
       by: Nominal
+      editor: SelectScriptEditor
+#      call: true
 
 
 WaitStep:

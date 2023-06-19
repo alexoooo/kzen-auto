@@ -96,10 +96,10 @@ WaitStepTool:
   delegate: WaitStep
 
 
-InvokeSequenceStepTool:
+RunTool:
   is: RibbonTool
   parent: SequenceGroup_LogicControl
-  delegate: InvokeSequenceStep
+  delegate: RunStep
 
 
 ################################################################

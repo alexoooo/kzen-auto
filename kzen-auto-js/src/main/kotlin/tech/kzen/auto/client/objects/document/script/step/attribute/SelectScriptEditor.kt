@@ -10,6 +10,8 @@ import react.react
 import tech.kzen.auto.client.objects.document.common.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.AttributeEditorWrapper
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
+import tech.kzen.auto.client.objects.document.report.model.ReportState
+import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -185,7 +187,12 @@ class SelectScriptEditor(
                 continue
             }
 
-            if (ScriptDocument.isScript(notation)) {
+            val isLogic =
+                ScriptDocument.isScript(notation) ||
+                SequenceState.isSequence(notation) ||
+                ReportState.isReport(notation)
+
+            if (isLogic) {
                 featureMains.add(ObjectLocation(
                         path, NotationConventions.mainObjectPath))
             }

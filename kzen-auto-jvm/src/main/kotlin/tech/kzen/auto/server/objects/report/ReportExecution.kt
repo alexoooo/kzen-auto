@@ -172,7 +172,7 @@ class ReportExecution(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun beforeStart(arguments: TupleValue): Boolean {
+    override fun beforeStart(arguments: TupleValue/*, topLevel: Boolean*/): Boolean {
 //        if (nextDatasetInfo != null) {
 //            return false
 //        }

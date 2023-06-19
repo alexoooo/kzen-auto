@@ -41,6 +41,7 @@ class SequenceExecution(
 
     private var activeSequenceModel = ActiveSequenceModel()
     private var previousGraphInstance = GraphInstance(ObjectLocationMap.empty())
+//    private var topLevel: Boolean = false
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -51,8 +52,9 @@ class SequenceExecution(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun beforeStart(arguments: TupleValue): Boolean {
+    override fun beforeStart(arguments: TupleValue/*, topLevel: Boolean*/): Boolean {
         logger.info("{} - arguments - {}", documentPath, arguments)
+//        this.topLevel = topLevel
         return true
     }
 
@@ -92,28 +94,33 @@ class SequenceExecution(
         previousGraphInstance = graphInstance
 
         val stepContext = StepContext(
-            logicControl, activeSequenceModel, logicHandleFacade, logicTraceHandle, graphInstance)
+            logicControl, activeSequenceModel, logicHandleFacade, logicTraceHandle, graphInstance/*, topLevel*/)
 
         val step = graphInstance[objectLocation]!!.reference as SequenceStep
-        val model = activeSequenceModel.steps.getOrPut(objectLocation) { ActiveStepModel() }
+        val stepModel = activeSequenceModel.steps.getOrPut(objectLocation) { ActiveStepModel() }
 
-        model.traceState = StepTrace.State.Active
+        stepModel.traceState = StepTrace.State.Active
 
-        var stepValue: LogicResult
+        var logicResult: LogicResult
         try {
-            stepValue = step.continueOrStart(stepContext)
-            model.value = stepValue
+            logicResult = step.continueOrStart(stepContext)
+            stepModel.value = logicResult
+
+            if (logicResult is LogicResultFailed) {
+                logger.warn("Step execution failed: {}", logicResult.message)
+            }
         }
         catch (e: Throwable) {
-            model.error = ExecutionFailure.ofException(e).errorMessage
-            stepValue = LogicResultFailed(model.error!!)
+            stepModel.error = ExecutionFailure.ofException(e).errorMessage
+            logicResult = LogicResultFailed(stepModel.error!!)
+            logger.warn("Step execution error", e)
         }
 
-        if (stepValue is LogicResultSuccess) {
-            model.traceState = StepTrace.State.Done
+        if (logicResult is LogicResultSuccess) {
+            stepModel.traceState = StepTrace.State.Done
         }
 
-        return stepValue
+        return logicResult
     }
 
 
