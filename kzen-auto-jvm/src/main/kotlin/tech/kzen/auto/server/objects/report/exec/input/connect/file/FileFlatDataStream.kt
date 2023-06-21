@@ -47,7 +47,7 @@ class FileFlatDataStream constructor(
 
         val decoded =
             if (bomPrefix) {
-                BOMInputStream(extracted)
+                BOMInputStream.builder().setInputStream(extracted).get()
             }
             else {
                 extracted

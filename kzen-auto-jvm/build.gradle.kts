@@ -22,7 +22,7 @@ dependencies {
 //    implementation("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
     api("tech.kzen.lib:kzen-lib-jvm:$kzenLibVersion")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
+    api("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
 
     implementation("org.jetbrains.kotlin:kotlin-scripting-jvm:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-scripting-jvm-host:$kotlinVersion")
