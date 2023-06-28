@@ -31,7 +31,6 @@ fun <S : State> Component<*, S>.setState(buildState: S.() -> Unit) {
         buildState()
     }
     setState(partialState)
-//    setState({ Object.assign(it, buildState) })
 }
 
 
@@ -60,7 +59,6 @@ fun <S : State> PureComponent<*, S>.setState(buildState: S.() -> Unit) {
         buildState()
     }
     setState(partialState)
-//    setState({ Object.assign(it, buildState) })
 }
 
 

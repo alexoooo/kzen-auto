@@ -8,13 +8,15 @@ import tech.kzen.auto.common.paradigm.common.model.TextExecutionValue
 data class StepTrace(
     val state: State,
     val displayValue: ExecutionValue,
-    val detail: ExecutionValue
+    val detail: ExecutionValue,
+    val error: String?
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val stateKey = "state"
         private const val displayKey = "display"
         private const val detailKey = "detail"
+        private const val errorKey = "error"
 
 
         fun ofExecutionValue(executionValue: ExecutionValue): StepTrace {
@@ -22,7 +24,8 @@ data class StepTrace(
             return StepTrace(
                 State.valueOf((executionValue.values[stateKey] as TextExecutionValue).value),
                 executionValue.values[displayKey]!!,
-                executionValue.values[detailKey]!!
+                executionValue.values[detailKey]!!,
+                (executionValue.values[errorKey] as? TextExecutionValue)?.value
             )
         }
     }
@@ -42,7 +45,8 @@ data class StepTrace(
         return MapExecutionValue(mapOf(
             stateKey to TextExecutionValue(state.name),
             displayKey to displayValue,
-            detailKey to detail
+            detailKey to detail,
+            errorKey to ExecutionValue.of(error)
         ))
     }
 }

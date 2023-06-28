@@ -40,6 +40,8 @@ import tech.kzen.lib.common.reflect.ReflectionRegistry
 @Suppress("UNCHECKED_CAST")
 object KzenAutoJvmModule: ModuleReflection {
     override fun register(reflectionRegistry: ReflectionRegistry) {
+//--------------------------------------------------------------
+
 reflectionRegistry.put(
     "tech.kzen.auto.server.objects.feature.ScreenshotCropper",
     listOf()
@@ -347,5 +349,7 @@ reflectionRegistry.put(
 ) { args ->
     WaitStep(args[0] as Long, args[1] as ObjectLocation)
 }
+
+//--------------------------------------------------------------
     }
 }

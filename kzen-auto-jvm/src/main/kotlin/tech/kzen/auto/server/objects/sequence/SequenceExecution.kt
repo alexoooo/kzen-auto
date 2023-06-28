@@ -11,7 +11,10 @@ import tech.kzen.auto.server.objects.sequence.model.ActiveSequenceModel
 import tech.kzen.auto.server.objects.sequence.model.ActiveStepModel
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.*
-import tech.kzen.auto.server.service.v1.model.*
+import tech.kzen.auto.server.service.v1.model.LogicCommand
+import tech.kzen.auto.server.service.v1.model.LogicResult
+import tech.kzen.auto.server.service.v1.model.LogicResultCancelled
+import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -116,7 +119,7 @@ class SequenceExecution(
             logger.warn("Step execution error", e)
         }
 
-        if (logicResult is LogicResultSuccess) {
+        if (logicResult.isTerminal()) {
             stepModel.traceState = StepTrace.State.Done
         }
 

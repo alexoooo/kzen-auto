@@ -16,6 +16,7 @@ data class ActiveStepModel(
         return StepTrace(
             traceState,
             displayValue,
-            detail)
+            detail,
+            error)
     }
 }

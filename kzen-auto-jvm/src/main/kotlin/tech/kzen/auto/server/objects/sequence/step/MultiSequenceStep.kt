@@ -1,6 +1,8 @@
 package tech.kzen.auto.server.objects.sequence.step
 
+import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
+import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
@@ -19,9 +21,15 @@ import tech.kzen.lib.common.reflect.Reflect
 class MultiSequenceStep(
     private val steps: List<ObjectLocation>
 ):
-    SequenceStep//,
-//    StatefulLogicElement<MultiSequenceStep>
+    SequenceStep
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val logger = LoggerFactory.getLogger(MultiSequenceStep::class.java)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun valueDefinition(): TupleDefinition {
         return TupleDefinition.empty
     }
@@ -57,7 +65,14 @@ class MultiSequenceStep(
                 stepModel.trace().asExecutionValue())
 
             @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
-            val result = step.continueOrStart(stepContext)
+            val result =
+                try {
+                    step.continueOrStart(stepContext)
+                }
+                catch (t: Throwable) {
+                    logger.warn("Step error - {}", nextToRun, t)
+                    LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
+                }
 
             when (result) {
                 is LogicResultSuccess -> {

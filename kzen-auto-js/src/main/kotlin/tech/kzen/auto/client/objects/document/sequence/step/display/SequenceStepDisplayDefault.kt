@@ -45,9 +45,10 @@ class SequenceStepDisplayDefault(
         RPureComponent<SequenceStepDisplayDefaultProps, SequenceStepDisplayDefaultState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-//    companion object {
-//        val wrapperName = ObjectName("DefaultStepDisplay")
-//    }
+    companion object {
+        val successColour = Color("#00b467")
+        val errorColour = Color("#b40000")
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -132,7 +133,12 @@ class SequenceStepDisplayDefault(
                         EdgeController.goldLight90
                     }
                     else if (traceState == StepTrace.State.Done) {
-                        Color("#00b467")
+                        if (trace?.error != null) {
+                            errorColour
+                        }
+                        else {
+                            successColour
+                        }
                     }
                     else if (nextToRun) {
                         EdgeController.goldLight50
@@ -196,6 +202,7 @@ class SequenceStepDisplayDefault(
 
         renderValue(trace.displayValue)
         renderDetail(trace.detail)
+        renderError(trace.error)
     }
 
 
@@ -237,35 +244,62 @@ class SequenceStepDisplayDefault(
 
 
     private fun ChildrenBuilder.renderDetail(detail: ExecutionValue) {
-        when (detail) {
-            is BinaryExecutionValue -> {
-                val screenshotPngUrl = detail.cache("img") {
-                    val base64 = IoUtils.base64Encode(detail.value)
-                    "data:png/png;base64,$base64"
-                }
+        if (detail is NullExecutionValue) {
+            return
+        }
 
-                img {
-                    css {
-                        width = 100.pct
+        div {
+            title = "Detail"
+
+            css {
+                padding = Padding(0.em, 0.5.em, 0.5.em, 0.5.em)
+            }
+
+            when (detail) {
+                is BinaryExecutionValue -> {
+                    val screenshotPngUrl = detail.cache("img") {
+                        val base64 = IoUtils.base64Encode(detail.value)
+                        "data:png/png;base64,$base64"
                     }
-                    src = screenshotPngUrl
+
+                    img {
+                        css {
+                            width = 100.pct
+                        }
+                        src = screenshotPngUrl
+                    }
+                }
+
+                is ScalarExecutionValue -> {
+                    +"${detail.get()}"
+                }
+
+                is ListExecutionValue -> {
+                    val valueStrings = detail.values.map { it.get().toString() }
+                    +"$valueStrings"
+                }
+
+                else -> {
+                    +"Detail: $detail"
                 }
             }
+        }
+    }
 
-            is ScalarExecutionValue -> {
-                +"${detail.get()}"
+
+    private fun ChildrenBuilder.renderError(message: String?) {
+        if (message == null) {
+            return
+        }
+
+        div {
+            title = "Error"
+
+            css {
+                padding = Padding(0.em, 0.5.em, 0.5.em, 0.5.em)
             }
 
-            is ListExecutionValue -> {
-                val valueStrings = detail.values.map { it.get().toString() }
-                +"$valueStrings"
-            }
-
-            is NullExecutionValue -> {}
-
-            else -> {
-                +"Detail: $detail"
-            }
+            +"Error: $message"
         }
     }
 

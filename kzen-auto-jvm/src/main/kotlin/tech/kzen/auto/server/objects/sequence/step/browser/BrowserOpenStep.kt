@@ -48,6 +48,8 @@ class BrowserOpenStep(
         // https://stackoverflow.com/questions/75678572/java-io-ioexception-invalid-status-code-403-text-forbidden
         chromeOptions.addArguments("--remote-allow-origins=*")
 
+        // TODO: https://www.selenium.dev/documentation/webdriver/drivers/service/#setting-log-output
+//        ChromeDriverService.Builder().build()
         val driver: RemoteWebDriver = ChromeDriver(chromeOptions)
 
         KzenAutoContext.global().webDriverContext.set(driver)
