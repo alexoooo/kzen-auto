@@ -23,6 +23,7 @@ import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import java.util.concurrent.CopyOnWriteArrayList
 
 
 class ServerLogicController(
@@ -135,29 +136,32 @@ class ServerLogicController(
                 logicRunExecutionId: LogicRunExecutionId,
                 originalObjectLocation: ObjectLocation
             ): LogicExecutionFacade {
-                val dependencies = mutableListOf<LogicFrame>()
-                val listener = object: LogicExecutionListener {
+                val currentState = checkNotNull(stateOrNull)
+                check(currentState.runId == runId)
 
+                val hostFrame = currentState.frame.find(executionId)
+                checkNotNull(hostFrame)
+
+                val guestExecutionId = LogicExecutionId(LogicExecutionFacadeImpl.arbitraryId())
+
+                val dependencies = CopyOnWriteArrayList<LogicFrame>()
+                val listener = object: LogicExecutionListener {
+                    override fun closed() {
+                        hostFrame.dependencies.removeIf { it.executionId == guestExecutionId }
+                    }
                 }
 
                 val logicExecutionFacadeImpl = LogicExecutionFacadeImpl(
                     successfulGraphDefinition, commonMutableLogicControl, listener)
 
-                val currentState = checkNotNull(stateOrNull)
-                check(currentState.runId == runId)
-
-                val frame = currentState.frame.find(executionId)
-                checkNotNull(frame)
-
                 val logicExecution = logicExecutionFacadeImpl.open(
                     runId, originalObjectLocation, this, graphCreator)
 
                 val stableObjectLocation = objectStableMapper.objectStableId(originalObjectLocation)
-                frame.dependencies.add(LogicFrame(
+                hostFrame.dependencies.add(LogicFrame(
                     stableObjectLocation,
-                    executionId,
+                    guestExecutionId,
                     logicExecution,
-//                    LogicRunFrameState.Ready,
                     dependencies,
                     commonMutableLogicControl
                 ))
@@ -184,8 +188,7 @@ class ServerLogicController(
                 objectStableMapper.objectStableId(root),
                 executionId,
                 execution,
-//                LogicRunFrameState.Ready,
-                mutableListOf(),
+                CopyOnWriteArrayList(),
                 commonMutableLogicControl
             ),
             objectStableMapper

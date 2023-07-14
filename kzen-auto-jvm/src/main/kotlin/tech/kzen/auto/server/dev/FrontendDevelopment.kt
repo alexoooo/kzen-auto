@@ -25,7 +25,7 @@ fun frontendDevelopmentMain(
 
     val projectBaseDir = Path.of(".").toAbsolutePath().normalize()
     val jsDistDir = projectBaseDir.resolve(
-        "${context.config.jsModuleName}/build/distributions")
+        "${context.config.jsModuleName}/build/dist/js/productionExecutable")
     val jsFile = jsDistDir.resolve(context.config.jsFileName()).toFile()
     println("Auto-reload js file (exists = ${jsFile.exists()}): $jsFile")
 

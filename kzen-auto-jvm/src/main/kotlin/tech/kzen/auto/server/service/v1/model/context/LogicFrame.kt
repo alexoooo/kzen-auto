@@ -5,14 +5,14 @@ import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunFrameInfo
 import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import java.util.concurrent.CopyOnWriteArrayList
 
 
 data class LogicFrame(
     val logicId: ObjectStableId,
     val executionId: LogicExecutionId,
     val execution: LogicExecution,
-//    var state: LogicRunFrameState,
-    val dependencies: MutableList<LogicFrame>,
+    val dependencies: CopyOnWriteArrayList<LogicFrame>,
 
     // shared between all frames
     val control: MutableLogicControl
@@ -23,7 +23,6 @@ data class LogicFrame(
         return LogicRunFrameInfo(
             objectStableMapper.objectLocation(logicId),
             executionId,
-//            state,
             dependencies.map { it.toInfo(objectStableMapper) }
         )
     }

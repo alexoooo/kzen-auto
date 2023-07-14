@@ -14,6 +14,7 @@ import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunFrameInfo
 import web.cssom.NamedColor
 import web.cssom.em
 import web.cssom.px
@@ -367,21 +368,41 @@ class RibbonLogicRun (
 
                 val frame = state.clientState?.clientLogicState?.logicStatus?.active?.frame
 
-//                renderSelected(selected, selectedFramePaths)
-                +"foo"
-
-                ReactHTML.hr {}
-
-                +"bar"
-//                renderActiveSelection(
-//                        selected,
-//                        clientState.graphDefinitionAttempt.graphStructure.graphNotation,
-//                        active,
-//                        clientState.navigationRoute)
+                if (frame == null) {
+                    +"<Frame missing>"
+                }
+                else {
+                    renderFrame(frame)
+                }
             }
         }
     }
 
+
+    private fun ChildrenBuilder.renderFrame(frame: LogicRunFrameInfo) {
+        +"${frame.objectLocation.documentPath.name}"
+
+        val dependencies = frame.dependencies
+        if (dependencies.size == 1) {
+            ReactHTML.hr {}
+            renderFrame(dependencies.single())
+        }
+        else if (dependencies.size > 1) {
+            for (dependency in dependencies) {
+                div {
+                    key = dependency.objectLocation.asString()
+
+                    css {
+                        marginLeft = 0.5.em
+                    }
+
+                    ReactHTML.hr {}
+
+                    renderFrame(dependency)
+                }
+            }
+        }
+    }
 
 
 //    private fun ChildrenBuilder.renderSelected(

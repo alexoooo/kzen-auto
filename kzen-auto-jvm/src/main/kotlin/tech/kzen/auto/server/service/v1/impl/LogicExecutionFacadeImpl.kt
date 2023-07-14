@@ -86,5 +86,6 @@ class LogicExecutionFacadeImpl(
 
     override fun close() {
         logicExecution?.close(false)
+        listener.closed()
     }
 }
