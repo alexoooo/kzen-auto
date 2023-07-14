@@ -365,6 +365,8 @@ class RibbonLogicRun (
                     width = 16.em
                 }
 
+                val frame = state.clientState?.clientLogicState?.logicStatus?.active?.frame
+
 //                renderSelected(selected, selectedFramePaths)
                 +"foo"
 

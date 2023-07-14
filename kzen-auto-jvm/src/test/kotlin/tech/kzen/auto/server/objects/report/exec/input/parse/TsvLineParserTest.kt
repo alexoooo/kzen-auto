@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.report.exec.input.parse
 
 import org.junit.Test
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils
 import tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvReportDefiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -19,8 +20,8 @@ class TsvLineParserTest {
                 "     PRISTINE CONDITION INSIDE AND OUT   Best Import Auto Sales Inc    Year: 2012 Make: Acura Model" +
                 ": TL Series: Base 4dr Sedan VIN: 19UUA8F22CA003926  Condition: Used Mileage: 90,186  Exterior: Blue" +
                 " Interior: Black Body: Sedan Transmission: Automatic 6-Speed Engine: 3.5L V6      **** Best Import " +
-                "Auto Sales Inc. 🚘 Raleigh Auto Dealer *****  ⚡️⚡️⚡️ Call Or Text (919) 800-0650 ⚡️⚡️⚡️  ✅ - We can " +
-                "arrange Financing Options with most banks and credit unions!!!!     ✅ Extended Warranties " +
+                "Auto Sales Inc. 🚘 Raleigh Auto Dealer *****  ⚡️⚡️⚡️ Call Or Text (919) 800-0650 ⚡️⚡️⚡️  ✅ - We " +
+                "can arrange Financing Options with most banks and credit unions!!!!     ✅ Extended Warranties " +
                 "Available on most vehicles!! \"Call To Inquire\"  ✅ Full Service ASE-Certified Shop Onsite!       " +
                 "More vehicle details: best-import-auto-sales-inc.hammerwebsites.net/v/cfoamRwq     Address: 1501 " +
                 "Buck Jones Rd Raleigh, NC 27606   Phone: (919) 800-0650     Website: www.bestimportsonline.com     " +
@@ -55,7 +56,7 @@ class TsvLineParserTest {
     fun tsvEmptyValues() {
         val tsvLines = "\t"
         assertEquals(listOf("", ""), read(tsvLines)[0].toList())
-        assertEquals(tsvLines, tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils.toTsv(read(tsvLines)[0]))
+        assertEquals(tsvLines, TsvFormatUtils.toTsv(read(tsvLines)[0]))
     }
 
 
@@ -147,11 +148,11 @@ class TsvLineParserTest {
     fun utf8Line() {
         val line = read(tsvUtf8Line)[0]
         assertEquals(25, line.toList().size)
-        assertEquals(tsvUtf8Line, tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils.toTsv(line))
+        assertEquals(tsvUtf8Line, TsvFormatUtils.toTsv(line))
 
         for (i in 1 .. 16) {
             assertEquals(
-                tsvUtf8Line, tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils.toTsv(read(
+                tsvUtf8Line, TsvFormatUtils.toTsv(read(
                     tsvUtf8Line, i)[0]))
         }
     }
@@ -165,14 +166,14 @@ class TsvLineParserTest {
 
         val parsed = read(lines)
         assertEquals(2, parsed.size)
-        assertEquals(tsvLineA, tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils.toTsv(parsed[0]))
-        assertEquals(tsvLineB, tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils.toTsv(parsed[1]))
+        assertEquals(tsvLineA, TsvFormatUtils.toTsv(parsed[0]))
+        assertEquals(tsvLineB, TsvFormatUtils.toTsv(parsed[1]))
 
         for (i in 1 .. 128) {
             val parsedBuffered = read(lines, i)
             assertEquals(2, parsedBuffered.size)
-            assertEquals(tsvLineA, tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils.toTsv(parsedBuffered[0]))
-            assertEquals(tsvLineB, tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils.toTsv(parsedBuffered[1]))
+            assertEquals(tsvLineA, TsvFormatUtils.toTsv(parsedBuffered[0]))
+            assertEquals(tsvLineB, TsvFormatUtils.toTsv(parsedBuffered[1]))
         }
     }
 
@@ -185,14 +186,14 @@ class TsvLineParserTest {
 
         val parsed = read(lines)
         assertEquals(2, parsed.size)
-        assertEquals(tsvLineA, tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils.toTsv(parsed[0]))
-        assertEquals(tsvLineB, tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils.toTsv(parsed[1]))
+        assertEquals(tsvLineA, TsvFormatUtils.toTsv(parsed[0]))
+        assertEquals(tsvLineB, TsvFormatUtils.toTsv(parsed[1]))
 
         for (i in 1 .. 128) {
             val parsedBuffered = read(lines, i)
             assertEquals(2, parsedBuffered.size)
-            assertEquals(tsvLineA, tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils.toTsv(parsedBuffered[0]))
-            assertEquals(tsvLineB, tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvFormatUtils.toTsv(parsedBuffered[1]))
+            assertEquals(tsvLineA, TsvFormatUtils.toTsv(parsedBuffered[0]))
+            assertEquals(tsvLineB, TsvFormatUtils.toTsv(parsedBuffered[1]))
         }
     }
 

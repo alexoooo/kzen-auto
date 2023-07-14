@@ -74,7 +74,7 @@ public enum CsvFormatUtils
             }
 
             case quotation ->
-                    throw new IllegalStateException("Unexpected: '" + nextChar + "'");
+                throw new IllegalStateException("Unexpected: '" + nextChar + "'");
 
             default -> {
                 return stateInUnquoted;
@@ -155,7 +155,9 @@ public enum CsvFormatUtils
             int startIndex,
             int endIndex,
             Writer out
-    ) throws IOException {
+    )
+            throws IOException
+    {
         var containsSpecial = false;
         for (int i = startIndex; i < endIndex; i++) {
             char nextChar = contents[i];
