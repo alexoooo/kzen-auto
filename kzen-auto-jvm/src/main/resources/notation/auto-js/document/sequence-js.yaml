@@ -19,7 +19,7 @@ SequenceCommander:
 SequenceStepCommander:
   abstract: true
   is: ParentPointer
-  class: tech.kzen.auto.client.objects.document.sequence.command.StepCommander
+  class: tech.kzen.auto.client.objects.document.sequence.command.SequenceStepCommander
 
 
 ################################################################
@@ -52,6 +52,27 @@ SequenceStepDisplayDefault:
   is: SequenceStepDisplay
   class: tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayDefault$Wrapper
 
+
+IfStepDisplay:
+  is: SequenceStepDisplay
+  class: tech.kzen.auto.client.objects.document.sequence.step.display.condition.IfStepDisplay$Wrapper
+#  stepControllerHandle: StepControllerHandle
+#  commander: IfStepCommander
+  attributeController: AttributeController
+
+IfStepCommander:
+  is: SequenceStepCommander
+  class: tech.kzen.auto.client.objects.document.sequence.command.IfStepCommander
+  parent: SequenceCommander
+  stepArchetype: IfStep
+  branchArchetype: MultiSequenceStep
+  meta:
+    stepArchetype:
+      is: ObjectLocation
+      by: Nominal
+    branchArchetype:
+      is: ObjectLocation
+      by: Nominal
 
 #######################################################################################################################
 
@@ -100,6 +121,12 @@ RunTool:
   is: RibbonTool
   parent: SequenceGroup_LogicControl
   delegate: RunStep
+
+
+IfTool:
+  is: RibbonTool
+  parent: SequenceGroup_LogicControl
+  delegate: IfStep
 
 
 ################################################################

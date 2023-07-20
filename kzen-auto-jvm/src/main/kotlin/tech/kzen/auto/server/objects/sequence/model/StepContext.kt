@@ -6,6 +6,7 @@ import tech.kzen.auto.server.service.v1.LogicHandleFacade
 import tech.kzen.lib.common.model.instance.GraphInstance
 
 
+// TODO: rename SequenceExecutionContext?
 data class StepContext(
     val logicControl: LogicControl,
     val activeSequenceModel: ActiveSequenceModel,

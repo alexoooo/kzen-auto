@@ -39,8 +39,6 @@ external interface ConditionalStepDisplayProps: StepDisplayProps {
 
     var stepControllerHandle: StepController.Handle
 }
-//            common: StepDisplayPropsCommon
-//    ): StepDisplayProps(common)
 
 
 //---------------------------------------------------------------------------------------------------------------------

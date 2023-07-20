@@ -19,6 +19,7 @@ object CommonRestApi {
     const val commandObjectRemove = "${commandObjectPrefix}remove"
     const val commandObjectShift = "${commandObjectPrefix}shift"
     const val commandObjectRename = "${commandObjectPrefix}rename"
+    const val commandObjectAddAtAttribute = "${commandObjectPrefix}add-at-attribute"
     const val commandObjectInsertInList = "${commandObjectPrefix}insert-in-list"
     const val commandObjectRemoveIn = "${commandObjectPrefix}remove-in"
 

@@ -416,7 +416,6 @@ class ExecutionRepository(
             return ImperativeResponse(result, null, digest)
         }
         else {
-            @Suppress("MoveVariableDeclarationIntoWhen")
             val controlTransition = actionExecutor.control(host, objectLocation, imperativeModel)
 
             val controlState = when (controlTransition) {

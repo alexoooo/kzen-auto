@@ -8,12 +8,12 @@ sealed class LogicResult {
 }
 
 
-object LogicResultPaused: LogicResult() {
+data object LogicResultPaused: LogicResult() {
     override fun isTerminal() = false
 }
 
 
-object LogicResultCancelled: LogicResult() {
+data object LogicResultCancelled: LogicResult() {
     override fun isTerminal() = true
 }
 

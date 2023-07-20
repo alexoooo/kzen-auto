@@ -6,7 +6,7 @@ import tech.kzen.lib.common.model.obj.ObjectName
 
 
 abstract class StepDisplayWrapper(
-        private val objectLocation: ObjectLocation
+    private val objectLocation: ObjectLocation
 ): ReactWrapper<StepDisplayProps> {
     //-----------------------------------------------------------------------------------------------------------------
     fun name(): ObjectName {

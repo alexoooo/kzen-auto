@@ -268,6 +268,10 @@ private fun Routing.routeNotationCommands(
         val response = restHandler.renameObject(call.parameters)
         call.respondText(response)
     }
+    get(CommonRestApi.commandObjectAddAtAttribute) {
+        val response = restHandler.addObjectAtAttribute(call.parameters)
+        call.respondText(response)
+    }
     get(CommonRestApi.commandObjectInsertInList) {
         val response = restHandler.insertObjectInList(call.parameters)
         call.respondText(response)

@@ -72,6 +72,29 @@ WaitStep:
     selfLocation: SelfLocation
 
 
+IfStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.control.IfStep
+  icon: Share
+  title: "If"
+  description: "Do one thing or another based on condition"
+  display: IfStepDisplay
+  condition: ""
+  then: ""
+  else: ""
+  meta:
+    condition:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectSequenceStepEditor
+    then:
+      is: ObjectLocation
+      by: Nominal
+    else:
+      is: ObjectLocation
+      by: Nominal
+
 #######################################################################################################################
 
 

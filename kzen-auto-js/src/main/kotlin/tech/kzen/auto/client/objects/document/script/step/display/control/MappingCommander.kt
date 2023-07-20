@@ -15,7 +15,9 @@ import tech.kzen.lib.common.reflect.Reflect
 class MappingCommander(
         private val stepArchetype: ObjectLocation,
         private val itemArchetype: ObjectLocation
-): StepCommander {
+):
+    StepCommander
+{
     override fun archetypes(): Set<ObjectLocation> {
         return setOf(stepArchetype)
     }

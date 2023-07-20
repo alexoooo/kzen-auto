@@ -46,6 +46,16 @@ class ClientRestGraphStore(
                         command.objectLocation, command.newName)
 
 
+            is AddObjectAtAttributeCommand -> {
+                val unparsed = notationParser.unparseObject(command.objectNotation)
+                restClient.addObjectAtAttribute(
+                        command.containingObjectLocation,
+                        command.containingAttribute,
+                        command.objectName,
+                        command.positionInDocument,
+                        unparsed)
+            }
+
             is InsertObjectInListAttributeCommand -> {
                 val unparsed = notationParser.unparseObject(command.objectNotation)
                 restClient.insertObjectInList(

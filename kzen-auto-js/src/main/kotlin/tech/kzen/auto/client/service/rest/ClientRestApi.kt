@@ -180,6 +180,24 @@ class ClientRestApi(
     }
 
 
+    suspend fun addObjectAtAttribute(
+        containingObjectLocation: ObjectLocation,
+        containingAttribute: AttributeName,
+        objectName: ObjectName,
+        positionInDocument: PositionRelation,
+        unparsedObjectNotation: String
+    ): Digest {
+        return getOrPutDigest(
+                CommonRestApi.commandObjectAddAtAttribute,
+                CommonRestApi.paramDocumentPath to containingObjectLocation.documentPath.asString(),
+                CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
+                CommonRestApi.paramAttributeName to containingAttribute.asString(),
+                CommonRestApi.paramObjectName to objectName.value,
+                CommonRestApi.paramSecondaryPosition to positionInDocument.asString(),
+                CommonRestApi.paramObjectNotation to unparsedObjectNotation)
+    }
+
+
     suspend fun insertObjectInList(
         containingObjectLocation: ObjectLocation,
         containingList: AttributePath,

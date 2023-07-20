@@ -85,7 +85,6 @@ class MultiSequenceStep(
 
                 is LogicResultFailed -> {
                     stepModel.error = result.message
-//                    stepModel.detail = TextExecutionValue("Failed")
                     stepModel.traceState = StepTrace.State.Done
                     stepContext.logicTraceHandle.set(
                         logicTracePath,
@@ -95,7 +94,6 @@ class MultiSequenceStep(
 
                 LogicResultCancelled -> {
                     stepModel.traceState = StepTrace.State.Done
-//                    stepModel.detail = TextExecutionValue("Stopped")
                     stepContext.logicTraceHandle.set(
                         logicTracePath,
                         stepModel.trace().asExecutionValue())
@@ -104,7 +102,6 @@ class MultiSequenceStep(
 
                 LogicResultPaused -> {
                     stepModel.traceState = StepTrace.State.Running
-//                    stepModel.detail = TextExecutionValue("Paused")
                     stepContext.logicTraceHandle.set(
                         logicTracePath,
                         stepModel.trace().asExecutionValue())

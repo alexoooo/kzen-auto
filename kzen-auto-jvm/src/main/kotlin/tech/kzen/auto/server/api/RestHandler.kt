@@ -288,6 +288,36 @@ class RestHandler(
     }
 
 
+    fun addObjectAtAttribute(parameters: Parameters): String {
+        val documentPath: DocumentPath = parameters.getParam(
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+
+        val containingObjectPath: ObjectPath = parameters.getParam(
+            CommonRestApi.paramObjectPath, ObjectPath::parse)
+
+        val containingAttirute: AttributeName = parameters.getParam(
+            CommonRestApi.paramAttributeName, AttributeName::parse)
+
+        val objectName: ObjectName = parameters.getParam(
+            CommonRestApi.paramObjectName, ::ObjectName)
+
+        val positionInDocument: PositionRelation = parameters.getParam(
+            CommonRestApi.paramSecondaryPosition, PositionRelation::parse)
+
+        val objectNotation: ObjectNotation = parameters.getParam(
+            CommonRestApi.paramObjectNotation, yamlNotationParser::parseObject)
+
+        val command = AddObjectAtAttributeCommand(
+            ObjectLocation(documentPath, containingObjectPath),
+            containingAttirute,
+            objectName,
+            positionInDocument,
+            objectNotation)
+
+        return applyCommand(command).asString()
+    }
+
+
     fun insertObjectInList(parameters: Parameters): String {
         val documentPath: DocumentPath = parameters.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
