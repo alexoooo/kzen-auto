@@ -29,20 +29,24 @@ import kotlin.js.Date
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface StepHeaderProps : Props {
+external interface StepHeaderProps: Props {
     var hoverSignal: StepHeader.HoverSignal
 
     var attributeNesting: AttributeNesting
 
     var objectLocation: ObjectLocation
-    var graphStructure: GraphStructure
+//    var graphStructure: GraphStructure
 
-    var imperativeState: ImperativeState?
+//    var imperativeState: ImperativeState?
 //    var isRunning: Boolean
 
     var managed: Boolean
     var first: Boolean
     var last: Boolean
+
+    var icon: String
+    var description: String
+    var title: String
 }
 
 
@@ -72,6 +76,20 @@ class StepHeader(
         private val menuIconOffset = 12.px
 
         private const val menuDanglingTimeout = 300
+
+        fun icon(graphStructure: GraphStructure, objectLocation: ObjectLocation): String {
+            return graphStructure.graphNotation
+                .firstAttribute(objectLocation, AutoConventions.iconAttributePath)
+                ?.asString()
+                ?: defaultRunIcon
+        }
+
+        fun description(graphStructure: GraphStructure, objectLocation: ObjectLocation): String {
+            return graphStructure.graphNotation
+                .firstAttribute(objectLocation, AutoConventions.descriptionAttributePath)
+                ?.asString()
+                ?: defaultRunDescription
+        }
     }
 
 
@@ -306,10 +324,10 @@ class StepHeader(
 //        +"${parentObjectLocation}"
 //        +"state.intentToRun ${state.intentToRun}"
 
-        val actionDescription = props.graphStructure.graphNotation
-                .firstAttribute(props.objectLocation, AutoConventions.descriptionAttributePath)
-                ?.asString()
-                ?: defaultRunDescription
+//        val actionDescription = props.graphStructure.graphNotation
+//                .firstAttribute(props.objectLocation, AutoConventions.descriptionAttributePath)
+//                ?.asString()
+//                ?: defaultRunDescription
 
         div {
             css {
@@ -327,7 +345,7 @@ class StepHeader(
                     left = (-20).px
                 }
 
-                renderRunIcon(actionDescription)
+                renderRunIcon(props.description)
             }
 
             div {
@@ -341,9 +359,8 @@ class StepHeader(
 
                 StepNameEditor::class.react {
                     objectLocation = props.objectLocation
-                    notation = props.graphStructure.graphNotation
-
-                    description = actionDescription
+                    title = props.title
+                    description = props.description
 //                    intentToRun = state.intentToRun
 
 //                    runCallback = ::onRun
@@ -371,10 +388,11 @@ class StepHeader(
     private fun ChildrenBuilder.renderRunIcon(
             actionDescription: String
     ) {
-        val icon = props.graphStructure.graphNotation
-                .firstAttribute(props.objectLocation, AutoConventions.iconAttributePath)
-                ?.asString()
-                ?: defaultRunIcon
+//        val icon = props.graphStructure.graphNotation
+//                .firstAttribute(props.objectLocation, AutoConventions.iconAttributePath)
+//                ?.asString()
+//                ?: defaultRunIcon
+        val icon = props.icon
 
         val highlight =
 //                if (state.intentToRun && ! props.isRunning) {

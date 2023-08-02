@@ -5,7 +5,7 @@ SequenceController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.sequence.SequenceController$Wrapper
   archetype: Sequence
-  stepController: SequenceStepController
+  stepController: StepDisplayManager
   sequenceCommander: SequenceCommander
   ribbonController: RibbonController
 
@@ -24,9 +24,9 @@ SequenceStepCommander:
 
 ################################################################
 
-SequenceStepController:
-  class: tech.kzen.auto.client.objects.document.sequence.step.SequenceStepController$Wrapper
-  handle: SequenceStepControllerHandle
+StepDisplayManager:
+  class: tech.kzen.auto.client.objects.document.sequence.step.StepDisplayManager$Wrapper
+  handle: StepDisplayManagerHandle
   meta:
     stepDisplays:
       is: List
@@ -34,8 +34,8 @@ SequenceStepController:
       by: Autowired
 
 
-SequenceStepControllerHandle:
-  class: tech.kzen.auto.client.objects.document.sequence.step.SequenceStepController$Handle
+StepDisplayManagerHandle:
+  class: tech.kzen.auto.client.objects.document.sequence.step.StepDisplayManager$Handle
 
 
 SequenceStepDisplay:
@@ -46,11 +46,23 @@ SequenceStepDisplay:
     objectLocation:
       is: ObjectLocation
       by: Self
+    attributeController: AttributeController
 
 
 SequenceStepDisplayDefault:
   is: SequenceStepDisplay
   class: tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayDefault$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  meta:
+    attributeEditorManager: AttributeEditorManager
+
+
+MultiStepDisplay:
+  is: SequenceStepDisplay
+  class: tech.kzen.auto.client.objects.document.sequence.step.display.MultiStepDisplay$Wrapper
+  stepDisplayManager: StepDisplayManagerHandle
+  meta:
+    stepDisplayManager: StepDisplayManagerHandle
 
 
 IfStepDisplay:

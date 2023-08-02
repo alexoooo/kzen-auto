@@ -188,16 +188,17 @@ class MappingStepDisplay(
                 }
             }
 
-            StepHeader::class.react {
-                hoverSignal = this@MappingStepDisplay.hoverSignal
-
-                attributeNesting = props.common.attributeNesting
-                objectLocation = props.common.objectLocation
-                graphStructure = props.common.clientState.graphStructure()
-
-                this.imperativeState = imperativeState
-//                this.isRunning = isRunning
-            }
+            +"[Header]"
+//            StepHeader::class.react {
+//                hoverSignal = this@MappingStepDisplay.hoverSignal
+//
+//                attributeNesting = props.common.attributeNesting
+//                objectLocation = props.common.objectLocation
+//                graphStructure = props.common.clientState.graphStructure()
+//
+//                this.imperativeState = imperativeState
+////                this.isRunning = isRunning
+//            }
         }
     }
 

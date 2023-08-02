@@ -38,6 +38,8 @@ import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
+import tech.kzen.lib.common.service.media.LiteralNotationMedia
+import tech.kzen.lib.common.service.media.MapNotationMedia
 import tech.kzen.lib.common.service.media.NotationMedia
 import tech.kzen.lib.common.service.media.ReadWriteNotationMedia
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
@@ -89,28 +91,13 @@ class KzenAutoContext(
 
     private val fileLocator = GradleLocator()
 
-    // TODO: don't require autoMainDocumentNesting, but detect it instead and use classpath if it's not there
-    private val fileMedia = FileNotationMedia(
-        fileLocator, require = listOf(AutoConventions.autoMainDocumentNesting))
-//        fileLocator)
+    private val fileMedia = FileNotationMedia(fileLocator)
 
-    private val classpathNotationMedia = ClasspathNotationMedia(
-        exclude = listOf(AutoConventions.autoMainDocumentNesting))
-
-    private val readOnlyMedia: NotationMedia =
-        classpathNotationMedia
-//    private val readOnlyMedia: NotationMedia = run {
-//        val fileScan = runBlocking {
-//            fileMedia.scan()
-//        }
-//
-//        if (fileScan.documents.contains(AutoConventions.autoMainDocumentNesting)) {
-//            MapNotationMedia()
-//        }
-//        else {
-//            classpathNotationMedia
-//        }
-//    }
+    private val readOnlyMedia: NotationMedia = runBlocking {
+        val classpathNotationMedia = ClasspathNotationMedia(
+            exclude = listOf(AutoConventions.autoMainDocumentNesting))
+        LiteralNotationMedia.filter(classpathNotationMedia, fileMedia)
+    }
 
     val notationMedia: NotationMedia = ReadWriteNotationMedia(
         fileMedia, readOnlyMedia)

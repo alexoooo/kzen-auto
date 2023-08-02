@@ -11,10 +11,19 @@ import react.dom.html.ReactHTML.img
 import react.dom.html.ReactHTML.span
 import react.react
 import tech.kzen.auto.client.objects.document.common.AttributeController
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.graph.EdgeController
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
+import tech.kzen.auto.client.objects.document.script.step.header.StepNameEditor
+import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
+import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
+import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.SessionGlobal
+import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.common.paradigm.sequence.StepTrace
@@ -30,38 +39,75 @@ import web.cssom.*
 //---------------------------------------------------------------------------------------------------------------------
 external interface SequenceStepDisplayDefaultProps: SequenceStepDisplayProps {
 //    var common: SequenceStepDisplayPropsCommon
-    var attributeController: AttributeController.Wrapper
+    var attributeEditorManager: AttributeEditorManager.Wrapper
 }
 
 
-external interface SequenceStepDisplayDefaultState: State
+external interface SequenceStepDisplayDefaultState: State {
+    var stepTrace: StepTrace?
+    var isNextToRun: Boolean?
+    var objectMetadata: ObjectMetadata?
+
+    var icon: String?
+    var description: String?
+    var title: String?
+}
 
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class SequenceStepDisplayDefault(
-        props: SequenceStepDisplayDefaultProps
+    props: SequenceStepDisplayDefaultProps
 ):
-        RPureComponent<SequenceStepDisplayDefaultProps, SequenceStepDisplayDefaultState>(props)
+    RPureComponent<SequenceStepDisplayDefaultProps, SequenceStepDisplayDefaultState>(props),
+    SessionGlobal.Observer,
+    SequenceStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val successColour = Color("#00b467")
         val errorColour = Color("#b40000")
+
+        fun backgroundColor(
+            traceState: StepTrace.State,
+            error: String?,
+            nextToRun: Boolean
+        ): BackgroundColor {
+            return if (traceState == StepTrace.State.Running) {
+                NamedColor.gold
+            }
+            else if (traceState == StepTrace.State.Active) {
+                EdgeController.goldLight90
+            }
+            else if (traceState == StepTrace.State.Done) {
+                if (error != null) {
+                    errorColour
+                }
+                else {
+                    successColour
+                }
+            }
+            else if (nextToRun) {
+                EdgeController.goldLight50
+            }
+            else {
+                NamedColor.white
+            }
+        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-            objectLocation: ObjectLocation,
-            private val attributeController: AttributeController.Wrapper
+        objectLocation: ObjectLocation,
+        private val attributeEditorManager: AttributeEditorManager.Wrapper
     ):
         SequenceStepDisplayWrapper(objectLocation)
     {
         override fun ChildrenBuilder.child(block: SequenceStepDisplayProps.() -> Unit) {
             SequenceStepDisplayDefault::class.react {
-                this.attributeController = this@Wrapper.attributeController
+                this.attributeEditorManager = this@Wrapper.attributeEditorManager
                 block()
             }
         }
@@ -70,6 +116,80 @@ class SequenceStepDisplayDefault(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var hoverSignal = StepHeader.HoverSignal()
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun componentDidMount() {
+        ClientContext.sessionGlobal.observe(this)
+        props.common.sequenceStore.observe(this)
+    }
+
+
+    override fun componentWillUnmount() {
+        ClientContext.sessionGlobal.unobserve(this)
+        props.common.sequenceStore.unobserve(this)
+    }
+
+
+    override fun onSequenceState(sequenceState: SequenceState) {
+        val traceValues: Map<LogicTracePath, ExecutionValue>? = sequenceState
+            .progress
+            .logicTraceSnapshot
+            ?.values
+
+        val trace = traceValues
+            ?.get(LogicTracePath.ofObjectLocation(props.common.objectLocation))
+            ?.let { StepTrace.ofExecutionValue(it) }
+
+        val nextToRun = traceValues
+            ?.get(SequenceConventions.nextStepTracePath)
+            ?.get()
+            ?.let {
+                ObjectLocation.parse(it as String)
+            }
+
+        val isNextToRun = nextToRun == props.common.objectLocation
+
+        if (state.stepTrace == trace &&
+                state.isNextToRun != isNextToRun
+        ) {
+            return
+        }
+
+        setState {
+            this.isNextToRun = isNextToRun
+            stepTrace = trace
+        }
+    }
+
+
+    override fun onClientState(clientState: SessionState) {
+        val graphStructure = clientState.graphStructure()
+
+        val objectMetadata = graphStructure
+            .graphMetadata
+            .objectMetadata[props.common.objectLocation]!!
+
+        val icon = StepHeader.icon(graphStructure, props.common.objectLocation)
+        val description = StepHeader.description(graphStructure, props.common.objectLocation)
+        val title = StepNameEditor.title(graphStructure, props.common.objectLocation)
+
+        if (state.objectMetadata == objectMetadata &&
+                state.icon == icon &&
+                state.description == description &&
+                state.title == title
+        ) {
+            return
+        }
+
+        setState {
+            this.objectMetadata = objectMetadata
+
+            this.icon = icon
+            this.description = description
+            this.title = title
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -105,64 +225,39 @@ class SequenceStepDisplayDefault(
 
 
     private fun ChildrenBuilder.renderCard() {
-        val objectMetadata = props
-            .common
-            .clientState
-            .graphStructure()
-            .graphMetadata
-            .objectMetadata[props.common.objectLocation]!!
+        val objectMetadata = state.objectMetadata
+            ?: return
 
-        val trace = props
-            .common
-            .logicTraceSnapshot
-            ?.values
-            ?.get(LogicTracePath.ofObjectLocation(props.common.objectLocation))
-            ?.let { StepTrace.ofExecutionValue(it) }
-
-        val nextToRun = props.common.nextToRun == props.common.objectLocation
+        val trace = state.stepTrace
+        val isNextToRun = state.isNextToRun ?: false
 
         Paper {
             val traceState = trace?.state ?: StepTrace.State.Idle
 
             sx {
-                backgroundColor =
-                    if (traceState == StepTrace.State.Running) {
-                        NamedColor.gold
-                    }
-                    else if (traceState == StepTrace.State.Active) {
-                        EdgeController.goldLight90
-                    }
-                    else if (traceState == StepTrace.State.Done) {
-                        if (trace?.error != null) {
-                            errorColour
-                        }
-                        else {
-                            successColour
-                        }
-                    }
-                    else if (nextToRun) {
-                        EdgeController.goldLight50
-                    }
-                    else {
-                        NamedColor.white
-                    }
+                backgroundColor = backgroundColor(traceState, trace?.error, isNextToRun)
             }
 
             CardContent {
+//                +"[Header]"
                 StepHeader::class.react {
                     hoverSignal = this@SequenceStepDisplayDefault.hoverSignal
 
                     attributeNesting = props.common.attributeNesting
                     objectLocation = props.common.objectLocation
-                    graphStructure = props.common.clientState.graphStructure()
+//                    graphStructure = props.common.clientState.graphStructure()
 
 //                    this.imperativeState = imperativeState
-                    this.imperativeState = null
+//                    this.imperativeState = null
 //                    this.isRunning = isRunning
 
                     managed = props.common.managed
                     first = props.common.first
                     last = props.common.last
+
+                    icon = state.icon ?: ""
+                    description = state.description ?: ""
+                    title = state.title ?: ""
                 }
 
                 div {
@@ -170,6 +265,7 @@ class SequenceStepDisplayDefault(
                         marginBottom = (-1.5).em
                     }
 
+//                    +"[Body]"
                     renderBody(objectMetadata, trace)
                 }
             }
@@ -307,8 +403,9 @@ class SequenceStepDisplayDefault(
     private fun ChildrenBuilder.renderAttribute(
             attributeName: AttributeName
     ) {
-        props.attributeController.child(this) {
-            this.clientState = props.common.clientState
+//        +"[Attribute - $attributeName - ${props.attributeEditorManager}]"
+
+        props.attributeEditorManager.child(this) {
             this.objectLocation = props.common.objectLocation
             this.attributeName = attributeName
         }

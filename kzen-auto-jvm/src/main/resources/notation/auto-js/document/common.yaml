@@ -17,6 +17,28 @@ AttributeEditorWrapper:
       by: Self
 
 
+AttributeEditor:
+  abstract: true
+  class: tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
+  meta:
+    objectLocation:
+      is: ObjectLocation
+      by: Self
+
+
+AutoAttributeEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.common.attribute.AutoAttributeEditor$Wrapper
+
+
+AttributeEditorManager:
+  class: tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager$Wrapper
+  meta:
+    attributeEditors:
+      is: List
+      of: AttributeEditor
+      by: Autowired
+
 ################################################################
 
 DefaultAttributeEditor:

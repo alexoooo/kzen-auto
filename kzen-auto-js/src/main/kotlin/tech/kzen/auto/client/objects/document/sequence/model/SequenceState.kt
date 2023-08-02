@@ -44,11 +44,11 @@ data class SequenceState(
         fun isSequence(documentNotation: DocumentNotation): Boolean {
             val mainObjectNotation =
                 documentNotation.objects.notations[NotationConventions.mainObjectPath]
-                    ?: return false
+                ?: return false
 
             val mainObjectIs =
                 mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
-                    ?: return false
+                ?: return false
 
             return mainObjectIs == SequenceConventions.objectName.value
         }

@@ -22,6 +22,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenameObjectRefactorCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -32,8 +33,9 @@ import web.html.HTMLInputElement
 //---------------------------------------------------------------------------------------------------------------------
 external interface StepNameEditorProps: react.Props {
     var objectLocation: ObjectLocation
-    var notation: GraphNotation
+//    var notation: GraphNotation
     var description: String
+    var title: String
 //    var intentToRun: Boolean
 
 //    var runCallback: () -> Unit
@@ -50,10 +52,26 @@ external interface StepNameEditorState: react.State {
 
 //---------------------------------------------------------------------------------------------------------------------
 class StepNameEditor(
-        props: StepNameEditorProps
+    props: StepNameEditorProps
 ):
-        RPureComponent<StepNameEditorProps, StepNameEditorState>(props)
+    RPureComponent<StepNameEditorProps, StepNameEditorState>(props)
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        fun title(graphStructure: GraphStructure, objectLocation: ObjectLocation): String {
+            val titleAttributeText = graphStructure
+                .graphNotation
+                .firstAttribute(objectLocation, AutoConventions.titleAttributePath)
+                ?.asString()
+
+            return titleAttributeText
+                ?: graphStructure.graphNotation.getString(
+                    objectLocation, NotationConventions.isAttributePath)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     class EditSignal {
         private var callback: (() -> Unit)? = null
 
@@ -119,15 +137,15 @@ class StepNameEditor(
     }
 
 
-    private fun actionTitle(): String {
-        return props
-                .notation
-                .firstAttribute(
-                        props.objectLocation, AutoConventions.titleAttributePath)
-                ?.asString()
-                ?: props.notation.getString(
-                        props.objectLocation, NotationConventions.isAttributePath)
-    }
+//    private fun actionTitle(): String {
+//        return props
+//                .notation
+//                .firstAttribute(
+//                        props.objectLocation, AutoConventions.titleAttributePath)
+//                ?.asString()
+//                ?: props.notation.getString(
+//                        props.objectLocation, NotationConventions.isAttributePath)
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -291,7 +309,7 @@ class StepNameEditor(
                         }
 
                 if (AutoConventions.isAnonymous(objectName)) {
-                    +actionTitle()
+                    +props.title
                 }
                 else {
                     +objectName.value

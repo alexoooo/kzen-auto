@@ -16,7 +16,8 @@ import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
 import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressController
-import tech.kzen.auto.client.objects.document.sequence.step.SequenceStepController
+import tech.kzen.auto.client.objects.document.sequence.step.StepDisplayManager
+import tech.kzen.auto.client.objects.document.sequence.step.display.MultiStepDisplay
 import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.ClientContext
@@ -46,7 +47,7 @@ import web.cssom.*
 
 //-----------------------------------------------------------------------------------------------------------------
 external interface SequenceControllerProps: Props {
-    var stepController: SequenceStepController.Wrapper
+    var stepController: StepDisplayManager.Wrapper
     var sequenceCommander: SequenceCommander
 }
 
@@ -93,7 +94,7 @@ class SequenceController:
     @Reflect
     class Wrapper(
         private val archetype: ObjectLocation,
-        private val stepController: SequenceStepController.Wrapper,
+        private val stepController: StepDisplayManager.Wrapper,
         private val sequenceCommander: SequenceCommander,
         private val ribbonController: RibbonController.Wrapper
     ):
@@ -141,16 +142,18 @@ class SequenceController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        store.didMount(this)
+        store.didMount()
+        store.observe(this)
         ClientContext.sessionGlobal.observe(this)
         ClientContext.insertionGlobal.subscribe(this)
     }
 
 
     override fun componentWillUnmount() {
-        store.willUnmount()
         ClientContext.insertionGlobal.unsubscribe(this)
         ClientContext.sessionGlobal.unobserve(this)
+        store.unobserve(this)
+        store.willUnmount()
     }
 
 
@@ -192,6 +195,7 @@ class SequenceController:
             this.clientState = clientState
         }
     }
+
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(index: Int) {
@@ -250,7 +254,7 @@ class SequenceController:
                 marginLeft = 2.em
             }
 
-            steps(clientState)
+            renderMain(documentPath)
         }
 
         runController(clientState, sequenceState)
@@ -258,175 +262,23 @@ class SequenceController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun ChildrenBuilder.steps(
-        clientState: SessionState
+    private fun ChildrenBuilder.renderMain(
+        documentPath: DocumentPath
     ) {
-        val graphStructure: GraphStructure = clientState.graphDefinitionAttempt.graphStructure
-        val documentPath: DocumentPath = clientState.navigationRoute.documentPath!!
-
-        val stepLocations = stepLocations(graphStructure, documentPath)
-            ?: return
-
-        if (stepLocations.isEmpty()) {
-            div {
-                css {
-                    paddingTop = 2.em
+//        +"[Main]"
+        MultiStepDisplay::class.react {
+            common = SequenceStepDisplayPropsCommon(
+                documentPath.toMainObjectLocation(),
+                attributeNesting = AttributeNesting.empty,
+                managed = false,
+                first = true,
+                last = true,
+                sequenceStore = store
+            )
+            stepDisplayManager =
+                StepDisplayManager.Handle().also {
+                    it.wrapper = props.stepController
                 }
-
-                div {
-                    css {
-                        fontSize = 1.5.em
-                    }
-                    +"Empty script, please add steps from the toolbar (above)"
-                }
-
-                insertionPoint(0)
-            }
-        }
-        else {
-            div {
-                css {
-                    paddingLeft = 1.em
-                }
-                nonEmptySteps(documentPath, stepLocations)
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.nonEmptySteps(
-            documentPath: DocumentPath,
-            stepLocations: List<ObjectLocation>
-    ) {
-        insertionPoint(0)
-
-        div {
-            css {
-                width = StepController.width
-            }
-
-            for ((index, stepLocation) in stepLocations.withIndex()) {
-                val objectPath = stepLocation.objectPath
-
-                val keyLocation = ObjectLocation(documentPath, objectPath)
-
-                renderStep(
-                        index,
-                        keyLocation,
-                        stepLocations.size)
-
-                if (index < stepLocations.size - 1) {
-                    downArrowWithInsertionPoint(index + 1)
-                }
-            }
-        }
-
-        insertionPoint(stepLocations.size)
-    }
-
-
-    private fun ChildrenBuilder.downArrowWithInsertionPoint(index: Int) {
-        div {
-            css {
-                position = Position.relative
-                height = 4.em
-                width = StepController.width.div(2).minus(1.em)
-            }
-
-            div {
-                css {
-                    marginTop = 0.5.em
-
-                    position = Position.absolute
-                    height = 1.em
-                    width = 1.em
-                    top = 0.em
-                    left = 0.em
-                }
-                insertionPoint(index)
-            }
-
-            div {
-                css {
-                    position = Position.absolute
-                    height = 3.em
-                    width = 3.em
-                    top = 0.em
-                    left = StepController.width.div(2).minus(1.5.em)
-
-                    marginTop =  0.5.em
-                    marginBottom = 0.5.em
-                }
-
-                ArrowDownwardIcon::class.react {
-                    style = jso {
-                        fontSize = 3.em
-                    }
-                }
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.insertionPoint(index: Int) {
-        span {
-            if (state.creating) {
-                title = "Insert action here"
-            }
-
-            IconButton {
-                css {
-                    if (! state.creating) {
-                        opacity = number(0.0)
-                        cursor = Cursor.default
-                    }
-                }
-
-                onClick = {
-                    onCreate(index)
-                }
-
-                AddCircleOutlineIcon::class.react {}
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderStep(
-            index: Int,
-            objectLocation: ObjectLocation,
-            stepCount: Int
-    ) {
-        span {
-            key = objectLocation.toReference().asString()
-
-            val progressValue = state
-                .sequenceState
-                ?.progress
-                ?.logicTraceSnapshot
-                ?.filter(LogicTracePath.ofObjectLocation(objectLocation))
-
-            val nextToRun = state
-                .sequenceState
-                ?.progress
-                ?.logicTraceSnapshot
-                ?.values
-                ?.get(SequenceConventions.nextStepTracePath)
-                ?.get()
-                ?.let {
-                    ObjectLocation.parse(it as String)
-                }
-
-            props.stepController.child(this) {
-                common = SequenceStepDisplayPropsCommon(
-                    state.clientState!!,
-                    objectLocation,
-                    AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),
-                    progressValue,
-                    nextToRun,
-                    first = index == 0,
-                    last = index == stepCount - 1)
-            }
         }
     }
 

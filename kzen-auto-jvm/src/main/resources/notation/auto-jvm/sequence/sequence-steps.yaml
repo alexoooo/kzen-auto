@@ -35,6 +35,7 @@ MultiSequenceStep:
   abstract: true
   is: SequenceStep
   class: tech.kzen.auto.server.objects.sequence.step.MultiSequenceStep
+  display: MultiStepDisplay
   icon: ToggleOn
   title: "Sub-sequence"
   steps: []
@@ -76,10 +77,10 @@ IfStep:
   abstract: true
   is: SequenceStep
   class: tech.kzen.auto.server.objects.sequence.step.control.IfStep
+  display: IfStepDisplay
   icon: Share
   title: "If"
   description: "Do one thing or another based on condition"
-  display: IfStepDisplay
   condition: ""
   then: ""
   else: ""

@@ -1,8 +1,14 @@
 package tech.kzen.auto.client.objects.document.sequence.step.display.condition
 
+import emotion.react.css
+import mui.material.HiddenImplementation.Companion.css
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.table
+import react.dom.html.ReactHTML.tbody
+import react.dom.html.ReactHTML.td
+import react.dom.html.ReactHTML.tr
 import react.react
 import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.objects.document.script.step.StepController
@@ -10,7 +16,12 @@ import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayPro
 import tech.kzen.auto.client.objects.document.script.step.display.StepDisplayWrapper
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.objects.document.sequence.command.IfStepCommander
+import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayDefault
+import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayProps
+import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayWrapper
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
+import tech.kzen.auto.common.paradigm.sequence.StepTrace
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -18,8 +29,8 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface IfStepDisplayProps: StepDisplayProps {
-//    var attributeController: AttributeController.Wrapper
+external interface IfStepDisplayProps: SequenceStepDisplayProps {
+    var attributeController: AttributeController.Wrapper
 //    var scriptCommander: ScriptCommander
 //
 //    var stepControllerHandle: StepController.Handle
@@ -36,8 +47,8 @@ class IfStepDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val conditionAttributeName = AttributeName("condition")
-        private val thenAttributeName = AttributeName("then")
-        private val elseAttributeName = AttributeName("else")
+        val thenAttributeName = AttributeName("then")
+        val elseAttributeName = AttributeName("else")
         private val stepWidth = StepController.width.minus(2.em)
         private val overlapTop = 4.px
 
@@ -54,11 +65,11 @@ class IfStepDisplay(
 //        private val commander: IfStepCommander,
 //        private val stepControllerHandle: StepController.Handle
     ):
-        StepDisplayWrapper(objectLocation)
+        SequenceStepDisplayWrapper(objectLocation)
     {
-        override fun ChildrenBuilder.child(block: StepDisplayProps.() -> Unit) {
+        override fun ChildrenBuilder.child(block: SequenceStepDisplayProps.() -> Unit) {
             IfStepDisplay::class.react {
-//                attributeController = this@Wrapper.attributeController
+                attributeController = this@Wrapper.attributeController
 //                scriptCommander = this@Wrapper.scriptCommander
 //                stepControllerHandle = this@Wrapper.stepControllerHandle
 
@@ -73,36 +84,27 @@ class IfStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    @Suppress("UNUSED_PARAMETER")
-//    private fun onMouseOver(event: MouseEvent<*, *>) {
-//        hoverSignal.triggerMouseOver()
-//    }
-//
-//
-//    @Suppress("UNUSED_PARAMETER")
-//    private fun onMouseOut(event: MouseEvent<*, *>) {
-//        hoverSignal.triggerMouseOut()
-//    }
+    private fun onMouseOver() {
+        hoverSignal.triggerMouseOver()
+    }
+
+
+    private fun onMouseOut() {
+        hoverSignal.triggerMouseOut()
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        div {
-            +"[If]"
-        }
-//        val imperativeState = props
-//                .common
-//                .imperativeModel
-//                .frames
-//                .lastOrNull()
-//                ?.states
-//                ?.get(props.common.objectLocation.objectPath)
-//        val isRunning = props.common.isRunning()
+//        val trace = props
+//            .common
+//            .logicTraceSnapshot
+//            ?.values
+//            ?.get(LogicTracePath.ofObjectLocation(props.common.objectLocation))
+//            ?.let { StepTrace.ofExecutionValue(it) }
 //
-//        val nextToRun = ImperativeUtils.next(
-//                props.common.clientState.graphStructure(), props.common.imperativeModel)
-//
-//        val isNextToRun = nextToRun == props.common.objectLocation
+//        val traceState = trace?.state ?: StepTrace.State.Idle
+//        val nextToRun = props.common.nextToRun == props.common.objectLocation
 //
 //        table {
 //            css {
@@ -131,15 +133,10 @@ class IfStepDisplay(
 //                            padding = Padding(0.px, 0.px, 0.px, 0.px)
 //                        }
 //
-//                        onMouseOver = {
-//                            this@IfStepDisplay.onMouseOver(it)
-//                        }
+//                        onMouseOver = { onMouseOver() }
+//                        onMouseOut = { onMouseOut() }
 //
-//                        onMouseOut = {
-//                            this@IfStepDisplay.onMouseOut(it)
-//                        }
-//
-//                        renderHeader(isNextToRun, imperativeState/*, isRunning*/)
+//                        renderHeader(traceState, trace?.error, nextToRun)
 //                    }
 //
 //                    td {}
@@ -153,7 +150,9 @@ class IfStepDisplay(
 //                            padding = Padding(0.px, 0.px, 0.px, 0.px)
 //                        }
 //
-//                        renderCondition(isNextToRun, imperativeState, isRunning)
+////                        +"[Condition]"
+////                        renderCondition(isNextToRun, imperativeState, isRunning)
+//                        renderCondition()
 //                    }
 //                    td {
 //                        css {
@@ -162,7 +161,9 @@ class IfStepDisplay(
 //                                borderStyle = LineStyle.solid
 //                            }
 //                        }
-//                        renderThenBranch()
+//
+//                        +"[Then Branch]"
+////                        renderThenBranch()
 //                    }
 //                }
 //
@@ -179,11 +180,13 @@ class IfStepDisplay(
 //                            }
 //                        }
 //
-//                        renderElseSegment(isNextToRun, imperativeState, isRunning)
+//                        +"[Else]"
+////                        renderElseSegment(isNextToRun, imperativeState, isRunning)
 //                    }
 //
 //                    td {
-//                        renderElseBranch()
+//                        +"[Else Branch]"
+////                        renderElseBranch()
 //                    }
 //                }
 //            }
@@ -191,24 +194,60 @@ class IfStepDisplay(
     }
 
 
-//    private fun ChildrenBuilder.renderCondition(
+    private fun ChildrenBuilder.renderHeader(
+        traceState: StepTrace.State,
+        error: String?,
+        nextToRun: Boolean
+    ) {
+        div {
+            css {
+                width = stepWidth
+                padding = Padding(16.px, 16.px, 0.px, 16.px)
+                borderTopLeftRadius = 3.px
+                borderTopRightRadius = 3.px
+                filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
+
+                backgroundColor = SequenceStepDisplayDefault.backgroundColor(traceState, error, nextToRun)
+            }
+
+            +"[Header]"
+//            StepHeader::class.react {
+//                hoverSignal = this@IfStepDisplay.hoverSignal
+//
+////                attributeNesting = props.common.attributeNesting
+//                objectLocation = props.common.objectLocation
+////                graphStructure = props.common.clientState.graphStructure()
+//
+////                    this.imperativeState = imperativeState
+//                this.imperativeState = null
+////                    this.isRunning = isRunning
+//
+//                managed = props.common.managed
+//                first = props.common.first
+//                last = props.common.last
+//            }
+        }
+    }
+
+    private fun ChildrenBuilder.renderCondition(
 //            isNextToRun: Boolean,
 //            imperativeState: ImperativeState?,
 //            isRunning: Boolean
-//    ) {
+    ) {
 //        val inThenBranch = ! isNextToRun &&
 //                ! isRunning &&
 //                imperativeState?.controlState is InternalControlState &&
 //                (imperativeState.controlState as InternalControlState).branchIndex == 0
-//
-//        div {
-//            css {
-//                width = stepWidth
-//                padding = Padding(0.em, 1.em, 0.em, 1.em)
-//                filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
-//
-//                height = 100.pct
-//
+
+        div {
+            css {
+                width = stepWidth
+                padding = Padding(0.em, 1.em, 0.em, 1.em)
+                filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
+
+                height = 100.pct
+
+                backgroundColor = NamedColor.white
 //                backgroundColor = when {
 //                    imperativeState?.previous is ExecutionSuccess ->
 //                        Color("#00b467")
@@ -219,16 +258,16 @@ class IfStepDisplay(
 //                    else ->
 //                        NamedColor.white
 //                }
-//            }
-//
-//            props.attributeController.child(this) {
+            }
+
+            props.attributeController.child(this) {
 //                this.clientState = props.common.clientState
-//                this.objectLocation = props.common.objectLocation
-//                this.attributeName = conditionAttributeName
-//            }
-//        }
-//    }
-//
+                this.objectLocation = props.common.objectLocation
+                this.attributeName = conditionAttributeName
+            }
+        }
+    }
+
 //
 //    private fun ChildrenBuilder.renderThenBranch(
 ////            imperativeState: ImperativeState
@@ -307,45 +346,6 @@ class IfStepDisplay(
 //                height = 100.pct
 //            }
 //            +"Otherwise"
-//        }
-//    }
-//
-//
-//    private fun ChildrenBuilder.renderHeader(
-//        isNextToRun: Boolean,
-//        imperativeState: ImperativeState?,
-////            isRunning: Boolean
-//    ) {
-//        div {
-//            css {
-//                width = stepWidth
-//                padding = Padding(16.px, 16.px, 0.px, 16.px)
-//                borderTopLeftRadius = 3.px
-//                borderTopRightRadius = 3.px
-//                filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
-//
-//                backgroundColor = when {
-//                    imperativeState?.previous is ExecutionSuccess ->
-//                        Color("#00b467")
-//
-//                    isNextToRun ->
-//                        EdgeController.goldLight50
-//
-//                    else ->
-//                        NamedColor.white
-//                }
-//            }
-//
-//            StepHeader::class.react {
-//                hoverSignal = this@IfStepDisplay.hoverSignal
-//
-//                attributeNesting = props.common.attributeNesting
-//                objectLocation = props.common.objectLocation
-//                graphStructure = props.common.clientState.graphStructure()
-//
-//                this.imperativeState = imperativeState
-////                this.isRunning = isRunning
-//            }
 //        }
 //    }
 //

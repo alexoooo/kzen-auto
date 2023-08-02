@@ -27,7 +27,7 @@ class SequenceStore: SessionGlobal.Observer {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var observer: Observer? = null
+    private val observers = mutableSetOf<Observer>()
     private var mounted = false
     private var state: SequenceState? = null
 
@@ -67,10 +67,30 @@ class SequenceStore: SessionGlobal.Observer {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun didMount(subscriber: Observer) {
-        this.observer = subscriber
-        mounted = true
+    fun observe(observer: Observer) {
+        observers.add(observer)
 
+        state?.let {
+            observer.onSequenceState(it)
+        }
+    }
+
+
+    fun unobserve(observer: Observer) {
+        val removed = observers.remove(observer)
+        check(removed) { "Not found: $observer" }
+    }
+
+
+    private fun publish(nextState: SequenceState) {
+        for (observer in observers) {
+            observer.onSequenceState(nextState)
+        }
+    }
+
+
+    fun didMount() {
+        mounted = true
         async {
             ClientContext.sessionGlobal.observe(this)
         }
@@ -78,12 +98,9 @@ class SequenceStore: SessionGlobal.Observer {
 
 
     fun willUnmount() {
-        observer = null
         mounted = false
         state = null
-
         ClientContext.sessionGlobal.unobserve(this)
-//        cancelRefresh()
     }
 
 
@@ -115,7 +132,7 @@ class SequenceStore: SessionGlobal.Observer {
 
         if (state != nextState) {
             state = nextState
-            observer?.onSequenceState(nextState)
+            publish(nextState)
         }
 
         if (initial) {
@@ -178,16 +195,16 @@ class SequenceStore: SessionGlobal.Observer {
 
         if (state != updated) {
             state = updated
-            observer?.onSequenceState(updated)
+            publish(updated)
 //            scheduleRefresh()
         }
     }
 
 
-    fun update(state: SequenceState) {
-        if (this.state != state) {
-            this.state = state
-            observer?.onSequenceState(state)
+    fun update(nextState: SequenceState) {
+        if (state != nextState) {
+            state = nextState
+            publish(nextState)
 //            scheduleRefresh()
         }
     }

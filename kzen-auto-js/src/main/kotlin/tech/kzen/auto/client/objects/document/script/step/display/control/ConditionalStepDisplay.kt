@@ -228,16 +228,17 @@ class ConditionalStepDisplay(
                 }
             }
 
-            StepHeader::class.react {
-                hoverSignal = this@ConditionalStepDisplay.hoverSignal
-
-                attributeNesting = props.common.attributeNesting
-                objectLocation = props.common.objectLocation
-                graphStructure = props.common.clientState.graphStructure()
-
-                this.imperativeState = imperativeState
-//                this.isRunning = isRunning
-            }
+            +"[Header]"
+//            StepHeader::class.react {
+//                hoverSignal = this@ConditionalStepDisplay.hoverSignal
+//
+//                attributeNesting = props.common.attributeNesting
+//                objectLocation = props.common.objectLocation
+//                graphStructure = props.common.clientState.graphStructure()
+//
+//                this.imperativeState = imperativeState
+////                this.isRunning = isRunning
+//            }
         }
     }
 

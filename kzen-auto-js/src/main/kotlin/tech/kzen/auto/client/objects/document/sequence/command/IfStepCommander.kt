@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.sequence.command
 
+import tech.kzen.auto.client.objects.document.sequence.step.display.condition.IfStepDisplay
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -50,14 +51,14 @@ class IfStepCommander(
 
         val thenCommand = AddObjectAtAttributeCommand(
             containingObjectLocation,
-            AttributeName.parse("then"),
+            IfStepDisplay.thenAttributeName,
             ObjectName("Branch"),
             PositionRelation.at(endOfDocumentPosition),
             objectNotation)
 
         val elseCommand = AddObjectAtAttributeCommand(
             containingObjectLocation,
-            AttributeName.parse("else"),
+            IfStepDisplay.elseAttributeName,
             ObjectName("Branch"),
             PositionRelation.after(endOfDocumentPosition),
             objectNotation)

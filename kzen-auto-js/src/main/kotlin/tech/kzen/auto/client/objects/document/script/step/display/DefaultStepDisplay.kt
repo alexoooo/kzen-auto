@@ -164,20 +164,21 @@ class DefaultStepDisplay(
             }
 
             CardContent {
-                StepHeader::class.react {
-                    hoverSignal = this@DefaultStepDisplay.hoverSignal
-
-                    attributeNesting = props.common.attributeNesting
-                    objectLocation = props.common.objectLocation
-                    graphStructure = props.common.clientState.graphStructure()
-
-                    this.imperativeState = imperativeState
-//                    this.isRunning = isRunning
-
-                    managed = props.common.managed
-                    first = props.common.first
-                    last = props.common.last
-                }
+                +"[Header]"
+//                StepHeader::class.react {
+//                    hoverSignal = this@DefaultStepDisplay.hoverSignal
+//
+//                    attributeNesting = props.common.attributeNesting
+//                    objectLocation = props.common.objectLocation
+//                    graphStructure = props.common.clientState.graphStructure()
+//
+//                    this.imperativeState = imperativeState
+////                    this.isRunning = isRunning
+//
+//                    managed = props.common.managed
+//                    first = props.common.first
+//                    last = props.common.last
+//                }
 
                 div {
                     css {
