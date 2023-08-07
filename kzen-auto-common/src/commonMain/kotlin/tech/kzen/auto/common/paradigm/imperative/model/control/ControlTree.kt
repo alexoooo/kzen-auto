@@ -132,19 +132,19 @@ data class SingularControlNode(
 
 
 data class BranchingControlNode(
-        override val step: ObjectPath,
-        val branches: List<BranchControlNode>
+    override val step: ObjectPath,
+    val branches: List<BranchControlNode>
 ): StepControlNode()
 
 
 data class CallingControlNode(
-        override val step: ObjectPath,
-        val reference: DocumentPath?
+    override val step: ObjectPath,
+    val reference: DocumentPath?
 ): StepControlNode()
 
 
 data class BranchControlNode(
-        val nodes: List<StepControlNode>
+    val nodes: List<StepControlNode>
 ): ControlTree() {
     companion object {
         val empty = BranchControlNode(listOf())

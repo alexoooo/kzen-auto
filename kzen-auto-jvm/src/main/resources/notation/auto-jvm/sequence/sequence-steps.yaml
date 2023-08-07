@@ -57,7 +57,7 @@ RunStep:
     instructions:
       is: ObjectLocation
       by: Nominal
-      editor: SelectScriptEditor
+      editor: SelectLogicEditor
 #      call: true
 
 

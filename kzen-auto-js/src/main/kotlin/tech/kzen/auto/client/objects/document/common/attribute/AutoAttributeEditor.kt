@@ -87,6 +87,11 @@ class AutoAttributeEditor(
     override fun onClientState(clientState: SessionState) {
         val graphStructure = clientState.graphStructure()
 
+        if (props.objectLocation !in graphStructure.graphNotation.coalesce) {
+            // NB: containing step was deleted, but its parent component hasn't re-rendered yet
+            return
+        }
+
         val attributeMetadata: AttributeMetadata? = graphStructure
             .graphMetadata
             .get(props.objectLocation)

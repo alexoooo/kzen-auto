@@ -198,31 +198,31 @@ class SequenceController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onCreate(index: Int) {
-        val clientState = state.clientState!!
-
-        val archetypeObjectLocation = ClientContext.insertionGlobal
-                .getAndClearSelection()
-                ?: return
-
-        val documentPath = clientState.navigationRoute.documentPath!!
-        val containingObjectLocation = ObjectLocation(
-                documentPath, NotationConventions.mainObjectPath)
-
-        val commands = props.sequenceCommander.createCommands(
-            containingObjectLocation,
-            SequenceConventions.stepsAttributePath,
-            index,
-            archetypeObjectLocation,
-            clientState.graphDefinitionAttempt.graphStructure
-        )
-
-        async {
-            for (command in commands) {
-                ClientContext.mirroredGraphStore.apply(command)
-            }
-        }
-    }
+//    private fun onCreate(index: Int) {
+//        val clientState = state.clientState!!
+//
+//        val archetypeObjectLocation = ClientContext.insertionGlobal
+//                .getAndClearSelection()
+//                ?: return
+//
+//        val documentPath = clientState.navigationRoute.documentPath!!
+//        val containingObjectLocation = ObjectLocation(
+//                documentPath, NotationConventions.mainObjectPath)
+//
+//        val commands = props.sequenceCommander.createCommands(
+//            containingObjectLocation,
+//            SequenceConventions.stepsAttributePath,
+//            index,
+//            archetypeObjectLocation,
+//            clientState.graphDefinitionAttempt.graphStructure
+//        )
+//
+//        async {
+//            for (command in commands) {
+//                ClientContext.mirroredGraphStore.apply(command)
+//            }
+//        }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -265,7 +265,6 @@ class SequenceController:
     private fun ChildrenBuilder.renderMain(
         documentPath: DocumentPath
     ) {
-//        +"[Main]"
         MultiStepDisplay::class.react {
             common = SequenceStepDisplayPropsCommon(
                 documentPath.toMainObjectLocation(),
@@ -275,10 +274,13 @@ class SequenceController:
                 last = true,
                 sequenceStore = store
             )
+
             stepDisplayManager =
                 StepDisplayManager.Handle().also {
                     it.wrapper = props.stepController
                 }
+
+            sequenceCommander = props.sequenceCommander
         }
     }
 

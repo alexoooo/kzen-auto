@@ -1,8 +1,6 @@
 package tech.kzen.auto.client.objects.document.sequence.step.display
 
-import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
-import tech.kzen.auto.client.objects.document.sequence.step.StepDisplayManager
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.locate.ObjectLocation
 
@@ -13,7 +11,6 @@ external interface SequenceStepDisplayProps: react.Props {
 
 
 data class SequenceStepDisplayPropsCommon(
-//    var clientState: SessionState,
     var objectLocation: ObjectLocation,
     var attributeNesting: AttributeNesting,
 

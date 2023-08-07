@@ -92,7 +92,6 @@ class AttributeEditorManager(
 
         val attributeEditor =
             props.attributeEditors.find { it.name() == editorWrapperName }
-//            ?: throw IllegalStateException("Attribute editor not found: $editorWrapperName")
 
         setState {
             this.attributeEditorName = editorWrapperName

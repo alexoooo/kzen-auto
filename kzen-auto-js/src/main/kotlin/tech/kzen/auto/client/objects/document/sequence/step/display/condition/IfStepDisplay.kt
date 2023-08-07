@@ -52,8 +52,8 @@ class IfStepDisplay(
         private val stepWidth = StepController.width.minus(2.em)
         private val overlapTop = 4.px
 
-//        private const val tableBorders = true
-        private const val tableBorders = false
+        private const val tableBorders = true
+//        private const val tableBorders = false
     }
 
 
@@ -102,95 +102,100 @@ class IfStepDisplay(
 //            ?.values
 //            ?.get(LogicTracePath.ofObjectLocation(props.common.objectLocation))
 //            ?.let { StepTrace.ofExecutionValue(it) }
-//
+
 //        val traceState = trace?.state ?: StepTrace.State.Idle
 //        val nextToRun = props.common.nextToRun == props.common.objectLocation
 //
-//        table {
-//            css {
-//                // https://stackoverflow.com/a/24594811/1941359
-//                height = 100.pct
-//
-//                if (tableBorders) {
-//                    borderWidth = 1.px
-//                    borderStyle = LineStyle.solid
-//                }
-//
-//                borderCollapse = BorderCollapse.collapse
-//            }
-//
-//            tbody {
-//                css {
-//                    if (tableBorders) {
-//                        borderWidth = 1.px
-//                        borderStyle = LineStyle.solid
-//                    }
-//                }
-//
-//                tr {
-//                    td {
-//                        css {
-//                            padding = Padding(0.px, 0.px, 0.px, 0.px)
-//                        }
-//
-//                        onMouseOver = { onMouseOver() }
-//                        onMouseOut = { onMouseOut() }
-//
+        table {
+            css {
+                // https://stackoverflow.com/a/24594811/1941359
+                height = 100.pct
+
+                if (tableBorders) {
+                    borderWidth = 1.px
+                    borderStyle = LineStyle.solid
+                }
+
+                borderCollapse = BorderCollapse.collapse
+            }
+
+            tbody {
+                css {
+                    if (tableBorders) {
+                        borderWidth = 1.px
+                        borderStyle = LineStyle.solid
+                    }
+                }
+
+                tr {
+                    td {
+                        css {
+                            padding = Padding(0.px, 0.px, 0.px, 0.px)
+                        }
+
+                        onMouseOver = { onMouseOver() }
+                        onMouseOut = { onMouseOut() }
+
+                        +"[Header]"
 //                        renderHeader(traceState, trace?.error, nextToRun)
-//                    }
-//
-//                    td {}
-//                }
-//
-//                tr {
-//                    td {
-//                        css {
-//                            verticalAlign = VerticalAlign.top
-//                            height = 100.pct
-//                            padding = Padding(0.px, 0.px, 0.px, 0.px)
-//                        }
-//
-////                        +"[Condition]"
-////                        renderCondition(isNextToRun, imperativeState, isRunning)
+                    }
+
+                    td {}
+                }
+
+                tr {
+                    td {
+                        css {
+                            verticalAlign = VerticalAlign.top
+                            height = 100.pct
+                            padding = Padding(0.px, 0.px, 0.px, 0.px)
+                            if (tableBorders) {
+                                borderWidth = 1.px
+                                borderStyle = LineStyle.solid
+                            }
+                        }
+
+                        +"[Condition]"
+//                        renderCondition(isNextToRun, imperativeState, isRunning)
 //                        renderCondition()
-//                    }
-//                    td {
-//                        css {
-//                            if (tableBorders) {
-//                                borderWidth = 1.px
-//                                borderStyle = LineStyle.solid
-//                            }
-//                        }
-//
-//                        +"[Then Branch]"
-////                        renderThenBranch()
-//                    }
-//                }
-//
-//                tr {
-//                    td {
-//                        css {
-//                            verticalAlign = VerticalAlign.top
-//                            height = 100.pct
-//                            padding = Padding(0.px, 0.px, 0.px, 0.px)
-//
-//                            if (tableBorders) {
-//                                borderWidth = 1.px
-//                                borderStyle = LineStyle.solid
-//                            }
-//                        }
-//
-//                        +"[Else]"
-////                        renderElseSegment(isNextToRun, imperativeState, isRunning)
-//                    }
-//
-//                    td {
-//                        +"[Else Branch]"
-////                        renderElseBranch()
-//                    }
-//                }
-//            }
-//        }
+                    }
+                    td {
+                        css {
+                            if (tableBorders) {
+                                borderWidth = 1.px
+                                borderStyle = LineStyle.solid
+                            }
+                        }
+
+                        +"[Then Branch]"
+//                        renderThenBranch()
+                    }
+                }
+
+                tr {
+                    td {
+                        css {
+                            verticalAlign = VerticalAlign.top
+                            height = 100.pct
+                            padding = Padding(0.px, 0.px, 0.px, 0.px)
+
+                            if (tableBorders) {
+                                borderWidth = 1.px
+                                borderStyle = LineStyle.solid
+                            }
+                        }
+
+                        +"[Else]"
+//                        renderElseSegment(isNextToRun, imperativeState, isRunning)
+                    }
+
+                    td {
+                        +"[Else Branch]"
+//                        renderElseBranch()
+                    }
+                }
+            }
+        }
     }
 
 

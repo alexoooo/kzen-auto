@@ -279,11 +279,17 @@ class RibbonController(
                     if (state.type == ribbonTool.delegate) {
                         color = NamedColor.white
                         backgroundColor = Color("#649fff")
+                        hover {
+                            color = NamedColor.white
+                            backgroundColor = Color("#649fff")
+                        }
+                    }
+                    else {
+                        color = NamedColor.black
                     }
 
                     marginRight = 0.5.em
                     marginBottom = 0.5.em
-                    color = NamedColor.black
                     borderColor = Color("#c4c4c4")
                 }
 

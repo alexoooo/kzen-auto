@@ -19,6 +19,7 @@ class SequenceCommander(
     private val byArchetype: Map<ObjectLocation, SequenceStepCommander>
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     init {
         val builder = mutableMapOf<ObjectLocation, SequenceStepCommander>()
         for (stepCommander in stepCommanders) {
@@ -63,7 +64,6 @@ class SequenceCommander(
 
         val stepCommander = byArchetype[archetypeObjectLocation]
 
-        @Suppress("UnnecessaryVariable")
         val commands =
             if (stepCommander != null) {
                 val additionalCommands =

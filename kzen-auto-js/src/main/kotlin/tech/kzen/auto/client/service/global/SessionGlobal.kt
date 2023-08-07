@@ -108,12 +108,12 @@ class SessionGlobal:
         imperativeModel = executionModel
 
         val modifiedActive =
-                if (executionModel?.isActive() == true) {
-                    runningHosts + host
-                }
-                else {
-                    runningHosts - host
-                }
+            if (executionModel?.isActive() == true) {
+                runningHosts + host
+            }
+            else {
+                runningHosts - host
+            }
 
         runningHosts = modifiedActive
 
@@ -169,7 +169,7 @@ class SessionGlobal:
         observers.add(observer)
 
         val initialState = sessionState
-                ?: return
+            ?: return
 
         observer.onClientState(initialState)
     }
@@ -192,7 +192,7 @@ class SessionGlobal:
 
         val selected = navigation.requestParams.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
 
-        sessionState = SessionState(
+        val nextSessionState = SessionState(
             definition,
             navigation,
             logicState,
@@ -200,8 +200,21 @@ class SessionGlobal:
             selected,
             runningHosts)
 
+        sessionState = nextSessionState
+
         for (observer in observers) {
-            observer.onClientState(sessionState!!)
+            try {
+                observer.onClientState(nextSessionState)
+            }
+            catch (e: Throwable) {
+//                println("onClientState ERROR for $observer")
+                e.printStackTrace()
+            }
         }
+    }
+
+
+    fun current(): SessionState? {
+        return sessionState
     }
 }

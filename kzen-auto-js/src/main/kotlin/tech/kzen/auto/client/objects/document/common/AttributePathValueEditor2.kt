@@ -19,7 +19,6 @@ import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
@@ -125,20 +124,10 @@ class AttributePathValueEditor2(
     override fun onClientState(clientState: SessionState) {
         val graphStructure = clientState.graphStructure()
 
-//        val attributeMetadata: AttributeMetadata? = graphStructure
-//            .graphMetadata
-//            .get(props.objectLocation)
-//            ?.attributes
-//            ?.get(props.attributeName)
-//
-//        val attributeNotation = clientState
-//            .graphStructure()
-//            .graphNotation
-//            .firstAttribute(objectLocation, attributePath)
-//
-//        checkNotNull(attributeNotation) {
-//            "missing: $objectLocation | $attributePath"
-//        }
+        if (props.objectLocation !in graphStructure.graphNotation.coalesce) {
+            // NB: containing step was deleted, but its parent component hasn't re-rendered yet
+            return
+        }
 
         val attributeNotation: AttributeNotation? = graphStructure
             .graphNotation
@@ -148,10 +137,7 @@ class AttributePathValueEditor2(
             return
         }
 
-//        this.value = value
-//        this.values = values
         setState {
-//            this.attributeMetadata = attributeMetadata
             this.attributeNotation = attributeNotation
 
             if (attributeNotation != null) {
@@ -316,7 +302,6 @@ class AttributePathValueEditor2(
 //        +"## attributePath ${props.attributePath} - state.value ${state.value}"
 
         val type = props.valueType
-//        val type = attributeMetadata.type
 
         if (! isValue(type)) {
             +"${props.attributePath} $type (not a value)"

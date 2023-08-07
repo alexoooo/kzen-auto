@@ -38,7 +38,6 @@ import web.cssom.*
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface SequenceStepDisplayDefaultProps: SequenceStepDisplayProps {
-//    var common: SequenceStepDisplayPropsCommon
     var attributeEditorManager: AttributeEditorManager.Wrapper
 }
 
@@ -168,7 +167,13 @@ class SequenceStepDisplayDefault(
 
         val objectMetadata = graphStructure
             .graphMetadata
-            .objectMetadata[props.common.objectLocation]!!
+            .objectMetadata[props.common.objectLocation]
+
+        @Suppress("FoldInitializerAndIfToElvis", "RedundantSuppression")
+        if (objectMetadata == null) {
+            // NB: this step has been deleted, but parent component hasn't re-rendered yet
+            return
+        }
 
         val icon = StepHeader.icon(graphStructure, props.common.objectLocation)
         val description = StepHeader.description(graphStructure, props.common.objectLocation)

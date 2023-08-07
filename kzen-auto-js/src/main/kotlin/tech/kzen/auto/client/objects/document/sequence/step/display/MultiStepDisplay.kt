@@ -11,8 +11,10 @@ import react.react
 import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.sequence.SequenceController.Companion.stepLocations
+import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.objects.document.sequence.step.StepDisplayManager
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
@@ -34,8 +36,8 @@ import web.cssom.*
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface MultiStepDisplayProps: SequenceStepDisplayProps {
-    var stepDisplayManager: StepDisplayManager.Handle?
-//    var attributeController: AttributeController.Wrapper
+    var stepDisplayManager: StepDisplayManager.Handle
+    var sequenceCommander: SequenceCommander
 }
 
 
@@ -52,19 +54,22 @@ class MultiStepDisplay(
     props: MultiStepDisplayProps
 ):
     RPureComponent<MultiStepDisplayProps, MultiStepDisplayState>(props),
-    SessionGlobal.Observer
+    SessionGlobal.Observer,
+    InsertionGlobal.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
         objectLocation: ObjectLocation,
-        private val stepDisplayManager: StepDisplayManager.Handle
+        private val stepDisplayManager: StepDisplayManager.Handle,
+        private val sequenceCommander: SequenceCommander
     ):
         SequenceStepDisplayWrapper(objectLocation)
     {
         override fun ChildrenBuilder.child(block: SequenceStepDisplayProps.() -> Unit) {
             MultiStepDisplay::class.react {
                 stepDisplayManager = this@Wrapper.stepDisplayManager
+                sequenceCommander = this@Wrapper.sequenceCommander
                 block()
             }
         }
@@ -74,10 +79,12 @@ class MultiStepDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.sessionGlobal.observe(this)
+        ClientContext.insertionGlobal.subscribe(this)
     }
 
 
     override fun componentWillUnmount() {
+        ClientContext.insertionGlobal.unsubscribe(this)
         ClientContext.sessionGlobal.unobserve(this)
     }
 
@@ -95,32 +102,48 @@ class MultiStepDisplay(
     }
 
 
+    override fun onInsertionSelected(action: ObjectLocation) {
+        setState {
+            creating = true
+        }
+    }
+
+
+    override fun onInsertionUnselected() {
+        setState {
+            creating = false
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(index: Int) {
-        println("onCreate($index)")
-//        val clientState = state.clientState!!
-//
-//        val archetypeObjectLocation = ClientContext.insertionGlobal
-//            .getAndClearSelection()
-//            ?: return
-//
-//        val documentPath = clientState.navigationRoute.documentPath!!
-//        val containingObjectLocation = ObjectLocation(
-//            documentPath, NotationConventions.mainObjectPath)
-//
-//        val commands = props.sequenceCommander.createCommands(
-//            containingObjectLocation,
-//            SequenceConventions.stepsAttributePath,
-//            index,
-//            archetypeObjectLocation,
-//            clientState.graphDefinitionAttempt.graphStructure
-//        )
-//
-//        async {
-//            for (command in commands) {
-//                ClientContext.mirroredGraphStore.apply(command)
-//            }
-//        }
+//        println("onCreate(${props.} $index)")
+
+        val graphStructure = ClientContext.sessionGlobal.current()?.graphStructure()
+            ?: return
+
+        val archetypeObjectLocation = ClientContext.insertionGlobal
+            .getAndClearSelection()
+            ?: return
+
+        val documentPath = state.documentPath
+        val containingObjectLocation = ObjectLocation(
+            documentPath, NotationConventions.mainObjectPath)
+
+        val commands = props.sequenceCommander.createCommands(
+            containingObjectLocation,
+            SequenceConventions.stepsAttributePath,
+            index,
+            archetypeObjectLocation,
+            graphStructure
+        )
+
+        async {
+            for (command in commands) {
+                ClientContext.mirroredGraphStore.apply(command)
+            }
+        }
     }
 
 
@@ -262,9 +285,8 @@ class MultiStepDisplay(
         span {
             key = objectLocation.toReference().asString()
 
-//            +"[Step $index - $stepCount - $objectLocation - ${props.stepDisplayManager}]"
-
-            props.stepDisplayManager?.wrapper?.child(this) {
+//            +"[Step $index - $stepCount - $objectLocation]"
+            props.stepDisplayManager.wrapper?.child(this) {
                 common = SequenceStepDisplayPropsCommon(
                     objectLocation,
                     AttributeNesting(persistentListOf(AttributeSegment.ofIndex(index))),

@@ -10,8 +10,10 @@ import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStep
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
+import tech.kzen.lib.common.model.locate.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
@@ -27,11 +29,18 @@ external interface StepDisplayManagerProps: Props {
 }
 
 
+external interface StepDisplayManagerState: State {
+    var sequenceStepDisplayWrapper: SequenceStepDisplayWrapper?
+}
+
+
 //---------------------------------------------------------------------------------------------------------------------
 class StepDisplayManager(
     props: StepDisplayManagerProps
 ):
-    RPureComponent<StepDisplayManagerProps, State>(props), LocalGraphStore.Observer {
+    RPureComponent<StepDisplayManagerProps, StepDisplayManagerState>(props)//,
+//    LocalGraphStore.Observer
+{
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val width = 26.em
@@ -69,50 +78,42 @@ class StepDisplayManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var sequenceStepDisplayWrapper: SequenceStepDisplayWrapper? = null
-
-
-    override fun componentDidMount() {
-        if (sequenceStepDisplayWrapper != null) {
-            return
-        }
-
-        async {
-            ClientContext.mirroredGraphStore.observe(this)
-        }
+    override fun StepDisplayManagerState.init(props: StepDisplayManagerProps) {
+        sequenceStepDisplayWrapper = findDisplayWrapper(props)
     }
 
 
-    override fun componentWillUnmount() {
-        ClientContext.mirroredGraphStore.unobserve(this)
-    }
-
-
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
-
-
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
-        onStoreRefresh(graphDefinition)
-    }
-
-
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
-        if (sequenceStepDisplayWrapper != null) {
-            return
-        }
+    private fun findDisplayWrapper(props: StepDisplayManagerProps): SequenceStepDisplayWrapper {
+        val graphStructure = ClientContext.sessionGlobal.current()?.graphStructure()
+            ?: throw IllegalStateException("Session not initialized")
 
         val displayWrapperName = ObjectName(
-            graphDefinition.graphStructure.graphNotation.getString(
+            graphStructure.graphNotation.getString(
                 props.common.objectLocation, AutoConventions.displayAttributePath))
 
-        sequenceStepDisplayWrapper = props.stepDisplays.find { it.name() == displayWrapperName }
+        return props.stepDisplays.find { it.name() == displayWrapperName }
             ?: throw IllegalStateException("Step display not found: $displayWrapperName")
+    }
+
+
+    override fun componentDidUpdate(
+        prevProps: StepDisplayManagerProps,
+        prevState: StepDisplayManagerState,
+        snapshot: Any
+    ) {
+        if (props.common.objectLocation == prevProps.common.objectLocation) {
+            return
+        }
+
+        setState {
+            sequenceStepDisplayWrapper = findDisplayWrapper(props)
+        }
     }
 
 
     //------------------------------------------------------------------ -----------------------------------------------
     override fun ChildrenBuilder.render() {
-        val display = sequenceStepDisplayWrapper
+        val display = state.sequenceStepDisplayWrapper
             ?: return
 
 //        +"[sequenceStepDisplayWrapper - ${sequenceStepDisplayWrapper?.name()}] - ${props.common}"

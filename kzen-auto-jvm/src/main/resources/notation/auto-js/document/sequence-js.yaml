@@ -53,16 +53,18 @@ SequenceStepDisplayDefault:
   is: SequenceStepDisplay
   class: tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayDefault$Wrapper
   attributeEditorManager: AttributeEditorManager
-  meta:
-    attributeEditorManager: AttributeEditorManager
+#  meta:
+#    attributeEditorManager: AttributeEditorManager
 
 
 MultiStepDisplay:
   is: SequenceStepDisplay
   class: tech.kzen.auto.client.objects.document.sequence.step.display.MultiStepDisplay$Wrapper
   stepDisplayManager: StepDisplayManagerHandle
-  meta:
-    stepDisplayManager: StepDisplayManagerHandle
+  sequenceCommander: SequenceCommander
+#  meta:
+#    stepDisplayManager: StepDisplayManagerHandle
+#    sequenceCommander: SequenceCommander
 
 
 IfStepDisplay:
@@ -90,8 +92,13 @@ IfStepCommander:
 
 
 SelectSequenceStepEditor:
-  is: AttributeEditorWrapper
+  is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.sequence.step.attribute.SelectSequenceStepEditor$Wrapper
+
+
+SelectLogicEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.sequence.step.attribute.SelectLogicEditor$Wrapper
 
 
 
