@@ -23,7 +23,6 @@ import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenameObjectRefactorCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
 import web.cssom.*

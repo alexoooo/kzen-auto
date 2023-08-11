@@ -15,7 +15,6 @@ import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState

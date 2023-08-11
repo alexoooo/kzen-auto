@@ -39,7 +39,6 @@ import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
 import tech.kzen.lib.common.service.media.LiteralNotationMedia
-import tech.kzen.lib.common.service.media.MapNotationMedia
 import tech.kzen.lib.common.service.media.NotationMedia
 import tech.kzen.lib.common.service.media.ReadWriteNotationMedia
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader

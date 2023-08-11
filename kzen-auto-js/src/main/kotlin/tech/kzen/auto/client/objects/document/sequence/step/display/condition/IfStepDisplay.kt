@@ -11,7 +11,6 @@ import react.dom.html.ReactHTML.tbody
 import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.tr
 import react.react
-import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
@@ -26,7 +25,6 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.wrap.RComponent
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.ArrowForwardIcon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
@@ -37,7 +35,6 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import web.cssom.*
-import web.cssom.PropertyName.Companion.fontSize
 
 
 //---------------------------------------------------------------------------------------------------------------------

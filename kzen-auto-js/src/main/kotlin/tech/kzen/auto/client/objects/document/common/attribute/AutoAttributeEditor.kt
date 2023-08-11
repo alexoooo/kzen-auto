@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document.common.attribute
 import react.*
 import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.objects.document.common.*
+import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor2
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
@@ -156,7 +156,7 @@ class AutoAttributeEditor(
                 // NB: don't render
             }
 
-            AttributePathValueEditor.isValue(type) -> {
+            AttributePathValueEditor2.isValue(type) -> {
                 renderValueEditor(type)
             }
 

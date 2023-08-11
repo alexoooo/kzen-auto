@@ -2,14 +2,11 @@ package tech.kzen.auto.server.objects.sequence.step.control
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.TextExecutionValue
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
-import tech.kzen.auto.common.paradigm.sequence.StepTrace
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
-import tech.kzen.auto.server.objects.sequence.model.ActiveStepModel
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.objects.sequence.step.MultiSequenceStep
-import tech.kzen.auto.server.service.v1.model.*
+import tech.kzen.auto.server.service.v1.model.LogicResult
+import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentName
 import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentValue
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
