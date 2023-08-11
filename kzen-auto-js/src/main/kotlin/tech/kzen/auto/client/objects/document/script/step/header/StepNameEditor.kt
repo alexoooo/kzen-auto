@@ -20,7 +20,7 @@ import tech.kzen.auto.client.wrap.material.CancelIcon
 import tech.kzen.auto.client.wrap.material.SaveIcon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.GraphNotation

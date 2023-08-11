@@ -7,7 +7,7 @@ import org.openqa.selenium.OutputType
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.remote.RemoteWebDriver
 import tech.kzen.auto.common.objects.document.feature.*
-import tech.kzen.lib.common.model.locate.ResourceLocation
+import tech.kzen.lib.common.model.location.ResourceLocation
 import tech.kzen.lib.common.service.media.NotationMedia
 import tech.kzen.lib.platform.toInputStream
 import java.awt.Rectangle

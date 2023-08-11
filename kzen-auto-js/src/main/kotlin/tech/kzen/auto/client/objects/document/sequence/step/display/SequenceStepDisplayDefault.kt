@@ -10,18 +10,18 @@ import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
 import react.dom.html.ReactHTML.span
 import react.react
-import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.graph.EdgeController
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.objects.document.script.step.header.StepNameEditor
+import tech.kzen.auto.client.objects.document.sequence.model.SequenceGlobal
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
-import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.auto.common.paradigm.common.model.*
@@ -29,7 +29,7 @@ import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.common.paradigm.sequence.StepTrace
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.IoUtils
@@ -58,7 +58,7 @@ external interface SequenceStepDisplayDefaultState: State {
 class SequenceStepDisplayDefault(
     props: SequenceStepDisplayDefaultProps
 ):
-    RPureComponent<SequenceStepDisplayDefaultProps, SequenceStepDisplayDefaultState>(props),
+    RComponent<SequenceStepDisplayDefaultProps, SequenceStepDisplayDefaultState>(props),
     SessionGlobal.Observer,
     SequenceStore.Observer
 {
@@ -120,13 +120,13 @@ class SequenceStepDisplayDefault(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.sessionGlobal.observe(this)
-        props.common.sequenceStore.observe(this)
+        SequenceGlobal.get().observe(this)
     }
 
 
     override fun componentWillUnmount() {
         ClientContext.sessionGlobal.unobserve(this)
-        props.common.sequenceStore.unobserve(this)
+        SequenceGlobal.get().unobserve(this)
     }
 
 
@@ -148,12 +148,6 @@ class SequenceStepDisplayDefault(
             }
 
         val isNextToRun = nextToRun == props.common.objectLocation
-
-        if (state.stepTrace == trace &&
-                state.isNextToRun != isNextToRun
-        ) {
-            return
-        }
 
         setState {
             this.isNextToRun = isNextToRun
@@ -178,14 +172,6 @@ class SequenceStepDisplayDefault(
         val icon = StepHeader.icon(graphStructure, props.common.objectLocation)
         val description = StepHeader.description(graphStructure, props.common.objectLocation)
         val title = StepNameEditor.title(graphStructure, props.common.objectLocation)
-
-        if (state.objectMetadata == objectMetadata &&
-                state.icon == icon &&
-                state.description == description &&
-                state.title == title
-        ) {
-            return
-        }
 
         setState {
             this.objectMetadata = objectMetadata
@@ -235,10 +221,9 @@ class SequenceStepDisplayDefault(
 
         val trace = state.stepTrace
         val isNextToRun = state.isNextToRun ?: false
+        val traceState = trace?.state ?: StepTrace.State.Idle
 
         Paper {
-            val traceState = trace?.state ?: StepTrace.State.Idle
-
             sx {
                 backgroundColor = backgroundColor(traceState, trace?.error, isNextToRun)
             }
@@ -248,7 +233,7 @@ class SequenceStepDisplayDefault(
                 StepHeader::class.react {
                     hoverSignal = this@SequenceStepDisplayDefault.hoverSignal
 
-                    attributeNesting = props.common.attributeNesting
+                    indexInParent = props.common.indexInParent
                     objectLocation = props.common.objectLocation
 //                    graphStructure = props.common.clientState.graphStructure()
 
@@ -256,7 +241,8 @@ class SequenceStepDisplayDefault(
 //                    this.imperativeState = null
 //                    this.isRunning = isRunning
 
-                    managed = props.common.managed
+//                    managed = props.common.managed
+//                    managed = false
                     first = props.common.first
                     last = props.common.last
 
@@ -284,7 +270,7 @@ class SequenceStepDisplayDefault(
         trace: StepTrace?
     ) {
         for (e in objectMetadata.attributes.values) {
-            if (AutoConventions.isManaged(e.key) || props.common.managed) {
+            if (AutoConventions.isManaged(e.key) /*|| props.common.managed*/) {
                 continue
             }
 

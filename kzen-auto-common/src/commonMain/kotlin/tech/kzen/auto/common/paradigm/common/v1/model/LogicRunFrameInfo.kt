@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.paradigm.common.v1.model
 
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 
 
 data class LogicRunFrameInfo(

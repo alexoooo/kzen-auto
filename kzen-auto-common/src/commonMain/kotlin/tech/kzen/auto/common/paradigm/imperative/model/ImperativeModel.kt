@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.paradigm.imperative.model
 
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.Digestible

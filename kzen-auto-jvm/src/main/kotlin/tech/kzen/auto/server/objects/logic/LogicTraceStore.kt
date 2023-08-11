@@ -15,7 +15,7 @@ import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceQuery
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceSnapshot
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.reflect.Reflect
 import java.util.concurrent.ConcurrentHashMap

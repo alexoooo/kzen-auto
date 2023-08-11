@@ -4,7 +4,7 @@ import tech.kzen.auto.client.objects.document.sequence.step.display.condition.If
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation

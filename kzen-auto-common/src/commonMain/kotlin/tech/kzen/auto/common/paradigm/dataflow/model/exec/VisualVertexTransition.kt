@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.paradigm.dataflow.model.exec
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 
 
 // TODO: add error handling and logging

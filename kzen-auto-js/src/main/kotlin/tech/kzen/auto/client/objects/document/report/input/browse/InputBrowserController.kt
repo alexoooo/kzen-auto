@@ -15,7 +15,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputBrowserSpec
 import tech.kzen.auto.common.util.data.DataLocation
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.*
 
 

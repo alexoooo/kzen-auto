@@ -13,15 +13,15 @@ import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentName
 import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentValue
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
 class IfStep(
     private val condition: ObjectLocation,
-    private val then: ObjectLocation,
-    private val `else`: ObjectLocation
+    then: List<ObjectLocation>,
+    `else`: List<ObjectLocation>
 ):
     SequenceStep
 {
@@ -40,6 +40,9 @@ class IfStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private val thenDelegate = MultiSequenceStep(then)
+    private val elseDelegate = MultiSequenceStep(`else`)
+
     private var state = State.Initial
 
 
@@ -73,22 +76,23 @@ class IfStep(
                 }
         }
 
-        val nextToRun =
+//        val nextToRun =
+        val step =
             if (state == State.ThenBranch) {
-                then
+                thenDelegate
             }
             else {
-                `else`
+                elseDelegate
             }
 
-        val stepModel = stepContext.activeSequenceModel.steps.getOrPut(nextToRun) { ActiveStepModel() }
-        val step = stepContext.graphInstance[nextToRun]!!.reference as SequenceStep
+//        val stepModel = stepContext.activeSequenceModel.steps.getOrPut(nextToRun) { ActiveStepModel() }
+//        val step = stepContext.graphInstance[nextToRun]!!.reference as SequenceStep
 
-        val logicTracePath = LogicTracePath.ofObjectLocation(nextToRun)
-        stepModel.traceState = StepTrace.State.Running
-        stepContext.logicTraceHandle.set(
-            logicTracePath,
-            stepModel.trace().asExecutionValue())
+//        val logicTracePath = LogicTracePath.ofObjectLocation(nextToRun)
+//        stepModel.traceState = StepTrace.State.Running
+//        stepContext.logicTraceHandle.set(
+//            logicTracePath,
+//            stepModel.trace().asExecutionValue())
 
         @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
         val result =
@@ -96,41 +100,41 @@ class IfStep(
                 step.continueOrStart(stepContext)
             }
             catch (t: Throwable) {
-                logger.warn("Branch error - {}", nextToRun, t)
+                logger.warn("Branch error - {}", step, t)
                 LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
             }
 
-        when (result) {
-            is LogicResultSuccess -> {
-                stepModel.value = result.value.components
-                stepModel.traceState = StepTrace.State.Done
-                stepContext.logicTraceHandle.set(
-                    logicTracePath,
-                    stepModel.trace().asExecutionValue())
-            }
-
-            is LogicResultFailed -> {
-                stepModel.error = result.message
-                stepModel.traceState = StepTrace.State.Done
-                stepContext.logicTraceHandle.set(
-                    logicTracePath,
-                    stepModel.trace().asExecutionValue())
-            }
-
-            LogicResultCancelled -> {
-                stepModel.traceState = StepTrace.State.Done
-                stepContext.logicTraceHandle.set(
-                    logicTracePath,
-                    stepModel.trace().asExecutionValue())
-            }
-
-            LogicResultPaused -> {
-                stepModel.traceState = StepTrace.State.Running
-                stepContext.logicTraceHandle.set(
-                    logicTracePath,
-                    stepModel.trace().asExecutionValue())
-            }
-        }
+//        when (result) {
+//            is LogicResultSuccess -> {
+//                stepModel.value = result.value.components
+//                stepModel.traceState = StepTrace.State.Done
+//                stepContext.logicTraceHandle.set(
+//                    logicTracePath,
+//                    stepModel.trace().asExecutionValue())
+//            }
+//
+//            is LogicResultFailed -> {
+//                stepModel.error = result.message
+//                stepModel.traceState = StepTrace.State.Done
+//                stepContext.logicTraceHandle.set(
+//                    logicTracePath,
+//                    stepModel.trace().asExecutionValue())
+//            }
+//
+//            LogicResultCancelled -> {
+//                stepModel.traceState = StepTrace.State.Done
+//                stepContext.logicTraceHandle.set(
+//                    logicTracePath,
+//                    stepModel.trace().asExecutionValue())
+//            }
+//
+//            LogicResultPaused -> {
+//                stepModel.traceState = StepTrace.State.Running
+//                stepContext.logicTraceHandle.set(
+//                    logicTracePath,
+//                    stepModel.trace().asExecutionValue())
+//            }
+//        }
 
         return result
     }

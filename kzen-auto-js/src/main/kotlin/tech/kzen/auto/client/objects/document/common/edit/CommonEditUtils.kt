@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
 import tech.kzen.lib.common.model.attribute.AttributePath
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.StructuralNotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand

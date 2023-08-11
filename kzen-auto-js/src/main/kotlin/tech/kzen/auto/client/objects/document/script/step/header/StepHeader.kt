@@ -14,11 +14,10 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeState
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectInAttributeCommand
@@ -32,13 +31,8 @@ import kotlin.js.Date
 external interface StepHeaderProps: Props {
     var hoverSignal: StepHeader.HoverSignal
 
-    var attributeNesting: AttributeNesting
-
     var objectLocation: ObjectLocation
-//    var graphStructure: GraphStructure
-
-//    var imperativeState: ImperativeState?
-//    var isRunning: Boolean
+    var indexInParent: Int
 
     var managed: Boolean
     var first: Boolean
@@ -287,7 +281,8 @@ class StepHeader(
 //            val index = props.attributeNesting.segments.last().asIndex()!!
             val index =
 //                    props.attributePath.nesting.segments.last().asIndex()!!
-                    props.attributeNesting.segments.last().asIndex()!!
+//                    props.attributeNesting.segments.last().asIndex()!!
+                    props.indexInParent
 //            console.log("^^^^ onShift", index, offset, props.attributeNesting)
 
             ClientContext.mirroredGraphStore.apply(ShiftInAttributeCommand(
@@ -315,7 +310,7 @@ class StepHeader(
         val containingAttribute = props.objectLocation.objectPath.nesting.segments.last().attributePath
         return AttributePath(
                 containingAttribute.attribute,
-                containingAttribute.nesting.push(props.attributeNesting))
+                containingAttribute.nesting.push(AttributeSegment.ofIndex(props.indexInParent)))
     }
 
 

@@ -82,18 +82,20 @@ IfStep:
   title: "If"
   description: "Do one thing or another based on condition"
   condition: ""
-  then: ""
-  else: ""
+  then: []
+  else: []
   meta:
     condition:
       is: ObjectLocation
       by: Nominal
       editor: SelectSequenceStepEditor
     then:
-      is: ObjectLocation
+      is: List
+      of: SequenceStep
       by: Nominal
     else:
-      is: ObjectLocation
+      is: List
+      of: SequenceStep
       by: Nominal
 
 #######################################################################################################################

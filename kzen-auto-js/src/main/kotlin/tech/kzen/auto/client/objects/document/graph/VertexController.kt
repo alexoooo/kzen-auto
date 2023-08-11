@@ -34,8 +34,8 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.locate.ObjectReference
+import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectInAttributeCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
 import web.cssom.*

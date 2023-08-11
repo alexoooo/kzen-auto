@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.objects.document.sequence.command
 
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
-import tech.kzen.lib.common.model.attribute.AttributePath
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.AttributeLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
@@ -33,19 +33,18 @@ class SequenceCommander(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun createCommands(
-        containingObjectLocation: ObjectLocation,
-        containingAttributePath: AttributePath,
+        containingAttributeLocation: AttributeLocation,
         indexInContainingAttribute: Int,
         archetypeObjectLocation: ObjectLocation,
         graphStructure: GraphStructure
     ): List<NotationCommand> {
         val newName = ScriptDocument.findNextAvailable(
-            containingObjectLocation, archetypeObjectLocation, graphStructure)
+            containingAttributeLocation.objectLocation, archetypeObjectLocation, graphStructure)
 
         // NB: +1 offset for main Script object
         val endOfDocumentPosition = graphStructure
             .graphNotation
-            .documents[containingObjectLocation.documentPath]!!
+            .documents[containingAttributeLocation.objectLocation.documentPath]!!
             .objects
             .notations
             .values
@@ -55,8 +54,8 @@ class SequenceCommander(
             archetypeObjectLocation.toReference().name)
 
         val command = InsertObjectInListAttributeCommand(
-            containingObjectLocation,
-            containingAttributePath,
+            containingAttributeLocation.objectLocation,
+            containingAttributeLocation.attributePath,
             PositionRelation.at(indexInContainingAttribute),
             newName,
             PositionRelation.at(endOfDocumentPosition),

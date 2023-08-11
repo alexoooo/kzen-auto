@@ -5,7 +5,7 @@ SequenceController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.sequence.SequenceController$Wrapper
   archetype: Sequence
-  stepController: StepDisplayManager
+  stepDisplayManager: StepDisplayManager
   sequenceCommander: SequenceCommander
   ribbonController: RibbonController
 
@@ -53,8 +53,6 @@ SequenceStepDisplayDefault:
   is: SequenceStepDisplay
   class: tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayDefault$Wrapper
   attributeEditorManager: AttributeEditorManager
-#  meta:
-#    attributeEditorManager: AttributeEditorManager
 
 
 MultiStepDisplay:
@@ -62,31 +60,26 @@ MultiStepDisplay:
   class: tech.kzen.auto.client.objects.document.sequence.step.display.MultiStepDisplay$Wrapper
   stepDisplayManager: StepDisplayManagerHandle
   sequenceCommander: SequenceCommander
-#  meta:
-#    stepDisplayManager: StepDisplayManagerHandle
-#    sequenceCommander: SequenceCommander
 
 
 IfStepDisplay:
   is: SequenceStepDisplay
   class: tech.kzen.auto.client.objects.document.sequence.step.display.condition.IfStepDisplay$Wrapper
-#  stepControllerHandle: StepControllerHandle
-#  commander: IfStepCommander
-  attributeController: AttributeController
+  attributeEditorManager: AttributeEditorManager
 
-IfStepCommander:
-  is: SequenceStepCommander
-  class: tech.kzen.auto.client.objects.document.sequence.command.IfStepCommander
-  parent: SequenceCommander
-  stepArchetype: IfStep
-  branchArchetype: MultiSequenceStep
-  meta:
-    stepArchetype:
-      is: ObjectLocation
-      by: Nominal
-    branchArchetype:
-      is: ObjectLocation
-      by: Nominal
+#IfStepCommander:
+#  is: SequenceStepCommander
+#  class: tech.kzen.auto.client.objects.document.sequence.command.IfStepCommander
+#  parent: SequenceCommander
+#  stepArchetype: IfStep
+#  branchArchetype: MultiSequenceStep
+#  meta:
+#    stepArchetype:
+#      is: ObjectLocation
+#      by: Nominal
+#    branchArchetype:
+#      is: ObjectLocation
+#      by: Nominal
 
 #######################################################################################################################
 

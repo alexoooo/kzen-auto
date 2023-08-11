@@ -2,7 +2,7 @@ package tech.kzen.auto.client.objects.document.script.step.display.control
 
 import tech.kzen.auto.client.objects.document.script.command.StepCommander
 import tech.kzen.auto.common.objects.document.script.ScriptDocument
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation

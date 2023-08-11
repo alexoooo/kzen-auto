@@ -6,7 +6,7 @@ import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.auto.common.paradigm.imperative.model.control.ControlTransition
 import tech.kzen.auto.common.paradigm.imperative.service.ActionExecutor
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 
 
 class ClientRestActionExecutor(

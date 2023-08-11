@@ -20,7 +20,7 @@ import tech.kzen.auto.common.paradigm.imperative.model.control.InitialControlSta
 import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.paradigm.imperative.util.ImperativeUtils
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import web.cssom.NamedColor
 import web.cssom.Visibility

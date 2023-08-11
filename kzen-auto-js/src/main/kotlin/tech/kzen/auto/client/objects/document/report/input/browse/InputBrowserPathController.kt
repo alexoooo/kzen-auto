@@ -20,7 +20,7 @@ import tech.kzen.auto.client.wrap.material.EditIcon
 import tech.kzen.auto.client.wrap.material.SaveIcon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.data.DataLocation
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.*
 import web.html.HTMLInputElement
 

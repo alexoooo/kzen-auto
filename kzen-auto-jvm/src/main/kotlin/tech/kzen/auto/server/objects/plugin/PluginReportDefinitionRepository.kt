@@ -7,7 +7,7 @@ import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 import tech.kzen.auto.server.service.plugin.ReportDefinitionMetadata
 import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
 import tech.kzen.lib.common.service.store.LocalGraphStore

@@ -13,7 +13,7 @@ import tech.kzen.auto.common.paradigm.task.model.TaskState
 import tech.kzen.auto.common.paradigm.task.service.TaskRepository
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.cqrs.DeletedDocumentEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent

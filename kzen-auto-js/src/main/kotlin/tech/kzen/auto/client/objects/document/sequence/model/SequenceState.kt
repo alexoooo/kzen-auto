@@ -4,7 +4,7 @@ import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgress
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.lib.common.model.definition.ObjectDefinition
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
 

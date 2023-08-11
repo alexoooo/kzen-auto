@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document.script.step.display
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
 import tech.kzen.lib.common.model.attribute.AttributeNesting
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 
 
 external interface StepDisplayProps: react.Props {

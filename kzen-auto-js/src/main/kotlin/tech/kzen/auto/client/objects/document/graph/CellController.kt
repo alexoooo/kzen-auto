@@ -18,7 +18,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescript
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.em
 import web.cssom.plus
 import web.cssom.times

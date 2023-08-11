@@ -10,7 +10,7 @@ import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadExecutor
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.LocalGraphStore
 

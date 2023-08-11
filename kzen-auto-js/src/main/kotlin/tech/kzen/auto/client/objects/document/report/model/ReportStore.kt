@@ -15,7 +15,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.lib.common.model.definition.ObjectDefinition
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 
 
 class ReportStore: SessionGlobal.Observer {

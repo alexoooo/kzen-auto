@@ -9,7 +9,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.api.rootHtmlElementId
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.instance.GraphInstance
-import tech.kzen.lib.common.model.locate.ObjectReference
+import tech.kzen.lib.common.model.location.ObjectReference
 import web.dom.document
 import web.html.HTMLElement
 import web.window.window

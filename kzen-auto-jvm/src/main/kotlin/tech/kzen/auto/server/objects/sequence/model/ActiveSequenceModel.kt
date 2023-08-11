@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.sequence.model
 
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 
 
 data class ActiveSequenceModel(

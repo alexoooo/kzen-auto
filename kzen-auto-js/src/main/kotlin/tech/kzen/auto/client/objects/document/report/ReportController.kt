@@ -19,7 +19,7 @@ import tech.kzen.auto.client.objects.document.report.run.ReportRunController
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import web.cssom.*
 

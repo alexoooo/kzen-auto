@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.service.global
 
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 
 
 class InsertionGlobal {

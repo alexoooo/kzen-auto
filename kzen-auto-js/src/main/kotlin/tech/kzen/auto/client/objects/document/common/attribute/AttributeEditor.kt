@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.common.attribute
 
 import tech.kzen.auto.client.api.ReactWrapper
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 
 

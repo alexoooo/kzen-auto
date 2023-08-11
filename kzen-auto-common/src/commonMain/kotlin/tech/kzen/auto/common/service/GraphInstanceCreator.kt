@@ -2,7 +2,7 @@ package tech.kzen.auto.common.service
 
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.instance.ObjectInstance
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.LocalGraphStore
 

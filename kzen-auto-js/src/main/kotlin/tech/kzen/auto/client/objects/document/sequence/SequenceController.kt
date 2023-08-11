@@ -1,18 +1,15 @@
 package tech.kzen.auto.client.objects.document.sequence
 
 import emotion.react.css
-import js.core.jso
-import mui.material.IconButton
 import react.ChildrenBuilder
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.span
 import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
+import tech.kzen.auto.client.objects.document.sequence.model.SequenceGlobal
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
 import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressController
@@ -24,30 +21,24 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
-import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
-import tech.kzen.auto.client.wrap.material.ArrowDownwardIcon
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
-import tech.kzen.lib.common.model.attribute.AttributeNesting
-import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.locate.ObjectLocation
-import tech.kzen.lib.common.model.locate.ObjectReference
-import tech.kzen.lib.common.model.locate.ObjectReferenceHost
+import tech.kzen.lib.common.model.location.AttributeLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectReference
+import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
-import tech.kzen.lib.common.service.notation.NotationConventions
-import tech.kzen.lib.platform.collect.persistentListOf
-import web.cssom.*
+import web.cssom.Position
+import web.cssom.em
+import web.cssom.px
 
 
 //-----------------------------------------------------------------------------------------------------------------
 external interface SequenceControllerProps: Props {
-    var stepController: StepDisplayManager.Wrapper
+    var stepDisplayManager: StepDisplayManager.Wrapper
     var sequenceCommander: SequenceCommander
 }
 
@@ -70,17 +61,18 @@ class SequenceController:
     companion object {
         fun stepLocations(
             graphStructure: GraphStructure,
-            documentPath: DocumentPath
+            attributeLocation: AttributeLocation
         ): List<ObjectLocation>? {
-            val mainObjectLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+//            val mainObjectLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
 
             val stepsNotation = graphStructure
                     .graphNotation
-                    .firstAttribute(mainObjectLocation, SequenceConventions.stepsAttributePath)
+//                    .firstAttribute(mainObjectLocation, SequenceConventions.stepsAttributePath)
+                    .firstAttribute(attributeLocation)
                     as? ListAttributeNotation
                     ?: return null
 
-            val objectReferenceHost = ObjectReferenceHost.ofLocation(mainObjectLocation)
+            val objectReferenceHost = ObjectReferenceHost.ofLocation(attributeLocation.objectLocation)
 
             return stepsNotation
                     .values
@@ -94,7 +86,7 @@ class SequenceController:
     @Reflect
     class Wrapper(
         private val archetype: ObjectLocation,
-        private val stepController: StepDisplayManager.Wrapper,
+        private val stepDisplayManager: StepDisplayManager.Wrapper,
         private val sequenceCommander: SequenceCommander,
         private val ribbonController: RibbonController.Wrapper
     ):
@@ -118,7 +110,7 @@ class SequenceController:
             return object: ReactWrapper<Props> {
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     SequenceController::class.react {
-                        this.stepController = this@Wrapper.stepController
+                        this.stepDisplayManager = this@Wrapper.stepDisplayManager
                         this.sequenceCommander = this@Wrapper.sequenceCommander
                         block()
                     }
@@ -146,6 +138,7 @@ class SequenceController:
         store.observe(this)
         ClientContext.sessionGlobal.observe(this)
         ClientContext.insertionGlobal.subscribe(this)
+        SequenceGlobal.upsertWeak(store)
     }
 
 
@@ -257,7 +250,7 @@ class SequenceController:
             renderMain(documentPath)
         }
 
-        runController(clientState, sequenceState)
+        renderRunController(clientState, sequenceState)
     }
 
 
@@ -268,16 +261,14 @@ class SequenceController:
         MultiStepDisplay::class.react {
             common = SequenceStepDisplayPropsCommon(
                 documentPath.toMainObjectLocation(),
-                attributeNesting = AttributeNesting.empty,
-                managed = false,
+                0,
                 first = true,
-                last = true,
-                sequenceStore = store
+                last = true
             )
 
             stepDisplayManager =
                 StepDisplayManager.Handle().also {
-                    it.wrapper = props.stepController
+                    it.wrapper = props.stepDisplayManager
                 }
 
             sequenceCommander = props.sequenceCommander
@@ -286,7 +277,7 @@ class SequenceController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun ChildrenBuilder.runController(
+    private fun ChildrenBuilder.renderRunController(
         clientState: SessionState,
         sequenceState: SequenceState
     ) {

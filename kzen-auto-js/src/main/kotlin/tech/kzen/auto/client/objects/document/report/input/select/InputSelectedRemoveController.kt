@@ -14,7 +14,7 @@ import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStor
 import tech.kzen.auto.client.objects.document.report.input.select.model.InputSelectedState
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.RemoveCircleOutlineIcon
-import tech.kzen.lib.common.model.locate.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.Color
 import web.cssom.Display
 import web.cssom.NamedColor
