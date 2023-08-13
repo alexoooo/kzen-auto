@@ -32,6 +32,7 @@ import web.cssom.*
 //---------------------------------------------------------------------------------------------------------------------
 external interface StepListDisplayProps: Props {
     var attributeLocation: AttributeLocation
+    var nested: Boolean
 
     var stepDisplayManager: StepDisplayManager.Wrapper
     var sequenceCommander: SequenceCommander
@@ -140,7 +141,13 @@ class StepListDisplay(
                     css {
                         fontSize = 1.5.em
                     }
-                    +"Empty script, please add steps from the toolbar (above)"
+
+                    if (props.nested) {
+                        +"Add steps from the toolbar (above)"
+                    }
+                    else {
+                        +"Empty script, please add steps from the toolbar (above)"
+                    }
                 }
 
                 insertionPoint(0)
@@ -148,9 +155,9 @@ class StepListDisplay(
         }
         else {
             div {
-                css {
-                    paddingLeft = 1.em
-                }
+//                css {
+//                    paddingLeft = 1.em
+//                }
 
                 nonEmptySteps(stepLocations)
             }

@@ -66,6 +66,8 @@ IfStepDisplay:
   is: SequenceStepDisplay
   class: tech.kzen.auto.client.objects.document.sequence.step.display.condition.IfStepDisplay$Wrapper
   attributeEditorManager: AttributeEditorManager
+  stepDisplayManager: StepDisplayManagerHandle
+  sequenceCommander: SequenceCommander
 
 #IfStepCommander:
 #  is: SequenceStepCommander

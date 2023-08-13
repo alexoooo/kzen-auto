@@ -15,23 +15,29 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorMa
 import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.objects.document.script.step.header.StepNameEditor
+import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceGlobal
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
+import tech.kzen.auto.client.objects.document.sequence.step.StepDisplayManager
 import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayDefault
 import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayProps
 import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayWrapper
+import tech.kzen.auto.client.objects.document.sequence.step.display.control.StepListDisplay
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.material.ArrowForwardIcon
+import tech.kzen.auto.client.wrap.material.SubdirectoryArrowLeftIcon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.common.paradigm.sequence.StepTrace
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import web.cssom.*
@@ -40,9 +46,8 @@ import web.cssom.*
 //---------------------------------------------------------------------------------------------------------------------
 external interface IfStepDisplayProps: SequenceStepDisplayProps {
     var attributeEditorManager: AttributeEditorManager.Wrapper
-//    var scriptCommander: ScriptCommander
-//
-//    var stepControllerHandle: StepController.Handle
+    var stepDisplayManager: StepDisplayManager.Wrapper
+    var sequenceCommander: SequenceCommander
 }
 
 
@@ -68,13 +73,18 @@ class IfStepDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val conditionAttributeName = AttributeName("condition")
+
         val thenAttributeName = AttributeName("then")
+        private val thenAttributePath = AttributePath.ofName(thenAttributeName)
+
         val elseAttributeName = AttributeName("else")
+        private val elseAttributePath = AttributePath.ofName(elseAttributeName)
+
         private val stepWidth = StepController.width.minus(2.em)
         private val overlapTop = 4.px
 
-        private const val tableBorders = true
-//        private const val tableBorders = false
+//        private const val tableBorders = true
+        private const val tableBorders = false
     }
 
 
@@ -83,16 +93,16 @@ class IfStepDisplay(
     class Wrapper(
         objectLocation: ObjectLocation,
         private val attributeEditorManager: AttributeEditorManager.Wrapper,
-//        private val commander: IfStepCommander,
-//        private val stepControllerHandle: StepController.Handle
+        private val stepDisplayManager: StepDisplayManager.Handle,
+        private val sequenceCommander: SequenceCommander
     ):
         SequenceStepDisplayWrapper(objectLocation)
     {
         override fun ChildrenBuilder.child(block: SequenceStepDisplayProps.() -> Unit) {
             IfStepDisplay::class.react {
                 attributeEditorManager = this@Wrapper.attributeEditorManager
-//                scriptCommander = this@Wrapper.scriptCommander
-//                stepControllerHandle = this@Wrapper.stepControllerHandle
+                stepDisplayManager = this@Wrapper.stepDisplayManager.wrapper!!
+                sequenceCommander = this@Wrapper.sequenceCommander
 
                 block()
             }
@@ -229,8 +239,6 @@ class IfStepDisplay(
                             }
                         }
 
-//                        +"[Condition]"
-//                        renderCondition(isNextToRun, imperativeState, isRunning)
                         renderCondition()
                     }
                     td {
@@ -241,8 +249,7 @@ class IfStepDisplay(
                             }
                         }
 
-                        +"[Then Branch]"
-//                        renderThenBranch()
+                        renderThenBranch()
                     }
                 }
 
@@ -259,13 +266,14 @@ class IfStepDisplay(
                             }
                         }
 
-                        +"[Else]"
+//                        +"[Else]"
 //                        renderElseSegment(isNextToRun, imperativeState, isRunning)
+                        renderElseSegment()
                     }
 
                     td {
-                        +"[Else Branch]"
-//                        renderElseBranch()
+//                        +"[Else Branch]"
+                        renderElseBranch()
                     }
                 }
             }
@@ -349,9 +357,7 @@ class IfStepDisplay(
     }
 
 
-    private fun ChildrenBuilder.renderThenBranch(
-//            imperativeState: ImperativeState
-    ) {
+    private fun ChildrenBuilder.renderThenBranch() {
         div {
             css {
                 width = 100.pct
@@ -378,40 +384,50 @@ class IfStepDisplay(
                     width = 100.pct.minus(3.em)
                     display = Display.inlineBlock
                     marginTop = (-4.5).em
+                    marginLeft = 3.5.em
                 }
 
-//                ConditionalBranchDisplay::class.react {
-//                    branchAttributePath = AttributePath.ofName(thenAttributeName)
-//
-//                    this.stepController = props.stepControllerHandle.wrapper!!
-//                    this.scriptCommander = props.scriptCommander
-//
-//                    this.clientState = props.common.clientState
-//                    this.objectLocation = props.common.objectLocation
-//                    this.imperativeModel = props.common.imperativeModel
-//                }
+                StepListDisplay::class.react {
+                    attributeLocation = AttributeLocation(
+                        thenAttributePath, props.common.objectLocation)
+                    nested = true
+
+                    stepDisplayManager = props.stepDisplayManager
+                    sequenceCommander = props.sequenceCommander
+                }
+            }
+
+            div {
+                SubdirectoryArrowLeftIcon::class.react {
+                    style = jso {
+                        fontSize = 3.em
+                        marginBottom = 15.px
+                        marginTop = (-40).px
+                    }
+                }
             }
         }
     }
 
 
-//    private fun ChildrenBuilder.renderElseSegment(
+    private fun ChildrenBuilder.renderElseSegment(
 //            isNextToRun: Boolean,
 //            imperativeState: ImperativeState?,
 //            isRunning: Boolean
-//    ) {
+    ) {
 //        val inElseBranch = ! isNextToRun &&
 //                ! isRunning &&
 //                imperativeState?.controlState is InternalControlState &&
 //                (imperativeState.controlState as InternalControlState).branchIndex == 1
 //
-//        div {
-//            css {
-//                padding = Padding(0.px, 1.em, 0.px, 1.em)
-//                borderBottomLeftRadius = 3.px
-//                borderBottomRightRadius = 3.px
-//                filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
-//
+        div {
+            css {
+                padding = Padding(0.px, 1.em, 0.px, 1.em)
+                borderBottomLeftRadius = 3.px
+                borderBottomRightRadius = 3.px
+                filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
+
+                backgroundColor = NamedColor.white
 //                backgroundColor = when {
 //                    imperativeState?.previous is ExecutionSuccess ->
 //                        Color("#00b467")
@@ -422,57 +438,66 @@ class IfStepDisplay(
 //                    else ->
 //                        NamedColor.white
 //                }
-//
-//                height = 100.pct
-//            }
-//            +"Otherwise"
-//        }
-//    }
-//
-//
-//    private fun ChildrenBuilder.renderElseBranch(
-////            imperativeState: ImperativeState
-//    ) {
-//        div {
-//            css {
-//                marginBottom = 2.times(overlapTop)
-//                width = 100.pct
-//            }
-//
-//            div {
-//                css {
-//                    width = 100.pct
-//                    display = Display.inlineBlock
-//                    marginLeft = 3.px
-//                }
-//
-//                +"Else"
-//                br {}
-//                ArrowForwardIcon::class.react {
-//                    style = jso {
-//                        fontSize = 3.em
-//                    }
-//                }
-//            }
-//
-//            div {
-//                css {
-//                    display = Display.inlineBlock
-//                    marginTop = (-4.5).em
-//                    width = 100.pct.minus(3.em)
-//                }
-//
-//                ConditionalBranchDisplay::class.react {
-//                    branchAttributePath = AttributePath.ofName(elseAttributeName)
-//
-//                    this.stepController = props.stepControllerHandle.wrapper!!
-//                    this.scriptCommander = props.scriptCommander
-//
-//                    this.clientState = props.common.clientState
-//                    this.objectLocation = props.common.objectLocation
-//                    this.imperativeModel = props.common.imperativeModel
-//                }
-//            }
-//        }
-//    }
+
+                height = 100.pct
+            }
+            +"Otherwise"
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderElseBranch(
+//            imperativeState: ImperativeState
+    ) {
+        div {
+            css {
+                marginBottom = 2.times(overlapTop)
+                width = 100.pct
+            }
+
+            div {
+                css {
+                    width = 100.pct
+                    display = Display.inlineBlock
+                    marginLeft = 3.px
+                }
+
+                +"Else"
+                br {}
+                ArrowForwardIcon::class.react {
+                    style = jso {
+                        fontSize = 3.em
+                    }
+                }
+            }
+
+            div {
+                css {
+                    display = Display.inlineBlock
+                    marginTop = (-4.5).em
+                    width = 100.pct.minus(3.em)
+                    marginLeft = 3.5.em
+                }
+
+                StepListDisplay::class.react {
+                    attributeLocation = AttributeLocation(
+                        elseAttributePath, props.common.objectLocation)
+                    nested = true
+
+                    stepDisplayManager = props.stepDisplayManager
+                    sequenceCommander = props.sequenceCommander
+                }
+            }
+
+            div {
+                SubdirectoryArrowLeftIcon::class.react {
+                    style = jso {
+                        fontSize = 3.em
+                        marginBottom = 15.px
+                        marginTop = (-40).px
+                    }
+                }
+            }
+        }
+    }
 }
