@@ -146,6 +146,11 @@ class SelectSequenceStepEditor(
     override fun onClientState(clientState: SessionState) {
         val graphNotation = clientState.graphStructure().graphNotation
 
+        if (props.objectLocation !in graphNotation.coalesce) {
+            // NB: containing step deleted or renamed and this objectLocation is stale
+            return
+        }
+
         val attributeNotation = graphNotation
             .firstAttribute(props.objectLocation, props.attributeName)
 

@@ -71,6 +71,11 @@ class StepListDisplay(
     override fun onClientState(clientState: SessionState) {
         val graphStructure: GraphStructure = clientState.graphDefinitionAttempt.graphStructure
 
+        if (props.attributeLocation.objectLocation !in graphStructure.graphNotation.coalesce) {
+            // NB: deleted or renamed (this is a stale objectLocation)
+            return
+        }
+
         val stepLocations = SequenceController.stepLocations(
             graphStructure, props.attributeLocation)
 

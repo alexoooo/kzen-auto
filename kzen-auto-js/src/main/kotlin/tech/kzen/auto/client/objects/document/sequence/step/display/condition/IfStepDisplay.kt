@@ -300,7 +300,7 @@ class IfStepDisplay(
             StepHeader::class.react {
                 hoverSignal = this@IfStepDisplay.hoverSignal
 
-//                attributeNesting = props.common.attributeNesting
+                indexInParent = props.common.indexInParent
                 objectLocation = props.common.objectLocation
 
 //                managed = props.common.managed

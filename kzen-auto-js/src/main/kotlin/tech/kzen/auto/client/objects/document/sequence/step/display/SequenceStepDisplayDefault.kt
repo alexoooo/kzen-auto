@@ -235,14 +235,7 @@ class SequenceStepDisplayDefault(
 
                     indexInParent = props.common.indexInParent
                     objectLocation = props.common.objectLocation
-//                    graphStructure = props.common.clientState.graphStructure()
 
-//                    this.imperativeState = imperativeState
-//                    this.imperativeState = null
-//                    this.isRunning = isRunning
-
-//                    managed = props.common.managed
-//                    managed = false
                     first = props.common.first
                     last = props.common.last
 
