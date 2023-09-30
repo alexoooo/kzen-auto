@@ -40,9 +40,11 @@ class MultiSequenceStep(
 //        var executeNextIfPaused = stepContext.topLevel
         var executeNextIfPaused = true
 
+        var lastSuccessValue: TupleValue = TupleValue.empty
+
         while (true) {
             val nextToRun = getAndPublishNextToRun(stepContext)
-                ?: return LogicResultSuccess(TupleValue.empty)
+                ?: return LogicResultSuccess(lastSuccessValue)
 
             val logicCommand = stepContext.logicControl.pollCommand()
             if (logicCommand == LogicCommand.Cancel) {
@@ -76,14 +78,17 @@ class MultiSequenceStep(
 
             when (result) {
                 is LogicResultSuccess -> {
-                    stepModel.value = result.value.components
+                    stepModel.value = result.value
+                    stepModel.error = null
                     stepModel.traceState = StepTrace.State.Done
                     stepContext.logicTraceHandle.set(
                         logicTracePath,
                         stepModel.trace().asExecutionValue())
+                    lastSuccessValue = result.value
                 }
 
                 is LogicResultFailed -> {
+                    stepModel.value = null
                     stepModel.error = result.message
                     stepModel.traceState = StepTrace.State.Done
                     stepContext.logicTraceHandle.set(
@@ -93,6 +98,8 @@ class MultiSequenceStep(
                 }
 
                 LogicResultCancelled -> {
+                    stepModel.value = null
+                    stepModel.error = null
                     stepModel.traceState = StepTrace.State.Done
                     stepContext.logicTraceHandle.set(
                         logicTracePath,
@@ -101,6 +108,8 @@ class MultiSequenceStep(
                 }
 
                 LogicResultPaused -> {
+                    stepModel.value = null
+                    stepModel.error = null
                     stepModel.traceState = StepTrace.State.Running
                     stepContext.logicTraceHandle.set(
                         logicTracePath,

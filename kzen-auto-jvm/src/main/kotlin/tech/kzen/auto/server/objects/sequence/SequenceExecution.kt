@@ -11,10 +11,7 @@ import tech.kzen.auto.server.objects.sequence.model.ActiveSequenceModel
 import tech.kzen.auto.server.objects.sequence.model.ActiveStepModel
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.*
-import tech.kzen.auto.server.service.v1.model.LogicCommand
-import tech.kzen.auto.server.service.v1.model.LogicResult
-import tech.kzen.auto.server.service.v1.model.LogicResultCancelled
-import tech.kzen.auto.server.service.v1.model.LogicResultFailed
+import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -107,10 +104,15 @@ class SequenceExecution(
         var logicResult: LogicResult
         try {
             logicResult = step.continueOrStart(stepContext)
-            stepModel.value = logicResult
+
+            stepModel.value = (logicResult as? LogicResultSuccess)?.value
 
             if (logicResult is LogicResultFailed) {
+                stepModel.error = logicResult.message
                 logger.warn("Step execution failed: {}", logicResult.message)
+            }
+            else {
+                stepModel.error = null
             }
         }
         catch (e: Throwable) {

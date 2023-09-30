@@ -28,6 +28,10 @@ data class LogicResultFailed(
 data class LogicResultSuccess(
     val value: TupleValue
 ): LogicResult() {
+    companion object {
+        val empty = LogicResultSuccess(TupleValue.empty)
+    }
+
     override fun isTerminal() = true
 }
 

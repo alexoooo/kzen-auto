@@ -4,12 +4,87 @@
 BooleanLiteralStep:
   abstract: true
   is: SequenceStep
-  class: tech.kzen.auto.server.objects.sequence.step.BooleanLiteralStep
+  class: tech.kzen.auto.server.objects.sequence.step.value.BooleanLiteralStep
   icon: ToggleOn
   title: "True or false"
   value: false
   meta:
     value: Boolean
+    selfLocation: SelfLocation
+
+
+TextLiteralStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.value.TextLiteralStep
+  icon: Textsms
+  title: "Text"
+  value: ""
+  meta:
+    value: String
+    selfLocation: SelfLocation
+
+
+NumberLiteralStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.value.NumberLiteralStep
+  icon: LooksOne
+  title: "Number"
+  value: 0
+  meta:
+    value: Double
+    selfLocation: SelfLocation
+
+
+NumberRangeStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.value.NumberRangeStep
+  icon: TripOrigin
+  title: "Number range"
+  from: 1
+  to: 100
+  meta:
+    from: Int
+    to: Int
+    selfLocation: SelfLocation
+
+
+DivisibleCheckStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.logic.DivisibleCheckStep
+  icon: FilterList
+  title: "Is divisible by"
+  number: ""
+  divisor: 1
+  meta:
+    number:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectSequenceStepEditor
+    divisor: Int
+    selfLocation: SelfLocation
+
+
+LogicalAndStepStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.logic.LogicalAndStep
+  icon: AddBox
+  title: "Logical AND"
+  condition: ""
+  and: ""
+  meta:
+    condition:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectSequenceStepEditor
+    and:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectSequenceStepEditor
     selfLocation: SelfLocation
 
 

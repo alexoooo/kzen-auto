@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.sequence.step
+package tech.kzen.auto.server.objects.sequence.step.value
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
@@ -13,15 +13,15 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class BooleanLiteralStep(
-    private val value: Boolean,
+class TextLiteralStep(
+    private val value: String,
     private val selfLocation: ObjectLocation
 ):
     TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val logger = LoggerFactory.getLogger(BooleanLiteralStep::class.java)
+        private val logger = LoggerFactory.getLogger(TextLiteralStep::class.java)
     }
 
 

@@ -6,6 +6,7 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 data class TupleValue(
     val components: List<TupleComponentValue>
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val empty = TupleValue(listOf())
 
@@ -15,11 +16,20 @@ data class TupleValue(
             ))
         }
 
-
         fun ofVoidWithDetail(value: ExecutionValue): TupleValue {
             return TupleValue(listOf(
                 TupleComponentValue.ofDetail(value)
             ))
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun mainComponentValue(): Any? {
+        return components.find { it.name == TupleComponentName.main }?.value
+    }
+
+    fun detailComponentValue(): ExecutionValue? {
+        return components.find { it.name == TupleComponentName.detail }?.value as? ExecutionValue
     }
 }

@@ -7,8 +7,6 @@ import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.objects.sequence.step.MultiSequenceStep
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultFailed
-import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentName
-import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentValue
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -52,18 +50,9 @@ class IfStep(
     override fun continueOrStart(stepContext: StepContext): LogicResult {
         if (state == State.Initial) {
             val conditionStep = stepContext.activeSequenceModel.steps[condition]
-            val value = conditionStep?.value
+            val value = conditionStep?.value?.mainComponentValue()
 
-            val mainValue: Any? =
-                if (value is List<*>) {
-                    val components = value.filterIsInstance<TupleComponentValue>()
-                    components.find { it.name == TupleComponentName.main }?.value
-                }
-                else {
-                    value
-                }
-
-            val conditionValue: Boolean = mainValue.toString() == "true"
+            val conditionValue: Boolean = value.toString() == "true"
             state =
                 if (conditionValue) {
                     State.ThenBranch

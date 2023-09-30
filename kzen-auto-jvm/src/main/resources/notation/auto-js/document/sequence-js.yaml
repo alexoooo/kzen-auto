@@ -111,6 +111,24 @@ BooleanLiteralStepTool:
   delegate: BooleanLiteralStep
 
 
+TextLiteralStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_InputOutput
+  delegate: TextLiteralStep
+
+
+NumberLiteralStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_InputOutput
+  delegate: NumberLiteralStep
+
+
+NumberRangeStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_InputOutput
+  delegate: NumberRangeStep
+
+
 DisplayValueStepTool:
   is: RibbonTool
   parent: SequenceGroup_InputOutput
@@ -142,6 +160,11 @@ IfTool:
   parent: SequenceGroup_LogicControl
   delegate: IfStep
 
+
+DivisibleCheckStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_LogicControl
+  delegate: DivisibleCheckStep
 
 ################################################################
 
