@@ -68,7 +68,7 @@ DivisibleCheckStep:
     selfLocation: SelfLocation
 
 
-LogicalAndStepStep:
+LogicalAndStep:
   abstract: true
   is: SequenceStep
   class: tech.kzen.auto.server.objects.sequence.step.logic.LogicalAndStep

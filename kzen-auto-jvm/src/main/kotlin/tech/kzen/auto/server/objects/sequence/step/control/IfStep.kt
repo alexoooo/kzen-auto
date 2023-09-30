@@ -50,9 +50,12 @@ class IfStep(
     override fun continueOrStart(stepContext: StepContext): LogicResult {
         if (state == State.Initial) {
             val conditionStep = stepContext.activeSequenceModel.steps[condition]
-            val value = conditionStep?.value?.mainComponentValue()
 
-            val conditionValue: Boolean = value.toString() == "true"
+            val conditionValue = conditionStep?.value?.mainComponentValue()
+            check(conditionValue is Boolean) {
+                "Boolean expected: $condition = $conditionValue"
+            }
+
             state =
                 if (conditionValue) {
                     State.ThenBranch
@@ -62,7 +65,6 @@ class IfStep(
                 }
         }
 
-//        val nextToRun =
         val step =
             if (state == State.ThenBranch) {
                 thenDelegate
@@ -70,15 +72,6 @@ class IfStep(
             else {
                 elseDelegate
             }
-
-//        val stepModel = stepContext.activeSequenceModel.steps.getOrPut(nextToRun) { ActiveStepModel() }
-//        val step = stepContext.graphInstance[nextToRun]!!.reference as SequenceStep
-
-//        val logicTracePath = LogicTracePath.ofObjectLocation(nextToRun)
-//        stepModel.traceState = StepTrace.State.Running
-//        stepContext.logicTraceHandle.set(
-//            logicTracePath,
-//            stepModel.trace().asExecutionValue())
 
         @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
         val result =
@@ -89,38 +82,6 @@ class IfStep(
                 logger.warn("Branch error - {}", step, t)
                 LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
             }
-
-//        when (result) {
-//            is LogicResultSuccess -> {
-//                stepModel.value = result.value.components
-//                stepModel.traceState = StepTrace.State.Done
-//                stepContext.logicTraceHandle.set(
-//                    logicTracePath,
-//                    stepModel.trace().asExecutionValue())
-//            }
-//
-//            is LogicResultFailed -> {
-//                stepModel.error = result.message
-//                stepModel.traceState = StepTrace.State.Done
-//                stepContext.logicTraceHandle.set(
-//                    logicTracePath,
-//                    stepModel.trace().asExecutionValue())
-//            }
-//
-//            LogicResultCancelled -> {
-//                stepModel.traceState = StepTrace.State.Done
-//                stepContext.logicTraceHandle.set(
-//                    logicTracePath,
-//                    stepModel.trace().asExecutionValue())
-//            }
-//
-//            LogicResultPaused -> {
-//                stepModel.traceState = StepTrace.State.Running
-//                stepContext.logicTraceHandle.set(
-//                    logicTracePath,
-//                    stepModel.trace().asExecutionValue())
-//            }
-//        }
 
         return result
     }

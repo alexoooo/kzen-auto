@@ -166,6 +166,12 @@ DivisibleCheckStepTool:
   parent: SequenceGroup_LogicControl
   delegate: DivisibleCheckStep
 
+
+LogicalAndStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_LogicControl
+  delegate: LogicalAndStep
+
 ################################################################
 
 SequenceGroup_Browser:
