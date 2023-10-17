@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.sequence.step
+package tech.kzen.auto.server.objects.sequence.step.value
 
 import tech.kzen.auto.common.paradigm.common.model.TextExecutionValue
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep

@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.sequence.step
+package tech.kzen.auto.server.objects.sequence.step.control
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep

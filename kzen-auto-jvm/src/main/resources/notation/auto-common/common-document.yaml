@@ -17,16 +17,16 @@ Document:
 
 # TODO: factor out DocumentArchetype (concrete) vs DocumentRoot (concrete)
 
-Script:
-  abstract: true
-  is: Document
-  class: tech.kzen.auto.common.objects.document.script.ScriptDocument
-  icon: PlaylistPlay
-  steps: []
-  meta:
-    steps:
-      is: List
-      of: Action
+#Script:
+#  abstract: true
+#  is: Document
+#  class: tech.kzen.auto.common.objects.document.script.ScriptDocument
+#  icon: PlaylistPlay
+#  steps: []
+#  meta:
+#    steps:
+#      is: List
+#      of: Action
 
 
 Sequence:

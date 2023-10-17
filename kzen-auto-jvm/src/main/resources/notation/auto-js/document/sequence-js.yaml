@@ -25,7 +25,7 @@ SequenceStepCommander:
 ################################################################
 
 StepDisplayManager:
-  class: tech.kzen.auto.client.objects.document.sequence.step.StepDisplayManager$Wrapper
+  class: tech.kzen.auto.client.objects.document.sequence.display.StepDisplayManager$Wrapper
   handle: StepDisplayManagerHandle
   meta:
     stepDisplays:
@@ -35,12 +35,12 @@ StepDisplayManager:
 
 
 StepDisplayManagerHandle:
-  class: tech.kzen.auto.client.objects.document.sequence.step.StepDisplayManager$Handle
+  class: tech.kzen.auto.client.objects.document.sequence.display.StepDisplayManager$Handle
 
 
 SequenceStepDisplay:
   abstract: true
-  class: tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayWrapper
+  class: tech.kzen.auto.client.objects.document.sequence.display.SequenceStepDisplayWrapper
   attributeController: AttributeController
   meta:
     objectLocation:
@@ -51,20 +51,20 @@ SequenceStepDisplay:
 
 SequenceStepDisplayDefault:
   is: SequenceStepDisplay
-  class: tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayDefault$Wrapper
+  class: tech.kzen.auto.client.objects.document.sequence.display.SequenceStepDisplayDefault$Wrapper
   attributeEditorManager: AttributeEditorManager
 
 
 MultiStepDisplay:
   is: SequenceStepDisplay
-  class: tech.kzen.auto.client.objects.document.sequence.step.display.MultiStepDisplay$Wrapper
+  class: tech.kzen.auto.client.objects.document.sequence.step.control.MultiStepDisplay$Wrapper
   stepDisplayManager: StepDisplayManagerHandle
   sequenceCommander: SequenceCommander
 
 
 IfStepDisplay:
   is: SequenceStepDisplay
-  class: tech.kzen.auto.client.objects.document.sequence.step.display.condition.IfStepDisplay$Wrapper
+  class: tech.kzen.auto.client.objects.document.sequence.step.control.IfStepDisplay$Wrapper
   attributeEditorManager: AttributeEditorManager
   stepDisplayManager: StepDisplayManagerHandle
   sequenceCommander: SequenceCommander
@@ -83,17 +83,38 @@ IfStepDisplay:
 #      is: ObjectLocation
 #      by: Nominal
 
+MappingStepDisplay:
+  is: SequenceStepDisplay
+  class: tech.kzen.auto.client.objects.document.sequence.step.control.mapping.MappingStepDisplay$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  stepDisplayManager: StepDisplayManagerHandle
+  sequenceCommander: SequenceCommander
+
+MappingStepCommander:
+  is: SequenceStepCommander
+  class: tech.kzen.auto.client.objects.document.sequence.step.control.mapping.MappingStepCommander
+  parent: SequenceCommander
+  mappingStepArchetype: MappingStepDisplay
+  itemArchetype: MappingItemStep
+  meta:
+    mappingStepArchetype:
+      is: ObjectLocation
+      by: Nominal
+    itemArchetype:
+      is: ObjectLocation
+      by: Nominal
+
 #######################################################################################################################
 
 
 SelectSequenceStepEditor:
   is: AttributeEditor
-  class: tech.kzen.auto.client.objects.document.sequence.step.attribute.SelectSequenceStepEditor$Wrapper
+  class: tech.kzen.auto.client.objects.document.sequence.display.edit.SelectSequenceStepEditor$Wrapper
 
 
 SelectLogicEditor:
   is: AttributeEditor
-  class: tech.kzen.auto.client.objects.document.sequence.step.attribute.SelectLogicEditor$Wrapper
+  class: tech.kzen.auto.client.objects.document.sequence.display.edit.SelectLogicEditor$Wrapper
 
 
 
@@ -159,6 +180,12 @@ IfTool:
   is: RibbonTool
   parent: SequenceGroup_LogicControl
   delegate: IfStep
+
+
+MappingTool:
+  is: RibbonTool
+  parent: SequenceGroup_LogicControl
+  delegate: MappingStep
 
 
 DivisibleCheckStepTool:

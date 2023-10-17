@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.sequence.step
+package tech.kzen.auto.server.objects.sequence.step.control
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
@@ -18,14 +18,14 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class MultiSequenceStep(
+class MultiStep(
     private val steps: List<ObjectLocation>
 ):
     SequenceStep
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val logger = LoggerFactory.getLogger(MultiSequenceStep::class.java)
+        private val logger = LoggerFactory.getLogger(MultiStep::class.java)
     }
 
 

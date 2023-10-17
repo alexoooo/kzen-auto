@@ -1,8 +1,9 @@
 package tech.kzen.auto.client.objects.document.sequence.command
 
-import tech.kzen.auto.common.objects.document.script.ScriptDocument
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
@@ -15,6 +16,47 @@ import tech.kzen.lib.common.reflect.Reflect
 class SequenceCommander(
     stepCommanders: List<SequenceStepCommander>
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        fun findNextAvailable(
+            containingObjectLocation: ObjectLocation,
+            archetypeObjectLocation: ObjectLocation,
+            graphStructure: GraphStructure
+        ): ObjectName {
+            val namePrefix = graphStructure
+                    .graphNotation
+                    .firstAttribute(archetypeObjectLocation, AutoConventions.titleAttributePath)
+                    ?.asString()
+                    ?: archetypeObjectLocation.objectPath.name.value
+
+            val directObjectName = ObjectName(namePrefix)
+
+            val documentObjectNames = graphStructure
+                    .graphNotation
+                    .documents[containingObjectLocation.documentPath]!!
+                    .objects
+                    .notations
+                    .values
+                    .keys
+                    .map { it.name }
+                    .toSet()
+
+            if (directObjectName !in documentObjectNames) {
+                return directObjectName
+            }
+
+            for (i in 2 .. 1000) {
+                val numberedObjectName = ObjectName("$namePrefix $i")
+
+                if (numberedObjectName !in documentObjectNames) {
+                    return numberedObjectName
+                }
+            }
+
+            return AutoConventions.randomAnonymous()
+        }
+    }
+
     //-----------------------------------------------------------------------------------------------------------------
     private val byArchetype: Map<ObjectLocation, SequenceStepCommander>
 
@@ -38,7 +80,7 @@ class SequenceCommander(
         archetypeObjectLocation: ObjectLocation,
         graphStructure: GraphStructure
     ): List<NotationCommand> {
-        val newName = ScriptDocument.findNextAvailable(
+        val newName = findNextAvailable(
             containingAttributeLocation.objectLocation, archetypeObjectLocation, graphStructure)
 
         // NB: +1 offset for main Script object

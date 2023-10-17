@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.sequence.step.display
+package tech.kzen.auto.client.objects.document.sequence.display
 
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.lib.common.model.location.ObjectLocation

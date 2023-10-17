@@ -5,7 +5,7 @@ import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
-import tech.kzen.auto.server.objects.sequence.step.MultiSequenceStep
+import tech.kzen.auto.server.objects.sequence.step.control.MultiStep
 import tech.kzen.auto.server.service.v1.Logic
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicExecution
@@ -67,7 +67,7 @@ class SequenceDocument(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val sequenceStepDelegate = MultiSequenceStep(steps)
+    private val sequenceStepDelegate = MultiStep(steps)
 
 
     override fun valueDefinition(): TupleDefinition {

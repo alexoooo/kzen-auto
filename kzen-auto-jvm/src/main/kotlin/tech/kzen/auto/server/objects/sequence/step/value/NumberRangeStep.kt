@@ -9,7 +9,9 @@ import tech.kzen.auto.server.service.v1.model.LogicType
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.platform.ClassNames
 
 
 @Reflect
@@ -28,7 +30,8 @@ class NumberRangeStep(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.ofMain(LogicType.boolean)
+        return TupleDefinition.ofMain(
+            LogicType(TypeMetadata(ClassNames.kotlinList, listOf(TypeMetadata.int))))
     }
 
 

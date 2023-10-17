@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.sequence.step.display.control
+package tech.kzen.auto.client.objects.document.sequence.display
 
 import emotion.react.css
 import js.core.jso
@@ -9,11 +9,8 @@ import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.react
-import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.sequence.SequenceController
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
-import tech.kzen.auto.client.objects.document.sequence.step.StepDisplayManager
-import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayPropsCommon
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.SessionGlobal
@@ -48,7 +45,7 @@ external interface StepListDisplayState: State {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-class StepListDisplay(
+class SequenceBranchDisplay(
     props: StepListDisplayProps
 ):
     RPureComponent<StepListDisplayProps, StepListDisplayState>(props),
@@ -179,7 +176,7 @@ class StepListDisplay(
 
         div {
             css {
-                width = StepController.width
+                width = SequenceController.stepWidth
             }
 
             for ((index, stepLocation) in stepLocations.withIndex()) {
@@ -208,7 +205,7 @@ class StepListDisplay(
             css {
                 position = Position.relative
                 height = 4.em
-                width = StepController.width.div(2).minus(1.em)
+                width = SequenceController.stepWidth.div(2).minus(1.em)
             }
 
             div {
@@ -230,7 +227,7 @@ class StepListDisplay(
                     height = 3.em
                     width = 3.em
                     top = 0.em
-                    left = StepController.width.div(2).minus(1.5.em)
+                    left = SequenceController.stepWidth.div(2).minus(1.5.em)
 
                     marginTop = 0.5.em
                     marginBottom = 0.5.em

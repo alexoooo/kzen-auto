@@ -9,13 +9,13 @@ import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
+import tech.kzen.auto.client.objects.document.sequence.display.SequenceStepDisplayPropsCommon
+import tech.kzen.auto.client.objects.document.sequence.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceGlobal
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
 import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressController
-import tech.kzen.auto.client.objects.document.sequence.step.StepDisplayManager
-import tech.kzen.auto.client.objects.document.sequence.step.display.MultiStepDisplay
-import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayPropsCommon
+import tech.kzen.auto.client.objects.document.sequence.step.control.MultiStepDisplay
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
@@ -59,6 +59,8 @@ class SequenceController:
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        val stepWidth = 26.em
+
         fun stepLocations(
             graphStructure: GraphStructure,
             attributeLocation: AttributeLocation

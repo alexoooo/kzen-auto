@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.paradigm.imperative.model.control
 
-import tech.kzen.auto.common.objects.document.script.ScriptDocument
+import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -25,9 +25,9 @@ sealed class ControlTree {
             val mainObjectLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
 
             return readBranch(
-                    graphStructure,
-                    mainObjectLocation,
-                    ScriptDocument.stepsAttributeName)
+                graphStructure,
+                mainObjectLocation,
+                SequenceConventions.stepsAttributeName)
         }
 
 

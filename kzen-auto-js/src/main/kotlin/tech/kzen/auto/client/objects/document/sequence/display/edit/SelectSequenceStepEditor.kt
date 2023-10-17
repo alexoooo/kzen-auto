@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.sequence.step.attribute
+package tech.kzen.auto.client.objects.document.sequence.display.edit
 
 import emotion.react.css
 import js.core.jso
@@ -10,9 +10,9 @@ import react.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor2Props
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
-import tech.kzen.auto.client.objects.document.report.model.ReportState
-import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.SessionGlobal
+import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.select.ReactSelect
@@ -23,14 +23,13 @@ import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
-import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
-import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
+import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedObjectRefactorEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
-import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import web.cssom.em
 import kotlin.js.Json
@@ -38,23 +37,31 @@ import kotlin.js.json
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface SelectLogicEditorState: State {
+external interface SelectSequenceStepEditorState: State {
     var value: ObjectLocation?
     var renaming: Boolean
 
-    var options: List<ObjectLocation>?
-//    var initialized: Boolean
+    var initialized: Boolean
+    var predecessors: List<ObjectLocation>?
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
-class SelectLogicEditor(
+class SelectSequenceStepEditor(
     props: AttributeEditor2Props
 ):
-    RComponent<AttributeEditor2Props, SelectLogicEditorState>(props),
-    LocalGraphStore.Observer
+    RComponent<AttributeEditor2Props, SelectSequenceStepEditorState>(props),
+    LocalGraphStore.Observer,
+    SessionGlobal.Observer//,
+//    SequenceStore.Observer
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        val stepIdentifier = ObjectName("SequenceStep")
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
@@ -63,7 +70,7 @@ class SelectLogicEditor(
         AttributeEditor(objectLocation)
     {
         override fun ChildrenBuilder.child(block: AttributeEditor2Props.() -> Unit) {
-            SelectLogicEditor::class.react {
+            SelectSequenceStepEditor::class.react {
                 block()
             }
         }
@@ -71,58 +78,36 @@ class SelectLogicEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun SelectLogicEditorState.init(props: AttributeEditor2Props) {
+    override fun SelectSequenceStepEditorState.init(props: AttributeEditor2Props) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
-        val graphNotation = ClientContext.sessionGlobal.current()!!.graphStructure().graphNotation
+//        val attributeNotation = props.clientState.graphStructure().graphNotation
+//            .firstAttribute(props.objectLocation, props.attributeName)
+////        console.log("SelectSequenceStepEditorState.init | attributeNotation - $attributeNotation")
+//
+//        val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
+//
+//        if (attributeNotation is ScalarAttributeNotation) {
+//            val reference = ObjectReference.parse(attributeNotation.value)
+//            val objectLocation = props.clientState.graphStructure().graphNotation.coalesce
+//                .locateOptional(reference, objectReferenceHost)
+//
+//            if (objectLocation != null) {
+//                // NB: might be absent if e.g. it was deleted
+//                value = objectLocation
+//            }
+//        }
 
-        val attributeNotation = graphNotation.firstAttribute(props.objectLocation, props.attributeName)
-
-        val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
-
-        value =
-            if (attributeNotation is ScalarAttributeNotation && attributeNotation.value.isNotEmpty()) {
-                val reference = ObjectReference.parse(attributeNotation.value)
-                val objectLocation = graphNotation.coalesce.locateOptional(reference, objectReferenceHost)
-                objectLocation
-            }
-            else {
-                null
-            }
-
-//        value = null
+        value = null
         renaming = false
-        options = options(graphNotation)
-//        initialized = false
+        initialized = false
     }
 
-
-    private fun options(graphNotation: GraphNotation): List<ObjectLocation> {
-        val featureMains = mutableListOf<ObjectLocation>()
-
-        for ((path, notation) in graphNotation.documents.values) {
-            if (path == props.objectLocation.documentPath) {
-                // TODO: avoid suggesting DAG violation?
-                continue
-            }
-
-            val isLogic =
-                SequenceState.isSequence(notation) ||
-                ReportState.isReport(notation)
-
-            if (isLogic) {
-                featureMains.add(ObjectLocation(
-                        path, NotationConventions.mainObjectPath))
-            }
-        }
-
-        return featureMains
-    }
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
         prevProps: AttributeEditor2Props,
-        prevState: SelectLogicEditorState,
+        prevState: SelectSequenceStepEditorState,
         snapshot: Any
     ) {
         if (state.value != prevState.value) {
@@ -131,7 +116,7 @@ class SelectLogicEditor(
                     renaming = false
                 }
             }
-            else {
+            else if (prevState.initialized) {
                 editAttributeCommandAsync()
             }
         }
@@ -139,6 +124,7 @@ class SelectLogicEditor(
 
 
     override fun componentDidMount() {
+        ClientContext.sessionGlobal.observe(this)
         async {
             ClientContext.mirroredGraphStore.observe(this)
         }
@@ -147,30 +133,76 @@ class SelectLogicEditor(
 
     override fun componentWillUnmount() {
         ClientContext.mirroredGraphStore.unobserve(this)
+        ClientContext.sessionGlobal.unobserve(this)
+    }
+
+
+
+//    override fun onSequenceState(sequenceState: SequenceState) {
+//        sequenceState.progress
+//    }
+
+
+    override fun onClientState(clientState: SessionState) {
+        val graphNotation = clientState.graphStructure().graphNotation
+
+        if (props.objectLocation !in graphNotation.coalesce) {
+            // NB: containing step deleted or renamed and this objectLocation is stale
+            return
+        }
+
+        val attributeNotation = graphNotation
+            .firstAttribute(props.objectLocation, props.attributeName)
+
+        val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
+
+        val value =
+            (attributeNotation as? ScalarAttributeNotation)?.let {
+                val reference = ObjectReference.parse(it.value)
+                graphNotation.coalesce
+                    .locateOptional(reference, objectReferenceHost)
+            }
+
+        val host = props.objectLocation.documentPath
+        val documentNotation = graphNotation.documents[host]!!
+
+        val documentObjectNotations = documentNotation.objects.notations.values
+
+        val steps = documentObjectNotations
+            .keys
+            .filter { objectPath ->
+                graphNotation.inheritanceChain(
+                    host.toObjectLocation(objectPath)
+                ).any {
+                    it.objectPath.name == stepIdentifier
+                }
+            }
+
+        val predecessors = steps
+            .filter { it != props.objectLocation.objectPath }
+            .map { host.toObjectLocation(it) }
+
+        setState {
+            this.value = value
+            this.predecessors = predecessors
+            initialized = true
+        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         when (event) {
-            is RenamedDocumentRefactorEvent -> {
-                if (event.removedUnderOldName.documentPath == state.value?.documentPath) {
-                    val newLocation =
-                            state.value!!.copy(documentPath = event.createdWithNewName.destination)
-
+            is RenamedObjectRefactorEvent -> {
+                if (event.renamedObject.objectLocation == state.value) {
                     setState {
-                        value = newLocation
+                        value = event.renamedObject.newObjectLocation()
                         renaming = true
                     }
                 }
-                else {
-                    updateOptions()
-                }
             }
 
-            else -> {
-                updateOptions()
-            }
+            else -> {}
         }
     }
 
@@ -179,14 +211,6 @@ class SelectLogicEditor(
 
 
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
-
-
-    private fun updateOptions() {
-        val graphNotation = ClientContext.sessionGlobal.current()!!.graphStructure().graphNotation
-        setState {
-            options = options(graphNotation)
-        }
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -210,11 +234,26 @@ class SelectLogicEditor(
         val value = state.value
                 ?: return
 
+        val localReference = value.toReference()
+                .crop(retainPath = false)
+
         ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
                 props.objectLocation,
                 props.attributeName,
-                ScalarAttributeNotation(value.asString())))
+                ScalarAttributeNotation(localReference.asString())))
     }
+
+
+//    private fun predecessors(): List<ObjectLocation> {
+//        val host = props.objectLocation.documentPath
+//        val steps = ControlTree.readSteps(
+//                props.clientState.graphStructure(), host)
+//
+////        console.log("^^^^ steps", steps.toString())
+//
+//        val objectPaths = steps.predecessors(props.objectLocation.objectPath)
+//        return objectPaths.map { ObjectLocation(host, it) }
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -222,21 +261,19 @@ class SelectLogicEditor(
 //        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
 //                props.objectLocation, props.attributeName)
 
-//        +"[Select Script]"
-        val options = state.options
+        val predecessors = state.predecessors
             ?: return
 
-        val selectOptions = options
-                .map {
-                    val option: ReactSelectOption = jso {
-                        value = it.asString()
-                        label = it.documentPath.name.value
-                    }
-                    option
+        val selectOptions: Array<ReactSelectOption> = predecessors
+            .map { location ->
+                val option: ReactSelectOption = jso {
+                    this.value = location.asString()
+                    this.label = location.objectPath.name.value
                 }
-                .toTypedArray()
+                option
+            }
+            .toTypedArray()
 
-//        +"!! ${selectOptions.map { it.value }}"
 //        +"^^ SELECT: ${props.attributeName} - $attributeNotation - ${selectOptions.map { it.value }}"
 
         val selectId = "material-react-select-id"
@@ -251,10 +288,13 @@ class SelectLogicEditor(
             +formattedLabel()
         }
 
+        val selectedValue = selectOptions.find { it.value == state.value?.asString() }
+//        console.log("### ReactSelect !!!", state.value, selectedValue, selectOptions)
+
         ReactSelect::class.react {
             id = selectId
-            value = selectOptions.find { it.value == state.value?.asString() }
-            this.options = selectOptions
+            value = selectedValue
+            options = selectOptions
 
             onChange = {
                 onValueChange(ObjectLocation.parse(it.value))

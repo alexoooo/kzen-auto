@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.service.global
 
-import tech.kzen.auto.client.objects.ribbon.RibbonRun
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicState
@@ -27,6 +26,10 @@ class SessionGlobal:
         LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        const val runningKey = "running"
+    }
+
     interface Observer {
         fun onClientState(clientState: SessionState)
     }
@@ -70,7 +73,7 @@ class SessionGlobal:
     override fun handleNavigation(documentPath: DocumentPath?, parameters: RequestParams) {
         navigationRoute = NavigationRoute(documentPath, parameters)
 
-        val selected = parameters.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
+        val selected = parameters.get(runningKey)?.let { DocumentPath.parse(it) }
         if (selected != null) {
             async {
                 imperativeModel = ClientContext.executionRepository.executionModel(
@@ -190,7 +193,7 @@ class SessionGlobal:
         val logicState = clientLogicState
             ?: return
 
-        val selected = navigation.requestParams.get(RibbonRun.runningKey)?.let { DocumentPath.parse(it) }
+        val selected = navigation.requestParams.get(runningKey)?.let { DocumentPath.parse(it) }
 
         val nextSessionState = SessionState(
             definition,

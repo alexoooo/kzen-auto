@@ -91,7 +91,7 @@ LogicalAndStep:
 DisplayValueStep:
   abstract: true
   is: SequenceStep
-  class: tech.kzen.auto.server.objects.sequence.step.DisplayValueStep
+  class: tech.kzen.auto.server.objects.sequence.step.value.DisplayValueStep
   icon: Print
   title: "Display"
   text: ""
@@ -109,7 +109,7 @@ DisplayValueStep:
 MultiSequenceStep:
   abstract: true
   is: SequenceStep
-  class: tech.kzen.auto.server.objects.sequence.step.MultiSequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.control.MultiSequenceStep
   display: MultiStepDisplay
   icon: ToggleOn
   title: "Sub-sequence"
@@ -124,7 +124,7 @@ MultiSequenceStep:
 RunStep:
   abstract: true
   is: SequenceStep
-  class: tech.kzen.auto.server.objects.sequence.step.RunStep
+  class: tech.kzen.auto.server.objects.sequence.step.control.RunStep
   icon: PlayArrow
   title: "Run"
   instructions: ""
@@ -139,7 +139,7 @@ RunStep:
 WaitStep:
   abstract: true
   is: SequenceStep
-  class: tech.kzen.auto.server.objects.sequence.step.WaitStep
+  class: tech.kzen.auto.server.objects.sequence.step.control.WaitStep
   icon: Timer
   title: "Wait"
   milliseconds: 1000
@@ -172,6 +172,36 @@ IfStep:
       is: List
       of: SequenceStep
       by: Nominal
+
+
+MappingStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.control.mapping.MappingStep
+  display: MappingStepDisplay
+  icon: Forward
+  title: "Mapping"
+  description: "Transform each item in a list"
+  items: ""
+  steps: []
+  meta:
+    items:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectSequenceStepEditor
+    steps:
+      is: List
+      of: SequenceStep
+      by: Nominal
+
+MappingItemStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.control.mapping.MappingItemStep
+  icon: Share
+  title: "Item"
+  meta:
+    selfLocation: SelfLocation
 
 #######################################################################################################################
 

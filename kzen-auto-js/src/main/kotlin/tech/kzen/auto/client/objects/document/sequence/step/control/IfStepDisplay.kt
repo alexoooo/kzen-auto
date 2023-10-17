@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.sequence.step.display.condition
+package tech.kzen.auto.client.objects.document.sequence.step.control
 
 import emotion.react.css
 import js.core.jso
@@ -12,18 +12,14 @@ import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.tr
 import react.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
-import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.objects.document.script.step.header.StepNameEditor
+import tech.kzen.auto.client.objects.document.sequence.SequenceController
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
+import tech.kzen.auto.client.objects.document.sequence.display.*
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceGlobal
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
-import tech.kzen.auto.client.objects.document.sequence.step.StepDisplayManager
-import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayDefault
-import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayProps
-import tech.kzen.auto.client.objects.document.sequence.step.display.SequenceStepDisplayWrapper
-import tech.kzen.auto.client.objects.document.sequence.step.display.control.StepListDisplay
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
@@ -80,7 +76,7 @@ class IfStepDisplay(
         val elseAttributeName = AttributeName("else")
         private val elseAttributePath = AttributePath.ofName(elseAttributeName)
 
-        private val stepWidth = StepController.width.minus(2.em)
+        private val stepWidth = SequenceController.stepWidth.minus(2.em)
         private val overlapTop = 4.px
 
 //        private const val tableBorders = true
@@ -387,7 +383,7 @@ class IfStepDisplay(
                     marginLeft = 3.5.em
                 }
 
-                StepListDisplay::class.react {
+                SequenceBranchDisplay::class.react {
                     attributeLocation = AttributeLocation(
                         thenAttributePath, props.common.objectLocation)
                     nested = true
@@ -479,7 +475,7 @@ class IfStepDisplay(
                     marginLeft = 3.5.em
                 }
 
-                StepListDisplay::class.react {
+                SequenceBranchDisplay::class.react {
                     attributeLocation = AttributeLocation(
                         elseAttributePath, props.common.objectLocation)
                     nested = true

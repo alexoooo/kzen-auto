@@ -1,11 +1,13 @@
-package tech.kzen.auto.client.objects.document.sequence.step.display
+package tech.kzen.auto.client.objects.document.sequence.step.control
 
 import react.ChildrenBuilder
 import react.State
 import react.react
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
-import tech.kzen.auto.client.objects.document.sequence.step.StepDisplayManager
-import tech.kzen.auto.client.objects.document.sequence.step.display.control.StepListDisplay
+import tech.kzen.auto.client.objects.document.sequence.display.SequenceBranchDisplay
+import tech.kzen.auto.client.objects.document.sequence.display.SequenceStepDisplayProps
+import tech.kzen.auto.client.objects.document.sequence.display.SequenceStepDisplayWrapper
+import tech.kzen.auto.client.objects.document.sequence.display.StepDisplayManager
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.lib.common.model.location.AttributeLocation
@@ -50,7 +52,7 @@ class MultiStepDisplay(
         val stepDisplayManager = props.stepDisplayManager.wrapper
             ?: return
 
-        StepListDisplay::class.react {
+        SequenceBranchDisplay::class.react {
             attributeLocation = AttributeLocation(
                 SequenceConventions.stepsAttributePath,
                 props.common.objectLocation)

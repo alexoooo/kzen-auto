@@ -4,7 +4,6 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
-import tech.kzen.auto.server.objects.sequence.step.MultiSequenceStep
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
@@ -35,8 +34,8 @@ class IfStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val thenDelegate = MultiSequenceStep(then)
-    private val elseDelegate = MultiSequenceStep(`else`)
+    private val thenDelegate = MultiStep(then)
+    private val elseDelegate = MultiStep(`else`)
 
     private var state = State.Initial
 
@@ -73,7 +72,6 @@ class IfStep(
                 elseDelegate
             }
 
-        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
         val result =
             try {
                 step.continueOrStart(stepContext)

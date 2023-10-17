@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.sequence.step.display
+package tech.kzen.auto.client.objects.document.sequence.display
 
 import emotion.react.css
 import mui.material.CardContent
@@ -12,9 +12,9 @@ import react.dom.html.ReactHTML.span
 import react.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.graph.EdgeController
-import tech.kzen.auto.client.objects.document.script.step.StepController
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.objects.document.script.step.header.StepNameEditor
+import tech.kzen.auto.client.objects.document.sequence.SequenceController
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceGlobal
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
@@ -204,7 +204,7 @@ class SequenceStepDisplayDefault(
     override fun ChildrenBuilder.render() {
         span {
             css {
-                width = StepController.width
+                width = SequenceController.stepWidth
             }
 
             onMouseOver = { onMouseOver() }
