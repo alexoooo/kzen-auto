@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.sequence.step.control.mapping
 
-import tech.kzen.auto.server.objects.sequence.api.SequenceStep
+import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultFailed
@@ -15,7 +15,9 @@ import tech.kzen.lib.common.reflect.Reflect
 @Reflect
 class MappingItemStep(
     private val selfLocation: ObjectLocation
-): SequenceStep {
+):
+    TracingSequenceStep(selfLocation)
+{
     override fun valueDefinition(): TupleDefinition {
         return TupleDefinition.ofMain(LogicType.any)
     }
@@ -30,6 +32,8 @@ class MappingItemStep(
 
         val next = parentMapping.next
             ?: return LogicResultFailed("Next mapping not found: $parentLocation")
+
+        traceDetail(stepContext, next)
 
         return LogicResultSuccess(
             TupleValue.ofMain(next))

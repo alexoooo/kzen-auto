@@ -53,6 +53,11 @@ data class LogicTracePath(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun append(segment: String): LogicTracePath {
+        return LogicTracePath(segments + segment)
+    }
+
+
     fun asString(): String {
         return segments.joinToString("/", prefix = "/")
     }

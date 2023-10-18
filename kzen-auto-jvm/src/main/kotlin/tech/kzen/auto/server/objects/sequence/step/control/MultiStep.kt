@@ -58,7 +58,8 @@ class MultiStep(
             }
 
             val stepModel = stepContext.activeSequenceModel.steps.getOrPut(nextToRun) { ActiveStepModel() }
-            val step = stepContext.graphInstance[nextToRun]!!.reference as SequenceStep
+            val step = stepContext.graphInstance[nextToRun]?.reference as? SequenceStep
+                ?: throw IllegalStateException("Next step not found: $nextToRun")
 
             val logicTracePath = LogicTracePath.ofObjectLocation(nextToRun)
             stepModel.traceState = StepTrace.State.Running
@@ -151,9 +152,4 @@ class MultiStep(
         }
         return null
     }
-
-
-//    override fun loadState(previous: MultiSequenceStep) {
-//        TODO("Not yet implemented")
-//    }
 }

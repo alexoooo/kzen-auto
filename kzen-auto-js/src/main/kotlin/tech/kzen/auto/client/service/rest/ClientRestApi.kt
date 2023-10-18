@@ -13,8 +13,6 @@ import tech.kzen.auto.common.paradigm.common.v1.model.LogicStatus
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.platform.encodeURIComponent
@@ -457,70 +455,70 @@ class ClientRestApi(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun runningHosts(): List<DocumentPath> {
-        val responseText = getOrPut(
-            CommonRestApi.actionList)
-
-        val responseJson = JSON.parse<Array<String>>(responseText)
-
-        @Suppress("UNCHECKED_CAST")
-        val responseCollection = ClientJsonUtils.toList(responseJson) as List<String>
-
-        return responseCollection.map { DocumentPath.parse(it) }
-    }
-
-
-    suspend fun executionModel(host: DocumentPath): ImperativeModel {
-        val responseText = getOrPut(
-            CommonRestApi.actionModel,
-            CommonRestApi.paramDocumentPath to host.asString())
-
-        val responseJson = JSON.parse<Json>(responseText)
-        val responseCollection = ClientJsonUtils.toMap(responseJson)
-
-        return ImperativeModel.fromCollection(
-                responseCollection)
-    }
-
-
-    // todo: should this be used?
-    suspend fun startExecution(documentPath: DocumentPath): Digest {
-        return getOrPutDigest(
-                CommonRestApi.actionStart,
-                CommonRestApi.paramDocumentPath to documentPath.asString())
-    }
-
-
-    suspend fun resetExecution(
-            host: DocumentPath
-    ) {
-        getOrPut(CommonRestApi.actionReset,
-            CommonRestApi.paramDocumentPath to host.asString())
-    }
-
-
-    suspend fun performAction(
-            host: DocumentPath,
-            objectLocation: ObjectLocation
-    ): ImperativeResponse {
-        val responseJson = getOrPutJson(
-                CommonRestApi.actionPerform,
-                CommonRestApi.paramHostDocumentPath to host.asString(),
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
-
-        val responseCollection = ClientJsonUtils.toMap(responseJson)
-
-        return ImperativeResponse.fromCollection(responseCollection)
-    }
-
-
-    suspend fun returnFrame(
-            host: DocumentPath
-    ) {
-        getOrPut(CommonRestApi.actionReturn,
-            CommonRestApi.paramHostDocumentPath to host.asString())
-    }
+//    suspend fun runningHosts(): List<DocumentPath> {
+//        val responseText = getOrPut(
+//            CommonRestApi.actionList)
+//
+//        val responseJson = JSON.parse<Array<String>>(responseText)
+//
+//        @Suppress("UNCHECKED_CAST")
+//        val responseCollection = ClientJsonUtils.toList(responseJson) as List<String>
+//
+//        return responseCollection.map { DocumentPath.parse(it) }
+//    }
+//
+//
+//    suspend fun executionModel(host: DocumentPath): ImperativeModel {
+//        val responseText = getOrPut(
+//            CommonRestApi.actionModel,
+//            CommonRestApi.paramDocumentPath to host.asString())
+//
+//        val responseJson = JSON.parse<Json>(responseText)
+//        val responseCollection = ClientJsonUtils.toMap(responseJson)
+//
+//        return ImperativeModel.fromCollection(
+//                responseCollection)
+//    }
+//
+//
+//    // todo: should this be used?
+//    suspend fun startExecution(documentPath: DocumentPath): Digest {
+//        return getOrPutDigest(
+//                CommonRestApi.actionStart,
+//                CommonRestApi.paramDocumentPath to documentPath.asString())
+//    }
+//
+//
+//    suspend fun resetExecution(
+//            host: DocumentPath
+//    ) {
+//        getOrPut(CommonRestApi.actionReset,
+//            CommonRestApi.paramDocumentPath to host.asString())
+//    }
+//
+//
+//    suspend fun performAction(
+//            host: DocumentPath,
+//            objectLocation: ObjectLocation
+//    ): ImperativeResponse {
+//        val responseJson = getOrPutJson(
+//                CommonRestApi.actionPerform,
+//                CommonRestApi.paramHostDocumentPath to host.asString(),
+//                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+//                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+//
+//        val responseCollection = ClientJsonUtils.toMap(responseJson)
+//
+//        return ImperativeResponse.fromCollection(responseCollection)
+//    }
+//
+//
+//    suspend fun returnFrame(
+//            host: DocumentPath
+//    ) {
+//        getOrPut(CommonRestApi.actionReturn,
+//            CommonRestApi.paramHostDocumentPath to host.asString())
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

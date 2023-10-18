@@ -44,7 +44,7 @@ NumberRangeStep:
   icon: TripOrigin
   title: "Number range"
   from: 1
-  to: 100
+  to: 10
   meta:
     from: Int
     to: Int
@@ -193,6 +193,7 @@ MappingStep:
       is: List
       of: SequenceStep
       by: Nominal
+    selfLocation: SelfLocation
 
 MappingItemStep:
   abstract: true

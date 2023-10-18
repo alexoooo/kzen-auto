@@ -94,7 +94,7 @@ MappingStepCommander:
   is: SequenceStepCommander
   class: tech.kzen.auto.client.objects.document.sequence.step.control.mapping.MappingStepCommander
   parent: SequenceCommander
-  mappingStepArchetype: MappingStepDisplay
+  mappingStepArchetype: MappingStep
   itemArchetype: MappingItemStep
   meta:
     mappingStepArchetype:

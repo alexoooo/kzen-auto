@@ -8,13 +8,9 @@ import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.global.SessionState
-import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.lib.common.model.attribute.AttributePath
-import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
@@ -43,7 +39,7 @@ class AutoAttributeEditor(
     props: AutoAttributeEditorProps
 ):
     RPureComponent<AutoAttributeEditorProps, AutoAttributeEditorState>(props),
-    ExecutionRepository.Observer,
+//    ExecutionRepository.Observer,
     SessionGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -72,14 +68,14 @@ class AutoAttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.sessionGlobal.observe(this)
-        async {
-            ClientContext.executionRepository.observe(this)
-        }
+//        async {
+//            ClientContext.executionRepository.observe(this)
+//        }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.executionRepository.unobserve(this)
+//        ClientContext.executionRepository.unobserve(this)
         ClientContext.sessionGlobal.unobserve(this)
     }
 
@@ -122,12 +118,12 @@ class AutoAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
-        attributePathValueEditor.current?.flush()
-    }
-
-
-    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel?) {}
+//    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
+//        attributePathValueEditor.current?.flush()
+//    }
+//
+//
+//    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel?) {}
 
 
     //-----------------------------------------------------------------------------------------------------------------

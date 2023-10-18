@@ -62,6 +62,13 @@ object LogicTraceStore:
             override fun set(logicTracePath: LogicTracePath, executionValue: ExecutionValue) {
                 buffer.values[logicTracePath] = executionValue
             }
+
+            override fun clearAll(prefix: LogicTracePath) {
+                val pathsToClear = buffer.values.keys.filter { it.startsWith(prefix) }
+                for (pathToClear in pathsToClear) {
+                    buffer.values.remove(pathToClear)
+                }
+            }
         }
     }
 

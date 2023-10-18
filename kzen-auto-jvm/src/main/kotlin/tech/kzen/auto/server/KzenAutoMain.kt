@@ -109,7 +109,7 @@ private fun Routing.routeRequests(
     routeTask(context.restHandler)
     routeLogic(context.restHandler)
 
-    routeScript(context.restHandler)
+//    routeScript(context.restHandler)
     routeDataflow(context.restHandler)
 }
 
@@ -426,32 +426,32 @@ private fun Routing.routeDetached(
 }
 
 
-private fun Routing.routeScript(
-    restHandler: RestHandler
-) {
-    get(CommonRestApi.actionList) {
-        val response = restHandler.actionList()
-        call.respond(response)
-    }
-    get(CommonRestApi.actionModel) {
-        val response = restHandler.actionModel(call.parameters)
-        call.respond(response)
-    }
-    get(CommonRestApi.actionStart) {
-        val response = restHandler.actionStart(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.actionReturn) {
-        val response = restHandler.actionReturn(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.actionReset) {
-        restHandler.actionReset(call.parameters)
-        call.response.status(HttpStatusCode.OK)
-    }
-    get(CommonRestApi.actionPerform) {
-        val response = restHandler.actionPerform(call.parameters)
-        call.respond(response)
-    }
-}
+//private fun Routing.routeScript(
+//    restHandler: RestHandler
+//) {
+//    get(CommonRestApi.actionList) {
+//        val response = restHandler.actionList()
+//        call.respond(response)
+//    }
+//    get(CommonRestApi.actionModel) {
+//        val response = restHandler.actionModel(call.parameters)
+//        call.respond(response)
+//    }
+//    get(CommonRestApi.actionStart) {
+//        val response = restHandler.actionStart(call.parameters)
+//        call.respondText(response)
+//    }
+//    get(CommonRestApi.actionReturn) {
+//        val response = restHandler.actionReturn(call.parameters)
+//        call.respondText(response)
+//    }
+//    get(CommonRestApi.actionReset) {
+//        restHandler.actionReset(call.parameters)
+//        call.response.status(HttpStatusCode.OK)
+//    }
+//    get(CommonRestApi.actionPerform) {
+//        val response = restHandler.actionPerform(call.parameters)
+//        call.respond(response)
+//    }
+//}
 

@@ -13,6 +13,14 @@ data class ActiveStepModel(
     var traceState: StepTrace.State = StepTrace.State.Idle,
     var error: String? = null
 ) {
+    fun reset() {
+        value = null
+        displayValue = NullExecutionValue
+        detail = NullExecutionValue
+        traceState = StepTrace.State.Idle
+        error = null
+    }
+
     fun trace(): StepTrace {
         return StepTrace(
             traceState,

@@ -28,10 +28,11 @@ class DisplayValueStep(
         val step = stepContext.activeSequenceModel.steps[text]
         val value = step?.value?.mainComponentValue()
 
-        val executionValue = TextExecutionValue(value?.toString() ?: "<null>")
+        val text = value?.toString() ?: "<null>"
+        val executionValue = TextExecutionValue(text)
 
         traceDetail(stepContext, executionValue)
 
-        return LogicResultSuccess(TupleValue.empty)
+        return LogicResultSuccess(TupleValue.ofMain(text))
     }
 }

@@ -12,8 +12,8 @@ import tech.kzen.auto.client.service.rest.*
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
+//import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
+//import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
@@ -58,20 +58,20 @@ object ClientContext {
     val mirroredGraphStore = MirroredGraphStore(
             directGraphStore, remoteGraphStore)
 
-    private val restExecutionInitializer = ClientRestExecutionInitializer(
-            restClient)
-
-    private val restActionExecutor = ClientRestActionExecutor(
-            restClient)
-
-    val executionRepository = ExecutionRepository(
-            restExecutionInitializer,
-            restActionExecutor)
-
-    val executionLoop = ExecutionLoop(
-            mirroredGraphStore,
-            executionRepository,
-            125)
+//    private val restExecutionInitializer = ClientRestExecutionInitializer(
+//            restClient)
+//
+//    private val restActionExecutor = ClientRestActionExecutor(
+//            restClient)
+//
+//    val executionRepository = ExecutionRepository(
+//            restExecutionInitializer,
+//            restActionExecutor)
+//
+//    val executionLoop = ExecutionLoop(
+//            mirroredGraphStore,
+//            executionRepository,
+//            125)
 
     val insertionGlobal = InsertionGlobal()
     val executionIntentGlobal = ExecutionIntentGlobal()
@@ -94,7 +94,7 @@ object ClientContext {
 
 
     val navigationGlobal = NavigationGlobal(
-            executionLoop,
+//            executionLoop,
             visualDataflowLoop)
 
     val clientLogicGlobal = ClientLogicGlobal(
@@ -114,10 +114,10 @@ object ClientContext {
     suspend fun initAsync() {
         navigationGlobal.postConstruct(mirroredGraphStore)
 
-        mirroredGraphStore.observe(executionRepository)
+//        mirroredGraphStore.observe(executionRepository)
         mirroredGraphStore.observe(visualDataflowRepository)
 
-        executionRepository.observe(executionLoop)
+//        executionRepository.observe(executionLoop)
         visualDataflowRepository.observe(visualDataflowLoop)
 
         clientLogicGlobal.init()
@@ -126,6 +126,6 @@ object ClientContext {
         seededNotationMedia.scan()
 
         sessionGlobal.postConstruct(
-                navigationGlobal, directGraphStore, clientLogicGlobal, restClient, executionRepository)
+                navigationGlobal, directGraphStore, clientLogicGlobal, /*restClient, executionRepository*/)
     }
 }

@@ -12,4 +12,7 @@ interface LogicTraceHandle {
     fun set(
         logicTracePath: LogicTracePath,
         executionValue: ExecutionValue)
+
+
+    fun clearAll(prefix: LogicTracePath)
 }

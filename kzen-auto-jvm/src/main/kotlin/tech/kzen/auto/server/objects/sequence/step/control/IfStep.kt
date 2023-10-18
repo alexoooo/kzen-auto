@@ -4,6 +4,7 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.service.v1.StatefulLogicElement
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
@@ -17,7 +18,8 @@ class IfStep(
     then: List<ObjectLocation>,
     `else`: List<ObjectLocation>
 ):
-    SequenceStep
+    SequenceStep,
+    StatefulLogicElement<IfStep>
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -38,6 +40,12 @@ class IfStep(
     private val elseDelegate = MultiStep(`else`)
 
     private var state = State.Initial
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun loadState(previous: IfStep) {
+        state = previous.state
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -80,6 +88,10 @@ class IfStep(
                 logger.warn("Branch error - {}", step, t)
                 LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
             }
+
+        if (result.isTerminal()) {
+            state = State.Initial
+        }
 
         return result
     }

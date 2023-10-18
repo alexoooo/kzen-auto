@@ -6,7 +6,6 @@ import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveDataflowRepo
 import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveVisualProvider
 import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageInspector
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.service.GraphInstanceCreator
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.api.RestHandler
@@ -23,8 +22,6 @@ import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.service.DownloadClient
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
-import tech.kzen.auto.server.service.exec.EmptyExecutionInitializer
-import tech.kzen.auto.server.service.exec.ModelActionExecutor
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
@@ -114,15 +111,15 @@ class KzenAutoContext(
             graphDefiner,
             notationReducer)
 
-    val actionExecutor = ModelActionExecutor(
-            graphStore, graphCreator)
+//    val actionExecutor = ModelActionExecutor(
+//            graphStore, graphCreator)
 
     val detachedExecutor = ModelDetachedExecutor(
             graphStore, graphCreator)
 
-    val executionRepository = ExecutionRepository(
-            EmptyExecutionInitializer,
-            actionExecutor)
+//    val executionRepository = ExecutionRepository(
+//            EmptyExecutionInitializer,
+//            actionExecutor)
 
     val modelTaskRepository = ModelTaskRepository(
         graphStore, graphCreator)
@@ -175,7 +172,7 @@ class KzenAutoContext(
         notationMedia,
         yamlParser,
         graphStore,
-        executionRepository,
+//        executionRepository,
         detachedExecutor,
         visualDataflowRepository,
         modelTaskRepository,
@@ -193,7 +190,7 @@ class KzenAutoContext(
     //-----------------------------------------------------------------------------------------------------------------
     fun init() {
         runBlocking {
-            graphStore.observe(executionRepository)
+//            graphStore.observe(executionRepository)
             graphStore.observe(activeDataflowRepository)
             graphStore.observe(visualDataflowRepository)
             graphStore.observe(modelTaskRepository)

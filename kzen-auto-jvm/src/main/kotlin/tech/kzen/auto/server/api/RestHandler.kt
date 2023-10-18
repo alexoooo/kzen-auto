@@ -12,12 +12,8 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeModel
-import tech.kzen.auto.common.paradigm.imperative.model.ImperativeResponse
-import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
-import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
@@ -50,7 +46,7 @@ class RestHandler(
     private val notationMedia: NotationMedia,
     private val yamlNotationParser: YamlNotationParser,
     private val graphStore: DirectGraphStore,
-    private val executionRepository: ExecutionRepository,
+//    private val executionRepository: ExecutionRepository,
     private val detachedExecutor: ModelDetachedExecutor,
     private val visualDataflowRepository: VisualDataflowRepository,
     private val modelTaskRepository: ModelTaskRepository,
@@ -768,89 +764,89 @@ class RestHandler(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun actionList(): List<String> {
-        val activeScripts = executionRepository.activeScripts()
-        return activeScripts.map { it.asString() }
-    }
-
-
-    fun actionModel(parameters: Parameters): Map<String, Any?> {
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        val executionModel = runBlocking {
-            val graphStructure = graphStore.graphStructure()
-            executionRepository.executionModel(documentPath, graphStructure)
-        }
-
-        return ImperativeModel.toCollection(executionModel)
-    }
-
-
-    fun actionStart(parameters: Parameters): String {
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        val digest = runBlocking {
-            val graphStructure = graphStore
-                    .graphStructure()
-                    .filter(AutoConventions.serverAllowed)
-
-            executionRepository.start(
-                documentPath, graphStructure)
-        }
-
-        return digest.asString()
-    }
-
-
-    fun actionReturn(parameters: Parameters): String {
-        val hostDocumentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramHostDocumentPath, DocumentPath::parse)
-
-        val digest = runBlocking {
-            val graphStructure = graphStore
-                    .graphStructure()
-                    .filter(AutoConventions.serverAllowed)
-
-            executionRepository.returnFrame(
-                hostDocumentPath, graphStructure)
-        }
-
-        return digest.asString()
-    }
-
-
-    fun actionReset(parameters: Parameters) {
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        runBlocking {
-            executionRepository.reset(documentPath)
-        }
-    }
-
-
-    fun actionPerform(parameters: Parameters): Map<String, Any?> {
-        val hostDocumentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramHostDocumentPath, DocumentPath::parse)
-
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        val objectPath: ObjectPath = parameters.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse)
-
-        val objectLocation = ObjectLocation(documentPath, objectPath)
-
-        val execution: ImperativeResponse = runBlocking {
-            val graphStructure = graphStore.graphStructure()
-            executionRepository.execute(
-                hostDocumentPath, objectLocation, graphStructure)
-        }
-
-        return execution.toCollection()
-    }
+//    fun actionList(): List<String> {
+//        val activeScripts = executionRepository.activeScripts()
+//        return activeScripts.map { it.asString() }
+//    }
+//
+//
+//    fun actionModel(parameters: Parameters): Map<String, Any?> {
+//        val documentPath: DocumentPath = parameters.getParam(
+//            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+//
+//        val executionModel = runBlocking {
+//            val graphStructure = graphStore.graphStructure()
+//            executionRepository.executionModel(documentPath, graphStructure)
+//        }
+//
+//        return ImperativeModel.toCollection(executionModel)
+//    }
+//
+//
+//    fun actionStart(parameters: Parameters): String {
+//        val documentPath: DocumentPath = parameters.getParam(
+//            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+//
+//        val digest = runBlocking {
+//            val graphStructure = graphStore
+//                    .graphStructure()
+//                    .filter(AutoConventions.serverAllowed)
+//
+//            executionRepository.start(
+//                documentPath, graphStructure)
+//        }
+//
+//        return digest.asString()
+//    }
+//
+//
+//    fun actionReturn(parameters: Parameters): String {
+//        val hostDocumentPath: DocumentPath = parameters.getParam(
+//            CommonRestApi.paramHostDocumentPath, DocumentPath::parse)
+//
+//        val digest = runBlocking {
+//            val graphStructure = graphStore
+//                    .graphStructure()
+//                    .filter(AutoConventions.serverAllowed)
+//
+//            executionRepository.returnFrame(
+//                hostDocumentPath, graphStructure)
+//        }
+//
+//        return digest.asString()
+//    }
+//
+//
+//    fun actionReset(parameters: Parameters) {
+//        val documentPath: DocumentPath = parameters.getParam(
+//            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+//
+//        runBlocking {
+//            executionRepository.reset(documentPath)
+//        }
+//    }
+//
+//
+//    fun actionPerform(parameters: Parameters): Map<String, Any?> {
+//        val hostDocumentPath: DocumentPath = parameters.getParam(
+//            CommonRestApi.paramHostDocumentPath, DocumentPath::parse)
+//
+//        val documentPath: DocumentPath = parameters.getParam(
+//            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+//
+//        val objectPath: ObjectPath = parameters.getParam(
+//            CommonRestApi.paramObjectPath, ObjectPath::parse)
+//
+//        val objectLocation = ObjectLocation(documentPath, objectPath)
+//
+//        val execution: ImperativeResponse = runBlocking {
+//            val graphStructure = graphStore.graphStructure()
+//            executionRepository.execute(
+//                hostDocumentPath, objectLocation, graphStructure)
+//        }
+//
+//        return execution.toCollection()
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
