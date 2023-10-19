@@ -5,10 +5,10 @@ import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 
 data class TupleComponentValue(
     val name: TupleComponentName,
-    val value: Any
+    val value: Any?
 ) {
     companion object {
-        fun ofMain(value: Any): TupleComponentValue {
+        fun ofMain(value: Any?): TupleComponentValue {
             return TupleComponentValue(
                 TupleComponentName.main, value)
         }

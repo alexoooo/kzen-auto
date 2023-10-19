@@ -16,7 +16,7 @@ abstract class TracingSequenceStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun traceDetail(stepContext: StepContext, detail: Any) {
+    fun traceDetail(stepContext: StepContext, detail: Any?) {
         traceDetail(stepContext, ExecutionValue.of(detail))
     }
 
@@ -31,7 +31,7 @@ abstract class TracingSequenceStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun traceValue(stepContext: StepContext, displayValue: Any) {
+    fun traceValue(stepContext: StepContext, displayValue: Any?) {
         traceValue(stepContext, ExecutionValue.of(displayValue))
     }
 

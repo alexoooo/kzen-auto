@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.sequence.step.control
 
 import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.server.objects.sequence.api.SequenceStep
+import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.LogicExecutionFacade
 import tech.kzen.auto.server.service.v1.StatefulLogicElement
@@ -14,9 +14,11 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Reflect
 class RunStep(
-    private val instructions: ObjectLocation
+    private val instructions: ObjectLocation,
+    private val argument: ObjectLocation,
+    selfLocation: ObjectLocation
 ):
-    SequenceStep,
+    TracingSequenceStep(selfLocation),
     StatefulLogicElement<RunStep>
 {
 //    companion object {
@@ -54,18 +56,14 @@ class RunStep(
             else {
                 val created = stepContext.logicHandleFacade.start(instructions)
 
-                val initResult = created.beforeStart(TupleValue.empty)
+                val argumentValue = stepContext.activeSequenceModel.steps[argument]?.value
+                    ?: TupleValue.empty
+
+                val initResult = created.beforeStart(argumentValue)
                 if (! initResult) {
                     created.close()
                     return LogicResultFailed("Unable to initialize $instructions")
                 }
-
-//                stepContext.activeSequenceModel.next = instructions
-//
-//                if (command == LogicCommand.Pause) {
-//                    pausedExecution = created
-//                    return LogicResultPaused
-//                }
 
                 created
             }
@@ -78,6 +76,10 @@ class RunStep(
                     execution
                 }
                 else {
+                    if (runResult is LogicResultSuccess) {
+                        traceValue(stepContext, runResult.value)
+                    }
+
                     execution.close()
                     null
                 }

@@ -126,6 +126,12 @@ SequenceGroup_InputOutput:
   archetype: Sequence
 
 
+ArgumentStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_InputOutput
+  delegate: ArgumentStep
+
+
 BooleanLiteralStepTool:
   is: RibbonTool
   parent: SequenceGroup_InputOutput

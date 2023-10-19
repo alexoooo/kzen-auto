@@ -35,11 +35,19 @@ Sequence:
   class: tech.kzen.auto.server.objects.sequence.SequenceDocument
   icon: PlaylistPlay
   steps: []
+  parameters: []
+  results: []
   meta:
     steps:
       is: List
-      of: Action
+      of: SequenceStep
       by: Nominal
+    parameters:
+      is: List
+      of: String
+    results:
+      is: List
+      of: String
     selfLocation:
       is: ObjectLocation
       by: Self

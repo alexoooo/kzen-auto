@@ -12,6 +12,9 @@ import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.auto.server.service.v1.LogicHandle
 import tech.kzen.auto.server.service.v1.model.LogicDefinition
 import tech.kzen.auto.server.service.v1.model.LogicResult
+import tech.kzen.auto.server.service.v1.model.LogicType
+import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentDefinition
+import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentName
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -20,7 +23,8 @@ import tech.kzen.lib.common.reflect.Reflect
 @Reflect
 class SequenceDocument(
     steps: List<ObjectLocation>,
-//    private val root: ObjectLocation,
+    private val parameters: List<String>,
+    private val results: List<String>,
     private val selfLocation: ObjectLocation
 ):
     DocumentArchetype(),
@@ -46,9 +50,17 @@ class SequenceDocument(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun define(): LogicDefinition {
+        val inputs = parameters.map {
+            TupleComponentDefinition(TupleComponentName(it), LogicType.any)
+        }
+
+        val outputs = results.map {
+            TupleComponentDefinition(TupleComponentName(it), LogicType.any)
+        }
+
         return LogicDefinition(
-            TupleDefinition.empty,
-            TupleDefinition.empty)
+            TupleDefinition(inputs),
+            TupleDefinition(outputs))
     }
 
 

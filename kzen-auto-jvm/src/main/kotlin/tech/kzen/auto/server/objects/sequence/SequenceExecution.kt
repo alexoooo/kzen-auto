@@ -41,6 +41,7 @@ class SequenceExecution(
 
     private var activeSequenceModel = ActiveSequenceModel()
     private var previousGraphInstance = GraphInstance(ObjectLocationMap.empty())
+    private var arguments = TupleValue.empty
 //    private var topLevel: Boolean = false
 
 
@@ -54,6 +55,7 @@ class SequenceExecution(
     //-----------------------------------------------------------------------------------------------------------------
     override fun beforeStart(arguments: TupleValue/*, topLevel: Boolean*/): Boolean {
         logger.info("{} - arguments - {}", documentPath, arguments)
+        this.arguments = arguments
 //        this.topLevel = topLevel
         return true
     }
@@ -94,7 +96,13 @@ class SequenceExecution(
         previousGraphInstance = graphInstance
 
         val stepContext = StepContext(
-            logicControl, activeSequenceModel, logicHandleFacade, logicTraceHandle, graphInstance/*, topLevel*/)
+            logicControl,
+            activeSequenceModel,
+            logicHandleFacade,
+            logicTraceHandle,
+            graphInstance,
+            arguments,
+            /*topLevel*/)
 
         val step = graphInstance[objectLocation]!!.reference as SequenceStep
         val stepModel = activeSequenceModel.steps.getOrPut(objectLocation) { ActiveStepModel() }

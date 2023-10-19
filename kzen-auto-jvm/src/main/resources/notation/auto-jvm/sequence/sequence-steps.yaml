@@ -1,6 +1,18 @@
 
 #######################################################################################################################
 
+ArgumentStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.value.ArgumentStep
+  icon: ArrowForward
+  title: "Argument"
+  parameter: "main"
+  meta:
+    parameter: String
+    selfLocation: SelfLocation
+
+
 BooleanLiteralStep:
   abstract: true
   is: SequenceStep
@@ -128,12 +140,17 @@ RunStep:
   icon: PlayArrow
   title: "Run"
   instructions: ""
+  argument: ""
   meta:
     instructions:
       is: ObjectLocation
       by: Nominal
       editor: SelectLogicEditor
-#      call: true
+    argument:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectSequenceStepEditor
+    selfLocation: SelfLocation
 
 
 WaitStep:

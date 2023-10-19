@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.sequence.model
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicHandleFacade
+import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.instance.GraphInstance
 
 
@@ -13,5 +14,6 @@ data class StepContext(
     val logicHandleFacade: LogicHandleFacade,
     val logicTraceHandle: LogicTraceHandle,
     val graphInstance: GraphInstance,
+    val arguments: TupleValue
 //    val topLevel: Boolean
 )

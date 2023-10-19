@@ -10,7 +10,7 @@ data class TupleValue(
     companion object {
         val empty = TupleValue(listOf())
 
-        fun ofMain(value: Any): TupleValue {
+        fun ofMain(value: Any?): TupleValue {
             return TupleValue(listOf(
                 TupleComponentValue.ofMain(value)
             ))
@@ -25,11 +25,15 @@ data class TupleValue(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun find(tupleComponentName: TupleComponentName): Any? {
+        return components.find { it.name == tupleComponentName }?.value
+    }
+
     fun mainComponentValue(): Any? {
-        return components.find { it.name == TupleComponentName.main }?.value
+        return find(TupleComponentName.main)
     }
 
     fun detailComponentValue(): ExecutionValue? {
-        return components.find { it.name == TupleComponentName.detail }?.value as? ExecutionValue
+        return find(TupleComponentName.detail) as? ExecutionValue
     }
 }
