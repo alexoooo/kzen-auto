@@ -77,7 +77,7 @@ class RunStep(
                 }
                 else {
                     if (runResult is LogicResultSuccess) {
-                        traceValue(stepContext, runResult.value)
+                        traceValue(stepContext, runResult.value.mainComponentValue())
                     }
 
                     execution.close()
