@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.input.select
 import emotion.react.css
 import mui.material.Size
 import mui.material.TextField
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.ReactNode
@@ -83,7 +84,7 @@ class InputSelectedGroupController(
     override fun ChildrenBuilder.render() {
         TextField {
             size = Size.small
-            css {
+            sx {
                 marginTop = 0.5.em
             }
 

@@ -19,7 +19,6 @@ import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.reflect.Reflect
@@ -177,13 +176,13 @@ class ProjectController(
             +"Loading..."
         }
         else {
-            renderBody(graphNotation)
+            renderBody(/*graphNotation*/)
         }
     }
 
 
     private fun ChildrenBuilder.renderBody(
-            graphNotation: GraphNotation
+//            graphNotation: GraphNotation
     ) {
         div {
             css {

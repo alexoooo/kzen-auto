@@ -5,6 +5,7 @@ import js.core.jso
 import mui.material.IconButton
 import mui.material.Size
 import mui.material.TextField
+import mui.system.sx
 import react.ChildrenBuilder
 import react.ReactNode
 import react.dom.html.ReactHTML.div
@@ -225,7 +226,7 @@ class InputBrowserPathController(
             TextField {
                 fullWidth = true
                 size = Size.small
-                css {
+                sx {
                     width = 100.pct.minus(6.em)
                 }
 

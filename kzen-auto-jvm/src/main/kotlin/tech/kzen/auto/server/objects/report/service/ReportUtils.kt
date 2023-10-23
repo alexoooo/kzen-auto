@@ -24,6 +24,7 @@ object ReportUtils {
 
 
     private fun encodingWithoutMetadata(
+        @Suppress("UNUSED_PARAMETER")
         inputDataSpec: InputDataSpec
     ): DataEncodingSpec? {
         return null
@@ -31,6 +32,7 @@ object ReportUtils {
 
 
     fun encodingWithMetadata(
+        @Suppress("UNUSED_PARAMETER")
         inputDataSpec: InputDataSpec,
         reportDefinitionMetadata: ReportDefinitionMetadata
     ): DataEncodingSpec {

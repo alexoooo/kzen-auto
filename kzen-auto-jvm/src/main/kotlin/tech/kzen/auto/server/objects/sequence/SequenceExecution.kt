@@ -46,7 +46,10 @@ class SequenceExecution(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun init(logicControl: LogicControl) {
+    fun init(
+        @Suppress("UNUSED_PARAMETER")
+        logicControl: LogicControl
+    ) {
         activeSequenceModel = ActiveSequenceModel()
         previousGraphInstance = GraphInstance(ObjectLocationMap.empty())
     }

@@ -1,8 +1,9 @@
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig.Mode
+import org.jetbrains.kotlin.gradle.targets.js.yarn.yarn
 
 
 plugins {
-    id("org.jetbrains.kotlin.js")
+    kotlin("multiplatform")
     `maven-publish`
 }
 
@@ -24,9 +25,9 @@ kotlin {
                     Mode.PRODUCTION
                 }
 
-            commonWebpackConfig {
+            commonWebpackConfig(Action {
                 mode = webpackMode
-            }
+            })
         }
 
         // TODO: remove once browserDevelopmentWebpack works in continuous mode
@@ -43,39 +44,39 @@ kotlin {
 //            nodeOptions = ["--max-old-space-size=4096"]
 //        }
     }
-}
 
+    sourceSets {
+        val jsMain by getting {
+            dependencies {
+                implementation(project(":kzen-auto-common"))
 
-dependencies {
-    implementation(project(":kzen-auto-common"))
+                api("tech.kzen.lib:kzen-lib-js:$kzenLibVersion")
 
-//    implementation("tech.kzen.lib:kzen-lib-common-js:$kzenLibVersion")
-    api("tech.kzen.lib:kzen-lib-js:$kzenLibVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
-//    implementation("org.jetbrains.kotlinx:kotlinx-html-assembly:$kotlinxHtmlVersion")
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-react:$kotlinReactVersion")
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$kotlinReactDomVersion")
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-emotion:$kotlinEmotionVersion")
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-mui:$kotlinMuiVersion")
 
-    implementation("org.jetbrains.kotlin-wrappers:kotlin-react:$kotlinReactVersion")
-    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$kotlinReactDomVersion")
-    implementation("org.jetbrains.kotlin-wrappers:kotlin-emotion:$kotlinEmotionVersion")
-    implementation("org.jetbrains.kotlin-wrappers:kotlin-mui:$kotlinMuiVersion")
+                implementation(npm("@mui/icons-material", muiIconsVersion))
+                implementation(npm("cropperjs", cropperJsVersion))
+                implementation(npm("lodash", lodashVersion))
+                implementation(npm("react-select", reactSelectVersion))
+                implementation(npm("@iconify/react", iconifyReactVersion))
+                implementation(npm("@iconify/icons-vaadin", iconifyIconsVaadinVersion))
 
-////    implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:$kotlinStyledVersion")
-//    implementation("org.jetbrains.kotlin-wrappers:kotlin-styled-next:$kotlinStyledVersion")
-//    implementation("org.jetbrains.kotlin-wrappers:kotlin-extensions:$kotlinExtensionsVersion")
-//    implementation("org.jetbrains.kotlin-wrappers:kotlin-css-js:$kotlinCssVersion")
-//
-////    implementation(npm("@material-ui/lab", materialUiLabVersion))
-    implementation(npm("@mui/icons-material", muiIconsVersion))
+                // NB: avoid "unmet peer dependency" warning
+                implementation(npm("@babel/core", babelCoreVersion))
+            }
+        }
 
-    implementation(npm("cropperjs", cropperJsVersion))
-    implementation(npm("lodash", lodashVersion))
-    implementation(npm("react-select", reactSelectVersion))
-    implementation(npm("@iconify/react", iconifyReactVersion))
-    implementation(npm("@iconify/icons-vaadin", iconifyIconsVaadinVersion))
-//    implementation(npm("@iconify/icons-vaadin/area-select", iconifyIconsVaadinVersion))
-
-    testImplementation(kotlin("test"))
+        val jsTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+    }
 }
 
 
@@ -94,11 +95,11 @@ publishing {
         mavenLocal()
     }
 
-    publications {
-        create<MavenPublication>("js") {
-            from(components["kotlin"])
-        }
-    }
+//    publications {
+//        create<MavenPublication>("js") {
+//            from(components["kotlin"])
+//        }
+//    }
 }
 
 
@@ -106,3 +107,7 @@ publishing {
 //rootProject.extensions.configure<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension> {
 //    versions.webpackCli.version = "4.9.0"
 //}
+
+
+// https://youtrack.jetbrains.com/issue/KT-52578/KJS-Gradle-KotlinNpmInstallTask-gradle-task-produces-unsolvable-warning-ignored-scripts-due-to-flag.
+yarn.ignoreScripts = false

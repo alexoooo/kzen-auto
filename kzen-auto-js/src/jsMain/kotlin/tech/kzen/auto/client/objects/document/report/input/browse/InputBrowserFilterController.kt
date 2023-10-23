@@ -1,11 +1,11 @@
 package tech.kzen.auto.client.objects.document.report.input.browse
 
-import emotion.react.css
 import js.core.jso
 import mui.material.InputAdornment
 import mui.material.InputAdornmentPosition
 import mui.material.Size
 import mui.material.TextField
+import mui.system.sx
 import react.*
 import react.dom.onChange
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
@@ -81,7 +81,7 @@ class InputBrowserFilterController(
     override fun ChildrenBuilder.render() {
         TextField {
             size = Size.small
-            css {
+            sx {
                 width = 20.em
             }
 

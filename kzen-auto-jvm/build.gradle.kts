@@ -1,4 +1,5 @@
 @file:Suppress("UnstableApiUsage")
+import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 
@@ -55,13 +56,16 @@ dependencies {
 
 tasks.withType<ProcessResources> {
     val jsProject = project(":kzen-auto-js")
-    val task = jsProject.tasks.getByName("browserProductionWebpack") as org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
-    from(task.destinationDirectory) {
+    val browserDistributionTask = jsProject.tasks.getByName("jsBrowserDistribution")
+    dependsOn(browserDistributionTask)
+
+    val task = jsProject.tasks.getByName("jsBrowserProductionWebpack") as KotlinWebpack
+    dependsOn(task)
+
+    from(task.outputDirectory) {
         into("static")
     }
-
-    dependsOn(task)
 }
 
 
@@ -80,7 +84,7 @@ tasks.compileJava {
 
 val dependenciesDir = "dependencies"
 task("copyDependencies", Copy::class) {
-    from(configurations.default).into("$buildDir/libs/$dependenciesDir")
+    from(configurations.runtimeClasspath).into("$buildDir/libs/$dependenciesDir")
 }
 
 

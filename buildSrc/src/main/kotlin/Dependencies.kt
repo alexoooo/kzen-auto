@@ -33,6 +33,7 @@ const val kotlinxDatetimeVersion = "0.4.1"
 const val kotlinxHtmlVersion = "0.9.1"
 const val lodashVersion = "4.17.21"
 const val cropperJsVersion = "1.6.1"
+const val babelCoreVersion = "7.23.2"
 
 //const val muiMaterialVersion = "5.10.0"
 const val muiIconsVersion = "5.14.14"

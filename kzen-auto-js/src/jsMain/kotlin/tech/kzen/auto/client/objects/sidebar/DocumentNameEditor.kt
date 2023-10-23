@@ -4,6 +4,7 @@ import emotion.react.css
 import mui.material.IconButton
 import mui.material.Size
 import mui.material.TextField
+import mui.system.sx
 import react.*
 import react.dom.events.KeyboardEvent
 import react.dom.html.ReactHTML.div
@@ -197,7 +198,7 @@ class DocumentNameEditor(
 
             TextField {
                 size = Size.small
-                css {
+                sx {
                     marginTop = (-5).px
                 }
 
