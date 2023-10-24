@@ -10,7 +10,6 @@ kotlin {
     }
 
     jvm {
-        @Suppress("UNUSED_VARIABLE")
         val main by compilations.getting {
             kotlinOptions {
                 jvmTarget = jvmTargetVersion
@@ -20,19 +19,18 @@ kotlin {
 
     js {
         browser {
-            testTask {
+            testTask(Action {
                 testLogging {
                     showExceptions = true
                     exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
                     showCauses = true
                     showStackTraces = true
                 }
-            }
+            })
         }
     }
 
     sourceSets {
-        @Suppress("UNUSED_VARIABLE")
         val commonMain by getting {
             dependencies {
                 api("tech.kzen.lib:kzen-lib-common:$kzenLibVersion")
@@ -42,7 +40,6 @@ kotlin {
             }
         }
 
-        @Suppress("UNUSED_VARIABLE")
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
@@ -50,7 +47,6 @@ kotlin {
         }
 
 
-        @Suppress("UNUSED_VARIABLE")
         val jvmMain by getting {
             dependencies {
                 api("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
@@ -60,20 +56,17 @@ kotlin {
             }
         }
 
-        @Suppress("UNUSED_VARIABLE")
         val jvmTest by getting {
             dependencies {}
         }
 
 
-        @Suppress("UNUSED_VARIABLE")
         val jsMain by getting {
             dependencies {
                 api("tech.kzen.lib:kzen-lib-common-js:$kzenLibVersion")
             }
         }
 
-        @Suppress("UNUSED_VARIABLE")
         val jsTest by getting {
             dependencies {}
         }
@@ -86,11 +79,11 @@ publishing {
         mavenLocal()
     }
 
-    publications {
-        create<MavenPublication>("common") {
-//            println("Components: " + components.asMap.keys)
-            from(components["kotlin"])
-//            artifact(sourcesJar.get())
-        }
-    }
+//    publications {
+//        create<MavenPublication>("common") {
+////            println("Components: " + components.asMap.keys)
+//            from(components["kotlin"])
+////            artifact(sourcesJar.get())
+//        }
+//    }
 }
