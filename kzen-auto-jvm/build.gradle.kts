@@ -85,7 +85,7 @@ tasks.compileJava {
 
 val dependenciesDir = "dependencies"
 task("copyDependencies", Copy::class) {
-    from(configurations.runtimeClasspath).into("$buildDir/libs/$dependenciesDir")
+    from(configurations.runtimeClasspath).into("${layout.buildDirectory}/libs/$dependenciesDir")
 }
 
 

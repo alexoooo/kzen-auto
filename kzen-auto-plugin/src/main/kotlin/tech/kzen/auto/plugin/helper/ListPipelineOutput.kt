@@ -4,7 +4,7 @@ import tech.kzen.auto.plugin.api.managed.PipelineOutput
 
 
 class ListPipelineOutput<T>(
-        private val factory: () -> T
+    private val factory: () -> T
 ):
     PipelineOutput<T>
 {

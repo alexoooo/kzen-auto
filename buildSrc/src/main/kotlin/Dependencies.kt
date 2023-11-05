@@ -1,11 +1,11 @@
 
-const val kotlinVersion = "1.9.10"
-const val jvmTargetVersion = "19"
-const val javaVersion = 19
-const val jvmToolchainVersion = 19
+const val kotlinVersion = "1.9.20"
+const val jvmTargetVersion = "20"
+const val javaVersion = 20
+const val jvmToolchainVersion = 20
 
 
-const val kzenLibVersion = "0.27.0"
+const val kzenLibVersion = "0.29.0-SNAPSHOT"
 
 
 const val ktorVersion = "2.3.5"

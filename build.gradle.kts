@@ -5,7 +5,7 @@ plugins {
 
 allprojects {
     group = "tech.kzen.auto"
-    version = "0.27.0"
+    version = "0.29.0-SNAPSHOT"
 
     repositories {
         mavenCentral()

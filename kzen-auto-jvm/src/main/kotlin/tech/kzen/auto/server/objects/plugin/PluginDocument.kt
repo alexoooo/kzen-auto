@@ -19,7 +19,6 @@ import tech.kzen.lib.common.util.yaml.YamlString
 import tech.kzen.lib.platform.ClassName
 import java.net.JarURLConnection
 import java.net.URI
-import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
 import kotlin.io.path.isRegularFile
@@ -83,7 +82,7 @@ class PluginDocument(
         val pluginsPathInJar = "${jarRoot}META-INF/kzen/plugins.yaml"
 
         // https://bugs.openjdk.java.net/browse/JDK-8239054?page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel&showAll=true
-        val pluginsInJarUrl = URL(pluginsPathInJar)
+        val pluginsInJarUrl = URI(pluginsPathInJar).toURL()
         val pluginsInJarConnection = pluginsInJarUrl.openConnection() as JarURLConnection
         pluginsInJarConnection.useCaches = false
         val pluginsYaml = pluginsInJarConnection.inputStream.use { it.readAllBytes() }.toString(Charsets.UTF_8)

@@ -25,9 +25,9 @@ kotlin {
                     Mode.PRODUCTION
                 }
 
-            commonWebpackConfig(Action {
+            commonWebpackConfig {
                 mode = webpackMode
-            })
+            }
         }
 
         // TODO: remove once browserDevelopmentWebpack works in continuous mode
@@ -46,7 +46,7 @@ kotlin {
     }
 
     sourceSets {
-        val jsMain by getting {
+        jsMain {
             dependencies {
                 implementation(project(":kzen-auto-common"))
 
@@ -71,20 +71,13 @@ kotlin {
             }
         }
 
-        val jsTest by getting {
+        jsTest {
             dependencies {
                 implementation(kotlin("test"))
             }
         }
     }
 }
-
-
-//configurations.implementation {
-//    exclude(group = "org.jetbrains.kotlin-wrappers", module = "kotlin-react-legacy")
-//    exclude(group = "org.jetbrains.kotlin-wrappers", module = "kotlin-react-dom-legacy")
-//    exclude(group = "org.jetbrains.kotlin-wrappers", module = "kotlin-react-dom")
-//}
 
 
 run {}
@@ -94,19 +87,7 @@ publishing {
     repositories {
         mavenLocal()
     }
-
-//    publications {
-//        create<MavenPublication>("js") {
-//            from(components["kotlin"])
-//        }
-//    }
 }
-
-
-// https://youtrack.jetbrains.com/issue/KT-49124
-//rootProject.extensions.configure<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension> {
-//    versions.webpackCli.version = "4.9.0"
-//}
 
 
 // https://youtrack.jetbrains.com/issue/KT-52578/KJS-Gradle-KotlinNpmInstallTask-gradle-task-produces-unsolvable-warning-ignored-scripts-due-to-flag.

@@ -5,6 +5,7 @@ import tech.kzen.lib.common.util.Digestible
 import java.net.URI
 
 
+@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Url(
     private val uri: URI
 ): Digestible {

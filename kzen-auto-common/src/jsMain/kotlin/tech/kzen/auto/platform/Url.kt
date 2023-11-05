@@ -6,6 +6,7 @@ import tech.kzen.lib.common.util.Digestible
 
 
 // see: https://developer.mozilla.org/en-US/docs/Web/API/URL
+@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Url(
     private val url: URL,
     private val networkFile: Boolean
