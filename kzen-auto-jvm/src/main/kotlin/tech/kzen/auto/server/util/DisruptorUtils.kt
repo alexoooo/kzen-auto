@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.util
 
+import com.lmax.disruptor.BlockingWaitStrategy
 import com.lmax.disruptor.EventHandler
-import com.lmax.disruptor.LiteBlockingWaitStrategy
 import com.lmax.disruptor.WaitStrategy
 import com.lmax.disruptor.dsl.Disruptor
 import com.lmax.disruptor.dsl.EventHandlerGroup
@@ -12,8 +12,8 @@ object DisruptorUtils {
 //        return BusySpinWaitStrategy()
 //        return YieldingWaitStrategy()
 //        return SleepingWaitStrategy()
-//        return BlockingWaitStrategy()
-        return LiteBlockingWaitStrategy()
+        return BlockingWaitStrategy()
+//        return LiteBlockingWaitStrategy()
     }
 
 

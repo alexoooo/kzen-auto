@@ -50,9 +50,6 @@ import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.auto.server.util.DisruptorUtils
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import java.nio.file.Files
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 
@@ -134,7 +131,7 @@ class ReportExecution(
 
         private data class RecordDisruptor(
             val disruptor: Disruptor<ReportOutputEvent<Any>>,
-            val executor: ExecutorService
+//            val executor: ExecutorService
         )
     }
 
@@ -252,8 +249,8 @@ class ReportExecution(
             finally {
                 waitForProcessingToFinish(recordDisruptorInput)
                 recordDisruptor.disruptor.shutdown()
-                recordDisruptor.executor.shutdown()
-                recordDisruptor.executor.awaitTermination(1, TimeUnit.MINUTES)
+//                recordDisruptor.executor.shutdown()
+//                recordDisruptor.executor.awaitTermination(1, TimeUnit.MINUTES)
             }
         }
 
@@ -407,13 +404,12 @@ class ReportExecution(
     private fun setupRecordDisruptor(
         classLoaderHandle: ClassLoaderHandle,
     ): RecordDisruptor {
-        val executor = Executors.newCachedThreadPool(DaemonThreadFactory.INSTANCE)
+//        val executor = Executors.newCachedThreadPool(DaemonThreadFactory.INSTANCE)
 
-        @Suppress("DEPRECATION")
         val recordDisruptor = Disruptor(
             { ReportOutputEvent<Any>() },
             recordDisruptorBufferSize,
-            executor,
+            DaemonThreadFactory.INSTANCE,
             recordProducerType,
             DisruptorUtils.newWaitStrategy()
         )
@@ -471,7 +467,7 @@ class ReportExecution(
         val recordExceptionHandler = recordExceptionHandler(/*control*/)
         recordDisruptor.setDefaultExceptionHandler(recordExceptionHandler)
 
-        return RecordDisruptor(recordDisruptor, executor)
+        return RecordDisruptor(recordDisruptor, /*executor*/)
     }
 
 

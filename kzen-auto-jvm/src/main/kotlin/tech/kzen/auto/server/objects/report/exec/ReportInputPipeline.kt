@@ -24,8 +24,6 @@ import tech.kzen.auto.server.objects.report.exec.input.stages.ReportInputFramer
 import tech.kzen.auto.server.objects.report.exec.input.stages.ReportInputReader
 import tech.kzen.auto.server.objects.report.exec.trace.ReportInputTrace
 import tech.kzen.auto.server.util.DisruptorUtils
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 
@@ -63,7 +61,8 @@ class ReportInputPipeline<Output>(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val executor = Executors.newCachedThreadPool(DaemonThreadFactory.INSTANCE)
+//    private val executor = Executors.newCachedThreadPool(DaemonThreadFactory.INSTANCE)
+    private val threadFactory = DaemonThreadFactory.INSTANCE
 
     private var binaryDisruptor: BinaryDisruptor? = null
     private var binaryRingBuffer: RingBuffer<DataBlockBuffer>? = null
@@ -98,11 +97,10 @@ class ReportInputPipeline<Output>(
     private fun setupBinaryDisruptor(
         modelRingBuffer: RingBuffer<DataInputEvent>
     ): BinaryDisruptor {
-        @Suppress("DEPRECATION")
         val binaryDisruptor = Disruptor(
             { DataBlockBuffer.ofTextOrBinary(dataEncodingSpec) },
             binaryDisruptorBufferSize,
-            executor,
+            threadFactory,
             binaryProducerType,
             DisruptorUtils.newWaitStrategy()
         )
@@ -163,11 +161,10 @@ class ReportInputPipeline<Output>(
         @Suppress("UNCHECKED_CAST")
         val segment = reportDataInstance.segments[index] as ReportSegmentInstance<Any, T>
 
-        @Suppress("DEPRECATION")
         val segmentDisruptor = Disruptor(
             { segment.modelFactory() },
             segment.ringBufferSize,
-            executor,
+            threadFactory,
             modelProducerType,
             DisruptorUtils.newWaitStrategy()
         )
@@ -275,7 +272,7 @@ class ReportInputPipeline<Output>(
         binaryRingBuffer = null
         modelDisruptorChain = null
 
-        executor.shutdown()
-        executor.awaitTermination(1, TimeUnit.MINUTES)
+//        executor.shutdown()
+//        executor.awaitTermination(1, TimeUnit.MINUTES)
     }
 }

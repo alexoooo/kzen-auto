@@ -1,7 +1,6 @@
 package tech.kzen.auto.server.objects.report.exec
 
 import com.lmax.disruptor.EventHandler
-import com.lmax.disruptor.LifecycleAware
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -9,8 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger
 abstract class ReportPipelineStage<T>(
     private val name: String
 ):
-    EventHandler<T>,
-    LifecycleAware
+    EventHandler<T>
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
