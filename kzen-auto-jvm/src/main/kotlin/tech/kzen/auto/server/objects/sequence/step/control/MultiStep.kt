@@ -95,6 +95,9 @@ class MultiStep(
                     stepContext.logicTraceHandle.set(
                         logicTracePath,
                         stepModel.trace().asExecutionValue())
+                    stepContext.logicTraceHandle.set(
+                        SequenceConventions.nextStepTracePath,
+                        NullExecutionValue)
                     return result
                 }
 

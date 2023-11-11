@@ -93,7 +93,8 @@ class SequenceCommander(
             .size
 
         val objectNotation = ObjectNotation.ofParent(
-            archetypeObjectLocation.toReference().name)
+//            archetypeObjectLocation.toReference().name)
+            archetypeObjectLocation.objectPath.name)
 
         val command = InsertObjectInListAttributeCommand(
             containingAttributeLocation.objectLocation,

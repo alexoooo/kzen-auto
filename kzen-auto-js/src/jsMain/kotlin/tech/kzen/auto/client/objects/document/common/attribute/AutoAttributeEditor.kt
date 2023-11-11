@@ -148,7 +148,7 @@ class AutoAttributeEditor(
                 +"'${props.attributeName}' (unknown type)"
             }
 
-            attributeMetadata.definerReference?.name?.value == "Self" -> {
+            attributeMetadata.definerReference?.name?.objectName?.value == "Self" -> {
                 // NB: don't render
             }
 

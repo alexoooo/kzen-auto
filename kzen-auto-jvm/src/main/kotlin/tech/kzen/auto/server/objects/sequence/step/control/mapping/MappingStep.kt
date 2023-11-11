@@ -58,7 +58,7 @@ class MappingStep(
     //-----------------------------------------------------------------------------------------------------------------
     override fun valueDefinition(): TupleDefinition {
         return TupleDefinition.ofMain(
-            LogicType(TypeMetadata(ClassNames.kotlinList, listOf(TypeMetadata.any))))
+            LogicType(TypeMetadata(ClassNames.kotlinList, listOf(TypeMetadata.any), false)))
     }
 
 

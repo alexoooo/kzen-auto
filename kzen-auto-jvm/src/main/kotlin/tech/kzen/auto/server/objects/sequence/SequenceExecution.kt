@@ -127,8 +127,11 @@ class SequenceExecution(
             }
         }
         catch (e: Throwable) {
-            stepModel.error = ExecutionFailure.ofException(e).errorMessage
-            logicResult = LogicResultFailed(stepModel.error!!)
+            stepModel.value = null
+
+            val message = ExecutionFailure.ofException(e).errorMessage
+            stepModel.error = message
+            logicResult = LogicResultFailed(message)
             logger.warn("Step execution error", e)
         }
 

@@ -76,7 +76,10 @@ class TargetSpecDefiner: AttributeDefiner {
                         ?: return AttributeDefinitionAttempt.failure(
                                 "Target visual 'value' not found: $objectLocation")
 
-                ReferenceAttributeDefinition(ObjectReference.parse(value))
+                ReferenceAttributeDefinition(
+                    ObjectReference.parse(value),
+                    weak = false,
+                    nullable = false)
             }
         }
 

@@ -150,6 +150,7 @@ RunStep:
       is: ObjectLocation
       by: Nominal
       editor: SelectSequenceStepEditor
+      nullable: true
     selfLocation: SelfLocation
 
 

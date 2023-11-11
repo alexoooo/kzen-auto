@@ -33,6 +33,7 @@ Sequence:
   abstract: true
   is: Document
   class: tech.kzen.auto.server.objects.sequence.SequenceDocument
+  title: "Script"
   icon: PlaylistPlay
   steps: []
   parameters: []
@@ -56,7 +57,7 @@ Sequence:
 SequenceStep:
   abstract: true
   class: tech.kzen.auto.server.objects.sequence.api.SequenceStep
-  description: "Run step"
+  description: "Script step"
   display: SequenceStepDisplayDefault
   meta:
     icon: String

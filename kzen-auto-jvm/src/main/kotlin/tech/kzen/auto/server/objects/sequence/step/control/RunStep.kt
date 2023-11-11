@@ -15,7 +15,7 @@ import tech.kzen.lib.common.reflect.Reflect
 @Reflect
 class RunStep(
     private val instructions: ObjectLocation,
-    private val argument: ObjectLocation,
+    private val argument: ObjectLocation?,
     selfLocation: ObjectLocation
 ):
     TracingSequenceStep(selfLocation),
@@ -56,8 +56,14 @@ class RunStep(
             else {
                 val created = stepContext.logicHandleFacade.start(instructions)
 
-                val argumentValue = stepContext.activeSequenceModel.steps[argument]?.value
-                    ?: TupleValue.empty
+                val argumentValue =
+                    if (argument == null) {
+                        TupleValue.empty
+                    }
+                    else {
+                        stepContext.activeSequenceModel.steps[argument]?.value
+                            ?: TupleValue.empty
+                    }
 
                 val initResult = created.beforeStart(argumentValue)
                 if (! initResult) {
