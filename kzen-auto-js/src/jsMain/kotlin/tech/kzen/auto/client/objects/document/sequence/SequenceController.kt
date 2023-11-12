@@ -8,6 +8,7 @@ import react.dom.html.ReactHTML.div
 import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEditor
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.objects.document.sequence.display.SequenceStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.sequence.display.StepDisplayManager
@@ -18,12 +19,11 @@ import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgress
 import tech.kzen.auto.client.objects.document.sequence.step.control.MultiStepDisplay
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
-import tech.kzen.auto.client.service.global.SessionGlobal
-import tech.kzen.auto.client.service.global.SessionState
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
@@ -44,7 +44,7 @@ external interface SequenceControllerProps: Props {
 
 
 external interface SequenceControllerState: State {
-    var clientState: SessionState?
+    var clientState: ClientState?
     var sequenceState: SequenceState?
     var creating: Boolean
 }
@@ -55,7 +55,7 @@ class SequenceController:
     RPureComponent<SequenceControllerProps, SequenceControllerState>(),
     SequenceStore.Observer,
     InsertionGlobal.Subscriber,
-    SessionGlobal.Observer
+    ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -65,11 +65,8 @@ class SequenceController:
             graphStructure: GraphStructure,
             attributeLocation: AttributeLocation
         ): List<ObjectLocation>? {
-//            val mainObjectLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
-
             val stepsNotation = graphStructure
                     .graphNotation
-//                    .firstAttribute(mainObjectLocation, SequenceConventions.stepsAttributePath)
                     .firstAttribute(attributeLocation)
                     as? ListAttributeNotation
                     ?: return null
@@ -138,7 +135,7 @@ class SequenceController:
     override fun componentDidMount() {
         store.didMount()
         store.observe(this)
-        ClientContext.sessionGlobal.observe(this)
+        ClientContext.clientStateGlobal.observe(this)
         ClientContext.insertionGlobal.subscribe(this)
         SequenceGlobal.upsertWeak(store)
     }
@@ -146,7 +143,7 @@ class SequenceController:
 
     override fun componentWillUnmount() {
         ClientContext.insertionGlobal.unsubscribe(this)
-        ClientContext.sessionGlobal.unobserve(this)
+        ClientContext.clientStateGlobal.unobserve(this)
         store.unobserve(this)
         store.willUnmount()
     }
@@ -185,39 +182,11 @@ class SequenceController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onClientState(clientState: SessionState) {
+    override fun onClientState(clientState: ClientState) {
         setState {
             this.clientState = clientState
         }
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    private fun onCreate(index: Int) {
-//        val clientState = state.clientState!!
-//
-//        val archetypeObjectLocation = ClientContext.insertionGlobal
-//                .getAndClearSelection()
-//                ?: return
-//
-//        val documentPath = clientState.navigationRoute.documentPath!!
-//        val containingObjectLocation = ObjectLocation(
-//                documentPath, NotationConventions.mainObjectPath)
-//
-//        val commands = props.sequenceCommander.createCommands(
-//            containingObjectLocation,
-//            SequenceConventions.stepsAttributePath,
-//            index,
-//            archetypeObjectLocation,
-//            clientState.graphDefinitionAttempt.graphStructure
-//        )
-//
-//        async {
-//            for (command in commands) {
-//                ClientContext.mirroredGraphStore.apply(command)
-//            }
-//        }
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -238,6 +207,11 @@ class SequenceController:
         val sequenceState = state.sequenceState
             ?: return
 
+        val mainObjectLocation = documentPath.toMainObjectLocation()
+        div {
+            renderSignature(mainObjectLocation)
+        }
+
         if (sequenceState.globalError != null) {
             div {
                 +"Error: ${sequenceState.globalError}"
@@ -249,7 +223,7 @@ class SequenceController:
                 marginLeft = 2.em
             }
 
-            renderMain(documentPath)
+            renderMain(mainObjectLocation)
         }
 
         renderRunController(clientState, sequenceState)
@@ -257,12 +231,19 @@ class SequenceController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun ChildrenBuilder.renderSignature(mainObjectLocation: ObjectLocation) {
+        LogicSignatureEditor::class.react {
+            objectLocation = mainObjectLocation
+        }
+    }
+
+
     private fun ChildrenBuilder.renderMain(
-        documentPath: DocumentPath
+        mainObjectLocation: ObjectLocation
     ) {
         MultiStepDisplay::class.react {
             common = SequenceStepDisplayPropsCommon(
-                documentPath.toMainObjectLocation(),
+                mainObjectLocation,
                 0,
                 first = true,
                 last = true
@@ -280,7 +261,7 @@ class SequenceController:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderRunController(
-        clientState: SessionState,
+        clientState: ClientState,
         sequenceState: SequenceState
     ) {
         div {

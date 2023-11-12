@@ -5,8 +5,8 @@ import react.State
 import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.SessionGlobal
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -32,7 +32,7 @@ class AttributeEditorManager(
     props: AttributeEditorManagerProps
 ):
     RPureComponent<AttributeEditorManagerProps, AttributeEditorManagerState>(props),
-    SessionGlobal.Observer
+    ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -59,16 +59,16 @@ class AttributeEditorManager(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.sessionGlobal.observe(this)
+        ClientContext.clientStateGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.sessionGlobal.unobserve(this)
+        ClientContext.clientStateGlobal.unobserve(this)
     }
 
 
-    override fun onClientState(clientState: SessionState) {
+    override fun onClientState(clientState: ClientState) {
         if (state.attributeEditor != null) {
             return
         }

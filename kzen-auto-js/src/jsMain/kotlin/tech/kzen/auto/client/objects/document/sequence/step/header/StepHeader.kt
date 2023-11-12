@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.script.step.header
+package tech.kzen.auto.client.objects.document.sequence.step.header
 
 import emotion.react.css
 import js.core.jso
@@ -146,34 +146,6 @@ class StepHeader(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    override fun onExecutionIntent(actionLocation: ObjectLocation?) {
-//        setState {
-//            intentToRun = actionLocation == props.objectLocation
-//        }
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    private fun onRun() {
-//        async {
-//            ClientContext.executionRepository.execute(
-//                    props.objectLocation.documentPath,
-//                    props.objectLocation,
-//                    props.graphStructure)
-//        }
-//    }
-//
-//
-//    private fun onRunEnter() {
-//        ClientContext.executionIntentGlobal.set(props.objectLocation)
-//    }
-//
-//
-//    private fun onRunLeave() {
-//        ClientContext.executionIntentGlobal.clearIf(props.objectLocation)
-//    }
-
-
     private fun onMouseOver(cardOrActions: Boolean) {
         if (state.optionsOpen || processingOption) {
 //            console.log("^^^ onMouseOver hoverItem - skip due to optionsOpen")

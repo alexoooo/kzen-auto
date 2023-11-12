@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.sequence.model
 
 import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressState
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -21,7 +21,7 @@ data class SequenceState(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        fun tryMainLocation(clientState: SessionState): ObjectLocation? {
+        fun tryMainLocation(clientState: ClientState): ObjectLocation? {
             val documentPath = clientState
                 .navigationRoute
                 .documentPath

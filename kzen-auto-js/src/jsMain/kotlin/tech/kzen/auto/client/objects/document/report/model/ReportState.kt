@@ -8,7 +8,7 @@ import tech.kzen.auto.client.objects.document.report.input.select.model.InputSel
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputState
 import tech.kzen.auto.client.objects.document.report.preview.model.ReportPreviewState
 import tech.kzen.auto.client.objects.document.report.run.model.ReportRunState
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
@@ -41,7 +41,7 @@ data class ReportState(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        fun tryMainLocation(clientState: SessionState): ObjectLocation? {
+        fun tryMainLocation(clientState: ClientState): ObjectLocation? {
             val documentPath = clientState
                 .navigationRoute
                 .documentPath

@@ -76,7 +76,7 @@ class StepDisplayManager(
 
 
     private fun findDisplayWrapper(props: StepDisplayManagerProps): SequenceStepDisplayWrapper {
-        val graphStructure = ClientContext.sessionGlobal.current()?.graphStructure()
+        val graphStructure = ClientContext.clientStateGlobal.current()?.graphStructure()
             ?: throw IllegalStateException("Session not initialized")
 
         val displayWrapperName = ObjectName(

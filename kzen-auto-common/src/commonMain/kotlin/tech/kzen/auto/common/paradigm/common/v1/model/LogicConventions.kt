@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.paradigm.common.v1.model
 
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -20,7 +21,6 @@ object LogicConventions {
         ObjectPath(logicTraceStoreName, ObjectNesting.root))
 
 
-//    const val paramAction = "action"
     const val actionLookup = "lookup"
     const val actionMostRecent = "recent"
     const val actionReset = "reset"
@@ -28,9 +28,10 @@ object LogicConventions {
     const val paramSubDocumentPath = "sub-path"
     const val paramSubObjectPath = "sub-object"
 
-//    const val paramRunId = "runId"
-//    const val paramExecution = "executionId"
     const val paramQuery = "query"
+
+    val parametersAttributeName = AttributeName("parameters")
+//    val parametersAttributePath = AttributePath.ofName(AttributeName("parameters"))
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -13,7 +13,7 @@ import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.CssClasses
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -52,7 +52,7 @@ external interface VertexControllerProps: Props {
     var documentPath: DocumentPath
     var attributeNesting: AttributeNesting
 
-    var clientState: SessionState
+    var clientState: ClientState
     var visualDataflowModel: VisualDataflowModel
     var dataflowMatrix: DataflowMatrix
     var dataflowDag: DataflowDag

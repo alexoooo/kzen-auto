@@ -1,19 +1,19 @@
 package tech.kzen.auto.client.service
 
+//import tech.kzen.auto.client.codegen.KzenAutoJsModule
+//import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
+//import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import kotlinx.browser.window
 import tech.kzen.auto.client.codegen.KzenAutoJsModule
-//import tech.kzen.auto.client.codegen.KzenAutoJsModule
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
-import tech.kzen.auto.client.service.global.SessionGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.rest.*
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
-//import tech.kzen.auto.common.paradigm.imperative.service.ExecutionLoop
-//import tech.kzen.auto.common.paradigm.imperative.service.ExecutionRepository
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
@@ -94,13 +94,12 @@ object ClientContext {
 
 
     val navigationGlobal = NavigationGlobal(
-//            executionLoop,
             visualDataflowLoop)
 
     val clientLogicGlobal = ClientLogicGlobal(
         restClient)
 
-    val sessionGlobal = SessionGlobal()
+    val clientStateGlobal = ClientStateGlobal()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -125,7 +124,7 @@ object ClientContext {
         // NB: pre-load, otherwise can have race condition
         seededNotationMedia.scan()
 
-        sessionGlobal.postConstruct(
+        clientStateGlobal.postConstruct(
                 navigationGlobal, directGraphStore, clientLogicGlobal, /*restClient, executionRepository*/)
     }
 }

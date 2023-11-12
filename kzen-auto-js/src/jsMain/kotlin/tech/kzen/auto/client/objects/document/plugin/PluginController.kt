@@ -12,8 +12,8 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.SessionGlobal
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
@@ -29,7 +29,7 @@ import web.cssom.*
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface PluginControllerState: State {
-    var clientState: SessionState?
+    var clientState: ClientState?
     var detailList: List<ReportDefinerDetail>?
     var listingError: String?
 }
@@ -41,14 +41,14 @@ class PluginController(
     props: Props
 ):
     RPureComponent<Props, PluginControllerState>(props),
-    SessionGlobal.Observer
+    ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
 //        val separatorWidth = 2.px
 //        val separatorColor = Color("#c3c3c3")
 
-        fun tryMainLocation(clientState: SessionState): ObjectLocation? {
+        fun tryMainLocation(clientState: ClientState): ObjectLocation? {
             val documentPath = clientState
                 .navigationRoute
                 .documentPath
@@ -110,12 +110,12 @@ class PluginController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.sessionGlobal.observe(this)
+        ClientContext.clientStateGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.sessionGlobal.unobserve(this)
+        ClientContext.clientStateGlobal.unobserve(this)
     }
 
 
@@ -130,7 +130,7 @@ class PluginController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onClientState(clientState: SessionState) {
+    override fun onClientState(clientState: ClientState) {
 //        console.log("#!#@!#@! onClientState - ${clientState.imperativeModel}")
         setState {
             this.clientState = clientState
@@ -191,7 +191,7 @@ class PluginController(
     }
 
 
-    private fun ChildrenBuilder.renderPathEditor(mainObjectLocation: ObjectLocation, clientState: SessionState) {
+    private fun ChildrenBuilder.renderPathEditor(mainObjectLocation: ObjectLocation, clientState: ClientState) {
         AttributePathValueEditor::class.react {
             labelOverride = "Plugin Jar File Path"
 

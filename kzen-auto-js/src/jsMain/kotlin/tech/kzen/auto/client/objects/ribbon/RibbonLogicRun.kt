@@ -8,8 +8,8 @@ import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.SessionGlobal
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.*
@@ -23,7 +23,7 @@ import web.html.HTMLElement
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface RibbonLogicRunState: State {
-    var clientState: SessionState?
+    var clientState: ClientState?
     var dropdownOpen: Boolean
 }
 
@@ -33,7 +33,7 @@ class RibbonLogicRun (
     props: Props
 ):
     RPureComponent<Props, RibbonLogicRunState>(props),
-    SessionGlobal.Observer
+    ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -61,7 +61,7 @@ class RibbonLogicRun (
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.sessionGlobal.observe(this)
+        ClientContext.clientStateGlobal.observe(this)
 
 //        async {
 //            ClientContext.executionRepository.observe(this)
@@ -80,12 +80,12 @@ class RibbonLogicRun (
 
     override fun componentWillUnmount() {
 //        ClientContext.executionRepository.unobserve(this)
-        ClientContext.sessionGlobal.unobserve(this)
+        ClientContext.clientStateGlobal.unobserve(this)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onClientState(clientState: SessionState) {
+    override fun onClientState(clientState: ClientState) {
         setState {
             this.clientState = clientState
 //            active = clientState.runningHosts

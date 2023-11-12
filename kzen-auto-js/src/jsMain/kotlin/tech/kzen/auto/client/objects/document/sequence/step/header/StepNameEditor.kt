@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.script.step.header
+package tech.kzen.auto.client.objects.document.sequence.step.header
 
 import emotion.react.css
 import kotlinx.coroutines.delay

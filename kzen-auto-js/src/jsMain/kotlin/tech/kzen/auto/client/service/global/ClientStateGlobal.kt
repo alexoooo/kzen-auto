@@ -12,11 +12,10 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
-class SessionGlobal:
-        NavigationGlobal.Observer,
-//        ExecutionRepository.Observer,
-        ClientLogicGlobal.Observer,
-        LocalGraphStore.Observer
+class ClientStateGlobal:
+    NavigationGlobal.Observer,
+    ClientLogicGlobal.Observer,
+    LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -24,13 +23,13 @@ class SessionGlobal:
     }
 
     interface Observer {
-        fun onClientState(clientState: SessionState)
+        fun onClientState(clientState: ClientState)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private val observers = mutableSetOf<Observer>()
-    private var sessionState: SessionState? = null
+    private var sessionState: ClientState? = null
 
     private var graphDefinitionAttempt: GraphDefinitionAttempt? = null
     private var navigationRoute: NavigationRoute? = null
@@ -45,11 +44,9 @@ class SessionGlobal:
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun postConstruct(
-            navigationGlobal: NavigationGlobal,
-            localGraphStore: LocalGraphStore,
-            clientLogicGlobal: ClientLogicGlobal,
-//            clientRestApi: ClientRestApi,
-//            executionRepository: ExecutionRepository
+        navigationGlobal: NavigationGlobal,
+        localGraphStore: LocalGraphStore,
+        clientLogicGlobal: ClientLogicGlobal
     ) {
 //        runningHosts = clientRestApi.runningHosts().toSet()
 //        console.log("%%%%% runningHosts - $runningHosts")
@@ -186,15 +183,12 @@ class SessionGlobal:
         val logicState = clientLogicState
             ?: return
 
-        val selected = navigation.requestParams.get(runningKey)?.let { DocumentPath.parse(it) }
+//        val selected = navigation.requestParams.get(runningKey)?.let { DocumentPath.parse(it) }
 
-        val nextSessionState = SessionState(
+        val nextSessionState = ClientState(
             definition,
             navigation,
-            logicState,
-//            imperativeModel,
-            selected,
-//            runningHosts
+            logicState
         )
 
         sessionState = nextSessionState
@@ -211,7 +205,7 @@ class SessionGlobal:
     }
 
 
-    fun current(): SessionState? {
+    fun current(): ClientState? {
         return sessionState
     }
 }

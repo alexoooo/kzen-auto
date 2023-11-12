@@ -10,8 +10,8 @@ import react.dom.events.ChangeEvent
 import react.dom.onChange
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.SessionGlobal
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -62,7 +62,7 @@ class AttributePathValueEditor2(
     props: AttributePathValueEditorProps2
 ):
     RPureComponent<AttributePathValueEditorProps2, AttributePathValueEditorState2>(props),
-    SessionGlobal.Observer
+    ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -88,40 +88,18 @@ class AttributePathValueEditor2(
     }
 
 
-//    //-----------------------------------------------------------------------------------------------------------------
-//    private fun AttributePathValueEditorProps2.valuesAttribute(): AttributeNotation {
-////        @Suppress("MoveVariableDeclarationIntoWhen")
-//        val attributeNotation = clientState
-//            .graphStructure()
-//            .graphNotation
-//            .firstAttribute(objectLocation, attributePath)
-//
-//        checkNotNull(attributeNotation) {
-//            "missing: $objectLocation | $attributePath"
-//        }
-//
-////        val merge = clientState
-////            .graphStructure()
-////            .graphNotation
-////            .mergeAttribute(objectLocation, attributePath)!!
-////        console.log("#!@#@! merge: $objectLocation - $attributePath - $merge")
-//
-//        return attributeNotation
-//    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.sessionGlobal.observe(this)
+        ClientContext.clientStateGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.sessionGlobal.unobserve(this)
+        ClientContext.clientStateGlobal.unobserve(this)
     }
 
 
-    override fun onClientState(clientState: SessionState) {
+    override fun onClientState(clientState: ClientState) {
         val graphStructure = clientState.graphStructure()
 
         if (props.objectLocation !in graphStructure.graphNotation.coalesce) {

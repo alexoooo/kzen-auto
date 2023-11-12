@@ -18,8 +18,8 @@ import tech.kzen.auto.client.objects.document.common.AttributeController
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
-import tech.kzen.auto.client.service.global.SessionGlobal
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
@@ -57,7 +57,7 @@ external interface GraphControllerProps: Props {
 
 
 external interface GraphControllerState: State {
-    var clientState: SessionState?
+    var clientState: ClientState?
     var creating: Boolean
 
     var visualDataflowModel: VisualDataflowModel?
@@ -72,7 +72,7 @@ class GraphController(
     RPureComponent<GraphControllerProps, GraphControllerState>(props),
     InsertionGlobal.Subscriber,
     VisualDataflowRepository.Observer,
-    SessionGlobal.Observer
+    ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -120,7 +120,7 @@ class GraphController(
     override fun componentDidMount() {
 //        println("ProjectController - Subscribed")
         async {
-            ClientContext.sessionGlobal.observe(this)
+            ClientContext.clientStateGlobal.observe(this)
 
 //            ClientContext.mirroredGraphStore.observe(this)
             ClientContext.insertionGlobal.subscribe(this)
@@ -137,7 +137,7 @@ class GraphController(
         ClientContext.insertionGlobal.unsubscribe(this)
 //        ClientContext.navigationGlobal.unobserve(this)
         ClientContext.visualDataflowRepository.unobserve(this)
-        ClientContext.sessionGlobal.unobserve(this)
+        ClientContext.clientStateGlobal.unobserve(this)
     }
 
 
@@ -169,7 +169,7 @@ class GraphController(
     }
 
 
-    override fun onClientState(clientState: SessionState) {
+    override fun onClientState(clientState: ClientState) {
         setState {
             this.clientState = clientState
         }
@@ -354,9 +354,9 @@ class GraphController(
 
 
     private fun ChildrenBuilder.nonEmptyDag(
-            clientState: SessionState,
-            visualDataflowModel: VisualDataflowModel,
-            dataflowMatrix: DataflowMatrix
+        clientState: ClientState,
+        visualDataflowModel: VisualDataflowModel,
+        dataflowMatrix: DataflowMatrix
     ) {
         val dataflowDag = DataflowDag.of(dataflowMatrix)
 
@@ -478,11 +478,11 @@ class GraphController(
 
 
     private fun ChildrenBuilder.cell(
-            cellDescriptor: CellDescriptor,
-            clientState: SessionState,
-            visualDataflowModel: VisualDataflowModel,
-            dataflowMatrix: DataflowMatrix,
-            dataflowDag: DataflowDag
+        cellDescriptor: CellDescriptor,
+        clientState: ClientState,
+        visualDataflowModel: VisualDataflowModel,
+        dataflowMatrix: DataflowMatrix,
+        dataflowDag: DataflowDag
     ) {
         CellController::class.react {
             this.attributeController = props.attributeController

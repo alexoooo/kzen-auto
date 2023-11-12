@@ -74,7 +74,7 @@ class SelectLogicEditor(
     override fun SelectLogicEditorState.init(props: AttributeEditor2Props) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
-        val graphNotation = ClientContext.sessionGlobal.current()!!.graphStructure().graphNotation
+        val graphNotation = ClientContext.clientStateGlobal.current()!!.graphStructure().graphNotation
 
         val attributeNotation = graphNotation.firstAttribute(props.objectLocation, props.attributeName)
 
@@ -182,7 +182,7 @@ class SelectLogicEditor(
 
 
     private fun updateOptions() {
-        val graphNotation = ClientContext.sessionGlobal.current()!!.graphStructure().graphNotation
+        val graphNotation = ClientContext.clientStateGlobal.current()!!.graphStructure().graphNotation
         setState {
             options = options(graphNotation)
         }

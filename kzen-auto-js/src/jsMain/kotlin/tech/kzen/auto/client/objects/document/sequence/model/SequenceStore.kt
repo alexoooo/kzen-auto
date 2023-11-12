@@ -4,14 +4,14 @@ import kotlinx.coroutines.delay
 import kotlinx.datetime.internal.JSJoda.Instant
 import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressStore
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.SessionGlobal
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.util.async
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
-class SequenceStore: SessionGlobal.Observer {
+class SequenceStore: ClientStateGlobal.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
 //        const val debounceMillis = 1_500
@@ -92,7 +92,7 @@ class SequenceStore: SessionGlobal.Observer {
     fun didMount() {
         mounted = true
         async {
-            ClientContext.sessionGlobal.observe(this)
+            ClientContext.clientStateGlobal.observe(this)
         }
     }
 
@@ -100,12 +100,12 @@ class SequenceStore: SessionGlobal.Observer {
     fun willUnmount() {
         mounted = false
         state = null
-        ClientContext.sessionGlobal.unobserve(this)
+        ClientContext.clientStateGlobal.unobserve(this)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onClientState(clientState: SessionState) {
+    override fun onClientState(clientState: ClientState) {
         if (! mounted) {
             return
         }
@@ -148,7 +148,7 @@ class SequenceStore: SessionGlobal.Observer {
     }
 
 
-    private fun mainDefinition(clientState: SessionState, mainLocation: ObjectLocation): ObjectDefinition {
+    private fun mainDefinition(clientState: ClientState, mainLocation: ObjectLocation): ObjectDefinition {
         val mainDefinition = clientState
             .graphDefinitionAttempt
             .objectDefinitions[mainLocation]

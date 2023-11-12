@@ -9,8 +9,8 @@ import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputSt
 import tech.kzen.auto.client.objects.document.report.preview.model.ReportPreviewStore
 import tech.kzen.auto.client.objects.document.report.run.model.ReportRunStore
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.SessionGlobal
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
@@ -18,7 +18,7 @@ import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
-class ReportStore: SessionGlobal.Observer {
+class ReportStore: ClientStateGlobal.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         const val debounceMillis = 1_500
@@ -65,7 +65,7 @@ class ReportStore: SessionGlobal.Observer {
         mounted = true
 
         async {
-            ClientContext.sessionGlobal.observe(this)
+            ClientContext.clientStateGlobal.observe(this)
         }
     }
 
@@ -75,13 +75,13 @@ class ReportStore: SessionGlobal.Observer {
         mounted = false
         state = null
 
-        ClientContext.sessionGlobal.unobserve(this)
+        ClientContext.clientStateGlobal.unobserve(this)
         cancelRefresh()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onClientState(clientState: SessionState) {
+    override fun onClientState(clientState: ClientState) {
         if (! mounted) {
             return
         }
@@ -118,7 +118,7 @@ class ReportStore: SessionGlobal.Observer {
     }
 
 
-    private fun mainDefinition(clientState: SessionState, mainLocation: ObjectLocation): ObjectDefinition {
+    private fun mainDefinition(clientState: ClientState, mainLocation: ObjectLocation): ObjectDefinition {
         return clientState
             .graphDefinitionAttempt
             .objectDefinitions[mainLocation]!!

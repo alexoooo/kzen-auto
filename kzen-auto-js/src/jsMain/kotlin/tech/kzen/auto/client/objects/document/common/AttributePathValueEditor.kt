@@ -10,7 +10,7 @@ import react.dom.events.ChangeEvent
 import react.dom.onChange
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -39,7 +39,7 @@ external interface AttributePathValueEditorProps: PropsWithRef<AttributePathValu
     var invalid: Boolean
     var onChange: ((AttributeNotation) -> Unit)?
 
-    var clientState: SessionState
+    var clientState: ClientState
     var objectLocation: ObjectLocation
     var attributePath: AttributePath
 

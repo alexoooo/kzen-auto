@@ -13,8 +13,8 @@ import tech.kzen.auto.client.objects.document.sequence.SequenceController
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
-import tech.kzen.auto.client.service.global.SessionGlobal
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
@@ -49,23 +49,23 @@ class SequenceBranchDisplay(
     props: StepListDisplayProps
 ):
     RPureComponent<StepListDisplayProps, StepListDisplayState>(props),
-    SessionGlobal.Observer,
+    ClientStateGlobal.Observer,
     InsertionGlobal.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.sessionGlobal.observe(this)
+        ClientContext.clientStateGlobal.observe(this)
         ClientContext.insertionGlobal.subscribe(this)
     }
 
 
     override fun componentWillUnmount() {
         ClientContext.insertionGlobal.unsubscribe(this)
-        ClientContext.sessionGlobal.unobserve(this)
+        ClientContext.clientStateGlobal.unobserve(this)
     }
 
 
-    override fun onClientState(clientState: SessionState) {
+    override fun onClientState(clientState: ClientState) {
         val graphStructure: GraphStructure = clientState.graphDefinitionAttempt.graphStructure
 
         if (props.attributeLocation.objectLocation !in graphStructure.graphNotation.coalesce) {
@@ -101,7 +101,7 @@ class SequenceBranchDisplay(
     private fun onCreate(index: Int) {
 //        println("onCreate(${props.} $index)")
 
-        val graphStructure = ClientContext.sessionGlobal.current()?.graphStructure()
+        val graphStructure = ClientContext.clientStateGlobal.current()?.graphStructure()
             ?: return
 
         val archetypeObjectLocation = ClientContext.insertionGlobal

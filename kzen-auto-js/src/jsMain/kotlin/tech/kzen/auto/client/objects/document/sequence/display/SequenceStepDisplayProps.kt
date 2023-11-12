@@ -1,9 +1,10 @@
 package tech.kzen.auto.client.objects.document.sequence.display
 
+import react.Props
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
-external interface SequenceStepDisplayProps: react.Props {
+external interface SequenceStepDisplayProps: Props {
     var common: SequenceStepDisplayPropsCommon
 }
 

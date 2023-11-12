@@ -8,7 +8,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 
 
 class ClientRestTaskRepository(
-        private val restClient: ClientRestApi
+    private val restClient: ClientRestApi
 ):
     TaskRepository
 {

@@ -31,11 +31,11 @@ object AutoConventions {
             autoCommonDocumentNesting,
             autoClientDocumentNesting)
 
-    val clientEditAllowed = setOf(
-            NotationConventions.kzenBaseDocumentNesting,
-            autoCommonDocumentNesting,
-            autoClientDocumentNesting,
-            autoServerDocumentNesting)
+//    val clientEditAllowed = setOf(
+//            NotationConventions.kzenBaseDocumentNesting,
+//            autoCommonDocumentNesting,
+//            autoClientDocumentNesting,
+//            autoServerDocumentNesting)
 
 
     val iconAttributePath = AttributePath.ofName(AttributeName("icon"))

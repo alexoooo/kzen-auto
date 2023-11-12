@@ -6,8 +6,8 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor2
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.SessionGlobal
-import tech.kzen.auto.client.service.global.SessionState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -40,7 +40,7 @@ class AutoAttributeEditor(
 ):
     RPureComponent<AutoAttributeEditorProps, AutoAttributeEditorState>(props),
 //    ExecutionRepository.Observer,
-    SessionGlobal.Observer
+    ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -67,7 +67,7 @@ class AutoAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.sessionGlobal.observe(this)
+        ClientContext.clientStateGlobal.observe(this)
 //        async {
 //            ClientContext.executionRepository.observe(this)
 //        }
@@ -76,11 +76,11 @@ class AutoAttributeEditor(
 
     override fun componentWillUnmount() {
 //        ClientContext.executionRepository.unobserve(this)
-        ClientContext.sessionGlobal.unobserve(this)
+        ClientContext.clientStateGlobal.unobserve(this)
     }
 
 
-    override fun onClientState(clientState: SessionState) {
+    override fun onClientState(clientState: ClientState) {
         val graphStructure = clientState.graphStructure()
 
         if (props.objectLocation !in graphStructure.graphNotation.coalesce) {
