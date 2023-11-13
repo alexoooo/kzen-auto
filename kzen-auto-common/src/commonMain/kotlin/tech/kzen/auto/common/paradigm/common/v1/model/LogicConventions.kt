@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.paradigm.common.v1.model
 
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -31,7 +32,7 @@ object LogicConventions {
     const val paramQuery = "query"
 
     val parametersAttributeName = AttributeName("parameters")
-//    val parametersAttributePath = AttributePath.ofName(AttributeName("parameters"))
+    val parametersAttributePath = AttributePath.ofName(parametersAttributeName)
 
 
     //-----------------------------------------------------------------------------------------------------------------

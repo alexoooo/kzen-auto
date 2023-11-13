@@ -54,8 +54,8 @@ class MultiStepDisplay(
 
         SequenceBranchDisplay::class.react {
             attributeLocation = AttributeLocation(
-                SequenceConventions.stepsAttributePath,
-                props.common.objectLocation)
+                props.common.objectLocation,
+                SequenceConventions.stepsAttributePath)
 
             this.stepDisplayManager = stepDisplayManager
             sequenceCommander = props.sequenceCommander

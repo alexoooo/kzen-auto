@@ -6,6 +6,8 @@ import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.LogicExecutionFacade
 import tech.kzen.auto.server.service.v1.StatefulLogicElement
 import tech.kzen.auto.server.service.v1.model.*
+import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentName
+import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentValue
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -15,7 +17,7 @@ import tech.kzen.lib.common.reflect.Reflect
 @Reflect
 class RunStep(
     private val instructions: ObjectLocation,
-    private val argument: ObjectLocation?,
+    private val arguments: Map<String, ObjectLocation>,
     selfLocation: ObjectLocation
 ):
     TracingSequenceStep(selfLocation),
@@ -56,14 +58,13 @@ class RunStep(
             else {
                 val created = stepContext.logicHandleFacade.start(instructions)
 
-                val argumentValue =
-                    if (argument == null) {
-                        TupleValue.empty
-                    }
-                    else {
-                        stepContext.activeSequenceModel.steps[argument]?.value
-                            ?: TupleValue.empty
-                    }
+                val argumentTupleComponents = arguments.map {
+                    TupleComponentValue(
+                        TupleComponentName(it.key),
+                        stepContext.activeSequenceModel.steps[it.value]?.value?.mainComponentValue())
+                }
+
+                val argumentValue = TupleValue(argumentTupleComponents)
 
                 val initResult = created.beforeStart(argumentValue)
                 if (! initResult) {

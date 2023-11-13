@@ -146,11 +146,13 @@ RunStep:
       is: ObjectLocation
       by: Nominal
       editor: SelectLogicEditor
-    argument:
-      is: ObjectLocation
+    arguments:
+      is: Map
+      of:
+        - String
+        - ObjectLocation
       by: Nominal
-      editor: SelectSequenceStepEditor
-      nullable: true
+      editor: RunStepArgumentsEditor
     selfLocation: SelfLocation
 
 

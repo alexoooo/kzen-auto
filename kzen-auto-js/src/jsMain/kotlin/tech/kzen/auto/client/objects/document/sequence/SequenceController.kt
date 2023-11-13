@@ -209,6 +209,9 @@ class SequenceController:
 
         val mainObjectLocation = documentPath.toMainObjectLocation()
         div {
+            css {
+                paddingTop = 1.em
+            }
             renderSignature(mainObjectLocation)
         }
 

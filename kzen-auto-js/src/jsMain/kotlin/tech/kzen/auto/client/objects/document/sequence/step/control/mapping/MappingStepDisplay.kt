@@ -12,17 +12,17 @@ import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.tr
 import react.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
-import tech.kzen.auto.client.objects.document.sequence.step.header.StepHeader
-import tech.kzen.auto.client.objects.document.sequence.step.header.StepNameEditor
 import tech.kzen.auto.client.objects.document.sequence.SequenceController
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.objects.document.sequence.display.*
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceGlobal
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceStore
+import tech.kzen.auto.client.objects.document.sequence.step.header.StepHeader
+import tech.kzen.auto.client.objects.document.sequence.step.header.StepNameEditor
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.material.ArrowForwardIcon
 import tech.kzen.auto.client.wrap.material.SubdirectoryArrowLeftIcon
@@ -348,7 +348,7 @@ class MappingStepDisplay(
 
                 SequenceBranchDisplay::class.react {
                     attributeLocation = AttributeLocation(
-                        SequenceConventions.stepsAttributePath, props.common.objectLocation)
+                        props.common.objectLocation, SequenceConventions.stepsAttributePath)
                     nested = true
 
                     stepDisplayManager = props.stepDisplayManager

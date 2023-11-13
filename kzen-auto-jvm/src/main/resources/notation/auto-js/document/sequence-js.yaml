@@ -117,6 +117,10 @@ SelectLogicEditor:
   class: tech.kzen.auto.client.objects.document.sequence.display.edit.SelectLogicEditor$Wrapper
 
 
+RunStepArgumentsEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.sequence.step.control.RunStepArgumentsEditor$Wrapper
+
 
 #######################################################################################################################
 
