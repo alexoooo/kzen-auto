@@ -6,24 +6,26 @@ import kotlinx.browser.document
 import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.State
+import react.dom.html.ReactHTML.div
 import react.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor2Props
-import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
+import tech.kzen.auto.client.objects.document.sequence.display.edit.SelectSequenceStepEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.RComponent
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
-import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.structure.notation.AttributeNotation
+import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
@@ -31,6 +33,10 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedObjectRefactorE
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.platform.collect.PersistentList
+import tech.kzen.lib.platform.collect.PersistentMap
+import tech.kzen.lib.platform.collect.toPersistentList
+import tech.kzen.lib.platform.collect.toPersistentMap
 import web.cssom.em
 import kotlin.js.Json
 import kotlin.js.json
@@ -38,11 +44,12 @@ import kotlin.js.json
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface RunStepArgumentsEditorState: State {
-    var value: ObjectLocation?
+    var initialized: Boolean
     var renaming: Boolean
 
-    var initialized: Boolean
-    var predecessors: List<ObjectLocation>?
+    var values: PersistentMap<String, ObjectLocation>?
+    var predecessors: PersistentList<ObjectLocation>?
+    var parameterNames: PersistentList<String>?
 }
 
 
@@ -51,14 +58,14 @@ external interface RunStepArgumentsEditorState: State {
 class RunStepArgumentsEditor(
     props: AttributeEditor2Props
 ):
-    RComponent<AttributeEditor2Props, RunStepArgumentsEditorState>(props),
+    RPureComponent<AttributeEditor2Props, RunStepArgumentsEditorState>(props),
     LocalGraphStore.Observer,
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        val stepIdentifier = ObjectName("SequenceStep")
-    }
+//    companion object {
+//        val stepIdentifier = ObjectName("SequenceStep")
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -97,9 +104,12 @@ class RunStepArgumentsEditor(
 //            }
 //        }
 
-        value = null
-        renaming = false
         initialized = false
+        renaming = false
+
+        values = null
+        predecessors = null
+        parameterNames = null
     }
 
 
@@ -109,7 +119,7 @@ class RunStepArgumentsEditor(
         prevState: RunStepArgumentsEditorState,
         snapshot: Any
     ) {
-        if (state.value != prevState.value) {
+        if (state.values != prevState.values) {
             if (state.renaming) {
                 setState {
                     renaming = false
@@ -155,12 +165,24 @@ class RunStepArgumentsEditor(
 
         val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 
-        val value =
-            (attributeNotation as? ScalarAttributeNotation)?.let {
-                val reference = ObjectReference.parse(it.value)
-                graphNotation.coalesce
-                    .locateOptional(reference, objectReferenceHost)
+        val attributeMap: Map<String, String> =
+            (attributeNotation as? MapAttributeNotation)
+            ?.values
+            ?.map { it.key.asKey() to (it.value as ScalarAttributeNotation).value }
+            ?.toMap()
+            ?: mapOf()
+
+        val values = mutableMapOf<String, ObjectLocation>()
+        for (e in attributeMap) {
+            val reference = ObjectReference.parse(e.value)
+
+            val value: ObjectLocation? =
+                graphNotation.coalesce.locateOptional(reference, objectReferenceHost)
+
+            if (value != null) {
+                values[e.key] = value
             }
+        }
 
         val host = props.objectLocation.documentPath
         val documentNotation = graphNotation.documents[host]!!
@@ -173,7 +195,7 @@ class RunStepArgumentsEditor(
                 graphNotation.inheritanceChain(
                     host.toObjectLocation(objectPath)
                 ).any {
-                    it.objectPath.name == stepIdentifier
+                    it.objectPath.name == SelectSequenceStepEditor.stepIdentifier
                 }
             }
 
@@ -182,22 +204,30 @@ class RunStepArgumentsEditor(
             .map { host.toObjectLocation(it) }
 
         setState {
-            this.value = value
-            this.predecessors = predecessors
             initialized = true
+
+            this.values = values.toPersistentMap()
+            this.predecessors = predecessors.toPersistentList()
+            parameterNames = attributeMap.keys.toPersistentList()
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+        val values = state.values
+            ?: return
+
         when (event) {
             is RenamedObjectRefactorEvent -> {
-                if (event.renamedObject.objectLocation == state.value) {
-                    setState {
-                        value = event.renamedObject.newObjectLocation()
-                        renaming = true
-                    }
+                val entryList = values.entries.toList()
+                val renamedEntry = entryList.find { it.value == event.renamedObject.objectLocation }
+                    ?: return
+
+                setState {
+                    this.values = values.put(
+                        renamedEntry.key, event.renamedObject.newObjectLocation())
+                    renaming = true
                 }
             }
 
@@ -213,11 +243,13 @@ class RunStepArgumentsEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onValueChange(value: ObjectLocation?) {
+    private fun onValueChange(parameterName: String, value: ObjectLocation) {
 //        console.log("onValueChange - $value")
+        val values = state.values
+            ?: return
 
         setState {
-            this.value = value
+            this.values = values.put(parameterName, value)
         }
     }
 
@@ -230,16 +262,23 @@ class RunStepArgumentsEditor(
 
 
     private suspend fun editAttributeCommand() {
-        val value = state.value
-                ?: return
+        val values = state.values
+            ?: return
 
-        val localReference = value.toReference()
-                .crop(retainPath = false)
+        val localReferences: PersistentMap<AttributeSegment, AttributeNotation> =
+            values
+            .entries
+            .map {
+                val localReference = it.value.toReference().crop(retainPath = false)
+                AttributeSegment.ofKey(it.key) to
+                        ScalarAttributeNotation(localReference.asString())
+            }
+            .toPersistentMap()
 
         ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
                 props.objectLocation,
                 props.attributeName,
-                ScalarAttributeNotation(localReference.asString())))
+                MapAttributeNotation(localReferences)))
     }
 
 
@@ -257,17 +296,9 @@ class RunStepArgumentsEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        +"[Arguments]"
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    fun ChildrenBuilder.renderFoo() {
-//        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
-//                props.objectLocation, props.attributeName)
-
-        val predecessors = state.predecessors
-            ?: return
+        val values = state.values ?: return
+        val predecessors = state.predecessors ?: return
+        val parameterNames = state.parameterNames ?: return
 
         val selectOptions: Array<ReactSelectOption> = predecessors
             .map { location ->
@@ -281,50 +312,64 @@ class RunStepArgumentsEditor(
 
 //        +"^^ SELECT: ${props.attributeName} - $attributeNotation - ${selectOptions.map { it.value }}"
 
-        val selectId = "material-react-select-id"
+
+        for (parameterName in parameterNames) {
+            div {
+                key = parameterName
+                renderParameter(parameterName, selectOptions, values)
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderParameter(
+        parameterName: String,
+        selectOptions: Array<ReactSelectOption>,
+        values: PersistentMap<String, ObjectLocation>
+    ) {
+        val selectedValue = values[parameterName]
+        val selectedOption = selectOptions.find { it.value == selectedValue?.asString() }
+
+//        val selectId = "material-react-select-id"
 
         InputLabel {
-            htmlFor = selectId
-
+//            htmlFor = selectId
             css {
                 fontSize = 0.8.em
             }
 
-            +formattedLabel()
-        }
+            +parameterName
 
-        val selectedValue = selectOptions.find { it.value == state.value?.asString() }
-//        console.log("### ReactSelect !!!", state.value, selectedValue, selectOptions)
+            ReactSelect::class.react {
+//            id = selectId
+                value = selectedOption
+                options = selectOptions
 
-        ReactSelect::class.react {
-            id = selectId
-            value = selectedValue
-            options = selectOptions
+                onChange = {
+                    onValueChange(parameterName, ObjectLocation.parse(it.value))
+                }
 
-            onChange = {
-                onValueChange(ObjectLocation.parse(it.value))
+                // https://stackoverflow.com/a/51844542/1941359
+                val styleTransformer: (Json, Json) -> Json = { base, _ ->
+                    val transformed = json()
+                    transformed.add(base)
+                    transformed["background"] = "transparent"
+                    transformed
+                }
+
+                val reactStyles = json()
+                reactStyles["control"] = styleTransformer
+                styles = reactStyles
+
+                // NB: this was causing clipping when used in ConditionalStepDisplay table,
+                //   see: https://react-select.com/advanced#portaling
+                menuPortalTarget = document.body!!
             }
-
-            // https://stackoverflow.com/a/51844542/1941359
-            val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                val transformed = json()
-                transformed.add(base)
-                transformed["background"] = "transparent"
-                transformed
-            }
-
-            val reactStyles = json()
-            reactStyles["control"] = styleTransformer
-            styles = reactStyles
-
-            // NB: this was causing clipping when used in ConditionalStepDisplay table,
-            //   see: https://react-select.com/advanced#portaling
-            menuPortalTarget = document.body!!
         }
     }
 
 
-    private fun formattedLabel(): String {
-        return CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))
-    }
+//    private fun formattedLabel(): String {
+//        return CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))
+//    }
 }
