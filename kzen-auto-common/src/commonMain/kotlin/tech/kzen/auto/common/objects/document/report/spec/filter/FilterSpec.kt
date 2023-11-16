@@ -90,6 +90,7 @@ data class FilterSpec(
             return columnAttributePath.nest(ColumnFilterSpec.valuesAttributeSegment)
         }
 
+
         private fun columnTypeAttributePath(columnName: String): AttributePath {
             val columnAttributePath = columnAttributePath(columnName)
             return columnAttributePath.nest(ColumnFilterSpec.typeAttributeSegment)
@@ -101,29 +102,29 @@ data class FilterSpec(
     @Reflect
     object Definer: AttributeDefiner {
         override fun define(
-                objectLocation: ObjectLocation,
-                attributeName: AttributeName,
-                graphStructure: GraphStructure,
-                partialGraphDefinition: GraphDefinition,
-                partialGraphInstance: GraphInstance
+            objectLocation: ObjectLocation,
+            attributeName: AttributeName,
+            graphStructure: GraphStructure,
+            partialGraphDefinition: GraphDefinition,
+            partialGraphInstance: GraphInstance
         ): AttributeDefinitionAttempt {
             check(attributeName == ReportConventions.filterAttributeName) {
                 "Unexpected attribute name: $attributeName"
             }
 
             val attributeNotation = graphStructure
-                    .graphNotation
-                    .firstAttribute(objectLocation, ReportConventions.filterAttributeName) as? MapAttributeNotation
-                    ?: return AttributeDefinitionAttempt.failure(
-                            "'${ReportConventions.filterAttributeName}' attribute notation not found:" +
-                                    " $objectLocation - $attributeName")
+                .graphNotation
+                .firstAttribute(objectLocation, ReportConventions.filterAttributeName) as? MapAttributeNotation
+                ?: return AttributeDefinitionAttempt.failure(
+                    "'${ReportConventions.filterAttributeName}' attribute notation not found:" +
+                            " $objectLocation - $attributeName")
 
             val definitionMap = mutableMapOf<String, ColumnFilterSpec>()
 
-            for (e in attributeNotation.values) {
-                val columnCriteriaNotation = e.value as MapAttributeNotation
+            for ((columnName, columnNotation) in attributeNotation.values) {
+                val columnCriteriaNotation = columnNotation as MapAttributeNotation
                 val columnCriteria = ColumnFilterSpec.ofNotation(columnCriteriaNotation)
-                definitionMap[e.key.asString()] = columnCriteria
+                definitionMap[columnName.asKey()] = columnCriteria
             }
 
             return AttributeDefinitionAttempt.success(

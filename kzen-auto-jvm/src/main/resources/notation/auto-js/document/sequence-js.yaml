@@ -122,6 +122,11 @@ RunStepArgumentsEditor:
   class: tech.kzen.auto.client.objects.document.sequence.step.control.RunStepArgumentsEditor$Wrapper
 
 
+TargetSpecEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.sequence.display.edit.TargetSpecEditor$Wrapper
+
+
 #######################################################################################################################
 
 SequenceGroup_InputOutput:

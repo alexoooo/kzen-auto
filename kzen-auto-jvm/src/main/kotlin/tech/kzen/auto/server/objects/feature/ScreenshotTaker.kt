@@ -15,7 +15,7 @@ import javax.imageio.ImageIO
 @Reflect
 class ScreenshotTaker: DetachedAction {
     override suspend fun execute(
-            request: ExecutionRequest
+        request: ExecutionRequest
     ): ExecutionResult {
         // NB: screenshots don't work with some OS/JVM combinations, see:
         //  https://stackoverflow.com/a/58086589

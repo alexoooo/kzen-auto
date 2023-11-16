@@ -12,40 +12,40 @@ import javax.imageio.ImageIO
 @Reflect
 class ScreenshotCropper: DetachedAction {
     override suspend fun execute(
-            request: ExecutionRequest
+        request: ExecutionRequest
     ): ExecutionResult {
         val x = request.getInt(FeatureDocument.cropLeftParam)
-                ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropLeftParam}")
+            ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropLeftParam}")
 
         val y = request.getInt(FeatureDocument.cropTopParam)
-                ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropTopParam}")
+            ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropTopParam}")
 
         val width = request.getInt(FeatureDocument.cropWidthParam)
-                ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropWidthParam}")
+            ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropWidthParam}")
 
         val height = request.getInt(FeatureDocument.cropHeightParam)
-                ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropHeightParam}")
+            ?: return ExecutionFailure("Missing parameter: ${FeatureDocument.cropHeightParam}")
 
         val body = request.body
-                ?: return ExecutionFailure("Missing body")
+            ?: return ExecutionFailure("Missing body")
 
         val image = ImageIO.read(body.toInputStream())
 
         val xOffset =
-                if (x < 0) {
-                    -x
-                }
-                else {
-                    0
-                }
+            if (x < 0) {
+                -x
+            }
+            else {
+                0
+            }
 
         val yOffset =
-                if (y < 0) {
-                    -y
-                }
-                else {
-                    0
-                }
+            if (y < 0) {
+                -y
+            }
+            else {
+                0
+            }
 
         val adjustedX = x + xOffset
         val adjustedY = y + yOffset

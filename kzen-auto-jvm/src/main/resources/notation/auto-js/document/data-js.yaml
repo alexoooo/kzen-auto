@@ -1,0 +1,5 @@
+
+DataFormatController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.data.DataFormatController$Wrapper
+  archetype: DataFormat

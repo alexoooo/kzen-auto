@@ -12,9 +12,9 @@ import react.react
 import tech.kzen.auto.client.objects.document.sequence.SequenceController
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.InsertionGlobal
-import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
@@ -37,7 +37,6 @@ external interface StepListDisplayProps: Props {
 
 
 external interface StepListDisplayState: State {
-//    var documentPath: DocumentPath
     var stepLocations: List<ObjectLocation>?
 
     var creating: Boolean

@@ -11,8 +11,8 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor2Props
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.select.ReactSelect
@@ -53,8 +53,7 @@ class SelectSequenceStepEditor(
 ):
     RComponent<AttributeEditor2Props, SelectSequenceStepEditorState>(props),
     LocalGraphStore.Observer,
-    ClientStateGlobal.Observer//,
-//    SequenceStore.Observer
+    ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

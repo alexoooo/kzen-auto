@@ -107,54 +107,74 @@ Feature:
 
 
 ################################################################
+DataFormat:
+  abstract: true
+  is: Document
+  class: tech.kzen.auto.server.objects.data.DataDocument
+  title: "Data Format"
+  icon: MenuBook
+  fields: {}
+  meta:
+    fields: FieldFormatListSpec
+
+FieldFormatListSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.data.spec.FieldFormatListSpec
+  meta:
+    ref:
+      by: FieldFormatListSpecDefiner
+
+FieldFormatListSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.data.spec.FieldFormatListSpec$Definer
 
 
-#Report:
-#  abstract: true
-#  is: Document
-#  class: tech.kzen.auto.server.objects.report.ReportDocument
-#  title: "Report"
-#  icon: TableChart
-#  input:
-#    browser:
-#      directory: ./
-#      filter: ""
-#    selection:
-#      dataType: tech.kzen.auto.plugin.model.record.FlatFileRecord
-#      groupBy: ""
-#      locations: []
-#  formula: {}
-#  previewAll: false
-#  filter: {}
-#  previewFiltered: false
-#  analysis:
-#    type: FlatData
-#    flat:
-#      allow: []
-#      exclude: []
-#    pivot:
-#      rows: []
-#      values: {}
-#  output:
-#    type: Explore
-#    explore:
-#      save: ""
-#      start: 1
-#      count: 50
-#    export:
-#      format: csv
-#      compression: none
-#      path: "../work/export/${report}_${group}_${time}.${extension}"
-#    work: "report" # NB: referenced in OutputSpec
-#  meta:
-#    input: InputSpec
-#    formula: FormulaSpec
-#    previewAll: PreviewSpec
-#    filter: FilterSpec
-#    previewFiltered: PreviewSpec
-#    analysis: AnalysisSpec
-#    output: OutputSpec
-#    selfLocation: SelfLocation
+################################################################
+
+Report:
+  abstract: true
+  is: Document
+  class: tech.kzen.auto.server.objects.report.ReportDocument
+  title: "Report"
+  icon: TableChart
+  input:
+    browser:
+      directory: ./
+      filter: ""
+    selection:
+      dataType: tech.kzen.auto.plugin.model.record.FlatFileRecord
+      groupBy: ""
+      locations: []
+  formula: {}
+  previewAll: false
+  filter: {}
+  previewFiltered: false
+  analysis:
+    type: FlatData
+    flat:
+      allow: []
+      exclude: []
+    pivot:
+      rows: []
+      values: {}
+  output:
+    type: Explore
+    explore:
+      start: 1
+      count: 50
+    export:
+      format: csv
+      compression: none
+      path: "../work/output/${report}_${group}_${time}.${extension}"
+    work: "report" # NB: referenced in OutputSpec
+  meta:
+    input: InputSpec
+    formula: FormulaSpec
+    previewAll: PreviewSpec
+    filter: FilterSpec
+    previewFiltered: PreviewSpec
+    analysis: AnalysisSpec
+    output: OutputSpec
+    selfLocation: SelfLocation
 
 
 InputSpec:
@@ -221,55 +241,6 @@ OutputSpec:
 
 OutputSpecDefiner:
   class: tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec$Definer
-
-
-################################################################
-
-Report:
-  abstract: true
-  is: Document
-  class: tech.kzen.auto.server.objects.report.ReportDocument
-  title: "Report"
-  icon: TableChart
-  input:
-    browser:
-      directory: ./
-      filter: ""
-    selection:
-      dataType: tech.kzen.auto.plugin.model.record.FlatFileRecord
-      groupBy: ""
-      locations: []
-  formula: {}
-  previewAll: false
-  filter: {}
-  previewFiltered: false
-  analysis:
-    type: FlatData
-    flat:
-      allow: []
-      exclude: []
-    pivot:
-      rows: []
-      values: {}
-  output:
-    type: Explore
-    explore:
-      start: 1
-      count: 50
-    export:
-      format: csv
-      compression: none
-      path: "../work/output/${report}_${group}_${time}.${extension}"
-    work: "report" # NB: referenced in OutputSpec
-  meta:
-    input: InputSpec
-    formula: FormulaSpec
-    previewAll: PreviewSpec
-    filter: FilterSpec
-    previewFiltered: PreviewSpec
-    analysis: AnalysisSpec
-    output: OutputSpec
-    selfLocation: SelfLocation
 
 
 ################################################################

@@ -10,10 +10,10 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Reflect
 class GraphDocument(
-        val vertices: List<Dataflow<*>>,
-        val edges: List<EdgeDescriptor>
+    val vertices: List<Dataflow<*>>,
+    val edges: List<EdgeDescriptor>
 ):
-        DocumentArchetype()
+    DocumentArchetype()
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

@@ -4,7 +4,7 @@ package tech.kzen.auto.common.objects.document.feature
 sealed class TargetSpec
 
 
-object FocusTarget: TargetSpec()
+data object FocusTarget: TargetSpec()
 
 
 data class TextTarget(
