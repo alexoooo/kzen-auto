@@ -106,14 +106,14 @@ class TargetSpecEditor(
             .firstAttribute(props.objectLocation, props.attributeName)
                 as? MapAttributeNotation
             ?: return
-        println("attributeNotation - $attributeNotation")
+//        println("attributeNotation - $attributeNotation")
 
         val targetType = attributeNotation
             .get(TargetSpecDefiner.typeKey)
             ?.asString()
             ?.let { TargetType.valueOf(it) }
             ?: return
-        println("targetType - $targetType")
+//        println("targetType - $targetType")
 
         setState {
             this.targetType = targetType

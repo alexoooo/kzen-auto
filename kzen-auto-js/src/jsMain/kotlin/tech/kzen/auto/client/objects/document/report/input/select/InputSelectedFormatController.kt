@@ -1,9 +1,9 @@
 package tech.kzen.auto.client.objects.document.report.input.select
 
-import emotion.react.css
 import js.core.jso
 import kotlinx.browser.document
 import mui.material.InputLabel
+import mui.system.sx
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.span
@@ -85,8 +85,6 @@ class InputSelectedFormatController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val selectId = "material-react-data-type"
-
         val selectionProcessorDefinitionCoordinates = props
             .inputSelectedState
             .selectedInfo
@@ -155,53 +153,51 @@ class InputSelectedFormatController(
             }
 
             InputLabel {
-                htmlFor = selectId
-                css {
+                sx {
                     fontSize = 0.8.em
                     width = 16.em
                 }
+
                 +"Format"
-            }
 
-            ReactSelect::class.react {
-                id = selectId
+                ReactSelect::class.react {
+                    value =
+                        if (classNamesLabels.size == 1) {
+                            classNamesLabels.single()
+                        }
+                        else {
+                            null
+                        }
 
-                value =
-                    if (classNamesLabels.size == 1) {
-                        classNamesLabels.single()
+                    options = selectOptions
+
+                    onChange = {
+                        onValueChange(it.value)
                     }
-                    else {
-                        null
+
+                    onMenuOpen = {
+                        loadIfRequired()
                     }
 
-                options = selectOptions
+                    isDisabled = props.editDisabled || (selectionEmpty && ! singleOption)
 
-                onChange = {
-                    onValueChange(it.value)
+                    // https://stackoverflow.com/a/51844542/1941359
+                    val styleTransformer: (Json, Json) -> Json = { base, _ ->
+                        val transformed = json()
+                        transformed.add(base)
+                        transformed["background"] = "transparent"
+                        transformed["borderWidth"] = "2px"
+                        transformed
+                    }
+
+                    val reactStyles = json()
+                    reactStyles["control"] = styleTransformer
+                    styles = reactStyles
+
+                    // NB: this was causing clipping when used in ConditionalStepDisplay table,
+                    //   see: https://react-select.com/advanced#portaling
+                    menuPortalTarget = document.body!!
                 }
-
-                onMenuOpen = {
-                    loadIfRequired()
-                }
-
-                isDisabled = props.editDisabled || (selectionEmpty && ! singleOption)
-
-                // https://stackoverflow.com/a/51844542/1941359
-                val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                    val transformed = json()
-                    transformed.add(base)
-                    transformed["background"] = "transparent"
-                    transformed["borderWidth"] = "2px"
-                    transformed
-                }
-
-                val reactStyles = json()
-                reactStyles["control"] = styleTransformer
-                styles = reactStyles
-
-                // NB: this was causing clipping when used in ConditionalStepDisplay table,
-                //   see: https://react-select.com/advanced#portaling
-                menuPortalTarget = document.body!!
             }
         }
     }

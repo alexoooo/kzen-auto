@@ -227,54 +227,49 @@ class SelectLogicEditor(
             ?: return
 
         val selectOptions = options
-                .map {
-                    val option: ReactSelectOption = jso {
-                        value = it.asString()
-                        label = it.documentPath.name.value
-                    }
-                    option
+            .map {
+                val option: ReactSelectOption = jso {
+                    value = it.asString()
+                    label = it.documentPath.name.value
                 }
-                .toTypedArray()
+                option
+            }
+            .toTypedArray()
 
 //        +"!! ${selectOptions.map { it.value }}"
 //        +"^^ SELECT: ${props.attributeName} - $attributeNotation - ${selectOptions.map { it.value }}"
 
-        val selectId = "material-react-select-id"
-
         InputLabel {
-            htmlFor = selectId
-
             css {
                 fontSize = 0.8.em
             }
 
             +formattedLabel()
-        }
 
-        ReactSelect::class.react {
-            id = selectId
-            value = selectOptions.find { it.value == state.value?.asString() }
-            this.options = selectOptions
+            ReactSelect::class.react {
+                value = selectOptions.find { it.value == state.value?.asString() }
+                this.options = selectOptions
 
-            onChange = {
-                onValueChange(ObjectLocation.parse(it.value))
+                onChange = {
+                    onValueChange(ObjectLocation.parse(it.value))
+                }
+
+                // https://stackoverflow.com/a/51844542/1941359
+                val styleTransformer: (Json, Json) -> Json = { base, _ ->
+                    val transformed = json()
+                    transformed.add(base)
+                    transformed["background"] = "transparent"
+                    transformed
+                }
+
+                val reactStyles = json()
+                reactStyles["control"] = styleTransformer
+                styles = reactStyles
+
+                // NB: this was causing clipping when used in ConditionalStepDisplay table,
+                //   see: https://react-select.com/advanced#portaling
+                menuPortalTarget = document.body!!
             }
-
-            // https://stackoverflow.com/a/51844542/1941359
-            val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                val transformed = json()
-                transformed.add(base)
-                transformed["background"] = "transparent"
-                transformed
-            }
-
-            val reactStyles = json()
-            reactStyles["control"] = styleTransformer
-            styles = reactStyles
-
-            // NB: this was causing clipping when used in ConditionalStepDisplay table,
-            //   see: https://react-select.com/advanced#portaling
-            menuPortalTarget = document.body!!
         }
     }
 

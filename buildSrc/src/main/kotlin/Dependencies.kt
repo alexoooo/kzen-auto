@@ -38,7 +38,7 @@ const val reactSelectVersion = "5.7.7"
 const val iconifyReactVersion = "4.1.1"
 const val iconifyIconsVaadinVersion = "1.2.4"
 
-const val wrapperKotlinVersion = "pre.637"
+const val wrapperKotlinVersion = "pre.642"
 const val kotlinReactVersion = "18.2.0-$wrapperKotlinVersion"
 const val kotlinReactDomVersion = "18.2.0-$wrapperKotlinVersion"
 const val kotlinEmotionVersion = "11.11.1-$wrapperKotlinVersion"

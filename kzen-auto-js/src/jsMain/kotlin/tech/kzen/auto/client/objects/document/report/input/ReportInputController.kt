@@ -96,7 +96,7 @@ class ReportInputController(
 
         // TODO: updating state from state, is that a problem?
         val toggled = ! state.browserOpen
-        console.log("$@#$#@ onToggleBrowser - $toggled")
+//        console.log("$@#$#@ onToggleBrowser - $toggled")
 
         setState {
             this.browserOpen = toggled

@@ -129,8 +129,7 @@ class ProjectController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
-//        console.log("^^^ onCommandSuccess", event, graphDefinition)
-        console.log("^^^ onCommandSuccess", event)
+//        console.log("^^^ onCommandSuccess", event)
         setState {
             structure = graphDefinition.graphStructure
             commandErrorRequest = null
@@ -140,7 +139,7 @@ class ProjectController(
 
 
     override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {
-        console.log("^^^ onCommandFailure", command.toString(), cause)
+//        console.log("^^^ onCommandFailure", command.toString(), cause)
         setState {
             commandErrorRequest = command
             commandErrorMessage = "${cause.message}"

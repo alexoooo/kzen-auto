@@ -136,12 +136,6 @@ class SelectSequenceStepEditor(
     }
 
 
-
-//    override fun onSequenceState(sequenceState: SequenceState) {
-//        sequenceState.progress
-//    }
-
-
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphStructure().graphNotation
 
@@ -273,47 +267,39 @@ class SelectSequenceStepEditor(
             }
             .toTypedArray()
 
-//        +"^^ SELECT: ${props.attributeName} - $attributeNotation - ${selectOptions.map { it.value }}"
-
-        val selectId = "material-react-select-id"
+        val selectedValue = selectOptions.find { it.value == state.value?.asString() }
 
         InputLabel {
-            htmlFor = selectId
-
             css {
                 fontSize = 0.8.em
             }
 
             +formattedLabel()
-        }
 
-        val selectedValue = selectOptions.find { it.value == state.value?.asString() }
-//        console.log("### ReactSelect !!!", state.value, selectedValue, selectOptions)
+            ReactSelect::class.react {
+                value = selectedValue
+                options = selectOptions
 
-        ReactSelect::class.react {
-            id = selectId
-            value = selectedValue
-            options = selectOptions
+                onChange = {
+                    onValueChange(ObjectLocation.parse(it.value))
+                }
 
-            onChange = {
-                onValueChange(ObjectLocation.parse(it.value))
+                // https://stackoverflow.com/a/51844542/1941359
+                val styleTransformer: (Json, Json) -> Json = { base, _ ->
+                    val transformed = json()
+                    transformed.add(base)
+                    transformed["background"] = "transparent"
+                    transformed
+                }
+
+                val reactStyles = json()
+                reactStyles["control"] = styleTransformer
+                styles = reactStyles
+
+                // NB: this was causing clipping when used in ConditionalStepDisplay table,
+                //   see: https://react-select.com/advanced#portaling
+                menuPortalTarget = document.body!!
             }
-
-            // https://stackoverflow.com/a/51844542/1941359
-            val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                val transformed = json()
-                transformed.add(base)
-                transformed["background"] = "transparent"
-                transformed
-            }
-
-            val reactStyles = json()
-            reactStyles["control"] = styleTransformer
-            styles = reactStyles
-
-            // NB: this was causing clipping when used in ConditionalStepDisplay table,
-            //   see: https://react-select.com/advanced#portaling
-            menuPortalTarget = document.body!!
         }
     }
 

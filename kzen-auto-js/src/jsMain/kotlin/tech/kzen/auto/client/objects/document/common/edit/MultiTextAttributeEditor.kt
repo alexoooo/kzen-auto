@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
-import csstype.Properties
 import mui.material.InputBaseProps
 import mui.material.Size
 import mui.material.TextField
@@ -18,7 +17,6 @@ import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.platform.collect.toPersistentList
 import web.html.HTMLTextAreaElement
-import kotlin.js.Json
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -32,7 +30,7 @@ external interface MultiTextAttributeEditorProps: Props {
 
     var labelOverride: String?
     var InputProps: InputBaseProps?
-    var style: Json?
+//    var style: Json?
     var rows: Int?
     var maxRows: Int?
 
@@ -128,20 +126,6 @@ class MultiTextAttributeEditor(
                 .map { ScalarAttributeNotation(it) }
                 .toPersistentList())
 
-//        val command = CommonEditUtils.editCommand(
-//            props.objectLocation, props.attributePath, attributeNotation)
-//
-//        // TODO: handle error
-//        ClientContext.mirroredGraphStore.apply(command)
-//
-//        setState {
-//            pending = false
-//        }
-//
-//        props.onChange?.invoke(attributeNotation)
-
-//        val attributeNotation = ScalarAttributeNotation(state.value)
-//
         val command = CommonEditUtils.editCommand(
             props.objectLocation, props.attributePath, attributeNotation)
 
@@ -163,28 +147,21 @@ class MultiTextAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-//        val valueType = props.type ?: Type.PlainText
-//
-//        val isMultiline = valueType == Type.MultilineText
-
         TextField {
+            name = "${props.objectLocation.asString()} - ${props.attributePath.asString()}"
+
             fullWidth = true
             multiline = true
             size = Size.small
+//            autoComplete
 
             label = ReactNode(formattedLabel() + " (one per line)")
             value = state.value.joinToString("\n")
 
             onChange = {
-                val value =
-                    (it.target as HTMLTextAreaElement).value
-
+                val value = (it.target as HTMLTextAreaElement).value
                 onValueChange(value)
             }
-
-//                if (valueType == Type.Number) {
-//                    type = InputType.number.name
-//                }
 
             disabled = props.disabled
             error = props.invalid
@@ -193,10 +170,10 @@ class MultiTextAttributeEditor(
                 InputProps = props.InputProps!!
             }
 
-            if (props.style != null) {
-                @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
-                style = props.style!! as Properties
-            }
+//            if (props.style != null) {
+//                @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
+//                style = props.style!! as Properties
+//            }
             if (props.rows != null) {
                 rows = props.rows!!
             }

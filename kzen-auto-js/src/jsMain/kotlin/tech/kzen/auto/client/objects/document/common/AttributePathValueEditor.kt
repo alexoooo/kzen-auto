@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.common
 
-import js.core.jso
 import mui.material.*
+import mui.system.sx
 import react.ChildrenBuilder
 import react.PropsWithRef
 import react.ReactNode
@@ -338,103 +338,34 @@ class AttributePathValueEditor(
             disabled = props.disabled
             error = props.invalid
         }
-
-//        child(MaterialTextField::class.react) {
-//            fullWidth = true
-//            multiline = multilineOverride
-//            size = "small"
-//
-//            label = formattedLabel()
-//            value = stateValue
-//
-//            // https://stackoverflow.com/questions/54052525/how-to-change-material-ui-textfield-bottom-and-label-color-on-error-and-on-focus
-////                InputLabelProps = NestedInputLabelProps(reactStyle {
-////                    color = Color("rgb(66, 66, 66)")
-////                })
-//
-//            onChange = {
-//                val value =
-//                    if (multilineOverride) {
-//                        (it.target as HTMLTextAreaElement).value
-//                    }
-//                    else {
-//                        (it.target as HTMLInputElement).value
-//                    }
-//
-//                onValueChange(value)
-//            }
-//
-//            disabled = props.disabled
-//            error = props.invalid
-//        }
     }
 
 
     private fun ChildrenBuilder.renderBoolean(stateValue: Boolean) {
-        val inputId = "material-react-switch-id"
-
         InputLabel {
-            htmlFor = inputId
-
-            style = jso {
+            sx {
                 fontSize = 0.8.em
             }
 
             +formattedLabel()
-        }
-//        child(MaterialInputLabel::class) {
-//            attrs {
-//                htmlFor = inputId
-//
-//                style = reactStyle {
-//                    fontSize = 0.8.em
-//                }
-//            }
-//
-//            +formattedLabel()
-//        }
 
-        Switch {
-            id = inputId
+            Switch {
+                checked = stateValue
 
-            checked = stateValue
+                onChange = { event: ChangeEvent<HTMLInputElement>, _: Boolean ->
+                    val target = event.target
+                    onValueChange(target.checked.toString())
+                }
 
-            onChange = { event: ChangeEvent<HTMLInputElement>, _: Boolean ->
-                val target = event.target
-                onValueChange(target.checked.toString())
-            }
+                color = SwitchColor.default
 
-            color = SwitchColor.default
-
-            if (stateValue) {
-                style = jso {
-//                        this.color = Color("#8CBAE8")
-                    this.color = NamedColor.black
+                if (stateValue) {
+                    sx {
+                        color = NamedColor.black
+                    }
                 }
             }
         }
-
-//        child(MaterialSwitch::class) {
-//            attrs {
-//                id = inputId
-//
-//                checked = stateValue
-//
-//                onChange = {
-//                    val target = it.target as HTMLInputElement
-//                    onValueChange(target.checked.toString())
-//                }
-//
-//                color = "default"
-//
-//                if (stateValue) {
-//                    style = reactStyle {
-////                        this.color = Color("#8CBAE8")
-//                        this.color = Color.black
-//                    }
-//                }
-//            }
-//        }
     }
 
 
@@ -464,32 +395,5 @@ class AttributePathValueEditor(
             disabled = props.disabled
             error = props.invalid
         }
-//        child(MaterialTextField::class) {
-//            attrs {
-//                fullWidth = true
-//                multiline = true
-//                size = "small"
-//
-//                label = formattedLabel() + " (one per line)"
-//                value = stateValues.joinToString("\n")
-//
-//                onChange = {
-//                    val target = it.target as HTMLTextAreaElement
-//                    val lines = target.value.split(Regex("\\n+"))
-//                    val values =
-//                        if (lines.size == 1 && lines[0].isEmpty()) {
-//                            listOf()
-//                        }
-//                        else {
-//                            lines
-//                        }
-//
-//                    onValuesChange(values)
-//                }
-//
-//                disabled = props.disabled
-//                error = props.invalid
-//            }
-//        }
     }
 }

@@ -75,19 +75,6 @@ class InputSelectedTypeController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val selectId = "material-react-data-type"
-
-        InputLabel {
-            htmlFor = selectId
-
-            css {
-                fontSize = 0.8.em
-                width = 16.em
-            }
-
-            +"Data Type"
-        }
-
         val dataType = props.spec.dataType
         val selectedOption: ReactSelectOption = jso {
             value = dataType.asString()
@@ -104,42 +91,50 @@ class InputSelectedTypeController(
                 }
                 option
             }
-            ?: listOf(selectedOption)
+                ?: listOf(selectedOption)
 
         val selectOptions = classNamesLabels
             .toTypedArray()
 
-        ReactSelect::class.react {
-            id = selectId
-            value = selectedOption
-            options = selectOptions
-
-            onChange = {
-                onValueChange(it.value)
+        InputLabel {
+            css {
+                fontSize = 0.8.em
+                width = 16.em
             }
 
-            onMenuOpen = {
-                loadIfRequired()
+            +"Data Type"
+
+            ReactSelect::class.react {
+                value = selectedOption
+                options = selectOptions
+
+                onChange = {
+                    onValueChange(it.value)
+                }
+
+                onMenuOpen = {
+                    loadIfRequired()
+                }
+
+                isDisabled = props.editDisabled
+
+                // https://stackoverflow.com/a/51844542/1941359
+                val styleTransformer: (Json, Json) -> Json = { base, _ ->
+                    val transformed = json()
+                    transformed.add(base)
+                    transformed["background"] = "transparent"
+                    transformed["borderWidth"] = "2px"
+                    transformed
+                }
+
+                val reactStyles = json()
+                reactStyles["control"] = styleTransformer
+                styles = reactStyles
+
+                // NB: this was causing clipping when used in ConditionalStepDisplay table,
+                //   see: https://react-select.com/advanced#portaling
+                menuPortalTarget = document.body!!
             }
-
-            isDisabled = props.editDisabled
-
-            // https://stackoverflow.com/a/51844542/1941359
-            val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                val transformed = json()
-                transformed.add(base)
-                transformed["background"] = "transparent"
-                transformed["borderWidth"] = "2px"
-                transformed
-            }
-
-            val reactStyles = json()
-            reactStyles["control"] = styleTransformer
-            styles = reactStyles
-
-            // NB: this was causing clipping when used in ConditionalStepDisplay table,
-            //   see: https://react-select.com/advanced#portaling
-            menuPortalTarget = document.body!!
         }
     }
 }

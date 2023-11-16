@@ -1,6 +1,7 @@
 package tech.kzen.auto.client
 
 import react.Fragment
+import react.StrictMode
 import react.create
 import react.dom.client.createRoot
 import tech.kzen.auto.client.api.ReactWrapper
@@ -64,7 +65,9 @@ fun main() {
             val rootElement = emptyRootElement()
 
             createRoot(rootElement).render(Fragment.create {
-                rootInstance.child(this) {}
+                StrictMode {
+                    rootInstance.child(this) {}
+                }
             })
         }
     }
