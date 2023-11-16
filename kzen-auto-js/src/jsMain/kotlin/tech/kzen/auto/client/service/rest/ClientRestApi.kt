@@ -573,7 +573,7 @@ class ClientRestApi(
             host: DocumentPath
     ): VisualDataflowModel {
         val responseJson = getOrPutJson(
-                CommonRestApi.execModel,
+                CommonRestApi.dataflowModel,
                 CommonRestApi.paramDocumentPath to host.asString())
 
         val responseCollection = ClientJsonUtils.toMap(responseJson)
@@ -589,7 +589,7 @@ class ClientRestApi(
             vertexLocation: ObjectLocation
     ): VisualVertexModel {
         val responseJson = getOrPutJson(
-                CommonRestApi.execModel,
+                CommonRestApi.dataflowModel,
                 CommonRestApi.paramDocumentPath to host.asString(),
                 CommonRestApi.paramObjectPath to vertexLocation.objectPath.asString())
 
@@ -604,7 +604,7 @@ class ClientRestApi(
             host: DocumentPath
     ): VisualDataflowModel {
         val responseJson = getOrPutJson(
-                CommonRestApi.execReset,
+                CommonRestApi.dataflowReset,
                 CommonRestApi.paramDocumentPath to host.asString())
 
         @Suppress("UNCHECKED_CAST")
@@ -619,7 +619,7 @@ class ClientRestApi(
             objectLocation: ObjectLocation
     ): VisualVertexTransition {
         val responseJson = getOrPutJson(
-                CommonRestApi.execPerform,
+                CommonRestApi.dataflowPerform,
                 CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
                 CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
 

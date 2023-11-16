@@ -96,18 +96,9 @@ object CommonRestApi {
     const val logicContinueStep = "${logicPrefix}step"
     const val logicStartAndStep = "${logicPrefix}startStep"
 
-    // script (ad hoc)
-    const val actionList = "${actionPrefix}list"
-    const val actionModel = "${actionPrefix}model"
-    const val actionStart = "${actionPrefix}start"
-    const val actionReturn = "${actionPrefix}return"
-    const val actionReset = "${actionPrefix}reset"
-    const val actionPerform = "${actionPrefix}perform"
-    const val fieldDigest = "digest"
-
     // dataflow (ad hoc)
-    private const val execPrefix = "/exec/"
-    const val execModel = "${execPrefix}model"
-    const val execReset = "${execPrefix}reset"
-    const val execPerform = "${execPrefix}perform"
+    private const val dataflowPrefix = "/dataflow/"
+    const val dataflowModel = "${dataflowPrefix}model"
+    const val dataflowReset = "${dataflowPrefix}reset"
+    const val dataflowPerform = "${dataflowPrefix}perform"
 }

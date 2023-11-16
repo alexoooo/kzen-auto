@@ -4,7 +4,7 @@ import react.ChildrenBuilder
 import react.Props
 import react.State
 import react.react
-import tech.kzen.auto.client.objects.document.common.AttributeController
+import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.ClientState
@@ -26,7 +26,7 @@ import web.cssom.times
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface CellControllerProps: Props {
-    var attributeController: AttributeController.Wrapper
+    var attributeController: AttributeEditorManagerOld.Wrapper
 
     var cellDescriptor: CellDescriptor
 

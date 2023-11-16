@@ -917,7 +917,7 @@ class RestHandler(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun execModel(parameters: Parameters): Map<String, Any?> {
+    fun dataflowModel(parameters: Parameters): Map<String, Any?> {
         val documentPath: DocumentPath = parameters.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
@@ -929,22 +929,22 @@ class RestHandler(
         }
 
         val result =
-                if (objectPath == null) {
-                    VisualDataflowModel.toJsonCollection(visualDataflowModel)
-                }
-                else {
-                    val objectLocation = ObjectLocation(documentPath, objectPath)
-                    val visualVertexModel = visualDataflowModel.vertices[objectLocation]
-                            ?: throw IllegalArgumentException("Object location not found: $objectLocation")
+            if (objectPath == null) {
+                VisualDataflowModel.toJsonCollection(visualDataflowModel)
+            }
+            else {
+                val objectLocation = ObjectLocation(documentPath, objectPath)
+                val visualVertexModel = visualDataflowModel.vertices[objectLocation]
+                    ?: throw IllegalArgumentException("Object location not found: $objectLocation")
 
-                    VisualVertexModel.toJsonCollection(visualVertexModel)
-                }
+                VisualVertexModel.toJsonCollection(visualVertexModel)
+            }
 
         return result
     }
 
 
-    fun execReset(parameters: Parameters): Map<String, Any> {
+    fun dataflowReset(parameters: Parameters): Map<String, Any> {
         val documentPath: DocumentPath = parameters.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
@@ -956,7 +956,7 @@ class RestHandler(
     }
 
 
-    fun execPerform(parameters: Parameters): Map<String, Any?> {
+    fun dataflowPerform(parameters: Parameters): Map<String, Any?> {
         val documentPath: DocumentPath = parameters.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 

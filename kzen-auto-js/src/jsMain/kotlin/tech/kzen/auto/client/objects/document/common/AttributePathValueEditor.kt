@@ -11,6 +11,7 @@ import react.dom.onChange
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -39,7 +40,6 @@ external interface AttributePathValueEditorProps: PropsWithRef<AttributePathValu
     var invalid: Boolean
     var onChange: ((AttributeNotation) -> Unit)?
 
-    var clientState: ClientState
     var objectLocation: ObjectLocation
     var attributePath: AttributePath
 
@@ -50,8 +50,9 @@ external interface AttributePathValueEditorProps: PropsWithRef<AttributePathValu
 external interface AttributePathValueEditorState: State {
     var value: String?
     var values: List<String>?
-
     var pending: Boolean
+
+    var attributeNotation: AttributeNotation?
 }
 
 
@@ -59,7 +60,8 @@ external interface AttributePathValueEditorState: State {
 class AttributePathValueEditor(
     props: AttributePathValueEditorProps
 ):
-    RPureComponent<AttributePathValueEditorProps, AttributePathValueEditorState>(props)
+    RPureComponent<AttributePathValueEditorProps, AttributePathValueEditorState>(props),
+    ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -86,26 +88,42 @@ class AttributePathValueEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun AttributePathValueEditorProps.valuesAttribute(): AttributeNotation {
-//        @Suppress("MoveVariableDeclarationIntoWhen")
-        val attributeNotation = clientState
-            .graphStructure()
-            .graphNotation
-            .firstAttribute(objectLocation, attributePath)
-
-        checkNotNull(attributeNotation) {
-            "missing: $objectLocation | $attributePath"
-        }
-
-//        val merge = clientState
-//            .graphStructure()
-//            .graphNotation
-//            .mergeAttribute(objectLocation, attributePath)!!
-//        console.log("#!@#@! merge: $objectLocation - $attributePath - $merge")
-
-        return attributeNotation
+    override fun componentDidMount() {
+        ClientContext.clientStateGlobal.observe(this)
     }
 
+
+    override fun componentWillUnmount() {
+        ClientContext.clientStateGlobal.unobserve(this)
+    }
+
+
+    override fun onClientState(clientState: ClientState) {
+        val graphStructure = clientState.graphStructure()
+
+        if (props.objectLocation !in graphStructure.graphNotation.coalesce) {
+            // NB: containing step was deleted, but its parent component hasn't re-rendered yet
+            return
+        }
+
+        val attributeNotation: AttributeNotation? = graphStructure
+            .graphNotation
+            .mergeAttribute(props.objectLocation, props.attributePath)
+
+        if (state.attributeNotation == attributeNotation) {
+            return
+        }
+
+        setState {
+            this.attributeNotation = attributeNotation
+
+            if (attributeNotation != null) {
+                val (value, values) = extractValues(attributeNotation)
+                this.value = value
+                this.values = values
+            }
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -118,13 +136,14 @@ class AttributePathValueEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun AttributePathValueEditorState.init(props: AttributePathValueEditorProps) {
-        val attributeNotation = props.valuesAttribute()
-
-        val (value, values) = extractValues(attributeNotation)
-
-        this.value = value
-        this.values = values
-
+//        val attributeNotation = props.valuesAttribute()
+//
+//        val (value, values) = extractValues(attributeNotation)
+//
+//        this.value = value
+//        this.values = values
+        value = null
+        values = null
         pending = false
     }
 
@@ -157,11 +176,19 @@ class AttributePathValueEditor(
         prevState: AttributePathValueEditorState,
         snapshot: Any
     ) {
-        if (props.clientState == prevProps.clientState) {
+        if (state.attributeNotation == prevState.attributeNotation) {
             return
         }
 
-        val attributeNotation = props.valuesAttribute()
+        val attributeNotation = state.attributeNotation
+        if (attributeNotation == null) {
+            setState {
+                value = null
+                values = null
+            }
+            return
+        }
+
         val (value, values) = extractValues(attributeNotation)
 
         if (value != state.value || values != state.values) {
@@ -252,7 +279,6 @@ class AttributePathValueEditor(
 //        +"## attributePath ${props.attributePath} - state.value ${state.value}"
 
         val type = props.valueType
-//        val type = attributeMetadata.type
 
         if (! isValue(type)) {
             +"${props.attributePath} $type (not a value)"

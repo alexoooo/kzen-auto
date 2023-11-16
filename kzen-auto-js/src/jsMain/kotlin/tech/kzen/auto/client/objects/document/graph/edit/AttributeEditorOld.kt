@@ -1,13 +1,13 @@
-package tech.kzen.auto.client.objects.document.common
+package tech.kzen.auto.client.objects.document.graph.edit
 
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 
 
-abstract class AttributeEditorWrapper(
+abstract class AttributeEditorOld(
     private val objectLocation: ObjectLocation
-): ReactWrapper<AttributeEditorProps> {
+): ReactWrapper<AttributeEditorPropsOld> {
     //-----------------------------------------------------------------------------------------------------------------
 //    class Props(
 //            var objectLocation: ObjectLocation,

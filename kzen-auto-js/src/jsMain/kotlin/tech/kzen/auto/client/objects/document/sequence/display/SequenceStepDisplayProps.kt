@@ -11,7 +11,6 @@ external interface SequenceStepDisplayProps: Props {
 
 data class SequenceStepDisplayPropsCommon(
     var objectLocation: ObjectLocation,
-//    var attributePath: AttributePath,
     var indexInParent: Int,
 
     var first: Boolean = false,

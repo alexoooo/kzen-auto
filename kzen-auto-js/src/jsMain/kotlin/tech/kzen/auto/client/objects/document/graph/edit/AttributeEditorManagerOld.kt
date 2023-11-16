@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.common
+package tech.kzen.auto.client.objects.document.graph.edit
 
 import react.ChildrenBuilder
 import react.State
@@ -12,16 +12,16 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface AttributeControllerProps: AttributeEditorProps {
-    var attributeEditors: List<AttributeEditorWrapper>
+external interface AttributeEditorManagerOldProps: AttributeEditorPropsOld {
+    var attributeEditors: List<AttributeEditorOld>
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
-class AttributeController(
-        props: AttributeControllerProps
+class AttributeEditorManagerOld(
+    props: AttributeEditorManagerOldProps
 ):
-        RPureComponent<AttributeControllerProps, State>(props)
+    RPureComponent<AttributeEditorManagerOldProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -32,12 +32,12 @@ class AttributeController(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        private val attributeEditors: List<AttributeEditorWrapper>
+        private val attributeEditors: List<AttributeEditorOld>
     ):
-        ReactWrapper<AttributeControllerProps>
+        ReactWrapper<AttributeEditorManagerOldProps>
     {
-        override fun ChildrenBuilder.child(block: AttributeControllerProps.() -> Unit) {
-            AttributeController::class.react {
+        override fun ChildrenBuilder.child(block: AttributeEditorManagerOldProps.() -> Unit) {
+            AttributeEditorManagerOld::class.react {
                 this.attributeEditors = this@Wrapper.attributeEditors
                 block()
             }
@@ -63,7 +63,7 @@ class AttributeController(
         val editorWrapperName = editorAttributeNotation
                 ?.asString()
                 ?.let { ObjectName(it) }
-                ?: DefaultAttributeEditor.wrapperName
+                ?: DefaultAttributeEditorOld.wrapperName
 
         val editorWrapper = props.attributeEditors.find { it.name() == editorWrapperName }
                 ?: throw IllegalStateException("Attribute editor not found: $editorWrapperName")

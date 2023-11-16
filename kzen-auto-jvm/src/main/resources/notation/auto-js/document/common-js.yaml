@@ -1,0 +1,46 @@
+
+AttributeEditorManager:
+  class: tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager$Wrapper
+  meta:
+    attributeEditors:
+      is: List
+      of: AttributeEditor
+      by: Autowired
+
+AttributeEditor:
+  abstract: true
+  class: tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
+  meta:
+    objectLocation:
+      is: ObjectLocation
+      by: Self
+
+DefaultAttributeEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.common.attribute.DefaultAttributeEditor$Wrapper
+
+
+################################################################
+
+
+AttributeEditorManagerOld:
+  class: tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld$Wrapper
+  meta:
+    attributeEditors:
+      is: List
+      of: AttributeEditorOld
+      by: Autowired
+
+AttributeEditorOld:
+  abstract: true
+  class: tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorOld
+  meta:
+    objectLocation:
+      is: ObjectLocation
+      by: Self
+
+DefaultAttributeEditorOld:
+  is: AttributeEditorOld
+  class: tech.kzen.auto.client.objects.document.graph.edit.DefaultAttributeEditorOld$Wrapper
+
+

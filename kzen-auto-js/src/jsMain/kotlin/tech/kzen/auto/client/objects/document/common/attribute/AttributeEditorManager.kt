@@ -5,8 +5,8 @@ import react.State
 import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -16,7 +16,7 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface AttributeEditorManagerProps: AttributeEditor2Props {
+external interface AttributeEditorManagerProps: AttributeEditorProps {
     var attributeEditors: List<AttributeEditor>
 }
 
@@ -56,7 +56,6 @@ class AttributeEditorManager(
     }
 
 
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.clientStateGlobal.observe(this)
@@ -87,7 +86,7 @@ class AttributeEditorManager(
         val editorWrapperName = editorAttributeNotation
             ?.asString()
             ?.let { ObjectName(it) }
-            ?: AutoAttributeEditor.wrapperName
+            ?: DefaultAttributeEditor.wrapperName
 
         val attributeEditor =
             props.attributeEditors.find { it.name() == editorWrapperName }

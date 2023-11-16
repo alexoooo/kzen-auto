@@ -41,12 +41,10 @@ StepDisplayManagerHandle:
 SequenceStepDisplay:
   abstract: true
   class: tech.kzen.auto.client.objects.document.sequence.display.SequenceStepDisplayWrapper
-  attributeController: AttributeController
   meta:
     objectLocation:
       is: ObjectLocation
       by: Self
-    attributeController: AttributeController
 
 
 SequenceStepDisplayDefault:

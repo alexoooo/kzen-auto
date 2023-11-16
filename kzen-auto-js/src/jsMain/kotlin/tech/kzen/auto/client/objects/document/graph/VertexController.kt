@@ -8,7 +8,7 @@ import mui.material.MenuItem
 import react.*
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.objects.document.common.AttributeController
+import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
 import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
 import tech.kzen.auto.client.service.ClientContext
@@ -45,7 +45,7 @@ import kotlin.js.Date
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface VertexControllerProps: Props {
-    var attributeController: AttributeController.Wrapper
+    var attributeController: AttributeEditorManagerOld.Wrapper
 
     var cellDescriptor: VertexDescriptor
 

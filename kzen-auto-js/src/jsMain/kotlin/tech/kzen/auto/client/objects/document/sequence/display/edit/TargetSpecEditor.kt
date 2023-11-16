@@ -14,7 +14,7 @@ import react.dom.html.ReactHTML.div
 import react.dom.onChange
 import react.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
-import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor2Props
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -66,9 +66,9 @@ external interface TargetSpecEditorState: State {
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class TargetSpecEditor(
-    props: AttributeEditor2Props
+    props: AttributeEditorProps
 ):
-    RPureComponent<AttributeEditor2Props, TargetSpecEditorState>(props),
+    RPureComponent<AttributeEditorProps, TargetSpecEditorState>(props),
     LocalGraphStore.Observer,
     ClientStateGlobal.Observer
 {
@@ -79,7 +79,7 @@ class TargetSpecEditor(
     ):
         AttributeEditor(objectLocation)
     {
-        override fun ChildrenBuilder.child(block: AttributeEditor2Props.() -> Unit) {
+        override fun ChildrenBuilder.child(block: AttributeEditorProps.() -> Unit) {
             TargetSpecEditor::class.react {
                 block()
             }
@@ -94,7 +94,7 @@ class TargetSpecEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun TargetSpecEditorState.init(props: AttributeEditor2Props) {
+    override fun TargetSpecEditorState.init(props: AttributeEditorProps) {
 
     }
 
@@ -172,7 +172,7 @@ class TargetSpecEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
-        prevProps: AttributeEditor2Props,
+        prevProps: AttributeEditorProps,
         prevState: TargetSpecEditorState,
         snapshot: Any
     ) {

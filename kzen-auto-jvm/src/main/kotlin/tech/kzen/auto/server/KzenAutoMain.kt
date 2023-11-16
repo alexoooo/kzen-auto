@@ -197,16 +197,16 @@ private fun Routing.routeTask(
 private fun Routing.routeDataflow(
     restHandler: RestHandler
 ) {
-    get(CommonRestApi.execModel) {
-        val response = restHandler.execModel(call.parameters)
+    get(CommonRestApi.dataflowModel) {
+        val response = restHandler.dataflowModel(call.parameters)
         call.respond(response)
     }
-    get(CommonRestApi.execReset) {
-        val response = restHandler.execReset(call.parameters)
+    get(CommonRestApi.dataflowReset) {
+        val response = restHandler.dataflowReset(call.parameters)
         call.respond(response)
     }
-    get(CommonRestApi.execPerform) {
-        val response = restHandler.execPerform(call.parameters)
+    get(CommonRestApi.dataflowPerform) {
+        val response = restHandler.dataflowPerform(call.parameters)
         call.respond(response)
     }
 }

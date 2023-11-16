@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.common
+package tech.kzen.auto.client.objects.document.graph.edit
 
 
 import react.*
@@ -17,7 +17,7 @@ import tech.kzen.lib.platform.ClassNames.topLevel
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface DefaultAttributeEditorProps: AttributeEditorProps {
+external interface DefaultAttributeEditorOldProps: AttributeEditorPropsOld {
     var labelOverride: String?
     var disabled: Boolean
     var onChange: ((AttributeNotation) -> Unit)?
@@ -26,19 +26,18 @@ external interface DefaultAttributeEditorProps: AttributeEditorProps {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-class DefaultAttributeEditor(
-        props: DefaultAttributeEditorProps
+class DefaultAttributeEditorOld(
+    props: DefaultAttributeEditorOldProps
 ):
-        RPureComponent<DefaultAttributeEditorProps, State>(props)
-//        ExecutionRepository.Observer
+    RPureComponent<DefaultAttributeEditorOldProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val wrapperName = ObjectName("DefaultAttributeEditor")
+        val wrapperName = ObjectName("DefaultAttributeEditorOld")
     }
 
 
-    private var attributePathValueEditor: RefObject<AttributePathValueEditor> = createRef()
+    private var attributePathValueEditor: RefObject<AttributePathValueEditorOld> = createRef()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -46,10 +45,10 @@ class DefaultAttributeEditor(
     class Wrapper(
         objectLocation: ObjectLocation
     ):
-        AttributeEditorWrapper(objectLocation)
+        AttributeEditorOld(objectLocation)
     {
-        override fun ChildrenBuilder.child(block: AttributeEditorProps.() -> Unit) {
-            DefaultAttributeEditor::class.react {
+        override fun ChildrenBuilder.child(block: AttributeEditorPropsOld.() -> Unit) {
+            DefaultAttributeEditorOld::class.react {
                 block()
             }
         }
@@ -71,7 +70,7 @@ class DefaultAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
-        prevProps: DefaultAttributeEditorProps,
+        prevProps: DefaultAttributeEditorOldProps,
         prevState: State,
         snapshot: Any
     ) {
@@ -126,7 +125,7 @@ class DefaultAttributeEditor(
                 // NB: don't render
             }
 
-            AttributePathValueEditor.isValue(type) -> {
+            AttributePathValueEditorOld.isValue(type) -> {
                 renderValueEditor(type)
             }
 
@@ -146,7 +145,7 @@ class DefaultAttributeEditor(
 
 
     private fun ChildrenBuilder.renderValueEditor(type: TypeMetadata) {
-        AttributePathValueEditor::class.react {
+        AttributePathValueEditorOld::class.react {
             labelOverride = formattedLabel()
             disabled = props.disabled
             invalid = props.invalid

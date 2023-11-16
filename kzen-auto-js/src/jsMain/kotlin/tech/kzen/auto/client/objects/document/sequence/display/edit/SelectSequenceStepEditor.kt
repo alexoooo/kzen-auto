@@ -8,7 +8,7 @@ import react.ChildrenBuilder
 import react.State
 import react.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
-import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor2Props
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
@@ -49,9 +49,9 @@ external interface SelectSequenceStepEditorState: State {
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class SelectSequenceStepEditor(
-    props: AttributeEditor2Props
+    props: AttributeEditorProps
 ):
-    RComponent<AttributeEditor2Props, SelectSequenceStepEditorState>(props),
+    RComponent<AttributeEditorProps, SelectSequenceStepEditorState>(props),
     LocalGraphStore.Observer,
     ClientStateGlobal.Observer
 {
@@ -68,7 +68,7 @@ class SelectSequenceStepEditor(
     ):
         AttributeEditor(objectLocation)
     {
-        override fun ChildrenBuilder.child(block: AttributeEditor2Props.() -> Unit) {
+        override fun ChildrenBuilder.child(block: AttributeEditorProps.() -> Unit) {
             SelectSequenceStepEditor::class.react {
                 block()
             }
@@ -77,7 +77,7 @@ class SelectSequenceStepEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun SelectSequenceStepEditorState.init(props: AttributeEditor2Props) {
+    override fun SelectSequenceStepEditorState.init(props: AttributeEditorProps) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
 //        val attributeNotation = props.clientState.graphStructure().graphNotation
@@ -105,7 +105,7 @@ class SelectSequenceStepEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
-        prevProps: AttributeEditor2Props,
+        prevProps: AttributeEditorProps,
         prevState: SelectSequenceStepEditorState,
         snapshot: Any
     ) {

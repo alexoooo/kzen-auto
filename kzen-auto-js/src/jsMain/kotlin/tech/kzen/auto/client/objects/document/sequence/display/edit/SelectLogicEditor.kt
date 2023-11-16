@@ -8,7 +8,7 @@ import react.ChildrenBuilder
 import react.State
 import react.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
-import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor2Props
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.report.model.ReportState
 import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
@@ -50,9 +50,9 @@ external interface SelectLogicEditorState: State {
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class SelectLogicEditor(
-    props: AttributeEditor2Props
+    props: AttributeEditorProps
 ):
-    RComponent<AttributeEditor2Props, SelectLogicEditorState>(props),
+    RComponent<AttributeEditorProps, SelectLogicEditorState>(props),
     LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ class SelectLogicEditor(
     ):
         AttributeEditor(objectLocation)
     {
-        override fun ChildrenBuilder.child(block: AttributeEditor2Props.() -> Unit) {
+        override fun ChildrenBuilder.child(block: AttributeEditorProps.() -> Unit) {
             SelectLogicEditor::class.react {
                 block()
             }
@@ -71,7 +71,7 @@ class SelectLogicEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun SelectLogicEditorState.init(props: AttributeEditor2Props) {
+    override fun SelectLogicEditorState.init(props: AttributeEditorProps) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
         val graphNotation = ClientContext.clientStateGlobal.current()!!.graphStructure().graphNotation
@@ -121,7 +121,7 @@ class SelectLogicEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
-        prevProps: AttributeEditor2Props,
+        prevProps: AttributeEditorProps,
         prevState: SelectLogicEditorState,
         snapshot: Any
     ) {

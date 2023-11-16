@@ -14,12 +14,12 @@ import react.dom.html.ReactHTML.tr
 import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.objects.document.common.AttributeController
+import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.InsertionGlobal
-import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
@@ -52,7 +52,7 @@ import web.cssom.*
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface GraphControllerProps: Props {
-    var attributeController: AttributeController.Wrapper
+    var attributeController: AttributeEditorManagerOld.Wrapper
 }
 
 
@@ -84,7 +84,7 @@ class GraphController(
     @Reflect
     class Wrapper(
         private val archetype: ObjectLocation,
-        private val attributeController: AttributeController.Wrapper,
+        private val attributeController: AttributeEditorManagerOld.Wrapper,
         private val ribbonController: RibbonController.Wrapper
     ):
         DocumentController

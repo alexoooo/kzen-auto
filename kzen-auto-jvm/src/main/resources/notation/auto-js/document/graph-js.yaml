@@ -4,7 +4,7 @@ GraphController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.graph.GraphController$Wrapper
   archetype: Graph
-  attributeController: AttributeController
+  attributeController: AttributeEditorManagerOld
   ribbonController: RibbonController
 
 

@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document.common.attribute
 import react.*
 import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor2
+import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
@@ -21,7 +21,7 @@ import tech.kzen.lib.platform.ClassNames.topLevel
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface AutoAttributeEditorProps: AttributeEditor2Props {
+external interface AutoAttributeEditorProps: AttributeEditorProps {
     var labelOverride: String?
     var disabled: Boolean
     var onChange: ((AttributeNotation) -> Unit)?
@@ -35,7 +35,7 @@ external interface AutoAttributeEditorState: State {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-class AutoAttributeEditor(
+class DefaultAttributeEditor(
     props: AutoAttributeEditorProps
 ):
     RPureComponent<AutoAttributeEditorProps, AutoAttributeEditorState>(props),
@@ -43,10 +43,10 @@ class AutoAttributeEditor(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val wrapperName = ObjectName("AutoAttributeEditor")
+        val wrapperName = ObjectName("DefaultAttributeEditor")
     }
 
-    private var attributePathValueEditor: RefObject<AttributePathValueEditor2> = createRef()
+    private var attributePathValueEditor: RefObject<AttributePathValueEditor> = createRef()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -56,8 +56,8 @@ class AutoAttributeEditor(
     ):
         AttributeEditor(objectLocation)
     {
-        override fun ChildrenBuilder.child(block: AttributeEditor2Props.() -> Unit) {
-            AutoAttributeEditor::class.react {
+        override fun ChildrenBuilder.child(block: AttributeEditorProps.() -> Unit) {
+            DefaultAttributeEditor::class.react {
                 block()
             }
         }
@@ -151,7 +151,7 @@ class AutoAttributeEditor(
                 // NB: don't render
             }
 
-            AttributePathValueEditor2.isValue(type) -> {
+            AttributePathValueEditor.isValue(type) -> {
                 renderValueEditor(type)
             }
 
@@ -173,7 +173,7 @@ class AutoAttributeEditor(
     private fun ChildrenBuilder.renderValueEditor(type: TypeMetadata) {
 //        +"[AttributePathValueEditor]"
 
-        AttributePathValueEditor2::class.react {
+        AttributePathValueEditor::class.react {
             labelOverride = formattedLabel()
             disabled = props.disabled
             invalid = props.invalid

@@ -10,7 +10,7 @@ import react.dom.html.ReactHTML.span
 import react.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
+import tech.kzen.auto.client.objects.document.graph.edit.AttributePathValueEditorOld
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ClientState
@@ -192,7 +192,7 @@ class PluginController(
 
 
     private fun ChildrenBuilder.renderPathEditor(mainObjectLocation: ObjectLocation, clientState: ClientState) {
-        AttributePathValueEditor::class.react {
+        AttributePathValueEditorOld::class.react {
             labelOverride = "Plugin Jar File Path"
 
             this.clientState = clientState

@@ -7,7 +7,7 @@ import tech.kzen.lib.common.model.obj.ObjectName
 
 abstract class AttributeEditor(
     private val objectLocation: ObjectLocation
-): ReactWrapper<AttributeEditor2Props> {
+): ReactWrapper<AttributeEditorProps> {
     //-----------------------------------------------------------------------------------------------------------------
     fun name(): ObjectName {
         return objectLocation.objectPath.name
