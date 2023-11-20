@@ -45,7 +45,7 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface FeatureControllerState: react.State {
+external interface FeatureControllerState: State {
     var documentPath: DocumentPath?
     var graphStructure: GraphStructure?
 
@@ -59,11 +59,11 @@ external interface FeatureControllerState: react.State {
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class FeatureController(
-        props: Props
+    props: Props
 ):
-        RPureComponent<Props, FeatureControllerState>(props),
-        NavigationGlobal.Observer,
-        LocalGraphStore.Observer
+    RPureComponent<Props, FeatureControllerState>(props),
+    NavigationGlobal.Observer,
+    LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -85,9 +85,8 @@ class FeatureController(
         }
 
 
-        override fun body(): ReactWrapper<react.Props> {
-            return object: ReactWrapper<react.Props> {
-//                override fun child(builder: ChildrenBuilder, block: Props.() -> Unit) {
+        override fun body(): ReactWrapper<Props> {
+            return object: ReactWrapper<Props> {
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     FeatureController::class.react {
                         block()
@@ -136,9 +135,9 @@ class FeatureController(
 
 
     override fun componentDidUpdate(
-            prevProps: Props,
-            prevState: FeatureControllerState,
-            snapshot: Any
+        prevProps: Props,
+        prevState: FeatureControllerState,
+        snapshot: Any
     ) {
         if (state.screenshotDataUrl == null && state.requestingScreenshot != true) {
             setState {
@@ -154,8 +153,8 @@ class FeatureController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun handleNavigation(
-            documentPath: DocumentPath?,
-            parameters: RequestParams
+        documentPath: DocumentPath?,
+        parameters: RequestParams
     ) {
         setState {
             this.documentPath = documentPath
@@ -163,7 +162,9 @@ class FeatureController(
     }
 
 
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onCommandSuccess(
+        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
+    ) {
         if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent) &&
                 event.documentPath == state.documentPath) {
             return
@@ -175,7 +176,9 @@ class FeatureController(
     }
 
 
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+    override suspend fun onCommandFailure(
+        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
+    ) {}
 
 
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
@@ -233,50 +236,7 @@ class FeatureController(
             ))
 
             onRefresh()
-
-//            val screenshotPng = result.value as BinaryExecutionValue
-//            val base64 = IoUtils.base64Encode(screenshotPng.value)
-//            val screenshotPngUrl = "data:png/png;base64,$base64"
-//
-//            screenshotBytes = screenshotPng.value
-//
-//            setState {
-//                screenshotDataUrl = screenshotPngUrl
-//                requestingScreenshot = false
-//            }
         }
-
-
-//        canvas.toBlob({ blob: Blob? ->
-//            val fileReader = FileReader()
-//
-//            fileReader.onload = { event ->
-//                val target  = event.target as FileReader
-//                val arrayBuffer= target.result as ArrayBuffer
-//                val uint8Array = Uint8Array(arrayBuffer)
-//                val byteArray = ByteArray(uint8Array.length) { i -> uint8Array[i] }
-//
-//                async {
-//                    ClientContext.mirroredGraphStore.apply(AddResourceCommand(
-//                            ResourceLocation(
-//                                    state.documentPath!!,
-//                                    ResourcePath(
-//                                            ResourceName(DateTimeUtils.filenameTimestamp() + ".png"),
-//                                            ResourceNesting.empty
-//                                    )
-//                            ),
-//                            ImmutableByteArray.wrap(byteArray)
-//                    ))
-//
-//                    onRefresh()
-//                }
-//
-//                Unit
-//            }
-//
-//            fileReader.readAsArrayBuffer(blob!!)
-//        })
-
     }
 
 
@@ -314,11 +274,7 @@ class FeatureController(
         val detail = state.detail
                 ?: return
 
-//        console.log("detail", detail)
-
         val canvas = cropperWrapper.current!!.getCroppedCanvas()
-
-//        console.log("canvas", canvas)
 
         setState {
             capturedDataUrl = canvas.toDataURL()
@@ -380,9 +336,6 @@ class FeatureController(
 
             val capturedDataUrl = state.capturedDataUrl
             val screenshotDataUrl = state.screenshotDataUrl
-//                    ?: "screenshot.png"
-
-//            +"requestingScreenshot: ${state.requestingScreenshot}"
 
             when {
                 capturedDataUrl != null -> {

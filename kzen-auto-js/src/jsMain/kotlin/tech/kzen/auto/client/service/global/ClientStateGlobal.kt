@@ -36,11 +36,6 @@ class ClientStateGlobal:
 
     private var clientLogicState: ClientLogicState? = null
 
-//    private val imperativeModels = mutableMapOf<DocumentPath, ImperativeModel>()
-//    private var imperativeModel: ImperativeModel? = null
-//    private var runningHosts = setOf<DocumentPath>()
-
-
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun postConstruct(
@@ -48,14 +43,9 @@ class ClientStateGlobal:
         localGraphStore: LocalGraphStore,
         clientLogicGlobal: ClientLogicGlobal
     ) {
-//        runningHosts = clientRestApi.runningHosts().toSet()
-//        console.log("%%%%% runningHosts - $runningHosts")
-
         localGraphStore.observe(this)
         navigationGlobal.observe(this)
         clientLogicGlobal.observe(this)
-
-//        executionRepository.observe(this)
     }
 
 
@@ -114,12 +104,16 @@ class ClientStateGlobal:
 //    }
 
 
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {
+    override suspend fun onCommandFailure(
+        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
+    ) {
 
     }
 
 
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onCommandSuccess(
+        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
+    ) {
 //        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent)) {
 //            runningHosts = runningHosts - event.documentPath
 //        }

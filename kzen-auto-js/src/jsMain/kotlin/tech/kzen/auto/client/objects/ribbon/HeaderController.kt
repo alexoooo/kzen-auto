@@ -109,14 +109,18 @@ class HeaderController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onCommandSuccess(
+        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
+    ) {
         setState {
             structure = graphDefinition.graphStructure
         }
     }
 
 
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+    override suspend fun onCommandFailure(
+        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
+    ) {}
 
 
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {

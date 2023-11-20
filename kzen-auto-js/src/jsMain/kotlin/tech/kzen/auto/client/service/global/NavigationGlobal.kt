@@ -21,8 +21,8 @@ class NavigationGlobal(
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         fun handleNavigation(
-                documentPath: DocumentPath?,
-                parameters: RequestParams
+            documentPath: DocumentPath?,
+            parameters: RequestParams
         )
     }
 
@@ -89,7 +89,9 @@ class NavigationGlobal(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onCommandSuccess(
+        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
+    ) {
         when (event) {
             is RenamedDocumentRefactorEvent -> {
                 if (event.removedUnderOldName.documentPath == documentPath) {
@@ -125,7 +127,9 @@ class NavigationGlobal(
     }
 
 
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+    override suspend fun onCommandFailure(
+        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
+    ) {}
 
 
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}

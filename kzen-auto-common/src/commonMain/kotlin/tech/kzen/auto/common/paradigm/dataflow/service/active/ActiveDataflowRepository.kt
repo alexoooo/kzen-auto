@@ -39,7 +39,9 @@ class ActiveDataflowRepository(
     private var models: MutableMap<DocumentPath, ActiveDataflowModel> = mutableMapOf()
 
 
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onCommandSuccess(
+        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
+    ) {
         // NB: avoid concurrent modification for DeletedDocumentEvent handling
         val modelHosts = models.keys.toList()
 
@@ -49,7 +51,9 @@ class ActiveDataflowRepository(
     }
 
 
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+    override suspend fun onCommandFailure(
+        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
+    ) {}
 
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}
 

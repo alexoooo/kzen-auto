@@ -37,16 +37,16 @@ external interface SidebarControllerState : react.State {
 
 //-----------------------------------------------------------------------------------------------------------------
 class SidebarController(
-        props: SidebarControllerProps
+    props: SidebarControllerProps
 ):
-        RPureComponent<SidebarControllerProps, SidebarControllerState>(props),
-        LocalGraphStore.Observer,
-        NavigationGlobal.Observer
+    RPureComponent<SidebarControllerProps, SidebarControllerState>(props),
+    LocalGraphStore.Observer,
+    NavigationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-            private val archetypes: List<ObjectLocation>
+        private val archetypes: List<ObjectLocation>
     ): ReactWrapper<SidebarControllerProps> {
         override fun ChildrenBuilder.child(block: SidebarControllerProps.() -> Unit) {
             SidebarController::class.react {
@@ -75,9 +75,9 @@ class SidebarController(
 
 
     override fun componentDidUpdate(
-            prevProps: SidebarControllerProps,
-            prevState: SidebarControllerState,
-            snapshot: Any
+        prevProps: SidebarControllerProps,
+        prevState: SidebarControllerState,
+        snapshot: Any
     ) {
         val structure = state.structure
                 ?: return
@@ -90,7 +90,9 @@ class SidebarController(
     }
 
 
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onCommandSuccess(
+        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
+    ) {
 //        console.log("^ handleModel")
         setState {
             structure = graphDefinition.graphStructure
@@ -98,7 +100,9 @@ class SidebarController(
     }
 
 
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+    override suspend fun onCommandFailure(
+        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
+    ) {}
 
 
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {

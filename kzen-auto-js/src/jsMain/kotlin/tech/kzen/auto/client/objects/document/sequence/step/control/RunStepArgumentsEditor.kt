@@ -214,7 +214,9 @@ class RunStepArgumentsEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onCommandSuccess(
+        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
+    ) {
         val values = state.values
             ?: return
 
@@ -236,10 +238,12 @@ class RunStepArgumentsEditor(
     }
 
 
+    override suspend fun onCommandFailure(
+        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
+    ) {}
+
+
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}
-
-
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
 
     //-----------------------------------------------------------------------------------------------------------------

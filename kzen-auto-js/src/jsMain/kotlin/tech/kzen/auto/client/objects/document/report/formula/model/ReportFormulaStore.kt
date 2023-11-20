@@ -185,7 +185,6 @@ class ReportFormulaStore(
     private suspend fun editNotation(
         command: NotationCommand
     ): String? {
-        @Suppress("MoveVariableDeclarationIntoWhen")
         val result = ClientContext.mirroredGraphStore.apply(command)
 
         return (result as? MirroredGraphError)

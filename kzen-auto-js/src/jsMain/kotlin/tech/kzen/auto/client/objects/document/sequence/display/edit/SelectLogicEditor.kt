@@ -151,12 +151,14 @@ class SelectLogicEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onCommandSuccess(
+        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
+    ) {
         when (event) {
             is RenamedDocumentRefactorEvent -> {
                 if (event.removedUnderOldName.documentPath == state.value?.documentPath) {
                     val newLocation =
-                            state.value!!.copy(documentPath = event.createdWithNewName.destination)
+                        state.value!!.copy(documentPath = event.createdWithNewName.destination)
 
                     setState {
                         value = newLocation
@@ -175,10 +177,12 @@ class SelectLogicEditor(
     }
 
 
+    override suspend fun onCommandFailure(
+        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
+    ) {}
+
+
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}
-
-
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
 
 
     private fun updateOptions() {

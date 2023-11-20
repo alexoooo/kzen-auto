@@ -210,10 +210,14 @@ class TargetSpecEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {}
+    override suspend fun onCommandFailure(
+        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
+    ) {}
 
 
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onCommandSuccess(
+        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
+    ) {
         when (event) {
             is RenamedDocumentRefactorEvent -> {
                 if (event.removedUnderOldName.documentPath == state.targetLocation?.documentPath) {

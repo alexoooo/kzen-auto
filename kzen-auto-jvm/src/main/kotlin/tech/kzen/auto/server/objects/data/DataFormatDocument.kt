@@ -6,7 +6,7 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class DataDocument(
+class DataFormatDocument(
     val fields: FieldFormatListSpec
 ):
     DocumentArchetype()

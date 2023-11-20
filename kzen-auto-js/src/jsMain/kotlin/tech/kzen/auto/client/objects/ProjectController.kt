@@ -54,8 +54,20 @@ class ProjectController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        @Suppress("ConstPropertyName")
         private const val shadowWidth = 6
+
         private val sidebarWidth = 16.em
+
+        @Suppress("ConstPropertyName")
+        private const val suppressErrorDisplayKey = "suppress-error-display"
+
+        val suppressErrorDisplay = LocalGraphStore.Attachment(
+            mapOf(suppressErrorDisplayKey to true))
+
+        private fun isSuppressErrorDisplay(attachment: LocalGraphStore.Attachment): Boolean {
+            return suppressErrorDisplayKey in attachment.header
+        }
     }
 
 
@@ -128,7 +140,9 @@ class ProjectController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandSuccess(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onCommandSuccess(
+        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
+    ) {
 //        console.log("^^^ onCommandSuccess", event)
         setState {
             structure = graphDefinition.graphStructure
@@ -138,11 +152,21 @@ class ProjectController(
     }
 
 
-    override suspend fun onCommandFailure(command: NotationCommand, cause: Throwable) {
+    override suspend fun onCommandFailure(
+        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
+    ) {
 //        console.log("^^^ onCommandFailure", command.toString(), cause)
-        setState {
-            commandErrorRequest = command
-            commandErrorMessage = "${cause.message}"
+        if (isSuppressErrorDisplay(attachment)) {
+            setState {
+                commandErrorRequest = null
+                commandErrorMessage = null
+            }
+        }
+        else {
+            setState {
+                commandErrorRequest = command
+                commandErrorMessage = "${cause.message}"
+            }
         }
     }
 
@@ -231,20 +255,22 @@ class ProjectController(
                 marginLeft = sidebarWidth
             }
 
-            if (state.commandErrorMessage != null) {
-                div {
-                    css {
-                        color = NamedColor.red
+            div {
+                css {
+                    if (state.commandErrorMessage == null) {
+                        // NB: avoid refreshing StateController on error change
+                        display = None.none
                     }
-                    +"Command Error: ${state.commandErrorMessage} - ${state.commandErrorRequest}"
+
+                    color = NamedColor.red
                 }
+                +"Command error: ${state.commandErrorMessage} - ${state.commandErrorRequest}"
             }
 
             val context = StageController.CoordinateContext(
                 stageTop = headerHeight,
                 stageLeft = sidebarWidth)
 
-//            +"[Stage]"
             StageController.StageContext.Provider(context) {
                 props.stageController.child(this) {}
             }

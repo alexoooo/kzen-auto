@@ -7,6 +7,7 @@ import mui.material.ButtonVariant
 import mui.material.Size
 import mui.system.sx
 import react.ChildrenBuilder
+import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import react.react
@@ -25,7 +26,7 @@ import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface InputBrowserActionControllerProps: react.Props {
+external interface InputBrowserActionControllerProps: Props {
     var mainLocation: ObjectLocation
     var dataLocationInfos: List<DataLocationInfo>
     var selectedDataLocation: Set<DataLocation>

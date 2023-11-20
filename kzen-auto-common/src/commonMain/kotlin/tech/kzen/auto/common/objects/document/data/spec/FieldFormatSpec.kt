@@ -17,8 +17,7 @@ data class FieldFormatSpec(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        val nameAttributeSegment = AttributeSegment.ofKey("name")
-//        val headerAttributeSegment = AttributeSegment.ofKey("header")
+        val any = FieldFormatSpec(TypeMetadata.any)
 
         fun ofNotation(attributeNotation: MapAttributeNotation): FieldFormatSpec {
             val typeMetadata = readTypeMetadata(attributeNotation)

@@ -63,8 +63,8 @@ fun main() {
                     ?: throw IllegalStateException("Missing root object")
 
             val rootElement = emptyRootElement()
-
-            createRoot(rootElement).render(Fragment.create {
+            val root = createRoot(rootElement)
+            root.render(Fragment.create {
                 StrictMode {
                     rootInstance.child(this) {}
                 }

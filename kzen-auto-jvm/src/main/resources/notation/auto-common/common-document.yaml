@@ -110,7 +110,7 @@ Feature:
 DataFormat:
   abstract: true
   is: Document
-  class: tech.kzen.auto.server.objects.data.DataDocument
+  class: tech.kzen.auto.server.objects.data.DataFormatDocument
   title: "Data Format"
   icon: MenuBook
   fields: {}
