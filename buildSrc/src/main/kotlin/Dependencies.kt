@@ -1,5 +1,5 @@
 
-const val kotlinVersion = "1.9.20"
+const val kotlinVersion = "1.9.21"
 const val jvmTargetVersion = "20"
 const val javaVersion = 20
 const val jvmToolchainVersion = 20
@@ -8,7 +8,7 @@ const val jvmToolchainVersion = 20
 const val kzenLibVersion = "0.29.0-SNAPSHOT"
 
 
-const val ktorVersion = "2.3.5"
+const val ktorVersion = "2.3.6"
 const val annotationsApiVersion = "1.3.2"
 const val logbackVersion = "1.4.11"
 const val jacksonModuleKotlin = "2.15.3"
@@ -23,7 +23,7 @@ const val commonsIoVersion = "2.15.0"
 const val migzVersion = "2.0.beta-1"
 
 const val seleniumVersion = "4.15.0"
-const val webdrivermanagerVersion = "5.6.0"
+const val webdrivermanagerVersion = "5.6.2"
 
 
 const val kotlinxDatetimeVersion = "0.4.1"
@@ -34,11 +34,11 @@ const val babelCoreVersion = "7.23.2"
 
 const val muiIconsVersion = "5.14.16"
 
-const val reactSelectVersion = "5.7.7"
+const val reactSelectVersion = "5.8.0"
 const val iconifyReactVersion = "4.1.1"
 const val iconifyIconsVaadinVersion = "1.2.4"
 
-const val wrapperKotlinVersion = "pre.642"
+const val wrapperKotlinVersion = "pre.647"
 const val kotlinReactVersion = "18.2.0-$wrapperKotlinVersion"
 const val kotlinReactDomVersion = "18.2.0-$wrapperKotlinVersion"
 const val kotlinEmotionVersion = "11.11.1-$wrapperKotlinVersion"

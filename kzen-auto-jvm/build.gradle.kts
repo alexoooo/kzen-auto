@@ -30,7 +30,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-scripting-jvm-host:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:$kotlinVersion")
 
-    implementation("ch.qos.logback:logback-classic:$logbackVersion")
+    api("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
     api("org.seleniumhq.selenium:selenium-java:$seleniumVersion")
     implementation("io.github.bonigarcia:webdrivermanager:$webdrivermanagerVersion")

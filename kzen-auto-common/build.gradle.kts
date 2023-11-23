@@ -34,8 +34,7 @@ kotlin {
         commonMain  {
             dependencies {
                 api("tech.kzen.lib:kzen-lib-common:$kzenLibVersion")
-
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
+                api("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
             }
         }
 
@@ -49,8 +48,7 @@ kotlin {
         jvmMain {
             dependencies {
                 api("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
-
-                implementation("ch.qos.logback:logback-classic:$logbackVersion")
+                api("ch.qos.logback:logback-classic:$logbackVersion")
             }
         }
 

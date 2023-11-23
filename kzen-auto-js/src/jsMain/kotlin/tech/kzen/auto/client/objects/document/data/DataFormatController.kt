@@ -16,9 +16,7 @@ import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.data.DataFormatConventions
 import tech.kzen.auto.common.objects.document.data.spec.FieldFormatListSpec
-import tech.kzen.auto.common.objects.document.data.spec.FieldFormatSpec
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import web.cssom.em
 
@@ -105,12 +103,6 @@ class DataFormatController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onAdd() {
-        println("add")
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val objectLocation = state.objectLocation ?: return
         val fields = state.fields ?: return
@@ -123,41 +115,19 @@ class DataFormatController(
             for ((fieldName, fieldSpec) in fields.fields) {
                 div {
                     key = fieldName
-                    renderField(fieldName, fieldSpec)
+
+                    DataFormatFieldEdit::class.react {
+                        this.objectLocation = objectLocation
+                        this.fieldName = fieldName
+                        this.fieldSpec = fieldSpec
+                    }
+
                     hr {}
                 }
             }
 
             DataFormatFieldAdd::class.react {
                 this.objectLocation = objectLocation
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderField(fieldName: String, fieldSpec: FieldFormatSpec) {
-        div {
-            +"Name: $fieldName"
-        }
-
-        renderMetadata(fieldSpec.typeMetadata)
-    }
-
-
-    private fun ChildrenBuilder.renderMetadata(typeMetadata: TypeMetadata) {
-        div {
-            +"ClassName: ${typeMetadata.className}"
-        }
-        div {
-            +"Nullable: ${typeMetadata.nullable}"
-        }
-        div {
-            +"Generics:"
-            for ((index, genericType) in typeMetadata.generics.withIndex()) {
-                div {
-                    key = index.toString()
-                    renderMetadata(genericType)
-                }
             }
         }
     }
