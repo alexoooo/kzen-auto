@@ -6,8 +6,8 @@ import kotlin.script.experimental.api.SourceCode
 import kotlin.script.experimental.host.toScriptSource
 
 
+@Suppress("ConstPropertyName")
 data class KotlinCode(
-//    val packagePath: String,
     val mainClassName: String,
     val sourceText: String
 ) {
@@ -25,13 +25,4 @@ data class KotlinCode(
     fun toScriptSource(): SourceCode {
         return sourceText.toScriptSource(scriptClassName)
     }
-//    fun fullyQualifiedMainClass(): String {
-//        return when {
-//            packagePath.isEmpty() ->
-//                mainClassName
-//
-//            else ->
-//                "$packagePath.$mainClassName"
-//        }
-//    }
 }

@@ -14,13 +14,6 @@ class CalculatedColumnEval(
     private val cachedKotlinCompiler: CachedKotlinCompiler
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private const val packagePath = ""
-//        private const val packagePath = "eval"
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     fun validate(
         calculatedColumnName: String,
         calculatedColumnFormula: String,
@@ -94,14 +87,6 @@ class CalculatedColumnEval(
 
         val columnAccessors = generateColumnAccessors(columnNames)
 
-//${
-//    if (packagePath.isEmpty()) {
-//        ""
-//    }
-//    else {
-//        "package $packagePath"
-//    }
-//}
         val code = """
 $imports
 
@@ -142,7 +127,6 @@ $calculatedColumnFormula
 }
 """
         return KotlinCode(
-//            packagePath,
             mainClassName,
             code)
     }

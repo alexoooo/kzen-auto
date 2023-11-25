@@ -151,6 +151,12 @@ TextLiteralStepTool:
   delegate: TextLiteralStep
 
 
+FormulaStepTool:
+  is: RibbonTool
+  parent: SequenceGroup_InputOutput
+  delegate: FormulaStep
+
+
 NumberLiteralStepTool:
   is: RibbonTool
   parent: SequenceGroup_InputOutput

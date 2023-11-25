@@ -56,6 +56,7 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, react.State>
         "CallReceived" -> CallReceivedIcon::class
         "MenuBook" -> MenuBookIcon::class
         "Settings" -> SettingsIcon::class
+        "Functions" -> FunctionsIcon::class
 
         else ->
             TextureIcon::class

@@ -39,7 +39,7 @@ class ScriptKotlinCompiler: KotlinCompiler {
         classpathLocations: List<Path>,
         classLoader: ClassLoader
     ):
-            KotlinCompilerResult
+        KotlinCompilerResult
     {
         Files.createDirectories(outputJarFile.parent)
 
@@ -74,6 +74,7 @@ class ScriptKotlinCompiler: KotlinCompiler {
                 KotlinCompilerSuccess(outputJarFile, classNamePrefix)
         }
     }
+
 
     private fun ScriptCompilationConfiguration.Builder.buildScriptCompilationConfiguration(
         classpathLocations: List<Path>,

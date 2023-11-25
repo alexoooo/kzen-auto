@@ -15,10 +15,8 @@ class CachedKotlinCompiler(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val codeCacheDir = "code-cache"
-//        private const val sourceDir = "src"
-//        private const val buildDir = "build"
         private const val jarExtension = ".jar"
-        private const val sourceExtension = ".kt"
+//        private const val sourceExtension = ".kt"
         private const val errorFile = "err.txt"
         private const val successFile = "success.txt"
     }

@@ -37,6 +37,18 @@ TextLiteralStep:
     selfLocation: SelfLocation
 
 
+FormulaStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.server.objects.sequence.step.eval.FormulaStep
+  icon: Functions
+  title: "Formula"
+  code: ""
+  meta:
+    code: String
+    selfLocation: SelfLocation
+
+
 NumberLiteralStep:
   abstract: true
   is: SequenceStep
