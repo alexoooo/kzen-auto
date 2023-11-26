@@ -1,9 +1,9 @@
 package tech.kzen.auto.client.objects.document.sequence.model
 
 import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressState
+import tech.kzen.auto.client.objects.document.sequence.valid.SequenceValidationState
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
-import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -11,11 +11,10 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 
 data class SequenceState(
     val mainLocation: ObjectLocation,
-    val mainDefinition: ObjectDefinition,
+//    val mainDefinition: ObjectDefinition,
 
     val progress: SequenceProgressState = SequenceProgressState(),
-
-//    val run: ExecutionRunState = ExecutionRunState(),
+    val validationState: SequenceValidationState = SequenceValidationState(),
 
     val globalError: String? = null
 ) {
@@ -65,6 +64,13 @@ data class SequenceState(
     fun withProgressSuccess(updater: (SequenceProgressState) -> SequenceProgressState): SequenceState {
         return copy(
             progress = updater(progress),
+            globalError = null)
+    }
+
+
+    fun withValidation(updater: (SequenceValidationState) -> SequenceValidationState): SequenceState {
+        return copy(
+            validationState = updater(validationState),
             globalError = null)
     }
 }

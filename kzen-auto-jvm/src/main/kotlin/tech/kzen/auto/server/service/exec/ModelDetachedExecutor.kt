@@ -27,22 +27,22 @@ class ModelDetachedExecutor(
 
 
     override suspend fun execute(
-            actionLocation: ObjectLocation,
-            request: ExecutionRequest
+        actionLocation: ObjectLocation,
+        request: ExecutionRequest
     ): ExecutionResult {
         val graphDefinition = graphStore
-                .graphDefinition()
-                .transitiveSuccessful()
-                .filterDefinitions(AutoConventions.serverAllowed)
+            .graphDefinition()
+            .transitiveSuccessful()
+            .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator
-                .createGraph(graphDefinition)
+            .createGraph(graphDefinition)
 
         val instance = objectGraph.objectInstances[actionLocation]?.reference
-                ?: return ExecutionFailure("Not found: $actionLocation")
+            ?: return ExecutionFailure("Not found: $actionLocation")
 
         val action = instance as? DetachedAction
-                ?: return ExecutionFailure("Not DetachedAAction: $actionLocation - $instance")
+            ?: return ExecutionFailure("Not DetachedAAction: $actionLocation - $instance")
 
         return try {
             action.execute(request)

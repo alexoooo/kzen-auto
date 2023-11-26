@@ -23,4 +23,11 @@ data class TupleDefinition(
             ))
         }
     }
+
+
+    fun find(name: TupleComponentName): LogicType? {
+        return components
+            .find { it.name == name }
+            ?.type
+    }
 }

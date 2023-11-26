@@ -27,7 +27,7 @@ class NumberLiteralStep(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.ofMain(LogicType.boolean)
+        return TupleDefinition.ofMain(LogicType.double)
     }
 
 

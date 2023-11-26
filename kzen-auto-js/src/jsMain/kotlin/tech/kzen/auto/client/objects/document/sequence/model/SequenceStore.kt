@@ -1,14 +1,16 @@
 package tech.kzen.auto.client.objects.document.sequence.model
 
 import kotlinx.coroutines.delay
-import kotlinx.datetime.internal.JSJoda.Instant
+import kotlinx.datetime.Instant
 import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressStore
+import tech.kzen.auto.client.objects.document.sequence.valid.SequenceValidationState
+import tech.kzen.auto.client.objects.document.sequence.valid.SequenceValidationStore
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
-import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 
 
 class SequenceStore: ClientStateGlobal.Observer {
@@ -31,7 +33,8 @@ class SequenceStore: ClientStateGlobal.Observer {
     private var mounted = false
     private var state: SequenceState? = null
 
-    private var previousLogicTime: Instant = Instant.MIN
+    private var previousLogicTime: Instant = Instant.DISTANT_PAST
+    private var previousDocumentNotation: DocumentNotation = DocumentNotation.empty
 
 //    private var refreshPending: Boolean = false
 //    private var previousRunning: Boolean = false
@@ -44,26 +47,8 @@ class SequenceStore: ClientStateGlobal.Observer {
 //    }, debounceMillis)
 
 
-//    val input = ReportInputStore(this)
-//    val formula = ReportFormulaStore(this)
-//    val filter = ReportFilterStore(this)
-//    val analysis = ReportAnalysisStore(this)
-//    val previewFiltered = ReportPreviewStore(this)
-//    val output = ReportOutputStore(this)
-//    val run = ExecutionRunStore(
-//        { state?.run!! },
-//        { state?.mainLocation!! },
-//        {
-//            state = state!!.copy(
-//                run = it(state!!.run))
-//        },
-//        {
-////            console.log("refresh - $it")
-//        }
-//    )
-
-
     val progressStore = SequenceProgressStore(this)
+    val validationStore = SequenceValidationStore(this)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -110,20 +95,25 @@ class SequenceStore: ClientStateGlobal.Observer {
             return
         }
 
-        val reportMainLocation = SequenceState.tryMainLocation(clientState)
+        val mainLocation = SequenceState.tryMainLocation(clientState)
             ?: return
 
-        val reportMainDefinition = mainDefinition(clientState, reportMainLocation)
+        val documentNotation = clientState.graphStructure().graphNotation.documents[mainLocation.documentPath]
+            ?: return
+
+//        val mainDefinition = mainDefinition(clientState, mainLocation)
 
         val previousState = state
         val nextState = when {
-            previousState == null || reportMainLocation != previousState.mainLocation ->
+            previousState == null || mainLocation != previousState.mainLocation ->
                 SequenceState(
-                    reportMainLocation,
-                    reportMainDefinition)
+                    mainLocation,
+//                    mainDefinition
+                )
 
             else ->
-                previousState.copy(mainDefinition = reportMainDefinition)
+                previousState
+//                previousState.copy(mainDefinition = mainDefinition)
         }
 
         val initial =
@@ -136,29 +126,34 @@ class SequenceStore: ClientStateGlobal.Observer {
         }
 
         if (initial) {
-//            cancelRefresh()
             refreshProgressAsync()
+            refreshValidationAsync()
         }
         else {
-            val logicTime = clientState.clientLogicState.logicStatus?.time ?: Instant.MIN
+            val logicTime: Instant = clientState.clientLogicState.logicStatus?.time ?: Instant.DISTANT_PAST
             if (previousLogicTime != logicTime) {
+                previousLogicTime = logicTime
                 refreshProgressAsync()
+            }
+
+            if (previousDocumentNotation != documentNotation) {
+                refreshValidationAsync()
             }
         }
     }
 
 
-    private fun mainDefinition(clientState: ClientState, mainLocation: ObjectLocation): ObjectDefinition {
-        val mainDefinition = clientState
-            .graphDefinitionAttempt
-            .objectDefinitions[mainLocation]
-
-        check(mainDefinition != null) {
-            "Sequence definition missing: $mainLocation - ${clientState.graphDefinitionAttempt.failures[mainLocation]}"
-        }
-
-        return mainDefinition
-    }
+//    private fun mainDefinition(clientState: ClientState, mainLocation: ObjectLocation): ObjectDefinition {
+//        val mainDefinition = clientState
+//            .graphDefinitionAttempt
+//            .objectDefinitions[mainLocation]
+//
+//        check(mainDefinition != null) {
+//            "Sequence definition missing: $mainLocation - ${clientState.graphDefinitionAttempt.failures[mainLocation]}"
+//        }
+//
+//        return mainDefinition
+//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -172,6 +167,16 @@ class SequenceStore: ClientStateGlobal.Observer {
         }
     }
 
+
+    private fun refreshValidationAsync() {
+        async {
+            delay(10)
+            if (state == null) {
+                return@async
+            }
+            validationStore.refresh()
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -206,6 +211,13 @@ class SequenceStore: ClientStateGlobal.Observer {
             state = nextState
             publish(nextState)
 //            scheduleRefresh()
+        }
+    }
+
+
+    fun updateValidation(updater: (SequenceValidationState) -> SequenceValidationState) {
+        update { state -> state
+            .withValidation(updater)
         }
     }
 

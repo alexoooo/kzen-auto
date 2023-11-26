@@ -26,6 +26,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.common.paradigm.sequence.StepTrace
+import tech.kzen.auto.common.paradigm.sequence.StepValidation
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -46,6 +47,7 @@ external interface SequenceStepDisplayDefaultState: State {
     var stepTrace: StepTrace?
     var isNextToRun: Boolean?
     var objectMetadata: ObjectMetadata?
+    var stepValidation: StepValidation?
 
     var icon: String?
     var description: String?
@@ -64,8 +66,8 @@ class SequenceStepDisplayDefault(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val successColour = Color("#00b467")
-        val errorColour = Color("#b40000")
+        private val successColour = Color("#00b467")
+        private val errorColour = Color("#b40000")
 
         fun backgroundColor(
             traceState: StepTrace.State,
@@ -136,7 +138,7 @@ class SequenceStepDisplayDefault(
             .logicTraceSnapshot
             ?.values
 
-        val trace = traceValues
+        val stepTrace = traceValues
             ?.get(LogicTracePath.ofObjectLocation(props.common.objectLocation))
             ?.let { StepTrace.ofExecutionValue(it) }
 
@@ -149,9 +151,16 @@ class SequenceStepDisplayDefault(
 
         val isNextToRun = nextToRun == props.common.objectLocation
 
+        val stepValidation = sequenceState
+            .validationState
+            .sequenceValidation
+            ?.stepValidations
+            ?.get(props.common.objectLocation)
+
         setState {
             this.isNextToRun = isNextToRun
-            stepTrace = trace
+            this.stepTrace = stepTrace
+            this.stepValidation = stepValidation
         }
     }
 
@@ -229,7 +238,6 @@ class SequenceStepDisplayDefault(
             }
 
             CardContent {
-//                +"[Header]"
                 StepHeader::class.react {
                     hoverSignal = this@SequenceStepDisplayDefault.hoverSignal
 
@@ -249,8 +257,8 @@ class SequenceStepDisplayDefault(
                         marginBottom = (-1.5).em
                     }
 
-//                    +"[Body]"
                     renderBody(objectMetadata, trace)
+                    renderValidation()
                 }
             }
         }
@@ -392,6 +400,26 @@ class SequenceStepDisplayDefault(
         props.attributeEditorManager.child(this) {
             this.objectLocation = props.common.objectLocation
             this.attributeName = attributeName
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderValidation() {
+        val stepValidation = state.stepValidation
+            ?: return
+
+        val errorMessage = stepValidation.errorMessage
+        if (errorMessage != null) {
+            div {
+                +"Error: $errorMessage"
+            }
+        }
+
+        val typeMetadata = stepValidation.typeMetadata
+        if (typeMetadata != null) {
+            div {
+                +"Type: ${typeMetadata.toSimple()}"
+            }
         }
     }
 }

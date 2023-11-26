@@ -102,17 +102,17 @@ class KzenAutoContext(
     val notationReducer = NotationReducer()
 
     val graphStore = DirectGraphStore(
-            notationMedia,
-            yamlParser,
-            notationMetadataReader,
-            graphDefiner,
-            notationReducer)
+        notationMedia,
+        yamlParser,
+        notationMetadataReader,
+        graphDefiner,
+        notationReducer)
 
 //    val actionExecutor = ModelActionExecutor(
 //            graphStore, graphCreator)
 
     val detachedExecutor = ModelDetachedExecutor(
-            graphStore, graphCreator)
+        graphStore, graphCreator)
 
 //    val executionRepository = ExecutionRepository(
 //            EmptyExecutionInitializer,
@@ -127,15 +127,15 @@ class KzenAutoContext(
     private val dataflowMessageInspector = DataflowMessageInspector()
 
     private val activeDataflowRepository = ActiveDataflowRepository(
-            graphInstanceCreator,
-            dataflowMessageInspector,
-            graphStore)
+        graphInstanceCreator,
+        dataflowMessageInspector,
+        graphStore)
 
     private val activeVisualProvider = ActiveVisualProvider(
-            activeDataflowRepository)
+        activeDataflowRepository)
 
     val visualDataflowRepository = VisualDataflowRepository(
-            activeVisualProvider)
+        activeVisualProvider)
 
     val workUtils = WorkUtils.sibling
     val reportWorkPool = ReportWorkPool(workUtils)

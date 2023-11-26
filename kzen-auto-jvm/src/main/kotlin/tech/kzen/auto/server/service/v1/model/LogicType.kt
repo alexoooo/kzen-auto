@@ -12,6 +12,7 @@ data class LogicType(
         val any = LogicType(TypeMetadata.any)
         val string = LogicType(TypeMetadata.string)
         val boolean = LogicType(TypeMetadata.boolean)
+        val double = LogicType(TypeMetadata.double)
 //        val int = LogicType(TypeMetadata.int)
         val executionValue = LogicType(ExecutionValue.typeMetadata)
     }

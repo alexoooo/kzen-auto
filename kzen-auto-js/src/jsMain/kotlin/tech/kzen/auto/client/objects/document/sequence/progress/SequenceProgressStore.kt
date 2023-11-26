@@ -185,7 +185,7 @@ class SequenceProgressStore(
         }
     }
 
-//
+
 //    private suspend fun mostRecent(): LogicRunExecutionId? {
 //        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
 //        val mostRecentResult = mostRecentQuery()

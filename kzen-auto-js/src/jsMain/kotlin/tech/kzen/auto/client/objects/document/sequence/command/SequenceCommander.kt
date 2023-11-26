@@ -24,22 +24,22 @@ class SequenceCommander(
             graphStructure: GraphStructure
         ): ObjectName {
             val namePrefix = graphStructure
-                    .graphNotation
-                    .firstAttribute(archetypeObjectLocation, AutoConventions.titleAttributePath)
-                    ?.asString()
-                    ?: archetypeObjectLocation.objectPath.name.value
+                .graphNotation
+                .firstAttribute(archetypeObjectLocation, AutoConventions.titleAttributePath)
+                ?.asString()
+                ?: archetypeObjectLocation.objectPath.name.value
 
             val directObjectName = ObjectName(namePrefix)
 
             val documentObjectNames = graphStructure
-                    .graphNotation
-                    .documents[containingObjectLocation.documentPath]!!
-                    .objects
-                    .notations
-                    .values
-                    .keys
-                    .map { it.name }
-                    .toSet()
+                .graphNotation
+                .documents[containingObjectLocation.documentPath]!!
+                .objects
+                .notations
+                .values
+                .keys
+                .map { it.name }
+                .toSet()
 
             if (directObjectName !in documentObjectNames) {
                 return directObjectName

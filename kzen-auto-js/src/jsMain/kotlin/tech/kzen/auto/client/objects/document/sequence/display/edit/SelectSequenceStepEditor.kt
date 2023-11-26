@@ -18,12 +18,12 @@ import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
-import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
@@ -55,12 +55,6 @@ class SelectSequenceStepEditor(
     LocalGraphStore.Observer,
     ClientStateGlobal.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        val stepIdentifier = ObjectName("SequenceStep")
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
@@ -167,7 +161,7 @@ class SelectSequenceStepEditor(
                 graphNotation.inheritanceChain(
                     host.toObjectLocation(objectPath)
                 ).any {
-                    it.objectPath.name == stepIdentifier
+                    it.objectPath.name == SequenceConventions.stepObjectName
                 }
             }
 

@@ -1,4 +1,10 @@
 
+
+# NB: referenced in FeatureDocument
+SequenceValidator:
+  class: tech.kzen.auto.server.objects.sequence.SequenceValidator
+
+
 #######################################################################################################################
 
 ArgumentStep:

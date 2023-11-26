@@ -10,7 +10,6 @@ import react.dom.html.ReactHTML.div
 import react.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
-import tech.kzen.auto.client.objects.document.sequence.display.edit.SelectSequenceStepEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -19,6 +18,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -195,7 +195,7 @@ class RunStepArgumentsEditor(
                 graphNotation.inheritanceChain(
                     host.toObjectLocation(objectPath)
                 ).any {
-                    it.objectPath.name == SelectSequenceStepEditor.stepIdentifier
+                    it.objectPath.name == SequenceConventions.stepObjectName
                 }
             }
 
