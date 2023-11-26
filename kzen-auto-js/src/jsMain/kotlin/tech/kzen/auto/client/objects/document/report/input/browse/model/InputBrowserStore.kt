@@ -8,9 +8,9 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.lib.common.exec.ExecutionFailure
+import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.platform.collect.PersistentSet
 import tech.kzen.lib.platform.collect.toPersistentSet
@@ -159,10 +159,7 @@ class InputBrowserStore(
 
     private suspend fun browserSelectDir(dir: DataLocation): String? {
         val command = InputSpec.browseCommand(store.mainLocation(), dir)
-
-        @Suppress("MoveVariableDeclarationIntoWhen")
         val result = ClientContext.mirroredGraphStore.apply(command)
-
         return (result as? MirroredGraphError)?.error?.message
     }
 
@@ -171,10 +168,7 @@ class InputBrowserStore(
         filter: String
     ): String? {
         val command = InputSpec.filterCommand(store.mainLocation(), filter)
-
-        @Suppress("MoveVariableDeclarationIntoWhen")
         val result = ClientContext.mirroredGraphStore.apply(command)
-
         return (result as? MirroredGraphError)?.error?.message
     }
 }

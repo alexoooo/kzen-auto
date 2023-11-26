@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.paradigm.dataflow.api
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.lib.common.exec.ExecutionValue
 
 
 /**

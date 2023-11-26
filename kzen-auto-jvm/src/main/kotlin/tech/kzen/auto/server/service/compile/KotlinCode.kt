@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.service.compile
 
 import tech.kzen.auto.server.util.WorkUtils
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.digest.Digest
 import kotlin.script.experimental.api.SourceCode
 import kotlin.script.experimental.host.toScriptSource
 

@@ -1,8 +1,10 @@
+@file:Suppress("ConstPropertyName")
+
 package tech.kzen.auto.common.paradigm.sequence
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
-import tech.kzen.auto.common.paradigm.common.model.MapExecutionValue
-import tech.kzen.auto.common.paradigm.common.model.TextExecutionValue
+import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.MapExecutionValue
+import tech.kzen.lib.common.exec.TextExecutionValue
 
 
 data class StepTrace(

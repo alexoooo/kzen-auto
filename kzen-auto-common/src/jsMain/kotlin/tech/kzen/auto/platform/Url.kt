@@ -1,8 +1,8 @@
 package tech.kzen.auto.platform
 
 import org.w3c.dom.url.URL
-import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.common.util.Digestible
+import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.common.util.digest.Digestible
 
 
 // see: https://developer.mozilla.org/en-US/docs/Web/API/URL

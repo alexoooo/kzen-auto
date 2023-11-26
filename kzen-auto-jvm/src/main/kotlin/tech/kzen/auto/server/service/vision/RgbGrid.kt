@@ -4,9 +4,9 @@ import java.awt.image.BufferedImage
 
 
 data class RgbGrid(
-        val width: Int,
-        val height: Int,
-        private val values: Array<IntArray>
+    val width: Int,
+    val height: Int,
+    private val values: Array<IntArray>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

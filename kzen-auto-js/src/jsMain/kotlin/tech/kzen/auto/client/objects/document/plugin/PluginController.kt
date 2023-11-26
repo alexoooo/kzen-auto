@@ -12,15 +12,15 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.graph.edit.AttributePathValueEditorOld
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.plugin.PluginConventions
 import tech.kzen.auto.common.objects.document.plugin.model.ReportDefinerDetail
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
+import tech.kzen.lib.common.exec.ExecutionFailure
+import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
@@ -139,6 +139,7 @@ class PluginController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @Suppress("MoveVariableDeclarationIntoWhen")
     private fun loadInfo() {
         val clientState = state.clientState
             ?: return
@@ -147,13 +148,13 @@ class PluginController(
             ?: return
 
         async {
-            @Suppress("MoveVariableDeclarationIntoWhen")
             val result = ClientContext.restClient.performDetached(mainObjectLocation)
 
             when (result) {
                 is ExecutionSuccess -> {
                     @Suppress("UNCHECKED_CAST")
                     val infoCollectionList = result.value.get() as List<Map<String, Any?>>
+
                     val infoList = infoCollectionList.map { ReportDefinerDetail.ofCollection(it) }
                     setState {
                         this.detailList = infoList

@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.exec.output.pivot.row.digest
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.digest.Digest
 
 
 class MapDigestIndex: DigestIndex {

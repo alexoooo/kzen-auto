@@ -1,10 +1,10 @@
 package tech.kzen.auto.server.service.v1.model.context
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.model.LogicCommand
+import tech.kzen.lib.common.exec.ExecutionFailure
+import tech.kzen.lib.common.exec.ExecutionRequest
+import tech.kzen.lib.common.exec.ExecutionResult
 import java.util.concurrent.atomic.AtomicReference
 
 

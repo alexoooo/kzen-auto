@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.paradigm.detached.api
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
+import tech.kzen.lib.common.exec.ExecutionRequest
+import tech.kzen.lib.common.exec.ExecutionResult
 
 
 interface DetachedAction {

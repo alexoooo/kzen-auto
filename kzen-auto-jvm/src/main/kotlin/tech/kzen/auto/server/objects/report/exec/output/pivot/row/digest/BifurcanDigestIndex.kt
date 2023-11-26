@@ -4,7 +4,7 @@ import io.lacuna.bifurcan.DurableEncodings
 import io.lacuna.bifurcan.IDurableEncoding
 import io.lacuna.bifurcan.IMap
 import io.lacuna.bifurcan.utils.Iterators
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.digest.Digest
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicLong

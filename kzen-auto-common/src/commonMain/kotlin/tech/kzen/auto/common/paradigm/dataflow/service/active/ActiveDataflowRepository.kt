@@ -1,6 +1,5 @@
 package tech.kzen.auto.common.paradigm.dataflow.service.active
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.dataflow.api.Dataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.StreamDataflow
 import tech.kzen.auto.common.paradigm.dataflow.model.channel.MutableDataflowOutput
@@ -12,6 +11,7 @@ import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageIns
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.auto.common.service.GraphInstanceCreator
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.instance.ObjectInstance
@@ -22,9 +22,9 @@ import tech.kzen.lib.platform.collect.toPersistentMap
 
 
 class ActiveDataflowRepository(
-        private val instanceCreator: GraphInstanceCreator,
-        private val dataflowMessageInspector: DataflowMessageInspector,
-        private val graphStore: LocalGraphStore
+    private val instanceCreator: GraphInstanceCreator,
+    private val dataflowMessageInspector: DataflowMessageInspector,
+    private val graphStore: LocalGraphStore
 ) :
         LocalGraphStore.Observer
 {
@@ -59,8 +59,8 @@ class ActiveDataflowRepository(
 
 
     private suspend fun apply(
-            documentPath: DocumentPath,
-            event: NotationEvent
+        documentPath: DocumentPath,
+        event: NotationEvent
     ) {
         return when (event) {
             is SingularNotationEvent ->
@@ -74,15 +74,15 @@ class ActiveDataflowRepository(
 
 
     private suspend fun applySingular(
-            documentPath: DocumentPath,
-            event: SingularNotationEvent
+        documentPath: DocumentPath,
+        event: SingularNotationEvent
     ) {
         if (documentPath != event.documentPath) {
             return
         }
 
         val model = models[documentPath]
-                ?: return
+            ?: return
 
         when (event) {
             is RemovedObjectEvent -> {
@@ -112,8 +112,8 @@ class ActiveDataflowRepository(
 
 
     private suspend fun applyCompound(
-            documentPath: DocumentPath,
-            event: CompoundNotationEvent
+        documentPath: DocumentPath,
+        event: CompoundNotationEvent
     ) {
         val appliedWithDependentEvents = applyCompoundWithDependentEvents(
                 documentPath, event)
@@ -128,8 +128,8 @@ class ActiveDataflowRepository(
 
 
     private fun applyCompoundWithDependentEvents(
-            documentPath: DocumentPath,
-            event: CompoundNotationEvent
+        documentPath: DocumentPath,
+        event: CompoundNotationEvent
     ): Boolean {
         if (documentPath != event.documentPath) {
             return false
@@ -156,15 +156,15 @@ class ActiveDataflowRepository(
 
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun getOrInit(
-            host: DocumentPath
+        host: DocumentPath
     ): ActiveDataflowModel {
         models[host]?.let {
             return it
         }
 
         val serverGraphStructure = graphStore
-                .graphStructure()
-                .filter(AutoConventions.serverAllowed)
+            .graphStructure()
+            .filter(AutoConventions.serverAllowed)
 
         check(host in serverGraphStructure.graphNotation.documents)
 
@@ -184,32 +184,32 @@ class ActiveDataflowRepository(
 
 
     private suspend fun initializeVertex(
-            vertexLocation: ObjectLocation
+        vertexLocation: ObjectLocation
     ): ActiveVertexModel {
         val vertexInstance = instanceCreator.create(vertexLocation).reference as Dataflow<*>
 
         val initialState = vertexInstance.initialState()
         val initialStateOrNull =
-                if (initialState == Unit) {
-                    null
-                }
-                else {
-                    initialState
-                }
+            if (initialState == Unit) {
+                null
+            }
+            else {
+                initialState
+            }
 
         return ActiveVertexModel(
-                initialStateOrNull,
-                null,
-                mutableListOf(),
-                false,
-                0,
-                null)
+            initialStateOrNull,
+            null,
+            mutableListOf(),
+            false,
+            0,
+            null)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun inspect(
-            host: DocumentPath
+        host: DocumentPath
     ): VisualDataflowModel {
         val activeDataflowModel = getOrInit(host)
 
@@ -217,54 +217,54 @@ class ActiveDataflowRepository(
 
         for ((vertexLocation, activeVertexModel) in activeDataflowModel.vertices) {
             builder[vertexLocation] = inspectActiveVertexModel(
-                    vertexLocation, activeVertexModel)
+                vertexLocation, activeVertexModel)
         }
 
         return VisualDataflowModel(
-                builder.toPersistentMap())
+            builder.toPersistentMap())
     }
 
 
     suspend fun inspectVertex(
-            host: DocumentPath,
-            vertexLocation: ObjectLocation
+        host: DocumentPath,
+        vertexLocation: ObjectLocation
     ): VisualVertexModel {
         val activeDataflowModel = getOrInit(host)
         val activeVertexModel = activeDataflowModel.vertices[vertexLocation]
-                ?: initializeVertex(vertexLocation)
+            ?: initializeVertex(vertexLocation)
 
         return inspectActiveVertexModel(
-                vertexLocation, activeVertexModel)
+            vertexLocation, activeVertexModel)
     }
 
 
     private suspend fun inspectActiveVertexModel(
-            vertexLocation: ObjectLocation,
-            activeVertexModel: ActiveVertexModel
+        vertexLocation: ObjectLocation,
+        activeVertexModel: ActiveVertexModel
     ): VisualVertexModel {
         val stateInspection = activeVertexModel.state?.let {
             inspectState(vertexLocation, it)
         }
 
         val messageInspection = activeVertexModel.message
-                ?.let(dataflowMessageInspector::inspectMessage)
+            ?.let(dataflowMessageInspector::inspectMessage)
 
         val hasNext = activeVertexModel.streamHasNext ||
-                activeVertexModel.remainingBatch.isNotEmpty()
+            activeVertexModel.remainingBatch.isNotEmpty()
 
         return VisualVertexModel(
-                false,
-                stateInspection,
-                messageInspection,
-                hasNext,
-                activeVertexModel.epoch.toInt(),
-                activeVertexModel.error)
+            false,
+            stateInspection,
+            messageInspection,
+            hasNext,
+            activeVertexModel.epoch.toInt(),
+            activeVertexModel.error)
     }
 
 
     private suspend fun inspectState(
-            vertexLocation: ObjectLocation,
-            state: Any
+        vertexLocation: ObjectLocation,
+        state: Any
     ): ExecutionValue {
         @Suppress("UNCHECKED_CAST")
         val dataflow = instanceCreator.create(vertexLocation).reference as Dataflow<Any>
@@ -273,7 +273,7 @@ class ActiveDataflowRepository(
 
 
     suspend fun reset(
-            host: DocumentPath
+        host: DocumentPath
     ): VisualDataflowModel {
         models.remove(host)
         return inspect(host)
@@ -282,8 +282,8 @@ class ActiveDataflowRepository(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun executeVisual(
-            host: DocumentPath,
-            vertexLocation: ObjectLocation
+        host: DocumentPath,
+        vertexLocation: ObjectLocation
     ): VisualVertexTransition {
         val activeDataflowModel = getOrInit(host)
         val activeVertexModel = activeDataflowModel.vertices[vertexLocation]!!
@@ -296,20 +296,21 @@ class ActiveDataflowRepository(
         val cleared = mutableListOf<ObjectLocation>()
 
         try {
-            execute(host,
-                    vertexLocation,
-                    { loop.add(it) },
-                    { cleared.add(it) })
+            execute(
+                host,
+                vertexLocation,
+                { loop.add(it) },
+                { cleared.add(it) })
         }
         catch (e: Throwable) {
             return VisualVertexTransition(
-                    null,
-                    null,
-                    activeVertexModel.hasNext(),
-                    activeVertexModel.epoch.toInt(),
-                    loop,
-                    cleared,
-                    e.message ?: "Error")
+                null,
+                null,
+                activeVertexModel.hasNext(),
+                activeVertexModel.epoch.toInt(),
+                loop,
+                cleared,
+                e.message ?: "Error")
         }
 
         val nextStateView = activeVertexModel.state?.let {
@@ -317,37 +318,37 @@ class ActiveDataflowRepository(
         }
 
         val stateChange =
-                if (previousStateView != nextStateView) {
-                    nextStateView
-                }
-                else {
-                    null
-                }
+            if (previousStateView != nextStateView) {
+                nextStateView
+            }
+            else {
+                null
+            }
 
         val messageView = activeVertexModel.message?.let {
             dataflowMessageInspector.inspectMessage(it)
         }
 
         return VisualVertexTransition(
-                stateChange,
-                messageView,
-                activeVertexModel.hasNext(),
-                activeVertexModel.epoch.toInt(),
-                loop,
-                cleared,
-                null)
+            stateChange,
+            messageView,
+            activeVertexModel.hasNext(),
+            activeVertexModel.epoch.toInt(),
+            loop,
+            cleared,
+            null)
     }
 
 
     suspend fun execute(
-            host: DocumentPath,
-            vertexLocation: ObjectLocation,
-            loopConsumer: (ObjectLocation) -> Unit = {},
-            clearedConsumer: (ObjectLocation) -> Unit = {}
+        host: DocumentPath,
+        vertexLocation: ObjectLocation,
+        loopConsumer: (ObjectLocation) -> Unit = {},
+        clearedConsumer: (ObjectLocation) -> Unit = {}
     ) {
         val serverGraphStructure = graphStore
-                .graphStructure()
-                .filter(AutoConventions.serverAllowed)
+            .graphStructure()
+            .filter(AutoConventions.serverAllowed)
 
         val dataflowMatrix = DataflowMatrix.ofGraphDocument(host, serverGraphStructure)
         val dataflowDag = DataflowDag.of(dataflowMatrix)
@@ -355,9 +356,9 @@ class ActiveDataflowRepository(
         val activeDataflowModel = getOrInit(host)
 
         executeDirect(
-                activeDataflowModel,
-                vertexLocation,
-                dataflowMatrix)
+            activeDataflowModel,
+            vertexLocation,
+            dataflowMatrix)
 
         val visualDataflowModel = inspect(host)
 
@@ -368,9 +369,9 @@ class ActiveDataflowRepository(
 
 
     private fun isDone(
-            dataflowMatrix: DataflowMatrix,
-            dataflowDag: DataflowDag,
-            visualDataflowModel: VisualDataflowModel
+        dataflowMatrix: DataflowMatrix,
+        dataflowDag: DataflowDag,
+        visualDataflowModel: VisualDataflowModel
     ): Boolean {
         val next = DataflowUtils.next(dataflowMatrix, dataflowDag, visualDataflowModel)
         return next == null
@@ -378,21 +379,21 @@ class ActiveDataflowRepository(
 
 
     private fun clearIteration(
-            dataflowDag: DataflowDag,
-            activeDataflowModel: ActiveDataflowModel,
-            loopConsumer: (ObjectLocation) -> Unit,
-            clearedConsumer: (ObjectLocation) -> Unit
+        dataflowDag: DataflowDag,
+        activeDataflowModel: ActiveDataflowModel,
+        loopConsumer: (ObjectLocation) -> Unit,
+        clearedConsumer: (ObjectLocation) -> Unit
     ) {
         val lastRowWithNextMessage = dataflowDag
-                .layers
-                .indexOfLast {layer ->
-                    layer.any {
-                        activeDataflowModel
-                                .vertices[it]
-                                ?.hasNext()
-                                ?: false
-                    }
+            .layers
+            .indexOfLast {layer ->
+                layer.any {
+                    activeDataflowModel
+                        .vertices[it]
+                        ?.hasNext()
+                        ?: false
                 }
+            }
 
         if (lastRowWithNextMessage == -1) {
             for (layer in dataflowDag.layers) {
@@ -433,9 +434,9 @@ class ActiveDataflowRepository(
 
 
     private suspend fun executeDirect(
-            activeDataflowModel: ActiveDataflowModel,
-            vertexLocation: ObjectLocation,
-            dataflowMatrix: DataflowMatrix
+        activeDataflowModel: ActiveDataflowModel,
+        vertexLocation: ObjectLocation,
+        dataflowMatrix: DataflowMatrix
     ) {
         val activeVertexModel = activeDataflowModel.vertices[vertexLocation]!!
 
@@ -450,24 +451,24 @@ class ActiveDataflowRepository(
             val dataflow = instance.reference as Dataflow<Any?>
 
             populateInputs(
-                    instance,
-                    activeDataflowModel,
-                    vertexLocation,
-                    dataflowMatrix)
+                instance,
+                activeDataflowModel,
+                vertexLocation,
+                dataflowMatrix)
 
             val nextState =
-                    when {
-                        activeVertexModel.streamHasNext ->
-                            (dataflow as StreamDataflow).next(activeVertexModel.state!!)
+                when {
+                    activeVertexModel.streamHasNext ->
+                        (dataflow as StreamDataflow).next(activeVertexModel.state!!)
 
-                        activeVertexModel.state == null -> {
-                            dataflow.process(Unit)
-                            null
-                        }
-
-                        else ->
-                            dataflow.process(activeVertexModel.state)
+                    activeVertexModel.state == null -> {
+                        dataflow.process(Unit)
+                        null
                     }
+
+                    else ->
+                        dataflow.process(activeVertexModel.state)
+                }
 
             val output = instance
                     .constructorAttributes[DataflowUtils.mainOutputAttributeName] as? MutableDataflowOutput<*>
@@ -496,13 +497,13 @@ class ActiveDataflowRepository(
 
 
     private fun populateInputs(
-            dataflowInstance: ObjectInstance,
-            activeDataflowModel: ActiveDataflowModel,
-            vertexLocation: ObjectLocation,
-            dataflowMatrix: DataflowMatrix
+        dataflowInstance: ObjectInstance,
+        activeDataflowModel: ActiveDataflowModel,
+        vertexLocation: ObjectLocation,
+        dataflowMatrix: DataflowMatrix
     ) {
         val vertexDescriptor = dataflowMatrix.verticesByLocation[vertexLocation]
-                ?: throw IllegalStateException("Vertex not found in matrix: $vertexLocation")
+            ?: throw IllegalStateException("Vertex not found in matrix: $vertexLocation")
 
         val inputAttributes = vertexDescriptor.inputNames
         if (inputAttributes.isEmpty()) {
@@ -512,11 +513,11 @@ class ActiveDataflowRepository(
         var populatedInputCount = 0
         for (inputAttribute in inputAttributes) {
             val sourceVertex = dataflowMatrix.traceVertexBackFrom(vertexDescriptor, inputAttribute)
-                    ?: continue
+                ?: continue
 
             @Suppress("UNCHECKED_CAST")
             val input = dataflowInstance.constructorAttributes[inputAttribute] as? MutableInput<Any>
-                    ?: throw IllegalArgumentException("Unknown vertexLocation $vertexLocation: $sourceVertex")
+                ?: throw IllegalArgumentException("Unknown vertexLocation $vertexLocation: $sourceVertex")
 
             val inputLocation = sourceVertex.objectLocation
             val inputActiveModel = activeDataflowModel.vertices[inputLocation]!!

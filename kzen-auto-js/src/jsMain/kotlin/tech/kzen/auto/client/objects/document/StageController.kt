@@ -11,7 +11,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.auto.common.util.RequestParams
+import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -40,11 +40,11 @@ external interface StageControllerState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 class StageController(
-        props: StageControllerProps
+    props: StageControllerProps
 ):
-        RPureComponent<StageControllerProps, StageControllerState>(props),
-        LocalGraphStore.Observer,
-        NavigationGlobal.Observer
+    RPureComponent<StageControllerProps, StageControllerState>(props),
+    LocalGraphStore.Observer,
+    NavigationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     data class CoordinateContext(
@@ -143,8 +143,8 @@ class StageController(
 
 
     override fun handleNavigation(
-            documentPath: DocumentPath?,
-            parameters: RequestParams
+        documentPath: DocumentPath?,
+        parameters: RequestParams
     ) {
         setState {
             this.documentPath = documentPath
@@ -155,10 +155,10 @@ class StageController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun documentArchetypeName(): ObjectName? {
         val notation = state.structure?.graphNotation
-                ?: return null
+            ?: return null
 
         val path = state.documentPath
-                ?: return null
+            ?: return null
 
         return DocumentArchetype.archetypeName(notation, path)
     }
@@ -189,10 +189,10 @@ class StageController(
             }
 
             val mainDocuments = state
-                    .structure
-                    ?.graphNotation
-                    ?.let { AutoConventions.mainDocuments(it) }
-                    ?: listOf()
+                .structure
+                ?.graphNotation
+                ?.let { AutoConventions.mainDocuments(it) }
+                ?: listOf()
 
             div {
                 css {
@@ -211,10 +211,10 @@ class StageController(
 
 
     private fun ChildrenBuilder.renderDocumentController(
-            archetypeName: ObjectName
+        archetypeName: ObjectName
     ) {
         val documentController = props.documentControllers
-                .singleOrNull { archetypeName == it.archetypeLocation().objectPath.name }
+            .singleOrNull { archetypeName == it.archetypeLocation().objectPath.name }
 
         if (documentController == null) {
             +"Document: $archetypeName"

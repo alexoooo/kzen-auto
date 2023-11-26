@@ -3,7 +3,7 @@ package tech.kzen.auto.client.service.rest
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.store.RemoteGraphStore
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.digest.Digest
 
 
 class ClientRestGraphStore(

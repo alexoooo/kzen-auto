@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.report.exec.output.pivot.row.digest
 import com.google.common.io.BaseEncoding
 import com.google.common.primitives.UnsignedBytes
 import tech.kzen.auto.server.objects.report.exec.output.pivot.store.StoreUtils
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.digest.Digest
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.file.Files

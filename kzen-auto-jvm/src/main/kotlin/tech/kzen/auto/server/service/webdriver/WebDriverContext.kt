@@ -45,7 +45,9 @@ class WebDriverContext {
 
     fun get(): RemoteWebDriver {
         // TODO: has been observed to fail
-        check(webDriver != null) {"WebDriver missing"}
+        check(webDriver != null) {
+            "WebDriver missing"
+        }
         return webDriver!!
     }
 }

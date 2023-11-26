@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.sequence.api
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 

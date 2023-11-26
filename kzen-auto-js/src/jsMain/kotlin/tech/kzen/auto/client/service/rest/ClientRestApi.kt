@@ -5,7 +5,6 @@ import tech.kzen.auto.client.util.httpGetBytes
 import tech.kzen.auto.client.util.httpPostBytes
 import tech.kzen.auto.client.util.httpPutForm
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunResponse
@@ -17,6 +16,7 @@ import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.platform.encodeURIComponent
 import tech.kzen.lib.client.ClientJsonUtils
+import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -32,8 +32,8 @@ import tech.kzen.lib.common.model.structure.resource.ResourceListing
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.model.structure.scan.DocumentScan
 import tech.kzen.lib.common.model.structure.scan.NotationScan
-import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.ImmutableByteArray
+import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.platform.collect.toPersistentMap
 import kotlin.js.Json
 
@@ -68,33 +68,32 @@ class ClientRestApi(
             val resources = valueMap["resources"] as? Map<String, String>
 
             builder[DocumentPath.parse(key)] = DocumentScan(
-                    Digest.parse(documentDigest),
-                    resources?.let {
-                        ResourceListing(
-                                it.map {e ->
-                                    ResourcePath.parse(e.key) to Digest.parse(e.value)
-                                }.toMap().toPersistentMap()
-                        )
-                    })
+                Digest.parse(documentDigest),
+                resources?.let {
+                    ResourceListing(
+                        it.map {e ->
+                            ResourcePath.parse(e.key) to Digest.parse(e.value)
+                        }.toMap().toPersistentMap()
+                    )
+                })
         }
 
         return NotationScan(DocumentPathMap(builder.toPersistentMap()))
     }
 
 
+    @Suppress("UnnecessaryVariable")
     suspend fun readNotation(location: DocumentPath): String {
-        @Suppress("UnnecessaryVariable")
         val response = getOrPut(CommonRestApi.notationPrefix + location.asRelativeFile())
-
         return response
     }
 
 
     suspend fun readResource(location: ResourceLocation): ImmutableByteArray {
         val response = getBytes(
-                CommonRestApi.resource,
-                CommonRestApi.paramDocumentPath to location.documentPath.asString(),
-                CommonRestApi.paramResourcePath to location.resourcePath.asString())
+            CommonRestApi.resource,
+            CommonRestApi.paramDocumentPath to location.documentPath.asString(),
+            CommonRestApi.paramResourcePath to location.resourcePath.asString())
 
         return ImmutableByteArray.wrap(response)
     }
@@ -102,8 +101,8 @@ class ClientRestApi(
 
     fun resourceUri(location: ResourceLocation): String {
         val suffix = paramSuffix(
-                CommonRestApi.paramDocumentPath to location.documentPath.asString(),
-                CommonRestApi.paramResourcePath to location.resourcePath.asString())
+            CommonRestApi.paramDocumentPath to location.documentPath.asString(),
+            CommonRestApi.paramResourcePath to location.resourcePath.asString())
         return "$baseUrl${CommonRestApi.resource}$suffix"
     }
 
@@ -114,9 +113,9 @@ class ClientRestApi(
         unparsedDocumentNotation: String
     ): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandDocumentCreate,
-                CommonRestApi.paramDocumentPath to documentPath.asString(),
-                CommonRestApi.paramDocumentNotation to unparsedDocumentNotation)
+            CommonRestApi.commandDocumentCreate,
+            CommonRestApi.paramDocumentPath to documentPath.asString(),
+            CommonRestApi.paramDocumentNotation to unparsedDocumentNotation)
     }
 
 
@@ -124,8 +123,8 @@ class ClientRestApi(
             documentPath: DocumentPath
     ): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandDocumentDelete,
-                CommonRestApi.paramDocumentPath to documentPath.asRelativeFile())
+            CommonRestApi.commandDocumentDelete,
+            CommonRestApi.paramDocumentPath to documentPath.asRelativeFile())
     }
 
 
@@ -136,45 +135,45 @@ class ClientRestApi(
         unparsedObjectNotation: String
     ): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandObjectAdd,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                CommonRestApi.paramPositionIndex to indexInDocument.asString(),
-                CommonRestApi.paramObjectNotation to unparsedObjectNotation)
+            CommonRestApi.commandObjectAdd,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramPositionIndex to indexInDocument.asString(),
+            CommonRestApi.paramObjectNotation to unparsedObjectNotation)
     }
 
 
     suspend fun removeObject(
-            objectLocation: ObjectLocation
+        objectLocation: ObjectLocation
     ): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandObjectRemove,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+            CommonRestApi.commandObjectRemove,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
     }
 
 
     suspend fun shiftObject(
-            objectLocation: ObjectLocation,
-            newPositionInDocument: PositionRelation
+        objectLocation: ObjectLocation,
+        newPositionInDocument: PositionRelation
     ): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandObjectShift,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                CommonRestApi.paramPositionIndex to newPositionInDocument.asString())
+            CommonRestApi.commandObjectShift,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramPositionIndex to newPositionInDocument.asString())
     }
 
 
     suspend fun renameObject(
-            objectLocation: ObjectLocation,
-            newName: ObjectName
+        objectLocation: ObjectLocation,
+        newName: ObjectName
     ): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandObjectRename,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                CommonRestApi.paramObjectName to newName.value)
+            CommonRestApi.commandObjectRename,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramObjectName to newName.value)
     }
 
 
@@ -186,13 +185,13 @@ class ClientRestApi(
         unparsedObjectNotation: String
     ): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandObjectAddAtAttribute,
-                CommonRestApi.paramDocumentPath to containingObjectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
-                CommonRestApi.paramAttributeName to containingAttribute.asString(),
-                CommonRestApi.paramObjectName to objectName.value,
-                CommonRestApi.paramSecondaryPosition to positionInDocument.asString(),
-                CommonRestApi.paramObjectNotation to unparsedObjectNotation)
+            CommonRestApi.commandObjectAddAtAttribute,
+            CommonRestApi.paramDocumentPath to containingObjectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributeName to containingAttribute.asString(),
+            CommonRestApi.paramObjectName to objectName.value,
+            CommonRestApi.paramSecondaryPosition to positionInDocument.asString(),
+            CommonRestApi.paramObjectNotation to unparsedObjectNotation)
     }
 
 
@@ -205,14 +204,14 @@ class ClientRestApi(
         unparsedObjectNotation: String
     ): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandObjectInsertInList,
-                CommonRestApi.paramDocumentPath to containingObjectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
-                CommonRestApi.paramAttributePath to containingList.asString(),
-                CommonRestApi.paramPositionIndex to indexInList.asString(),
-                CommonRestApi.paramObjectName to objectName.value,
-                CommonRestApi.paramSecondaryPosition to positionInDocument.asString(),
-                CommonRestApi.paramObjectNotation to unparsedObjectNotation)
+            CommonRestApi.commandObjectInsertInList,
+            CommonRestApi.paramDocumentPath to containingObjectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributePath to containingList.asString(),
+            CommonRestApi.paramPositionIndex to indexInList.asString(),
+            CommonRestApi.paramObjectName to objectName.value,
+            CommonRestApi.paramSecondaryPosition to positionInDocument.asString(),
+            CommonRestApi.paramObjectNotation to unparsedObjectNotation)
     }
 
 
@@ -221,10 +220,10 @@ class ClientRestApi(
             attributePath: AttributePath
     ): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandObjectRemoveIn,
-                CommonRestApi.paramDocumentPath to containingObjectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
-                CommonRestApi.paramAttributePath to attributePath.asString())
+            CommonRestApi.commandObjectRemoveIn,
+            CommonRestApi.paramDocumentPath to containingObjectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to containingObjectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributePath to attributePath.asString())
     }
 
 
@@ -235,11 +234,11 @@ class ClientRestApi(
         unparsedAttributeNotation: String
     ): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandAttributeUpsert,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                CommonRestApi.paramAttributeName to attributeName.value,
-                CommonRestApi.paramAttributeNotation to unparsedAttributeNotation)
+            CommonRestApi.commandAttributeUpsert,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributeName to attributeName.value,
+            CommonRestApi.paramAttributeNotation to unparsedAttributeNotation)
     }
 
 
@@ -249,11 +248,11 @@ class ClientRestApi(
         unparsedAttributeNotation: String
     ): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandAttributeUpdateIn,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                CommonRestApi.paramAttributePath to attributePath.asString(),
-                CommonRestApi.paramAttributeNotation to unparsedAttributeNotation)
+            CommonRestApi.commandAttributeUpdateIn,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributePath to attributePath.asString(),
+            CommonRestApi.paramAttributeNotation to unparsedAttributeNotation)
     }
 
 
@@ -304,12 +303,12 @@ class ClientRestApi(
         unparsedItemNotation: String
     ): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandAttributeInsertItemIn,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                CommonRestApi.paramAttributePath to containingList.asString(),
-                CommonRestApi.paramPositionIndex to indexInList.asString(),
-                CommonRestApi.paramAttributeNotation to unparsedItemNotation)
+            CommonRestApi.commandAttributeInsertItemIn,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramAttributePath to containingList.asString(),
+            CommonRestApi.paramPositionIndex to indexInList.asString(),
+            CommonRestApi.paramAttributeNotation to unparsedItemNotation)
     }
 
 
@@ -435,22 +434,22 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun addResource(
-            resourceLocation: ResourceLocation,
-            contents: ImmutableByteArray
+        resourceLocation: ResourceLocation,
+        contents: ImmutableByteArray
     ): Digest {
         return postDigest(
-                CommonRestApi.commandResourceAdd,
-                contents.toByteArray(),
-                CommonRestApi.paramDocumentPath to resourceLocation.documentPath.asString(),
-                CommonRestApi.paramResourcePath to resourceLocation.resourcePath.asString())
+            CommonRestApi.commandResourceAdd,
+            contents.toByteArray(),
+            CommonRestApi.paramDocumentPath to resourceLocation.documentPath.asString(),
+            CommonRestApi.paramResourcePath to resourceLocation.resourcePath.asString())
     }
 
 
     suspend fun removeResource(location: ResourceLocation): Digest {
         return getOrPutDigest(
-                CommonRestApi.commandResourceRemove,
-                CommonRestApi.paramDocumentPath to location.documentPath.asString(),
-                CommonRestApi.paramResourcePath to location.resourcePath.asString())
+            CommonRestApi.commandResourceRemove,
+            CommonRestApi.paramDocumentPath to location.documentPath.asString(),
+            CommonRestApi.paramResourcePath to location.resourcePath.asString())
     }
 
 
@@ -523,14 +522,14 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun performDetached(
-            objectLocation: ObjectLocation,
-            vararg parameters: Pair<String, String>
+        objectLocation: ObjectLocation,
+        vararg parameters: Pair<String, String>
     ): ExecutionResult {
         val responseJson = getOrPutJson(
-                CommonRestApi.actionDetached,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                *parameters)
+            CommonRestApi.actionDetached,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            *parameters)
 
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
@@ -539,16 +538,16 @@ class ClientRestApi(
 
 
     suspend fun performDetached(
-            objectLocation: ObjectLocation,
-            body: ByteArray,
-            vararg parameters: Pair<String, String>
+        objectLocation: ObjectLocation,
+        body: ByteArray,
+        vararg parameters: Pair<String, String>
     ): ExecutionResult {
         val responseJson = postJson(
-                CommonRestApi.actionDetached,
-                body,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-                *parameters)
+            CommonRestApi.actionDetached,
+            body,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            *parameters)
 
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
@@ -570,11 +569,11 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun visualDataflowModel(
-            host: DocumentPath
+        host: DocumentPath
     ): VisualDataflowModel {
         val responseJson = getOrPutJson(
-                CommonRestApi.dataflowModel,
-                CommonRestApi.paramDocumentPath to host.asString())
+            CommonRestApi.dataflowModel,
+            CommonRestApi.paramDocumentPath to host.asString())
 
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
@@ -585,43 +584,43 @@ class ClientRestApi(
 
 
     suspend fun visualVertexModel(
-            host: DocumentPath,
-            vertexLocation: ObjectLocation
+        host: DocumentPath,
+        vertexLocation: ObjectLocation
     ): VisualVertexModel {
         val responseJson = getOrPutJson(
-                CommonRestApi.dataflowModel,
-                CommonRestApi.paramDocumentPath to host.asString(),
-                CommonRestApi.paramObjectPath to vertexLocation.objectPath.asString())
+            CommonRestApi.dataflowModel,
+            CommonRestApi.paramDocumentPath to host.asString(),
+            CommonRestApi.paramObjectPath to vertexLocation.objectPath.asString())
 
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 
         return VisualVertexModel.fromCollection(
-                responseCollection)
+            responseCollection)
     }
 
 
     suspend fun resetDataflowExecution(
-            host: DocumentPath
+        host: DocumentPath
     ): VisualDataflowModel {
         val responseJson = getOrPutJson(
-                CommonRestApi.dataflowReset,
-                CommonRestApi.paramDocumentPath to host.asString())
+            CommonRestApi.dataflowReset,
+            CommonRestApi.paramDocumentPath to host.asString())
 
         @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toMap(responseJson) as Map<String, Any>
 
         return VisualDataflowModel.fromCollection(
-                responseCollection)
+            responseCollection)
     }
 
 
     suspend fun execDataflow(
-            objectLocation: ObjectLocation
+        objectLocation: ObjectLocation
     ): VisualVertexTransition {
         val responseJson = getOrPutJson(
-                CommonRestApi.dataflowPerform,
-                CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-                CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+            CommonRestApi.dataflowPerform,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
 
         val responseCollection = ClientJsonUtils.toMap(responseJson)
 

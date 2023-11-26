@@ -3,7 +3,6 @@ package tech.kzen.auto.server.objects.plugin
 import com.google.common.io.Files
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.plugin.model.ReportDefinerDetail
-import tech.kzen.auto.common.paradigm.common.model.*
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
 import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.common.util.data.FilePathJvm.toPath
@@ -11,6 +10,7 @@ import tech.kzen.auto.plugin.definition.ReportDefiner
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.report.service.ReportUtils.asCommon
 import tech.kzen.auto.server.util.ClassLoaderUtils
+import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.yaml.YamlList

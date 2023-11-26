@@ -15,7 +15,7 @@ import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.util.RequestParams
+import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.GraphStructure
@@ -125,9 +125,9 @@ class ProjectController(
 
 
     override fun componentDidUpdate(
-            prevProps: ProjectControllerProps,
-            prevState: ProjectControllerState,
-            snapshot: Any
+        prevProps: ProjectControllerProps,
+        prevState: ProjectControllerState,
+        snapshot: Any
     ) {
         val height = headerElement.current?.clientHeight ?: 0
 
@@ -181,8 +181,8 @@ class ProjectController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun handleNavigation(
-            documentPath: DocumentPath?,
-            parameters: RequestParams
+        documentPath: DocumentPath?,
+        parameters: RequestParams
     ) {
         async {
             // NB: account for possible header resize
@@ -204,9 +204,7 @@ class ProjectController(
     }
 
 
-    private fun ChildrenBuilder.renderBody(
-//            graphNotation: GraphNotation
-    ) {
+    private fun ChildrenBuilder.renderBody() {
         div {
             css {
                 position = Position.fixed

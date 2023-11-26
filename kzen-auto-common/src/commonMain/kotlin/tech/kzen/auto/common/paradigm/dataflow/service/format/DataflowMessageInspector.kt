@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.paradigm.dataflow.service.format
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.lib.common.exec.ExecutionValue
 import kotlin.reflect.KClass
 
 

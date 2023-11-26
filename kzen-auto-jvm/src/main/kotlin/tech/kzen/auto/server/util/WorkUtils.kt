@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.util
 
 import com.google.common.io.BaseEncoding
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.digest.Digest
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.LocalDateTime

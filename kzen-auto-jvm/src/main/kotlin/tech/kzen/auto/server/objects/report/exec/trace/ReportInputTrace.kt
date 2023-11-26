@@ -6,10 +6,10 @@ import kotlinx.datetime.Instant
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.progress.ReportFileProgress
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
+import tech.kzen.lib.common.exec.ExecutionValue
 import java.util.concurrent.TimeUnit
 
 

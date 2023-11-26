@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.sequence.model
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
-import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
+import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.NullExecutionValue
 
 
 data class StepValue<T>(

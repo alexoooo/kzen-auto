@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.exec.output.pivot.row.signature
 
-import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.common.util.Digestible
+import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.common.util.digest.Digestible
 
 
 data class RowSignature(

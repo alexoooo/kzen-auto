@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.exec.output.pivot.row.digest
 
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.digest.Digest
 
 
 // TODO: try B-Tree implementation, e.g. https://github.com/myui/btree4j/
@@ -15,7 +15,7 @@ interface DigestIndex: AutoCloseable {
 
 
     /**
-     * NB: Digest.zero is not allowed
+     * NB: `Digest.zero` is not allowed
      */
     fun getOrAdd(digestHigh: Long, digestLow: Long): DigestOrdinal
 

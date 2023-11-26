@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.logic
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceQuery
+import tech.kzen.lib.common.exec.ExecutionValue
 
 
 interface LogicTraceHandle {
@@ -11,7 +11,8 @@ interface LogicTraceHandle {
 
     fun set(
         logicTracePath: LogicTracePath,
-        executionValue: ExecutionValue)
+        executionValue: ExecutionValue
+    )
 
 
     fun clearAll(prefix: LogicTracePath)

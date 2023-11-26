@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.report.exec.input.model.data
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
-import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.common.util.Digestible
+import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.common.util.digest.Digestible
 
 
 data class DatasetInfo(

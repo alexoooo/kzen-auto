@@ -1,9 +1,5 @@
 package tech.kzen.auto.server.service.exec
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
 import tech.kzen.auto.common.paradigm.task.api.ManagedTask
 import tech.kzen.auto.common.paradigm.task.api.TaskHandle
 import tech.kzen.auto.common.paradigm.task.api.TaskRun
@@ -12,6 +8,10 @@ import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.common.paradigm.task.model.TaskState
 import tech.kzen.auto.common.paradigm.task.service.TaskRepository
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.exec.ExecutionFailure
+import tech.kzen.lib.common.exec.ExecutionRequest
+import tech.kzen.lib.common.exec.ExecutionResult
+import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.cqrs.DeletedDocumentEvent

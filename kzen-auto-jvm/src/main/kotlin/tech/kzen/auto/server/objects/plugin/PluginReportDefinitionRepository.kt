@@ -11,7 +11,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
 import tech.kzen.lib.common.service.store.LocalGraphStore
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.platform.ClassName
 import java.net.URLClassLoader
 

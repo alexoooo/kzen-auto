@@ -3,8 +3,6 @@ package tech.kzen.auto.server.api
 import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunResponse
@@ -14,11 +12,13 @@ import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
-import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.v1.impl.ServerLogicController
+import tech.kzen.lib.common.exec.ExecutionRequest
+import tech.kzen.lib.common.exec.ExecutionResult
+import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -37,8 +37,8 @@ import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.service.media.NotationMedia
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.common.service.store.DirectGraphStore
-import tech.kzen.lib.common.util.Digest
 import tech.kzen.lib.common.util.ImmutableByteArray
+import tech.kzen.lib.common.util.digest.Digest
 import java.net.URI
 
 

@@ -2,9 +2,6 @@ package tech.kzen.auto.server.objects.sequence.step.control
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
-import tech.kzen.auto.common.paradigm.common.model.NullExecutionValue
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.common.paradigm.sequence.StepTrace
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
@@ -13,6 +10,9 @@ import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
+import tech.kzen.lib.common.exec.ExecutionFailure
+import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -97,7 +97,8 @@ class MultiStep(
                         stepModel.trace().asExecutionValue())
                     stepContext.logicTraceHandle.set(
                         SequenceConventions.nextStepTracePath,
-                        NullExecutionValue)
+                        NullExecutionValue
+                    )
                     return result
                 }
 

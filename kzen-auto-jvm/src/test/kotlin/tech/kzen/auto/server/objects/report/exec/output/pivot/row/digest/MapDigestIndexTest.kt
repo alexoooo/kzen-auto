@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.exec.output.pivot.row.digest
 
 import com.google.common.base.Stopwatch
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.digest.Digest
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals

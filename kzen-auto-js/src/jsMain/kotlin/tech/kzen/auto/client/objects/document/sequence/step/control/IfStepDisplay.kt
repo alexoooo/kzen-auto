@@ -28,9 +28,9 @@ import tech.kzen.auto.client.wrap.material.ArrowForwardIcon
 import tech.kzen.auto.client.wrap.material.SubdirectoryArrowLeftIcon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.common.paradigm.sequence.StepTrace
+import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.AttributeLocation

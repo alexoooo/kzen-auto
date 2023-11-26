@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.service.v1.model
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
 

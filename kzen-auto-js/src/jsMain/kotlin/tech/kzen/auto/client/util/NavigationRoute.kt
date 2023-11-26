@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.util
 
-import tech.kzen.auto.common.util.RequestParams
+import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.document.DocumentPath
 
 

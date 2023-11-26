@@ -1,6 +1,5 @@
 package tech.kzen.auto.server.objects.sequence.step.control
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.LogicExecutionFacade
@@ -10,6 +9,7 @@ import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentName
 import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentValue
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
+import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 

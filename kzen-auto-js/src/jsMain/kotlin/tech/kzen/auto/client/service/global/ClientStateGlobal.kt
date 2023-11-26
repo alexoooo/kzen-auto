@@ -4,7 +4,7 @@ import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.common.util.RequestParams
+import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand

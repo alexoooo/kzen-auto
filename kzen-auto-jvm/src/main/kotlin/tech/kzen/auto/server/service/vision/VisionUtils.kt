@@ -16,6 +16,7 @@ import javax.imageio.ImageIO
 
 
 object VisionUtils {
+    //-----------------------------------------------------------------------------------------------------------------
     data class Result(
         val webElement: WebElement?,
         val error: String?
@@ -31,6 +32,7 @@ object VisionUtils {
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     fun locateElement(
         target: TargetSpec,
         driver: RemoteWebDriver,

@@ -1,11 +1,13 @@
+@file:Suppress("ConstPropertyName")
+
 package tech.kzen.auto.common.objects.document.report.spec.analysis.pivot
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.util.RequestParams
+import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
-import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.common.util.Digestible
+import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.common.util.digest.Digestible
 
 
 data class PivotValueTableSpec(

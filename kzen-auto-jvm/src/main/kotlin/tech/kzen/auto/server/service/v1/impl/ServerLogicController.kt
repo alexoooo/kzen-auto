@@ -3,9 +3,6 @@ package tech.kzen.auto.server.service.v1.impl
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
-import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
 import tech.kzen.auto.common.paradigm.common.v1.LogicController
 import tech.kzen.auto.common.paradigm.common.v1.model.*
 import tech.kzen.auto.server.objects.logic.LogicTraceStore
@@ -18,6 +15,9 @@ import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.context.LogicFrame
 import tech.kzen.auto.server.service.v1.model.context.MutableLogicControl
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
+import tech.kzen.lib.common.exec.ExecutionFailure
+import tech.kzen.lib.common.exec.ExecutionRequest
+import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator

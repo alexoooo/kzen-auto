@@ -3,8 +3,8 @@ package tech.kzen.auto.client.service.global
 import kotlinx.browser.window
 import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
-import tech.kzen.auto.common.util.RequestParams
 import tech.kzen.auto.platform.decodeURI
+import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.*

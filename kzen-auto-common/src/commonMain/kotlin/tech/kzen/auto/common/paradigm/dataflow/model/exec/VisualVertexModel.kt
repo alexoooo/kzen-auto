@@ -1,41 +1,41 @@
 package tech.kzen.auto.common.paradigm.dataflow.model.exec
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
-import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.common.util.Digestible
+import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.common.util.digest.Digestible
 
 
 // TODO: add support for logging (possibly with log levels)
 data class VisualVertexModel(
-        /**
-         * If true, then the below values, which refer to the "current" time, are potentially stale.
-         */
-        val running: Boolean,
+    /**
+     * If true, then the below values, which refer to the "current" time, are potentially stale.
+     */
+    val running: Boolean,
 
-        /**
-         * Null means stateless
-         */
-        val state: ExecutionValue?,
+    /**
+     * Null means stateless
+     */
+    val state: ExecutionValue?,
 
-        /**
-         * Null either no output or wasn't processed yet
-         */
-        val message: ExecutionValue?,
+    /**
+     * Null either no output or wasn't processed yet
+     */
+    val message: ExecutionValue?,
 
-        /**
-         * Might be from stream or batch, visually there's no distinction
-         */
-        val hasNext: Boolean,
+    /**
+     * Might be from stream or batch, visually there's no distinction
+     */
+    val hasNext: Boolean,
 
-        /**
-         * Number of times executed in current block context, reset to zero and end of block
-         */
-        val epoch: Int,
+    /**
+     * Number of times executed in current block context, reset to zero and end of block
+     */
+    val epoch: Int,
 
-        /**
-         * If present, means something went wrong
-         */
-        val error: String?
+    /**
+     * If present, means something went wrong
+     */
+    val error: String?
 ):
     Digestible
 {

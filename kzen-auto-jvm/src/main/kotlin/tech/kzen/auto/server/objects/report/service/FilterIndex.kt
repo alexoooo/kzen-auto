@@ -4,7 +4,7 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.util.WorkUtils
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.digest.Digest
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -15,6 +15,7 @@ class FilterIndex(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        @Suppress("ConstPropertyName")
         const val indexDirName = "index"
     }
 

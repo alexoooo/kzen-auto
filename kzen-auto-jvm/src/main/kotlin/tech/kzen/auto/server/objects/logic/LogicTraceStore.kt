@@ -1,10 +1,6 @@
 package tech.kzen.auto.server.objects.logic
 
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
-import tech.kzen.auto.common.paradigm.common.model.ExecutionSuccess
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicConventions
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
@@ -14,6 +10,10 @@ import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceQuery
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceSnapshot
 import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
+import tech.kzen.lib.common.exec.ExecutionRequest
+import tech.kzen.lib.common.exec.ExecutionResult
+import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath

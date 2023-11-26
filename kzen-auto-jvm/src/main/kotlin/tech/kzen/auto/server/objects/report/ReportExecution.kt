@@ -11,9 +11,6 @@ import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
-import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
-import tech.kzen.auto.common.paradigm.common.model.ExecutionResult
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.definition.ReportDefinition
@@ -48,6 +45,9 @@ import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.auto.server.util.DisruptorUtils
+import tech.kzen.lib.common.exec.ExecutionRequest
+import tech.kzen.lib.common.exec.ExecutionResult
+import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean

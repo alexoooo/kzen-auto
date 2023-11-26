@@ -1,7 +1,6 @@
 package tech.kzen.auto.server.objects.sequence
 
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.paradigm.common.model.ExecutionFailure
 import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
 import tech.kzen.auto.common.paradigm.sequence.StepTrace
 import tech.kzen.auto.server.context.KzenAutoContext
@@ -13,6 +12,7 @@ import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.*
 import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
+import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.instance.GraphInstance

@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.paradigm.task.api
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionRequest
+import tech.kzen.lib.common.exec.ExecutionRequest
 
 
 interface ManagedTask {

@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.graph
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.common.paradigm.dataflow.api.StreamDataflow
 import tech.kzen.auto.common.paradigm.dataflow.api.output.StreamOutput
+import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.reflect.Reflect
 
 

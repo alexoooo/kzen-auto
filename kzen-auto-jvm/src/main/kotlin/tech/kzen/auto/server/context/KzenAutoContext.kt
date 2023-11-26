@@ -19,7 +19,6 @@ import tech.kzen.auto.server.objects.report.service.ColumnListingAction
 import tech.kzen.auto.server.objects.report.service.FileListingAction
 import tech.kzen.auto.server.objects.report.service.FilterIndex
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
-import tech.kzen.auto.server.service.DownloadClient
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
@@ -29,8 +28,6 @@ import tech.kzen.auto.server.service.plugin.MultiDefinitionRepository
 import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
 import tech.kzen.auto.server.service.v1.impl.ServerLogicController
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
-import tech.kzen.auto.server.service.webdriver.WebDriverInstaller
-import tech.kzen.auto.server.service.webdriver.WebDriverOptionDao
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
@@ -180,10 +177,9 @@ class KzenAutoContext(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val downloadClient = DownloadClient()
-
-    val webDriverRepo = WebDriverOptionDao()
-    val webDriverInstaller = WebDriverInstaller(downloadClient)
+//    private val downloadClient = DownloadClient()
+//    val webDriverRepo = WebDriverOptionDao()
+//    val webDriverInstaller = WebDriverInstaller(downloadClient)
     val webDriverContext = WebDriverContext()
 
 

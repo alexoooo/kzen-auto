@@ -1,6 +1,6 @@
 package tech.kzen.auto.platform
 
-import tech.kzen.lib.common.util.Digestible
+import tech.kzen.lib.common.util.digest.Digestible
 
 
 // see: https://github.com/chRyNaN/uri

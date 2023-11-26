@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.report.exec.trace
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
+import tech.kzen.lib.common.exec.ExecutionValue
 
 
 class ReportOutputTrace(

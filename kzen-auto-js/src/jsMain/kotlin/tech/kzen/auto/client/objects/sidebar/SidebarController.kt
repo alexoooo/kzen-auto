@@ -11,7 +11,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.auto.common.util.RequestParams
+import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -80,7 +80,7 @@ class SidebarController(
         snapshot: Any
     ) {
         val structure = state.structure
-                ?: return
+            ?: return
 
         val mainDocuments = AutoConventions.mainDocuments(structure.graphNotation)
 
@@ -113,8 +113,8 @@ class SidebarController(
 
 
     override fun handleNavigation(
-            documentPath: DocumentPath?,
-            parameters: RequestParams
+        documentPath: DocumentPath?,
+        parameters: RequestParams
     ) {
         setState {
             this.documentPath = documentPath
@@ -125,7 +125,7 @@ class SidebarController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val structure = state.structure
-                ?: return
+            ?: return
 
         div {
             css {

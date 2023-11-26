@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.exec.output.pivot.row.digest
 
 import com.google.common.base.Stopwatch
 import org.junit.Test
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.digest.Digest
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path

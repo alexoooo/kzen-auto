@@ -4,9 +4,9 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ResourceLocation
 import tech.kzen.lib.common.model.structure.scan.NotationScan
 import tech.kzen.lib.common.service.media.NotationMedia
-import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.common.util.DigestCache
 import tech.kzen.lib.common.util.ImmutableByteArray
+import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.common.util.digest.DigestCache
 
 
 class ClientRestNotationMedia(

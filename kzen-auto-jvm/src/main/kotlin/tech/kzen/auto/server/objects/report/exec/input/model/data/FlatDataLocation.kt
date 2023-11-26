@@ -2,8 +2,8 @@ package tech.kzen.auto.server.objects.report.exec.input.model.data
 
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.plugin.spec.DataEncodingSpec
-import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.common.util.Digestible
+import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.common.util.digest.Digestible
 
 
 data class FlatDataLocation(

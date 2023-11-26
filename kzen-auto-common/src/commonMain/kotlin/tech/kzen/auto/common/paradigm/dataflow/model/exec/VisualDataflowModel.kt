@@ -3,14 +3,14 @@ package tech.kzen.auto.common.paradigm.dataflow.model.exec
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.util.Digest
+import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.persistentMapOf
 import tech.kzen.lib.platform.collect.toPersistentMap
 
 
 data class VisualDataflowModel(
-        val vertices: PersistentMap<ObjectLocation, VisualVertexModel>
+    val vertices: PersistentMap<ObjectLocation, VisualVertexModel>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -21,26 +21,26 @@ data class VisualDataflowModel(
                 model: VisualDataflowModel
         ): Map<String, Any> {
             return model
-                    .vertices
-                    .mapKeys {
-                        it.key.asString()
-                    }
-                    .mapValues {
-                        VisualVertexModel.toJsonCollection(it.value)
-                    }
+                .vertices
+                .mapKeys {
+                    it.key.asString()
+                }
+                .mapValues {
+                    VisualVertexModel.toJsonCollection(it.value)
+                }
         }
 
 
         @Suppress("UNCHECKED_CAST")
         fun fromCollection(
-                collection: Map<String, Any>
+            collection: Map<String, Any>
         ): VisualDataflowModel {
             return VisualDataflowModel(collection
-                    .map {
-                        ObjectLocation.parse(it.key) to
-                                VisualVertexModel.fromCollection(it.value as Map<String, Any?>)
-                    }
-                    .toPersistentMap()
+                .map {
+                    ObjectLocation.parse(it.key) to
+                        VisualVertexModel.fromCollection(it.value as Map<String, Any?>)
+                }
+                .toPersistentMap()
             )
         }
     }
@@ -48,25 +48,25 @@ data class VisualDataflowModel(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun put(
-            vertexLocation: ObjectLocation,
-            newModel: VisualVertexModel
+        vertexLocation: ObjectLocation,
+        newModel: VisualVertexModel
     ): VisualDataflowModel {
         return VisualDataflowModel(
-                vertices.put(vertexLocation, newModel))
+            vertices.put(vertexLocation, newModel))
     }
 
 
     fun remove(
-            objectLocation: ObjectLocation
+        objectLocation: ObjectLocation
     ): VisualDataflowModel {
         return VisualDataflowModel(
-                vertices.remove(objectLocation))
+            vertices.remove(objectLocation))
     }
 
 
     fun rename(from: ObjectLocation, newName: ObjectName): VisualDataflowModel {
         val state = vertices[from]
-                ?: return this
+            ?: return this
 
         val newNamePath = from.objectPath.copy(name = newName)
         val newNameLocation = from.copy(objectPath = newNamePath)

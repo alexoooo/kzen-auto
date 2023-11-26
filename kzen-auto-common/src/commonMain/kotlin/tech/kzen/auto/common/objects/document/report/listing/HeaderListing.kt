@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.objects.document.report.listing
 
-import tech.kzen.lib.common.util.Digest
-import tech.kzen.lib.common.util.Digestible
+import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.common.util.digest.Digestible
 
 
 data class HeaderListing(

@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.paradigm.common.v1.trace.model
 
-import tech.kzen.auto.common.paradigm.common.model.ExecutionValue
+import tech.kzen.lib.common.exec.ExecutionValue
 
 // {LogicTracePath -> value}?
 data class LogicTraceSnapshot(
