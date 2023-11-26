@@ -5,6 +5,7 @@ import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.common.paradigm.sequence.StepTrace
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
+import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.model.ActiveStepModel
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.model.*
@@ -30,8 +31,9 @@ class MultiStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.empty
+    override fun definition(): SequenceStepDefinition {
+        return SequenceStepDefinition.of(
+            TupleDefinition.empty)
     }
 
 

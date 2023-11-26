@@ -4,6 +4,7 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
+import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.objects.sequence.step.control.MultiStep
 import tech.kzen.auto.server.service.v1.StatefulLogicElement
@@ -56,9 +57,13 @@ class MappingStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.ofMain(
-            LogicType(TypeMetadata(ClassNames.kotlinList, listOf(TypeMetadata.any), false)))
+    override fun definition(): SequenceStepDefinition {
+        return SequenceStepDefinition.of(
+            TupleDefinition.ofMain(LogicType(
+                TypeMetadata(
+                    ClassNames.kotlinList,
+                    listOf(TypeMetadata.any),
+                    false))))
     }
 
 

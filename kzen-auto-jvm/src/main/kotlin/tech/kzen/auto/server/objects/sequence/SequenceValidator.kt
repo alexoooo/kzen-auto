@@ -59,11 +59,12 @@ class SequenceValidator: DetachedAction {
                     StepValidation(null, "Not found")
             }
             else {
-                val valueDefinition = instance.valueDefinition()
+                val valueDefinition = instance.definition()
 
-                val logicType = valueDefinition.find(TupleComponentName.main)
+                val typeMetadata = valueDefinition.returnValueDefinition?.find(TupleComponentName.main)?.metadata
+
                 stepValidations[stepObjectLocation] =
-                    StepValidation(logicType?.metadata, null)
+                    StepValidation(typeMetadata, valueDefinition.validationError)
             }
         }
 

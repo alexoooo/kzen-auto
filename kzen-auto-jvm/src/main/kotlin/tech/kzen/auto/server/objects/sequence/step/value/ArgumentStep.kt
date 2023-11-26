@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.sequence.step.value
 
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
@@ -31,8 +32,9 @@ class ArgumentStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.ofMain(LogicType.any)
+    override fun definition(): SequenceStepDefinition {
+        return SequenceStepDefinition.of(
+            TupleDefinition.ofMain(LogicType.any))
     }
 
 

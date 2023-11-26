@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.sequence.step.control
 
+import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.LogicExecutionFacade
@@ -36,8 +37,9 @@ class RunStep(
     }
 
 
-    override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.ofMain(LogicType.any)
+    override fun definition(): SequenceStepDefinition {
+        return SequenceStepDefinition.of(
+            TupleDefinition.ofMain(LogicType.any))
     }
 
 

@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.sequence.step.logic
 
+import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
@@ -20,8 +21,9 @@ class LogicalAndStep(
     TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.ofMain(LogicType.boolean)
+    override fun definition(): SequenceStepDefinition {
+        return SequenceStepDefinition.of(
+            TupleDefinition.ofMain(LogicType.boolean))
     }
 
 

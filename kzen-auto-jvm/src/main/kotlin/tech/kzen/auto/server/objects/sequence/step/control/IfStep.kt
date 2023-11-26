@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.sequence.step.control
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
+import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.StatefulLogicElement
 import tech.kzen.auto.server.service.v1.model.LogicResult
@@ -49,8 +50,9 @@ class IfStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.empty
+    override fun definition(): SequenceStepDefinition {
+        return SequenceStepDefinition.of(
+            TupleDefinition.empty)
     }
 
 

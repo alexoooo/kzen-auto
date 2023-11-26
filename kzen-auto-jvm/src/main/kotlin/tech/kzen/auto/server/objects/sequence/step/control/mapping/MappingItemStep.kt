@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.sequence.step.control.mapping
 
+import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
@@ -18,8 +19,9 @@ class MappingItemStep(
 ):
     TracingSequenceStep(selfLocation)
 {
-    override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.ofMain(LogicType.any)
+    override fun definition(): SequenceStepDefinition {
+        return SequenceStepDefinition.of(
+            TupleDefinition.ofMain(LogicType.any))
     }
 
 

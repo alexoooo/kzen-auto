@@ -1,10 +1,10 @@
 package tech.kzen.auto.server.objects.sequence.step.value
 
+import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
-import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.exec.TextExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -19,8 +19,8 @@ class DisplayValueStep(
     TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.empty
+    override fun definition(): SequenceStepDefinition {
+        return SequenceStepDefinition.empty
     }
 
 

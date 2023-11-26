@@ -4,12 +4,12 @@ import org.openqa.selenium.Keys
 import org.openqa.selenium.OutputType
 import tech.kzen.auto.common.objects.document.feature.TargetSpec
 import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
 import tech.kzen.auto.server.objects.sequence.model.StepContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
-import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.auto.server.service.vision.VisionUtils
 import tech.kzen.lib.common.exec.BinaryExecutionValue
@@ -25,8 +25,8 @@ class BrowserFocusStep(
     TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun valueDefinition(): TupleDefinition {
-        return TupleDefinition.empty
+    override fun definition(): SequenceStepDefinition {
+        return SequenceStepDefinition.empty
     }
 
 
