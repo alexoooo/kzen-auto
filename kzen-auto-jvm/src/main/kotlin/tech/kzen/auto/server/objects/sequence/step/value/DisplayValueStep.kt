@@ -2,7 +2,8 @@ package tech.kzen.auto.server.objects.sequence.step.value
 
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
@@ -19,19 +20,19 @@ class DisplayValueStep(
     TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun definition(): SequenceStepDefinition {
+    override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition {
         return SequenceStepDefinition.empty
     }
 
 
-    override fun continueOrStart(stepContext: StepContext): LogicResult {
-        val step = stepContext.activeSequenceModel.steps[text]
+    override fun continueOrStart(sequenceExecutionContext: SequenceExecutionContext): LogicResult {
+        val step = sequenceExecutionContext.activeSequenceModel.steps[text]
         val value = step?.value?.mainComponentValue()
 
         val text = value?.toString() ?: "<null>"
         val executionValue = TextExecutionValue(text)
 
-        traceDetail(stepContext, executionValue)
+        traceDetail(sequenceExecutionContext, executionValue)
 
         return LogicResultSuccess(TupleValue.ofMain(text))
     }

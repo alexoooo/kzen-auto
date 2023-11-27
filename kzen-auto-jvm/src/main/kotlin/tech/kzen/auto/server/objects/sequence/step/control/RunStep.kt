@@ -2,7 +2,8 @@ package tech.kzen.auto.server.objects.sequence.step.control
 
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.LogicExecutionFacade
 import tech.kzen.auto.server.service.v1.StatefulLogicElement
 import tech.kzen.auto.server.service.v1.model.*
@@ -37,14 +38,14 @@ class RunStep(
     }
 
 
-    override fun definition(): SequenceStepDefinition {
+    override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition {
         return SequenceStepDefinition.of(
             TupleDefinition.ofMain(LogicType.any))
     }
 
 
-    override fun continueOrStart(stepContext: StepContext): LogicResult {
-        val command = stepContext.logicControl.pollCommand()
+    override fun continueOrStart(sequenceExecutionContext: SequenceExecutionContext): LogicResult {
+        val command = sequenceExecutionContext.logicControl.pollCommand()
         if (command == LogicCommand.Cancel) {
             pausedExecution?.close()
             pausedExecution = null
@@ -58,12 +59,12 @@ class RunStep(
                 existing
             }
             else {
-                val created = stepContext.logicHandleFacade.start(instructions)
+                val created = sequenceExecutionContext.logicHandleFacade.start(instructions)
 
                 val argumentTupleComponents = arguments.map {
                     TupleComponentValue(
                         TupleComponentName(it.key),
-                        stepContext.activeSequenceModel.steps[it.value]?.value?.mainComponentValue())
+                        sequenceExecutionContext.activeSequenceModel.steps[it.value]?.value?.mainComponentValue())
                 }
 
                 val argumentValue = TupleValue(argumentTupleComponents)
@@ -86,7 +87,7 @@ class RunStep(
                 }
                 else {
                     if (runResult is LogicResultSuccess) {
-                        traceValue(stepContext, runResult.value.mainComponentValue())
+                        traceValue(sequenceExecutionContext, runResult.value.mainComponentValue())
                     }
 
                     execution.close()

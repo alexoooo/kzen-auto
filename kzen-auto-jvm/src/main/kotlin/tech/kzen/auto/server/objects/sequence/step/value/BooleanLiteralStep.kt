@@ -3,7 +3,8 @@ package tech.kzen.auto.server.objects.sequence.step.value
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
 import tech.kzen.auto.server.service.v1.model.LogicType
@@ -27,18 +28,18 @@ class BooleanLiteralStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun definition(): SequenceStepDefinition {
+    override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition {
         return SequenceStepDefinition.of(
             TupleDefinition.ofMain(LogicType.boolean))
     }
 
 
     override fun continueOrStart(
-        stepContext: StepContext
+        sequenceExecutionContext: SequenceExecutionContext
     ): LogicResult {
         logger.info("{} - value = {}", selfLocation, value)
 
-        traceValue(stepContext, value)
+        traceValue(sequenceExecutionContext, value)
 
         return LogicResultSuccess(
             TupleValue.ofMain(value))

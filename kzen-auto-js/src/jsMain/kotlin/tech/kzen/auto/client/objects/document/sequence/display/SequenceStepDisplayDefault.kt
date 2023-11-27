@@ -155,7 +155,7 @@ class SequenceStepDisplayDefault(
             .validationState
             .sequenceValidation
             ?.stepValidations
-            ?.get(props.common.objectLocation)
+            ?.get(props.common.objectLocation.objectPath)
 
         setState {
             this.isNextToRun = isNextToRun

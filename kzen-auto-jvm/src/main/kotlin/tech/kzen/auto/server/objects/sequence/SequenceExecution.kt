@@ -1,14 +1,15 @@
 package tech.kzen.auto.server.objects.sequence
 
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
+import tech.kzen.auto.common.objects.document.sequence.model.SequenceTree
 import tech.kzen.auto.common.objects.document.sequence.model.StepTrace
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.ActiveSequenceModel
 import tech.kzen.auto.server.objects.sequence.model.ActiveStepModel
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.*
 import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
@@ -98,13 +99,19 @@ class SequenceExecution(
         }
         previousGraphInstance = graphInstance
 
-        val stepContext = StepContext(
+        val graphNotation = graphDefinition.graphStructure.graphNotation
+        val validation = SequenceValidator.validate(documentPath, graphNotation, graphInstance)
+        val sequenceTree = SequenceTree.read(graphNotation.documents[documentPath]!!)
+
+        val stepContext = SequenceExecutionContext(
             logicControl,
             activeSequenceModel,
             logicHandleFacade,
             logicTraceHandle,
             graphInstance,
             arguments,
+            sequenceTree,
+            validation
             /*topLevel*/)
 
         val step = graphInstance[objectLocation]!!.reference as SequenceStep

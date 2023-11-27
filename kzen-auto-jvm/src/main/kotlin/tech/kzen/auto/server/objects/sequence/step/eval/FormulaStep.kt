@@ -3,18 +3,23 @@
 package tech.kzen.auto.server.objects.sequence.step.eval
 
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.sequence.model.SequenceTree
+import tech.kzen.auto.common.objects.document.sequence.model.SequenceValidation
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.compile.KotlinCode
 import tech.kzen.auto.server.service.v1.model.LogicResult
+import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
 import tech.kzen.auto.server.service.v1.model.LogicType
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.ClassName
@@ -32,8 +37,6 @@ class FormulaStep(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val logger = LoggerFactory.getLogger(FormulaStep::class.java)
-
-        private val anyNullable = TypeMetadata(ClassNames.kotlinAny, listOf(), true)
 
         private const val inferredTypePrefix = "inferred type is "
         private const val inferredTypeSuffix = " but "
@@ -112,25 +115,39 @@ class FormulaStep(
 
     //-----------------------------------------------------------------------------------------------------------------
     @Suppress("FoldInitializerAndIfToElvis", "RedundantSuppression")
-    override fun definition(): SequenceStepDefinition {
+    override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition? {
         val compiler = KzenAutoContext.global().cachedKotlinCompiler
         val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
 
-        val anyNullableCode = generateCode("Any?")
+        val predecessorTypesNullable = processorTypes(
+            sequenceDefinitionContext.sequenceTree, sequenceDefinitionContext.sequenceValidation)
+
+        val predecessorTypes = predecessorTypesNullable
+            .filter { it.value != null }
+            .mapValues { it.value!! }
+
+        if (predecessorTypes.size != predecessorTypesNullable.size) {
+            return null
+        }
+
+        val anyNullableCode = generateCode(
+            "Any?", predecessorTypes)
         val anyNullableError = compiler.tryCompile(anyNullableCode, classLoader)
         if (anyNullableError != null) {
             return SequenceStepDefinition(
-                TupleDefinition.ofMain(LogicType(anyNullable)),
+                TupleDefinition.ofMain(LogicType(TypeMetadata.anyNullable)),
                 anyNullableError)
         }
 
-        val anyCode = generateCode("Any")
+        val anyCode = generateCode(
+            "Any", predecessorTypes)
         val anyError = compiler.tryCompile(anyCode, classLoader)
 
         val nullable = anyError != null
         val nullableSuffix = if (nullable) { "?" } else { "" }
 
-        val stringCode = generateCode("String$nullableSuffix")
+        val stringCode = generateCode(
+            "String$nullableSuffix", predecessorTypes)
         val stringError = compiler.tryCompile(stringCode, classLoader)
 
         if (stringError == null) {
@@ -169,50 +186,107 @@ class FormulaStep(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun continueOrStart(
-        stepContext: StepContext
+        sequenceExecutionContext: SequenceExecutionContext
     ): LogicResult {
         logger.info("{} - value = {}", selfLocation, code)
 
         val compiler = KzenAutoContext.global().cachedKotlinCompiler
+//        val graphDefinitionAttempt = KzenAutoContext.global().graphStore.graphDefinition()
         val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
 
-        val code = generateCode("Any?")
+        val predecessorTypesNullable = processorTypes(
+            sequenceExecutionContext.sequenceTree, sequenceExecutionContext.sequenceValidation)
 
-        val error = compiler.tryCompile(code, classLoader)
-        check(error == null) {
-            "Unable to compile: $error - $code"
+        val predecessorTypes = predecessorTypesNullable
+            .filter { it.value != null }
+            .mapValues { it.value!! }
+
+        if (predecessorTypes.size != predecessorTypesNullable.size) {
+            val missingPredecessor = predecessorTypesNullable.filter { it.value == null }.keys
+            return LogicResultFailed("Can't determine type: $missingPredecessor")
         }
 
-        val clazz = compiler.tryLoad(code, classLoader)
+        val generatedCode = generateCode(
+            "Any?", predecessorTypes)
+
+        val error = compiler.tryCompile(generatedCode, classLoader)
+        check(error == null) {
+            "Unable to compile: $error - $generatedCode"
+        }
+
+        val clazz = compiler.tryLoad(generatedCode, classLoader)
         check(clazz != null) {
-            "Unable to load: $code"
+            "Unable to load: $generatedCode"
         }
 
         @Suppress("UNCHECKED_CAST")
         val classCast = clazz as Class<StepExpression>
 
         val instance = classCast.getDeclaredConstructor().newInstance()
-        val value = instance.evaluate()
-        println("Value: $value")
 
-        traceValue(stepContext, value.toString())
+        val predecessorValues = predecessorTypes.map {
+            val objectLocation = selfLocation.documentPath.toObjectLocation(it.key)
+            val step = sequenceExecutionContext.activeSequenceModel.steps[objectLocation]
+            step?.value?.mainComponentValue()
+        }
+
+        val value = instance.evaluate(predecessorValues)
+        //println("Value: $value")
+
+        traceValue(sequenceExecutionContext, value.toString())
 
         return LogicResultSuccess(
             TupleValue.ofMain(value))
     }
 
 
-    private fun generateCode(returnType: String): KotlinCode {
+    private fun processorTypes(
+        sequenceTree: SequenceTree,
+        sequenceValidation: SequenceValidation
+    ):
+        Map<ObjectPath, TypeMetadata?>
+    {
+        val builder = mutableMapOf<ObjectPath, TypeMetadata?>()
+        val predecessors = sequenceTree.predecessors(selfLocation.objectPath)
+
+        for (predecessor in predecessors) {
+            val typeMetadata = sequenceValidation.stepValidations[predecessor]?.typeMetadata
+            builder[predecessor] = typeMetadata
+        }
+
+        return builder
+    }
+
+
+    private fun generateCode(
+        returnType: String,
+        predecessorTypes: Map<ObjectPath, TypeMetadata>
+    ): KotlinCode {
         val sanitizedName = sanitizeName(selfLocation.objectPath.name.value)
         val mainClassName = "Eval_$sanitizedName"
 
-        val imports = generateImports()
+        val imports = generateImports(predecessorTypes.values)
 
-        val code = """
+        val predecessorAccessors = predecessorTypes
+            .entries
+            .withIndex()
+            .map {
+                val entry = it.value
+                "val `${entry.key.name.value}` get(): ${entry.value.toSimple()} {" +
+                "    return predecessorValues[${it.index}] as ${entry.value.toSimple()}" +
+                "}"
+            }
+
+        val generatedCode = """
 $imports
 
 class $mainClassName: ${ StepExpression::class.java.simpleName } {
-    override fun evaluate(): $returnType {
+    private var predecessorValues: List<Any?> = listOf()
+
+    ${predecessorAccessors.joinToString("\n")}
+
+    override fun evaluate(predecessorValues: List<Any?>): $returnType {
+        this.predecessorValues = predecessorValues
         return run {
 $code
         }
@@ -221,15 +295,18 @@ $code
 """
         return KotlinCode(
             mainClassName,
-            code)
+            generatedCode)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun generateImports(): String {
-        val classImports = setOf(
-            StepExpression::class.java.name
-        )
+    private fun generateImports(importTypeMetadata: Collection<TypeMetadata>): String {
+        val classNames = importTypeMetadata.flatMap { it.classNames() }.toSet()
+
+        val basicClassNames = setOf(
+            StepExpression::class.java.name)
+
+        val classImports = basicClassNames + classNames
 
         return classImports.joinToString("\n") {
             "import $it"

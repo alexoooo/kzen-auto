@@ -5,7 +5,8 @@ import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.objects.sequence.step.control.MultiStep
 import tech.kzen.auto.server.service.v1.Logic
 import tech.kzen.auto.server.service.v1.LogicControl
@@ -83,12 +84,12 @@ class SequenceDocument(
     private val sequenceStepDelegate = MultiStep(steps)
 
 
-    override fun definition(): SequenceStepDefinition {
-        return sequenceStepDelegate.definition()
+    override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition {
+        return sequenceStepDelegate.definition(sequenceDefinitionContext)
     }
 
 
-    override fun continueOrStart(stepContext: StepContext): LogicResult {
-        return sequenceStepDelegate.continueOrStart(stepContext)
+    override fun continueOrStart(sequenceExecutionContext: SequenceExecutionContext): LogicResult {
+        return sequenceStepDelegate.continueOrStart(sequenceExecutionContext)
     }
 }

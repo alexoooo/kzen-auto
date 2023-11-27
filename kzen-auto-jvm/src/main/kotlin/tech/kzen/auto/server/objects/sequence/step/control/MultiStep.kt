@@ -7,7 +7,8 @@ import tech.kzen.auto.common.objects.document.sequence.model.StepTrace
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.model.ActiveStepModel
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
@@ -31,13 +32,13 @@ class MultiStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun definition(): SequenceStepDefinition {
+    override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition {
         return SequenceStepDefinition.of(
             TupleDefinition.empty)
     }
 
 
-    override fun continueOrStart(stepContext: StepContext): LogicResult {
+    override fun continueOrStart(sequenceExecutionContext: SequenceExecutionContext): LogicResult {
         // TODO: handle step-into via RunStep while paused
 //        var executeNextIfPaused = stepContext.topLevel
         var executeNextIfPaused = true
@@ -45,10 +46,10 @@ class MultiStep(
         var lastSuccessValue: TupleValue = TupleValue.empty
 
         while (true) {
-            val nextToRun = getAndPublishNextToRun(stepContext)
+            val nextToRun = getAndPublishNextToRun(sequenceExecutionContext)
                 ?: return LogicResultSuccess(lastSuccessValue)
 
-            val logicCommand = stepContext.logicControl.pollCommand()
+            val logicCommand = sequenceExecutionContext.logicControl.pollCommand()
             if (logicCommand == LogicCommand.Cancel) {
                 return LogicResultCancelled
             }
@@ -59,20 +60,20 @@ class MultiStep(
                 executeNextIfPaused = false
             }
 
-            val stepModel = stepContext.activeSequenceModel.steps.getOrPut(nextToRun) { ActiveStepModel() }
-            val step = stepContext.graphInstance[nextToRun]?.reference as? SequenceStep
+            val stepModel = sequenceExecutionContext.activeSequenceModel.steps.getOrPut(nextToRun) { ActiveStepModel() }
+            val step = sequenceExecutionContext.graphInstance[nextToRun]?.reference as? SequenceStep
                 ?: throw IllegalStateException("Next step not found: $nextToRun")
 
             val logicTracePath = LogicTracePath.ofObjectLocation(nextToRun)
             stepModel.traceState = StepTrace.State.Running
-            stepContext.logicTraceHandle.set(
+            sequenceExecutionContext.logicTraceHandle.set(
                 logicTracePath,
                 stepModel.trace().asExecutionValue())
 
             @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
             val result =
                 try {
-                    step.continueOrStart(stepContext)
+                    step.continueOrStart(sequenceExecutionContext)
                 }
                 catch (t: Throwable) {
                     logger.warn("Step error - {}", nextToRun, t)
@@ -84,7 +85,7 @@ class MultiStep(
                     stepModel.value = result.value
                     stepModel.error = null
                     stepModel.traceState = StepTrace.State.Done
-                    stepContext.logicTraceHandle.set(
+                    sequenceExecutionContext.logicTraceHandle.set(
                         logicTracePath,
                         stepModel.trace().asExecutionValue())
                     lastSuccessValue = result.value
@@ -94,10 +95,10 @@ class MultiStep(
                     stepModel.value = null
                     stepModel.error = result.message
                     stepModel.traceState = StepTrace.State.Done
-                    stepContext.logicTraceHandle.set(
+                    sequenceExecutionContext.logicTraceHandle.set(
                         logicTracePath,
                         stepModel.trace().asExecutionValue())
-                    stepContext.logicTraceHandle.set(
+                    sequenceExecutionContext.logicTraceHandle.set(
                         SequenceConventions.nextStepTracePath,
                         NullExecutionValue
                     )
@@ -108,7 +109,7 @@ class MultiStep(
                     stepModel.value = null
                     stepModel.error = null
                     stepModel.traceState = StepTrace.State.Done
-                    stepContext.logicTraceHandle.set(
+                    sequenceExecutionContext.logicTraceHandle.set(
                         logicTracePath,
                         stepModel.trace().asExecutionValue())
                     return result
@@ -118,7 +119,7 @@ class MultiStep(
                     stepModel.value = null
                     stepModel.error = null
                     stepModel.traceState = StepTrace.State.Running
-                    stepContext.logicTraceHandle.set(
+                    sequenceExecutionContext.logicTraceHandle.set(
                         logicTracePath,
                         stepModel.trace().asExecutionValue())
                     return result
@@ -128,7 +129,7 @@ class MultiStep(
     }
 
 
-    private fun getAndPublishNextToRun(stepContext: StepContext): ObjectLocation? {
+    private fun getAndPublishNextToRun(stepContext: SequenceExecutionContext): ObjectLocation? {
         val nextToRun = nextToRun(stepContext)
 
         if (nextToRun == null) {
@@ -148,7 +149,7 @@ class MultiStep(
     }
 
 
-    private fun nextToRun(stepContext: StepContext): ObjectLocation? {
+    private fun nextToRun(stepContext: SequenceExecutionContext): ObjectLocation? {
         for (stepLocation in steps) {
             val model = stepContext.activeSequenceModel.steps.getOrPut(stepLocation) { ActiveStepModel() }
             if (model.traceState == StepTrace.State.Done) {

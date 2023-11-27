@@ -15,5 +15,7 @@ data class LogicType(
         val double = LogicType(TypeMetadata.double)
 //        val int = LogicType(TypeMetadata.int)
         val executionValue = LogicType(ExecutionValue.typeMetadata)
+
+        val anyNullable = LogicType(TypeMetadata.anyNullable)
     }
 }

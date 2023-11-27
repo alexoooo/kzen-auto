@@ -2,7 +2,8 @@ package tech.kzen.auto.server.objects.sequence.step.logic
 
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
 import tech.kzen.auto.server.service.v1.model.LogicType
@@ -21,14 +22,14 @@ class DivisibleCheckStep(
     TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun definition(): SequenceStepDefinition {
+    override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition {
         return SequenceStepDefinition.of(
             TupleDefinition.ofMain(LogicType.boolean))
     }
 
 
-    override fun continueOrStart(stepContext: StepContext): LogicResult {
-        val step = stepContext.activeSequenceModel.steps[number]
+    override fun continueOrStart(sequenceExecutionContext: SequenceExecutionContext): LogicResult {
+        val step = sequenceExecutionContext.activeSequenceModel.steps[number]
 
         val value = step?.value?.mainComponentValue()
         check(value is Number) {
@@ -46,7 +47,7 @@ class DivisibleCheckStep(
 
         val result = intValue % divisor == 0
 
-        traceDetail(stepContext, result)
+        traceDetail(sequenceExecutionContext, result)
 
         return LogicResultSuccess(
             TupleValue.ofMain(result))

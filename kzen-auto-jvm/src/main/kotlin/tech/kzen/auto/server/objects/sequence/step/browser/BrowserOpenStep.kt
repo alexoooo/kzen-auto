@@ -7,7 +7,8 @@ import org.openqa.selenium.remote.RemoteWebDriver
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
@@ -22,13 +23,13 @@ class BrowserOpenStep(
     TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun definition(): SequenceStepDefinition {
+    override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition {
         return SequenceStepDefinition.empty
     }
 
 
     override fun continueOrStart(
-        stepContext: StepContext
+        sequenceExecutionContext: SequenceExecutionContext
     ): LogicResult {
         WebDriverManager.chromedriver().setup()
 
@@ -55,7 +56,7 @@ class BrowserOpenStep(
         KzenAutoContext.global().webDriverContext.set(driver)
 
         val infoText = WebDriverManager.chromedriver().browserPath.orElse(null)
-        traceDetail(stepContext, infoText.toString())
+        traceDetail(sequenceExecutionContext, infoText.toString())
 
         return LogicResultSuccess(TupleValue.empty)
     }

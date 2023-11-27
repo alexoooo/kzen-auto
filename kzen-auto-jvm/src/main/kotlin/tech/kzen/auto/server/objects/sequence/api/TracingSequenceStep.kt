@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.sequence.api
 
 import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 
@@ -16,12 +16,12 @@ abstract class TracingSequenceStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun traceDetail(stepContext: StepContext, detail: Any?) {
+    fun traceDetail(stepContext: SequenceExecutionContext, detail: Any?) {
         traceDetail(stepContext, ExecutionValue.of(detail))
     }
 
 
-    fun traceDetail(stepContext: StepContext, detail: ExecutionValue) {
+    fun traceDetail(stepContext: SequenceExecutionContext, detail: ExecutionValue) {
         val activeModel = stepContext.activeSequenceModel.steps[selfLocation]!!
         activeModel.detail = detail
         stepContext.logicTraceHandle.set(
@@ -31,12 +31,12 @@ abstract class TracingSequenceStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun traceValue(stepContext: StepContext, displayValue: Any?) {
+    fun traceValue(stepContext: SequenceExecutionContext, displayValue: Any?) {
         traceValue(stepContext, ExecutionValue.of(displayValue))
     }
 
 
-    fun traceValue(stepContext: StepContext, displayValue: ExecutionValue) {
+    fun traceValue(stepContext: SequenceExecutionContext, displayValue: ExecutionValue) {
         val activeModel = stepContext.activeSequenceModel.steps[selfLocation]!!
         activeModel.displayValue = displayValue
         stepContext.logicTraceHandle.set(

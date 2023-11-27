@@ -6,7 +6,8 @@ import org.openqa.selenium.interactions.Actions
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
@@ -22,20 +23,20 @@ class BrowserEscapeStep(
     TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun definition(): SequenceStepDefinition {
+    override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition {
         return SequenceStepDefinition.empty
     }
 
 
     override fun continueOrStart(
-        stepContext: StepContext
+        sequenceExecutionContext: SequenceExecutionContext
     ): LogicResult {
         val driver = KzenAutoContext.global().webDriverContext.get()
 
         Actions(driver).sendKeys(Keys.ESCAPE).build().perform()
 
         val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
-        traceDetail(stepContext, BinaryExecutionValue(screenshotPng))
+        traceDetail(sequenceExecutionContext, BinaryExecutionValue(screenshotPng))
 
         return LogicResultSuccess(TupleValue.empty)
     }

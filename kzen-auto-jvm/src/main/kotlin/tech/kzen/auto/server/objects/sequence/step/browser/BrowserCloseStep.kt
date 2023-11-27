@@ -3,7 +3,8 @@ package tech.kzen.auto.server.objects.sequence.step.browser
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
@@ -18,18 +19,18 @@ class BrowserCloseStep(
     TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun definition(): SequenceStepDefinition {
+    override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition {
         return SequenceStepDefinition.empty
     }
 
 
     override fun continueOrStart(
-        stepContext: StepContext
+        sequenceExecutionContext: SequenceExecutionContext
     ): LogicResult {
         Thread.sleep(250)
         KzenAutoContext.global().webDriverContext.quit()
 
-        traceDetail(stepContext, "Browser closed")
+        traceDetail(sequenceExecutionContext, "Browser closed")
 
         return LogicResultSuccess(TupleValue.empty)
     }

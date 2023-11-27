@@ -2,7 +2,8 @@ package tech.kzen.auto.server.objects.sequence.step.logic
 
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.api.TracingSequenceStep
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
 import tech.kzen.auto.server.service.v1.model.LogicType
@@ -21,20 +22,20 @@ class LogicalAndStep(
     TracingSequenceStep(selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun definition(): SequenceStepDefinition {
+    override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition {
         return SequenceStepDefinition.of(
             TupleDefinition.ofMain(LogicType.boolean))
     }
 
 
-    override fun continueOrStart(stepContext: StepContext): LogicResult {
-        val conditionStep = stepContext.activeSequenceModel.steps[condition]
+    override fun continueOrStart(sequenceExecutionContext: SequenceExecutionContext): LogicResult {
+        val conditionStep = sequenceExecutionContext.activeSequenceModel.steps[condition]
         val conditionValue = conditionStep?.value?.mainComponentValue()
         check(conditionValue is Boolean) {
             "Boolean expected: $condition = $conditionValue"
         }
 
-        val andStep = stepContext.activeSequenceModel.steps[and]
+        val andStep = sequenceExecutionContext.activeSequenceModel.steps[and]
         val andValue = andStep?.value?.mainComponentValue()
         check(andValue is Boolean) {
             "Boolean expected: $and = $andValue"
@@ -42,7 +43,7 @@ class LogicalAndStep(
 
         val result = conditionValue && andValue
 
-        traceDetail(stepContext, result)
+        traceDetail(sequenceExecutionContext, result)
 
         return LogicResultSuccess(
             TupleValue.ofMain(result))

@@ -3,7 +3,8 @@ package tech.kzen.auto.server.objects.sequence.step.control
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
-import tech.kzen.auto.server.objects.sequence.model.StepContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
+import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.StatefulLogicElement
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultFailed
@@ -50,15 +51,15 @@ class IfStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun definition(): SequenceStepDefinition {
+    override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition {
         return SequenceStepDefinition.of(
             TupleDefinition.empty)
     }
 
 
-    override fun continueOrStart(stepContext: StepContext): LogicResult {
+    override fun continueOrStart(sequenceExecutionContext: SequenceExecutionContext): LogicResult {
         if (state == State.Initial) {
-            val conditionStep = stepContext.activeSequenceModel.steps[condition]
+            val conditionStep = sequenceExecutionContext.activeSequenceModel.steps[condition]
 
             val conditionValue = conditionStep?.value?.mainComponentValue()
             check(conditionValue is Boolean) {
@@ -84,7 +85,7 @@ class IfStep(
 
         val result =
             try {
-                step.continueOrStart(stepContext)
+                step.continueOrStart(sequenceExecutionContext)
             }
             catch (t: Throwable) {
                 logger.warn("Branch error - {}", step, t)
