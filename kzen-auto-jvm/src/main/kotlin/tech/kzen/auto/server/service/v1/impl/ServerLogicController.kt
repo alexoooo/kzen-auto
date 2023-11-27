@@ -3,8 +3,9 @@ package tech.kzen.auto.server.service.v1.impl
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.paradigm.common.v1.LogicController
-import tech.kzen.auto.common.paradigm.common.v1.model.*
+import tech.kzen.auto.common.paradigm.logic.run.LogicController
+import tech.kzen.auto.common.paradigm.logic.LogicConventions
+import tech.kzen.auto.common.paradigm.logic.run.model.*
 import tech.kzen.auto.server.objects.logic.LogicTraceStore
 import tech.kzen.auto.server.service.v1.Logic
 import tech.kzen.auto.server.service.v1.LogicExecutionFacade
@@ -270,7 +271,7 @@ class ServerLogicController(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ):
-        LogicRunResponse
+            LogicRunResponse
     {
         val state = stateOrNull
             ?: return LogicRunResponse.NotFound

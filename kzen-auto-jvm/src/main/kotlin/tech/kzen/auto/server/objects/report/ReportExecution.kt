@@ -11,7 +11,7 @@ import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.definition.ReportDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate

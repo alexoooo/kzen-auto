@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.sequence.model
 
-import tech.kzen.auto.common.paradigm.sequence.StepTrace
+import tech.kzen.auto.common.objects.document.sequence.model.StepTrace
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue

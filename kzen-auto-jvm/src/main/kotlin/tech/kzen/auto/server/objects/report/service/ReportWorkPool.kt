@@ -2,9 +2,9 @@ package tech.kzen.auto.server.objects.report.service
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunId
 import tech.kzen.auto.server.objects.report.model.ReportRunSignature
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.util.yaml.YamlMap

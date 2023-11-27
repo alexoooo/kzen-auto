@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.service.v1.model.context
 
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunFrameInfo
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunFrameInfo
 import tech.kzen.auto.server.service.v1.LogicExecution
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper

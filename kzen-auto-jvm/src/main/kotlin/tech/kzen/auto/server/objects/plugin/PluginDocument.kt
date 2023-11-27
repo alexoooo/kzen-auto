@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.plugin
 import com.google.common.io.Files
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.plugin.model.ReportDefinerDetail
-import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
+import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.common.util.data.FilePathJvm.toPath
 import tech.kzen.auto.plugin.definition.ReportDefiner

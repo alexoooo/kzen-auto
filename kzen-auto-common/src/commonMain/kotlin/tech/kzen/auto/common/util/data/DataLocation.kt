@@ -76,7 +76,7 @@ data class DataLocation(
 
         val asString = asString()
 
-        @Suppress("MoveVariableDeclarationIntoWhen")
+        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
         val lastSeparator = asString.lastIndexOf('/')
 
         return when (lastSeparator) {
@@ -89,7 +89,7 @@ data class DataLocation(
     fun innerExtension(): String {
         val fileName = fileName()
 
-        @Suppress("MoveVariableDeclarationIntoWhen")
+        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
         val outerExtension = outerExtension(fileName)
 
         return when (outerExtension) {
@@ -105,7 +105,7 @@ data class DataLocation(
 
 
     private fun outerExtension(fileName: String): String {
-        @Suppress("MoveVariableDeclarationIntoWhen")
+        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
         val dotIndex = fileName.lastIndexOf('.')
 
         return when (dotIndex) {
@@ -141,7 +141,7 @@ data class DataLocation(
                 simpleString
             }
 
-        @Suppress("MoveVariableDeclarationIntoWhen")
+        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
         val lastSeparator = withoutTrainingSlash.lastIndexOf('/')
 
         return when {

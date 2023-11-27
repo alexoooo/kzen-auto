@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.sequence.progress
 
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceSnapshot
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
+import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceSnapshot
 
 
 data class SequenceProgressState(

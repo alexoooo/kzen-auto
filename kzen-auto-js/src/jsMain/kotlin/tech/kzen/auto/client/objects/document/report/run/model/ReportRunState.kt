@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.run.model
 
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicStatus
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicStatus
 
 
 data class ReportRunState(

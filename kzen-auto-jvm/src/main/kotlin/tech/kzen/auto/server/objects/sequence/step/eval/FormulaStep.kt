@@ -106,11 +106,6 @@ class FormulaStep(
 
             return TypeMetadata(
                 simpleMatch, generics.mapNotNull { it }, nullable)
-
-//            val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
-//            classLoader.
-//
-//            return simpleMatch
         }
     }
 
@@ -164,22 +159,15 @@ class FormulaStep(
                 "Unable to parse inferred type: $inferredType")
         }
 
-        println("^^ ERR: $stringError")
+//        println("^^ ERR: $stringError")
 
         return SequenceStepDefinition(
             TupleDefinition.ofMain(LogicType(typeMetadata)),
-            anyNullableError)
+            null)
     }
 
 
-//    fun foo(): Any? {
-//        return run {
-//            return 1
-//        }
-////        return 0
-//    }
-
-
+    //-----------------------------------------------------------------------------------------------------------------
     override fun continueOrStart(
         stepContext: StepContext
     ): LogicResult {
@@ -237,6 +225,7 @@ $code
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun generateImports(): String {
         val classImports = setOf(
             StepExpression::class.java.name

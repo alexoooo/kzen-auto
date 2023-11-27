@@ -14,7 +14,7 @@ import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunFrameInfo
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunFrameInfo
 import web.cssom.NamedColor
 import web.cssom.em
 import web.cssom.px

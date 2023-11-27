@@ -9,18 +9,18 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 
 // TODO: one instance per execution frame (Graph)
 class GraphInstanceCreator(
-        private val graphStore: LocalGraphStore,
-        private val graphCreator: GraphCreator)
-{
+    private val graphStore: LocalGraphStore,
+    private val graphCreator: GraphCreator
+) {
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun create(objectLocation: ObjectLocation): ObjectInstance {
         val graphDefinition = graphStore
-                .graphDefinition()
-                .transitiveSuccessful()
-                .filterDefinitions(AutoConventions.serverAllowed)
+            .graphDefinition()
+            .transitiveSuccessful()
+            .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator
-                .createGraph(graphDefinition)
+            .createGraph(graphDefinition)
 
         return objectGraph[objectLocation]!!
     }

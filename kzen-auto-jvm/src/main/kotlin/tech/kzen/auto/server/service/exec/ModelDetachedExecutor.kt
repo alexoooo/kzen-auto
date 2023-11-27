@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.service.exec
 
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
-import tech.kzen.auto.common.paradigm.detached.service.DetachedExecutor
+import tech.kzen.auto.common.paradigm.detached.DetachedAction
+import tech.kzen.auto.common.paradigm.detached.DetachedExecutor
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadExecutor

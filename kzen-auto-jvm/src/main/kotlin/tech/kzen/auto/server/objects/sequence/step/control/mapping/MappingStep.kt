@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.sequence.step.control.mapping
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
+import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.model.StepContext

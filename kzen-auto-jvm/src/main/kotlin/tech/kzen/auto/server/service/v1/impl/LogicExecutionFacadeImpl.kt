@@ -1,9 +1,9 @@
 package tech.kzen.auto.server.service.v1.impl
 
 import kotlinx.datetime.Clock
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunId
 import tech.kzen.auto.server.objects.logic.LogicTraceStore
 import tech.kzen.auto.server.service.v1.*
 import tech.kzen.auto.server.service.v1.model.LogicResult

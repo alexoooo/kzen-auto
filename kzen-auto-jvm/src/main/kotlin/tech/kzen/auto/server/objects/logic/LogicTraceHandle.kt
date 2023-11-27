@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.logic
 
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceQuery
+import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
+import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.exec.ExecutionValue
 
 

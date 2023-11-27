@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.sequence
 
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
-import tech.kzen.auto.common.paradigm.sequence.StepTrace
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
+import tech.kzen.auto.common.objects.document.sequence.model.StepTrace
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep

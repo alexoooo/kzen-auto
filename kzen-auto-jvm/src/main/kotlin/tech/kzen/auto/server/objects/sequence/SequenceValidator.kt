@@ -2,9 +2,9 @@ package tech.kzen.auto.server.objects.sequence
 
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
-import tech.kzen.auto.common.paradigm.detached.api.DetachedAction
-import tech.kzen.auto.common.paradigm.sequence.SequenceValidation
-import tech.kzen.auto.common.paradigm.sequence.StepValidation
+import tech.kzen.auto.common.paradigm.detached.DetachedAction
+import tech.kzen.auto.common.objects.document.sequence.model.SequenceValidation
+import tech.kzen.auto.common.objects.document.sequence.model.StepValidation
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentName

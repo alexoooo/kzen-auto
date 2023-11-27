@@ -105,9 +105,9 @@ MappingStepCommander:
 #######################################################################################################################
 
 
-SelectSequenceStepEditor:
+SelectStepEditor:
   is: AttributeEditor
-  class: tech.kzen.auto.client.objects.document.sequence.display.edit.SelectSequenceStepEditor$Wrapper
+  class: tech.kzen.auto.client.objects.document.sequence.display.edit.SelectStepEditor$Wrapper
 
 
 SelectLogicEditor:

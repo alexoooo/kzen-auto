@@ -4,6 +4,7 @@ import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgress
 import tech.kzen.auto.client.objects.document.sequence.valid.SequenceValidationState
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
+import tech.kzen.auto.common.objects.document.sequence.model.SequenceTree
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -11,7 +12,8 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 
 data class SequenceState(
     val mainLocation: ObjectLocation,
-//    val mainDefinition: ObjectDefinition,
+    val documentNotation: DocumentNotation,
+    val sequenceTree: SequenceTree,
 
     val progress: SequenceProgressState = SequenceProgressState(),
     val validationState: SequenceValidationState = SequenceValidationState(),

@@ -9,6 +9,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.objects.document.sequence.model.SequenceTree
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 
@@ -19,12 +20,21 @@ class SequenceStore: ClientStateGlobal.Observer {
 //        const val debounceMillis = 1_500
         const val debounceMillis = 2_500
 //        const val debounceMillis = 5_000
+
+        private val allChangeTypes = ChangeType.entries.toSet()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
-        fun onSequenceState(sequenceState: SequenceState)
+        fun onSequenceState(sequenceState: SequenceState, changes: Set<ChangeType>)
+    }
+
+    enum class ChangeType {
+        Notation,
+        Progress,
+        Validation,
+        Error
     }
 
 
@@ -36,17 +46,6 @@ class SequenceStore: ClientStateGlobal.Observer {
     private var previousLogicTime: Instant = Instant.DISTANT_PAST
     private var previousDocumentNotation: DocumentNotation = DocumentNotation.empty
 
-//    private var refreshPending: Boolean = false
-//    private var previousRunning: Boolean = false
-//    private val refreshDebounce: FunctionWithDebounce = lodash.debounce({
-//        refreshPending = false
-//        async {
-//            refresh()
-//            scheduleRefresh()
-//        }
-//    }, debounceMillis)
-
-
     val progressStore = SequenceProgressStore(this)
     val validationStore = SequenceValidationStore(this)
 
@@ -56,7 +55,7 @@ class SequenceStore: ClientStateGlobal.Observer {
         observers.add(observer)
 
         state?.let {
-            observer.onSequenceState(it)
+            observer.onSequenceState(it, allChangeTypes)
         }
     }
 
@@ -67,9 +66,9 @@ class SequenceStore: ClientStateGlobal.Observer {
     }
 
 
-    private fun publish(nextState: SequenceState) {
+    private fun publish(nextState: SequenceState, changes: Set<ChangeType>) {
         for (observer in observers) {
-            observer.onSequenceState(nextState)
+            observer.onSequenceState(nextState, changes)
         }
     }
 
@@ -101,29 +100,38 @@ class SequenceStore: ClientStateGlobal.Observer {
         val documentNotation = clientState.graphStructure().graphNotation.documents[mainLocation.documentPath]
             ?: return
 
-//        val mainDefinition = mainDefinition(clientState, mainLocation)
-
         val previousState = state
         val nextState = when {
-            previousState == null || mainLocation != previousState.mainLocation ->
+            previousState == null || mainLocation != previousState.mainLocation -> {
+                val sequenceTree = SequenceTree.read(documentNotation)
                 SequenceState(
                     mainLocation,
-//                    mainDefinition
-                )
+                    documentNotation,
+                    sequenceTree)
+            }
+
+            documentNotation != previousState.documentNotation -> {
+                val sequenceTree = SequenceTree.read(documentNotation)
+                if (previousState.sequenceTree == sequenceTree) {
+                    previousState.copy(
+                        documentNotation = documentNotation)
+                }
+                else {
+                    previousState.copy(
+                        documentNotation = documentNotation,
+                        sequenceTree = sequenceTree)
+                }
+            }
 
             else ->
                 previousState
-//                previousState.copy(mainDefinition = mainDefinition)
         }
 
         val initial =
             previousState == null ||
             previousState.mainLocation != nextState.mainLocation
 
-        if (state != nextState) {
-            state = nextState
-            publish(nextState)
-        }
+        updateIfChanged(nextState)
 
         if (initial) {
             refreshProgressAsync()
@@ -141,19 +149,6 @@ class SequenceStore: ClientStateGlobal.Observer {
             }
         }
     }
-
-
-//    private fun mainDefinition(clientState: ClientState, mainLocation: ObjectLocation): ObjectDefinition {
-//        val mainDefinition = clientState
-//            .graphDefinitionAttempt
-//            .objectDefinitions[mainLocation]
-//
-//        check(mainDefinition != null) {
-//            "Sequence definition missing: $mainLocation - ${clientState.graphDefinitionAttempt.failures[mainLocation]}"
-//        }
-//
-//        return mainDefinition
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -197,21 +192,43 @@ class SequenceStore: ClientStateGlobal.Observer {
             ?: return
 
         val updated = updater(initializedState)
-
-        if (state != updated) {
-            state = updated
-            publish(updated)
-//            scheduleRefresh()
-        }
+        updateIfChanged(updated)
     }
 
 
-    fun update(nextState: SequenceState) {
-        if (state != nextState) {
-            state = nextState
-            publish(nextState)
-//            scheduleRefresh()
+    fun updateIfChanged(nextState: SequenceState) {
+        if (state == nextState) {
+            return
         }
+
+        val changes = detectChanges(nextState)
+        state = nextState
+        publish(nextState, changes)
+    }
+
+
+    private fun detectChanges(nextState: SequenceState): Set<ChangeType> {
+        val changes = mutableSetOf<ChangeType>()
+
+        if (state?.mainLocation != nextState.mainLocation ||
+                state?.documentNotation != nextState.documentNotation
+        ) {
+            changes.add(ChangeType.Notation)
+        }
+
+        if (state?.progress != nextState.progress) {
+            changes.add(ChangeType.Progress)
+        }
+
+        if (state?.validationState != nextState.validationState) {
+            changes.add(ChangeType.Validation)
+        }
+
+        if (state?.globalError != nextState.globalError) {
+            changes.add(ChangeType.Error)
+        }
+
+        return allChangeTypes
     }
 
 
@@ -220,32 +237,4 @@ class SequenceStore: ClientStateGlobal.Observer {
             .withValidation(updater)
         }
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    private fun scheduleRefresh() {
-//        val running = state?.run?.logicStatus?.active != null
-//
-//        if (refreshPending) {
-//            return
-//        }
-//
-//        if (running) {
-//            refreshPending = true
-//            refreshDebounce.apply()
-//        }
-//        else if (previousRunning) {
-//            cancelRefresh()
-////            output.lookupOutputWithFallbackAsync()
-////            run.lookupProgressOfflineAsync()
-////            previewFiltered.lookupSummaryWithFallbackAsync()
-//        }
-//        previousRunning = running
-//    }
-//
-//
-//    private fun cancelRefresh() {
-//        refreshDebounce.cancel()
-//        refreshPending = false
-//    }
 }

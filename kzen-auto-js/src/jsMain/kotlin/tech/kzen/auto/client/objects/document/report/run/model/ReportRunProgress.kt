@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.run.model
 
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceSnapshot
+import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceSnapshot
 
 
 data class ReportRunProgress(

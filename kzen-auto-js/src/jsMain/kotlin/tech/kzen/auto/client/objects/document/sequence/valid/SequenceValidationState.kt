@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.sequence.valid
 
-import tech.kzen.auto.common.paradigm.sequence.SequenceValidation
+import tech.kzen.auto.common.objects.document.sequence.model.SequenceValidation
 
 
 data class SequenceValidationState(

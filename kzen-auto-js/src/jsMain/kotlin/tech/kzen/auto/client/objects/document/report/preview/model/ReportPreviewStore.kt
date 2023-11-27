@@ -7,9 +7,9 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicConventions
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
+import tech.kzen.auto.common.paradigm.logic.LogicConventions
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 

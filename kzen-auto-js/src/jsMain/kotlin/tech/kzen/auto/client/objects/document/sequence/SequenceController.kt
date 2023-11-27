@@ -160,7 +160,7 @@ class SequenceController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onSequenceState(sequenceState: SequenceState) {
+    override fun onSequenceState(sequenceState: SequenceState, changes: Set<SequenceStore.ChangeType>) {
         setState {
             this.sequenceState = sequenceState
         }

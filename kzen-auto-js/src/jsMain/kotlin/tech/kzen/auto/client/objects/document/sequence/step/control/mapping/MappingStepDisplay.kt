@@ -28,8 +28,8 @@ import tech.kzen.auto.client.wrap.material.ArrowForwardIcon
 import tech.kzen.auto.client.wrap.material.SubdirectoryArrowLeftIcon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
-import tech.kzen.auto.common.paradigm.sequence.StepTrace
+import tech.kzen.auto.common.objects.document.sequence.model.StepTrace
+import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.AttributeLocation
@@ -144,7 +144,7 @@ class MappingStepDisplay(
     }
 
 
-    override fun onSequenceState(sequenceState: SequenceState) {
+    override fun onSequenceState(sequenceState: SequenceState, changes: Set<SequenceStore.ChangeType>) {
         val traceValues: Map<LogicTracePath, ExecutionValue>? = sequenceState
             .progress
             .logicTraceSnapshot

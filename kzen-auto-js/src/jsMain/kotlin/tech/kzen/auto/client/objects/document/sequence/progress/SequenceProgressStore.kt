@@ -6,13 +6,13 @@ import tech.kzen.auto.client.util.ClientError
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicConventions
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTracePath
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceQuery
-import tech.kzen.auto.common.paradigm.common.v1.trace.model.LogicTraceSnapshot
+import tech.kzen.auto.common.paradigm.logic.LogicConventions
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunId
+import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
+import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceQuery
+import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 

@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.sequence
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunExecutionId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition

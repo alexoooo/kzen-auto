@@ -12,7 +12,7 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicConventions
+import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import web.cssom.em

@@ -3,9 +3,9 @@ package tech.kzen.auto.server.api
 import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunId
-import tech.kzen.auto.common.paradigm.common.v1.model.LogicRunResponse
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunId
+import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunResponse
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition

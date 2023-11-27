@@ -7,7 +7,7 @@ import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
-import tech.kzen.auto.common.paradigm.sequence.SequenceValidation
+import tech.kzen.auto.common.objects.document.sequence.model.SequenceValidation
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.MapExecutionValue

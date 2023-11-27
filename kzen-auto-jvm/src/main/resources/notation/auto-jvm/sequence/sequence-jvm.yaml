@@ -93,7 +93,7 @@ DivisibleCheckStep:
     number:
       is: ObjectLocation
       by: Nominal
-      editor: SelectSequenceStepEditor
+      editor: SelectStepEditor
     divisor: Int
     selfLocation: SelfLocation
 
@@ -110,11 +110,11 @@ LogicalAndStep:
     condition:
       is: ObjectLocation
       by: Nominal
-      editor: SelectSequenceStepEditor
+      editor: SelectStepEditor
     and:
       is: ObjectLocation
       by: Nominal
-      editor: SelectSequenceStepEditor
+      editor: SelectStepEditor
     selfLocation: SelfLocation
 
 
@@ -129,7 +129,7 @@ DisplayValueStep:
     text:
       is: ObjectLocation
       by: Nominal
-      editor: SelectSequenceStepEditor
+      editor: SelectStepEditor
     selfLocation: SelfLocation
 
 
@@ -201,7 +201,7 @@ IfStep:
     condition:
       is: ObjectLocation
       by: Nominal
-      editor: SelectSequenceStepEditor
+      editor: SelectStepEditor
     then:
       is: List
       of: SequenceStep
@@ -218,15 +218,15 @@ MappingStep:
   class: tech.kzen.auto.server.objects.sequence.step.control.mapping.MappingStep
   display: MappingStepDisplay
   icon: Forward
-  title: "Mapping"
-  description: "Transform each item in a list"
+  title: "Loop"
+  description: "Use each item in a list"
   items: ""
   steps: []
   meta:
     items:
       is: ObjectLocation
       by: Nominal
-      editor: SelectSequenceStepEditor
+      editor: SelectStepEditor
     steps:
       is: List
       of: SequenceStep
