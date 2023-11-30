@@ -51,7 +51,9 @@ FormulaStep:
   title: "Formula"
   code: ""
   meta:
-    code: String
+    code:
+      is: String
+      multiline: true
     selfLocation: SelfLocation
 
 

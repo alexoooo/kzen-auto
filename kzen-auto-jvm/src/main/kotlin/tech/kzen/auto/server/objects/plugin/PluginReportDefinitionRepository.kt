@@ -75,7 +75,7 @@ class PluginReportDefinitionRepository(
         }
 
         val graphDefinitionAttempt = graphDefiner.tryDefine(graphStructure)
-        val successfulGraphDefinition = graphDefinitionAttempt.transitiveSuccessful()
+        val successfulGraphDefinition = graphDefinitionAttempt.transitiveSuccessful
 
         val definedPluginObjectLocations = pluginObjectLocations
             .filter { it in successfulGraphDefinition.objectDefinitions }

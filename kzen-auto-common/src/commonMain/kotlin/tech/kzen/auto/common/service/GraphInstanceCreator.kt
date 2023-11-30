@@ -16,7 +16,7 @@ class GraphInstanceCreator(
     suspend fun create(objectLocation: ObjectLocation): ObjectInstance {
         val graphDefinition = graphStore
             .graphDefinition()
-            .transitiveSuccessful()
+            .transitiveSuccessful
             .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator

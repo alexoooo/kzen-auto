@@ -30,7 +30,7 @@ class TextLiteralStep(
     //-----------------------------------------------------------------------------------------------------------------
     override fun definition(sequenceDefinitionContext: SequenceDefinitionContext): SequenceStepDefinition {
         return SequenceStepDefinition.of(
-            TupleDefinition.ofMain(LogicType.boolean))
+            TupleDefinition.ofMain(LogicType.string))
     }
 
 

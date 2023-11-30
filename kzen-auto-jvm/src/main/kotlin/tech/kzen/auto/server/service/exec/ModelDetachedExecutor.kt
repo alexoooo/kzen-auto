@@ -32,7 +32,7 @@ class ModelDetachedExecutor(
     ): ExecutionResult {
         val graphDefinition = graphStore
             .graphDefinition()
-            .transitiveSuccessful()
+            .transitiveSuccessful
             .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator
@@ -60,7 +60,7 @@ class ModelDetachedExecutor(
     ): ExecutionDownloadResult {
         val graphDefinition = graphStore
             .graphDefinition()
-            .transitiveSuccessful()
+            .transitiveSuccessful
             .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator

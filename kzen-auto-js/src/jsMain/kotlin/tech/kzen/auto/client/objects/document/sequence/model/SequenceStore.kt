@@ -103,7 +103,8 @@ class SequenceStore: ClientStateGlobal.Observer {
         val previousState = state
         val nextState = when {
             previousState == null || mainLocation != previousState.mainLocation -> {
-                val sequenceTree = SequenceTree.read(documentNotation)
+                val sequenceTree = SequenceTree.read(
+                    mainLocation.documentPath, clientState.graphDefinitionAttempt.successful())
                 SequenceState(
                     mainLocation,
                     documentNotation,
@@ -111,7 +112,8 @@ class SequenceStore: ClientStateGlobal.Observer {
             }
 
             documentNotation != previousState.documentNotation -> {
-                val sequenceTree = SequenceTree.read(documentNotation)
+                val sequenceTree = SequenceTree.read(
+                    mainLocation.documentPath, clientState.graphDefinitionAttempt.successful())
                 if (previousState.sequenceTree == sequenceTree) {
                     previousState.copy(
                         documentNotation = documentNotation)

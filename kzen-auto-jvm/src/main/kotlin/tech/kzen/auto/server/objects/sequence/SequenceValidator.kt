@@ -13,6 +13,7 @@ import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -27,10 +28,17 @@ class SequenceValidator: DetachedAction {
         fun validate(
             documentPath: DocumentPath,
             graphNotation: GraphNotation,
+            graphDefinition: GraphDefinition,
             graphInstance: GraphInstance
         ): SequenceValidation {
             val documentNotation = graphNotation.documents[documentPath]
                 ?: throw IllegalArgumentException("Document not found: $documentPath")
+
+            val sequenceTree = SequenceTree.read(documentPath, graphDefinition)
+            val stepValidationBuffer = mutableMapOf<ObjectPath, StepValidation>()
+            val sequenceDefinitionContext = SequenceDefinitionContext(
+                sequenceTree,
+                SequenceValidation(stepValidationBuffer))
 
             val stepObjectLocations = documentNotation
                 .objects
@@ -43,12 +51,6 @@ class SequenceValidator: DetachedAction {
                         .inheritanceChain(objectLocation)
                         .any { it.objectPath.name == SequenceConventions.stepObjectName }
                 }
-
-            val sequenceTree = SequenceTree.read(documentNotation)
-            val stepValidationBuffer = mutableMapOf<ObjectPath, StepValidation>()
-            val sequenceDefinitionContext = SequenceDefinitionContext(
-                sequenceTree,
-                SequenceValidation(stepValidationBuffer))
 
             val remainingSteps = mutableSetOf<ObjectPath>()
             remainingSteps.addAll(stepObjectLocations.map { it.objectPath })
@@ -113,7 +115,7 @@ class SequenceValidator: DetachedAction {
         val graphDefinitionAttempt = KzenAutoContext.global().graphStore.graphDefinition()
 
         val stepGraphDefinition = graphDefinitionAttempt
-            .transitiveSuccessful()
+            .transitiveSuccessful
             .filterTransitive(documentPath)
 
         val graphInstance = KzenAutoContext.global().graphCreator
@@ -122,6 +124,7 @@ class SequenceValidator: DetachedAction {
         val sequenceValidation = validate(
             documentPath,
             graphDefinitionAttempt.graphStructure.graphNotation,
+            stepGraphDefinition,
             graphInstance)
 
         return ExecutionSuccess.ofValue(sequenceValidation.asExecutionValue())

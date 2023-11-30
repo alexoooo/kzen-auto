@@ -16,6 +16,7 @@ import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
+import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.ClassNames.topLevel
 
@@ -44,6 +45,8 @@ class DefaultAttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val wrapperName = ObjectName("DefaultAttributeEditor")
+
+        private const val multilineKey = "multiline"
     }
 
     private var attributePathValueEditor: RefObject<AttributePathValueEditor> = createRef()
@@ -148,11 +151,11 @@ class DefaultAttributeEditor(
             }
 
             attributeMetadata.definerReference?.name?.objectName?.value == "Self" -> {
-                // NB: don't render
+                // don't render
             }
 
             AttributePathValueEditor.isValue(type) -> {
-                renderValueEditor(type)
+                renderValueEditor(type, attributeMetadata.attributeMetadataNotation)
             }
 
             else -> {
@@ -170,8 +173,11 @@ class DefaultAttributeEditor(
     }
 
 
-    private fun ChildrenBuilder.renderValueEditor(type: TypeMetadata) {
-//        +"[AttributePathValueEditor]"
+    private fun ChildrenBuilder.renderValueEditor(
+        type: TypeMetadata,
+        attributeMetadataNotation: MapAttributeNotation
+    ) {
+        val multiline = attributeMetadataNotation.get(multilineKey)?.asBoolean() ?: false
 
         AttributePathValueEditor::class.react {
             labelOverride = formattedLabel()
@@ -185,6 +191,10 @@ class DefaultAttributeEditor(
 
             onChange = {
                 props.onChange?.invoke(it)
+            }
+
+            if (multiline) {
+                multilineOverride = true
             }
 
             ref = attributePathValueEditor

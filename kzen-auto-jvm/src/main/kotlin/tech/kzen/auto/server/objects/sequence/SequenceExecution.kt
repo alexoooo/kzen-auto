@@ -100,8 +100,8 @@ class SequenceExecution(
         previousGraphInstance = graphInstance
 
         val graphNotation = graphDefinition.graphStructure.graphNotation
-        val validation = SequenceValidator.validate(documentPath, graphNotation, graphInstance)
-        val sequenceTree = SequenceTree.read(graphNotation.documents[documentPath]!!)
+        val validation = SequenceValidator.validate(documentPath, graphNotation, graphDefinition, graphInstance)
+        val sequenceTree = SequenceTree.read(documentPath, graphDefinition)
 
         val stepContext = SequenceExecutionContext(
             logicControl,

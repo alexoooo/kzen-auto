@@ -125,7 +125,7 @@ class ModelTaskRepository(
     override suspend fun submit(taskLocation: ObjectLocation, request: ExecutionRequest): TaskModel {
         val graphDefinition = graphStore
             .graphDefinition()
-            .transitiveSuccessful()
+            .transitiveSuccessful
             .filterDefinitions(AutoConventions.serverAllowed)
 
         // TODO: add GraphInstanceAttempt for error reporting
