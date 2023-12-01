@@ -5,9 +5,10 @@ import tech.kzen.lib.common.model.definition.*
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectLocator
+import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.obj.ObjectPath
-import tech.kzen.lib.common.model.structure.notation.DocumentNotation
+import tech.kzen.lib.common.model.structure.notation.*
 
 
 data class SequenceTree(
@@ -23,6 +24,7 @@ data class SequenceTree(
             val objectPaths = documentNotation.objects.notations.values.keys
             return read(objectPaths, ObjectPath.main, documentPath, documentNotation, graphDefinition)
         }
+
 
         private fun read(
             objectPaths: Set<ObjectPath>,
@@ -52,19 +54,24 @@ data class SequenceTree(
                 val attributeTrees: List<SequenceTree> = directAttributePaths
                     .map { read(attributePaths, it, documentPath, documentNotation, graphDefinition) }
 
+                val attributeNotation = graphDefinition
+                    .graphStructure
+                    .graphNotation
+                    .firstAttribute(objectLocation, attributeName)
+
                 // used for ordering the steps within a branch
-                val attributeDefinition = graphDefinition[objectLocation]
+                val attributeDefinitionOrNull = graphDefinition[objectLocation]
                     ?.attributeDefinitions
                     ?.get(attributeName)
-                    ?: throw IllegalStateException("Missing definition: $objectPath - $attributeName")
 
                 val pathToIndex: Map<ObjectPath, Int> =
                     attributeTrees.associate {
                         it.objectPath to indexOf(
                             documentPath.toObjectLocation(it.objectPath),
-                            attributeDefinition,
+                            attributeNotation,
+                            attributeDefinitionOrNull,
                             objectReferenceHost,
-                            graphDefinition.objectDefinitions)
+                            graphDefinition.graphStructure.graphNotation.coalesce)
                     }
 
                 val sortedTrees = attributeTrees.sortedBy { pathToIndex[it.objectPath] ?: -2 }
@@ -78,6 +85,66 @@ data class SequenceTree(
 
         private fun indexOf(
             objectLocation: ObjectLocation,
+            attributeNotation: AttributeNotation,
+            attributeDefinitionOrNull: AttributeDefinition?,
+            objectReferenceHost: ObjectReferenceHost,
+            objectLocator: ObjectLocator
+        ): Int {
+            return when {
+                attributeDefinitionOrNull != null ->
+                    indexOfByDefinition(objectLocation, attributeDefinitionOrNull, objectReferenceHost, objectLocator)
+
+                else ->
+                    indexOfByNotation(objectLocation, attributeNotation, objectReferenceHost, objectLocator)
+            }
+        }
+
+
+        private fun indexOfByNotation(
+            objectLocation: ObjectLocation,
+            attributeNotation: AttributeNotation,
+            objectReferenceHost: ObjectReferenceHost,
+            objectLocator: ObjectLocator
+        ): Int {
+            return when (attributeNotation) {
+                is ScalarAttributeNotation -> {
+                    val objectReference = ObjectReference.tryParse(attributeNotation.value)
+                        ?: return -1
+                    val referenceLocation = objectLocator.locateOptional(objectReference, objectReferenceHost)
+                        ?: return -1
+                    if (referenceLocation != objectLocation) {
+                        return -1
+                    }
+                    0
+                }
+
+                is ListAttributeNotation -> {
+                    for ((index, itemNotation) in attributeNotation.values.withIndex()) {
+                        val itemIndex = indexOfByNotation(
+                            objectLocation, itemNotation, objectReferenceHost, objectLocator)
+                        if (itemIndex != -1) {
+                            return index + itemIndex
+                        }
+                    }
+                    -1
+                }
+
+                is MapAttributeNotation -> {
+                    for ((index, entry) in attributeNotation.values.entries.withIndex()) {
+                        val itemIndex = indexOfByNotation(
+                            objectLocation, entry.value, objectReferenceHost, objectLocator)
+                        if (itemIndex != -1) {
+                            return index + itemIndex
+                        }
+                    }
+                    -1
+                }
+            }
+        }
+
+
+        private fun indexOfByDefinition(
+            objectLocation: ObjectLocation,
             attributeDefinition: AttributeDefinition,
             objectReferenceHost: ObjectReferenceHost,
             objectLocator: ObjectLocator
@@ -86,21 +153,19 @@ data class SequenceTree(
                 is ReferenceAttributeDefinition -> {
                     val objectReference = attributeDefinition.objectReference
                         ?: return -1
-
                     val referenceLocation = objectLocator.locateOptional(objectReference, objectReferenceHost)
                         ?: return -1
-
                     if (referenceLocation != objectLocation) {
                         return -1
                     }
-
                     0
                 }
 
                 is ListAttributeDefinition -> {
                     for (index in attributeDefinition.values.indices) {
                         val itemDefinition = attributeDefinition.values[index]
-                        val itemIndex = indexOf(objectLocation, itemDefinition, objectReferenceHost, objectLocator)
+                        val itemIndex = indexOfByDefinition(
+                            objectLocation, itemDefinition, objectReferenceHost, objectLocator)
                         if (itemIndex != -1) {
                             return index + itemIndex
                         }
@@ -110,7 +175,8 @@ data class SequenceTree(
 
                 is MapAttributeDefinition -> {
                     for ((index, entry) in attributeDefinition.values.entries.withIndex()) {
-                        val itemIndex = indexOf(objectLocation, entry.value, objectReferenceHost, objectLocator)
+                        val itemIndex = indexOfByDefinition(
+                            objectLocation, entry.value, objectReferenceHost, objectLocator)
                         if (itemIndex != -1) {
                             return index + itemIndex
                         }

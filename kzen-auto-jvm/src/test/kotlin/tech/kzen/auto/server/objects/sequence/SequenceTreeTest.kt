@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 class SequenceTreeTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun treeOrder() {
+    fun treeOrderByDefinition() {
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 
@@ -51,4 +51,38 @@ class SequenceTreeTest {
                 ObjectPath.parse("main.steps/Display")))
     }
 
+
+    @Test
+    fun treeOrderByNotation() {
+        val graphNotation = AutoTestUtils.readNotation()
+        val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
+
+        val documentPath = DocumentPath.parse("test/script-tree-undefined-test.yaml")
+
+        val tree = SequenceTree.read(documentPath, graphDefinitionAttempt.successful())
+
+        assertEquals(
+            listOf(),
+            tree.predecessors(
+                ObjectPath.parse("main.steps/Formula")))
+
+        assertEquals(
+            listOf(
+                ObjectPath.parse("main.steps/Formula")),
+            tree.predecessors(
+                ObjectPath.parse("main.steps/Loop")))
+
+        assertEquals(
+            listOf(
+                ObjectPath.parse("main.steps/Formula")),
+            tree.predecessors(
+                ObjectPath.parse("main.steps/Loop.steps/Item")))
+
+        assertEquals(
+            listOf(
+                ObjectPath.parse("main.steps/Formula"),
+                ObjectPath.parse("main.steps/Loop.steps/Item")),
+            tree.predecessors(
+                ObjectPath.parse("main.steps/Loop.steps/Display")))
+    }
 }

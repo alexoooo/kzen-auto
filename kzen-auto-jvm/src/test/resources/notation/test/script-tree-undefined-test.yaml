@@ -1,0 +1,22 @@
+main:
+  is: Sequence
+  steps:
+    - main.steps/Formula
+    - main.steps/Loop
+
+main.steps/Formula:
+  is: FormulaStep
+  code: 1..100
+
+main.steps/Loop:
+  is: MappingStep
+  steps:
+    - main.steps/Loop.steps/Item
+    - main.steps/Loop.steps/Display
+
+main.steps/Loop.steps/Display:
+  is: DisplayValueStep
+  text:  main.steps/Loop.steps/Item
+
+main.steps/Loop.steps/Item:
+  is: MappingItemStep

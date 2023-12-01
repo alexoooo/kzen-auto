@@ -17,6 +17,7 @@ import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -92,7 +93,17 @@ class SequenceValidator: DetachedAction {
                     val valueDefinition = instance.definition(sequenceDefinitionContext)
                         ?: continue
 
-                    val typeMetadata = valueDefinition.returnValueDefinition?.find(TupleComponentName.main)?.metadata
+                    val returnValueDefinition = valueDefinition.returnValueDefinition
+                    val typeMetadata =
+                        if (returnValueDefinition == null) {
+                            null
+                        }
+                        else {
+                            returnValueDefinition
+                                .find(TupleComponentName.main)
+                                ?.metadata
+                                ?: TypeMetadata.unit
+                        }
 
                     builder[objectPath] = StepValidation(
                         typeMetadata, valueDefinition.validationError)

@@ -72,8 +72,11 @@ class SequenceBranchDisplay(
             return
         }
 
+//        println("^^^ ${props.attributeLocation.objectLocation}")
         val stepLocations = SequenceController.stepLocations(
             graphStructure, props.attributeLocation)
+
+//        println("^^^ stepLocations: $stepLocations")
 
         setState {
 //            this.documentPath = documentPath

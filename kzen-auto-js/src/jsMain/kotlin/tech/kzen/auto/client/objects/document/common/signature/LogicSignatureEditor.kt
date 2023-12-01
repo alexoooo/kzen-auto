@@ -54,9 +54,13 @@ class LogicSignatureEditor:
 
 
     override fun onClientState(clientState: ClientState) {
-        val parametersNotation = clientState
-            .graphStructure()
-            .graphNotation
+        val graphNotation = clientState.graphStructure().graphNotation
+        if (props.objectLocation !in graphNotation.coalesce) {
+            // NB: deleted or renamed (this is a stale objectLocation)
+            return
+        }
+
+        val parametersNotation = graphNotation
             .firstAttribute(props.objectLocation, LogicConventions.parametersAttributeName)
             as? ListAttributeNotation
 

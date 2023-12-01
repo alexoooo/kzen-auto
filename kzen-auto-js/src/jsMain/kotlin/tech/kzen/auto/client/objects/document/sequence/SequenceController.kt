@@ -66,10 +66,10 @@ class SequenceController:
             attributeLocation: AttributeLocation
         ): List<ObjectLocation>? {
             val stepsNotation = graphStructure
-                    .graphNotation
-                    .firstAttribute(attributeLocation)
-                    as? ListAttributeNotation
-                    ?: return null
+                .graphNotation
+                .firstAttribute(attributeLocation)
+                as? ListAttributeNotation
+                ?: return null
 
             val objectReferenceHost = ObjectReferenceHost.ofLocation(attributeLocation.objectLocation)
 

@@ -41,10 +41,15 @@ class FormulaStep(
         private const val inferredTypePrefix = "inferred type is "
         private const val inferredTypeSuffix = " but "
 
+        private const val literalTypePrefix = "The "
+        private const val literalTypeSuffix = " literal "
+        private const val integerLiteralPrefix = "IntegerLiteralType["
+
+
         private fun parseInferredType(errorMessage: String): String? {
             val startOfPrefix = errorMessage.indexOf(inferredTypePrefix)
             if (startOfPrefix == -1) {
-                return null
+                return parseLiteralType(errorMessage)
             }
 
             val startOfInferred = startOfPrefix + inferredTypePrefix.length
@@ -53,7 +58,36 @@ class FormulaStep(
                 return null
             }
 
-            return errorMessage.substring(startOfInferred ..< endOfInferred)
+            val parsedType = errorMessage.substring(startOfInferred ..< endOfInferred)
+            if (parsedType.startsWith(integerLiteralPrefix)) {
+                return ClassNames.kotlinInt.simple()
+            }
+
+            return parsedType
+        }
+
+
+        private fun parseLiteralType(errorMessage: String): String? {
+            val startOfPrefix = errorMessage.indexOf(literalTypePrefix)
+            if (startOfPrefix == -1) {
+                return null
+            }
+
+            val startOfLiteral = startOfPrefix + literalTypePrefix.length
+            val endOfLiteral = errorMessage.indexOf(literalTypeSuffix, startIndex = startOfLiteral)
+            if (endOfLiteral == -1) {
+                return null
+            }
+
+            @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
+            val literalName = errorMessage.substring(startOfLiteral ..< endOfLiteral)
+
+            return when (literalName) {
+                "integer" -> ClassNames.kotlinInt.simple()
+                "floating-point" -> ClassNames.kotlinDouble.simple()
+                "boolean" -> ClassNames.kotlinBoolean.simple()
+                else -> TODO("Unexpected literal: $literalName")
+            }
         }
 
 
@@ -130,24 +164,28 @@ class FormulaStep(
             return null
         }
 
+        val nonUnitPredecessorTypes = predecessorTypes
+            .filter { it.value.className != ClassNames.kotlinUnit }
+
         val anyNullableCode = generateCode(
-            "Any?", predecessorTypes)
+            "Any?", nonUnitPredecessorTypes)
         val anyNullableError = compiler.tryCompile(anyNullableCode, classLoader)
         if (anyNullableError != null) {
             return SequenceStepDefinition(
-                TupleDefinition.ofMain(LogicType(TypeMetadata.anyNullable)),
+//                TupleDefinition.ofMain(LogicType(TypeMetadata.anyNullable)),
+                null,
                 anyNullableError)
         }
 
         val anyCode = generateCode(
-            "Any", predecessorTypes)
+            "Any", nonUnitPredecessorTypes)
         val anyError = compiler.tryCompile(anyCode, classLoader)
 
         val nullable = anyError != null
         val nullableSuffix = if (nullable) { "?" } else { "" }
 
         val stringCode = generateCode(
-            "String$nullableSuffix", predecessorTypes)
+            "String$nullableSuffix", nonUnitPredecessorTypes)
         val stringError = compiler.tryCompile(stringCode, classLoader)
 
         if (stringError == null) {
@@ -206,8 +244,11 @@ class FormulaStep(
             return LogicResultFailed("Can't determine type: $missingPredecessor")
         }
 
+        val nonUnitPredecessorTypes = predecessorTypes
+            .filter { it.value.className != ClassNames.kotlinUnit }
+
         val generatedCode = generateCode(
-            "Any?", predecessorTypes)
+            "Any?", nonUnitPredecessorTypes)
 
         val error = compiler.tryCompile(generatedCode, classLoader)
         check(error == null) {
@@ -224,14 +265,13 @@ class FormulaStep(
 
         val instance = classCast.getDeclaredConstructor().newInstance()
 
-        val predecessorValues = predecessorTypes.map {
+        val predecessorValues = nonUnitPredecessorTypes.map {
             val objectLocation = selfLocation.documentPath.toObjectLocation(it.key)
             val step = sequenceExecutionContext.activeSequenceModel.steps[objectLocation]
             step?.value?.mainComponentValue()
         }
 
         val value = instance.evaluate(predecessorValues)
-        //println("Value: $value")
 
         traceValue(sequenceExecutionContext, value.toString())
 

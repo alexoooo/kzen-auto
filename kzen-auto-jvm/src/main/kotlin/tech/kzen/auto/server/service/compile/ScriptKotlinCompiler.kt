@@ -29,6 +29,18 @@ class ScriptKotlinCompiler: KotlinCompiler {
             ScriptKotlinCompiler::class.java.kotlin)
 
         private val contextClass: KClass<*> = ScriptCompilationConfiguration::class.java.kotlin
+
+        private fun formatError(errors: List<ScriptDiagnostic>): String {
+            require(errors.isNotEmpty())
+
+            val last = errors.last()
+
+            return last.render(
+                withSeverity = false,
+                withLocation = false,
+                withException = true,
+                withStackTrace = false)
+        }
     }
 
 
@@ -63,7 +75,7 @@ class ScriptKotlinCompiler: KotlinCompiler {
 
         val errorMessage = when {
             errors.isEmpty() -> null
-            else -> errors.joinToString(" | ")
+            else -> formatError(errors)
         }
 
         return when {
