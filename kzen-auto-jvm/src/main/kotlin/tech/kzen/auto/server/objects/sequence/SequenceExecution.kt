@@ -13,12 +13,12 @@ import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.*
 import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
-import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectLocationMap
+import tech.kzen.lib.common.util.ExceptionUtils
 
 
 @Suppress("CanBeParameter")
@@ -133,13 +133,13 @@ class SequenceExecution(
                 stepModel.error = null
             }
         }
-        catch (e: Throwable) {
+        catch (t: Throwable) {
             stepModel.value = null
 
-            val message = ExecutionFailure.ofException(e).errorMessage
+            val message = ExceptionUtils.message(t)
             stepModel.error = message
             logicResult = LogicResultFailed(message)
-            logger.warn("Step execution error", e)
+            logger.warn("Step execution error", t)
         }
 
         if (logicResult.isTerminal()) {

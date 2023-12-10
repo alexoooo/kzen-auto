@@ -17,7 +17,11 @@ abstract class TracingSequenceStep(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun traceDetail(stepContext: SequenceExecutionContext, detail: Any?) {
-        traceDetail(stepContext, ExecutionValue.of(detail))
+        val detailValue =
+            ExecutionValue.ofArbitrary(detail)
+                ?: ExecutionValue.of(detail.toString())
+
+        traceDetail(stepContext, detailValue)
     }
 
 

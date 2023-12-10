@@ -1,0 +1,7 @@
+
+
+ObjectRegistryController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.registry.ObjectRegistryController$Wrapper
+  archetype: ObjectRegistry
+#  ribbonController: RibbonController

@@ -3,8 +3,8 @@ package tech.kzen.auto.server.service.v1.impl
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.paradigm.logic.run.LogicController
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
+import tech.kzen.auto.common.paradigm.logic.run.LogicController
 import tech.kzen.auto.common.paradigm.logic.run.model.*
 import tech.kzen.auto.server.objects.logic.LogicTraceStore
 import tech.kzen.auto.server.service.v1.Logic
@@ -16,7 +16,6 @@ import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.context.LogicFrame
 import tech.kzen.auto.server.service.v1.model.context.MutableLogicControl
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
-import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
@@ -24,6 +23,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import tech.kzen.lib.common.util.ExceptionUtils
 import java.util.concurrent.CopyOnWriteArrayList
 
 
@@ -304,7 +304,7 @@ class ServerLogicController(
                 }
                 catch (t: Throwable) {
                     logger.warn("Execution failed", t)
-                    LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
+                    LogicResultFailed(ExceptionUtils.message(t))
                 }
 
             state.running = false
@@ -359,7 +359,7 @@ class ServerLogicController(
                 }
                 catch (t: Throwable) {
                     logger.warn("Execution failed", t)
-                    LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
+                    LogicResultFailed(ExceptionUtils.message(t))
                 }
 
             state.stepping = false

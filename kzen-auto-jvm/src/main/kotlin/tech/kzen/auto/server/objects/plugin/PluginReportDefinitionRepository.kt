@@ -104,12 +104,13 @@ class PluginReportDefinitionRepository(
                     val builder = mutableListOf<ReportDefinitionMetadata>()
 
                     for (processorDefiner in processorDefiners) {
-                        val definition = try {
-                            processorDefiner.define()
-                        }
-                        catch (e: Throwable) {
-                            continue
-                        }
+                        val definition =
+                            try {
+                                processorDefiner.define()
+                            }
+                            catch (e: Throwable) {
+                                continue
+                            }
 
                         val payloadType = ClassName(definition.reportDataDefinition.outputModelType.name)
 

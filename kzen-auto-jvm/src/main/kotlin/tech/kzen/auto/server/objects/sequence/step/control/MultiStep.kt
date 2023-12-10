@@ -2,8 +2,8 @@ package tech.kzen.auto.server.objects.sequence.step.control
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
 import tech.kzen.auto.common.objects.document.sequence.model.StepTrace
+import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.api.SequenceStepDefinition
 import tech.kzen.auto.server.objects.sequence.model.ActiveStepModel
@@ -12,11 +12,11 @@ import tech.kzen.auto.server.objects.sequence.model.SequenceExecutionContext
 import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
-import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.util.ExceptionUtils
 
 
 @Reflect
@@ -77,7 +77,7 @@ class MultiStep(
                 }
                 catch (t: Throwable) {
                     logger.warn("Step error - {}", nextToRun, t)
-                    LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
+                    LogicResultFailed(ExceptionUtils.message(t))
                 }
 
             when (result) {

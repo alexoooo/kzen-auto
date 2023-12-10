@@ -103,6 +103,17 @@ class FormulaStep(
             ClassNames.kotlinSet,
             ClassName("kotlin.ranges.IntRange"))
 
+
+        private fun findClassName(inferredTypeWithoutGenerics: String): ClassName? {
+            val simpleClassName = simpleClassNames.find { it.simple() == inferredTypeWithoutGenerics }
+            if (simpleClassName != null) {
+                return simpleClassName
+            }
+
+            return null
+        }
+
+
         private fun parseTypeMetadata(inferredType: String): TypeMetadata? {
             val intersectionComponents = inferredType.split(" & ")
             val mostSpecificComponent = intersectionComponents.last().removeSuffix("}")
@@ -138,7 +149,7 @@ class FormulaStep(
                     mostSpecificComponent.substring(0, startOfGenerics)
                 }
 
-            val simpleMatch = simpleClassNames.find { it.simple() == inferredTypeWithoutGenerics }
+            val simpleMatch = findClassName(inferredTypeWithoutGenerics)
                 ?: return null
 
             return TypeMetadata(

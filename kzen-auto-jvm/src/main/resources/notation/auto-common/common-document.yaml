@@ -129,6 +129,28 @@ FieldFormatListSpecDefiner:
 
 
 ################################################################
+ObjectRegistry:
+  abstract: true
+  is: Document
+  class: tech.kzen.auto.server.objects.registry.ObjectRegistryDocument
+  title: "Object Registry"
+  icon: MenuBook
+  classes: []
+  meta:
+    classes: ClassListSpec
+
+ClassListSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.registry.spec.ClassListSpec
+  meta:
+    ref:
+      by: ClassListSpecDefiner
+
+ClassListSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.registry.spec.ClassListSpec$Definer
+
+
+################################################################
 
 Report:
   abstract: true

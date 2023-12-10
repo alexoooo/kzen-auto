@@ -9,9 +9,9 @@ import tech.kzen.auto.server.service.v1.StatefulLogicElement
 import tech.kzen.auto.server.service.v1.model.LogicResult
 import tech.kzen.auto.server.service.v1.model.LogicResultFailed
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
-import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.util.ExceptionUtils
 
 
 @Reflect
@@ -89,7 +89,7 @@ class IfStep(
             }
             catch (t: Throwable) {
                 logger.warn("Branch error - {}", step, t)
-                LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
+                LogicResultFailed(ExceptionUtils.message(t))
             }
 
         if (result.isTerminal()) {

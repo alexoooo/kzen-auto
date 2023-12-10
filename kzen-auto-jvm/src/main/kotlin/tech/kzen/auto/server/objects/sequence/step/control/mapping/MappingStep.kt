@@ -12,10 +12,10 @@ import tech.kzen.auto.server.service.v1.StatefulLogicElement
 import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
-import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.util.ExceptionUtils
 import tech.kzen.lib.platform.ClassNames
 
 
@@ -105,7 +105,7 @@ class MappingStep(
                 }
                 catch (t: Throwable) {
                     logger.warn("Mapping error - {}", stepsDelegate, t)
-                    return LogicResultFailed(ExecutionFailure.ofException(t).errorMessage)
+                    return LogicResultFailed(ExceptionUtils.message(t))
                 }
 
             when (result) {
