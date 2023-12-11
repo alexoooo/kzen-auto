@@ -9,8 +9,8 @@ import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputSt
 import tech.kzen.auto.client.objects.document.report.preview.model.ReportPreviewStore
 import tech.kzen.auto.client.objects.document.report.run.model.ReportRunStore
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash

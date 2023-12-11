@@ -6,8 +6,8 @@ import react.State
 import react.react
 import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel

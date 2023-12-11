@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.input.select
 
-import emotion.react.css
 import mui.material.Size
 import mui.material.TextField
 import mui.system.sx

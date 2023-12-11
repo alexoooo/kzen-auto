@@ -10,7 +10,10 @@ import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.ClassName
 
@@ -29,6 +32,15 @@ data class ClassListSpec(
             }
 
             return ClassListSpec(builder)
+        }
+
+
+        fun addCommand(mainLocation: ObjectLocation, className: ClassName): NotationCommand {
+            return InsertListItemInAttributeCommand(
+                mainLocation,
+                ObjectRegistryConventions.classesAttributePath,
+                PositionRelation.afterLast,
+                ScalarAttributeNotation(className.asString()))
         }
     }
 

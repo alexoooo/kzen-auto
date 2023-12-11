@@ -10,14 +10,13 @@ import react.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
-import tech.kzen.auto.client.objects.document.report.model.ReportState
-import tech.kzen.auto.client.objects.document.sequence.model.SequenceState
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -106,9 +105,7 @@ class SelectLogicEditor(
                 continue
             }
 
-            val isLogic =
-                SequenceState.isSequence(notation) ||
-                ReportState.isReport(notation)
+            val isLogic = AutoConventions.isLogic(notation)
 
             if (isLogic) {
                 featureMains.add(ObjectLocation(

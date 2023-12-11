@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.service.rest
 
+import tech.kzen.auto.common.paradigm.task.TaskRepository
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
-import tech.kzen.auto.common.paradigm.task.TaskRepository
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.model.location.ObjectLocation
 

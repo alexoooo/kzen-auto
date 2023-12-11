@@ -5,6 +5,8 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.structure.notation.DocumentNotation
+import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 object SequenceConventions {
@@ -18,4 +20,17 @@ object SequenceConventions {
     val stepsAttributePath = AttributePath.ofName(stepsAttributeName)
 
     val nextStepTracePath = LogicTracePath(listOf("next-step"))
+
+
+    fun isSequence(documentNotation: DocumentNotation): Boolean {
+        val mainObjectNotation =
+            documentNotation.objects.notations[NotationConventions.mainObjectPath]
+                ?: return false
+
+        val mainObjectIs =
+            mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
+                ?: return false
+
+        return mainObjectIs == objectName.value
+    }
 }

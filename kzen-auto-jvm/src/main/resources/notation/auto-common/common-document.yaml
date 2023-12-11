@@ -112,7 +112,7 @@ DataFormat:
   is: Document
   class: tech.kzen.auto.server.objects.data.DataFormatDocument
   title: "Data Format"
-  icon: MenuBook
+  icon: Storage
   fields: {}
   meta:
     fields: FieldFormatListSpec

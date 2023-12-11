@@ -34,7 +34,10 @@ object DataFormatConventions {
             documentNotation.objects.notations[NotationConventions.mainObjectPath]
             ?: return null
 
-        val fieldsAttributeNotation = mainObjectNotation.get(fieldsAttributeName) as? MapAttributeNotation
+        val untypedFieldsAttributeNotation = mainObjectNotation.get(fieldsAttributeName)
+            ?: MapAttributeNotation.empty
+
+        val fieldsAttributeNotation = untypedFieldsAttributeNotation as? MapAttributeNotation
             ?: return null
 
         return FieldFormatListSpec.ofAttributeNotation(fieldsAttributeNotation)

@@ -6,6 +6,8 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.structure.notation.DocumentNotation
+import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 object ReportConventions {
@@ -59,5 +61,18 @@ object ReportConventions {
     fun inputTracePath(dataLocation: DataLocation): LogicTracePath {
         return LogicTracePath(listOf(
             traceInputPrefix, dataLocation.digest().asString()))
+    }
+
+
+    fun isReport(documentNotation: DocumentNotation): Boolean {
+        val mainObjectNotation =
+            documentNotation.objects.notations[NotationConventions.mainObjectPath]
+                ?: return false
+
+        val mainObjectIs =
+            mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
+                ?: return false
+
+        return mainObjectIs == objectName.value
     }
 }

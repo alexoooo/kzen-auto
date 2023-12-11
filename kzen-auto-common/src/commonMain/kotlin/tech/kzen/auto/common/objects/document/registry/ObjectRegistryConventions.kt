@@ -2,6 +2,7 @@ package tech.kzen.auto.common.objects.document.registry
 
 import tech.kzen.auto.common.objects.document.registry.spec.ClassListSpec
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
@@ -12,6 +13,7 @@ object ObjectRegistryConventions {
     val objectName = ObjectName("ObjectRegistry")
 
     val classesAttributeName = AttributeName("classes")
+    val classesAttributePath = AttributePath.ofName(classesAttributeName)
 
 
     fun isObjectRegistry(documentNotation: DocumentNotation): Boolean {
@@ -32,9 +34,12 @@ object ObjectRegistryConventions {
             documentNotation.objects.notations[NotationConventions.mainObjectPath]
             ?: return null
 
-        val fieldsAttributeNotation = mainObjectNotation.get(classesAttributeName) as? ListAttributeNotation
+        val untypedClassesAttributeNotation = mainObjectNotation.get(classesAttributeName)
+            ?: ListAttributeNotation.empty
+
+        val classesAttributeNotation = untypedClassesAttributeNotation as? ListAttributeNotation
             ?: return null
 
-        return ClassListSpec.ofAttributeNotation(fieldsAttributeNotation)
+        return ClassListSpec.ofAttributeNotation(classesAttributeNotation)
     }
 }

@@ -129,10 +129,10 @@ class ObjectRegistryController:
                 }
             }
 
-//            DataFormatFieldAdd::class.react {
-//                this.objectLocation = objectLocation
-//            }
-            +"[objectLocation: $objectLocation]"
+            ObjectRegistryAdd::class.react {
+                this.objectLocation = objectLocation
+            }
+//            +"[objectLocation: $objectLocation]"
         }
     }
 }

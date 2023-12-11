@@ -524,3 +524,15 @@ external class InfoIcon: Component<IconProps, react.State> {
 external class BlockIcon: Component<IconProps, react.State> {
     override fun render(): ReactElement<IconProps>?
 }
+
+
+@JsName("ViewList")
+external class ViewListIcon: Component<IconProps, react.State> {
+    override fun render(): ReactElement<IconProps>?
+}
+
+
+@JsName("Storage")
+external class StorageIcon: Component<IconProps, react.State> {
+    override fun render(): ReactElement<IconProps>?
+}

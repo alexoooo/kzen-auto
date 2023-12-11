@@ -21,8 +21,6 @@ import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.notation.DocumentNotation
-import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 data class ReportState(
@@ -53,24 +51,11 @@ data class ReportState(
                 .documents[documentPath]
                 ?: return null
 
-            if (! isReport(documentNotation)) {
+            if (! ReportConventions.isReport(documentNotation)) {
                 return null
             }
 
             return documentPath.toMainObjectLocation()
-        }
-
-
-        fun isReport(documentNotation: DocumentNotation): Boolean {
-            val mainObjectNotation =
-                documentNotation.objects.notations[NotationConventions.mainObjectPath]
-                ?: return false
-
-            val mainObjectIs =
-                mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
-                ?: return false
-
-            return mainObjectIs == ReportConventions.objectName.value
         }
     }
 

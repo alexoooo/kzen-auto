@@ -4,17 +4,18 @@ import emotion.react.css
 import mui.material.*
 import mui.system.sx
 import react.*
-import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.hr
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ClientState
-import tech.kzen.auto.client.service.logic.ClientLogicState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.*
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunFrameInfo
+import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.NamedColor
 import web.cssom.em
 import web.cssom.px
@@ -23,12 +24,19 @@ import web.html.HTMLElement
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface RibbonLogicRunState: State {
-    var clientState: ClientState?
+    var mainObjectLocation: ObjectLocation?
+    var runnable: Boolean
+
+    var active: Boolean
+    var executing: Boolean
+    var frame: LogicRunFrameInfo?
+
     var dropdownOpen: Boolean
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
+@Suppress("ConstPropertyName")
 class RibbonLogicRun (
     props: Props
 ):
@@ -51,11 +59,15 @@ class RibbonLogicRun (
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RibbonLogicRunState.init(props: Props) {
-//        active = setOf()
-//        selectedFramePaths = listOf()
-//        executionModel = null
-        clientState = null
+//        clientState = null
+        mainObjectLocation = null
+        runnable = false
+
         dropdownOpen = false
+
+        active = false
+        executing = false
+        frame = null
     }
 
 
@@ -86,22 +98,24 @@ class RibbonLogicRun (
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
-        setState {
-            this.clientState = clientState
-//            active = clientState.runningHosts
-//            selectedFramePaths = clientState.imperativeModel?.frames?.map { it.path } ?: listOf()
-        }
+        val documentPath = clientState.navigationRoute.documentPath
+            ?: return
 
-//        if (clientState.activeHost == null &&
-//                clientState.imperativeModel?.isActive() == true)
-//        {
-//            onInitialRunning(clientState.imperativeModel.frames[0].path)
-//        }
-//        else if (clientState.activeHost != null &&
-//                clientState.imperativeModel?.isActive() != true)
-//        {
-//            onStoppedRunning()
-//        }
+        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
+            ?: return
+
+        val isLogic = AutoConventions.isLogic(documentNotation)
+
+        val clientLogicState = clientState.clientLogicState
+
+        setState {
+            runnable = isLogic
+            mainObjectLocation = documentPath.toMainObjectLocation()
+
+            active = clientLogicState.isActive()
+            executing = clientLogicState.isExecuting()
+            frame = clientState.clientLogicState.logicStatus?.active?.frame
+        }
     }
 
 
@@ -137,6 +151,9 @@ class RibbonLogicRun (
 
 
     private fun onAction(action: String, active: Boolean, executing: Boolean) {
+        val mainObjectLocation = state.mainObjectLocation
+            ?: return
+
         when (action) {
             actionRunOrPause -> {
                 if (executing) {
@@ -146,7 +163,6 @@ class RibbonLogicRun (
                     ClientContext.clientLogicGlobal.continueRunAsync()
                 }
                 else {
-                    val mainObjectLocation = state.clientState!!.navigationRoute.documentPath!!.toMainObjectLocation()
                     ClientContext.clientLogicGlobal.startAndRunAsync(mainObjectLocation, false)
                 }
             }
@@ -160,7 +176,6 @@ class RibbonLogicRun (
                     ClientContext.clientLogicGlobal.stepAsync()
                 }
                 else {
-                    val mainObjectLocation = state.clientState!!.navigationRoute.documentPath!!.toMainObjectLocation()
                     ClientContext.clientLogicGlobal.startAndRunAsync(mainObjectLocation, true)
                 }
             }
@@ -176,11 +191,11 @@ class RibbonLogicRun (
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val clientState = state.clientState
-            ?: return
+//        val clientState = state.clientState
+//            ?: return
 
         div {
-            renderControls(clientState.clientLogicState)
+            renderControls(/*clientState.clientLogicState*/)
         }
 
         renderDetailsOverlay()
@@ -188,13 +203,13 @@ class RibbonLogicRun (
 
 
     private fun ChildrenBuilder.renderControls(
-        clientLogicState: ClientLogicState
+//        clientLogicState: ClientLogicState
     ) {
 //        println("#### renderControls: ${clientLogicState.logicStatus?.active?.state}")
 
-        val active = clientLogicState.isActive()
-        val executing = clientLogicState.isExecuting()
-        val runnable = true
+        val active = state.active
+        val executing = state.executing
+        val runnable = state.runnable
 
         ToggleButtonGroup {
 //                value = actionRun
@@ -366,7 +381,7 @@ class RibbonLogicRun (
                     width = 16.em
                 }
 
-                val frame = state.clientState?.clientLogicState?.logicStatus?.active?.frame
+                val frame = state.frame
 
                 if (frame == null) {
                     +"<Frame missing>"
@@ -384,7 +399,7 @@ class RibbonLogicRun (
 
         val dependencies = frame.dependencies
         if (dependencies.size == 1) {
-            ReactHTML.hr {}
+            hr {}
             renderFrame(dependencies.single())
         }
         else if (dependencies.size > 1) {
@@ -396,7 +411,7 @@ class RibbonLogicRun (
                         marginLeft = 0.5.em
                     }
 
-                    ReactHTML.hr {}
+                    hr {}
 
                     renderFrame(dependency)
                 }

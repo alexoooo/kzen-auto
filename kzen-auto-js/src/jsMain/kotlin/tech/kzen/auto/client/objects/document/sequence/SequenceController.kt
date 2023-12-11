@@ -24,6 +24,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
@@ -200,7 +201,7 @@ class SequenceController:
         val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
             ?: return
 
-        if (! SequenceState.isSequence(documentNotation)) {
+        if (! SequenceConventions.isSequence(documentNotation)) {
             return
         }
 

@@ -8,12 +8,12 @@ import mui.material.MenuItem
 import react.*
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
 import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
+import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
 import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.CssClasses
 import tech.kzen.auto.client.wrap.RPureComponent

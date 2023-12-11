@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.logic
 
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
 import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
@@ -9,7 +10,6 @@ import tech.kzen.auto.common.paradigm.logic.trace.LogicTrace
 import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
 import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceQuery
 import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceSnapshot
-import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionSuccess
