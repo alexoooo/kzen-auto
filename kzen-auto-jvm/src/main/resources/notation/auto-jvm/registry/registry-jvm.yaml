@@ -1,0 +1,4 @@
+main:
+  is: ObjectRegistry
+  classes:
+    - kotlin.ranges.IntRange
