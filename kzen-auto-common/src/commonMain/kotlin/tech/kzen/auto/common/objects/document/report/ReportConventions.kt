@@ -10,6 +10,7 @@ import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
 
 
+@Suppress("ConstPropertyName")
 object ReportConventions {
     val objectName = ObjectName("Report")
 

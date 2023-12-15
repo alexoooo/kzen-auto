@@ -12,12 +12,19 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.util.ClientResult
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.registry.ObjectRegistryConventions
+import tech.kzen.auto.common.objects.document.registry.model.ObjectRegistryReflection
 import tech.kzen.auto.common.objects.document.registry.spec.ClassListSpec
+import tech.kzen.lib.common.exec.ExecutionFailure
+import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import web.cssom.NamedColor
 import web.cssom.em
 
 
@@ -25,6 +32,8 @@ import web.cssom.em
 external interface ObjectRegistryControllerState: State {
     var objectLocation: ObjectLocation?
     var classes: ClassListSpec?
+    var reflection: List<ObjectRegistryReflection>?
+    var lastError: String?
 }
 
 
@@ -36,6 +45,8 @@ class ObjectRegistryController:
     override fun ObjectRegistryControllerState.init(props: Props) {
         objectLocation = null
         classes = null
+        reflection = null
+        lastError = null
     }
 
 
@@ -61,9 +72,45 @@ class ObjectRegistryController:
             return
         }
 
+        val objectLocation = documentPath.toMainObjectLocation()
+        val classes = ObjectRegistryConventions.classesSpec(documentNotation)
+
+        if (state.objectLocation == objectLocation &&
+                state.classes == classes) {
+            return
+        }
+
         setState {
-            objectLocation = documentPath.toMainObjectLocation()
-            classes = ObjectRegistryConventions.classesSpec(documentNotation)
+            this.objectLocation = objectLocation
+            this.classes = classes
+        }
+
+        async {
+            @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
+            val result = loadReflection(objectLocation)
+
+            setState {
+                reflection = result.valueOrNull()
+                lastError = result.errorOrNull()
+            }
+        }
+    }
+
+
+
+    private suspend fun loadReflection(objectLocation: ObjectLocation): ClientResult<List<ObjectRegistryReflection>> {
+        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
+        val result = ClientContext.restClient.performDetached(objectLocation)
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                val resultNotation = result.value as ListExecutionValue
+                val resultValue = ObjectRegistryReflection.listOfExecutionValue(resultNotation)
+                ClientResult.ofSuccess(resultValue)
+            }
+
+            is ExecutionFailure ->
+                ClientResult.ofError(result.errorMessage)
         }
     }
 
@@ -114,16 +161,29 @@ class ObjectRegistryController:
                 padding = 1.em
             }
 
-            for (className in classes.classNames) {
+            val lastError = state.lastError
+            if (lastError != null) {
+                div {
+                    css {
+                        color = NamedColor.red
+                    }
+                    +"Error: $lastError"
+                }
+            }
+
+            val reflection = state.reflection
+
+            for ((index, className) in classes.classNames.withIndex()) {
                 div {
                     key = className.asString()
 
-//                    DataFormatFieldEdit::class.react {
-//                        this.objectLocation = objectLocation
-//                        this.fieldName = fieldName
-//                        this.fieldSpec = fieldSpec
-//                    }
-                    +"Class name: $className"
+                    ObjectRegistryEdit::class.react {
+                        this.objectLocation = objectLocation
+                        this.index = index
+                        this.className = className
+
+                        this.reflection = reflection?.getOrNull(index)
+                    }
 
                     hr {}
                 }
@@ -132,7 +192,6 @@ class ObjectRegistryController:
             ObjectRegistryAdd::class.react {
                 this.objectLocation = objectLocation
             }
-//            +"[objectLocation: $objectLocation]"
         }
     }
 }

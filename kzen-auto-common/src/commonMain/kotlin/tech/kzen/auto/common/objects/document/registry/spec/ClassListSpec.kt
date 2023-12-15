@@ -9,11 +9,13 @@ import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveListItemInAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.ClassName
 
@@ -41,6 +43,20 @@ data class ClassListSpec(
                 ObjectRegistryConventions.classesAttributePath,
                 PositionRelation.afterLast,
                 ScalarAttributeNotation(className.asString()))
+        }
+
+
+        fun removeCommand(mainLocation: ObjectLocation, className: ClassName): NotationCommand {
+            return RemoveListItemInAttributeCommand(
+                mainLocation,
+                ObjectRegistryConventions.classesAttributePath,
+                classNameNotation(className),
+                false)
+        }
+
+
+        private fun classNameNotation(className: ClassName): AttributeNotation {
+            return ScalarAttributeNotation(className.asString())
         }
     }
 

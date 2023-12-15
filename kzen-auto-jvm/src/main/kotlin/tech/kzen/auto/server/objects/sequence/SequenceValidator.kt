@@ -7,6 +7,7 @@ import tech.kzen.auto.common.objects.document.sequence.model.SequenceValidation
 import tech.kzen.auto.common.objects.document.sequence.model.StepValidation
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.objects.registry.ObjectRegistryDocument
 import tech.kzen.auto.server.objects.sequence.api.SequenceStep
 import tech.kzen.auto.server.objects.sequence.model.SequenceDefinitionContext
 import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentName
@@ -35,11 +36,14 @@ class SequenceValidator: DetachedAction {
             val documentNotation = graphNotation.documents[documentPath]
                 ?: throw IllegalArgumentException("Document not found: $documentPath")
 
+            val objectRegistryScan = ObjectRegistryDocument.scan(graphNotation)
+
             val sequenceTree = SequenceTree.read(documentPath, graphDefinition)
             val stepValidationBuffer = mutableMapOf<ObjectPath, StepValidation>()
             val sequenceDefinitionContext = SequenceDefinitionContext(
                 sequenceTree,
-                SequenceValidation(stepValidationBuffer))
+                SequenceValidation(stepValidationBuffer),
+                objectRegistryScan)
 
             val stepObjectLocations = documentNotation
                 .objects

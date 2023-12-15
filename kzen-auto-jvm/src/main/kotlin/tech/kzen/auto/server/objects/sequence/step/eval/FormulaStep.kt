@@ -3,6 +3,7 @@
 package tech.kzen.auto.server.objects.sequence.step.eval
 
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.registry.model.ObjectRegistryScan
 import tech.kzen.auto.common.objects.document.sequence.model.SequenceTree
 import tech.kzen.auto.common.objects.document.sequence.model.SequenceValidation
 import tech.kzen.auto.server.context.KzenAutoContext
@@ -101,20 +102,31 @@ class FormulaStep(
             ClassNames.kotlinDouble,
             ClassNames.kotlinList,
             ClassNames.kotlinSet,
-            ClassName("kotlin.ranges.IntRange"))
+//            ClassName("kotlin.ranges.IntRange")
+        )
 
 
-        private fun findClassName(inferredTypeWithoutGenerics: String): ClassName? {
-            val simpleClassName = simpleClassNames.find { it.simple() == inferredTypeWithoutGenerics }
+        private fun findClassName(
+            inferredTypeWithoutGenerics: String,
+            objectRegistryScan: ObjectRegistryScan
+        ): ClassName? {
+            val simpleClassName = simpleClassNames
+                .find { it.simple() == inferredTypeWithoutGenerics }
+
             if (simpleClassName != null) {
                 return simpleClassName
             }
 
-            return null
+            return objectRegistryScan
+                .classNames
+                .find { it.simple() == inferredTypeWithoutGenerics }
         }
 
 
-        private fun parseTypeMetadata(inferredType: String): TypeMetadata? {
+        private fun parseTypeMetadata(
+            inferredType: String,
+            objectRegistryScan: ObjectRegistryScan
+        ): TypeMetadata? {
             val intersectionComponents = inferredType.split(" & ")
             val mostSpecificComponent = intersectionComponents.last().removeSuffix("}")
 
@@ -131,7 +143,9 @@ class FormulaStep(
                         .split(",")
                 }
 
-            val generics = genericComponents.map { parseTypeMetadata(it) }
+            val generics = genericComponents.map {
+                parseTypeMetadata(it, objectRegistryScan)
+            }
 
             val genericsParseErrors = generics
                 .withIndex()
@@ -149,7 +163,7 @@ class FormulaStep(
                     mostSpecificComponent.substring(0, startOfGenerics)
                 }
 
-            val simpleMatch = findClassName(inferredTypeWithoutGenerics)
+            val simpleMatch = findClassName(inferredTypeWithoutGenerics, objectRegistryScan)
                 ?: return null
 
             return TypeMetadata(
@@ -216,7 +230,7 @@ class FormulaStep(
                 "Unable to infer type: $stringError")
         }
 
-        val typeMetadata = parseTypeMetadata(inferredType)
+        val typeMetadata = parseTypeMetadata(inferredType, sequenceDefinitionContext.objectRegistryScan)
         if (typeMetadata == null) {
             return SequenceStepDefinition(
                 TupleDefinition.ofMain(LogicType(
