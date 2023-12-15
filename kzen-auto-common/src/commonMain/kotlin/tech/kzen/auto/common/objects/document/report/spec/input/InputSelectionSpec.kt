@@ -31,11 +31,11 @@ data class InputSelectionSpec(
 
 
         fun ofNotation(mapAttributeNotation: MapAttributeNotation): InputSelectionSpec {
-            val dataType = ClassName(mapAttributeNotation.values[dataTypeKey]!!.asString()!!)
+            val dataType = ClassName(mapAttributeNotation[dataTypeKey]!!.asString()!!)
 
-            val groupBy = mapAttributeNotation.values[groupByKey]!!.asString()!!
+            val groupBy = mapAttributeNotation[groupByKey]!!.asString()!!
 
-            val locationsAttributeNotation = mapAttributeNotation.values[locationsKey] as ListAttributeNotation
+            val locationsAttributeNotation = mapAttributeNotation[locationsKey] as ListAttributeNotation
             val locations = locationsAttributeNotation
                 .values
                 .map { InputDataSpec.ofNotation(it as MapAttributeNotation) }

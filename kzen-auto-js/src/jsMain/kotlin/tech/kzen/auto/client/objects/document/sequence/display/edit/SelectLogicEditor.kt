@@ -99,7 +99,7 @@ class SelectLogicEditor(
     private fun options(graphNotation: GraphNotation): List<ObjectLocation> {
         val featureMains = mutableListOf<ObjectLocation>()
 
-        for ((path, notation) in graphNotation.documents.values) {
+        for ((path, notation) in graphNotation.documents.map) {
             if (path == props.objectLocation.documentPath) {
                 // TODO: avoid suggesting DAG violation?
                 continue

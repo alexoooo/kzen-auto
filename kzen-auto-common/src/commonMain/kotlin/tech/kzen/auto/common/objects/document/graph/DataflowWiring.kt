@@ -20,6 +20,7 @@ import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames
 
 
+@Suppress("MemberVisibilityCanBePrivate")
 @Reflect
 class DataflowWiring: AttributeDefiner {
     companion object {
@@ -29,7 +30,7 @@ class DataflowWiring: AttributeDefiner {
 
 
         fun isInput(attributeMetadataMap: MapAttributeNotation): Boolean {
-            val isSegment = attributeMetadataMap.values[NotationConventions.isAttributeSegment]
+            val isSegment = attributeMetadataMap[NotationConventions.isAttributeSegment]
                     as? ScalarAttributeNotation
                     ?: return false
 
@@ -46,7 +47,7 @@ class DataflowWiring: AttributeDefiner {
 
             return cellMetadata
                     .attributes
-                    .values
+                    .map
                     .filter {
                         isInput(it.value.attributeMetadataNotation)
                     }
@@ -84,12 +85,11 @@ class DataflowWiring: AttributeDefiner {
             partialGraphDefinition: GraphDefinition,
             partialGraphInstance: GraphInstance
     ): AttributeDefinitionAttempt {
-        @Suppress("MoveVariableDeclarationIntoWhen")
+//        @Suppress("MoveVariableDeclarationIntoWhen")
         val attributeClass: ClassName = graphStructure
                 .graphMetadata
                 .get(objectLocation)!!
-                .attributes
-                .values[attributeName]
+                .attributes[attributeName]
                 ?.type
                 ?.className
                 ?: ClassNames.kotlinAny

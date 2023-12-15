@@ -36,7 +36,7 @@ class SequenceCommander(
                 .documents[containingObjectLocation.documentPath]!!
                 .objects
                 .notations
-                .values
+                .map
                 .keys
                 .map { it.name }
                 .toSet()
@@ -89,7 +89,7 @@ class SequenceCommander(
             .documents[containingAttributeLocation.objectLocation.documentPath]!!
             .objects
             .notations
-            .values
+            .map
             .size
 
         val objectNotation = ObjectNotation.ofParent(

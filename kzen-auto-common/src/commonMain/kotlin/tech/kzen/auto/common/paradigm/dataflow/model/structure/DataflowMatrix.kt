@@ -48,10 +48,8 @@ data class DataflowMatrix(
         ): ListAttributeNotation {
             return documentNotation
                     .objects
-                    .notations
-                    .values[NotationConventions.mainObjectPath]
+                    .notations[NotationConventions.mainObjectPath]
                     ?.attributes
-                    ?.values
                     ?.get(GraphDocument.verticesAttributeName)
                     as? ListAttributeNotation
                     ?: ListAttributeNotation(persistentListOf())
@@ -63,10 +61,8 @@ data class DataflowMatrix(
         ): ListAttributeNotation {
             return documentNotation
                     .objects
-                    .notations
-                    .values[NotationConventions.mainObjectPath]
+                    .notations[NotationConventions.mainObjectPath]
                     ?.attributes
-                    ?.values
                     ?.get(GraphDocument.edgesAttributeName)
                     as? ListAttributeNotation
                     ?: ListAttributeNotation(persistentListOf())

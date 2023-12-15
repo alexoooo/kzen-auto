@@ -59,7 +59,7 @@ object AutoConventions {
     fun mainDocuments(graphNotation: GraphNotation): List<DocumentPath> {
         return graphNotation
             .documents
-            .values
+            .map
             .keys
             .filter { it.startsWith(NotationConventions.mainDocumentNesting) }
     }

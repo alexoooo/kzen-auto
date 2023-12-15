@@ -21,7 +21,7 @@ data class SequenceTree(
             val documentNotation = graphDefinition.graphStructure.graphNotation.documents[documentPath]
                 ?: throw IllegalStateException("Not found: $documentPath")
 
-            val objectPaths = documentNotation.objects.notations.values.keys
+            val objectPaths = documentNotation.objects.notations.map.keys
             return read(objectPaths, ObjectPath.main, documentPath, documentNotation, graphDefinition)
         }
 
@@ -130,7 +130,7 @@ data class SequenceTree(
                 }
 
                 is MapAttributeNotation -> {
-                    for ((index, entry) in attributeNotation.values.entries.withIndex()) {
+                    for ((index, entry) in attributeNotation.map.entries.withIndex()) {
                         val itemIndex = indexOfByNotation(
                             objectLocation, entry.value, objectReferenceHost, objectLocator)
                         if (itemIndex != -1) {
@@ -174,7 +174,7 @@ data class SequenceTree(
                 }
 
                 is MapAttributeDefinition -> {
-                    for ((index, entry) in attributeDefinition.values.entries.withIndex()) {
+                    for ((index, entry) in attributeDefinition.map.entries.withIndex()) {
                         val itemIndex = indexOfByDefinition(
                             objectLocation, entry.value, objectReferenceHost, objectLocator)
                         if (itemIndex != -1) {

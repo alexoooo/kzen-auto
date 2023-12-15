@@ -91,7 +91,7 @@ data class FormulaSpec(
 
             val definitionMap = mutableMapOf<String, String>()
 
-            for (e in attributeNotation.values) {
+            for (e in attributeNotation.map) {
                 definitionMap[e.key.asString()] = e.value.asString()
                     ?: return AttributeDefinitionAttempt.failure(
                     "'${e.key}' is not a String: ${e.value}")

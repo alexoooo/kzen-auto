@@ -28,10 +28,10 @@ data class InputDataSpec(
 
 
         fun ofNotation(mapAttributeNotation: MapAttributeNotation): InputDataSpec {
-            val location = DataLocation.of(mapAttributeNotation.values[locationAttributeSegment]!!.asString()!!)
+            val location = DataLocation.of(mapAttributeNotation[locationAttributeSegment]!!.asString()!!)
 
             val processorDefinitionNameKey = mapAttributeNotation
-                .values[processorDefinitionCoordinateAttributeSegment]!!
+                .map[processorDefinitionCoordinateAttributeSegment]!!
                 .asString()!!
 
             return InputDataSpec(

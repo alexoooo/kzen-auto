@@ -108,8 +108,8 @@ class SidebarFolder(
             return true
         }
 
-        return props.graphStructure.graphNotation.documents.values.keys !=
-                nextProps.graphStructure.graphNotation.documents.values.keys
+        return props.graphStructure.graphNotation.documents.map.keys !=
+                nextProps.graphStructure.graphNotation.documents.map.keys
     }
 
 
@@ -118,7 +118,7 @@ class SidebarFolder(
         return structure
                 .graphNotation
                 .documents
-                .values
+                .map
                 .keys
                 .filter { it.startsWith(documentBaseNesting) }
                 .sortedBy { it.asString().lowercase() }
@@ -244,7 +244,7 @@ class SidebarFolder(
             directory: Boolean
     ): Boolean {
         val candidatePath = resolve(prefix + candidateSuffix, directory)
-        return candidatePath !in structure.graphNotation.documents.values
+        return candidatePath !in structure.graphNotation.documents
     }
 
 

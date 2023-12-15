@@ -35,7 +35,7 @@ class MappingStepCommander(
             .documents[containingObjectLocation.documentPath]!!
             .objects
             .notations
-            .values
+            .map
             .size +
             1
 

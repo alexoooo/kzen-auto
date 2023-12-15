@@ -26,20 +26,18 @@ data class FieldFormatSpec(
 
 
         private fun readTypeMetadata(attributeNotation: MapAttributeNotation): TypeMetadata {
-            val className = attributeNotation
-                .values[NotationConventions.classAttributeSegment]
+            val className = attributeNotation[NotationConventions.classAttributeSegment]
                 ?.asString()
                 ?: throw IllegalArgumentException("Class name expected: $attributeNotation")
 
-            val nestedGenericsNotation = attributeNotation
-                .values[NotationConventions.ofAttributeSegment] as? ListAttributeNotation
+            val nestedGenericsNotation =
+                attributeNotation[NotationConventions.ofAttributeSegment] as? ListAttributeNotation
                 ?: throw IllegalArgumentException("Generics expected: $attributeNotation")
 
             val nestedGenerics: List<TypeMetadata> =
                 nestedGenericsNotation.values.map { readTypeMetadata(it as MapAttributeNotation) }
 
-            val nullable = attributeNotation
-                .values[NotationConventions.nullableAttributeSegment]
+            val nullable = attributeNotation[NotationConventions.nullableAttributeSegment]
                 ?.asBoolean()
                 ?: throw IllegalArgumentException("Nullable info expected: $attributeNotation")
 

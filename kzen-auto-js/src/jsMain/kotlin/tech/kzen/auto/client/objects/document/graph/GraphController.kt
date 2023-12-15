@@ -286,7 +286,7 @@ class GraphController(
                         GraphDocument.verticesAttributePath,
                         PositionRelation.at(verticesNotation.values.size),
                         AutoConventions.randomAnonymous(),
-                        PositionRelation.at(documentNotation.objects.notations.values.size),
+                        PositionRelation.at(documentNotation.objects.notations.map.size),
                         objectNotation)
                 }
 
@@ -401,7 +401,7 @@ class GraphController(
 
                                         val inputAttributes: List<AttributeName> = cellMetadata
                                                 .attributes
-                                                .values
+                                                .map
                                                 .filter {
                                                     DataflowWiring.isInput(it.value.attributeMetadataNotation)
                                                 }

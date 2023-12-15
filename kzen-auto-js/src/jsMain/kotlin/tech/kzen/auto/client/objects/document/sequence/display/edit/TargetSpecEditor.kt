@@ -158,7 +158,7 @@ class TargetSpecEditor(
         val featureMains = mutableListOf<ObjectLocation>()
 
         for ((path, notation) in
-                clientState.graphStructure().graphNotation.documents.values
+                clientState.graphStructure().graphNotation.documents.map
         ) {
             if (FeatureDocument.isFeature(notation)) {
                 featureMains.add(ObjectLocation(

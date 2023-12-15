@@ -26,7 +26,7 @@ class ObjectRegistryDocument(
         fun scan(graphNotation: GraphNotation): ObjectRegistryScan {
             val classNames = graphNotation
                 .documents
-                .values
+                .map
                 .values
                 .asSequence()
                 .filter { ObjectRegistryConventions.isObjectRegistry(it) }

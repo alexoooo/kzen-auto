@@ -121,7 +121,7 @@ data class FilterSpec(
 
             val definitionMap = mutableMapOf<String, ColumnFilterSpec>()
 
-            for ((columnName, columnNotation) in attributeNotation.values) {
+            for ((columnName, columnNotation) in attributeNotation.map) {
                 val columnCriteriaNotation = columnNotation as MapAttributeNotation
                 val columnCriteria = ColumnFilterSpec.ofNotation(columnCriteriaNotation)
                 definitionMap[columnName.asKey()] = columnCriteria

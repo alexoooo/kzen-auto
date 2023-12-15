@@ -29,10 +29,10 @@ data class CellCoordinate(
         fun fromObjectNotation(
                 objectNotation: ObjectNotation
         ): CellCoordinate {
-            val rows = objectNotation.attributes.values[rowAttributeName]?.asString()?.toInt()
+            val rows = objectNotation.attributes[rowAttributeName]?.asString()?.toInt()
                     ?: throw IllegalArgumentException("$rowAttributeName expected: $objectNotation")
 
-            val columns = objectNotation.attributes.values[columnAttributeName]?.asString()?.toInt()
+            val columns = objectNotation.attributes[columnAttributeName]?.asString()?.toInt()
                     ?: throw IllegalArgumentException("$columnAttributeName expected: $objectNotation")
 
             return CellCoordinate(

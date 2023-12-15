@@ -33,12 +33,10 @@ data class PivotSpec(
 
 
         fun ofNotation(attributeNotation: MapAttributeNotation): PivotSpec {
-            val rowsNotation = attributeNotation
-                .get(rowsKey) as? ListAttributeNotation
+            val rowsNotation = attributeNotation[rowsKey] as? ListAttributeNotation
                 ?: throw IllegalArgumentException("'$rowsKey' attribute notation not found")
 
-            val valuesNotation = attributeNotation
-                .get(valuesKey) as? MapAttributeNotation
+            val valuesNotation = attributeNotation[valuesKey] as? MapAttributeNotation
                 ?: throw IllegalArgumentException("'$valuesKey' attribute notation not found")
 
             val rows = rowsNotation

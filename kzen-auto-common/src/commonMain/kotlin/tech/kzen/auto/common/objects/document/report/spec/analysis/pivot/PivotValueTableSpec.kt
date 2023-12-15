@@ -49,7 +49,7 @@ data class PivotValueTableSpec(
         fun ofNotation(notation: MapAttributeNotation): PivotValueTableSpec {
             val values = mutableMapOf<String, PivotValueColumnSpec>()
 
-            for (e in notation.values) {
+            for (e in notation.map) {
                 val pivotValueNotation = e.value as ListAttributeNotation
                 val pivotValue = PivotValueColumnSpec.ofNotation(pivotValueNotation)
                 values[e.key.asString()] = pivotValue

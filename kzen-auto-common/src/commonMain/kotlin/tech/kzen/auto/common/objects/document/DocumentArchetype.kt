@@ -8,25 +8,22 @@ import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
 
 
-abstract class DocumentArchetype(
-//        private val objectLocation: ObjectLocation
-) {
+abstract class DocumentArchetype {
     companion object {
         fun archetypeName(
             graphNotation: GraphNotation,
             documentPath: DocumentPath
         ): ObjectName? {
-            val document = graphNotation.documents.values[documentPath]
-                    ?: return null
+            val document = graphNotation.documents[documentPath]
+                ?: return null
 
-            val mainObject = document.objects.notations.values[NotationConventions.mainObjectPath]
-                    ?: return null
+            val mainObject = document.objects.notations[NotationConventions.mainObjectPath]
+                ?: return null
 
             return mainObject
-                    .attributes
-                    .values[NotationConventions.isAttributeName]
-                    ?.asString()
-                    ?.let { ObjectName(it) }
+                .attributes[NotationConventions.isAttributeName]
+                ?.asString()
+                ?.let { ObjectName(it) }
         }
 
 

@@ -25,7 +25,7 @@ data class FieldFormatListSpec(
         fun ofAttributeNotation(attributeNotation: MapAttributeNotation): FieldFormatListSpec {
             val builder = mutableMapOf<String, FieldFormatSpec>()
 
-            for ((fieldName, fieldNotation) in attributeNotation.values) {
+            for ((fieldName, fieldNotation) in attributeNotation.map) {
                 val fieldFormat = FieldFormatSpec.ofNotation(fieldNotation as MapAttributeNotation)
                 builder[fieldName.asKey()] = fieldFormat
             }

@@ -48,7 +48,7 @@ class SequenceValidator: DetachedAction {
             val stepObjectLocations = documentNotation
                 .objects
                 .notations
-                .values
+                .map
                 .keys
                 .map { documentPath.toObjectLocation(it) }
                 .filter { objectLocation ->

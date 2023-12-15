@@ -54,7 +54,7 @@ class PluginReportDefinitionRepository(
         val pluginObjectLocations = graphStructure
             .graphNotation
             .documents
-            .values
+            .map
             .filterValues { PluginConventions.isPlugin(it) }
             .keys
             .map { it.toMainObjectLocation() }

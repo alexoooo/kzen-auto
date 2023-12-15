@@ -54,7 +54,7 @@ object AutoTestUtils {
             val combinedNotationMedia = ReadWriteNotationMedia(
                 notationMedia, readOnlyMedia)
 
-            for (notationPath in combinedNotationMedia.scan().documents.values) {
+            for (notationPath in combinedNotationMedia.scan().documents.map) {
                 val notationModule = combinedNotationMedia.readDocument(notationPath.key)
                 val objects = notationParser.parseDocumentObjects(notationModule)
                 notationProjectBuilder[notationPath.key] = DocumentNotation(

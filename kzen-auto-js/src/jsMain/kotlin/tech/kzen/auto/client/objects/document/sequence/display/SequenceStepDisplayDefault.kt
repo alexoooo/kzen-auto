@@ -270,7 +270,7 @@ class SequenceStepDisplayDefault(
         objectMetadata: ObjectMetadata,
         trace: StepTrace?
     ) {
-        for (e in objectMetadata.attributes.values) {
+        for (e in objectMetadata.attributes.map) {
             if (AutoConventions.isManaged(e.key) /*|| props.common.managed*/) {
                 continue
             }

@@ -139,7 +139,7 @@ class RestHandler(
 
         val asMap = mutableMapOf<String, Any>()
 
-        for (e in documentTree.documents.values) {
+        for (e in documentTree.documents.map) {
             asMap[e.key.asRelativeFile()] = mapOf(
                 "documentDigest" to e.value.documentDigest.asString(),
                 "resources" to e.value.resources?.digests?.map {

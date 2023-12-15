@@ -22,17 +22,17 @@ class TargetSpecCreator: AttributeCreator {
         objectDefinition: ObjectDefinition,
         partialGraphInstance: GraphInstance
     ): Any {
-        val attributeDefinition = objectDefinition.attributeDefinitions.values[attributeName]
-                as? MapAttributeDefinition
-                ?: throw IllegalArgumentException("Attribute definition missing: $objectLocation - $attributeName")
+        val attributeDefinition = objectDefinition.attributeDefinitions[attributeName]
+            as? MapAttributeDefinition
+            ?: throw IllegalArgumentException("Attribute definition missing: $objectLocation - $attributeName")
 
         val typeDefinition =
-                attributeDefinition.values[TargetSpecDefiner.typeKey] as ValueAttributeDefinition
+            attributeDefinition[TargetSpecDefiner.typeKey] as ValueAttributeDefinition
         val typeName = typeDefinition.value as String
         val targetType = TargetType.valueOf(typeName)
 
         val valueDefinition =
-                attributeDefinition.values[TargetSpecDefiner.valueKey]
+            attributeDefinition[TargetSpecDefiner.valueKey]
 
         return when (targetType) {
             TargetType.Focus ->
@@ -52,10 +52,10 @@ class TargetSpecCreator: AttributeCreator {
                 val value = (valueDefinition as ReferenceAttributeDefinition).objectReference!!
 
                 val location = partialGraphInstance.objectInstances.locate(
-                        value, ObjectReferenceHost.ofLocation(objectLocation))
+                    value, ObjectReferenceHost.ofLocation(objectLocation))
 
                 val featureDocument=
-                        partialGraphInstance[location]?.reference as FeatureDocument
+                    partialGraphInstance[location]?.reference as FeatureDocument
 
                 VisualTarget(featureDocument)
             }

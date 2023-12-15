@@ -29,12 +29,12 @@ data class ColumnFilterSpec(
 
         fun ofNotation(attributeNotation: MapAttributeNotation): ColumnFilterSpec {
             val typeAttribute =
-                attributeNotation.get(typeAttributeSegment) as ScalarAttributeNotation
+                attributeNotation[typeAttributeSegment] as ScalarAttributeNotation
 
             val type = ColumnFilterType.valueOf(typeAttribute.value)
 
             val valuesAttribute =
-                attributeNotation.get(valuesAttributeSegment) as ListAttributeNotation
+                attributeNotation[valuesAttributeSegment] as ListAttributeNotation
 
             val values = valuesAttribute
                 .values

@@ -70,10 +70,10 @@ external interface VertexControllerState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 class VertexController(
-        props: VertexControllerProps
+    props: VertexControllerProps
 ):
-        RPureComponent<VertexControllerProps, VertexControllerState>(props),
-        ExecutionIntentGlobal.Observer
+    RPureComponent<VertexControllerProps, VertexControllerState>(props),
+    ExecutionIntentGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -199,15 +199,15 @@ class VertexController(
     private fun onRemove() {
         async {
             val sourceMain = ObjectLocation(
-                    props.documentPath,
-                    NotationConventions.mainObjectPath)
+                props.documentPath,
+                NotationConventions.mainObjectPath)
 
             val objectAttributePath = AttributePath(
-                    GraphDocument.verticesAttributeName,
-                    props.attributeNesting)
+                GraphDocument.verticesAttributeName,
+                props.attributeNesting)
 
             ClientContext.mirroredGraphStore.apply(RemoveObjectInAttributeCommand(
-                    sourceMain, objectAttributePath))
+                sourceMain, objectAttributePath))
         }
     }
 
@@ -221,10 +221,10 @@ class VertexController(
             inputName: AttributeName
     ): Boolean {
         val sourceVertex = props.dataflowMatrix.traceVertexBackFrom(props.cellDescriptor, inputName)
-                ?: return false
+            ?: return false
 
         val sourceVisualModel = props.visualDataflowModel.vertices[sourceVertex.objectLocation]
-                ?: return false
+            ?: return false
 
         return sourceVisualModel.message != null
     }
@@ -241,12 +241,12 @@ class VertexController(
         }
 
         val successors = props.dataflowDag.successors[props.cellDescriptor.objectLocation]
-                ?: return false
+            ?: return false
 
         return successors.isEmpty() ||
-                successors.any {
-                    (props.visualDataflowModel.vertices[it]?.epoch ?: -1) == 0
-                }
+            successors.any {
+                (props.visualDataflowModel.vertices[it]?.epoch ?: -1) == 0
+            }
     }
 
 
@@ -330,7 +330,7 @@ class VertexController(
 
         val objectMetadata = props.clientState.graphStructure().graphMetadata.get(props.cellDescriptor.objectLocation)!!
         val hasInput = inputAttributes.isNotEmpty()
-        val hasOutput = objectMetadata.attributes.values.containsKey(DataflowUtils.mainOutputAttributeName)
+        val hasOutput = objectMetadata.attributes.map.containsKey(DataflowUtils.mainOutputAttributeName)
 
         if (hasInput) {
             renderInput(inputAttributes[0], isRunning, isNextToRun, visualVertexModel)
@@ -395,19 +395,20 @@ class VertexController(
             visualVertexModel: VisualVertexModel?
     ) {
         val ingressColor =
-                if ((visualVertexModel?.epoch ?: 0) == 0 &&
-                        (isNextToRun || visualVertexModel?.phase() == VisualVertexPhase.Running) &&
-                        hasInputMessage(inputName)) {
-                    if (isRunning) {
-                        EdgeController.goldLight25
-                    }
-                    else {
-                        NamedColor.gold
-                    }
+            if ((visualVertexModel?.epoch ?: 0) == 0 &&
+                    (isNextToRun || visualVertexModel?.phase() == VisualVertexPhase.Running) &&
+                    hasInputMessage(inputName)
+            ) {
+                if (isRunning) {
+                    EdgeController.goldLight25
                 }
                 else {
-                    NamedColor.white
+                    NamedColor.gold
                 }
+            }
+            else {
+                NamedColor.white
+            }
 
         TopIngress::class.react {
             attributeName = inputName
@@ -417,11 +418,11 @@ class VertexController(
 
 
     private fun ChildrenBuilder.renderAdditionalInputs(
-            cardColor: Color,
-            inputAttributes: List<AttributeName>,
-            isRunning: Boolean,
-            isNextToRun: Boolean,
-            visualVertexModel: VisualVertexModel?
+        cardColor: Color,
+        inputAttributes: List<AttributeName>,
+        isRunning: Boolean,
+        isNextToRun: Boolean,
+        visualVertexModel: VisualVertexModel?
     ) {
         div {
             css {
@@ -484,12 +485,12 @@ class VertexController(
         val objectMetadata = props
             .clientState.graphStructure().graphMetadata.objectMetadata[vertexLocation]!!
 
-        val editableAttributes = objectMetadata.attributes.values.keys.filterNot {
+        val editableAttributes = objectMetadata.attributes.map.keys.filterNot {
             AutoConventions.isManaged(it) ||
                     it == CellCoordinate.rowAttributeName ||
                     it == CellCoordinate.columnAttributeName ||
                     props.clientState.graphStructure().graphNotation.firstAttribute(
-                            vertexLocation, AttributePath.ofName(it)
+                        vertexLocation, AttributePath.ofName(it)
                     ) == null
         }
 //        val userAttributeValues: Map<AttributeName, AttributeNotation> =
@@ -543,16 +544,16 @@ class VertexController(
             phase: VisualVertexPhase?
     ) {
         val title = props.clientState.graphStructure().graphNotation
-                .firstAttribute(
-                        props.cellDescriptor.objectLocation,
-                        AutoConventions.titleAttributePath
-                )?.asString()
+            .firstAttribute(
+                props.cellDescriptor.objectLocation,
+                AutoConventions.titleAttributePath
+            )?.asString()
 
         val description = props.clientState.graphStructure().graphNotation
-                .firstAttribute(
-                        props.cellDescriptor.objectLocation,
-                        AutoConventions.descriptionAttributePath
-                )?.asString()
+            .firstAttribute(
+                props.cellDescriptor.objectLocation,
+                AutoConventions.descriptionAttributePath
+            )?.asString()
 
         div {
             css {
@@ -664,17 +665,17 @@ class VertexController(
             phase: VisualVertexPhase?
     ) {
         val icon = props.clientState.graphStructure().graphNotation
-                .firstAttribute(props.cellDescriptor.objectLocation, AutoConventions.iconAttributePath)
-                ?.asString()
-                ?: defaultIcon
+            .firstAttribute(props.cellDescriptor.objectLocation, AutoConventions.iconAttributePath)
+            ?.asString()
+            ?: defaultIcon
 
         val highlight =
-                if (state.intentToRun && phase != VisualVertexPhase.Running) {
-                    Color("rgba(255, 215, 0, 0.5)")
-                }
-                else {
-                    Color("rgba(255, 255, 255, 0.5)")
-                }
+            if (state.intentToRun && phase != VisualVertexPhase.Running) {
+                Color("rgba(255, 215, 0, 0.5)")
+            }
+            else {
+                Color("rgba(255, 255, 255, 0.5)")
+            }
 
         IconButton {
             if (description?.isNotEmpty() == true) {

@@ -167,7 +167,7 @@ class RunStepArgumentsEditor(
 
         val attributeMap: Map<String, String> =
             (attributeNotation as? MapAttributeNotation)
-            ?.values
+            ?.map
             ?.map { it.key.asKey() to (it.value as ScalarAttributeNotation).value }
             ?.toMap()
             ?: mapOf()
@@ -187,7 +187,7 @@ class RunStepArgumentsEditor(
         val host = props.objectLocation.documentPath
         val documentNotation = graphNotation.documents[host]!!
 
-        val documentObjectNotations = documentNotation.objects.notations.values
+        val documentObjectNotations = documentNotation.objects.notations.map
 
         val steps = documentObjectNotations
             .keys
