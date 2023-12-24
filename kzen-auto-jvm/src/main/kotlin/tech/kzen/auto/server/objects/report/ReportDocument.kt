@@ -47,6 +47,7 @@ import tech.kzen.auto.server.service.v1.model.LogicDefinition
 import tech.kzen.auto.server.service.v1.model.LogicType
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.util.ClassLoaderUtils
+import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -391,7 +392,14 @@ class ReportDocument(
         val reportRunContext = reportRunContext()
             ?: throw IllegalStateException("Unable to create context")
 
-        KzenAutoContext.global().reportWorkPool.prepareRunDir(reportRunContext.runDir, logicRunExecutionId)
+        val reportWorkPool = KzenAutoContext.global().reportWorkPool
+        val created = reportWorkPool.prepareRunDir(reportRunContext.runDir, logicRunExecutionId)
+
+        if (! created) {
+            WorkUtils.recursivelyDeleteDir(reportRunContext.runDir)
+            val createdRetry = reportWorkPool.prepareRunDir(reportRunContext.runDir, logicRunExecutionId)
+            check(createdRetry) { "Unable to re-create: ${reportRunContext.runDir}" }
+        }
 
         var success = false
         try {

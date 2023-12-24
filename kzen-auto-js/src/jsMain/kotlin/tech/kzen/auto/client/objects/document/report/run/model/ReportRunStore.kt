@@ -189,10 +189,12 @@ class ReportRunStore(
 
 
     fun lookupProgressOfflineAsync() {
+//        println("lookupProgressOfflineAsync - ${store.state().output.outputInfo}")
         val runExecutionId = store.state().output.outputInfo?.runExecutionId
             ?: return
 
         async {
+//            println("lookupProgressOfflineAsync - lookupProgress")
             lookupProgress(runExecutionId)
         }
     }

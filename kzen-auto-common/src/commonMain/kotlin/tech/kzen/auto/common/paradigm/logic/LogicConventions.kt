@@ -11,6 +11,7 @@ import tech.kzen.lib.common.model.obj.ObjectNesting
 import tech.kzen.lib.common.model.obj.ObjectPath
 
 
+@Suppress("ConstPropertyName")
 object LogicConventions {
     // NB: referenced in logic-trace.yaml
     private val logicTraceStoreName = ObjectName("LogicTraceStore")

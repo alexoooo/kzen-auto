@@ -2,6 +2,8 @@ package tech.kzen.auto.server.util
 
 import com.google.common.io.BaseEncoding
 import tech.kzen.lib.common.util.digest.Digest
+import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.LocalDateTime
@@ -26,6 +28,14 @@ class WorkUtils(
 
         fun filenameEncodeDigest(digest: Digest): String {
             return digestEncoding.encode(digest.toByteArray())
+        }
+
+
+        fun recursivelyDeleteDir(dir: Path) {
+            Files.walk(dir)
+                .sorted(Comparator.reverseOrder())
+                .map(Path::toFile)
+                .forEach(File::delete)
         }
     }
 

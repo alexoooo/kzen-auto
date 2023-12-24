@@ -148,8 +148,13 @@ class ReportWorkPool(
     fun prepareRunDir(
         dir: Path,
         logicRunExecutionId: LogicRunExecutionId
-    ) {
-        check(! Files.exists(dir)) { "Already exists: $dir" }
+    ):
+        Boolean
+    {
+        if (! Files.exists(dir)) {
+            return false
+        }
+
         Files.createDirectories(dir)
 
         val initialInfoYaml = """
@@ -162,5 +167,6 @@ class ReportWorkPool(
         Files.write(
             dir.resolve(reportInfoFile),
             initialInfoYaml.toByteArray())
+        return true
     }
 }

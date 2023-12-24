@@ -9,6 +9,7 @@ import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputSt
 import tech.kzen.auto.client.objects.document.report.preview.model.ReportPreviewState
 import tech.kzen.auto.client.objects.document.report.run.model.ReportRunState
 import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
@@ -26,6 +27,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 data class ReportState(
     val mainLocation: ObjectLocation,
     val mainDefinition: ObjectDefinition,
+    val clientLogicState: ClientLogicState,
     val input: ReportInputState = ReportInputState(),
     val formula: ReportFormulaState = ReportFormulaState(),
     val filter: ReportFilterState = ReportFilterState(),

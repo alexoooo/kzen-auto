@@ -516,6 +516,13 @@ class ReportExecution(
 
         if (error) {
             reportWorkPool.updateRunStatus(initialReportRunContext.runDir, OutputStatus.Failed)
+            logger.warn("Report run failed")
+        }
+        else if (cancelled) {
+            logger.info("Report run cancelled")
+        }
+        else {
+            logger.info("Report run completed successfully")
         }
     }
 }

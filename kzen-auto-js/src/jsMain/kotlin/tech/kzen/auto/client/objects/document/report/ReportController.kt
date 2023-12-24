@@ -98,7 +98,7 @@ class ReportController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onPipelineState(reportState: ReportState/*, initial: Boolean*/) {
+    override fun onReportState(reportState: ReportState/*, initial: Boolean*/) {
         setState {
             this.reportState = reportState
         }

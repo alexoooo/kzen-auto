@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.model
 
 import kotlinx.coroutines.delay
+import kotlinx.datetime.Instant
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterStore
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaStore
@@ -29,7 +30,7 @@ class ReportStore: ClientStateGlobal.Observer {
 
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
-        fun onPipelineState(reportState: ReportState/*, initial: Boolean*/)
+        fun onReportState(reportState: ReportState/*, initial: Boolean*/)
     }
 
 
@@ -38,17 +39,7 @@ class ReportStore: ClientStateGlobal.Observer {
     private var mounted = false
     private var state: ReportState? = null
 
-
-    private var refreshPending: Boolean = false
-    private var previousRunning: Boolean = false
-    private val refreshDebounce: FunctionWithDebounce = lodash.debounce({
-        refreshPending = false
-        async {
-            refresh()
-            scheduleRefresh()
-        }
-    }, debounceMillis)
-
+    private var previousLogicTime: Instant = Instant.DISTANT_PAST
 
     val input = ReportInputStore(this)
     val formula = ReportFormulaStore(this)
@@ -96,10 +87,14 @@ class ReportStore: ClientStateGlobal.Observer {
             previousState == null || reportMainLocation != previousState.mainLocation ->
                 ReportState(
                     reportMainLocation,
-                    reportMainDefinition)
+                    reportMainDefinition,
+                    clientState.clientLogicState)
 
             else ->
-                previousState.copy(mainDefinition = reportMainDefinition)
+                previousState.copy(
+                    mainDefinition = reportMainDefinition,
+                    clientLogicState = clientState.clientLogicState
+                )
         }
 
         val initial =
@@ -108,12 +103,24 @@ class ReportStore: ClientStateGlobal.Observer {
 
         if (state != nextState) {
             state = nextState
-            observer?.onPipelineState(nextState/*, initial*/)
+            observer?.onReportState(nextState/*, initial*/)
         }
 
         if (initial) {
             cancelRefresh()
             initAsync()
+        }
+        else {
+//            println("Time: $previousLogicTime | Active: ${clientState.clientLogicState.isActive()}")
+
+            val logicTime: Instant = clientState.clientLogicState.logicStatus?.time ?: Instant.DISTANT_PAST
+            if (previousLogicTime != logicTime ||
+                previousLogicTime != Instant.DISTANT_PAST && ! clientState.clientLogicState.isActive()
+            ) {
+//                println("Scheduling $logicTime")
+                previousLogicTime = logicTime
+                scheduleRefresh()
+            }
         }
     }
 
@@ -169,7 +176,7 @@ class ReportStore: ClientStateGlobal.Observer {
 
         if (state != updated) {
             state = updated
-            observer?.onPipelineState(updated/*, false*/)
+            observer?.onReportState(updated/*, false*/)
             scheduleRefresh()
         }
     }
@@ -178,31 +185,49 @@ class ReportStore: ClientStateGlobal.Observer {
     fun update(state: ReportState) {
         if (this.state != state) {
             this.state = state
-            observer?.onPipelineState(state/*, false*/)
+            observer?.onReportState(state/*, false*/)
             scheduleRefresh()
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var refreshPending: Boolean = false
+    private var previousRunning: Boolean = false
+    private val refreshDebounce: FunctionWithDebounce = lodash.debounce({
+        refreshPending = false
+        async {
+            refresh()
+            scheduleRefresh()
+        }
+    }, debounceMillis)
+
+
     private fun scheduleRefresh() {
-        val running = state?.run?.logicStatus?.active != null
+//        val running = state?.run?.logicStatus?.active != null
+        val running = state?.clientLogicState?.logicStatus?.active != null
 //        console.log("^^^^ scheduleRefresh: $running - $refreshPending")
 
         if (refreshPending) {
             return
         }
+//        println("scheduleRefresh - ${state().output.outputInfo}")
 
         if (running) {
             refreshPending = true
             refreshDebounce.apply()
         }
         else if (previousRunning) {
-            println("ReportStore - previousRunning")
+//            println("ReportStore - previousRunning")
             cancelRefresh()
-            output.lookupOutputWithFallbackAsync()
-            run.lookupProgressOfflineAsync()
-            previewFiltered.lookupSummaryWithFallbackAsync()
+            async {
+                output.lookupOutputWithFallback()
+                run.lookupProgressOfflineAsync()
+                previewFiltered.lookupSummaryWithFallbackAsync()
+            }
+//            output.lookupOutputWithFallbackAsync()
+//            run.lookupProgressOfflineAsync()
+//            previewFiltered.lookupSummaryWithFallbackAsync()
         }
         previousRunning = running
     }

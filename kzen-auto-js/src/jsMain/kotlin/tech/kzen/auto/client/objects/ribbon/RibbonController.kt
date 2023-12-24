@@ -119,7 +119,7 @@ class RibbonController(
         }
 
         if (state.documentPath == null) {
-            println("%%%% componentDidUpdate reset")
+//            println("%%%% componentDidUpdate reset")
             setState {
                 updatePending = false
                 type = null

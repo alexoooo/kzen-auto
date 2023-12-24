@@ -17,10 +17,6 @@ import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 class SequenceStore: ClientStateGlobal.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        const val debounceMillis = 1_500
-        const val debounceMillis = 2_500
-//        const val debounceMillis = 5_000
-
         private val allChangeTypes = ChangeType.entries.toSet()
     }
 
