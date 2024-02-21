@@ -44,7 +44,7 @@ class ReportPreviewStore(
             return
         }
 
-        val logicRunInfo = store.state().run.logicStatus?.active
+        val logicRunInfo = store.state().clientLogicState.logicStatus?.active
 
         if (logicRunInfo != null) {
             val runId = logicRunInfo.id

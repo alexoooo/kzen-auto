@@ -110,8 +110,6 @@ class ReportController(
         val reportState = state.reportState
             ?: return
 
-//        renderHeader(processState)
-
         div {
             css {
                 padding = Padding(3.em, 3.em, 7.em, 3.em)
@@ -139,49 +137,6 @@ class ReportController(
 
         renderRun(reportState)
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    private fun RBuilder.renderHeader(reportState: ReportState) {
-//        val isInitiating = reportState.isInitiating()
-//        val errorMessage = reportState.nextErrorMessage()
-//
-//        // NB: placing condition here causes some InputBrowser state to be re-initialized?
-//        // if (! isInitiating && errorMessage == null) {
-//        //     return
-//        // }
-//
-//        StageController.StageContext.Consumer { context ->
-//            if (isInitiating || errorMessage != null) {
-//                styledDiv {
-//                    css {
-//                        position = Position.fixed
-//                        top = context.stageTop
-//                        left = context.stageLeft
-//                        width = 100.pct.minus(context.stageLeft)
-//                        zIndex = 99
-//                    }
-//
-//                    if (isInitiating) {
-//                        child(MaterialLinearProgress::class) {}
-//                    }
-//
-//                    if (errorMessage != null) {
-//                        styledDiv {
-//                            css {
-//                                backgroundColor = Color.red.lighten(50).withAlpha(0.85)
-//                                margin(1.em)
-//                                padding(0.25.em)
-//                                borderRadius = 3.px
-//                                fontWeight = FontWeight.bold
-//                            }
-//                            +"Error: $errorMessage"
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -276,11 +231,7 @@ class ReportController(
 
             ReportRunController::class.react {
                 thisRunning = reportState.isRunning()
-                thisSubmitting = reportState.run.submitting()
-                otherRunning = reportState.run.otherRunning
-
                 outputTerminal = (reportState.output.outputInfo?.status ?: OutputStatus.Missing).isTerminal()
-
                 reportStore = store
             }
         }

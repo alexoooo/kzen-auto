@@ -55,7 +55,6 @@ class ReportOutputStore(
         val command = OutputSpec.changeTypeCommand(
             store.mainLocation(), outputType)
 
-        @Suppress("MoveVariableDeclarationIntoWhen")
         val result = ClientContext.mirroredGraphStore.apply(command)
 
         return (result as? MirroredGraphError)?.error?.message
@@ -84,7 +83,7 @@ class ReportOutputStore(
 
 
     suspend fun lookupOutputWithFallback() {
-        val logicRunInfo = store.state().run.logicStatus?.active
+        val logicRunInfo = store.state().clientLogicState.logicStatus?.active
 
         if (logicRunInfo != null) {
             val runId = logicRunInfo.id

@@ -151,7 +151,7 @@ class ReportWorkPool(
     ):
         Boolean
     {
-        if (! Files.exists(dir)) {
+        if (Files.exists(dir)) {
             return false
         }
 

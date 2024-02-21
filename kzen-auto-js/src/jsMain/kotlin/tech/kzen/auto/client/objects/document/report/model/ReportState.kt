@@ -119,7 +119,8 @@ data class ReportState(
 
 
     fun isRunning(): Boolean {
-        return run.logicStatus?.active != null
+//        return run.logicStatus?.active != null
+        return clientLogicState.isActive()
     }
 
 

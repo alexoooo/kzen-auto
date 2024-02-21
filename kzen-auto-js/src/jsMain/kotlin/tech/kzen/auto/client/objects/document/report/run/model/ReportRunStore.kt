@@ -1,6 +1,5 @@
 package tech.kzen.auto.client.objects.document.report.run.model
 
-import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientError
@@ -12,7 +11,6 @@ import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
 import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
 import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunId
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunResponse
 import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
 import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceQuery
 import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceSnapshot
@@ -25,9 +23,9 @@ class ReportRunStore(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun init() {
-        lookupStatus()
+//        lookupStatus()
 
-        val activeInfo = store.state().run.logicStatus?.active
+        val activeInfo = store.state().clientLogicState.logicStatus?.active
         if (activeInfo != null) {
             lookupProgress(
                 LogicRunExecutionId(
@@ -40,154 +38,13 @@ class ReportRunStore(
     }
 
 
-//    suspend fun lookupProgressOffline() {
-//        val runExecutionId = store.state().output.outputInfo?.runExecutionId
-//            ?: return
-//
-//        lookupProgress(runExecutionId)
-//    }
-//
-//
-//    suspend fun lookupProgressActive() {
-//        val activeInfo = store.state().run.logicStatus?.active
-//            ?: return
-//
-//        lookupProgress(LogicRunExecutionId(
-//            activeInfo.id, activeInfo.frame.executionId))
-//    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun refresh() {
-        lookupStatus()
         lookupProgressActive()
     }
 
 
-    suspend fun lookupStatus() {
-        val status = ClientContext.restClient.logicStatus()
-
-        val active = status.active
-        val otherRunning = active != null && active.frame.objectLocation != store.state().mainLocation
-
-        store.update { state -> state
-            .withRun {
-                if (otherRunning) {
-                    it.copy(
-                        logicStatus = status.copy(active = null),
-                        otherRunning = true)
-                }
-                else {
-                    it.copy(
-                        logicStatus = status,
-                        otherRunning = false)
-                }
-            }
-        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
-    fun startAndRunAsync() {
-        store.update { state -> state
-            .withRun { it.copy(
-                starting = true,
-                runError = null
-            ) }
-        }
-
-        async {
-            delay(1)
-            val logicRunId = ClientContext.restClient.logicStartAndRun(
-                store.mainLocation())
-
-            if (logicRunId == null) {
-                store.update { state -> state
-                    .withRun { it.copy(
-                        starting = false,
-                        runError = "Unable to start"
-                    ) }
-                }
-            }
-            else {
-                delay(10)
-                store.update { state -> state
-                    .withRun { it.copy(starting = false) }
-                }
-
-                refreshAll()
-            }
-        }
-    }
-
-
-    private suspend fun refreshAll() {
-        delay(10)
-        lookupStatus()
-
-        delay(10)
-        store.output.lookupOutputWithFallback()
-
-        store.previewFiltered.lookupSummaryWithFallbackAsync()
-        lookupProgressWithFallbackAsync()
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    fun cancelAsync() {
-        val logicRunId = store.state().run.logicStatus?.active?.id
-            ?: return
-
-        store.update { state -> state
-            .withRun { it.copy(
-                cancelling = true,
-                runError = null
-            ) }
-        }
-
-        async {
-            delay(1)
-            val response = ClientContext.restClient.logicCancel(logicRunId)
-
-            if (response != LogicRunResponse.Submitted) {
-                store.update { state -> state
-                    .withRun { it.copy(
-                        cancelling = false,
-                        runError = "Unable to cancel"
-                    ) }
-                }
-            }
-            else {
-                delay(10)
-                store.update { state -> state
-                    .withRun { it.copy(cancelling = false) }
-                }
-
-                refreshAll()
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    fun lookupProgressWithFallbackAsync() {
-        if (store.state().isRunning()) {
-            lookupProgressActiveAsync()
-        }
-        else {
-            lookupProgressOfflineAsync()
-        }
-    }
-
-
-//    suspend fun lookupProgressWithFallback() {
-//        val wasActive = lookupProgressActive()
-//        if (! wasActive) {
-//            lookupProgressOffline()
-//        }
-//    }
-
-
     fun lookupProgressOfflineAsync() {
 //        println("lookupProgressOfflineAsync - ${store.state().output.outputInfo}")
         val runExecutionId = store.state().output.outputInfo?.runExecutionId
@@ -208,21 +65,8 @@ class ReportRunStore(
     }
 
 
-    fun lookupProgressActiveAsync() {
-        val activeInfo = store.state().run.logicStatus?.active
-            ?: return
-
-        async {
-            lookupProgress(
-                LogicRunExecutionId(
-                activeInfo.id, activeInfo.frame.executionId)
-            )
-        }
-    }
-
-
     suspend fun lookupProgressActive() {
-        val activeInfo = store.state().run.logicStatus?.active
+        val activeInfo = store.state().clientLogicState.logicStatus?.active
             ?: return
 
         lookupProgress(
