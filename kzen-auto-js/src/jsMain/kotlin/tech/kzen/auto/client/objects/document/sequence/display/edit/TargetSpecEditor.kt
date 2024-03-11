@@ -2,7 +2,7 @@ package tech.kzen.auto.client.objects.document.sequence.display.edit
 
 
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import kotlinx.browser.document
 import mui.material.MenuItem
 import mui.material.Select

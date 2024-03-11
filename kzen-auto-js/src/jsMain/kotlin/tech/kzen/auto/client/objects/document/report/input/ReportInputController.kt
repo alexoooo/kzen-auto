@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.input
 
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import mui.material.*
 import mui.material.Size
 import mui.system.sx

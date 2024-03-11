@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.run
 
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import mui.material.Fab
 import react.ChildrenBuilder
 import react.Props

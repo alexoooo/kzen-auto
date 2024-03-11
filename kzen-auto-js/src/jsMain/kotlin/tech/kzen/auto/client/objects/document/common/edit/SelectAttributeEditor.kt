@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import kotlinx.browser.document
 import mui.material.InputLabel
 import react.ChildrenBuilder

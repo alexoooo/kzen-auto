@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.analysis.pivot
 
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import kotlinx.browser.document
 import mui.material.IconButton
 import mui.material.InputLabel

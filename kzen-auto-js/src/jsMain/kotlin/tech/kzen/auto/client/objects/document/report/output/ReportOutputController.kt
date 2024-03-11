@@ -1,9 +1,10 @@
 package tech.kzen.auto.client.objects.document.report.output
 
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import mui.material.*
 import mui.material.Size
+//import mui.material.Size
 import mui.system.sx
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
@@ -205,7 +206,8 @@ class ReportOutputController(
             ToggleButton {
                 value = OutputType.Explore.name
                 disabled = props.runningOrLoading
-                size = Size.medium
+//                size = Size.medium
+                size = Size.pkcs8
                 css {
                     height = 34.px
                     color = NamedColor.black
@@ -226,7 +228,8 @@ class ReportOutputController(
             ToggleButton {
                 value = OutputType.Export.name
                 disabled = props.runningOrLoading
-                size = Size.medium
+//                size = Size.medium
+                size = Size.pkcs8
                 css {
                     height = 34.px
                     color = NamedColor.black

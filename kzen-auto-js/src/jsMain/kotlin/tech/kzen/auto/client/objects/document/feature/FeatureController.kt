@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.feature
 
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size

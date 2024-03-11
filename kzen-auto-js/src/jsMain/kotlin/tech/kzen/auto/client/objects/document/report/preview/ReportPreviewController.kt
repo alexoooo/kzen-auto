@@ -2,7 +2,7 @@ package tech.kzen.auto.client.objects.document.report.preview
 
 import csstype.PropertiesBuilder
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size

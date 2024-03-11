@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.sequence.display
 
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import mui.material.IconButton
 import react.ChildrenBuilder
 import react.Props

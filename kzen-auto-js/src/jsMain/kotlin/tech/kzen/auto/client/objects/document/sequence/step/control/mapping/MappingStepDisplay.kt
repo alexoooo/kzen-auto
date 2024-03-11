@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.sequence.step.control.mapping
 
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.br

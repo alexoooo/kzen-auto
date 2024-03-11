@@ -2,7 +2,7 @@ package tech.kzen.auto.client.objects.document.report.analysis
 
 import csstype.PropertiesBuilder
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import react.ChildrenBuilder
 import react.Props
 import react.State

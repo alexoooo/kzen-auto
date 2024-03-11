@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.input.select
 
-import js.core.jso
+import js.objects.jso
 import kotlinx.browser.document
 import mui.material.InputLabel
 import mui.system.sx

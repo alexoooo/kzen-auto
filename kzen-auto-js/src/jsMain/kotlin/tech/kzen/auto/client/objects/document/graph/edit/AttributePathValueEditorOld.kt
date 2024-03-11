@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.graph.edit
 
-import js.core.jso
+import js.objects.jso
 import mui.material.*
 import react.ChildrenBuilder
 import react.PropsWithRef

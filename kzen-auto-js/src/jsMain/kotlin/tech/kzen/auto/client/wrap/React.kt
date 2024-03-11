@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.wrap
 
 
-import js.core.jso
+import js.objects.jso
 import mui.material.InputBaseProps
 import mui.material.TextFieldProps
 import react.*

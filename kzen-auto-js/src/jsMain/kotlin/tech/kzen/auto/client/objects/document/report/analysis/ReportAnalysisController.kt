@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.analysis
 
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import mui.material.Size
 import mui.material.ToggleButton
 import mui.material.ToggleButtonGroup
@@ -138,7 +138,8 @@ class ReportAnalysisController(
                     ToggleButton {
                         value = AnalysisType.FlatData.name
                         disabled = editDisabled
-                        size = Size.medium
+//                        size = Size.medium
+                        size = Size.pkcs8
                         css {
                             height = 34.px
                             color = NamedColor.black
@@ -160,7 +161,8 @@ class ReportAnalysisController(
                     ToggleButton {
                         value = AnalysisType.PivotTable.name
                         disabled = editDisabled
-                        size = Size.medium
+//                        size = Size.medium
+                        size = Size.pkcs8
                         css {
                             height = 34.px
                             color = NamedColor.black

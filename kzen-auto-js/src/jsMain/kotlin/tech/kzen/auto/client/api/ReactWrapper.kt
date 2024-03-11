@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.api
 
-import js.core.JsoDsl
+import js.objects.JsoDsl
 import react.ChildrenBuilder
 
 

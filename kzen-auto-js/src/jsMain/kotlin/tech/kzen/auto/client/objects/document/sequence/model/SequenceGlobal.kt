@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.sequence.model
 
-import js.core.WeakRef
+import js.memory.WeakRef
 
 
 // TODO: use React context instead?

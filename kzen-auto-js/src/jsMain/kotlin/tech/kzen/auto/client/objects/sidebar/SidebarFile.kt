@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.sidebar
 
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import mui.material.IconButton
 import mui.material.Menu
 import mui.material.MenuItem

@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.ribbon
 
 import emotion.react.css
-import js.core.jso
+import js.objects.jso
 import mui.material.*
 import mui.system.sx
 import react.ChildrenBuilder

@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.sequence.progress
 
-import js.core.jso
+import js.objects.jso
 import mui.material.Fab
 import mui.system.sx
 import react.ChildrenBuilder

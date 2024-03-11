@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.input.browse
 
-import js.core.jso
+import js.objects.jso
 import mui.material.InputAdornment
 import mui.material.InputAdornmentPosition
 import mui.material.Size
