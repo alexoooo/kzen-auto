@@ -46,7 +46,7 @@ class FilePath private constructor(
 
             val type = when {
                 normalizedSlashes[1] == ':' && isWindowsDriveLetter(normalizedSlashes[0]) ->
-                    if (normalizedSlashes.length < 3 || normalizedSlashes[2] != '/') {
+                    if (normalizedSlashes.length > 2 && normalizedSlashes[2] != '/') {
                         return null
                     }
                     else {
@@ -71,7 +71,10 @@ class FilePath private constructor(
                     FilePathType.Relative
             }
 
-            if (type == FilePathType.AbsoluteWindows && normalizedSlashes.length <= 3 ||
+            if (type == FilePathType.AbsoluteWindows && normalizedSlashes.length == 2) {
+                return FilePath("$normalizedSlashes/", type)
+            }
+            else if (type == FilePathType.AbsoluteWindows && normalizedSlashes.length == 3 ||
                     type == FilePathType.AbsoluteUnix && normalizedSlashes.length == 1) {
                 return FilePath(normalizedSlashes, type)
             }
@@ -79,33 +82,34 @@ class FilePath private constructor(
             val parts = normalizedSlashes.split('/')
             val builder = mutableListOf<String>()
 
-            val firstFileInPath = when (type) {
-                FilePathType.NetworkWindows -> {
-                    if (! parts[2].all { isLegalInFilename(it) }) {
+            val firstFileInPath: Int
+            if (type == FilePathType.NetworkWindows) {
+                if (! parts[2].all { isLegalInFilename(it) }) {
+                    return null
+                }
+
+                if (parts.size == 3) {
+                    builder.add("\\\\" + parts[2])
+                    firstFileInPath = 3
+                }
+                else {
+                    if (! parts[3].all { isLegalInFilename(it) }) {
                         return null
                     }
-
-                    if (parts.size == 3) {
-                        builder.add("\\\\" + parts[2])
-                        3
-                    }
-                    else {
-                        if (! parts[3].all { isLegalInFilename(it) }) {
-                            return null
-                        }
-                        builder.add("\\\\" + parts[2] + "\\" + parts[3])
-                        4
-                    }
+                    builder.add("\\\\" + parts[2] + "\\" + parts[3])
+                    firstFileInPath = 4
                 }
-                FilePathType.AbsoluteWindows -> {
-                    builder.add(parts[0])
-                    1
-                }
-                FilePathType.AbsoluteUnix -> {
-                    builder.add("")
-                    1
-                }
-                else -> 0
+            }
+            else if (type == FilePathType.AbsoluteWindows) {
+                builder.add(parts[0])
+                firstFileInPath = 1
+            }
+            else if (type == FilePathType.AbsoluteUnix) {
+                builder.add("")
+                firstFileInPath = 1
+            }
+            else {
+                firstFileInPath = 0
             }
 
             for (i in firstFileInPath until parts.size) {
