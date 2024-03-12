@@ -13,6 +13,7 @@ data class DataLocation(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        @Suppress("ConstPropertyName")
         private const val unknownLocation = "unknown"
         val unknown = DataLocation(null, null)
 
@@ -135,7 +136,7 @@ data class DataLocation(
 
         val withoutTrainingSlash =
             if (simpleString.endsWith("/")) {
-                simpleString.substring(0, simpleString.length - 1)
+                simpleString.dropLast(1)
             }
             else {
                 simpleString
@@ -166,9 +167,10 @@ data class DataLocation(
             filePath != null &&
                     filePath.type == FilePathType.AbsoluteWindows &&
                     lastSeparator == 2 ->
-                of(simpleString.substring(0, lastSeparator + 1))
+                of(simpleString.take(lastSeparator + 1))
 
-            else -> of(simpleString.substring(0, lastSeparator))
+            else ->
+                of(simpleString.take(lastSeparator))
         }
     }
 
