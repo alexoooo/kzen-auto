@@ -38,6 +38,6 @@ class ReportHeaderReaderTest {
                 FlatDataSource.ofLiteral(contents.toByteArray()),
                 processorDataDefinition))
 
-        assertEquals(listOf("foo", "bar"), header.values)
+        assertEquals(listOf("foo", "bar"), header.values.map { it.text })
     }
 }

@@ -6,10 +6,11 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 
 
 data class OutputPreview(
-    val header: HeaderListing,
+    val renderedHeader: List<String>,
     val rows: List<List<String>>,
     val startRow: Long
 ) {
+    @Suppress("ConstPropertyName")
     companion object {
         private const val headerKey = "header"
         private const val rowsKey = "rows"
@@ -17,9 +18,9 @@ data class OutputPreview(
 
 
         @Suppress("UNCHECKED_CAST")
-        fun fromCollection(collection: Map<String, Any>): OutputPreview {
+        fun ofCollection(collection: Map<String, Any>): OutputPreview {
             return OutputPreview(
-                HeaderListing(collection[headerKey] as List<String>),
+                collection[headerKey] as List<String>,
                 collection[rowsKey] as List<List<String>>,
                 (collection[startKey] as String).toLong())
         }
@@ -28,20 +29,21 @@ data class OutputPreview(
         fun emptyHeaderListing(
             filteredColumns: HeaderListing,
             analysisSpec: AnalysisSpec
-        ): HeaderListing {
+        ): List<String> {
             return when (analysisSpec.type) {
                 AnalysisType.PivotTable ->
-                    OutputPivotExportSignature.of(analysisSpec.pivot).header
+                    OutputPivotExportSignature.of(analysisSpec.pivot).header.map { it.render() }
 
-                else -> filteredColumns
+                else ->
+                    filteredColumns.values.map { it.render() }
             }
         }
     }
 
 
-    fun toCollection(): Map<String, Any> {
+    fun asCollection(): Map<String, Any> {
         return mapOf(
-            headerKey to header.values,
+            headerKey to renderedHeader,
             rowsKey to rows,
             startKey to startRow.toString())
     }

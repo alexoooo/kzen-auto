@@ -2,8 +2,8 @@ package tech.kzen.auto.client.wrap.select
 
 
 external interface ReactSelectOption {
-        var value: String
-        var label: String
+    var value: String
+    var label: String
 }
 
 

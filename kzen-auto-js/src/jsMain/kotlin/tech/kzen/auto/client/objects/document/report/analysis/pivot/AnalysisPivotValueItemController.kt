@@ -10,6 +10,7 @@ import react.react
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.DeleteIcon
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import web.cssom.Float
 import web.cssom.em
 import web.cssom.pct
@@ -17,7 +18,7 @@ import web.cssom.pct
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface AnalysisPivotValueItemControllerProps: react.Props {
-    var columnName: String
+    var columnName: HeaderLabel
     var analysisStore: ReportAnalysisStore
     var runningOrLoading: Boolean
 }
@@ -68,7 +69,7 @@ class AnalysisPivotValueItemController(
                 paddingBottom = 0.25.em
             }
 
-            +props.columnName
+            +props.columnName.render()
 
             IconButton {
                 size = Size.small

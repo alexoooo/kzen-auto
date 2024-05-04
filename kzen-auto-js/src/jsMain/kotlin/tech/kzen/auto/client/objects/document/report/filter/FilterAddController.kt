@@ -18,6 +18,7 @@ import tech.kzen.auto.client.wrap.material.CancelIcon
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import web.cssom.Display
@@ -173,7 +174,7 @@ class FilterAddController(
     }
 
 
-    private fun ChildrenBuilder.renderSelect(unusedOptions: List<String>, editDisabled: Boolean) {
+    private fun ChildrenBuilder.renderSelect(unusedOptions: List<HeaderLabel>, editDisabled: Boolean) {
         val selectId = "material-react-select-id"
 
         InputLabel {
@@ -189,8 +190,8 @@ class FilterAddController(
         val selectOptions = unusedOptions
             .map {
                 val option: ReactSelectOption = jso {
-                    value = it
-                    label = it
+                    value = it.asString()
+                    label = it.render()
                 }
                 option
             }

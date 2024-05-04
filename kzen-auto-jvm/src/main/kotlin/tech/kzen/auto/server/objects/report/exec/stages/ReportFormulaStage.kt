@@ -54,8 +54,7 @@ class ReportFormulaStage(
             formulas[nextIndex++] = calculatedColumn
         }
 
-        augmentedHeader = HeaderListing(
-            header.values + formulaSpec.formulas.keys)
+        augmentedHeader = header.append(HeaderListing.ofUnique(formulaSpec.formulas.keys.toList()))
     }
 
 

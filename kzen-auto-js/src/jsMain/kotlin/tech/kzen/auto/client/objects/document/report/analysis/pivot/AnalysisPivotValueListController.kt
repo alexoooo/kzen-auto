@@ -55,7 +55,7 @@ class AnalysisPivotValueListController(
                 tbody {
                     for (e in props.spec.values.columns) {
                         tr {
-                            key = e.key
+                            key = e.key.asString()
 
                             td {
                                 css {

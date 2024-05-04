@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.objects.report.exec.summary
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabelMap
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.summary.*
 import tech.kzen.auto.common.util.FormatUtils
@@ -21,6 +23,7 @@ class ReportSummary(
     AutoCloseable
 {
     //-----------------------------------------------------------------------------------------------------------------
+    @Suppress("ConstPropertyName")
     companion object {
         //-------------------------------------------------------------------------------------------------------------
         const val summaryDirName = "summary"
@@ -44,8 +47,8 @@ class ReportSummary(
         }
 
 
-        private fun columnDir(summaryDir: Path, columnName: String): Path {
-            val columnDirName = FormatUtils.sanitizeFilename(columnName)
+        private fun columnDir(summaryDir: Path, headerLabel: HeaderLabel): Path {
+            val columnDirName = FormatUtils.sanitizeFilename(headerLabel.render())
             return summaryDir.resolve(columnDirName)
         }
 
@@ -59,7 +62,7 @@ class ReportSummary(
                 return null
             }
 
-            val builder = mutableMapOf<String, ColumnSummary>()
+            val builder = mutableMapOf<HeaderLabel, ColumnSummary>()
 
             for (columnName in reportRunContext.inputAndFormulaColumns.values) {
                 val columnDir = columnDir(summaryDir, columnName)
@@ -73,7 +76,7 @@ class ReportSummary(
                 builder[columnName] = ValueSummaryBuilder.merge(cumulative, columnSummary)
             }
 
-            return TableSummary(builder)
+            return TableSummary(HeaderLabelMap(builder))
         }
 
 
@@ -289,12 +292,12 @@ class ReportSummary(
         val response = viewResponse
             ?: return
 
-        val tableSummary = TableSummary(
+        val tableSummary = TableSummary(HeaderLabelMap(
             headerIndex
                 .columnHeaders
                 .values
                 .withIndex()
-                .associate { it.value to builders[it.index].build() })
+                .associate { it.value to builders[it.index].build() }))
 
         response.complete(tableSummary)
         viewResponse = null

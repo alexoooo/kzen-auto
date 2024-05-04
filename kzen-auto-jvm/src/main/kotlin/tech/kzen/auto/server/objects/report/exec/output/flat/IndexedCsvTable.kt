@@ -73,7 +73,7 @@ class IndexedCsvTable(
         logger.info("Open {}", tablePath)
 
         if (offsetStore.size() == 0L) {
-            bufferWriter.write(FlatFileRecord.of(header.values).toCsv())
+            bufferWriter.write(FlatFileRecord.of(header.values.map { it.render() }).toCsv())
             bufferWriter.write(lineBreak)
             bufferWriter.flush()
 
@@ -152,7 +152,8 @@ class IndexedCsvTable(
         traverseWithoutHeader(start, count.toLong()) {
             builder.add(it)
         }
-        return OutputPreview(header, builder, start)
+        val renderedHeader = header.values.map { it.render() }
+        return OutputPreview(renderedHeader, builder, start)
     }
 
 

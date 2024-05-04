@@ -1,30 +1,43 @@
 package tech.kzen.auto.common.objects.document.report.summary
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabelMap
+
 
 data class TableSummary(
-    val columnSummaries: Map<String, ColumnSummary>
+    val columnSummaries: HeaderLabelMap<ColumnSummary>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val empty = TableSummary(mapOf())
+        val empty = TableSummary(HeaderLabelMap(mapOf()))
 
 
         fun fromCollection(collection: Map<String, Map<String, Any>>): TableSummary {
-            return TableSummary(
-                collection.mapValues { ColumnSummary.fromCollection(it.value) })
+            return TableSummary(HeaderLabelMap(
+                collection
+                    .map {
+                        HeaderLabel.ofString(it.key) to
+                                ColumnSummary.fromCollection(it.value)
+                    }
+                    .toMap()))
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun isEmpty(): Boolean {
-        return columnSummaries.isEmpty() ||
-                columnSummaries.values.all { it.isEmpty() }
+        return columnSummaries.map.isEmpty() ||
+                columnSummaries.map.values.all { it.isEmpty() }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun toCollection(): Map<String, Map<String, Any>> {
-        return columnSummaries.mapValues { it.value.toCollection() }
+        return columnSummaries
+            .map
+            .map {
+                it.key.asString() to it.value.toCollection()
+            }
+            .toMap()
     }
 }

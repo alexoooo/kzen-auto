@@ -9,13 +9,13 @@ class ReportStateCache {
     private var cachedAnalysisColumnInfo: AnalysisColumnInfo? = null
     private var cachedFormulaKeys: Set<String>? = null
 
-    private var inputColumnNamesCache: List<String>? = null
+    private var inputColumnNamesCache: HeaderListing? = null
     private var inputAndCalculatedColumnsCache: HeaderListing? = null
     private var filteredColumnsCache: HeaderListing? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun inputColumnNames(state: ReportState): List<String>? {
+    fun inputColumnNames(state: ReportState): HeaderListing? {
         update(state)
         return inputColumnNamesCache
     }
@@ -58,12 +58,12 @@ class ReportStateCache {
             return
         }
 
-        val inputAndCalculatedColumnNames = analysisColumnInfo.inputAndCalculatedColumns.keys.toList()
-        inputAndCalculatedColumnsCache = HeaderListing(inputAndCalculatedColumnNames)
+        val inputColumnsHeaderListing = analysisColumnInfo.inputColumns.allHeaderListing()
+        inputColumnNamesCache = inputColumnsHeaderListing
 
-        val inputColumnNames = inputAndCalculatedColumnNames.filterNot { it in formulaKeys }
-        inputColumnNamesCache = inputColumnNames
+        val calculatedColumnsHeaderListing = analysisColumnInfo.calculatedColumns.allHeaderListing()
+        inputAndCalculatedColumnsCache = inputColumnsHeaderListing.append(calculatedColumnsHeaderListing)
 
-        filteredColumnsCache = analysisColumnInfo.filteredColumns()
+        filteredColumnsCache = analysisColumnInfo.filteredInputAndCalculatedColumns
     }
 }

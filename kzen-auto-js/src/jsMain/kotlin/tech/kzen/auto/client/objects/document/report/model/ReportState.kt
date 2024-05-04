@@ -125,7 +125,7 @@ data class ReportState(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun inputColumnNames(): List<String>? {
+    fun inputColumnNames(): HeaderListing? {
         return _cache.inputColumnNames(this)
     }
 

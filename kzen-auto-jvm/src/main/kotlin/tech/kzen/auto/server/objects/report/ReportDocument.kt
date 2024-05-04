@@ -3,8 +3,7 @@ package tech.kzen.auto.server.objects.report
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
-import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
+import tech.kzen.auto.common.objects.document.report.listing.*
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
@@ -505,13 +504,14 @@ class ReportDocument(
 
 
     private fun analysisColumnInfo(datasetInfo: DatasetInfo): AnalysisColumnInfo {
-        val inputColumnNames = datasetInfo.headerSuperset().values
-        val calculatedColumnNames = formula.formulas.keys.toList()
-        val inputAndCalculatedColumnNames = inputColumnNames + calculatedColumnNames
+        val inputHeaderListing: HeaderListing = datasetInfo.headerSuperset()
+        val calculatedHeaderListing = HeaderListing.ofUnique(formula.formulas.keys.toList())
+//        val inputAndCalculatedColumnNames = inputColumnNames.append(calculatedColumnNames)
 
         if (analysis.type != AnalysisType.FlatData) {
             return AnalysisColumnInfo(
-                inputAndCalculatedColumnNames.associateWith { true },
+                FilteredHeaderListing.ofAll(inputHeaderListing),
+                FilteredHeaderListing.ofAll(calculatedHeaderListing),
                 null,
                 null)
         }
@@ -538,18 +538,24 @@ class ReportDocument(
             }
         }
 
-        val inputColumns = inputAndCalculatedColumnNames.associateWith { columnName ->
-            val allow = allowPatterns.isEmpty() ||
-                    allowPatterns.any { it.matcher(columnName).matches() }
+        fun include(headerLabelText: String): Boolean {
+            val allow =
+                allowPatterns.isEmpty() ||
+                allowPatterns.any { it.matcher(headerLabelText).matches() }
 
-            val exclude = excludePatterns.isNotEmpty() &&
-                    excludePatterns.any { it.matcher(columnName).matches() }
+            val exclude =
+                excludePatterns.isNotEmpty() &&
+                excludePatterns.any { it.matcher(headerLabelText).matches() }
 
-            allow && ! exclude
+            return allow && ! exclude
         }
 
+        val inputColumns = inputHeaderListing.values.associateWith { include(it.text) }
+        val calculatedColumns = calculatedHeaderListing.values.associateWith { include(it.text) }
+
         return AnalysisColumnInfo(
-            inputColumns,
+            FilteredHeaderListing(HeaderLabelMap(inputColumns)),
+            FilteredHeaderListing(HeaderLabelMap(calculatedColumns)),
             patternErrorOrNull(allowErrors),
             patternErrorOrNull(excludeErrors)
         )

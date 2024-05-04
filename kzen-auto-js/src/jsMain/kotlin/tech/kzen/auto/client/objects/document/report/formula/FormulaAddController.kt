@@ -17,6 +17,8 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.material.CancelIcon
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import web.cssom.Display
 import web.cssom.em
@@ -27,7 +29,7 @@ import web.html.HTMLInputElement
 external interface FormulaAddControllerProps: react.Props {
     var formulaSpec: FormulaSpec
     var formulaState: ReportFormulaState
-    var inputColumns: List<String>?
+    var inputColumns: HeaderListing?
     var runningOrLoading: Boolean
     var formulaStore: ReportFormulaStore
 }
@@ -187,7 +189,7 @@ class FormulaAddController(
             }
 
             disabled = props.runningOrLoading
-            error = (props.inputColumns?.contains(state.selectedColumn) ?: false)
+            error = (props.inputColumns?.values?.any { it.text == state.selectedColumn } ?: false)
 
             onKeyDown = {e ->
                 handleEnterAndEscape(e)

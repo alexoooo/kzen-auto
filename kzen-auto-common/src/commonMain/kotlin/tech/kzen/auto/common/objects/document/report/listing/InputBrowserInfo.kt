@@ -8,6 +8,7 @@ data class InputBrowserInfo(
     val browseDir: DataLocation,
     val files: List<DataLocationInfo>
 ) {
+    @Suppress("ConstPropertyName")
     companion object {
         private const val browseDirKey = "dir"
         private const val filesKey = "files"

@@ -417,14 +417,14 @@ class CalculatedColumnEvalTest {
         val calculatedColumn = calculatedColumnEval.create(
             "c",
             formula,
-            HeaderListing(columnNames),
+            HeaderListing.ofUnique(columnNames),
             ClassNames.kotlinAny,
             ClassLoaderUtils.dynamicParentClassLoader())
 
         val value = calculatedColumn.evaluate(
             Unit,
             FlatFileRecord.of(aValue, bValue),
-            HeaderListing(columnNames))
+            HeaderListing.ofUnique(columnNames))
 
         assertEquals(expected, value.text)
     }

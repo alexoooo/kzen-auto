@@ -1,6 +1,8 @@
 package tech.kzen.auto.common.objects.document.report.spec.filter
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabelMap
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -21,7 +23,8 @@ import tech.kzen.lib.common.util.digest.Digestible
 
 
 data class FilterSpec(
-    val columns: Map<String, ColumnFilterSpec>
+//    val columns: HeaderLabelMap<ColumnFilterSpec>
+    val columns: Map<HeaderLabel, ColumnFilterSpec>
 ): Digestible {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -37,7 +40,7 @@ data class FilterSpec(
         }
 
 
-        fun removeCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
+        fun removeCommand(mainLocation: ObjectLocation, columnName: HeaderLabel): NotationCommand {
             return RemoveInAttributeCommand(
                 mainLocation,
                 columnAttributePath(columnName),
@@ -45,7 +48,11 @@ data class FilterSpec(
         }
 
 
-        fun addValueCommand(mainLocation: ObjectLocation, columnName: String, filterValue: String): NotationCommand {
+        fun addValueCommand(
+            mainLocation: ObjectLocation,
+            columnName: HeaderLabel,
+            filterValue: String
+        ): NotationCommand {
             return InsertListItemInAttributeCommand(
                 mainLocation,
                 columnValuesAttributePath(columnName),
@@ -56,7 +63,7 @@ data class FilterSpec(
 
         fun removeValueCommand(
             mainLocation: ObjectLocation,
-            columnName: String,
+            columnName: HeaderLabel,
             filterValue: String
         ): NotationCommand {
             return RemoveListItemInAttributeCommand(
@@ -69,7 +76,7 @@ data class FilterSpec(
 
         fun updateTypeCommand(
             mainLocation: ObjectLocation,
-            columnName: String,
+            columnName: HeaderLabel,
             filterType: ColumnFilterType
         ): NotationCommand {
             return UpdateInAttributeCommand(
@@ -79,19 +86,19 @@ data class FilterSpec(
         }
 
 
-        private fun columnAttributePath(columnName: String): AttributePath {
-            val columnAttributeSegment = AttributeSegment.ofKey(columnName)
+        private fun columnAttributePath(columnName: HeaderLabel): AttributePath {
+            val columnAttributeSegment = AttributeSegment.ofKey(columnName.asString())
             return ReportConventions.filterAttributePath.nest(columnAttributeSegment)
         }
 
 
-        fun columnValuesAttributePath(columnName: String): AttributePath {
+        fun columnValuesAttributePath(columnName: HeaderLabel): AttributePath {
             val columnAttributePath = columnAttributePath(columnName)
             return columnAttributePath.nest(ColumnFilterSpec.valuesAttributeSegment)
         }
 
 
-        private fun columnTypeAttributePath(columnName: String): AttributePath {
+        private fun columnTypeAttributePath(columnName: HeaderLabel): AttributePath {
             val columnAttributePath = columnAttributePath(columnName)
             return columnAttributePath.nest(ColumnFilterSpec.typeAttributeSegment)
         }
@@ -119,12 +126,12 @@ data class FilterSpec(
                     "'${ReportConventions.filterAttributeName}' attribute notation not found:" +
                             " $objectLocation - $attributeName")
 
-            val definitionMap = mutableMapOf<String, ColumnFilterSpec>()
+            val definitionMap = mutableMapOf<HeaderLabel, ColumnFilterSpec>()
 
             for ((columnName, columnNotation) in attributeNotation.map) {
                 val columnCriteriaNotation = columnNotation as MapAttributeNotation
                 val columnCriteria = ColumnFilterSpec.ofNotation(columnCriteriaNotation)
-                definitionMap[columnName.asKey()] = columnCriteria
+                definitionMap[HeaderLabel.ofString(columnName.asKey())] = columnCriteria
             }
 
             return AttributeDefinitionAttempt.success(
@@ -143,7 +150,7 @@ data class FilterSpec(
     //-----------------------------------------------------------------------------------------------------------------
     override fun digest(sink: Digest.Sink) {
         sink.addUnorderedCollection(columns.entries) {
-            addUtf8(it.key)
+            addDigestible(it.key)
             addDigestible(it.value)
         }
     }

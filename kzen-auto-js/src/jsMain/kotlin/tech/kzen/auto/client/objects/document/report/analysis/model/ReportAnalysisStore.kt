@@ -4,6 +4,7 @@ import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
@@ -46,31 +47,31 @@ class ReportAnalysisStore(
     }
 
 
-    fun addPivotRowAsync(columnName: String) {
+    fun addPivotRowAsync(headerLabel: HeaderLabel) {
         val command = PivotSpec.addRowCommand(
-            store.mainLocation(), columnName)
+            store.mainLocation(), headerLabel)
 
         applyCommandAsync(command, true)
     }
 
 
-    fun removePivotRowAsync(columnName: String) {
+    fun removePivotRowAsync(headerLabel: HeaderLabel) {
         val command = PivotSpec.removeRowCommand(
-            store.mainLocation(), columnName)
+            store.mainLocation(), headerLabel)
 
         applyCommandAsync(command, true)
     }
 
 
-    fun addValueType(columnName: String, valueType: PivotValueType) {
+    fun addValueType(headerLabel: HeaderLabel, valueType: PivotValueType) {
         val command = PivotSpec.addValueTypeCommand(
-            store.mainLocation(), columnName, valueType)
+            store.mainLocation(), headerLabel, valueType)
 
         applyCommandAsync(command, true)
     }
 
 
-    fun removeValueType(columnName: String, valueType: PivotValueType) {
+    fun removeValueType(columnName: HeaderLabel, valueType: PivotValueType) {
         val command = PivotSpec.removeValueTypeCommand(
             store.mainLocation(), columnName, valueType)
 
@@ -79,17 +80,17 @@ class ReportAnalysisStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun addValue(columnName: String) {
+    suspend fun addValue(headerLabel: HeaderLabel) {
         val command = PivotSpec.addValueCommand(
-            store.mainLocation(), columnName)
+            store.mainLocation(), headerLabel)
 
         applyCommand(command, true)
     }
 
 
-    fun removeValueAsync(columnName: String) {
+    fun removeValueAsync(headerLabel: HeaderLabel) {
         val command = PivotSpec.removeValueCommand(
-            store.mainLocation(), columnName)
+            store.mainLocation(), headerLabel)
 
         applyCommandAsync(command, true)
     }
@@ -122,7 +123,6 @@ class ReportAnalysisStore(
         delay(1)
         beforeNotationChange()
 
-        @Suppress("MoveVariableDeclarationIntoWhen")
         val result = ClientContext.mirroredGraphStore.apply(command)
 
         val notationError = (result as? MirroredGraphError)?.error?.message

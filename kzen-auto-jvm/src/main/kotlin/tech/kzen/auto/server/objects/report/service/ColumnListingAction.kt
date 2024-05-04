@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report.service
 
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.plugin.model.PluginCoordinate
@@ -15,24 +16,15 @@ class ColumnListingAction(
     private val filterIndex: FilterIndex
 ) {
     //-----------------------------------------------------------------------------------------------------------------
+    @Suppress("ConstPropertyName")
     companion object {
         private const val columnsCsvFilename = "columns.csv"
+
+        private const val columnsCsvHeader = "Number,Label,Occurrence"
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    suspend fun <T> columnNamesMerge(
-//        flatDataHeaderDefinitions: List<FlatDataHeaderDefinition<T>>
-//    ): HeaderListing {
-//        val builder = LinkedHashSet<String>()
-//        for (flatDataHeaderDefinition in flatDataHeaderDefinitions) {
-//            val columns = columnNames(flatDataHeaderDefinition)
-//            builder.addAll(columns.values)
-//        }
-//        return HeaderListing(builder.toList())
-//    }
-
-
     private fun cachedHeaderListing(
         columnsFile: Path
     ): HeaderListing? {
@@ -40,15 +32,16 @@ class ColumnListingAction(
             return null
         }
 
-        val text =
-//            withContext(Dispatchers.IO) {
-                Files.readString(columnsFile, Charsets.UTF_8)
-//            }
+        val text = Files.readString(columnsFile, Charsets.UTF_8)
 
         return CsvReportDefiner
             .literal(text)
             .drop(1)
-            .map { it.getString(1) }
+            .map {
+                HeaderLabel(
+                    it.getString(1),
+                    it.getString(2).toInt())
+            }
             .let { HeaderListing(it) }
     }
 
@@ -85,14 +78,16 @@ class ColumnListingAction(
             .values
             .withIndex()
             .joinToString("\n") {
-                FlatFileRecord.of(listOf(it.index.toString(), it.value)).toCsv()
+                FlatFileRecord.of(
+                    it.index.toString(),
+                    it.value.text,
+                    it.value.occurrence.toString()
+                ).toCsv()
             }
 
-        val csvFile = "Number,Name\n$csvBody"
+        val csvFile = "$columnsCsvHeader\n$csvBody"
 
-//        withContext(Dispatchers.IO) {
-            Files.writeString(columnsFile, csvFile)
-//        }
+        Files.writeString(columnsFile, csvFile)
 
         return headerListing
     }

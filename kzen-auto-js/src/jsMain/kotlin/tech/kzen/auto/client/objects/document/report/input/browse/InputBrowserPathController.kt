@@ -86,8 +86,9 @@ class InputBrowserPathController(
 
 
     private fun onEditToggle() {
+        val nextTextEdit = state.textEdit
         setState {
-            textEdit = ! textEdit
+            textEdit = ! nextTextEdit
         }
     }
 

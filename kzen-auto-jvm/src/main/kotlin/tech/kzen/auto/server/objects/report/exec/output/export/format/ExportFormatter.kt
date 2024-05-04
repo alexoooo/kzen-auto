@@ -48,7 +48,7 @@ class ExportFormatter(
             if (pathChanged) {
                 // print flat file header
                 recordFormat.format(
-                    FlatFileRecord.of(filteredColumns.values),
+                    FlatFileRecord.of(filteredColumns.values.map { it.render() }),
                     exportData)
             }
         }

@@ -15,6 +15,7 @@ data class InputDataInfo(
 ):
     Comparable<InputDataInfo>
 {
+    @Suppress("ConstPropertyName")
     companion object {
         private const val dataLocationInfoKey = "location"
         private const val processorDefinitionNameKey = "processor"

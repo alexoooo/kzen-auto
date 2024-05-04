@@ -119,7 +119,11 @@ class ReportInputStore(
             is ExecutionSuccess -> {
                 @Suppress("UNCHECKED_CAST")
                 val resultCollection = result.value.get() as Map<String, Any>
+
+//                println("listColumnsRequest: $resultCollection")
                 val resultValue = AnalysisColumnInfo.ofCollection(resultCollection)
+//                println("got: $resultValue")
+
                 ClientResult.ofSuccess(resultValue)
             }
 

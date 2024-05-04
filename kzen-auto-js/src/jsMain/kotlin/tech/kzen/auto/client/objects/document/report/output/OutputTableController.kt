@@ -290,7 +290,7 @@ class OutputTableController(
                             +"Row Number"
                         }
 
-                        for (header in outputPreview.header.values) {
+                        for (header in outputPreview.renderedHeader) {
                             th {
                                 css {
                                     position = Position.sticky
@@ -402,7 +402,7 @@ class OutputTableController(
                             +"Row Number"
                         }
 
-                        for (header in headerListing.values) {
+                        for (header in headerListing) {
                             th {
                                 css {
                                     paddingLeft = 0.5.em

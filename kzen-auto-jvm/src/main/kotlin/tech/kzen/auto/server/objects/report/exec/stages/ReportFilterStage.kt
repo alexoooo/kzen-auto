@@ -19,7 +19,7 @@ class ReportFilterStage(
     private val filterColumnNames = reportRunContext
         .inputAndFormulaColumns
         .values
-        .intersect(reportRunContext.filter.columns.keys)
+        .filter { it in reportRunContext.filter.columns.keys }
         .toList()
 
     private val nonEmptyFilterColumnNames = filterColumnNames

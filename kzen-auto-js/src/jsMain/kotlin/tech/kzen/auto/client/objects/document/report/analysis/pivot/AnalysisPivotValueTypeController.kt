@@ -9,6 +9,7 @@ import react.State
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueColumnSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 import web.cssom.FontWeight
@@ -16,7 +17,7 @@ import web.cssom.FontWeight
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface AnalysisPivotValueTypeControllerProps: react.Props {
-    var columnName: String
+    var columnName: HeaderLabel
     var pivotValueSpec: PivotValueColumnSpec
     var analysisStore: ReportAnalysisStore
 }
@@ -65,7 +66,7 @@ class AnalysisPivotValueTypeController(
 
             size = Size.small
 
-            for (valueType in PivotValueType.values()) {
+            for (valueType in PivotValueType.entries) {
                 ToggleButton {
                     key = valueType.name
                     value = valueType.name

@@ -13,6 +13,7 @@ import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormula
 import tech.kzen.auto.client.objects.document.report.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.FunctionsIcon
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import web.cssom.*
 
@@ -21,7 +22,7 @@ import web.cssom.*
 external interface ReportFormulaControllerProps: react.Props {
     var formulaSpec: FormulaSpec
     var formulaState: ReportFormulaState
-    var inputColumns: List<String>?
+    var inputColumns: HeaderListing?
     var runningOrLoading: Boolean
     var formulaStore: ReportFormulaStore
 }

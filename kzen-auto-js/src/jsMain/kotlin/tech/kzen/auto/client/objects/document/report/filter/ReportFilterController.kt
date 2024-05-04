@@ -160,7 +160,7 @@ class ReportFilterController(
         div {
             for ((index, columnName) in filterSpec.columns.keys.withIndex()) {
                 div {
-                    key = columnName
+                    key = columnName.asString()
 
                     if (index < filterSpec.columns.size - 1) {
                         css {

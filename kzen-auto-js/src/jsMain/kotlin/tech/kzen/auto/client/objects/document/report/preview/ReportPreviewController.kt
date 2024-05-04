@@ -372,9 +372,9 @@ class ReportPreviewController(
                 }
                 tbody {
                     var isFirst = true
-                    for ((columnName, columnSummary) in tableSummary.columnSummaries) {
+                    for ((headerLabel, columnSummary) in tableSummary.columnSummaries.map) {
                         tr {
-                            key = columnName
+                            key = headerLabel.asString()
 
                             css {
                                 hover {
@@ -391,7 +391,7 @@ class ReportPreviewController(
                                     boxShadow = BoxShadow(BoxShadowInset.inset, (-2).px, 0.px, 0.px, 0.px, NamedColor.lightgray)
                                     commonTdCss(isFirst)
                                 }
-                                +columnName
+                                +headerLabel.render()
                             }
 
                             td {

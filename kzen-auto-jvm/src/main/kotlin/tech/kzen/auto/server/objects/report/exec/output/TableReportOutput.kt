@@ -109,7 +109,7 @@ class TableReportOutput(
         else {
             if (initialReportRunContext.analysis.type == AnalysisType.FlatData) {
                 indexedCsvTable = IndexedCsvTable(
-                    initialReportRunContext.analysisColumnInfo.filteredColumns(),
+                    initialReportRunContext.analysisColumnInfo.filteredInputAndCalculatedColumns,
                     initialReportRunContext.runDir)
                 pivotBuilder = null
             }

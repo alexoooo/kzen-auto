@@ -18,6 +18,7 @@ import tech.kzen.auto.client.wrap.material.CancelIcon
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 import web.cssom.Display
@@ -37,7 +38,7 @@ external interface AnalysisPivotValueAddControllerProps: Props {
 
 external interface AnalysisPivotValueAddControllerState: State {
     var adding: Boolean
-    var selectedColumn: String?
+    var selectedColumn: HeaderLabel?
 }
 
 
@@ -70,7 +71,7 @@ class AnalysisPivotValueAddController(
     }
 
 
-    private fun onColumnSelected(columnName: String) {
+    private fun onColumnSelected(columnName: HeaderLabel) {
         setState {
             selectedColumn = columnName
         }
@@ -127,7 +128,7 @@ class AnalysisPivotValueAddController(
     }
 
 
-    fun ChildrenBuilder.renderSelect(unusedOptions: List<String>, editDisabled: Boolean) {
+    private fun ChildrenBuilder.renderSelect(unusedOptions: List<HeaderLabel>, editDisabled: Boolean) {
         val selectId = "material-react-select-id"
 
         InputLabel {
@@ -143,8 +144,8 @@ class AnalysisPivotValueAddController(
         val selectOptions = unusedOptions
             .map {
                 val option: ReactSelectOption = jso {
-                    value = it
-                    label = it
+                    value = it.asString()
+                    label = it.render()
                 }
                 option
             }
@@ -153,12 +154,12 @@ class AnalysisPivotValueAddController(
         ReactSelect::class.react {
             id = selectId
 
-            value = selectOptions.find { it.value == state.selectedColumn }
+            value = selectOptions.find { HeaderLabel.ofString(it.value) == state.selectedColumn }
 
             options = selectOptions
 
             onChange = {
-                onColumnSelected(it.value)
+                onColumnSelected(HeaderLabel.ofString(it.value))
             }
 
             isDisabled = editDisabled

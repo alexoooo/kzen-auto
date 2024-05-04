@@ -438,7 +438,7 @@ class ReportExecution(
             }
             else {
                 ExportColumnNormalizer(
-                    initialReportRunContext.analysisColumnInfo.filteredColumns())
+                    initialReportRunContext.analysisColumnInfo.filteredInputAndCalculatedColumns)
             }
 
         builder =
@@ -456,7 +456,7 @@ class ReportExecution(
             builder
                 .then(ExportFormatter(
                     ExportFormat.byName(initialReportRunContext.output.export.format),
-                    initialReportRunContext.analysisColumnInfo.filteredColumns(),
+                    initialReportRunContext.analysisColumnInfo.filteredInputAndCalculatedColumns,
                     initialReportRunContext.reportDocumentName,
                     initialReportRunContext.output.export
                 ))

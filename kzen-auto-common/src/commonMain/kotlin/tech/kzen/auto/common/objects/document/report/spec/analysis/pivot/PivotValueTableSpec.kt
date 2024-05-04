@@ -3,6 +3,7 @@
 package tech.kzen.auto.common.objects.document.report.spec.analysis.pivot
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
@@ -11,7 +12,7 @@ import tech.kzen.lib.common.util.digest.Digestible
 
 
 data class PivotValueTableSpec(
-    val columns: Map<String, PivotValueColumnSpec>
+    val columns: Map<HeaderLabel, PivotValueColumnSpec>
 ):
     Digestible
 {
@@ -29,10 +30,10 @@ data class PivotValueTableSpec(
 
             val columns = values
                 .map { encodedColumnValue ->
-                    val delimiterIndex = encodedColumnValue.indexOf(requestValueTypeDelimiter)
-                    val valueType = PivotValueType.valueOf(encodedColumnValue.substring(0, delimiterIndex))
-                    val columnName = encodedColumnValue.substring(delimiterIndex + 1)
-                    columnName to valueType
+                    val valueTypeDelimiterIndex = encodedColumnValue.indexOf(requestValueTypeDelimiter)
+                    val valueType = PivotValueType.valueOf(encodedColumnValue.substring(0, valueTypeDelimiterIndex))
+                    val headerLabel = HeaderLabel.ofString(encodedColumnValue.substring(valueTypeDelimiterIndex + 1))
+                    headerLabel to valueType
                 }
                 .groupBy { it.first }
                 .mapValues { columnValueGroup ->
@@ -47,12 +48,12 @@ data class PivotValueTableSpec(
 
 
         fun ofNotation(notation: MapAttributeNotation): PivotValueTableSpec {
-            val values = mutableMapOf<String, PivotValueColumnSpec>()
+            val values = mutableMapOf<HeaderLabel, PivotValueColumnSpec>()
 
             for (e in notation.map) {
                 val pivotValueNotation = e.value as ListAttributeNotation
                 val pivotValue = PivotValueColumnSpec.ofNotation(pivotValueNotation)
-                values[e.key.asString()] = pivotValue
+                values[HeaderLabel.ofString(e.key.asKey())] = pivotValue
             }
 
             return PivotValueTableSpec(values)
@@ -70,7 +71,7 @@ data class PivotValueTableSpec(
         val encodedValues = columns
             .flatMap { column ->
                 column.value.types.map {
-                    "${it.name}$requestValueTypeDelimiter${column.key}"
+                    "${it.name}$requestValueTypeDelimiter${column.key.asString()}"
                 }
             }
 
@@ -80,9 +81,6 @@ data class PivotValueTableSpec(
 
 
     override fun digest(sink: Digest.Sink) {
-        sink.addUnorderedCollection(columns.entries) {
-            addUtf8(it.key)
-            addDigestible(it.value)
-        }
+        sink.addDigestibleUnorderedMap(columns)
     }
 }

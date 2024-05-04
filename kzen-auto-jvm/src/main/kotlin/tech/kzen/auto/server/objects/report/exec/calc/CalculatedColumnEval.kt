@@ -56,7 +56,7 @@ class CalculatedColumnEval(
 
         val error = cachedKotlinCompiler.tryCompile(code, classLoader)
         check(error == null) {
-            "Unable to compile: $error - $calculatedColumnName - $calculatedColumnFormula - $columnNames"
+            "Unable to compile: $error - $calculatedColumnName - $calculatedColumnFormula - ${columnNames.render()}"
         }
 
         val clazz = cachedKotlinCompiler.tryLoad(code, classLoader)
@@ -78,12 +78,12 @@ class CalculatedColumnEval(
         columnNames: HeaderListing,
         modelType: ClassName
     ): KotlinCode {
-        val sanitizedName = sanitizeName(calculatedColumnName)
+        val sanitizedName = sanitizeClassName(calculatedColumnName)
         val mainClassName = "Column_$sanitizedName"
 
         val imports = generateImports(modelType)
 
-        val columnNameStringList = columnNames.values.joinToString { "\"$it\""}
+        val columnNameStringList = columnNames.values.joinToString { "\"${it.asString()}\""}
 
         val columnAccessors = generateColumnAccessors(columnNames)
 
@@ -92,7 +92,7 @@ $imports
 
 class $mainClassName: ${ CalculatedColumn::class.java.simpleName }<${modelType.topLevel()}> {
     companion object {
-        private val columnNames: HeaderListing = HeaderListing(listOf($columnNameStringList))
+        private val columnNames: HeaderListing = HeaderListing.ofCollection(listOf($columnNameStringList))
         private val recordHeaderIndex = ${ RecordHeaderIndex::class.java.simpleName }(columnNames)
     }
 
@@ -154,19 +154,36 @@ $calculatedColumnFormula
     }
 
 
-    private fun generateColumnAccessors(columnNames: HeaderListing): String {
-        return columnNames
+    private fun generateColumnAccessors(headerListing: HeaderListing): String {
+        val sanitizedRenderedColumnNames = headerListing
             .values
+            .map { it.render() }
+            .map { sanitizeVariableName(it) }
+
+        val variableNames = HeaderListing.of(sanitizedRenderedColumnNames)
+            .values
+            .map {
+                when {
+                    it.occurrence == 0 -> it.text
+                    else -> "${it.text}_${it.occurrence + 1}"
+                }
+            }
+
+        return variableNames
             .withIndex()
             .joinToString("\n") { columnName ->
-                "val `${columnName.value}` get(): ColumnValue {" +
+                "val `${sanitizeVariableName(columnName.value)}` get(): ColumnValue {" +
                 "    return columnValue(${columnName.index})" +
                 "}"
             }
     }
 
 
-    private fun sanitizeName(text: String): String {
+    private fun sanitizeVariableName(text: String): String {
+        return text.replace(Regex("[\\[(,)/;\\\\]+"), "_")
+    }
+
+    private fun sanitizeClassName(text: String): String {
         return text.replace(Regex("\\W+"), "_")
     }
 }

@@ -7,7 +7,7 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotVa
 
 
 data class OutputPivotExportSignature(
-    val header: HeaderListing,
+    val header: List<OutputPivotHeaderLabel>,
     val valueTypes: List<IndexedValue<PivotValueType>>
 ) {
     companion object {
@@ -17,24 +17,23 @@ data class OutputPivotExportSignature(
 
 
         fun of(rowColumns: HeaderListing, values: PivotValueTableSpec): OutputPivotExportSignature {
-            val header = mutableListOf<String>()
+            val header = mutableListOf<OutputPivotHeaderLabel>()
             val valueTypes = mutableListOf<IndexedValue<PivotValueType>>()
 
             for (rowColumn in rowColumns.values) {
-                header.add(rowColumn)
+                header.add(OutputPivotHeaderLabel(rowColumn, null))
             }
 
             for ((index, e) in values.columns.toList().withIndex()) {
                 val valueColumn = e.first
                 val valueValueSpec = e.second
                 for (valueType in valueValueSpec.types) {
-                    val valueHeader = "$valueColumn - $valueType"
-                    header.add(valueHeader)
+                    header.add(OutputPivotHeaderLabel(valueColumn, valueType))
                     valueTypes.add(IndexedValue(index, valueType))
                 }
             }
 
-            return OutputPivotExportSignature(HeaderListing(header), valueTypes)
+            return OutputPivotExportSignature(header, valueTypes)
         }
     }
 }

@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.report.spec.analysis.pivot
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -26,23 +27,23 @@ data class PivotSpec(
         val empty = PivotSpec(HeaderListing.empty, PivotValueTableSpec.empty)
 
         private val rowsKey = AttributeSegment.ofKey("rows")
-        val rowsAttributePath = ReportConventions.pivotAttributePath.nest(rowsKey)
+        private val rowsAttributePath = ReportConventions.pivotAttributePath.nest(rowsKey)
 
         private val valuesKey = AttributeSegment.ofKey("values")
-        val valuesAttributePath = ReportConventions.pivotAttributePath.nest(valuesKey)
+        private val valuesAttributePath = ReportConventions.pivotAttributePath.nest(valuesKey)
 
 
         fun ofNotation(attributeNotation: MapAttributeNotation): PivotSpec {
             val rowsNotation = attributeNotation[rowsKey] as? ListAttributeNotation
                 ?: throw IllegalArgumentException("'$rowsKey' attribute notation not found")
 
-            val valuesNotation = attributeNotation[valuesKey] as? MapAttributeNotation
-                ?: throw IllegalArgumentException("'$valuesKey' attribute notation not found")
-
             val rows = rowsNotation
                 .values
-                .map { it.asString()!! }
+                .map { HeaderLabel.ofString(it.asString()!!) }
                 .toSet()
+
+            val valuesNotation = attributeNotation[valuesKey] as? MapAttributeNotation
+                ?: throw IllegalArgumentException("'$valuesKey' attribute notation not found")
 
             val values = PivotValueTableSpec.ofNotation(valuesNotation)
 
@@ -52,20 +53,20 @@ data class PivotSpec(
         }
 
 
-        fun addRowCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
+        fun addRowCommand(mainLocation: ObjectLocation, headerLabel: HeaderLabel): NotationCommand {
             return InsertListItemInAttributeCommand(
                 mainLocation,
                 rowsAttributePath,
                 PositionRelation.afterLast,
-                ScalarAttributeNotation(columnName))
+                ScalarAttributeNotation(headerLabel.asString()))
         }
 
 
-        fun removeRowCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
+        fun removeRowCommand(mainLocation: ObjectLocation, headerLabel: HeaderLabel): NotationCommand {
             return RemoveListItemInAttributeCommand(
                 mainLocation,
                 rowsAttributePath,
-                ScalarAttributeNotation(columnName),
+                ScalarAttributeNotation(headerLabel.asString()),
                 false)
         }
 
@@ -78,49 +79,49 @@ data class PivotSpec(
         }
 
 
-        fun addValueCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
+        fun addValueCommand(mainLocation: ObjectLocation, headerLabel: HeaderLabel): NotationCommand {
             return InsertMapEntryInAttributeCommand(
                 mainLocation,
                 valuesAttributePath,
                 PositionRelation.afterLast,
-                AttributeSegment.ofKey(columnName),
+                AttributeSegment.ofKey(headerLabel.asString()),
                 ListAttributeNotation.empty,
                 true)
         }
 
 
-        fun removeValueCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
+        fun removeValueCommand(mainLocation: ObjectLocation, headerLabel: HeaderLabel): NotationCommand {
             return RemoveInAttributeCommand(
                 mainLocation,
-                valuePath(columnName),
+                valuePath(headerLabel),
                 false)
         }
 
 
         fun addValueTypeCommand(
-            mainLocation: ObjectLocation, columnName: String, valueType: PivotValueType
+            mainLocation: ObjectLocation, headerLabel: HeaderLabel, valueType: PivotValueType
         ): NotationCommand {
             return InsertListItemInAttributeCommand(
                 mainLocation,
-                valuePath(columnName),
+                valuePath(headerLabel),
                 PositionRelation.afterLast,
                 ScalarAttributeNotation(valueType.name))
         }
 
 
         fun removeValueTypeCommand(
-            mainLocation: ObjectLocation, columnName: String, valueType: PivotValueType
+            mainLocation: ObjectLocation, headerLabel: HeaderLabel, valueType: PivotValueType
         ): NotationCommand {
             return RemoveListItemInAttributeCommand(
                 mainLocation,
-                valuePath(columnName),
+                valuePath(headerLabel),
                 ScalarAttributeNotation(valueType.name),
                 false)
         }
 
 
-        private fun valuePath(columnName: String): AttributePath {
-            return valuesAttributePath.nest(AttributeSegment.ofKey(columnName))
+        private fun valuePath(headerLabel: HeaderLabel): AttributePath {
+            return valuesAttributePath.nest(AttributeSegment.ofKey(headerLabel.asString()))
         }
     }
 

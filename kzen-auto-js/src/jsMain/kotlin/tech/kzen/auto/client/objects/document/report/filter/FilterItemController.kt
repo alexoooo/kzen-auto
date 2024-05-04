@@ -21,6 +21,7 @@ import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.material.ExpandLessIcon
 import tech.kzen.auto.client.wrap.material.ExpandMoreIcon
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
@@ -32,7 +33,7 @@ import web.cssom.*
 //---------------------------------------------------------------------------------------------------------------------
 external interface FilterItemControllerProps: react.Props {
     var filterSpec: FilterSpec
-    var columnName: String
+    var columnName: HeaderLabel
     var runningOrLoading: Boolean
     var inputAndCalculatedColumns: HeaderListing?
     var tableSummary: TableSummary?
@@ -150,7 +151,7 @@ class FilterItemController(
             }
 
         val tableSummary = props.tableSummary
-        val columnSummary = tableSummary?.columnSummaries?.get(props.columnName)
+        val columnSummary = tableSummary?.columnSummaries?.map?.get(props.columnName)
 
         val editDisabled = props.runningOrLoading
 
@@ -213,7 +214,7 @@ class FilterItemController(
                                 }
                             }
 
-                            +props.columnName
+                            +props.columnName.render()
                         }
 
                         if (missing) {

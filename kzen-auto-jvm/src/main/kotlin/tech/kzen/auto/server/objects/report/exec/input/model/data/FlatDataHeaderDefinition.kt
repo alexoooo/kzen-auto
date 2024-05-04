@@ -29,6 +29,6 @@ data class FlatDataHeaderDefinition<T>(
     fun extract(traversable: TraversableReportOutput<T>): HeaderListing {
         val headerExtractor = reportDefinition.headerExtractorFactory()
         val columnNames = headerExtractor.extract(traversable)
-        return HeaderListing(columnNames)
+        return HeaderListing.of(columnNames)
     }
 }

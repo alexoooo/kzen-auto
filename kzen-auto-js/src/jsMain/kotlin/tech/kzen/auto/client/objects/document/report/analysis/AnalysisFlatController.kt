@@ -161,12 +161,12 @@ class AnalysisFlatController(
                 }
 
                 tbody {
-                    for ((index, e) in analysisColumnInfo.inputAndCalculatedColumns.entries.withIndex()) {
+                    for ((index, e) in analysisColumnInfo.inputAndCalculatedColumns.values.map.entries.withIndex()) {
                         val included = e.value
                         val isFirst = index == 0
 
                         tr {
-                            key = e.key
+                            key = e.key.asString()
 
                             css {
                                 hover {
@@ -188,7 +188,7 @@ class AnalysisFlatController(
                                         fontWeight = FontWeight.bold
                                     }
                                 }
-                                +e.key
+                                +e.key.render()
                             }
 
                             td {

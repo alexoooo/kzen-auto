@@ -14,6 +14,7 @@ import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import web.cssom.Display
 import web.cssom.WhiteSpace
 import web.cssom.em
@@ -23,7 +24,7 @@ import kotlin.js.json
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface FormulaReferenceControllerProps: react.Props {
-    var inputColumns: List<String>
+    var inputColumns: HeaderListing
     var editDisabled: Boolean
     var onAdded: (String) -> Unit
     var addLabel: String
@@ -160,10 +161,11 @@ class FormulaReferenceController(
 
         val selectOptions = props
             .inputColumns
+            .values
             .map {
                 val option: ReactSelectOption = jso {
-                    value = it
-                    label = it
+                    value = it.asString()
+                    label = it.render()
                 }
                 option
             }

@@ -13,6 +13,7 @@ import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalys
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.select.ReactSelectMulti
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 import web.cssom.LineStyle
@@ -44,7 +45,7 @@ class AnalysisPivotRowListController(
             props.analysisStore.clearPivotRowsAsync()
         }
         else {
-            val newRows = options?.map { it.value } ?: listOf()
+            val newRows = options?.map { HeaderLabel.ofString(it.value) } ?: listOf()
 
             val added = newRows.filter { it !in oldRows.values }
             val removed = oldRows.values.filter { it !in newRows }
@@ -89,16 +90,16 @@ class AnalysisPivotRowListController(
 
                 value = props.spec.rows.values.map {
                     val option: ReactSelectOption = jso {
-                        value = it
-                        label = it
+                        value = it.asString()
+                        label = it.render()
                     }
                     option
                 }.toTypedArray()
 
                 options = columnListing.values.map {
                     val option: ReactSelectOption = jso {
-                        value = it
-                        label = it
+                        value = it.asString()
+                        label = it.render()
                     }
                     option
                 }.toTypedArray()

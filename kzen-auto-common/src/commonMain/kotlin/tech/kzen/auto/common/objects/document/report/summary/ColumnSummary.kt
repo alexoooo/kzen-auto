@@ -8,6 +8,7 @@ data class ColumnSummary(
     val opaqueValueSummary: OpaqueValueSummary
 ) {
     //-----------------------------------------------------------------------------------------------------------------
+    @Suppress("ConstPropertyName")
     companion object {
         val empty = ColumnSummary(
             0,

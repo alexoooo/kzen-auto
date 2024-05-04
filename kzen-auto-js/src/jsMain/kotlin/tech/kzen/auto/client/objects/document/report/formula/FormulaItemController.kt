@@ -23,6 +23,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import web.cssom.VerticalAlign
 import web.cssom.em
@@ -34,7 +35,7 @@ external interface FormulaItemControllerProps: react.Props {
     var formulaState: ReportFormulaState
     var formulaSpec: FormulaSpec
     var runningOrLoading: Boolean
-    var inputColumns: List<String>?
+    var inputColumns: HeaderListing?
     var columnName: String
     var formulaStore: ReportFormulaStore
 }
@@ -217,7 +218,7 @@ class FormulaItemController(
 
                     td {
                         FormulaReferenceController::class.react {
-                            this.inputColumns = props.inputColumns ?: listOf()
+                            this.inputColumns = props.inputColumns ?: HeaderListing.empty
                             this.editDisabled = props.runningOrLoading
 
                             addLabel = "Column reference"

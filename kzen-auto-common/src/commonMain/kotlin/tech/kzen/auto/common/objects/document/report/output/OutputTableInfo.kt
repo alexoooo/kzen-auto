@@ -18,7 +18,7 @@ data class OutputTableInfo(
 
             val outputPreview =
                 outputPreviewCollection
-                    ?.let { OutputPreview.fromCollection(it) }
+                    ?.let { OutputPreview.ofCollection(it) }
 
             return OutputTableInfo(
                 (collection[countKey] as String).toLong(),
@@ -31,6 +31,6 @@ data class OutputTableInfo(
     fun toCollection(): Map<String, Any?> {
         return mapOf(
             countKey to rowCount.toString(),
-            previewKey to preview?.toCollection())
+            previewKey to preview?.asCollection())
     }
 }

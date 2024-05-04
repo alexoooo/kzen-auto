@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.report.exec.output.pivot
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPivotExportSignature
+import tech.kzen.auto.common.objects.document.report.output.OutputPivotHeaderLabel
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
@@ -40,6 +41,7 @@ class PivotBuilder(
     AutoCloseable
 {
     //-----------------------------------------------------------------------------------------------------------------
+    @Suppress("ConstPropertyName")
     companion object {
         private const val missingRowCellValue = "<missing>"
         private const val missingStatisticCellValue = ""
@@ -62,11 +64,11 @@ class PivotBuilder(
                         pivotSpec.rows, reportRunContext.analysis.pivot.values)
                     val valueTypes = exportSignature.valueTypes
 
-                    val headerValues = exportSignature.header.values
+                    val headerValues = exportSignature.header
                     val flatFileRecord = FlatFileRecord(
-                        headerValues.sumOf { it.length },
+                        headerValues.sumOf { it.headerLabel.text.length },
                         headerValues.size)
-                    flatFileRecord.addAll(headerValues)
+                    flatFileRecord.addAll(headerValues.map { it.headerLabel.render() })
                     flatFileRecord.writeCsv(writer)
 
                     val rowIndex = pivotBuilder.rowIndex
@@ -262,29 +264,24 @@ class PivotBuilder(
 
 
     fun preview(values: PivotValueTableSpec, start: Long, count: Int): OutputPreview {
-        var header: List<String>? = null
+        val exportSignature = OutputPivotExportSignature.of(rows, values)
+        val headerListing = exportSignature.header.map { it.render() }
+
         val builder = mutableListOf<List<String>>()
-        traverseWithHeader(values, start, count.toLong()) { row ->
-            if (header == null) {
-                header = row
-            }
-            else {
-                builder.add(row)
-            }
+        traverse(values, start, count.toLong()) { row ->
+            builder.add(row)
         }
-        return OutputPreview(HeaderListing(header!!), builder, start)
+        return OutputPreview(headerListing, builder, start)
     }
 
 
-    fun traverseWithHeader(
+    private fun traverse(
         values: PivotValueTableSpec,
         start: Long = 0,
         count: Long = rowCount(),
         visitor: (List<String>) -> Unit
     ) {
         val exportSignature = OutputPivotExportSignature.of(rows, values)
-
-        visitor.invoke(exportSignature.header.values)
 
         val adjustedStart = start.coerceAtLeast(0L)
         val adjustedEndExclusive = (adjustedStart + count).coerceAtMost(rowIndex.size())

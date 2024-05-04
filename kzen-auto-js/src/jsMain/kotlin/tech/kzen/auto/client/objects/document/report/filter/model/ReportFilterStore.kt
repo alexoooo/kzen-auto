@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.filter.model
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
@@ -74,7 +75,7 @@ class ReportFilterStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun removeFilterAsync(
-        columnName: String
+        columnName: HeaderLabel
     ) {
         beforeRequest()
         async {
@@ -91,7 +92,7 @@ class ReportFilterStore(
 
 
     private suspend fun removeColumn(
-        columnName: String
+        columnName: HeaderLabel
     ): String? {
         return editNotation(
             FilterSpec.removeCommand(
@@ -101,7 +102,7 @@ class ReportFilterStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun changeFilterTypeAsync(
-        columnName: String, type: ColumnFilterType
+        columnName: HeaderLabel, type: ColumnFilterType
     ) {
         beforeRequest()
         async {
@@ -118,7 +119,7 @@ class ReportFilterStore(
 
 
     private suspend fun updateType(
-        columnName: String, type: ColumnFilterType
+        columnName: HeaderLabel, type: ColumnFilterType
     ): String? {
         return editNotation(
             FilterSpec.updateTypeCommand(
@@ -128,7 +129,7 @@ class ReportFilterStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun addFilterValueAsync(
-        columnName: String, filterValue: String
+        columnName: HeaderLabel, filterValue: String
     ) {
         beforeRequest()
         async {
@@ -140,7 +141,7 @@ class ReportFilterStore(
 
 
     fun removeFilterValueAsync(
-        columnName: String, filterValue: String
+        columnName: HeaderLabel, filterValue: String
     ) {
         beforeRequest()
         async {
@@ -152,7 +153,7 @@ class ReportFilterStore(
 
 
     private suspend fun addValue(
-        columnName: String, filterValue: String
+        columnName: HeaderLabel, filterValue: String
     ): String? {
         return editNotation(
             FilterSpec.addValueCommand(
@@ -161,7 +162,7 @@ class ReportFilterStore(
 
 
     private suspend fun removeValue(
-        columnName: String, filterValue: String
+        columnName: HeaderLabel, filterValue: String
     ): String? {
         return editNotation(
             FilterSpec.removeValueCommand(
