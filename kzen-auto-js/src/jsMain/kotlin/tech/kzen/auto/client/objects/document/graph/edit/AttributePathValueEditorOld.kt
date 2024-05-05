@@ -345,70 +345,30 @@ class AttributePathValueEditorOld(
 
 
     private fun ChildrenBuilder.renderBoolean(stateValue: Boolean) {
-        val inputId = "material-react-switch-id"
-
         InputLabel {
-            htmlFor = inputId
-
             style = jso {
                 fontSize = 0.8.em
             }
 
             +formattedLabel()
-        }
-//        child(MaterialInputLabel::class) {
-//            attrs {
-//                htmlFor = inputId
-//
-//                style = reactStyle {
-//                    fontSize = 0.8.em
-//                }
-//            }
-//
-//            +formattedLabel()
-//        }
 
-        Switch {
-            id = inputId
+            Switch {
+                checked = stateValue
 
-            checked = stateValue
+                onChange = { event: ChangeEvent<HTMLInputElement>, _: Boolean ->
+                    val target = event.target
+                    onValueChange(target.checked.toString())
+                }
 
-            onChange = { event: ChangeEvent<HTMLInputElement>, _: Boolean ->
-                val target = event.target
-                onValueChange(target.checked.toString())
-            }
+                color = SwitchColor.default
 
-            color = SwitchColor.default
-
-            if (stateValue) {
-                style = jso {
-//                        this.color = Color("#8CBAE8")
-                    this.color = NamedColor.black
+                if (stateValue) {
+                    style = jso {
+                        this.color = NamedColor.black
+                    }
                 }
             }
         }
-
-//        child(MaterialSwitch::class) {
-//            attrs {
-//                id = inputId
-//
-//                checked = stateValue
-//
-//                onChange = {
-//                    val target = it.target as HTMLInputElement
-//                    onValueChange(target.checked.toString())
-//                }
-//
-//                color = "default"
-//
-//                if (stateValue) {
-//                    style = reactStyle {
-////                        this.color = Color("#8CBAE8")
-//                        this.color = Color.black
-//                    }
-//                }
-//            }
-//        }
     }
 
 

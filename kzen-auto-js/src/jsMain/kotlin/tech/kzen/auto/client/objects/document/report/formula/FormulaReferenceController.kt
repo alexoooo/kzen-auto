@@ -148,18 +148,6 @@ class FormulaReferenceController(
 
 
     private fun ChildrenBuilder.renderSelect() {
-        val selectId = "material-react-select-id"
-
-        InputLabel {
-            htmlFor = selectId
-
-            css {
-                fontSize = 0.8.em
-            }
-
-            +"Column"
-        }
-
         val selectOptions = props
             .inputColumns
             .values
@@ -172,34 +160,39 @@ class FormulaReferenceController(
             }
             .toTypedArray()
 
-        ReactSelect::class.react {
-            id = selectId
-
-            value = selectOptions.find { HeaderLabel.ofString(it.value) == state.selectedColumn }
-            options = selectOptions
-
-            onChange = {
-//                    console.log("^^^^^ selected: $it")
-                onValueChange(HeaderLabel.ofString(it.value))
+        InputLabel {
+            css {
+                fontSize = 0.8.em
             }
 
-            isDisabled = props.editDisabled
+            +"Column"
 
-            // https://stackoverflow.com/a/51844542/1941359
-            val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                val transformed = json()
-                transformed.add(base)
-                transformed["background"] = "transparent"
-                transformed
+            ReactSelect::class.react {
+                value = selectOptions.find { HeaderLabel.ofString(it.value) == state.selectedColumn }
+                options = selectOptions
+
+                onChange = {
+                    onValueChange(HeaderLabel.ofString(it.value))
+                }
+
+                isDisabled = props.editDisabled
+
+                // https://stackoverflow.com/a/51844542/1941359
+                val styleTransformer: (Json, Json) -> Json = { base, _ ->
+                    val transformed = json()
+                    transformed.add(base)
+                    transformed["background"] = "transparent"
+                    transformed
+                }
+
+                val reactStyles = json()
+                reactStyles["control"] = styleTransformer
+                styles = reactStyles
+
+                // NB: this was causing clipping when used in ConditionalStepDisplay table,
+                //   see: https://react-select.com/advanced#portaling
+                menuPortalTarget = document.body!!
             }
-
-            val reactStyles = json()
-            reactStyles["control"] = styleTransformer
-            styles = reactStyles
-
-            // NB: this was causing clipping when used in ConditionalStepDisplay table,
-            //   see: https://react-select.com/advanced#portaling
-            menuPortalTarget = document.body!!
         }
     }
 }

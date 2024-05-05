@@ -206,6 +206,7 @@ class ReportInputController(
                 }
 
                 Fade {
+//                    println("^^^^ props.inputState.anyLoading() = ${props.inputState.anyLoading()}")
                     `in` = props.inputState.anyLoading()
                     timeout = FadeTimeout(appear = 500, enter = 5000)
 

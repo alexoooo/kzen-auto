@@ -76,43 +76,28 @@ class BooleanAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val inputId = "material-react-switch-id"
         InputLabel {
-            htmlFor = inputId
-
             css {
                 fontSize = 0.8.em
             }
 
             +formattedLabel()
-        }
 
-        Switch {
-            id = inputId
-            checked = props.value
-            disabled = props.disabled
-            onChange = { e, _ ->
-                val target = e.target
-                submitEditAsync(target.checked)
-            }
-            color = SwitchColor.default
+            Switch {
+                checked = props.value
+                disabled = props.disabled
+                onChange = { e, _ ->
+                    val target = e.target
+                    submitEditAsync(target.checked)
+                }
+                color = SwitchColor.default
 
-            if (props.value) {
-                css {
-//                        this.color = Color("#8CBAE8")
-                    this.color = NamedColor.black
+                if (props.value) {
+                    css {
+                        this.color = NamedColor.black
+                    }
                 }
             }
-//                style = reactStyle {
-//                    color = Color("#c4c4c4")
-//                }
-
-//                styleOverrides = json(
-//                    "track" to reactStyle {
-//                        color = Color.red
-//                        backgroundColor = Color.green
-//                    }
-//                )
         }
     }
 }

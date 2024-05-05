@@ -76,19 +76,6 @@ class SelectAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val selectId = "material-react-select-edit"
-
-        InputLabel {
-            htmlFor = selectId
-
-            css {
-                fontSize = 0.8.em
-                width = 16.em
-            }
-
-            +formattedLabel()
-        }
-
         val selectedOption: ReactSelectOption = jso {
             value = props.value
             label = props.options[props.value] ?: props.value
@@ -104,31 +91,39 @@ class SelectAttributeEditor(
 
         val selectOptions = reactSelectOptions.toTypedArray()
 
-        ReactSelect::class.react {
-            id = selectId
-            value = selectedOption
-            options = selectOptions
-
-            onChange = {
-                submitEditAsync(it.value)
+        InputLabel {
+            css {
+                fontSize = 0.8.em
+                width = 16.em
             }
 
-            isDisabled = props.disabled
+            +formattedLabel()
 
-            // https://stackoverflow.com/a/51844542/1941359
-            val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                val transformed = json()
-                transformed.add(base)
-                transformed["background"] = "transparent"
-                transformed["borderWidth"] = "2px"
-                transformed
+            ReactSelect::class.react {
+                value = selectedOption
+                options = selectOptions
+
+                onChange = {
+                    submitEditAsync(it.value)
+                }
+
+                isDisabled = props.disabled
+
+                // https://stackoverflow.com/a/51844542/1941359
+                val styleTransformer: (Json, Json) -> Json = { base, _ ->
+                    val transformed = json()
+                    transformed.add(base)
+                    transformed["background"] = "transparent"
+                    transformed["borderWidth"] = "2px"
+                    transformed
+                }
+
+                val reactStyles = json()
+                reactStyles["control"] = styleTransformer
+                styles = reactStyles
+
+                menuPortalTarget = document.body!!
             }
-
-            val reactStyles = json()
-            reactStyles["control"] = styleTransformer
-            styles = reactStyles
-
-            menuPortalTarget = document.body!!
         }
     }
 }
