@@ -8,13 +8,13 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Reflect
 class CountSink(
-        private val input: RequiredInput<*>
+    private val input: RequiredInput<*>
 ):
-        Dataflow<CountSink.State>
+    Dataflow<CountSink.State>
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
-            var count: Long = 0
+        var count: Long = 0
     )
 
 

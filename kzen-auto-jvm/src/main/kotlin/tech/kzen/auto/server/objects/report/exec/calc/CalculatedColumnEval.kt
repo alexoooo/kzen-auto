@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.exec.calc
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.util.ExpressionUtils
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
@@ -155,32 +156,17 @@ $calculatedColumnFormula
 
 
     private fun generateColumnAccessors(headerListing: HeaderListing): String {
-        val sanitizedRenderedColumnNames = headerListing
+        val variableNames = headerListing
             .values
-            .map { it.render() }
-            .map { sanitizeVariableName(it) }
-
-        val variableNames = HeaderListing.of(sanitizedRenderedColumnNames)
-            .values
-            .map {
-                when {
-                    it.occurrence == 0 -> it.text
-                    else -> "${it.text}_${it.occurrence + 1}"
-                }
-            }
+            .map { ExpressionUtils.escapeKotlinVariableName(it) }
 
         return variableNames
             .withIndex()
             .joinToString("\n") { columnName ->
-                "val `${sanitizeVariableName(columnName.value)}` get(): ColumnValue {" +
+                "val ${ExpressionUtils.escapeKotlinVariableName(columnName.value)} get(): ColumnValue {" +
                 "    return columnValue(${columnName.index})" +
                 "}"
             }
-    }
-
-
-    private fun sanitizeVariableName(text: String): String {
-        return text.replace(Regex("[\\[(,)/;\\\\]+"), "_")
     }
 
     private fun sanitizeClassName(text: String): String {

@@ -1,8 +1,8 @@
 package tech.kzen.auto.common.paradigm.dataflow.api
 
 
-interface StatelessDataflow:
-        Dataflow<Unit>
+interface StatelessDataflow
+    : Dataflow<Unit>
 {
     override fun initialState() {}
 

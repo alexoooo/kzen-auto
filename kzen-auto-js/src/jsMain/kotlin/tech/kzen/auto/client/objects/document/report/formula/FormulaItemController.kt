@@ -23,8 +23,10 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
+import tech.kzen.auto.common.util.ExpressionUtils
 import web.cssom.VerticalAlign
 import web.cssom.em
 import web.html.HTMLTextAreaElement
@@ -52,34 +54,6 @@ class FormulaItemController(
 ):
     RPureComponent<FormulaItemControllerProps, FormulaItemControllerState>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        // https://stackoverflow.com/a/44149580/1941359
-        private val reservedWords = setOf(
-            "package", "as", "typealias", "class", "this", "super", "val", "var", "fun", "for",
-            "null", "true", "false", "is", "in", "throw", "return", "break", "continue", "object",
-            "if", "try", "else", "while", "do", "when", "interface", "typeof")
-
-        private val simpleVariablePattern = Regex("[a-zA-Z][a-zA-Z0-9_]+")
-
-        private fun escapeColumnName(columnName: String): String {
-            if (columnName in reservedWords) {
-                return backticksQuote(columnName)
-            }
-
-            if (simpleVariablePattern.matches(columnName)) {
-                return columnName
-            }
-
-            return backticksQuote(columnName)
-        }
-
-        private fun backticksQuote(identifier: String): String {
-            return "`$identifier`"
-        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private var submitDebounce: FunctionWithDebounce = lodash.debounce({
         async {
@@ -125,8 +99,8 @@ class FormulaItemController(
     }
 
 
-    private fun onInsertColumn(columnName: String) {
-        val escaped = escapeColumnName(columnName)
+    private fun onInsertColumn(columnName: HeaderLabel) {
+        val escaped = ExpressionUtils.escapeKotlinVariableName(columnName)
 
         val escapePrefix =
             if (state.value.isEmpty() || state.value.endsWith(" ")) {
@@ -140,7 +114,7 @@ class FormulaItemController(
         val newValue = state.value + valueSuffix
 
         setState {
-            value += valueSuffix
+            value = newValue
         }
 
         submitDebounce.cancel()

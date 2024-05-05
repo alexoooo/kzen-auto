@@ -14,6 +14,7 @@ import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import web.cssom.Display
 import web.cssom.WhiteSpace
@@ -26,7 +27,7 @@ import kotlin.js.json
 external interface FormulaReferenceControllerProps: react.Props {
     var inputColumns: HeaderListing
     var editDisabled: Boolean
-    var onAdded: (String) -> Unit
+    var onAdded: (HeaderLabel) -> Unit
     var addLabel: String
     var addIcon: String
 }
@@ -34,7 +35,7 @@ external interface FormulaReferenceControllerProps: react.Props {
 
 external interface FormulaReferenceControllerState: react.State {
     var adding: Boolean
-    var selectedColumn: String?
+    var selectedColumn: HeaderLabel?
 }
 
 
@@ -68,7 +69,7 @@ class FormulaReferenceController(
     }
 
 
-    private fun onValueChange(columnName: String) {
+    private fun onValueChange(columnName: HeaderLabel) {
         props.onAdded.invoke(columnName)
 
         setState {
@@ -174,12 +175,12 @@ class FormulaReferenceController(
         ReactSelect::class.react {
             id = selectId
 
-            value = selectOptions.find { it.value == state.selectedColumn }
+            value = selectOptions.find { HeaderLabel.ofString(it.value) == state.selectedColumn }
             options = selectOptions
 
             onChange = {
 //                    console.log("^^^^^ selected: $it")
-                onValueChange(it.value)
+                onValueChange(HeaderLabel.ofString(it.value))
             }
 
             isDisabled = props.editDisabled
