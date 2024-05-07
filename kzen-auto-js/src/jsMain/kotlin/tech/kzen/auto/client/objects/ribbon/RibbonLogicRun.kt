@@ -243,8 +243,7 @@ class RibbonLogicRun (
 
             disabled = ! (active && ! executing || ! active && runnable)
 
-//            size = Size.medium
-            size = Size.pkcs8
+            size = Size.medium
 
             sx {
                 height = 34.px
@@ -273,8 +272,7 @@ class RibbonLogicRun (
         ToggleButton {
             value = actionRunOrPause
             disabled = ! active && ! runnable
-//            size = Size.medium
-            size = Size.pkcs8
+            size = Size.medium
 
             sx {
                 height = 34.px
@@ -315,8 +313,7 @@ class RibbonLogicRun (
         ToggleButton {
             value = actionStop
             disabled = ! active
-//            size = Size.medium
-            size = Size.pkcs8
+            size = Size.medium
 
             sx {
                 height = 34.px

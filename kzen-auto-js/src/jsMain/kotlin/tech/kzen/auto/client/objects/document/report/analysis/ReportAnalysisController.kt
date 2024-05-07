@@ -138,8 +138,8 @@ class ReportAnalysisController(
                     ToggleButton {
                         value = AnalysisType.FlatData.name
                         disabled = editDisabled
-//                        size = Size.medium
-                        size = Size.pkcs8
+                        size = Size.medium
+
                         css {
                             height = 34.px
                             color = NamedColor.black
@@ -161,8 +161,8 @@ class ReportAnalysisController(
                     ToggleButton {
                         value = AnalysisType.PivotTable.name
                         disabled = editDisabled
-//                        size = Size.medium
-                        size = Size.pkcs8
+                        size = Size.medium
+
                         css {
                             height = 34.px
                             color = NamedColor.black

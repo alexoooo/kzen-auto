@@ -42,7 +42,8 @@ dependencies {
     implementation("com.sangupta:bloomfilter:$bloomFilterVersion")
     implementation("commons-io:commons-io:$commonsIoVersion")
     implementation("com.linkedin.migz:migz:$migzVersion")
-    implementation("javax.annotation:javax.annotation-api:$annotationsApiVersion")
+//    implementation("javax.annotation:javax.annotation-api:$annotationsApiVersion")
+    implementation("jakarta.annotation:jakarta.annotation-api:$annotationsApiVersion")
 
     implementation("io.ktor:ktor-server-netty:$ktorVersion")
     implementation("io.ktor:ktor-server-html-builder-jvm:$ktorVersion")

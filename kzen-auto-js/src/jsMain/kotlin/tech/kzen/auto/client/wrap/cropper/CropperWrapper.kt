@@ -17,7 +17,7 @@ import kotlin.js.json
 //-----------------------------------------------------------------------------------------------------------------
 external interface CropperWrapperProps: PropsWithRef<CropperWrapper> {
     var src: String?
-    var crop: (event: CustomEvent<*, *>) -> Unit
+    var crop: (event: CustomEvent<*>) -> Unit
 }
 
 

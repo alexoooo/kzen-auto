@@ -12,6 +12,7 @@ import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectReference
 import web.dom.document
+import web.events.EventHandler
 import web.html.HTMLElement
 import web.window.window
 
@@ -30,7 +31,7 @@ fun main() {
         return rootElement
     }
 
-    window.onload = {
+    window.onload = EventHandler {
         async {
             ClientContext.initAsync()
 

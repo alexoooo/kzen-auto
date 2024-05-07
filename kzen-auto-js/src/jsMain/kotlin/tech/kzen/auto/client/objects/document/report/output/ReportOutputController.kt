@@ -206,8 +206,8 @@ class ReportOutputController(
             ToggleButton {
                 value = OutputType.Explore.name
                 disabled = props.runningOrLoading
-//                size = Size.medium
-                size = Size.pkcs8
+                size = Size.medium
+
                 css {
                     height = 34.px
                     color = NamedColor.black
@@ -228,8 +228,7 @@ class ReportOutputController(
             ToggleButton {
                 value = OutputType.Export.name
                 disabled = props.runningOrLoading
-//                size = Size.medium
-                size = Size.pkcs8
+                size = Size.medium
                 css {
                     height = 34.px
                     color = NamedColor.black

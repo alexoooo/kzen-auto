@@ -163,7 +163,7 @@ $calculatedColumnFormula
         return variableNames
             .withIndex()
             .joinToString("\n") { columnName ->
-                "val ${ExpressionUtils.escapeKotlinVariableName(columnName.value)} get(): ColumnValue {" +
+                "val ${columnName.value} get(): ColumnValue {" +
                 "    return columnValue(${columnName.index})" +
                 "}"
             }
