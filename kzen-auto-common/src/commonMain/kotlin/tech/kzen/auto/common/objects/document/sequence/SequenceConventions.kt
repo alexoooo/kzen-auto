@@ -19,6 +19,9 @@ object SequenceConventions {
     val stepsAttributeName = AttributeName("steps")
     val stepsAttributePath = AttributePath.ofName(stepsAttributeName)
 
+    val instructionsAttributeName = AttributeName("instructions")
+    val instructionsAttributePath = AttributePath.ofName(instructionsAttributeName)
+
     val nextStepTracePath = LogicTracePath(listOf("next-step"))
 
 

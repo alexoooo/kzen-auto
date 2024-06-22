@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.sequence.step.control
 import emotion.react.css
 import js.objects.jso
 import kotlinx.browser.document
+import mui.material.IconButton
 import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.State
@@ -15,16 +16,19 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.material.RemoveCircleOutlineIcon
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
+import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
@@ -160,10 +164,34 @@ class RunStepArgumentsEditor(
             return
         }
 
+        val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
+
+        val instructionsNotation = graphNotation
+            .firstAttribute(props.objectLocation, SequenceConventions.instructionsAttributeName)
+
+        val instructionsObjectLocation =
+            if (instructionsNotation is ScalarAttributeNotation && instructionsNotation.value.isNotEmpty()) {
+                val reference = ObjectReference.parse(instructionsNotation.value)
+                val objectLocation = graphNotation.coalesce.locateOptional(reference, objectReferenceHost)
+                objectLocation
+            }
+            else {
+                null
+            }
+        val instructionsParametersNotation =
+            if (instructionsObjectLocation != null) {
+                graphNotation
+                    .firstAttribute(instructionsObjectLocation, LogicConventions.parametersAttributeName)
+                    as? ListAttributeNotation
+            }
+            else {
+                null
+            }
+        val instructionsParameters: List<String>? =
+            instructionsParametersNotation?.values?.mapNotNull { i -> i.asString() }
+
         val attributeNotation = graphNotation
             .firstAttribute(props.objectLocation, props.attributeName)
-
-        val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 
         val attributeMap: Map<String, String> =
             (attributeNotation as? MapAttributeNotation)
@@ -208,7 +236,7 @@ class RunStepArgumentsEditor(
 
             this.values = values.toPersistentMap()
             this.predecessors = predecessors.toPersistentList()
-            parameterNames = attributeMap.keys.toPersistentList()
+            parameterNames = instructionsParameters?.toPersistentList()
         }
     }
 
@@ -247,6 +275,16 @@ class RunStepArgumentsEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onRemove(parameterName: String) {
+        val values = state.values
+            ?: return
+
+        setState {
+            this.values = values.remove(parameterName)
+        }
+    }
+
+
     private fun onValueChange(parameterName: String, value: ObjectLocation) {
 //        console.log("onValueChange - $value")
         val values = state.values
@@ -300,9 +338,13 @@ class RunStepArgumentsEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
+//        +"[1 ${props.attributeName}]"
         val values = state.values ?: return
+//        +"[2 $values]"
         val predecessors = state.predecessors ?: return
+//        +"[3 $predecessors]"
         val parameterNames = state.parameterNames ?: return
+//        +"[4 $parameterNames]"
 
         val selectOptions: Array<ReactSelectOption> = predecessors
             .map { location ->
@@ -313,14 +355,20 @@ class RunStepArgumentsEditor(
                 option
             }
             .toTypedArray()
-
-//        +"^^ SELECT: ${props.attributeName} - $attributeNotation - ${selectOptions.map { it.value }}"
-
+//        +"^^ SELECT: ${selectOptions.map { it.value }}"
 
         for (parameterName in parameterNames) {
             div {
                 key = parameterName
                 renderParameter(parameterName, selectOptions, values)
+            }
+        }
+
+        val unusedParameters = values.keys.minus(parameterNames)
+        for (unusedParameter in unusedParameters) {
+            div {
+                key = unusedParameter
+                renderUnusedParameter(unusedParameter, selectOptions, values)
             }
         }
     }
@@ -334,10 +382,7 @@ class RunStepArgumentsEditor(
         val selectedValue = values[parameterName]
         val selectedOption = selectOptions.find { it.value == selectedValue?.asString() }
 
-//        val selectId = "material-react-select-id"
-
         InputLabel {
-//            htmlFor = selectId
             css {
                 fontSize = 0.8.em
             }
@@ -373,7 +418,31 @@ class RunStepArgumentsEditor(
     }
 
 
-//    private fun formattedLabel(): String {
-//        return CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))
-//    }
+    private fun ChildrenBuilder.renderUnusedParameter(
+        parameterName: String,
+        selectOptions: Array<ReactSelectOption>,
+        values: PersistentMap<String, ObjectLocation>
+    ) {
+        val selectedValue = values[parameterName]
+        val selectedOption = selectOptions.find { it.value == selectedValue?.asString() }
+
+        +"Unused parameter: $parameterName - ${selectedOption?.label}"
+
+        IconButton {
+            css {
+                marginLeft = 0.25.em
+            }
+            title = "Remove"
+
+            onClick = {
+                onRemove(parameterName)
+            }
+
+            RemoveCircleOutlineIcon::class.react {
+                style = jso {
+                    fontSize = 1.5.em
+                }
+            }
+        }
+    }
 }

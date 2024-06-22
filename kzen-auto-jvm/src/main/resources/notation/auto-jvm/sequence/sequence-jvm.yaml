@@ -160,7 +160,7 @@ RunStep:
   icon: PlayArrow
   title: "Run"
   instructions: ""
-  argument: ""
+  arguments: {}
   meta:
     instructions:
       is: ObjectLocation

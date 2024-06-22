@@ -17,7 +17,6 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.material.CancelIcon
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import web.cssom.Display

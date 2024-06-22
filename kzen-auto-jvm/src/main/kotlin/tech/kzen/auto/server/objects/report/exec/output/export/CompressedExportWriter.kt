@@ -11,7 +11,6 @@ import java.io.Closeable
 import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.zip.GZIPOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.absolute
@@ -24,6 +23,7 @@ class CompressedExportWriter(
     ReportPipelineStage<ReportOutputEvent<*>>("export-write")
 {
     //-----------------------------------------------------------------------------------------------------------------
+    @Suppress("ConstPropertyName")
     companion object {
 //        private const val migzThreads = 3
 //        private const val migzThreads = 5
@@ -89,12 +89,12 @@ class CompressedExportWriter(
 
             ExportCompression.GZip -> {
                 // https://stackoverflow.com/questions/1082320/what-order-should-i-use-gzipoutputstream-and-bufferedoutputstream
-                out =
-                    BufferedOutputStream(
-                        GZIPOutputStream(
-                            BufferedOutputStream(Files.newOutputStream(file), 128 * 1024),
-                        128 * 1024),
-                    128 * 1024)
+//                out =
+//                    BufferedOutputStream(
+//                        GZIPOutputStream(
+//                            BufferedOutputStream(Files.newOutputStream(file), 128 * 1024),
+//                        128 * 1024),
+//                    128 * 1024)
 
                 out = MiGzOutputStream(
                     Files.newOutputStream(file),

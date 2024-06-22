@@ -2,7 +2,6 @@ package tech.kzen.auto.common.objects.document.report.spec.filter
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabelMap
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
