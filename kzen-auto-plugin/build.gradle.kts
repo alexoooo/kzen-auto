@@ -1,4 +1,4 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     kotlin("jvm")
@@ -10,6 +10,9 @@ kotlin {
     jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion))
     }
+    compilerOptions {
+        jvmTarget.set(JvmTarget.fromTarget(jvmTargetVersion))
+    }
 }
 
 
@@ -18,12 +21,12 @@ dependencies {
 }
 
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs += listOf("-Xjsr305=strict")
-        jvmTarget = jvmTargetVersion
-    }
-}
+//tasks.withType<KotlinCompile> {
+//    kotlinOptions {
+//        freeCompilerArgs += listOf("-Xjsr305=strict")
+//        jvmTarget = jvmTargetVersion
+//    }
+//}
 
 
 tasks.compileJava {

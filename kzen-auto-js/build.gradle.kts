@@ -46,35 +46,31 @@ kotlin {
     }
 
     sourceSets {
-        jsMain {
-            dependencies {
-                implementation(project(":kzen-auto-common"))
+        jsMain.dependencies {
+            implementation(project(":kzen-auto-common"))
 
-                api("tech.kzen.lib:kzen-lib-js:$kzenLibVersion")
+            api("tech.kzen.lib:kzen-lib-js:$kzenLibVersion")
 
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
 
-                implementation("org.jetbrains.kotlin-wrappers:kotlin-react:$kotlinReactVersion")
-                implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$kotlinReactDomVersion")
-                implementation("org.jetbrains.kotlin-wrappers:kotlin-emotion:$kotlinEmotionVersion")
-                implementation("org.jetbrains.kotlin-wrappers:kotlin-mui-material:$kotlinMuiVersion")
+            implementation("org.jetbrains.kotlin-wrappers:kotlin-react:$kotlinReactVersion")
+            implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$kotlinReactDomVersion")
+            implementation("org.jetbrains.kotlin-wrappers:kotlin-emotion:$kotlinEmotionVersion")
+            implementation("org.jetbrains.kotlin-wrappers:kotlin-mui-material:$kotlinMuiMaterialVersion")
 
-                implementation(npm("@mui/icons-material", muiIconsVersion))
-                implementation(npm("cropperjs", cropperJsVersion))
-                implementation(npm("lodash", lodashVersion))
-                implementation(npm("react-select", reactSelectVersion))
-                implementation(npm("@iconify/react", iconifyReactVersion))
-                implementation(npm("@iconify/icons-vaadin", iconifyIconsVaadinVersion))
+            implementation(npm("@mui/icons-material", muiIconsVersion))
+            implementation(npm("cropperjs", cropperJsVersion))
+            implementation(npm("lodash", lodashVersion))
+            implementation(npm("react-select", reactSelectVersion))
+            implementation(npm("@iconify/react", iconifyReactVersion))
+            implementation(npm("@iconify/icons-vaadin", iconifyIconsVaadinVersion))
 
-                // NB: avoid "unmet peer dependency" warning
-                implementation(npm("@babel/core", babelCoreVersion))
-            }
+            // NB: avoid "unmet peer dependency" warning
+            implementation(npm("@babel/core", babelCoreVersion))
         }
 
-        jsTest {
-            dependencies {
-                implementation(kotlin("test"))
-            }
+        jsTest.dependencies {
+            implementation(kotlin("test"))
         }
     }
 }

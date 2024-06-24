@@ -60,7 +60,7 @@ class AnalysisPivotValueTypeController(
 
             value = props.pivotValueSpec.types.map { it.name }.toTypedArray()
 
-            onChange = { _, v ->
+            asDynamic()["onChange"] = { _, v ->
                 onTypeChange(v)
             }
 

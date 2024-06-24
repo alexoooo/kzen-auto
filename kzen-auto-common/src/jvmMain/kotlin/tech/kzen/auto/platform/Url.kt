@@ -55,7 +55,7 @@ actual class Url(
     }
 
 
-    override fun digest(sink: Digest.Sink) {
+    actual override fun digest(sink: Digest.Sink) {
         sink.addUtf8(toString())
     }
 

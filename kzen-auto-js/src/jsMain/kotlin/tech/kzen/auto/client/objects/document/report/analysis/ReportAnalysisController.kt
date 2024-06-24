@@ -6,6 +6,7 @@ import mui.material.Size
 import mui.material.ToggleButton
 import mui.material.ToggleButtonGroup
 import react.ChildrenBuilder
+import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -28,7 +29,7 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface ReportAnalysisControllerProps: react.Props {
+external interface ReportAnalysisControllerProps: Props {
     var spec: AnalysisSpec
     var inputAndCalculatedColumns: HeaderListing?
     var analysisColumnInfo: AnalysisColumnInfo?
@@ -85,7 +86,6 @@ class ReportAnalysisController(
     }
 
 
-
     private fun ChildrenBuilder.renderContent() {
         renderHeader()
         renderAnalysis()
@@ -131,7 +131,8 @@ class ReportAnalysisController(
                 ToggleButtonGroup {
                     value = props.spec.type.name
                     exclusive = true
-                    onChange = { _, v ->
+
+                    asDynamic()["onChange"] = { _, v ->
                         onTypeChange(AnalysisType.valueOf(v as String))
                     }
 

@@ -215,7 +215,7 @@ class RibbonLogicRun (
 //                value = actionRun
             exclusive = true
 
-            onChange = { _, v ->
+            asDynamic()["onChange"] = { _, v ->
                 onAction(v as String, active, executing)
             }
 

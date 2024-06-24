@@ -1,3 +1,6 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     kotlin("multiplatform")
     `maven-publish`
@@ -10,11 +13,15 @@ kotlin {
     }
 
     jvm {
-        val main by compilations.getting {
-            kotlinOptions {
-                jvmTarget = jvmTargetVersion
-            }
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        compilerOptions {
+            jvmTarget.set(JvmTarget.fromTarget(jvmTargetVersion))
         }
+//        val main by compilations.getting {
+//            kotlinOptions {
+//                jvmTarget = jvmTargetVersion
+//            }
+//        }
     }
 
     js {
@@ -31,41 +38,28 @@ kotlin {
     }
 
     sourceSets {
-        commonMain  {
-            dependencies {
-                api("tech.kzen.lib:kzen-lib-common:$kzenLibVersion")
-                api("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
-            }
+        commonMain.dependencies {
+            api("tech.kzen.lib:kzen-lib-common:$kzenLibVersion")
+            api("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
         }
 
-        commonTest {
-            dependencies {
-                implementation(kotlin("test"))
-            }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
 
 
-        jvmMain {
-            dependencies {
-                api("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
-                api("ch.qos.logback:logback-classic:$logbackVersion")
-            }
+        jvmMain.dependencies {
+            api("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
+            api("ch.qos.logback:logback-classic:$logbackVersion")
         }
 
-        jvmTest {
-            dependencies {}
+        jvmTest.dependencies {}
+
+        jsMain.dependencies {
+            api("tech.kzen.lib:kzen-lib-common-js:$kzenLibVersion")
         }
 
-
-        jsMain {
-            dependencies {
-                api("tech.kzen.lib:kzen-lib-common-js:$kzenLibVersion")
-            }
-        }
-
-        jsTest {
-            dependencies {}
-        }
+        jsTest.dependencies {}
     }
 }
 

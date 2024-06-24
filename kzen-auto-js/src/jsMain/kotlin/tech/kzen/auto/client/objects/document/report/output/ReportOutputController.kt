@@ -196,7 +196,8 @@ class ReportOutputController(
         ToggleButtonGroup {
             value = props.spec.type.name
             exclusive = true
-            onChange = { _, v ->
+
+            asDynamic()["onChange"] = { _, v ->
                 if (v is String) {
                     @Suppress("UnsafeCastFromDynamic")
                     onTypeChange(OutputType.valueOf(v))

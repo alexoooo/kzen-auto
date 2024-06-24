@@ -9,6 +9,7 @@ import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import tech.kzen.auto.server.objects.report.exec.calc.ColumnValueUtils
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
+import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvFormatUtils
 import tech.kzen.auto.server.objects.report.exec.output.pivot.row.RowIndex
 import tech.kzen.auto.server.objects.report.exec.output.pivot.row.digest.H2DigestIndex
 import tech.kzen.auto.server.objects.report.exec.output.pivot.row.signature.StoreRowSignatureIndex
@@ -76,7 +77,7 @@ class PivotBuilder(
                     val valueBuffer = ArrayList<String?>()
 
                     for (rowNumber in 0 until size) {
-                        writer.write(tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvFormatUtils.lineFeedInt)
+                        writer.write(CsvFormatUtils.lineFeedInt)
 
                         flatFileRecord.clear()
                         valueBuffer.clear()

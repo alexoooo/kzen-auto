@@ -12,6 +12,7 @@ actual class Url(
     private val networkFile: Boolean
 ): Digestible {
     //-----------------------------------------------------------------------------------------------------------------
+    @Suppress("ConstPropertyName")
     actual companion object {
         private const val filePrefix = "file://"
         private const val localFilePrefix = "file:///"
@@ -106,7 +107,7 @@ actual class Url(
     }
 
 
-    override fun digest(sink: Digest.Sink) {
+    actual override fun digest(sink: Digest.Sink) {
         sink.addUtf8(toString())
     }
 
@@ -117,9 +118,7 @@ actual class Url(
 
         other as Url
 
-        if (url != other.url) return false
-
-        return true
+        return url == other.url
     }
 
 

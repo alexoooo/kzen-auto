@@ -350,8 +350,8 @@ class FilterItemController(
         ToggleButtonGroup {
             value = columnFilterSpec.type.name
             exclusive = true
-//                size = "small"
-            onChange = { _, v ->
+
+            asDynamic()["onChange"] = { _, v ->
                 if (v is String) {
                     onTypeChange(ColumnFilterType.valueOf(v))
                 }
