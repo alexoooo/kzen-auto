@@ -243,7 +243,7 @@ class RibbonController(
 
             value = state.tabIndex
 
-            onChange = { _, index: Int ->
+            asDynamic().onChange = { _: Any, index: Int ->
                 onTab(index)
             }
 

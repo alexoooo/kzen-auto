@@ -11,10 +11,11 @@ object ExpressionUtils {
         "if", "try", "else", "while", "do", "when", "interface", "typeof")
 
     private val simpleVariablePattern = Regex("[a-zA-Z][a-zA-Z0-9_]+")
-//    private val backticksPattern = Regex("[^\\[(,)/;\\\\]+")
     private val backticksPattern = Regex("""[^\[(,)/;\\]+""")
 
     private val escapedPattern = Regex("[^a-zA-Z0-9_]+")
+    @Suppress("RegExpSimplifiable")
+    private val backticksEscaped = Regex("[>]+")
 
 
     fun escapeKotlinVariableName(headerLabel: HeaderLabel): String {
@@ -52,6 +53,7 @@ object ExpressionUtils {
 
 
     private fun backticksQuote(identifier: String): String {
-        return "`$identifier`"
+        val backticksEscaped = identifier.replace(backticksEscaped, "_")
+        return "`$backticksEscaped`"
     }
 }

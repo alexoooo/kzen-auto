@@ -208,7 +208,6 @@ class ColumnValue(
     }
 
 
-    @Suppress("SpellCheckingInspection")
     val falsy: Boolean get() {
         if (! number.isNaN()) {
             return asNumber == 0.0

@@ -10,6 +10,7 @@ data class ObjectRegistryReflection(
     val source: String?,
     val error: String?
 ) {
+    @Suppress("ConstPropertyName")
     companion object {
         private const val sourceKey = "source"
         private const val errorKey = "error"

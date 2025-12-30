@@ -6,7 +6,6 @@ import tech.kzen.auto.server.objects.report.exec.input.connect.InputStreamFlatDa
 import tech.kzen.auto.server.objects.report.exec.trace.ReportInputTrace
 
 
-@Suppress("UnstableApiUsage")
 class ReportInputReader(
     private val input: FlatDataStream,
     private val progress: ReportInputTrace? = null

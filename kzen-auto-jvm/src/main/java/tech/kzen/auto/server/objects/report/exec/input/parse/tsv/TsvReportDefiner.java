@@ -95,7 +95,7 @@ public class TsvReportDefiner
                 FlatFileRecord.class,
                 List.of(
                         new ReportSegmentStepDefinition<>(List.of(
-                            TsvPipelineLexer::new)),
+                                TsvPipelineLexer::new)),
                         new ReportSegmentStepDefinition<>(List.of(
                                 TsvPipelineParser::new))
                 ),
