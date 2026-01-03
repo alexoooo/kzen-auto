@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.sequence.progress
 
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.Fab
 import mui.system.sx
 import react.ChildrenBuilder
@@ -58,7 +58,7 @@ class SequenceProgressController(
             title = "Reset"
 
             ReplayIcon::class.react {
-                style = jso {
+                style = unsafeJso {
                     fontSize = 3.em
                 }
             }

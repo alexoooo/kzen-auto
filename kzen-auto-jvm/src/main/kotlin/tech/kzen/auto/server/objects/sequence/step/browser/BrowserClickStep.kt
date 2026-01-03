@@ -47,7 +47,7 @@ class BrowserClickStep(
         val element = match.webElement!!
 
         if (element.tagName.lowercase() == "input" &&
-                element.getAttribute("type").lowercase() == "submit") {
+                element.getAttribute("type")?.lowercase() == "submit") {
             element.submit()
         }
         else {

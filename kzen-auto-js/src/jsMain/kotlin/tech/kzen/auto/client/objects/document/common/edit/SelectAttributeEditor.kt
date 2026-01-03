@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import kotlinx.browser.document
 import mui.material.InputLabel
 import react.ChildrenBuilder
@@ -76,13 +76,13 @@ class SelectAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val selectedOption: ReactSelectOption = jso {
+        val selectedOption: ReactSelectOption = unsafeJso {
             value = props.value
             label = props.options[props.value] ?: props.value
         }
 
         val reactSelectOptions = props.options.map {
-            val option: ReactSelectOption = jso {
+            val option: ReactSelectOption = unsafeJso {
                 value = it.key
                 label = it.value
             }

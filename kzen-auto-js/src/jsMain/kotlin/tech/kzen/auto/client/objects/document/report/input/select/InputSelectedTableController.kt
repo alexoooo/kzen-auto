@@ -31,6 +31,7 @@ import tech.kzen.lib.platform.collect.persistentSetOf
 import tech.kzen.lib.platform.collect.toPersistentSet
 import web.cssom.*
 import web.html.InputType
+import web.html.checkbox
 import kotlin.math.max
 import kotlin.math.min
 
@@ -214,7 +215,7 @@ class InputSelectedTableController(
                             marginBottom = (-0.5).em
                             marginLeft = (-0.25).em
                             marginRight = (-0.25).em
-                            backgroundColor = NamedColor.transparent
+                            backgroundColor = Color.transparent
                             height = 0.px
                             overflow = Overflow.visible
                         }

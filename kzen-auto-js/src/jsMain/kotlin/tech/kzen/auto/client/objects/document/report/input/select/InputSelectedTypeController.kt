@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.input.select
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import kotlinx.browser.document
 import mui.material.InputLabel
 import react.ChildrenBuilder
@@ -76,7 +76,7 @@ class InputSelectedTypeController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val dataType = props.spec.dataType
-        val selectedOption: ReactSelectOption = jso {
+        val selectedOption: ReactSelectOption = unsafeJso {
             value = dataType.asString()
             label = typeLabel(dataType)
         }
@@ -85,7 +85,7 @@ class InputSelectedTypeController(
 
         val classNamesLabels =
             loadedDataTypes?.map {
-                val option: ReactSelectOption = jso {
+                val option: ReactSelectOption = unsafeJso {
                     value = it.asString()
                     label = typeLabel(it)
                 }

@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.graph
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.Fab
 import mui.material.IconButton
 import react.*
@@ -343,7 +343,7 @@ class GraphRunController(
 //                    }
 //                }
                 icon.react {
-                    style = jso {
+                    style = unsafeJso {
                         fontSize = 3.em
                     }
                 }
@@ -368,7 +368,7 @@ class GraphRunController(
             onClick = { onReset() }
 
             ReplayIcon::class.react {
-                style = jso {
+                style = unsafeJso {
                     fontSize = 1.5.em
                 }
             }
@@ -389,7 +389,7 @@ class GraphRunController(
             onClick = { onRun() }
 
             RedoIcon::class.react {
-                style = jso {
+                style = unsafeJso {
                     fontSize = 1.5.em
                 }
             }

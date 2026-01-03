@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.input.select
 
-import js.objects.jso
+import js.objects.unsafeJso
 import kotlinx.browser.document
 import mui.material.InputLabel
 import mui.system.sx
@@ -99,7 +99,7 @@ class InputSelectedFormatController(
         val classNamesLabels = when {
             loadedFormats != null -> {
                 val loadedOptions = loadedFormats.map {
-                    val option: ReactSelectOption = jso {
+                    val option: ReactSelectOption = unsafeJso {
                         value = it.coordinate.asString()
                         label = typeLabel(it)
                     }
@@ -112,7 +112,7 @@ class InputSelectedFormatController(
                 else {
                     listOf(
                         run {
-                            val option: ReactSelectOption = jso {
+                            val option: ReactSelectOption = unsafeJso {
                                 value = CommonPluginCoordinate.defaultName
                                 label = "Default"
                             }
@@ -124,7 +124,7 @@ class InputSelectedFormatController(
 
             selectionProcessorDefinitionCoordinates != null ->
                 selectionProcessorDefinitionCoordinates.map {
-                    val option: ReactSelectOption = jso {
+                    val option: ReactSelectOption = unsafeJso {
                         value = it.name
                         label = it.asString()
                     }

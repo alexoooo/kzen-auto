@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.input.browse
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.IconButton
 import mui.material.Size
 import mui.material.TextField
@@ -150,7 +150,7 @@ class InputBrowserPathController(
 
                     if (index != 0) {
                         ArrowForwardIosIcon::class.react {
-                            style = jso {
+                            style = unsafeJso {
                                 fontSize = 0.75.em
                                 marginLeft = 0.25.em
                                 marginRight = 0.25.em
@@ -250,7 +250,7 @@ class InputBrowserPathController(
                 title = "Cancel"
 
                 CancelIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         fontSize = 0.85.em
                     }
                 }
@@ -263,7 +263,7 @@ class InputBrowserPathController(
                 title = "Save"
 
                 SaveIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         fontSize = 0.85.em
                     }
                 }

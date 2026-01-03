@@ -1,10 +1,9 @@
 package tech.kzen.auto.client.objects.document.report.output
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.*
 import mui.material.Size
-//import mui.material.Size
 import mui.system.sx
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
@@ -139,7 +138,7 @@ class ReportOutputController(
                 }
 
                 SaveAltIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         position = Position.absolute
                         fontSize = 2.5.em
                         top = (-0.5).em

@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.graph
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.IconButton
 import mui.material.Menu
 import mui.material.MenuItem
@@ -323,8 +323,8 @@ class VertexController(
                 null ->
                     NamedColor.gray
 
-                else ->
-                    throw IllegalStateException()
+//                else ->
+//                    throw IllegalStateException()
             }
         }
 
@@ -609,7 +609,7 @@ class VertexController(
         span {
             css {
                 // NB: blinks in and out without this
-                backgroundColor = NamedColor.transparent
+                backgroundColor = Color.transparent
 
                 if (! (state.hoverCard || state.hoverMenu)) {
                     display = None.none
@@ -650,7 +650,7 @@ class VertexController(
             }
 
             DeleteIcon::class.react {
-                style = jso {
+                style = unsafeJso {
                     marginRight = 1.em
                 }
             }
@@ -693,7 +693,7 @@ class VertexController(
             }
 
             iconClassForName(icon).react {
-                style = jso {
+                style = unsafeJso {
                     color = NamedColor.black
 
                     fontSize = 1.75.em

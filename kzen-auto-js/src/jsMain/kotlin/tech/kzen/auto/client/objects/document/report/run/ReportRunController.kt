@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.run
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.Fab
 import react.ChildrenBuilder
 import react.Props
@@ -60,7 +60,7 @@ class ReportRunController(
             title = "Reset"
 
             ReplayIcon::class.react {
-                style = jso {
+                style = unsafeJso {
                     fontSize = 3.em
                 }
             }

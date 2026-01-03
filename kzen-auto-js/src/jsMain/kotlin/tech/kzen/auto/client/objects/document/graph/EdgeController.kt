@@ -529,8 +529,8 @@ class EdgeController(
                     height = 0.px
 
                     borderRight = Border(CellController.arrowSide, LineStyle.solid, cardColor)
-                    borderTop = Border(CellController.arrowSide, LineStyle.solid, NamedColor.transparent)
-                    borderBottom = Border(CellController.arrowSide, LineStyle.solid, NamedColor.transparent)
+                    borderTop = Border(CellController.arrowSide, LineStyle.solid, Color.transparent)
+                    borderBottom = Border(CellController.arrowSide, LineStyle.solid, Color.transparent)
                 }
             }
 
@@ -572,8 +572,8 @@ class EdgeController(
                 height = 0.px
 
                 borderLeft = Border(2.em, LineStyle.solid, cardColor)
-                borderTop = Border(2.em, LineStyle.solid, NamedColor.transparent)
-                borderBottom = Border(2.em, LineStyle.solid, NamedColor.transparent)
+                borderTop = Border(2.em, LineStyle.solid, Color.transparent)
+                borderBottom = Border(2.em, LineStyle.solid, Color.transparent)
 
                 marginTop = (-1).em
                 marginBottom = (-1).em
@@ -597,8 +597,8 @@ class EdgeController(
                     height = 0.px
 
                     borderLeft = Border(CellController.arrowSide, LineStyle.solid, cardColor)
-                    borderTop = Border(CellController.arrowSide, LineStyle.solid, NamedColor.transparent)
-                    borderBottom = Border(CellController.arrowSide, LineStyle.solid, NamedColor.transparent)
+                    borderTop = Border(CellController.arrowSide, LineStyle.solid, Color.transparent)
+                    borderBottom = Border(CellController.arrowSide, LineStyle.solid, Color.transparent)
                 }
             }
 
@@ -639,8 +639,8 @@ class EdgeController(
                 height = 0.px
 
                 borderRight = Border(2.em, LineStyle.solid, cardColor)
-                borderTop = Border(2.em, LineStyle.solid, NamedColor.transparent)
-                borderBottom = Border(2.em, LineStyle.solid, NamedColor.transparent)
+                borderTop = Border(2.em, LineStyle.solid, Color.transparent)
+                borderBottom = Border(2.em, LineStyle.solid, Color.transparent)
 
                 marginTop = (-3).em.minus(3.px)
                 marginBottom = (-1).em

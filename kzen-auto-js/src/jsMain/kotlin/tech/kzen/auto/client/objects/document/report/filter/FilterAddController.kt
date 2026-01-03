@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.filter
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import kotlinx.browser.document
 import mui.material.IconButton
 import mui.material.InputLabel
@@ -177,7 +177,7 @@ class FilterAddController(
     private fun ChildrenBuilder.renderSelect(unusedOptions: List<HeaderLabel>, editDisabled: Boolean) {
         val selectOptions = unusedOptions
             .map {
-                val option: ReactSelectOption = jso {
+                val option: ReactSelectOption = unsafeJso {
                     value = it.asString()
                     label = it.render()
                 }

@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.ribbon
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.*
 import mui.system.sx
 import react.ChildrenBuilder
@@ -311,7 +311,7 @@ class RibbonController(
 
                 if (icon != null) {
                     iconClassForName(icon).react {
-                        style = jso {
+                        style = unsafeJso {
                             marginRight = 0.25.em
                         }
                     }

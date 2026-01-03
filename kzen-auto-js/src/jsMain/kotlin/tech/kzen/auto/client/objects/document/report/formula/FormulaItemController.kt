@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.formula
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.IconButton
 import mui.material.Size
 import mui.material.TextField
@@ -176,7 +176,7 @@ class FormulaItemController(
                             disabled = props.runningOrLoading
                             this.error = error != null
 
-                            InputLabelProps = jso {
+                            InputLabelProps = unsafeJso {
                                 shrink = true
                             }
                         }

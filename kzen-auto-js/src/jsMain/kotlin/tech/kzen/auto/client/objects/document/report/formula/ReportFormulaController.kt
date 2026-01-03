@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.formula
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.CircularProgress
 import react.ChildrenBuilder
 import react.State
@@ -85,7 +85,7 @@ class ReportFormulaController(
                 }
 
                 FunctionsIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         position = Position.absolute
                         fontSize = 2.5.em
                         top = (-16.5).px

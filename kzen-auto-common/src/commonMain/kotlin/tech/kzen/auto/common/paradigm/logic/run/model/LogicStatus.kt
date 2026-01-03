@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.paradigm.logic.run.model
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 
 data class LogicStatus(

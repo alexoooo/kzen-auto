@@ -53,10 +53,15 @@ kotlin {
 
             implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
 
-            implementation("org.jetbrains.kotlin-wrappers:kotlin-react:$kotlinReactVersion")
-            implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$kotlinReactDomVersion")
-            implementation("org.jetbrains.kotlin-wrappers:kotlin-emotion:$kotlinEmotionVersion")
-            implementation("org.jetbrains.kotlin-wrappers:kotlin-mui-material:$kotlinMuiMaterialVersion")
+//            implementation("org.jetbrains.kotlin-wrappers:kotlin-react:$kotlinReactVersion")
+//            implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$kotlinReactDomVersion")
+//            implementation("org.jetbrains.kotlin-wrappers:kotlin-emotion:$kotlinEmotionVersion")
+//            implementation("org.jetbrains.kotlin-wrappers:kotlin-mui-material:$kotlinMuiMaterialVersion")
+            implementation(kotlinWrappers.react)
+            implementation(kotlinWrappers.reactLegacy)
+            implementation(kotlinWrappers.reactDom)
+            implementation(kotlinWrappers.emotion.styled)
+            implementation(kotlinWrappers.mui.material)
 
             implementation(npm("@mui/icons-material", muiIconsVersion))
             implementation(npm("cropperjs", cropperJsVersion))

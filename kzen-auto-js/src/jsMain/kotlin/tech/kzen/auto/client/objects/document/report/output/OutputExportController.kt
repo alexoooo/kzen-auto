@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.output
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.InputAdornment
 import mui.material.InputAdornmentPosition
 import react.ChildrenBuilder
@@ -122,7 +122,7 @@ class OutputExportController(
             TextAttributeEditor::class.react {
                 labelOverride = "Export Path Pattern"
 
-                InputProps = jso {
+                InputProps = unsafeJso {
                     startAdornment = InputAdornment.create {
                         position = InputAdornmentPosition.start
                         iconify(vaadinIconFile)

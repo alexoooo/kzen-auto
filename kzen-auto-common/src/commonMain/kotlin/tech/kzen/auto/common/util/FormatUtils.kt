@@ -1,10 +1,10 @@
 package tech.kzen.auto.common.util
 
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.math.log10
 import kotlin.math.pow
+import kotlin.time.Instant
 
 
 object FormatUtils {

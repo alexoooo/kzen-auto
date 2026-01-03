@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.graph.edit
 
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.*
 import react.ChildrenBuilder
 import react.PropsWithRef
@@ -346,7 +346,7 @@ class AttributePathValueEditorOld(
 
     private fun ChildrenBuilder.renderBoolean(stateValue: Boolean) {
         InputLabel {
-            style = jso {
+            style = unsafeJso {
                 fontSize = 0.8.em
             }
 
@@ -363,7 +363,7 @@ class AttributePathValueEditorOld(
                 color = SwitchColor.default
 
                 if (stateValue) {
-                    style = jso {
+                    style = unsafeJso {
                         this.color = NamedColor.black
                     }
                 }

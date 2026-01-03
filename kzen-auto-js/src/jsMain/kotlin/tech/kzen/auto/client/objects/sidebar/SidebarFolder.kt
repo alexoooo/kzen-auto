@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.sidebar
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.IconButton
 import mui.material.Menu
 import mui.material.MenuItem
@@ -369,7 +369,7 @@ class SidebarFolder(
         span {
             css {
                 // NB: blinks in and out without this
-                backgroundColor = NamedColor.transparent
+                backgroundColor = Color.transparent
 
                 if (! (state.hoverItem || state.hoverOptions)) {
                     display = None.none
@@ -431,7 +431,7 @@ class SidebarFolder(
                 }
 
                 iconClassForName(icon).react {
-                    style = jso {
+                    style = unsafeJso {
                         marginRight = 1.em
                     }
                 }

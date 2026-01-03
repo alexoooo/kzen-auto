@@ -1,5 +1,6 @@
 @file:Suppress("UnstableApiUsage")
 
+import org.gradle.kotlin.dsl.register
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
@@ -34,7 +35,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:$kotlinVersion")
 
     api("ch.qos.logback:logback-classic:$logbackVersion")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
+    implementation("tools.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
     api("org.seleniumhq.selenium:selenium-java:$seleniumVersion")
     implementation("io.github.bonigarcia:webdrivermanager:$webdrivermanagerVersion")
     implementation("org.apache.commons:commons-compress:$commonsCompressVersion")
@@ -88,7 +89,7 @@ tasks.compileJava {
 
 
 val dependenciesDir = "dependencies"
-task("copyDependencies", Copy::class) {
+tasks.register<Copy>("copyDependencies") {
     from(configurations.runtimeClasspath)
         .into("${layout.buildDirectory.get().asFile}/libs/$dependenciesDir")
 }

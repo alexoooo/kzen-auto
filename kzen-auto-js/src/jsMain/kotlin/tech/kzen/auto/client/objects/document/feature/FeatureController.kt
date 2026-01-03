@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.feature
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size
@@ -383,7 +383,7 @@ class FeatureController(
                 onClick = { onCapture() }
 
                 CameraAltIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         marginRight = 0.25.em
                     }
                 }
@@ -410,7 +410,7 @@ class FeatureController(
                 onClick = { onSave() }
 
                 CameraAltIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         marginRight = 0.25.em
                     }
                 }
@@ -436,7 +436,7 @@ class FeatureController(
                 onClick = { onRefresh() }
 
                 RefreshIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         marginRight = 0.25.em
                     }
                 }
@@ -468,7 +468,7 @@ class FeatureController(
                 title = "Delete"
 
                 DeleteIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         marginRight = 0.25.em
                     }
                 }

@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.sequence.model
 
 import kotlinx.coroutines.delay
-import kotlinx.datetime.Instant
 import tech.kzen.auto.client.objects.document.sequence.progress.SequenceProgressStore
 import tech.kzen.auto.client.objects.document.sequence.valid.SequenceValidationState
 import tech.kzen.auto.client.objects.document.sequence.valid.SequenceValidationStore
@@ -12,6 +11,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.sequence.model.SequenceTree
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
+import kotlin.time.Instant
 
 
 class SequenceStore: ClientStateGlobal.Observer {

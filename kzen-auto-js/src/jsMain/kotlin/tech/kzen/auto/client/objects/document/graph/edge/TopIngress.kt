@@ -50,8 +50,8 @@ class TopIngress(
                     height = 0.px
 
                     borderTop = Border(CellController.arrowSide, LineStyle.solid, props.ingressColor)
-                    borderLeft = Border(CellController.arrowSide, LineStyle.solid, NamedColor.transparent)
-                    borderRight = Border(CellController.arrowSide, LineStyle.solid, NamedColor.transparent)
+                    borderLeft = Border(CellController.arrowSide, LineStyle.solid, Color.transparent)
+                    borderRight = Border(CellController.arrowSide, LineStyle.solid, Color.transparent)
 
                     float = Float.right
                 }

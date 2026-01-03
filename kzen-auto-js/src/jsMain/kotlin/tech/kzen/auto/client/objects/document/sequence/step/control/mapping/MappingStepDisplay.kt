@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.sequence.step.control.mapping
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.br
@@ -332,7 +332,7 @@ class MappingStepDisplay(
                 +"Each"
                 br {}
                 ArrowForwardIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         fontSize = 3.em
                     }
                 }
@@ -358,7 +358,7 @@ class MappingStepDisplay(
 
             div {
                 SubdirectoryArrowLeftIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         fontSize = 3.em
                         marginBottom = 15.px
                         marginTop = (-40).px

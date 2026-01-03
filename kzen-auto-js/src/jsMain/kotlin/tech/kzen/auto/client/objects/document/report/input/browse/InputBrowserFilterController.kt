@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.input.browse
 
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.InputAdornment
 import mui.material.InputAdornmentPosition
 import mui.material.Size
@@ -11,7 +11,10 @@ import react.dom.onChange
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.client.wrap.FunctionWithDebounce
+import tech.kzen.auto.client.wrap.InputProps
+import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.material.SearchIcon
 import tech.kzen.auto.common.objects.document.report.spec.input.InputBrowserSpec
 import web.cssom.em
@@ -91,7 +94,7 @@ class InputBrowserFilterController(
 //                +"kg"
 //            }
 
-            InputProps = jso {
+            InputProps = unsafeJso {
                 startAdornment = InputAdornment.create {
                     position = InputAdornmentPosition.start
                     SearchIcon::class.react {}

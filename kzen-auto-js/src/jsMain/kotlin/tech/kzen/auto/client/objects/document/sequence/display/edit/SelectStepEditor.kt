@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.sequence.display.edit
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import kotlinx.browser.document
 import mui.material.InputLabel
 import react.ChildrenBuilder
@@ -227,7 +227,7 @@ class SelectStepEditor(
 
         val selectOptions: Array<ReactSelectOption> = predecessors
             .map { location ->
-                val option: ReactSelectOption = jso {
+                val option: ReactSelectOption = unsafeJso {
                     this.value = location.asString()
                     this.label = location.objectPath.name.value
                 }

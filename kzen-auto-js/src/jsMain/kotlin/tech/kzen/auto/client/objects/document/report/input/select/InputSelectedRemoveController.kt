@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.input.select
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size
@@ -91,7 +91,7 @@ class InputSelectedRemoveController(
                 }
 
                 RemoveCircleOutlineIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         marginRight = 0.25.em
                     }
                 }

@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.formula
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import kotlinx.browser.document
 import mui.material.IconButton
 import mui.material.InputLabel
@@ -152,7 +152,7 @@ class FormulaReferenceController(
             .inputColumns
             .values
             .map {
-                val option: ReactSelectOption = jso {
+                val option: ReactSelectOption = unsafeJso {
                     value = it.asString()
                     label = it.render()
                 }

@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.analysis
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.Size
 import mui.material.ToggleButton
 import mui.material.ToggleButtonGroup
@@ -105,7 +105,7 @@ class ReportAnalysisController(
                 }
 
                 TableChartIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         position = Position.absolute
                         fontSize = 2.5.em
                         top = (-14.5).px

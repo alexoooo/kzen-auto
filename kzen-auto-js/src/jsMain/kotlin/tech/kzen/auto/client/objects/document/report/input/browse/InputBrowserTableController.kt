@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.input.browse
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.Checkbox
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
@@ -28,6 +28,7 @@ import tech.kzen.lib.platform.collect.persistentSetOf
 import tech.kzen.lib.platform.collect.toPersistentSet
 import web.cssom.*
 import web.html.InputType
+import web.html.checkbox
 import kotlin.math.max
 import kotlin.math.min
 
@@ -226,7 +227,7 @@ class InputBrowserTableController(
                             marginBottom = (-0.5).em
                             marginLeft = (-0.25).em
                             marginRight = (-0.25).em
-                            backgroundColor = NamedColor.transparent
+                            backgroundColor = Color.transparent
                             height = 0.px
                             overflow = Overflow.visible
                         }
@@ -358,7 +359,7 @@ class InputBrowserTableController(
                             overflow = Overflow.hidden
                         }
                         FolderOpenIcon::class.react {
-                            style = jso {
+                            style = unsafeJso {
                                 marginTop = (-4).px
                                 marginLeft = 0.15.em
                                 marginRight = 0.15.em
@@ -451,7 +452,7 @@ class InputBrowserTableController(
                     }
                     if (selected) {
                         CheckIcon::class.react {
-                            style = jso {
+                            style = unsafeJso {
                                 marginTop = (-0.2).em
                                 marginBottom = (-0.2).em
                             }

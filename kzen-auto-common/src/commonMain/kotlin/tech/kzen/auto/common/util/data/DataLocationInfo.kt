@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.util.data
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 
 data class DataLocationInfo(

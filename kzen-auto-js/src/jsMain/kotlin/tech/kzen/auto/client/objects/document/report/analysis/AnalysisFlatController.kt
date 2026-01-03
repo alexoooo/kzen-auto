@@ -2,7 +2,7 @@ package tech.kzen.auto.client.objects.document.report.analysis
 
 import csstype.PropertiesBuilder
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -197,7 +197,7 @@ class AnalysisFlatController(
                                 }
                                 if (included) {
                                     CheckIcon::class.react {
-                                        style = jso {
+                                        style = unsafeJso {
                                             marginTop = (-0.2).em
                                             marginBottom = (-0.2).em
                                         }

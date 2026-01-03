@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.sequence.step.header
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.IconButton
 import mui.material.Menu
 import mui.material.MenuItem
@@ -390,7 +390,7 @@ class StepHeader(
 //            onMouseOut = { onRunLeave() }
 
             iconClassForName(icon).react {
-                style = jso {
+                style = unsafeJso {
                     color = NamedColor.black
 
                     fontSize = 1.75.em
@@ -415,7 +415,7 @@ class StepHeader(
         span {
             css {
                 // NB: blinks in and out without this
-                backgroundColor = NamedColor.transparent
+                backgroundColor = Color.transparent
 
                 if (! (state.hoverCard || state.hoverMenu)) {
                     display = None.none
@@ -442,7 +442,7 @@ class StepHeader(
 
 
     private fun ChildrenBuilder.renderMenuItems() {
-        val iconStyle: CSSProperties = jso {
+        val iconStyle: CSSProperties = unsafeJso {
             marginRight = 1.em
         }
 

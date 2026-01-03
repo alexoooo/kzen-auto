@@ -1,11 +1,11 @@
 package tech.kzen.auto.common.objects.document.report.spec.output
 
-import kotlinx.datetime.Instant
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
+import kotlin.time.Instant
 
 
 data class OutputExportSpec(
@@ -63,10 +63,10 @@ data class OutputExportSpec(
             val sanitizedGroup = FormatUtils.sanitizeFilename(group.group ?: "")
 
             return pattern
-                .replace("\${report}", sanitizedReportName)
-                .replace("\${group}", sanitizedGroup)
-                .replace("\${time}", timeFormat)
-                .replace("\${extension}", extension)
+                .replace($$"${report}", sanitizedReportName)
+                .replace($$"${group}", sanitizedGroup)
+                .replace($$"${time}", timeFormat)
+                .replace($$"${extension}", extension)
                 .replace(Regex("_+"), "_")
         }
     }

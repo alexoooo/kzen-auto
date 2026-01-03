@@ -2,7 +2,7 @@ package tech.kzen.auto.client.objects.document.report.preview
 
 import csstype.PropertiesBuilder
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size
@@ -132,7 +132,7 @@ class ReportPreviewController(
                 }
 
                 VisibilityIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         position = Position.absolute
                         fontSize = 2.5.em
                         top = (-17).px
@@ -197,7 +197,7 @@ class ReportPreviewController(
             }
 
             RefreshIcon::class.react {
-                style = jso {
+                style = unsafeJso {
                     marginRight = 0.25.em
                 }
             }

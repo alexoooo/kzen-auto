@@ -11,6 +11,7 @@ import tech.kzen.auto.common.api.rootHtmlElementId
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectReference
+import web.dom.ElementId
 import web.dom.document
 import web.events.EventHandler
 import web.html.HTMLElement
@@ -18,11 +19,10 @@ import web.window.window
 
 
 fun main() {
-//    console.log("^^^ main!!")
     ClientContext.init()
 
     fun emptyRootElement(): HTMLElement {
-        val rootElement = document.getElementById(rootHtmlElementId)
+        val rootElement = document.getElementById(ElementId(rootHtmlElementId))
             ?: throw IllegalStateException("'$rootHtmlElementId' element not found")
 
         while (rootElement.hasChildNodes()) {

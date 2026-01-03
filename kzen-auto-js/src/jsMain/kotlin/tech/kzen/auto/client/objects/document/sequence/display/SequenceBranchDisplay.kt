@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.sequence.display
 
 import emotion.react.css
-import js.objects.jso
+import js.objects.unsafeJso
 import mui.material.IconButton
 import react.ChildrenBuilder
 import react.Props
@@ -236,7 +236,7 @@ class SequenceBranchDisplay(
                 }
 
                 ArrowDownwardIcon::class.react {
-                    style = jso {
+                    style = unsafeJso {
                         fontSize = 3.em
                     }
                 }
