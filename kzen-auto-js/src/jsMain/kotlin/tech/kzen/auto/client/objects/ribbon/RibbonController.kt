@@ -4,10 +4,13 @@ import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.*
 import mui.system.sx
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.ReactNode
 import react.dom.html.ReactHTML.div
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
@@ -249,7 +252,7 @@ class RibbonController(
 
             for (ribbonGroup in state.currentRibbonGroups) {
                 Tab {
-                    key = ribbonGroup.title
+                    key = Key(ribbonGroup.title)
                     label = ReactNode(ribbonGroup.title)
                 }
             }
@@ -266,7 +269,7 @@ class RibbonController(
 
         for (ribbonTool in currentRibbon.children) {
             Button {
-                key = ribbonTool.delegate.asString()
+                key = Key(ribbonTool.delegate.asString())
                 variant = ButtonVariant.outlined
                 size = Size.small
 

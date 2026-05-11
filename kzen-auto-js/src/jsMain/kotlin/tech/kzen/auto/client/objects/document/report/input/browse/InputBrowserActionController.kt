@@ -10,7 +10,7 @@ import react.ChildrenBuilder
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.wrap.RPureComponent

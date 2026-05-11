@@ -87,7 +87,7 @@ class BooleanAttributeEditor(
                 checked = props.value
                 disabled = props.disabled
                 onChange = { e, _ ->
-                    val target = e.target
+                    val target = e.currentTarget
                     submitEditAsync(target.checked)
                 }
                 color = SwitchColor.default

@@ -1,12 +1,16 @@
 package tech.kzen.auto.client.objects.document.data
 
 import emotion.react.css
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.Props
+
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.hr
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
@@ -114,7 +118,7 @@ class DataFormatController(
 
             for ((fieldName, fieldSpec) in fields.fields) {
                 div {
-                    key = fieldName
+                    key = Key(fieldName)
 
                     DataFormatFieldEdit::class.react {
                         this.objectLocation = objectLocation

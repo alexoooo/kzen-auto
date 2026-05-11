@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.wrap.iconify
 
 import react.ChildrenBuilder
-import react.react
+import tech.kzen.auto.client.wrap.react
 
 
 fun ChildrenBuilder.iconify(module: IconifyIconModule) {

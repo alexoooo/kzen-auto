@@ -7,7 +7,7 @@ import mui.material.IconButton
 import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.CancelIcon
 import tech.kzen.auto.client.wrap.material.iconByName

@@ -9,7 +9,7 @@ import react.ReactNode
 import react.dom.events.KeyboardEvent
 import react.dom.html.ReactHTML.div
 import react.dom.onChange
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaState
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaStore
 import tech.kzen.auto.client.util.ClientInputUtils

@@ -6,12 +6,15 @@ import mui.material.IconButton
 import mui.material.Menu
 import mui.material.MenuItem
 import mui.system.sx
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.RefObject
-import react.createRef
+import tech.kzen.auto.client.wrap.createRef
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
@@ -425,7 +428,7 @@ class SidebarFolder(
                     ?: archetypeLocation.objectPath.name.value
 
             MenuItem {
-                key = archetypeLocation.objectPath.name.value
+                key = Key(archetypeLocation.objectPath.name.value)
                 onClick = {
                     onAdd(archetypeLocation, title)
                 }
@@ -456,7 +459,7 @@ class SidebarFolder(
         else {
             for (documentPath in mainDocuments) {
                 SidebarFile::class.react {
-                    key = documentPath.asString()
+                    key = Key(documentPath.asString())
 
                     structure = props.graphStructure
                     this.documentPath = documentPath

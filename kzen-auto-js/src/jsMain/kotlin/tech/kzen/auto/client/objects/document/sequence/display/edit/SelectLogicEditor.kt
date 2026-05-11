@@ -6,7 +6,7 @@ import kotlinx.browser.document
 import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.State
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils

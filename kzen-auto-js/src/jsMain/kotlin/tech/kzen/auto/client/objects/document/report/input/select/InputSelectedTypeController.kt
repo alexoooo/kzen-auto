@@ -6,7 +6,7 @@ import kotlinx.browser.document
 import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.State
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.objects.document.report.input.select.model.InputSelectedState
 import tech.kzen.auto.client.wrap.RPureComponent

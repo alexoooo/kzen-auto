@@ -6,7 +6,7 @@ import react.ChildrenBuilder
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
 import tech.kzen.auto.client.service.ClientContext

@@ -6,7 +6,7 @@ import mui.material.Fab
 import react.ChildrenBuilder
 import react.Props
 import react.State
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.ReplayIcon

@@ -3,8 +3,12 @@ package tech.kzen.auto.client.objects.document.report.analysis
 import csstype.PropertiesBuilder
 import emotion.react.css
 import js.objects.unsafeJso
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.Props
+
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.table
@@ -13,7 +17,7 @@ import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.th
 import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputStore
@@ -166,7 +170,7 @@ class AnalysisFlatController(
                         val isFirst = index == 0
 
                         tr {
-                            key = e.key.asString()
+                            key = Key(e.key.asString())
 
                             css {
                                 hover {

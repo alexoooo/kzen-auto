@@ -2,7 +2,7 @@ package tech.kzen.auto.client.objects.document.common.attribute
 
 import react.ChildrenBuilder
 import react.State
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState

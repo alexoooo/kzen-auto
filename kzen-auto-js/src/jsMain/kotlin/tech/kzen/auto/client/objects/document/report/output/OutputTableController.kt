@@ -7,6 +7,7 @@ import mui.material.ButtonVariant
 import mui.material.Size
 import mui.system.sx
 import react.ChildrenBuilder
+import react.Key
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.a
@@ -17,7 +18,7 @@ import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.th
 import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputState
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputStore
@@ -195,7 +196,7 @@ class OutputTableController(
                 }
 
                 TextAttributeEditor::class.react {
-                    key = "start-row"
+                    key = Key("start-row")
 
                     objectLocation = props.outputStore.mainLocation()
                     attributePath = OutputExploreSpec.previewStartPath
@@ -230,7 +231,7 @@ class OutputTableController(
                         onPreviewRefresh()
                     }
 
-                    key = "row-count"
+                    key = Key("row-count")
                 }
             }
 
@@ -302,7 +303,7 @@ class OutputTableController(
                                     textAlign = TextAlign.left
                                     boxShadow = BoxShadow(BoxShadowInset.inset, 0.px, (-2).px, 0.px, 0.px, NamedColor.lightgray)
                                 }
-                                key = header
+                                key = Key(header)
                                 +header
                             }
                         }
@@ -312,7 +313,7 @@ class OutputTableController(
                 tbody {
                     for (row in outputPreview.rows.withIndex()) {
                         tr {
-                            key = row.index.toString()
+                            key = Key(row.index.toString())
 
                             css {
                                 hover {
@@ -355,7 +356,7 @@ class OutputTableController(
                                         }
                                     }
 
-                                    key = value.index.toString()
+                                    key = Key(value.index.toString())
                                     +abbreviate(value.value)
                                 }
                             }
@@ -409,7 +410,7 @@ class OutputTableController(
                                     paddingRight = 0.5.em
                                     textAlign = TextAlign.left
                                 }
-                                key = header
+                                key = Key(header)
                                 +header
                             }
                         }

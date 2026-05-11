@@ -9,7 +9,7 @@ import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
 import react.dom.html.ReactHTML.span
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.graph.EdgeController
 import tech.kzen.auto.client.objects.document.sequence.SequenceController

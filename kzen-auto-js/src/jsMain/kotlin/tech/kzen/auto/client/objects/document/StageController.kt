@@ -1,7 +1,8 @@
 package tech.kzen.auto.client.objects.document
 
 import emotion.react.css
-import react.*
+import react.*
+import tech.kzen.auto.client.wrap.react
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext

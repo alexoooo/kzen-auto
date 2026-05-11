@@ -8,7 +8,7 @@ import react.ChildrenBuilder
 import react.State
 import react.create
 import react.dom.html.ReactHTML.div
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.edit.SelectAttributeEditor
 import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputStore

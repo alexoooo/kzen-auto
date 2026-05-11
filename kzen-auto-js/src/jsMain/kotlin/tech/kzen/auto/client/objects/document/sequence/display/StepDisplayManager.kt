@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document.sequence.display
 import react.ChildrenBuilder
 import react.Props
 import react.State
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.wrap.RPureComponent

@@ -10,7 +10,7 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.input.browse.InputBrowserController
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputState

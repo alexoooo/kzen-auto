@@ -352,8 +352,8 @@ class AttributePathValueEditor(
             Switch {
                 checked = stateValue
 
-                onChange = { event: ChangeEvent<HTMLInputElement>, _: Boolean ->
-                    val target = event.target
+                onChange = { event: ChangeEvent<HTMLInputElement, *>, _: Boolean ->
+                    val target = event.currentTarget
                     onValueChange(target.checked.toString())
                 }
 

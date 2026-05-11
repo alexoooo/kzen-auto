@@ -7,7 +7,7 @@ import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.wrap.RPureComponent

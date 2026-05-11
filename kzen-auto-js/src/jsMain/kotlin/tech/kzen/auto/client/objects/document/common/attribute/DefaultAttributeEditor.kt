@@ -1,6 +1,8 @@
 package tech.kzen.auto.client.objects.document.common.attribute
 
-import react.*
+import react.*
+import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.createRef
 import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor

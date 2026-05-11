@@ -3,12 +3,16 @@ package tech.kzen.auto.client.objects.document.sequence.display
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.IconButton
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.Props
+
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.sequence.SequenceController
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.service.ClientContext
@@ -275,7 +279,7 @@ class SequenceBranchDisplay(
         stepCount: Int
     ) {
         span {
-            key = objectLocation.toReference().asString()
+            key = Key(objectLocation.toReference().asString())
 
 //            +"[Step $index - $stepCount - $objectLocation]"
             props.stepDisplayManager.child(this) {

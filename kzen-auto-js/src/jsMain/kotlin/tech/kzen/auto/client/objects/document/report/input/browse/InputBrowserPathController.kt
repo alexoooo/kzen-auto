@@ -6,12 +6,15 @@ import mui.material.IconButton
 import mui.material.Size
 import mui.material.TextField
 import mui.system.sx
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.ReactNode
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.dom.onChange
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -146,7 +149,7 @@ class InputBrowserPathController(
 
             for ((index, part) in parts.withIndex()) {
                 span {
-                    key = part.asString()
+                    key = Key(part.asString())
 
                     if (index != 0) {
                         ArrowForwardIosIcon::class.react {

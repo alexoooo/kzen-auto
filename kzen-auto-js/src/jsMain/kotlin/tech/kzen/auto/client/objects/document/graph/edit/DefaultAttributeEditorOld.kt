@@ -1,7 +1,9 @@
 package tech.kzen.auto.client.objects.document.graph.edit
 
 
-import react.*
+import react.*
+import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.createRef
 import react.dom.html.ReactHTML.br
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils

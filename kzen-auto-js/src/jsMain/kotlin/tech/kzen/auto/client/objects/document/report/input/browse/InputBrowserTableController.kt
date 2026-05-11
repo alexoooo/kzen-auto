@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.input.browse
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.Checkbox
+import react.Key
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.input
@@ -12,7 +13,7 @@ import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.th
 import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.input.ReportInputController
 import tech.kzen.auto.client.objects.document.report.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
@@ -339,7 +340,7 @@ class InputBrowserTableController(
     private fun ChildrenBuilder.renderFolderRows() {
         for (folderInfo in state.folders) {
             tr {
-                key = folderInfo.path.asString()
+                key = Key(folderInfo.path.asString())
 
                 onClick = {
                     dirSelectedAsync(folderInfo.path)
@@ -395,7 +396,7 @@ class InputBrowserTableController(
             val selected = fileInfo.path in props.selectedDataLocation
 
             tr {
-                key = fileInfo.path.asString()
+                key = Key(fileInfo.path.asString())
 
                 css {
                     cursor = Cursor.pointer

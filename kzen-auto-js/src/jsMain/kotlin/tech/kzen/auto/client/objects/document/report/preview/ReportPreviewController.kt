@@ -7,7 +7,10 @@ import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size
 import mui.system.sx
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -17,7 +20,7 @@ import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.th
 import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.edit.BooleanAttributeEditor
 import tech.kzen.auto.client.objects.document.report.preview.model.ReportPreviewState
 import tech.kzen.auto.client.objects.document.report.preview.model.ReportPreviewStore
@@ -374,7 +377,7 @@ class ReportPreviewController(
                     var isFirst = true
                     for ((headerLabel, columnSummary) in tableSummary.columnSummaries.map) {
                         tr {
-                            key = headerLabel.asString()
+                            key = Key(headerLabel.asString())
 
                             css {
                                 hover {

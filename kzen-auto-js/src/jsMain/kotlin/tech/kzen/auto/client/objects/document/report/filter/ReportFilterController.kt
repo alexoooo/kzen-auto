@@ -5,11 +5,14 @@ import js.objects.unsafeJso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterState
 import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterStore
 import tech.kzen.auto.client.objects.document.report.widget.ReportBottomEgress
@@ -160,7 +163,7 @@ class ReportFilterController(
         div {
             for ((index, columnName) in filterSpec.columns.keys.withIndex()) {
                 div {
-                    key = columnName.asString()
+                    key = Key(columnName.asString())
 
                     if (index < filterSpec.columns.size - 1) {
                         css {

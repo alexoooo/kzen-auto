@@ -1,7 +1,11 @@
 package tech.kzen.auto.client.objects.document.data
 
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.Props
+
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -60,7 +64,7 @@ class DataFormatFieldEdit(
             +"Generics:"
             for ((index, genericType) in typeMetadata.generics.withIndex()) {
                 div {
-                    key = index.toString()
+                    key = Key(index.toString())
                     renderMetadata(genericType)
                 }
             }

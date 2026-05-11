@@ -4,7 +4,7 @@ import emotion.react.css
 import react.ChildrenBuilder
 import react.Props
 import react.dom.html.ReactHTML.div
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.report.analysis.ReportAnalysisController

@@ -6,6 +6,9 @@ import mui.material.IconButton
 import mui.material.Menu
 import mui.material.MenuItem
 import react.*
+
+import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.createRef
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
@@ -445,7 +448,7 @@ class VertexController(
         for (i in 1 until inputAttributes.size) {
             val inputAttribute = inputAttributes[i]
             div {
-                key = inputAttribute.value
+                key = Key(inputAttribute.value)
 
                 css {
                     position = Position.absolute
@@ -514,7 +517,7 @@ class VertexController(
             var index = 0
             for (attributeName in editableAttributes) {
                 div {
-                    key = attributeName.value
+                    key = Key(attributeName.value)
 
                     css {
                         if (index++ != 0) {

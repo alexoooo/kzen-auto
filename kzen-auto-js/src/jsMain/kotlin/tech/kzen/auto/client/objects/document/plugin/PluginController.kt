@@ -1,13 +1,17 @@
 package tech.kzen.auto.client.objects.document.plugin
 
 import emotion.react.css
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.Props
+
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.h2
 import react.dom.html.ReactHTML.span
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.graph.edit.AttributePathValueEditorOld
@@ -240,7 +244,7 @@ class PluginController(
 
         for (processorDefinitionDetail in detailList) {
             div {
-                key = processorDefinitionDetail.coordinate.asString()
+                key = Key(processorDefinitionDetail.coordinate.asString())
 
                 css {
                     filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)

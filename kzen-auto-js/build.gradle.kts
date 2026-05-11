@@ -54,7 +54,6 @@ kotlin {
             implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
 
             implementation(kotlinWrappers.react)
-            implementation(kotlinWrappers.reactLegacy)
             implementation(kotlinWrappers.reactDom)
             implementation(kotlinWrappers.emotion.styled)
             implementation(kotlinWrappers.mui.material)

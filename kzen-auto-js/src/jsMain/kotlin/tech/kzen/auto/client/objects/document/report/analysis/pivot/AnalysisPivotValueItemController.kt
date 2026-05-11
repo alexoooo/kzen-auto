@@ -3,10 +3,13 @@ package tech.kzen.auto.client.objects.document.report.analysis.pivot
 import emotion.react.css
 import mui.material.IconButton
 import mui.material.Size
-import react.ChildrenBuilder
-import react.State
-import react.dom.html.ReactHTML.div
-import react.react
+import react.ChildrenBuilder
+import tech.kzen.auto.client.wrap.setState
+import react.State
+import tech.kzen.auto.client.wrap.setState
+import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.DeleteIcon

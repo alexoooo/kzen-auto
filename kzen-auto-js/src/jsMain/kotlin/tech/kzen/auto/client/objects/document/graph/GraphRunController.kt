@@ -4,7 +4,8 @@ import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.Fab
 import mui.material.IconButton
-import react.*
+import react.*
+import tech.kzen.auto.client.wrap.react
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async

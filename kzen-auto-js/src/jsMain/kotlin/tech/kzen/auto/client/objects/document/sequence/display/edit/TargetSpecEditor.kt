@@ -8,11 +8,14 @@ import mui.material.MenuItem
 import mui.material.Select
 import mui.material.Size
 import mui.material.TextField
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.onChange
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.service.ClientContext
@@ -349,7 +352,7 @@ class TargetSpecEditor(
 
                 for (type in TargetType.entries) {
                     MenuItem {
-                        key = type.name
+                        key = Key(type.name)
                         value = type.name
 
                         when (type) {

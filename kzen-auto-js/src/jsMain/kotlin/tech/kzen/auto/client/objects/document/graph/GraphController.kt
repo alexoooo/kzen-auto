@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.graph
 import emotion.react.css
 import mui.material.IconButton
 import react.ChildrenBuilder
+import react.Key
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
@@ -11,7 +12,7 @@ import react.dom.html.ReactHTML.table
 import react.dom.html.ReactHTML.tbody
 import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.tr
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
@@ -389,11 +390,11 @@ class GraphController(
                                 val cellDescriptor = dataflowMatrix.get(row, column)
 
                                 if (cellDescriptor == null) {
-                                    key = "$row-$column"
+                                    key = Key("$row-$column")
                                     absentCell(row, column)
                                 }
                                 else {
-                                    key = cellDescriptor.key()
+                                    key = Key(cellDescriptor.key())
 
                                     if (cellDescriptor is VertexDescriptor) {
                                         val cellMetadata = clientState.graphStructure()

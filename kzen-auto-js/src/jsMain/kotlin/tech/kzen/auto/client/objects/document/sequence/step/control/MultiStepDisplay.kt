@@ -2,7 +2,7 @@ package tech.kzen.auto.client.objects.document.sequence.step.control
 
 import react.ChildrenBuilder
 import react.State
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.objects.document.sequence.display.SequenceBranchDisplay
 import tech.kzen.auto.client.objects.document.sequence.display.SequenceStepDisplayProps

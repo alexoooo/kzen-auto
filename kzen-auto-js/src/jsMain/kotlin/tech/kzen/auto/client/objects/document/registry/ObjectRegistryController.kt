@@ -1,12 +1,16 @@
 package tech.kzen.auto.client.objects.document.registry
 
 import emotion.react.css
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.Props
+
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.hr
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.ClientContext
@@ -175,7 +179,7 @@ class ObjectRegistryController:
 
             for ((index, className) in classes.classNames.withIndex()) {
                 div {
-                    key = className.asString()
+                    key = Key(className.asString())
 
                     ObjectRegistryEdit::class.react {
                         this.objectLocation = objectLocation

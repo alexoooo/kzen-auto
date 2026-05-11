@@ -5,10 +5,13 @@ import js.objects.unsafeJso
 import kotlinx.browser.document
 import mui.material.IconButton
 import mui.material.InputLabel
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.State
 import react.dom.html.ReactHTML.div
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.service.ClientContext
@@ -359,7 +362,7 @@ class RunStepArgumentsEditor(
 
         for (parameterName in parameterNames) {
             div {
-                key = parameterName
+                key = Key(parameterName)
                 renderParameter(parameterName, selectOptions, values)
             }
         }
@@ -367,7 +370,7 @@ class RunStepArgumentsEditor(
         val unusedParameters = values.keys.minus(parameterNames)
         for (unusedParameter in unusedParameters) {
             div {
-                key = unusedParameter
+                key = Key(unusedParameter)
                 renderUnusedParameter(unusedParameter, selectOptions, values)
             }
         }

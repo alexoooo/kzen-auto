@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.filter
 import emotion.react.css
 import mui.material.*
 import mui.material.Size
+import react.Key
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -12,7 +13,7 @@ import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.th
 import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterStore
@@ -458,7 +459,7 @@ class FilterItemController(
                         val checked = columnFilterSpec.values.contains(e.key)
 
                         tr {
-                            key = e.key
+                            key = Key(e.key)
 
                             td {
                                 Checkbox {
@@ -583,7 +584,7 @@ class FilterItemController(
                 tbody {
                     for (value in opaque.sample) {
                         tr {
-                            key = value
+                            key = Key(value)
 
                             td {
                                 val abbreviated = abbreviateValue(value)

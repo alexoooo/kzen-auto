@@ -6,8 +6,10 @@ import mui.material.InputAdornmentPosition
 import mui.material.Size
 import mui.material.TextField
 import mui.system.sx
-import react.*
-import react.dom.onChange
+import react.*
+import tech.kzen.auto.client.wrap.react
+import react.dom.onChange
+import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async

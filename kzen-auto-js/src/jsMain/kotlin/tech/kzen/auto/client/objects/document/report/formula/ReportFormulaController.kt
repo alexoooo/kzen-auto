@@ -3,11 +3,14 @@ package tech.kzen.auto.client.objects.document.report.formula
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.CircularProgress
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaState
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaStore
 import tech.kzen.auto.client.objects.document.report.widget.ReportBottomEgress
@@ -131,7 +134,7 @@ class ReportFormulaController(
         div {
             for ((index, columnName) in formulas.keys.withIndex()) {
                 div {
-                    key = columnName
+                    key = Key(columnName)
 
                     if (index < formulas.size - 1) {
                         css {

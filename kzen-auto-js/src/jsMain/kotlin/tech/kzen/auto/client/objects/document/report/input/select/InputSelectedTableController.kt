@@ -2,8 +2,12 @@ package tech.kzen.auto.client.objects.document.report.input.select
 
 import emotion.react.css
 import mui.material.Checkbox
+import react.Key
+
 import react.ChildrenBuilder
+
 import react.Props
+
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.input
@@ -365,7 +369,7 @@ class InputSelectedTableController(
         val group = inputDataInfo?.group
 
         tr {
-            key = dataLocation.asString()
+            key = Key(dataLocation.asString())
 
             css {
                 cursor = Cursor.pointer

@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document.graph
 import react.ChildrenBuilder
 import react.Props
 import react.State
-import react.react
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState

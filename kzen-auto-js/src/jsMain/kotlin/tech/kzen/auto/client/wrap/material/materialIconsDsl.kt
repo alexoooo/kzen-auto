@@ -2,7 +2,7 @@ package tech.kzen.auto.client.wrap.material
 
 import react.ChildrenBuilder
 import react.Component
-import react.react
+import tech.kzen.auto.client.wrap.react
 import kotlin.reflect.KClass
 
 

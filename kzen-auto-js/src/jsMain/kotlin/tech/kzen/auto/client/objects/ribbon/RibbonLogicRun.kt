@@ -4,6 +4,9 @@ import emotion.react.css
 import mui.material.*
 import mui.system.sx
 import react.*
+
+import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.createRef
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.hr
 import react.dom.html.ReactHTML.span
@@ -405,7 +408,7 @@ class RibbonLogicRun (
         else if (dependencies.size > 1) {
             for (dependency in dependencies) {
                 div {
-                    key = dependency.objectLocation.asString()
+                    key = Key(dependency.objectLocation.asString())
 
                     css {
                         marginLeft = 0.5.em
