@@ -23,7 +23,7 @@ class ReportHeaderReader(
                 if (chain == null) {
                     chain = flatDataHeaderDefinition.openInputChain(dataBlockSize)
                 }
-                return chain!!.poll(visitor)
+                return chain.poll(visitor)
             }
         }
 

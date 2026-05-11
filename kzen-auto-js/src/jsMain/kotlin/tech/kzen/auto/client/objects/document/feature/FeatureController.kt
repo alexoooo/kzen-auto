@@ -493,6 +493,7 @@ class FeatureController(
 
                 crop = { event ->
                     @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
+                    @OptIn(ExperimentalWasmJsInterop::class)
                     val detail = event.detail as CropperDetail
                     onCrop(detail)
                 }

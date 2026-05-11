@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.model
 
 import kotlinx.coroutines.delay
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterStore
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaStore
