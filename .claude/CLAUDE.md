@@ -1,3 +1,3 @@
-# CLAUDE.md
-
-AI agent context for this repo lives in [`../AGENTS.md`](../AGENTS.md).
+@../AGENTS.md
+@../docs/architecture.md
+@../docs/js-architecture.md

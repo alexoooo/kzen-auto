@@ -86,12 +86,20 @@ Two-terminal pattern. **Open kzen-auto as its OWN IntelliJ project**, not via th
   ./gradlew :kzen-auto-plugin:publishToMavenLocal
   ```
 - **Composite NPM coordination broken under umbrella.** Running `:kzen-auto:kotlinNpmInstall` from the umbrella fails because kzen-auto's `settings.gradle.kts` deliberately doesn't `includeBuild("../kzen-lib")` (would break IDE run/debug). Workaround: `cd ../kzen-auto && ./gradlew kotlinNpmInstall`.
-- **kotlin-wrappers ceiling is `2025.12.11`.** Bumping to `2026.2.x` requires a coordinated React DSL touch-up: wrappers `2026.2.20` removes `kotlin-react-legacy` (`RBuilder`/`RClass`/`RComponent`), and `2026.2.11` changes the React `key` attribute type and `ChangeEvent` signature. Many jsMain files use these. Don't bump the catalog without planning the source migration.
+- **kotlin-wrappers ceiling is `2025.12.11`.** Bumping past it is mostly a small, targeted refactor — much less invasive than the breakage list suggests, because the codebase uses its own `RComponent`/`RPureComponent` wrapper (`wrap/React.kt`) that already sits on modern `react.Component`, not on `kotlin-react-legacy`. Concrete breakage:
+  - **kotlin-react-legacy removal (wrappers `2026.2.20`+):** only 1 file imports legacy types directly — `wrap/select/reactSelectDsl.kt`. Everything else routes through the custom wrapper.
+  - **`key` attribute type change (wrappers `2026.2.11`+):** 2 files use string-literal `key = "..."` — `objects/document/report/output/OutputTableController.kt`, `objects/document/graph/GraphController.kt`.
+  - **`ChangeEvent<C>` second type arg required (wrappers `2026.2.11`+):** 2 files — `objects/document/common/AttributePathValueEditor.kt`, `objects/document/graph/edit/AttributePathValueEditorOld.kt`.
+  - Five stale `*Old.kt` files under `objects/document/graph/edit/` are deletion candidates before refactoring.
+  - Additional incidental breakage from MUI / `web.cssom` / `js.objects.unsafeJso` API drift is possible at major wrappers jumps — only knowable by attempting the bump.
+
+  See [`docs/js-architecture.md`](docs/js-architecture.md) for the pre-refactor architecture and full inventory before starting.
 - **`logs/` and `work/` are runtime output dirs** under this root; they're `.gitignore`d. Logs from `KzenAutoMain` and dev mains land there.
 
 ## Pointers
 
 - **kzen-auto-specific architecture** → [`docs/architecture.md`](docs/architecture.md) (paradigms, graph sync, report execution, plugin SPI).
+- **JS client architecture** → [`docs/js-architecture.md`](docs/js-architecture.md) (Controller / Store / State / Observer patterns, document folder convention, React DSL wrapper).
 - **Foundational concepts (kzen-lib)** → [`../kzen-lib/docs/architecture.md`](../kzen-lib/docs/architecture.md).
 - **Composite build + toolchain rules** → [`../kzen/AGENTS.md`](../kzen/AGENTS.md).
 - **Plugin example** → `../kzen-sample-plugin/`.

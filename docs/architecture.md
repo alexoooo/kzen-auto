@@ -95,6 +95,8 @@ ReportInputFramer ─▶ decode ─▶ filter ─▶ pivot ─▶ output
 
 ## 4. Document types in the UI
 
+> For the JS-client patterns that back each UI (Controller / Store / State / Observer; document folder convention; the custom `RComponent` wrapper), see [`js-architecture.md`](js-architecture.md).
+
 Each subdirectory under `kzen-auto-js/src/jsMain/kotlin/tech/kzen/auto/client/objects/document/` is a different document type with its own `*Controller`. Each maps to a kzen-lib document with a particular `ObjectNotation` shape — the UI is a specialized editor for that shape.
 
 | Subdir | Document type | What it edits |
