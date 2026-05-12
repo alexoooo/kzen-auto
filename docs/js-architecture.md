@@ -2,7 +2,7 @@
 
 Patterns and plumbing of `kzen-auto-js`. Complements [`architecture.md`](architecture.md), which focuses on paradigms / server execution / graph sync.
 
-> **Snapshot:** as of `kotlin-wrappers 2025.12.11`. The custom `RComponent` wrapper layer is the most likely surface to evolve under the next wrappers bump — see [§7](#7-pre-refactor-inventory).
+> **Snapshot:** as of `kotlin-wrappers 2026.5.3` (migrated 2026-05-11, in lockstep with kzen-launcher). The custom `RComponent` wrapper layer absorbed most of the migration surface; see [§5](#5-react-dsl-wrapper-layer-wrapreactkt) for the bridges it now carries and [§7](#7-pre-refactor-inventory) for the historical pre-refactor inventory.
 
 ## 1. Top-level packages
 
@@ -122,7 +122,7 @@ Notable globals under `service/global/`:
 
 ## 5. React DSL wrapper layer (`wrap/React.kt`)
 
-The codebase uses **its own** `RComponent` / `RPureComponent` abstractions — not the ones from `kotlin-react-legacy`. They sit on top of modern `react.Component` / `react.PureComponent`:
+The codebase uses **its own** `RComponent` / `RPureComponent` abstractions. `RComponent` extends modern `react.Component`; `RPureComponent` no longer can — `react.PureComponent` was removed in `kotlin-wrappers 2026.x`, so it's now re-implemented in-house. Post-migration, `wrap/React.kt` carries three bridges that fill the gap the now-defunct `kotlin-react-legacy` artifact used to provide:
 
 ```kotlin
 abstract class RComponent<P : Props, S : State> : Component<P, S> {
@@ -136,20 +136,35 @@ abstract class RComponent<P : Props, S : State> : Component<P, S> {
     override fun render(): ReactNode = Fragment.create { render() }
 }
 
+// In-house re-implementation of the removed react.PureComponent.
+abstract class RPureComponent<P : Props, S : State> : Component<P, S> {
+    // …same constructors + init + ChildrenBuilder.render() as RComponent…
+    override fun shouldComponentUpdate(nextProps: P, nextState: S): Boolean =
+        !shallowEqual(props, nextProps) || !shallowEqual(state, nextState)
+}
+
+// Replaces the removed `react.react` extension. Every ::class.react call site depends on this.
+inline val <P : Props> KClass<out Component<P, *>>.react: ComponentType<P>
+    get() = unsafeCast(js)
+
+// Replaces removed react.createRef. useRef is a hook and class components can't call hooks,
+// so class components instantiate a RefObject directly here.
+fun <T : Any> createRef(): RefObject<T> = unsafeJso { current = null }
+
 fun <S : State> Component<*, S>.setState(buildState: S.() -> Unit) {
     val partialState: S = unsafeJso { buildState() }
     setState(partialState)
 }
 ```
 
-So `setState { … }` is a Kotlin-friendly builder. `init` is the equivalent of constructor-time default state. `ChildrenBuilder.render()` is the modern (non-legacy) render API.
+So `setState { … }` is a Kotlin-friendly builder. `init` is the equivalent of constructor-time default state. `ChildrenBuilder.render()` is the modern (non-legacy) render API. The three migration bridges (`RPureComponent`'s shallow-compare `shouldComponentUpdate`, `KClass<…>.react`, top-level `createRef`) all live in this file — the umbrella `AGENTS.md` has more on why each was needed.
 
 Other adapters in `wrap/`:
 
 - `wrap/material/*` — MUI component pass-throughs.
 - `wrap/iconify/*` — Iconify icon DSL.
 - `wrap/lodash.kt` — lodash debounce / throttle bindings.
-- `wrap/select/reactSelectDsl.kt` — react-select adapter; **the only file in the codebase that still imports `kotlin-react-legacy` types directly**.
+- `wrap/select/reactSelectDsl.kt` — react-select adapter. Pre-migration this was the last live consumer of `kotlin-react-legacy` types; post-migration its legacy code is fully commented out and no active legacy imports remain anywhere in the JS client.
 
 ## 6. Worked example: opening a report
 
@@ -163,9 +178,9 @@ Other adapters in `wrap/`:
 
 Mutation (user edits a value) follows the same lattice in reverse: a controller calls `store.someMethod(…)`; the store mutates internal state; the store may call `mirroredGraphStore.apply(command)` to ship a `NotationCommand` to the server (see `architecture.md` § 2); the resulting graph change re-enters the observer chain via `LocalGraphStore.Observer` on `ClientStateGlobal`.
 
-## 7. Pre-refactor inventory
+## 7. Pre-refactor inventory (historical)
 
-Snapshot as of writing (2026-05-11) — for the upcoming kotlin-wrappers bump past `2025.12.11`. Numbers will drift; treat as anchors, not gospel.
+Snapshot captured 2026-05-11 *before* the kotlin-wrappers `2025.12.11` → `2026.5.3` bump landed the same day. Kept here as a record of how the surface looked going in.
 
 | Metric | Count |
 |--------|-------|
@@ -179,11 +194,23 @@ Snapshot as of writing (2026-05-11) — for the upcoming kotlin-wrappers bump pa
 | `…Old.kt` files (stale, candidates for deletion before refactor) | 5 under `objects/document/graph/edit/` |
 | Top builder/setState hotspots | `objects/document/feature/FeatureController.kt` (14), `objects/document/graph/GraphController.kt` (11), `objects/ProjectController.kt` (11) |
 
-**Implications for the wrappers bump:**
+**Implications for the wrappers bump (what we expected):**
 
 - The custom `RComponent` wrapper already uses modern `react.Component` — class components don't need to become functional components just because of the wrappers bump.
 - Direct legacy-type breakage is **one file**, not the codebase. The catalog removal of `kotlin-react-legacy` still requires either keeping it as an explicit dependency (if available) or rewriting `reactSelectDsl.kt`.
 - Real surface area: the 4 files with `key` / `ChangeEvent` breakage, the 1 legacy file, plus whatever the wrappers bump touches incidentally in MUI / cssom / unsafeJso / etc. — the latter only knowable by attempting the bump.
+
+**What the migration actually touched (post-2026-05-11):**
+
+The "≈4 files plus 1 legacy" estimate held for the categories that were inventoried, but the migration also surfaced three larger categories the inventory missed entirely:
+
+- **~30 `key = "stringExpr"` sites** (the inventory found 2). The new wrappers require wrapping in `react.Key(...)`.
+- **~60 files** needed an explicit `import tech.kzen.auto.client.wrap.setState` — `setState { … }` used to resolve via a removed `PureComponent.setState` extension, so the inventory's "55 files using setState" all needed an import touched.
+- **~73 files** needed `import react.react` swapped to `import tech.kzen.auto.client.wrap.react` after the `KClass<…>.react` bridge moved in-house.
+
+Plus the three §5 in-house bridges (`RPureComponent`, `KClass.react`, `createRef`) had to be authored fresh.
+
+Lesson for the next refactor: anchored grep counts are fine for the categories you know to search, but they only tell you about the breakage categories you anticipated. A scratch build against the candidate library version surfaces the unknown unknowns faster than incremental inventory.
 
 ## 8. Critical files to read first
 

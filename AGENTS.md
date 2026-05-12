@@ -91,7 +91,7 @@ Two-terminal pattern. **Open kzen-auto as its OWN IntelliJ project**, not via th
 
 ## Pointers
 
-- **kzen-auto-specific architecture** → [`docs/architecture.md`](docs/architecture.md) (paradigms, graph sync, report execution, plugin SPI).
+- **kzen-auto-specific architecture** → [`docs/architecture.md`](docs/architecture.md) (paradigms, graph sync, REST surface, server composition root, report execution, plugin SPI, module registration).
 - **JS client architecture** → [`docs/js-architecture.md`](docs/js-architecture.md) (Controller / Store / State / Observer patterns, document folder convention, React DSL wrapper).
 - **Foundational concepts (kzen-lib)** → [`../kzen-lib/docs/architecture.md`](../kzen-lib/docs/architecture.md).
 - **Composite build + toolchain rules** → [`../kzen/AGENTS.md`](../kzen/AGENTS.md).
