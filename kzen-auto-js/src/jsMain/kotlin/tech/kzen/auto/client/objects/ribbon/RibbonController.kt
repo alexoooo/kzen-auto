@@ -117,7 +117,7 @@ class RibbonController(
             snapshot: Any
     ) {
         if (//state.documentPath == prevState.documentPath &&
-                ! state.updatePending) {
+                !state.updatePending) {
             return
         }
 

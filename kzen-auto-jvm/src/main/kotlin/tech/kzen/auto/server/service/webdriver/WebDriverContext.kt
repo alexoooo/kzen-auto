@@ -28,7 +28,7 @@ class WebDriverContext {
 
 
     fun quit() {
-        if (! present()) {
+        if (!present()) {
             return
         }
 

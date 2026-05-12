@@ -64,7 +64,7 @@ class PluginController(
                 .documents[documentPath]
                 ?: return null
 
-            if (! PluginConventions.isPlugin(documentNotation)) {
+            if (!PluginConventions.isPlugin(documentNotation)) {
                 return null
             }
 

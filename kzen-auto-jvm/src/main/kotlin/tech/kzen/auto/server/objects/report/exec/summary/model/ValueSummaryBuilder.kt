@@ -108,14 +108,14 @@ class ValueSummaryBuilder {
         if (value.isEmpty()) {
             emptyCount++
 
-            if (! histogramOverflow) {
+            if (!histogramOverflow) {
                 addTextHistogramFlyweight(FlatFileRecordField.empty)
             }
             return
         }
 
         val doubleValue = value.toDoubleOrNan()
-        if (! doubleValue.isNaN()) {
+        if (!doubleValue.isNaN()) {
             numberCount++
             sum += doubleValue
             min = min.coerceAtMost(doubleValue)
@@ -126,7 +126,7 @@ class ValueSummaryBuilder {
         else {
             textCount++
 
-            if (! histogramOverflow && value.length < histogramLengthThreshold) {
+            if (!histogramOverflow && value.length < histogramLengthThreshold) {
                 addTextHistogramFlyweight(value)
 
                 if (histogramValues.size > sampleThreshold) {

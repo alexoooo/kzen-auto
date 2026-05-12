@@ -263,12 +263,12 @@ class ServerLogicController(
             return LogicRunResponse.RunIdMismatch
         }
 
-        check(! state.paused) { "Already paused" }
+        check(!state.paused) { "Already paused" }
 
         state.pauseRequested = true
         state.frame.control.commandPause()
 
-        if (! state.running) {
+        if (!state.running) {
             state.paused = true
         }
 
@@ -290,15 +290,15 @@ class ServerLogicController(
             return LogicRunResponse.RunIdMismatch
         }
 
-        check(! state.running) { "Can't run, already running" }
-        check(! state.cancelRequested) { "Can't run, stop already requested" }
+        check(!state.running) { "Can't run, already running" }
+        check(!state.cancelRequested) { "Can't run, stop already requested" }
         state.pauseRequested = false
         state.paused = false
         state.frame.control.commandUnpause()
 
 //        val topLevel = state.frame.dependencies.isEmpty()
         val ready = state.frame.execution.beforeStart(TupleValue.empty/*, topLevel*/)
-        if (! ready) {
+        if (!ready) {
             return LogicRunResponse.UnableToStart
         }
 
@@ -347,8 +347,8 @@ class ServerLogicController(
         }
 
         // NB: "stepping" is just the same as running, but with the pause pre-selected
-        check(! state.stepping) { "Can't step, already stepping" }
-        check(! state.cancelRequested) { "Can't step, stop already requested" }
+        check(!state.stepping) { "Can't step, already stepping" }
+        check(!state.cancelRequested) { "Can't step, stop already requested" }
         check(state.pauseRequested) { "Must be paused in order to step" }
         check(state.paused) { "Must be paused in order to step" }
         state.stepping = true
@@ -358,7 +358,7 @@ class ServerLogicController(
 
 //        val topLevel = state.frame.dependencies.isEmpty()
         val ready = state.frame.execution.beforeStart(TupleValue.empty/*, topLevel*/)
-        if (! ready) {
+        if (!ready) {
             return LogicRunResponse.UnableToStart
         }
 

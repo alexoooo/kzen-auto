@@ -57,7 +57,7 @@ class ReportInputDecoder(
         }
 
         if (cr.isMalformed) {
-            check(! data.endOfData)
+            check(!data.endOfData)
             leftover.clear()
             for (i in cr.length() downTo 1) {
                 leftover.put(data.bytes[data.bytesLength - i])

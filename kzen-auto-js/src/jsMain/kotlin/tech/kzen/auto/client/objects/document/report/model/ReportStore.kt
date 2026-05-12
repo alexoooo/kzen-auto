@@ -73,7 +73,7 @@ class ReportStore: ClientStateGlobal.Observer {
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
-        if (! mounted) {
+        if (!mounted) {
             return
         }
 
@@ -115,7 +115,7 @@ class ReportStore: ClientStateGlobal.Observer {
 
             val logicTime: Instant = clientState.clientLogicState.logicStatus?.time ?: Instant.DISTANT_PAST
             if (previousLogicTime != logicTime ||
-                previousLogicTime != Instant.DISTANT_PAST && ! clientState.clientLogicState.isActive()
+                previousLogicTime != Instant.DISTANT_PAST && !clientState.clientLogicState.isActive()
             ) {
 //                println("Scheduling $logicTime")
                 previousLogicTime = logicTime

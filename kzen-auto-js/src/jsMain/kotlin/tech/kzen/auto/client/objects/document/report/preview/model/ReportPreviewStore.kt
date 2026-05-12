@@ -32,7 +32,7 @@ class ReportPreviewStore(
 
 
     suspend fun lookupSummaryWithFallback() {
-        if (! store.state().previewSpec(true).enabled ||
+        if (!store.state().previewSpec(true).enabled ||
                 store.state().output.outputInfo?.status == OutputStatus.Missing
         ) {
             store.update { state -> state.withPreviewFiltered {
@@ -60,7 +60,7 @@ class ReportPreviewStore(
                 } }
                 return
             }
-            else if (! LogicConventions.isMissingError(onlineError, runId, executionId)) {
+            else if (!LogicConventions.isMissingError(onlineError, runId, executionId)) {
                 store.update { state -> state.withPreviewFiltered {
                     it.copy(
                         tableSummary = null,

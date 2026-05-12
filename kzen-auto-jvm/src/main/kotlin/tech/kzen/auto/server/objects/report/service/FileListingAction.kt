@@ -46,7 +46,7 @@ class FileListingAction {
             return listOf(toFileInfo(parsed))
         }
 
-        if (! Files.isDirectory(parsed)) {
+        if (!Files.isDirectory(parsed)) {
             return listOf()
         }
 

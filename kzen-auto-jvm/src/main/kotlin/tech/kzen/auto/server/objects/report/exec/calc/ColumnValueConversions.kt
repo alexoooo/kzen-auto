@@ -95,12 +95,12 @@ object ColumnValueConversions {
 
 
     infix fun Int.ne(value: ColumnValue): Boolean {
-        return ! eq(value)
+        return !eq(value)
     }
 
 
     infix fun Double.ne(value: ColumnValue): Boolean {
-        return ! eq(value)
+        return !eq(value)
     }
 
 

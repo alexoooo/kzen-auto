@@ -90,7 +90,7 @@ class ReportWorkPool(
     fun readRunStatus(runDir: Path): OutputStatus {
 //        val dir = resolveRunDir(reportRunSignature)
         val infoFile = runDir.resolve(reportInfoFile)
-        if (! Files.exists(infoFile)) {
+        if (!Files.exists(infoFile)) {
             return OutputStatus.Corrupt
         }
 
@@ -122,7 +122,7 @@ class ReportWorkPool(
 
     fun readRunExecutionId(runDir: Path): LogicRunExecutionId? {
         val infoFile = runDir.resolve(reportInfoFile)
-        if (! Files.exists(infoFile)) {
+        if (!Files.exists(infoFile)) {
             return null
         }
 

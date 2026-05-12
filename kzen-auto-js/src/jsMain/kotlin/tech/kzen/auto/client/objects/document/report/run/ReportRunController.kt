@@ -42,7 +42,7 @@ class ReportRunController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderMainAction() {
-        if (props.thisRunning || ! props.outputTerminal) {
+        if (props.thisRunning || !props.outputTerminal) {
             return
         }
 

@@ -195,7 +195,7 @@ class IndexedCsvTable(
                         visitor.invoke(recordItem.model!!.toList())
                     }
                 }
-                if (! hasNext || remainingCount <= 0) {
+                if (!hasNext || remainingCount <= 0) {
                     break
                 }
             }
@@ -230,7 +230,7 @@ class IndexedCsvTable(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun close(error: Boolean) {
-        if (! error) {
+        if (!error) {
             flushPending()
         }
 

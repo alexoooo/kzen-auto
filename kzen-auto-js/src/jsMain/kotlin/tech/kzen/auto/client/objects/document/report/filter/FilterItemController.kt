@@ -3,7 +3,8 @@ package tech.kzen.auto.client.objects.document.report.filter
 import emotion.react.css
 import mui.material.*
 import mui.material.Size
-import react.Key
+import react.Key
+
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -129,7 +130,7 @@ class FilterItemController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onOpenToggle() {
-        val toggle = ! state.open
+        val toggle = !state.open
         setState {
             open = toggle
         }
@@ -148,7 +149,7 @@ class FilterItemController(
                 false
             }
             else {
-                ! inputAndCalculatedColumns.values.contains(props.columnName)
+                !inputAndCalculatedColumns.values.contains(props.columnName)
             }
 
         val tableSummary = props.tableSummary
@@ -312,17 +313,17 @@ class FilterItemController(
             return
         }
 
-        val hasNominal = ! columnSummary.nominalValueSummary.isEmpty()
+        val hasNominal = !columnSummary.nominalValueSummary.isEmpty()
         if (hasNominal) {
             renderHistogram(columnFilterSpec, columnSummary.nominalValueSummary, editDisabled)
         }
 
-        val hasNumeric = ! columnSummary.numericValueSummary.isEmpty()
+        val hasNumeric = !columnSummary.numericValueSummary.isEmpty()
         if (hasNumeric) {
             renderNumeric(columnSummary.numericValueSummary)
         }
 
-        val hasSample = ! columnSummary.opaqueValueSummary.isEmpty()
+        val hasSample = !columnSummary.opaqueValueSummary.isEmpty()
         if (hasSample) {
             renderSample(columnSummary.opaqueValueSummary)
         }
@@ -467,7 +468,7 @@ class FilterItemController(
                                     disabled = editDisabled
 
                                     onChange = { _, _ ->
-                                        onCriteriaChange(e.key, ! checked)
+                                        onCriteriaChange(e.key, !checked)
                                     }
                                 }
                             }

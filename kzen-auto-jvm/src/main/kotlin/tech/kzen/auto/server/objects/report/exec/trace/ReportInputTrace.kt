@@ -49,7 +49,7 @@ class ReportInputTrace(
 
 
     fun startReading() {
-        check(! running)
+        check(!running)
 
         running = true
         startTime = clock.now()
@@ -61,7 +61,7 @@ class ReportInputTrace(
 
     fun finishParsing(success: Boolean) {
         check(running)
-        check(! finished)
+        check(!finished)
 
         running = false
         finished = success

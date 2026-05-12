@@ -54,7 +54,7 @@ class CsvExportFormatter:
                         }
                     }
                 }
-                if (! hasSpecial) {
+                if (!hasSpecial) {
                     hasSpecial = fieldContents[end - 1] <= ' '
                 }
             }

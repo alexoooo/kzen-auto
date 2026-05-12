@@ -222,7 +222,7 @@ class RibbonLogicRun (
                 onAction(v as String, active, executing)
             }
 
-            if (! active && ! runnable) {
+            if (!active && !runnable) {
                 title = "Current document is not runnable"
                 disabled = true
             }
@@ -244,7 +244,7 @@ class RibbonLogicRun (
         ToggleButton {
             value = actionStep
 
-            disabled = ! (active && ! executing || ! active && runnable)
+            disabled = !(active && !executing || !active && runnable)
 
             size = Size.medium
 
@@ -274,7 +274,7 @@ class RibbonLogicRun (
     ) {
         ToggleButton {
             value = actionRunOrPause
-            disabled = ! active && ! runnable
+            disabled = !active && !runnable
             size = Size.medium
 
             sx {
@@ -315,7 +315,7 @@ class RibbonLogicRun (
     private fun ChildrenBuilder.renderStopButton(active: Boolean) {
         ToggleButton {
             value = actionStop
-            disabled = ! active
+            disabled = !active
             size = Size.medium
 
             sx {
@@ -359,7 +359,7 @@ class RibbonLogicRun (
                     }
                 }
 
-                disabled = ! active
+                disabled = !active
 
                 if (active) {
                     onClick = { onOptionsOpen() }

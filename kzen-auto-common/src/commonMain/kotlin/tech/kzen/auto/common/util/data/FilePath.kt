@@ -20,7 +20,7 @@ class FilePath private constructor(
 
             val withoutQuotes =
                 if (trimmed.startsWith('"')) {
-                    if (! trimmed.endsWith('"')) {
+                    if (!trimmed.endsWith('"')) {
                         return null
                     }
                     trimmed.substring(1, trimmed.length - 1)
@@ -84,7 +84,7 @@ class FilePath private constructor(
 
             val firstFileInPath: Int
             if (type == FilePathType.NetworkWindows) {
-                if (! parts[2].all { isLegalInFilename(it) }) {
+                if (!parts[2].all { isLegalInFilename(it) }) {
                     return null
                 }
 
@@ -93,7 +93,7 @@ class FilePath private constructor(
                     firstFileInPath = 3
                 }
                 else {
-                    if (! parts[3].all { isLegalInFilename(it) }) {
+                    if (!parts[3].all { isLegalInFilename(it) }) {
                         return null
                     }
                     builder.add("\\\\" + parts[2] + "\\" + parts[3])
@@ -114,7 +114,7 @@ class FilePath private constructor(
 
             for (i in firstFileInPath until parts.size) {
                 val part = parts[i]
-                if (! part.all { isLegalInFilename(it) }) {
+                if (!part.all { isLegalInFilename(it) }) {
                     return null
                 }
 
@@ -164,7 +164,7 @@ class FilePath private constructor(
     fun isWindowsNetworkShare(): Boolean {
         return type == FilePathType.NetworkWindows &&
                 location.lastIndexOf('\\') > 1 &&
-                ! location.contains('/')
+                !location.contains('/')
     }
 
 

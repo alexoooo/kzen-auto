@@ -45,7 +45,7 @@ class PluginDocument(
             return null
         }
 
-        if (! path.isRegularFile()) {
+        if (!path.isRegularFile()) {
             return null
         }
 

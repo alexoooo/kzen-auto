@@ -94,7 +94,7 @@ class H2DigestIndex(
             bloom.mightContain(bytes)
 
         val digestOrdinal =
-            if (! mightContain) {
+            if (!mightContain) {
                 bloom.add(bytes)
                 append(bytes, map)
             }

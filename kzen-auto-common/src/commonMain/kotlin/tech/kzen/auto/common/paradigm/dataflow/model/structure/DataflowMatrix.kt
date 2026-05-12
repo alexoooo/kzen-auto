@@ -286,7 +286,7 @@ data class DataflowMatrix(
         val edgeDescriptorAbove = get(above) as? EdgeDescriptor
                 ?: return listOf()
 
-        if (! edgeDescriptorAbove.orientation.hasBottom()) {
+        if (!edgeDescriptorAbove.orientation.hasBottom()) {
             return listOf()
         }
 

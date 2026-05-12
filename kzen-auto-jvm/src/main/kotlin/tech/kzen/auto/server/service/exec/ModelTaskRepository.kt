@@ -238,7 +238,7 @@ class ModelTaskRepository(
 
 
         fun updateModelNonTerminal(updater: (TaskModel) -> TaskModel) {
-            while (! stopRequested() && ! isTerminated()) {
+            while (!stopRequested() && !isTerminated()) {
                 val value = model.get()
                 val updated = updater(value)
                 val success = model.compareAndSet(value, updated)
@@ -323,7 +323,7 @@ class ModelTaskRepository(
 
 
         private fun terminate() {
-            check(! isTerminated()) {
+            check(!isTerminated()) {
                 "Already terminated"
             }
 

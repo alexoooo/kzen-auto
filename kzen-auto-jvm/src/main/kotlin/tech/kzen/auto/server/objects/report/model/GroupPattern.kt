@@ -36,7 +36,7 @@ class GroupPattern(
         }
 
         val matcher = regex!!.matcher(fileName)
-        if (! matcher.find()) {
+        if (!matcher.find()) {
             return DataLocationGroup.other
         }
 

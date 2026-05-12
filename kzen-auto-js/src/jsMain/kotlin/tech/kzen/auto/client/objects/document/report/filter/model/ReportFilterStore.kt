@@ -84,7 +84,7 @@ class ReportFilterStore(
             val error = removeColumn(columnName)
             afterRequest(error)
 
-            if (! isEmpty) {
+            if (!isEmpty) {
                 refreshOutputAndPreviewIfRequired()
             }
         }
@@ -111,7 +111,7 @@ class ReportFilterStore(
             val error = updateType(columnName, type)
             afterRequest(error)
 
-            if (! isEmpty) {
+            if (!isEmpty) {
                 refreshOutputAndPreviewIfRequired()
             }
         }

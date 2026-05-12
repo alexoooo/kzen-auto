@@ -462,7 +462,7 @@ class GraphController(
 
             IconButton {
                 css {
-                    if (! state.creating) {
+                    if (!state.creating) {
                         opacity = number(0.0)
                         cursor = Cursor.default
                     }

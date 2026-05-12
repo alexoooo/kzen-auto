@@ -104,7 +104,7 @@ class FormulaAddController(
                 }
             }
 
-            if (! props.formulaState.formulaLoading &&
+            if (!props.formulaState.formulaLoading &&
                     props.formulaState.formulaError != null
             ) {
                 div {

@@ -95,7 +95,7 @@ class ReportInputController(
         }
 
         // TODO: updating state from state, is that a problem?
-        val toggled = ! state.browserOpen
+        val toggled = !state.browserOpen
 //        console.log("$@#$#@ onToggleBrowser - $toggled")
 
         setState {
@@ -189,7 +189,7 @@ class ReportInputController(
                     float = Float.right
                 }
 
-                if (! isBrowserForceOpen()) {
+                if (!isBrowserForceOpen()) {
                     span {
                         css {
                             width = 2.em

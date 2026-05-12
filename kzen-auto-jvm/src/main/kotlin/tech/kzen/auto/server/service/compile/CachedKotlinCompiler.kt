@@ -46,7 +46,7 @@ class CachedKotlinCompiler(
     private fun readErrorFile(codeDir: Path): String? {
         val errorFile = errorFile(codeDir)
 
-        if (! Files.exists(errorFile)) {
+        if (!Files.exists(errorFile)) {
             return null
         }
 
@@ -105,7 +105,7 @@ class CachedKotlinCompiler(
         val codeDir = cacheDir.resolve(kotlinCode.signature())
 
         val previouslyCompiled = Files.exists(codeDir)
-        if (! previouslyCompiled) {
+        if (!previouslyCompiled) {
             return tryCompileNew(kotlinCode, codeDir, classLoader)
         }
 

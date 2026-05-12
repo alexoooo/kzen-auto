@@ -28,7 +28,7 @@ class ColumnListingAction(
     private fun cachedHeaderListing(
         columnsFile: Path
     ): HeaderListing? {
-        if (! Files.exists(columnsFile)) {
+        if (!Files.exists(columnsFile)) {
             return null
         }
 

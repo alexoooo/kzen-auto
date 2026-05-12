@@ -47,7 +47,7 @@ object AutoJvmUtils
         val normalizedSeparators = path.replace('\\', '/')
 
         if (normalizedSeparators.contains('/') ||
-                ! normalizedSeparators.endsWith(":")
+                !normalizedSeparators.endsWith(":")
         ) {
             return normalizedSeparators
         }

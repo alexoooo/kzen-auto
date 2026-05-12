@@ -4,7 +4,8 @@ import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.Fab
 import mui.material.IconButton
-import react.*
+import react.*
+
 import tech.kzen.auto.client.wrap.react
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.service.ClientContext
@@ -218,7 +219,7 @@ class GraphRunController(
         val host = props.documentPath
                 ?: return
 
-        if (! ClientContext.visualDataflowLoop.isLooping(host)) {
+        if (!ClientContext.visualDataflowLoop.isLooping(host)) {
             return
         }
 
@@ -360,7 +361,7 @@ class GraphRunController(
             title = "Reset"
 
             css {
-                if (! state.fabHover || ! hasReset) {
+                if (!state.fabHover || !hasReset) {
                     visibility = Visibility.hidden
                 }
                 marginRight = (-0.5).em
@@ -382,7 +383,7 @@ class GraphRunController(
 
             title = "Run next"
             css {
-                if (! state.fabHover || ! hasRunNext) {
+                if (!state.fabHover || !hasRunNext) {
                     visibility = Visibility.hidden
                 }
             }

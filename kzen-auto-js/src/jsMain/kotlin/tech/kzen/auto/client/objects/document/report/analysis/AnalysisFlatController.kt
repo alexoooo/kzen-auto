@@ -76,7 +76,7 @@ class AnalysisFlatController(
         paddingLeft = 0.5.em
         paddingRight = 0.5.em
 
-        if (! isFirst) {
+        if (!isFirst) {
             borderTopWidth = 1.px
             borderTopStyle = LineStyle.solid
             borderTopColor = NamedColor.lightgray

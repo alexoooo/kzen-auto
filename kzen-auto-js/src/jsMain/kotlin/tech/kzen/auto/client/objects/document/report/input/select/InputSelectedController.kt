@@ -57,7 +57,7 @@ class InputSelectedController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onToggleFolders() {
-        val toggle = ! state.showDetails
+        val toggle = !state.showDetails
         setState {
             showDetails = toggle
         }
@@ -65,7 +65,7 @@ class InputSelectedController(
 
 
     private fun onToggleGroupBy() {
-        val toggle = ! state.showGroupBy
+        val toggle = !state.showGroupBy
         setState {
             showGroupBy = toggle
         }
@@ -253,7 +253,7 @@ class InputSelectedController(
 
 
     private fun ChildrenBuilder.renderGroupBy() {
-        if (! state.showGroupBy) {
+        if (!state.showGroupBy) {
             return
         }
 

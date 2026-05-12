@@ -173,7 +173,7 @@ class ColumnValue(
 
 
     val isNumber: Boolean
-        get() = ! number.isNaN()
+        get() = !number.isNaN()
 
 
     val isNaN: Boolean
@@ -194,7 +194,7 @@ class ColumnValue(
 
     // TODO: rename or alias as `logic`? add special If construct?
     val truthy: Boolean get() {
-        if (! number.isNaN()) {
+        if (!number.isNaN()) {
             return asNumber == 1.0
         }
 
@@ -209,7 +209,7 @@ class ColumnValue(
 
 
     val falsy: Boolean get() {
-        if (! number.isNaN()) {
+        if (!number.isNaN()) {
             return asNumber == 0.0
         }
 
@@ -231,7 +231,7 @@ class ColumnValue(
         val thisNumber = toDoubleOrNan()
         val thatNumber = that.toDouble()
 
-        if (! thisNumber.isNaN()) {
+        if (!thisNumber.isNaN()) {
             val addition = thisNumber + thatNumber
             return ofNumber(addition)
         }
@@ -244,7 +244,7 @@ class ColumnValue(
         val thisNumber = toDoubleOrNan()
         val thatNumber = that.toDoubleOrNan()
 
-        if (! thisNumber.isNaN() && ! thatNumber.isNaN()) {
+        if (!thisNumber.isNaN() && !thatNumber.isNaN()) {
             val addition = thisNumber + thatNumber
             return ofNumber(addition)
         }
@@ -262,7 +262,7 @@ class ColumnValue(
         val thatText = that.toString()
         val thatNumber = NumberParseUtils.toDoubleOrNan(thatText)
 
-        if (! thisNumber.isNaN() && ! thatNumber.isNaN()) {
+        if (!thisNumber.isNaN() && !thatNumber.isNaN()) {
             val addition = thisNumber + thatNumber
             return ofNumber(addition)
         }
@@ -459,8 +459,8 @@ class ColumnValue(
                 val thisNumber = number
                 val otherNumber = other.number
 
-                if (! thisNumber.isNaN()) {
-                    if (! otherNumber.isNaN()) {
+                if (!thisNumber.isNaN()) {
+                    if (!otherNumber.isNaN()) {
                         compareNumbersWithEpsilon(thisNumber, otherNumber)
                     }
                     else {
@@ -468,7 +468,7 @@ class ColumnValue(
                     }
                 }
                 else {
-                    if (! otherNumber.isNaN()) {
+                    if (!otherNumber.isNaN()) {
                         1
                     }
                     else {
@@ -481,8 +481,8 @@ class ColumnValue(
                 val thisNumber = number
                 val otherNumber = other.toDouble()
 
-                if (! thisNumber.isNaN()) {
-                    if (! otherNumber.isNaN()) {
+                if (!thisNumber.isNaN()) {
+                    if (!otherNumber.isNaN()) {
                         compareNumbersWithEpsilon(thisNumber, otherNumber)
                     }
                     else {
@@ -544,7 +544,7 @@ class ColumnValue(
 
 
     infix fun ne(other: Any?): Boolean {
-        return ! eq(other)
+        return !eq(other)
     }
 
 

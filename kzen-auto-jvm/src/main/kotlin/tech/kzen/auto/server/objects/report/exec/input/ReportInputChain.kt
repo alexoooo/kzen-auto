@@ -74,7 +74,7 @@ class ReportInputChain<T>(
                 visitor.accept(it.model!!)
             }
 
-            if (! hasNext) {
+            if (!hasNext) {
                 break
             }
         }

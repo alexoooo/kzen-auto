@@ -60,7 +60,7 @@ class ReportFormulaStage(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onEvent(event: ReportOutputEvent<*>, sequence: Long, endOfBatch: Boolean) {
-        if (! event.isSkipOrSentinel()) {
+        if (!event.isSkipOrSentinel()) {
             processFormulas(event)
         }
 //        else {

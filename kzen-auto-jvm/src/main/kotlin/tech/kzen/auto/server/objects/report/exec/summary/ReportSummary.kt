@@ -58,7 +58,7 @@ class ReportSummary(
             reportRunContext: ReportRunContext
         ): TableSummary? {
             val summaryDir = reportRunContext.runDir.resolve(summaryDirName)
-            if (! Files.exists(summaryDir)) {
+            if (!Files.exists(summaryDir)) {
                 return null
             }
 
@@ -67,7 +67,7 @@ class ReportSummary(
             for (columnName in reportRunContext.inputAndFormulaColumns.values) {
                 val columnDir = columnDir(summaryDir, columnName)
 
-                if (! Files.exists(columnDir)) {
+                if (!Files.exists(columnDir)) {
                     continue
                 }
 
@@ -117,7 +117,7 @@ class ReportSummary(
             columnDir: Path
         ): NominalValueSummary {
             val nominalFile = columnDir.resolve(nominalCsvFilename)
-            if (! Files.exists(nominalFile)) {
+            if (!Files.exists(nominalFile)) {
                 return NominalValueSummary.empty
             }
 
@@ -131,7 +131,7 @@ class ReportSummary(
             columnDir: Path
         ): StatisticValueSummary {
             val numericFile = columnDir.resolve(numericCsvFilename)
-            if (! Files.exists(numericFile)) {
+            if (!Files.exists(numericFile)) {
                 return StatisticValueSummary.empty
             }
 
@@ -145,7 +145,7 @@ class ReportSummary(
             columnDir: Path
         ): OpaqueValueSummary {
             val opaqueFile = columnDir.resolve(opaqueCsvFilename)
-            if (! Files.exists(opaqueFile)) {
+            if (!Files.exists(opaqueFile)) {
                 return OpaqueValueSummary.empty
             }
 

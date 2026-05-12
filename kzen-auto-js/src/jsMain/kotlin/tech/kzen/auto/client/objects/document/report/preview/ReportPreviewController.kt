@@ -76,7 +76,7 @@ class ReportPreviewController(
         paddingLeft = 0.5.em
         paddingRight = 0.5.em
 
-        if (! isFirst) {
+        if (!isFirst) {
             borderTopWidth = 1.px
             borderTopStyle = LineStyle.solid
             borderTopColor = NamedColor.lightgray
@@ -180,7 +180,7 @@ class ReportPreviewController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderRefresh() {
         if (props.previewState.tableSummary == null ||
-               ! props.running
+               !props.running
         ) {
             return
         }
@@ -272,7 +272,7 @@ class ReportPreviewController(
                     iconify(vaadinIconInfoCircleO)
                 }
 
-                if (! enabled) {
+                if (!enabled) {
                     +"Enable for suggestions to appear in Filter"
                 }
                 else {
@@ -401,7 +401,7 @@ class ReportPreviewController(
                                 css {
                                     commonTdCss(isFirst)
                                 }
-                                if (! columnSummary.isEmpty()) {
+                                if (!columnSummary.isEmpty()) {
                                     +"${columnSummary.count}"
                                 }
                             }
@@ -443,7 +443,7 @@ class ReportPreviewController(
                                 css {
                                     commonTdCss(isFirst)
                                 }
-                                if (! columnSummary.nominalValueSummary.isEmpty()) {
+                                if (!columnSummary.nominalValueSummary.isEmpty()) {
                                     if (columnSummary.nominalValueSummary.histogram.size > 5) {
                                         +"${columnSummary.nominalValueSummary.histogram.size} categories: "
                                     }
@@ -468,7 +468,7 @@ class ReportPreviewController(
                                 css {
                                     commonTdCss(isFirst)
                                 }
-                                if (! columnSummary.opaqueValueSummary.isEmpty()) {
+                                if (!columnSummary.opaqueValueSummary.isEmpty()) {
                                     +columnSummary
                                         .opaqueValueSummary
                                         .sample

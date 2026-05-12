@@ -34,7 +34,7 @@ class FilterIndex(
         val pathInWork = Paths.get("$indexDirName/$digest")
         val workPath = workUtils.resolve(pathInWork)
 
-        if (! Files.isDirectory(workPath)) {
+        if (!Files.isDirectory(workPath)) {
             Files.createDirectories(workPath)
         }
 

@@ -119,7 +119,7 @@ class StepNameEditor(
 
 
     override fun componentDidUpdate(prevProps: StepNameEditorProps, prevState: StepNameEditorState, snapshot: Any) {
-        if (state.saving && ! prevState.saving) {
+        if (state.saving && !prevState.saving) {
             saveAsync()
         }
     }
@@ -185,7 +185,7 @@ class StepNameEditor(
 
 
     private fun onRename() {
-        if (! isModified()) {
+        if (!isModified()) {
             onCancel()
             return
         }
@@ -217,7 +217,7 @@ class StepNameEditor(
 
 
     private fun onEdit() {
-        if (! state.editing) {
+        if (!state.editing) {
             setState {
                 editing = true
             }
@@ -393,7 +393,7 @@ class StepNameEditor(
                     onRename()
                 }
 
-                disabled = ! isModified()
+                disabled = !isModified()
 
                 SaveIcon::class.react {}
             }

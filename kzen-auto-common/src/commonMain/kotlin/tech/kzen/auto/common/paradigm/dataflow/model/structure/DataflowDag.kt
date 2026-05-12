@@ -75,7 +75,7 @@ data class DataflowDag(
                 edgeDescriptor: EdgeDescriptor,
                 dataflowMatrix: DataflowMatrix
         ): List<ObjectLocation> {
-            if (! edgeDescriptor.orientation.hasTop()) {
+            if (!edgeDescriptor.orientation.hasTop()) {
                 return listOf()
             }
 

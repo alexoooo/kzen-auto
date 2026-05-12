@@ -72,7 +72,7 @@ class ObjectRegistryController:
         val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
             ?: return
 
-        if (! ObjectRegistryConventions.isObjectRegistry(documentNotation)) {
+        if (!ObjectRegistryConventions.isObjectRegistry(documentNotation)) {
             return
         }
 

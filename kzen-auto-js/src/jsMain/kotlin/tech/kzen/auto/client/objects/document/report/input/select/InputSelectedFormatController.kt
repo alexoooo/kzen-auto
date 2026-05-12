@@ -4,11 +4,14 @@ import js.objects.unsafeJso
 import kotlinx.browser.document
 import mui.material.InputLabel
 import mui.system.sx
-import react.ChildrenBuilder
+import react.ChildrenBuilder
+
 import tech.kzen.auto.client.wrap.setState
-import react.State
+import react.State
+
 import tech.kzen.auto.client.wrap.setState
-import react.dom.html.ReactHTML.span
+import react.dom.html.ReactHTML.span
+
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
@@ -92,7 +95,7 @@ class InputSelectedFormatController(
             .inputSelectedState
             .selectedInfo
             ?.locations
-            ?.filter { ! it.dataLocationInfo.isMissing() && ! it.invalidProcessor }
+            ?.filter { !it.dataLocationInfo.isMissing() && !it.invalidProcessor }
             ?.map { it.processorDefinitionCoordinate }
             ?.toSet()
 
@@ -182,7 +185,7 @@ class InputSelectedFormatController(
                         loadIfRequired()
                     }
 
-                    isDisabled = props.editDisabled || (selectionEmpty && ! singleOption)
+                    isDisabled = props.editDisabled || (selectionEmpty && !singleOption)
 
                     // https://stackoverflow.com/a/51844542/1941359
                     val styleTransformer: (Json, Json) -> Json = { base, _ ->

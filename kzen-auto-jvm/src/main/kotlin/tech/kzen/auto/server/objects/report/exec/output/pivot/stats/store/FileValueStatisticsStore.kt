@@ -30,7 +30,7 @@ class FileValueStatisticsStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var fileSize: Long =
-        if (! Files.exists(file)) {
+        if (!Files.exists(file)) {
             Files.createDirectories(file.parent)
             0
         }
@@ -186,7 +186,7 @@ class FileValueStatisticsStore(
 
             statistics.clear()
 
-            if (! ValueStatistics.isMissing(value)) {
+            if (!ValueStatistics.isMissing(value)) {
                 statistics.accept(value)
             }
 
@@ -208,7 +208,7 @@ class FileValueStatisticsStore(
             val value = values[i]
             val statistics = statisticsBuffer[i]
 
-            if (! ValueStatistics.isMissing(value)) {
+            if (!ValueStatistics.isMissing(value)) {
                 statistics.accept(value)
             }
 

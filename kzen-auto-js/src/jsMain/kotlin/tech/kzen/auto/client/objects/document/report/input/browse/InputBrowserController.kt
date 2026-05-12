@@ -53,13 +53,13 @@ class InputBrowserController(
         prevState: InputBrowserControllerState,
         snapshot: Any
     ) {
-        if (props.open && props.inputBrowserState.browserInfo == null && ! state.requestPending) {
+        if (props.open && props.inputBrowserState.browserInfo == null && !state.requestPending) {
             setState {
                 requestPending = true
             }
         }
 
-        if (state.requestPending && ! prevState.requestPending) {
+        if (state.requestPending && !prevState.requestPending) {
             props.inputStore.browser.browserLoadInfoAsync()
         }
     }
@@ -67,12 +67,12 @@ class InputBrowserController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        if (! props.open) {
+        if (!props.open) {
             // NB: keep state when browser is hidden
             return
         }
 
-        if (! props.forceOpen) {
+        if (!props.forceOpen) {
             div {
                 css {
                     borderTopWidth = ReportController.separatorWidth

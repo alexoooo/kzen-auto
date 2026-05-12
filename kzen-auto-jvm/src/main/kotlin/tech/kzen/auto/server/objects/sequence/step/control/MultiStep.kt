@@ -53,7 +53,7 @@ class MultiStep(
             if (logicCommand == LogicCommand.Cancel) {
                 return LogicResultCancelled
             }
-            else if (! executeNextIfPaused && logicCommand == LogicCommand.Pause) {
+            else if (!executeNextIfPaused && logicCommand == LogicCommand.Pause) {
                 return LogicResultPaused
             }
             else {

@@ -102,7 +102,7 @@ class TableReportOutput(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        if (! Files.exists(initialReportRunContext.runDir)) {
+        if (!Files.exists(initialReportRunContext.runDir)) {
             pivotBuilder = null
             indexedCsvTable = null
         }

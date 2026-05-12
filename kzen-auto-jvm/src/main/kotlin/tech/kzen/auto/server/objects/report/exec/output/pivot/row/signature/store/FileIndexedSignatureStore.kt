@@ -23,7 +23,7 @@ class FileIndexedSignatureStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var fileSize: Long =
-        if (! Files.exists(file)) {
+        if (!Files.exists(file)) {
             Files.createDirectories(file.parent)
             0
         }

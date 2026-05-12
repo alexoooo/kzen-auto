@@ -32,7 +32,7 @@ class ReportInputReader(
      * @return ReadResult
      */
     fun poll(buffer: DataBlockBuffer): Boolean {
-        check(! endOfData)
+        check(!endOfData)
 
         val result = input.read(buffer.bytes)
 

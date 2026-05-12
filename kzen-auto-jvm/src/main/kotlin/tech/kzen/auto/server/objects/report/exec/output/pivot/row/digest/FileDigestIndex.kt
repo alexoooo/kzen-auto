@@ -256,7 +256,7 @@ class FileDigestIndex(
 
         val handle = RandomAccessFile(path.toFile(), "rw")
 
-        if (! alreadyExists) {
+        if (!alreadyExists) {
             handle.write(emptyFileBuffer)
             bucketCount++
         }

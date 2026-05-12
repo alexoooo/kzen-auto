@@ -18,7 +18,7 @@ object ColumnValueUtils {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun formatDecimal(value: Double): String {
-        if (! value.isFinite()) {
+        if (!value.isFinite()) {
             return value.toString()
         }
 

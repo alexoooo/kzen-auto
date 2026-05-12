@@ -60,13 +60,13 @@ class ReportOutputController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ReportOutputControllerState.init(props: ReportOutputControllerProps) {
-        settingsOpen = ! props.spec.isDefaultWorkPath()
+        settingsOpen = !props.spec.isDefaultWorkPath()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onSettingsToggle() {
-        val toggle = ! state.settingsOpen
+        val toggle = !state.settingsOpen
         setState {
             settingsOpen = toggle
         }
@@ -116,7 +116,7 @@ class ReportOutputController(
     private fun ChildrenBuilder.renderContent() {
         renderHeader()
 
-        if (! props.filteredColumns?.values.isNullOrEmpty()) {
+        if (!props.filteredColumns?.values.isNullOrEmpty()) {
             renderBody()
         }
     }
@@ -345,7 +345,7 @@ class ReportOutputController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderSettings() {
-        if (! state.settingsOpen) {
+        if (!state.settingsOpen) {
             return
         }
 

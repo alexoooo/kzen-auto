@@ -295,7 +295,7 @@ class EdgeController(
             edgesAvailableToPending: Set<EdgeDescriptor>,
             pendingWithAvailableMessage: Set<ObjectLocation>
     ): Color {
-        if (nextToRun == null || ! hasMessage) {
+        if (nextToRun == null || !hasMessage) {
             return NamedColor.white
         }
 
@@ -459,7 +459,7 @@ class EdgeController(
                         marginRight = (-8).px
                         float = Float.right
 
-                        if (! state.edgeHover) {
+                        if (!state.edgeHover) {
                             visibility = Visibility.hidden
                         }
                     }

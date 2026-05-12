@@ -73,7 +73,7 @@ class AttributePathValueEditorOld(
                 className == ClassNames.kotlinList ||
                 className == ClassNames.kotlinSet
 
-            if (! isContainer) {
+            if (!isContainer) {
                 return false
             }
 
@@ -254,7 +254,7 @@ class AttributePathValueEditorOld(
         val type = props.valueType
 //        val type = attributeMetadata.type
 
-        if (! isValue(type)) {
+        if (!isValue(type)) {
             +"${props.attributePath} $type (not a value)"
         }
         else if (

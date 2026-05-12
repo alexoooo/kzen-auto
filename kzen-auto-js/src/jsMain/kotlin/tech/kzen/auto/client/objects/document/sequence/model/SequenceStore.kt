@@ -86,7 +86,7 @@ class SequenceStore: ClientStateGlobal.Observer {
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
-        if (! mounted) {
+        if (!mounted) {
             return
         }
 

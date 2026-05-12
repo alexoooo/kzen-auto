@@ -228,7 +228,7 @@ class SidebarFolder(
 
             for (i in 1 .. 99) {
                 val candidateSuffix = "-$i"
-                if (! testSuffix(structure, prefix, candidateSuffix, directory)) {
+                if (!testSuffix(structure, prefix, candidateSuffix, directory)) {
                     continue
                 }
 
@@ -374,7 +374,7 @@ class SidebarFolder(
                 // NB: blinks in and out without this
                 backgroundColor = Color.transparent
 
-                if (! (state.hoverItem || state.hoverOptions)) {
+                if (!(state.hoverItem || state.hoverOptions)) {
                     display = None.none
                 }
             }

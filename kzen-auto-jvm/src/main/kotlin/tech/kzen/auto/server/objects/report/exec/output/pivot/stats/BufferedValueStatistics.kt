@@ -51,7 +51,7 @@ class BufferedValueStatistics(
     private fun accept(stats: Array<MutableStatistics>, values: DoubleArray) {
         for (i in stats.indices) {
             val value = values[i]
-            if (! ValueStatistics.isMissing(value)) {
+            if (!ValueStatistics.isMissing(value)) {
                 stats[i].accept(values[i])
             }
         }

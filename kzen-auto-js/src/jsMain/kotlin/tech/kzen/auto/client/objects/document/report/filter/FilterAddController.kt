@@ -109,7 +109,7 @@ class FilterAddController(
                 }
             }
 
-            if (! props.filterState.filterLoading) {
+            if (!props.filterState.filterLoading) {
                 if (props.filterState.filterError != null) {
                     div {
                         +"Error: ${props.filterState.filterError}"

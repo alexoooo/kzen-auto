@@ -180,7 +180,7 @@ class HeaderController(
                 renderRightFloat()
             }
 
-            if (! state.transition) {
+            if (!state.transition) {
                 val archetypeName = documentArchetypeName()
                 if (archetypeName != null) {
                     renderHeaderController(archetypeName)

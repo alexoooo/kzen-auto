@@ -201,7 +201,7 @@ class SequenceController:
         val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
             ?: return
 
-        if (! SequenceConventions.isSequence(documentNotation)) {
+        if (!SequenceConventions.isSequence(documentNotation)) {
             return
         }
 

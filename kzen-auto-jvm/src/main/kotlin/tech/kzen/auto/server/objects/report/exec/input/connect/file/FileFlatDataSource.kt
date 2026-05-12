@@ -21,7 +21,7 @@ class FileFlatDataSource: FlatDataSource {
             ?: throw IllegalArgumentException("File expected: ${flatDataLocation.dataLocation}")
 
         val path = filePath.toPath()
-        val isText = ! flatDataLocation.dataEncoding.isBinary()
+        val isText = !flatDataLocation.dataEncoding.isBinary()
         return FileFlatDataStream(
             path, bomPrefix = isText)
     }

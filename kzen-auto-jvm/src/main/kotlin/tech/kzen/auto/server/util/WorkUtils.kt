@@ -52,7 +52,7 @@ class WorkUtils(
 
 
     fun resolve(relativePath: Path): Path {
-        check(! relativePath.isAbsolute)
+        check(!relativePath.isAbsolute)
         return base.resolve(relativePath)
     }
 }

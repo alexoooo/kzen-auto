@@ -53,7 +53,7 @@ data class ReportState(
                 .documents[documentPath]
                 ?: return null
 
-            if (! ReportConventions.isReport(documentNotation)) {
+            if (!ReportConventions.isReport(documentNotation)) {
                 return null
             }
 

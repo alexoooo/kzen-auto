@@ -114,7 +114,7 @@ class ClientLogicGlobal(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun startAndRunAsync(mainLocation: ObjectLocation, paused: Boolean) {
-        require(! clientLogicState.isActive()) {
+        require(!clientLogicState.isActive()) {
             "Already running"
         }
 

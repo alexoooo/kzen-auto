@@ -72,7 +72,7 @@ class ReportFilterStage(
             return
         }
 
-        event.skip = ! test(event.row, event.header.value)
+        event.skip = !test(event.row, event.header.value)
     }
 
 

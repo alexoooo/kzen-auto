@@ -95,7 +95,7 @@ class DataFormatController(
         val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
             ?: return
 
-        if (! DataFormatConventions.isDataFormat(documentNotation)) {
+        if (!DataFormatConventions.isDataFormat(documentNotation)) {
             return
         }
 

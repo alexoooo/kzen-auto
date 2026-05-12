@@ -614,7 +614,7 @@ class VertexController(
                 // NB: blinks in and out without this
                 backgroundColor = Color.transparent
 
-                if (! (state.hoverCard || state.hoverMenu)) {
+                if (!(state.hoverCard || state.hoverMenu)) {
                     display = None.none
                 }
             }

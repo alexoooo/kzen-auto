@@ -6,7 +6,8 @@ import mui.material.IconButton
 import mui.material.Menu
 import mui.material.MenuItem
 import mui.system.sx
-import react.*
+import react.*
+
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.createRef
 import react.dom.html.ReactHTML.a
@@ -320,7 +321,7 @@ class SidebarFile(
                 // NB: blinks in and out without this
                 backgroundColor = Color.transparent
 
-                if (! (state.hoverItem || state.hoverOptions)) {
+                if (!(state.hoverItem || state.hoverOptions)) {
                     display = None.none
                 }
             }

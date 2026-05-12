@@ -58,7 +58,7 @@ data class DataLocationInfo(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        check(! name.endsWith("/") && ! name.endsWith("\\"))
+        check(!name.endsWith("/") && !name.endsWith("\\"))
     }
 
 

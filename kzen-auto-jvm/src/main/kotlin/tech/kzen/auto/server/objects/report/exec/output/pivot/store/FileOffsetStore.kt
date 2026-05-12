@@ -16,7 +16,7 @@ class FileOffsetStore(
 {
     //-----------------------------------------------------------------------------------------------------------------
     private var fileSize: Long =
-        if (! Files.exists(file)) {
+        if (!Files.exists(file)) {
             Files.createDirectories(file.parent)
             0
         }
@@ -133,7 +133,7 @@ class FileOffsetStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        if (! closed) {
+        if (!closed) {
             StoreUtils.flushAndClose(handle, file.toString())
             closed = true
         }

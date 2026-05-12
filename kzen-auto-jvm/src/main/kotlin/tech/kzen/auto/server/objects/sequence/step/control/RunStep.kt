@@ -70,7 +70,7 @@ class RunStep(
                 val argumentValue = TupleValue(argumentTupleComponents)
 
                 val initResult = created.beforeStart(argumentValue)
-                if (! initResult) {
+                if (!initResult) {
                     created.close()
                     return LogicResultFailed("Unable to initialize $instructions")
                 }

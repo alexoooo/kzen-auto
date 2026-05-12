@@ -147,7 +147,7 @@ class MmapBitArray(
 
 
     private fun closeDirectBuffer() {
-        if (! buffer!!.isDirect) {
+        if (!buffer!!.isDirect) {
             return
         }
 

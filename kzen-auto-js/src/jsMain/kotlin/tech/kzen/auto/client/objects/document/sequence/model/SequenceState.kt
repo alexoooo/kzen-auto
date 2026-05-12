@@ -33,7 +33,7 @@ data class SequenceState(
                 .documents[documentPath]
                 ?: return null
 
-            if (! SequenceConventions.isSequence(documentNotation)) {
+            if (!SequenceConventions.isSequence(documentNotation)) {
                 return null
             }
 

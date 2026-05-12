@@ -6,7 +6,8 @@ import mui.material.IconButton
 import mui.material.Menu
 import mui.material.MenuItem
 import mui.system.sx
-import react.*
+import react.*
+
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.createRef
 import react.dom.html.ReactHTML.div
@@ -419,7 +420,7 @@ class StepHeader(
                 // NB: blinks in and out without this
                 backgroundColor = Color.transparent
 
-                if (! (state.hoverCard || state.hoverMenu)) {
+                if (!(state.hoverCard || state.hoverMenu)) {
                     display = None.none
                 }
             }
@@ -461,7 +462,7 @@ class StepHeader(
             return
         }
 
-        if (! props.first) {
+        if (!props.first) {
             MenuItem {
                 onClick = { onShiftUp() }
 
@@ -472,7 +473,7 @@ class StepHeader(
             }
         }
 
-        if (! props.last) {
+        if (!props.last) {
             MenuItem {
                 onClick = { onShiftDown() }
                 KeyboardArrowDownIcon::class.react {

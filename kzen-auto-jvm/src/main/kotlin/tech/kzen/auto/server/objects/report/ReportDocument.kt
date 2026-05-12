@@ -394,7 +394,7 @@ class ReportDocument(
         val reportWorkPool = KzenAutoContext.global().reportWorkPool
         val created = reportWorkPool.prepareRunDir(reportRunContext.runDir, logicRunExecutionId)
 
-        if (! created) {
+        if (!created) {
             WorkUtils.recursivelyDeleteDir(reportRunContext.runDir)
             val createdRetry = reportWorkPool.prepareRunDir(reportRunContext.runDir, logicRunExecutionId)
             check(createdRetry) { "Unable to re-create: ${reportRunContext.runDir}" }
@@ -411,7 +411,7 @@ class ReportDocument(
             return reportExecution
         }
         finally {
-            if (! success) {
+            if (!success) {
                 KzenAutoContext.global().reportWorkPool.updateRunStatus(reportRunContext.runDir, OutputStatus.Failed)
             }
         }
@@ -547,7 +547,7 @@ class ReportDocument(
                 excludePatterns.isNotEmpty() &&
                 excludePatterns.any { it.matcher(headerLabelText).matches() }
 
-            return allow && ! exclude
+            return allow && !exclude
         }
 
         val inputColumns = inputHeaderListing.values.associateWith { include(it.text) }

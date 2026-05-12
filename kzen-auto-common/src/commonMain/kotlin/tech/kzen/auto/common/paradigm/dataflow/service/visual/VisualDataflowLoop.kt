@@ -44,7 +44,7 @@ class VisualDataflowLoop(
 
         state.visualDataflowModel = visualDataflowModel
 
-        if (! state.looping || visualDataflowModel.isRunning()) {
+        if (!state.looping || visualDataflowModel.isRunning()) {
             return
         }
 
@@ -129,7 +129,7 @@ class VisualDataflowLoop(
         val state = getOrCreate(host)
 //        println("ExecutionLoop | Pause request")
 
-        if (! state.looping) {
+        if (!state.looping) {
 //            println("ExecutionLoop | Already paused")
             return
         }

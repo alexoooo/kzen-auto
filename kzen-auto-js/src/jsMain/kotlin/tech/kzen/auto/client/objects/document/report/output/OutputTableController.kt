@@ -80,7 +80,7 @@ class OutputTableController(
             renderHeaderControls()
         }
 
-        if (! props.filteredColumns?.values.isNullOrEmpty()) {
+        if (!props.filteredColumns?.values.isNullOrEmpty()) {
             renderOutput()
         }
     }

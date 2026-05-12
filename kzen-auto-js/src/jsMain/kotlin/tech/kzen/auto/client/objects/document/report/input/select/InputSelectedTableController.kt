@@ -491,7 +491,7 @@ class InputSelectedTableController(
                     whiteSpace = WhiteSpace.nowrap
                 }
 
-                if (fileInfo != null && ! missing) {
+                if (fileInfo != null && !missing) {
                     +FormatUtils.formatLocalDateTime(fileInfo.modified)
                 }
             }
@@ -503,7 +503,7 @@ class InputSelectedTableController(
                     whiteSpace = WhiteSpace.nowrap
                 }
 
-                if (fileInfo != null && ! missing) {
+                if (fileInfo != null && !missing) {
                     +FormatUtils.readableFileSize(fileInfo.size)
                 }
             }

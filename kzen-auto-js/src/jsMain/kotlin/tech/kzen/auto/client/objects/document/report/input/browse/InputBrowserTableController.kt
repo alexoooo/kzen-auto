@@ -3,7 +3,8 @@ package tech.kzen.auto.client.objects.document.report.input.browse
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.Checkbox
-import react.Key
+import react.Key
+
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.input
@@ -150,7 +151,7 @@ class InputBrowserTableController(
                     .inputBrowserState
                     .browserInfo!!
                     .files
-                    .filter { ! it.directory }
+                    .filter { !it.directory }
                     .map { it.path }
                     .toPersistentSet()
             }

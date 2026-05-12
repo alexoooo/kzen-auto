@@ -25,9 +25,9 @@ class DataFrameFeeder(
         }
 
         var count = 0
-        if (! frames.hasFull()) {
-            check(! dataBlockBuffer.endOfData)
-            if (! continuingPartial) {
+        if (!frames.hasFull()) {
+            check(!dataBlockBuffer.endOfData)
+            if (!continuingPartial) {
                 partialInput.addFrame(dataBlockBuffer, 0)
             }
             return 0
@@ -54,7 +54,7 @@ class DataFrameFeeder(
         }
 
         if (frames.partialLast) {
-            check(! dataBlockBuffer.endOfData)
+            check(!dataBlockBuffer.endOfData)
             partialInput.addFrame(dataBlockBuffer, frames.count - 1)
 //            println("DataFrameFeeder - partialLast")
         }

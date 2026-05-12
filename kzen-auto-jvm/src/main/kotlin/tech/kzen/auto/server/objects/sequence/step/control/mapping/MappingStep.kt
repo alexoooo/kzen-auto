@@ -87,7 +87,7 @@ class MappingStep(
                 delegatePaused = false
                 wasPaused = true
             }
-            else if (! initializedIterator.hasNext()) {
+            else if (!initializedIterator.hasNext()) {
                 break
             }
             else {
@@ -95,7 +95,7 @@ class MappingStep(
             }
             checkNotNull(next)
 
-            if (! wasPaused) {
+            if (!wasPaused) {
                 resetSteps(sequenceExecutionContext)
             }
 

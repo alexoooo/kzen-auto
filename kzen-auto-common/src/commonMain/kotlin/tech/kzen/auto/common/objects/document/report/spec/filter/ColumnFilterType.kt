@@ -9,7 +9,7 @@ enum class ColumnFilterType {
     fun reject(present: Boolean): Boolean {
         when (this) {
             RequireAny ->
-                if (! present) {
+                if (!present) {
                     return true
                 }
 

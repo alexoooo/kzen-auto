@@ -87,7 +87,7 @@ class ReportExecution(
             reportRunContext: ReportRunContext,
             reportWorkPool: ReportWorkPool
         ): OutputInfo {
-            val isMissing = ! Files.exists(reportRunContext.runDir)
+            val isMissing = !Files.exists(reportRunContext.runDir)
             if (isMissing) {
                 return OutputInfo(
                     reportRunContext.runDir.toString(),
@@ -304,14 +304,14 @@ class ReportExecution(
         try {
             reportInputTrace.startReading()
 
-            while (! failed.get()) {
+            while (!failed.get()) {
                 if (control.pollCommand() == LogicCommand.Cancel) {
                     cancelled = true
                     break
                 }
 
                 val hasNext = reportInputPipeline.poll()
-                if (! hasNext) {
+                if (!hasNext) {
                     reachedEndOfData = true
                     break
                 }
@@ -322,7 +322,7 @@ class ReportExecution(
 
             waitForProcessingToFinish(recordDisruptorInput)
 
-            val reachedEndWithoutFailOrCancel = ! failed.get() && ! cancelled
+            val reachedEndWithoutFailOrCancel = !failed.get() && !cancelled
             reportInputTrace.finishParsing(reachedEndWithoutFailOrCancel)
         }
     }
@@ -423,7 +423,7 @@ class ReportExecution(
         var builder = recordDisruptor.handleEventsWith(formulas)
 
         val filter = ReportFilterStage(initialReportRunContext)
-        if (! filter.isEmpty()) {
+        if (!filter.isEmpty()) {
             builder = builder.then(filter)
         }
 

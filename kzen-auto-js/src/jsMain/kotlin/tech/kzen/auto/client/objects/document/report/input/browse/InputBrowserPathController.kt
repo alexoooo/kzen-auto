@@ -65,7 +65,7 @@ class InputBrowserPathController(
         prevState: InputBrowserPathControllerState,
         snapshot: Any
     ) {
-        if (! state.textEdit) {
+        if (!state.textEdit) {
             setState {
                 editDir = props.browseDir.asString()
             }
@@ -91,7 +91,7 @@ class InputBrowserPathController(
     private fun onEditToggle() {
         val nextTextEdit = state.textEdit
         setState {
-            textEdit = ! nextTextEdit
+            textEdit = !nextTextEdit
         }
     }
 
@@ -193,7 +193,7 @@ class InputBrowserPathController(
                     position = Position.relative
                     marginLeft = 0.5.em
 
-                    if (! state.hover) {
+                    if (!state.hover) {
                         display = None.none
                     }
                 }
