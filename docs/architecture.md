@@ -66,6 +66,13 @@ Browser                                          Server
 
 The **observer pattern in kzen-lib** is what makes this work — both sides subscribe to the same event stream from their respective local stores. No diffing, no syncing logic beyond replaying the command.
 
+**Gotcha — `MirroredGraphStore.apply` runs local + remote in parallel.** The two `apply` calls are wrapped in sibling `coroutineScope.async { ... }` blocks, so the local branch — which calls `publishSuccess(event)` → every observer's `onCommandSuccess` — executes concurrently with the in-flight remote POST. An observer that responds to a notation event by issuing its own remote query to the server can therefore race the original POST: the server may not yet have applied the command when the query arrives.
+
+Two consequences:
+
+- Observers should compute derived state from the event payload + their own local cache only. Don't call back to the server inside `onCommandSuccess`. Concrete example: `VisualDataflowRepository.applySingular`'s `AddedObjectEvent` branch constructs `VisualVertexModel.empty` locally rather than calling `provider.inspectVertex`.
+- If an observer invalidates its cached state in response to an event, it must also publish the new state to *its* observers (typically the UI), or downstream consumers stay frozen on the pre-event model. The `if (host in models) publishModel(...)` gate in `VisualDataflowRepository.onCommandSuccess` is fine — but only because the current code never invalidates (it always `put`s an empty entry instead).
+
 ## 3. Backend execution model
 
 Subpackages of interest:
