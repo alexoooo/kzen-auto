@@ -11,12 +11,13 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.persistentMapOf
+import kotlin.time.Duration.Companion.milliseconds
 
 
 class VisualDataflowRepository(
-        private val visualDataflowProvider: VisualDataflowProvider
+    private val visualDataflowProvider: VisualDataflowProvider
 ):
-        LocalGraphStore.Observer
+    LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
@@ -46,8 +47,8 @@ class VisualDataflowRepository(
 
 
     private suspend fun publishBeforeExecution(
-            host: DocumentPath,
-            vertexLocation: ObjectLocation
+        host: DocumentPath,
+        vertexLocation: ObjectLocation
     ) {
         for (observer in observers) {
             observer.beforeDataflowExecution(host, vertexLocation)
@@ -56,8 +57,8 @@ class VisualDataflowRepository(
 
 
     private suspend fun publishModel(
-            host: DocumentPath,
-            model: VisualDataflowModel
+        host: DocumentPath,
+        model: VisualDataflowModel
     ) {
         for (observer in observers) {
             observer.onVisualDataflowModel(host, model)
@@ -69,14 +70,10 @@ class VisualDataflowRepository(
         event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
     ) {
         for (host in models.keys) {
-//            val model = modelOrInit(host)
-
-//            val model = models[host]!!
             val newModels = apply(host, event)
 
             if (models != newModels) {
                 models = newModels
-//                publishExecutionModel(host, models[host]!!)
                 if (host in models) {
                     publishModel(host, models[host]!!)
                 }
@@ -93,9 +90,9 @@ class VisualDataflowRepository(
     override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}
 
 
-    private suspend fun apply(
-            documentPath: DocumentPath,
-            event: NotationEvent
+    private fun apply(
+        documentPath: DocumentPath,
+        event: NotationEvent
     ): PersistentMap<DocumentPath, VisualDataflowModel> {
         return when (event) {
             is SingularNotationEvent ->
@@ -108,10 +105,10 @@ class VisualDataflowRepository(
     }
 
 
-    private suspend fun applySingular(
-            documentPath: DocumentPath,
-            currentModels: PersistentMap<DocumentPath, VisualDataflowModel>,
-            event: SingularNotationEvent
+    private fun applySingular(
+        documentPath: DocumentPath,
+        currentModels: PersistentMap<DocumentPath, VisualDataflowModel>,
+        event: SingularNotationEvent
     ): PersistentMap<DocumentPath, VisualDataflowModel> {
         if (documentPath != event.documentPath) {
             return currentModels
@@ -128,13 +125,10 @@ class VisualDataflowRepository(
                 currentModels.put(documentPath,
                         model.rename(event.objectLocation, event.newName))
 
-            is AddedObjectEvent -> {
-                val initialVertexModel =
-                        visualDataflowProvider.inspectVertex(documentPath, event.objectLocation)
-
+            is AddedObjectEvent ->
+                // Construct locally; calling provider.inspectVertex would race the parallel POST in MirroredGraphStore.apply (fresh vertex state is empty anyway).
                 currentModels.put(documentPath,
-                        model.put(event.objectLocation, initialVertexModel))
-            }
+                        model.put(event.objectLocation, VisualVertexModel.empty))
 
             is DeletedDocumentEvent ->
                 if (event.documentPath == documentPath) {
@@ -150,9 +144,9 @@ class VisualDataflowRepository(
     }
 
 
-    private suspend fun applyCompound(
-            documentPath: DocumentPath,
-            event: CompoundNotationEvent
+    private fun applyCompound(
+        documentPath: DocumentPath,
+        event: CompoundNotationEvent
     ): PersistentMap<DocumentPath, VisualDataflowModel> {
         val model = models[documentPath]!!
         val appliedWithDependentEvents = applyCompoundWithDependentEvents(
@@ -170,9 +164,9 @@ class VisualDataflowRepository(
 
 
     private fun applyCompoundWithDependentEvents(
-            documentPath: DocumentPath,
-            model: VisualDataflowModel,
-            event: CompoundNotationEvent
+        documentPath: DocumentPath,
+        model: VisualDataflowModel,
+        event: CompoundNotationEvent
     ): PersistentMap<DocumentPath, VisualDataflowModel> {
         if (documentPath != event.documentPath) {
             return models
@@ -180,7 +174,6 @@ class VisualDataflowRepository(
 
         return when (event) {
             is RenamedDocumentRefactorEvent -> {
-//                println("^^^^^ applyCompoundWithDependentEvents - $documentPath - $event")
                 val newModel = model.move(
                         event.removedUnderOldName.documentPath, event.createdWithNewName.destination)
 
@@ -197,7 +190,7 @@ class VisualDataflowRepository(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun get(
-            host: DocumentPath
+        host: DocumentPath
     ): VisualDataflowModel {
         val existing = models[host]
         if (existing != null) {
@@ -209,7 +202,7 @@ class VisualDataflowRepository(
 
 
     private suspend fun inspect(
-            host: DocumentPath
+        host: DocumentPath
     ): VisualDataflowModel {
         val model = visualDataflowProvider.inspectDataflow(host)
         models = models.put(host, model)
@@ -230,19 +223,19 @@ class VisualDataflowRepository(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun execute(
-            host: DocumentPath,
-            objectLocation: ObjectLocation,
-            waitBeforeRunningMillis: Int = 0,
-            waitAfterRunningMillis: Int = 0
+        host: DocumentPath,
+        objectLocation: ObjectLocation,
+        waitBeforeRunningMillis: Int = 0,
+        waitAfterRunningMillis: Int = 0
     ): VisualVertexTransition {
         if (waitBeforeRunningMillis > 0) {
-            delay(waitBeforeRunningMillis.toLong())
+            delay(waitBeforeRunningMillis.milliseconds)
         }
 
         willExecute(host, objectLocation)
 
         if (waitAfterRunningMillis > 0) {
-            delay(waitAfterRunningMillis.toLong())
+            delay(waitAfterRunningMillis.milliseconds)
         }
 
         val visualVertexTransition = visualDataflowProvider
@@ -255,8 +248,8 @@ class VisualDataflowRepository(
 
 
     private suspend fun willExecute(
-            host: DocumentPath,
-            objectLocation: ObjectLocation
+        host: DocumentPath,
+        objectLocation: ObjectLocation
     ) {
         val model = get(host)
 
@@ -277,12 +270,10 @@ class VisualDataflowRepository(
 
 
     private suspend fun didExecute(
-            host: DocumentPath,
-            objectLocation: ObjectLocation,
-            visualDataflowTransition: VisualVertexTransition
+        host: DocumentPath,
+        objectLocation: ObjectLocation,
+        visualDataflowTransition: VisualVertexTransition
     ) {
-//        println("^^^^^^ didExecute - $visualDataflowTransition")
-
         val model = get(host)
 
         val visualVertexModel = model.vertices[objectLocation]
@@ -321,19 +312,19 @@ class VisualDataflowRepository(
 
         for (loop in visualDataflowTransition.loop) {
             cursor = cursor.put(
-                    loop,
-                    updatedModel.vertices[loop]!!.copy(
-                            message = null
-                    ))
+                loop,
+                updatedModel.vertices[loop]!!.copy(
+                    message = null
+                ))
         }
 
         for (cleared in visualDataflowTransition.cleared) {
             cursor = cursor.put(
-                    cleared,
-                    updatedModel.vertices[cleared]!!.copy(
-                            message = null,
-                            epoch = 0
-                    ))
+                cleared,
+                updatedModel.vertices[cleared]!!.copy(
+                    message = null,
+                    epoch = 0
+                ))
         }
 
         return cursor

@@ -328,7 +328,7 @@ class GraphController(
                     css {
                         fontSize = 1.5.em
                     }
-                    +"Empty graph, please add a source from the toolbar (above)"
+                    +"Empty time series, please add a source from the toolbar (above)"
                 }
 
                 insertionPoint(0, 0)
