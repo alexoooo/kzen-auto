@@ -97,9 +97,9 @@ class KzenAutoContext(
 
     val yamlParser = YamlNotationParser()
 
-    val graphDefiner = GraphDefiner()
-    val graphCreator = GraphCreator()
-    val notationReducer = NotationReducer()
+    val graphDefiner = GraphDefiner
+    val graphCreator = GraphCreator
+    val notationReducer = NotationReducer
 
     val graphStore = DirectGraphStore(
         notationMedia,

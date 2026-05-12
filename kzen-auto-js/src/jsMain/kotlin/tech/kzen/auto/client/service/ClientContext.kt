@@ -38,9 +38,9 @@ object ClientContext {
 
     val notationMetadataReader = NotationMetadataReader()
 
-    val graphDefiner = GraphDefiner()
-    val graphCreator = GraphCreator()
-    val notationReducer = NotationReducer()
+    val graphDefiner = GraphDefiner
+    val graphCreator = GraphCreator
+    val notationReducer = NotationReducer
 
     val seededNotationMedia = SeededNotationMedia(
             restNotationMedia)

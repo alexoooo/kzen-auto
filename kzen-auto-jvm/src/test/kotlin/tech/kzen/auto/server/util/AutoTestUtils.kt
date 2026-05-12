@@ -73,7 +73,7 @@ object AutoTestUtils {
     fun graphDefinitionAttempt(graphNotation: GraphNotation): GraphDefinitionAttempt {
         val graphMetadata = graphMetadata(graphNotation)
         val graphStructure = GraphStructure(graphNotation, graphMetadata)
-        return GraphDefiner().tryDefine(graphStructure)
+        return GraphDefiner.tryDefine(graphStructure)
     }
 
 
