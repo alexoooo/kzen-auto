@@ -1,20 +1,32 @@
+@file:JsModule("cropperjs")
 package tech.kzen.auto.client.wrap.cropper
 
 import web.html.HTMLCanvasElement
+import web.html.HTMLElement
 import web.html.HTMLImageElement
 import kotlin.js.Json
+import kotlin.js.Promise
 
 
-@JsModule("cropperjs")
+@JsName("default")
 external class Cropper(
         imageElement: HTMLImageElement,
-        options: Json
+        options: Json = definedExternally
 ) {
-    // https://github.com/fengyuanchen/cropperjs/blob/master/README.md#destroy
-    fun destroy()
+    fun getCropperCanvas(): HTMLElement?
 
-    // https://github.com/fengyuanchen/cropperjs/blob/master/README.md#getcroppedcanvasoptions
-    fun getCroppedCanvas(optional: Json): HTMLCanvasElement
+    // https://github.com/fengyuanchen/cropperjs/blob/main/packages/cropperjs/README.md#getcropperselection
+    fun getCropperSelection(): CropperSelection?
+
+    fun destroy()
+}
+
+
+external class CropperSelection: HTMLElement {
+    var initialCoverage: Double
+
+    @JsName("\$toCanvas")
+    fun toCanvas(options: Json = definedExternally): Promise<HTMLCanvasElement>
 }
 
 

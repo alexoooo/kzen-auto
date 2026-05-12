@@ -24,13 +24,17 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.common.util.ExceptionUtils
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.time.Clock
 
 
 class ServerLogicController(
     private val graphStore: LocalGraphStore,
     private val graphCreator: GraphCreator
-): LogicController {
+):
+    LogicController
+{
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val logger = LoggerFactory.getLogger(ServerLogicController::class.java)
@@ -59,6 +63,12 @@ class ServerLogicController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var stateOrNull: LogicState? = null
+
+    private val executor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "ServerLogicController-execution").apply {
+            isDaemon = true
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -271,7 +281,7 @@ class ServerLogicController(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ):
-            LogicRunResponse
+        LogicRunResponse
     {
         val state = stateOrNull
             ?: return LogicRunResponse.NotFound
@@ -296,7 +306,7 @@ class ServerLogicController(
 
         state.running = true
 
-        Thread {
+        executor.execute {
             val result =
                 try {
                     state.frame.execution.continueOrStart(
@@ -307,21 +317,24 @@ class ServerLogicController(
                     LogicResultFailed(ExceptionUtils.message(t))
                 }
 
-            state.running = false
+            synchronized(this@ServerLogicController) {
+                state.running = false
 
-            if (result.isTerminal()) {
-                state.frame.execution.close(result is LogicResultFailed)
-                clearState()
+                if (result.isTerminal()) {
+                    state.frame.execution.close(result is LogicResultFailed)
+                    clearState()
+                }
+                else {
+                    state.paused = true
+                }
             }
-            else {
-                state.paused = true
-            }
-        }.start()
+        }
 
         return LogicRunResponse.Submitted
     }
 
 
+    @Synchronized
     override fun step(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
@@ -351,7 +364,7 @@ class ServerLogicController(
 
         val graphDefinitionAttempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
 
-        Thread {
+        executor.execute {
             val result =
                 try {
                     state.frame.execution.continueOrStart(
@@ -362,13 +375,15 @@ class ServerLogicController(
                     LogicResultFailed(ExceptionUtils.message(t))
                 }
 
-            state.stepping = false
+            synchronized(this@ServerLogicController) {
+                state.stepping = false
 
-            if (result.isTerminal()) {
-                state.frame.execution.close(result is LogicResultFailed)
-                clearState()
+                if (result.isTerminal()) {
+                    state.frame.execution.close(result is LogicResultFailed)
+                    clearState()
+                }
             }
-        }.start()
+        }
 
         return LogicRunResponse.Submitted
     }
@@ -399,5 +414,14 @@ class ServerLogicController(
 
         // NB: hit to GCs to give memory back to the OS
         System.gc()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun close() {
+        executor.shutdown()
+        if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+            executor.shutdownNow()
+        }
     }
 }

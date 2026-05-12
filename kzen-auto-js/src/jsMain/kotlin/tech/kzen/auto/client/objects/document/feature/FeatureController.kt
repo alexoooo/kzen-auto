@@ -5,7 +5,7 @@ import js.objects.unsafeJso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size
-import react.*
+import react.*
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.createRef
 import react.dom.html.ReactHTML.br
@@ -276,15 +276,15 @@ class FeatureController(
         val detail = state.detail
                 ?: return
 
-        val canvas = cropperWrapper.current!!.getCroppedCanvas()
+        cropperWrapper.current!!.getCroppedCanvas().then { canvas ->
+            setState {
+                capturedDataUrl = canvas.toDataURL()
 
-        setState {
-            capturedDataUrl = canvas.toDataURL()
+                requestingScreenshot = true
+            }
 
-            requestingScreenshot = true
+            doCropAndSave(detail)
         }
-
-        doCropAndSave(detail)
     }
 
 

@@ -4,7 +4,7 @@ import emotion.react.css
 import react.*
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
-import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
 import web.cssom.Position
 import web.cssom.number
@@ -12,6 +12,7 @@ import web.cssom.pct
 import web.events.CustomEvent
 import web.html.HTMLCanvasElement
 import web.html.HTMLImageElement
+import kotlin.js.Promise
 import kotlin.js.json
 
 
@@ -32,15 +33,31 @@ class CropperWrapper:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-//        console.log("cropperjs", cropperjs)
+        cropper = Cropper(imageElement.current!!)
 
-        val options = json()
+        // <cropper-canvas> defaults to min-height:100px; stretch it to fill the wrapper div.
+        // Note: `let` on `asDynamic()` becomes a JS member call at runtime (no `.let` on raw JS objects),
+        // so assign style fields directly on the dynamic receiver instead.
+        val canvas = cropper?.getCropperCanvas()
+        if (canvas != null) {
+            val style = canvas.asDynamic().style
+            style.width = "100%"
+            style.height = "80%"
+        }
 
-//        options["aspectRatio"] = Double.NaN
-        options["autoCropArea"] = 0.05
-        options["crop"] = props.crop
+        val selection = cropper?.getCropperSelection()
+            ?: return
 
-        cropper = Cropper(imageElement.current!!, options)
+        selection.initialCoverage = 0.05
+
+        // CropperSelection dispatches a `change` CustomEvent with detail = CropperDetail.
+        // kotlin-wrappers' typed addEventListener requires HasTargets which CustomEvent doesn't implement,
+        // so register the raw listener via dynamic to keep the existing CustomEvent<CropperDetail> contract.
+        selection.asDynamic().addEventListener("change") { event: dynamic ->
+            @OptIn(ExperimentalWasmJsInterop::class)
+            @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
+            props.crop(event.unsafeCast<CustomEvent<CropperDetail>>())
+        }
     }
 
 
@@ -52,15 +69,15 @@ class CropperWrapper:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun getCroppedCanvas(): HTMLCanvasElement {
+    fun getCroppedCanvas(): Promise<HTMLCanvasElement> {
         val options = json()
 
-        // https://github.com/fengyuanchen/cropperjs/blob/master/README.md#getcroppedcanvasoptions
+        // https://github.com/fengyuanchen/cropperjs/blob/main/packages/element-selection/README.md#tocanvasoptions
         options["imageSmoothingEnabled"] = false
         options["maxWidth"] = 4096
         options["maxHeight"] = 4096
 
-        return cropper!!.getCroppedCanvas(options)
+        return cropper!!.getCropperSelection()!!.toCanvas(options)
     }
 
 

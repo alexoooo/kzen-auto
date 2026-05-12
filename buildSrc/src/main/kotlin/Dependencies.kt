@@ -22,7 +22,7 @@ const val bloomFilterVersion = "0.9.0"
 const val commonsIoVersion = "2.22.0"
 const val migzVersion = "2.0.beta-1"
 
-const val seleniumVersion = "4.41.0"
+const val seleniumVersion = "4.43.0"
 const val webdrivermanagerVersion = "6.3.4"
 
 

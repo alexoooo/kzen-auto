@@ -10,7 +10,9 @@ import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
-interface LogicController {
+interface LogicController
+    : AutoCloseable
+{
     fun status(): LogicStatus
 
 
@@ -43,10 +45,4 @@ interface LogicController {
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt? = null
     ): LogicRunResponse
-
-
-//    suspend fun startStep(
-//        root: ObjectLocation,
-//        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt? = null
-//    ): LogicRunId?
 }

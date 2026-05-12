@@ -42,11 +42,14 @@ import tech.kzen.lib.common.service.store.DirectGraphStore
 import tech.kzen.lib.server.notation.ClasspathNotationMedia
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.GradleLocator
+import java.lang.AutoCloseable
 
 
 class KzenAutoContext(
     val config: KzenAutoConfig
-) {
+):
+    AutoCloseable
+{
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         init {
@@ -194,7 +197,8 @@ class KzenAutoContext(
     }
 
 
-    fun close() {
+    override fun close() {
+        serverLogicController.close()
         webDriverContext.quit()
     }
 }
