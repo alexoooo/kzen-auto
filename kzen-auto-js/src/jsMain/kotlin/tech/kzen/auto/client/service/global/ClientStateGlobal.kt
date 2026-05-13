@@ -57,52 +57,13 @@ class ClientStateGlobal:
         val selected = parameters.get(runningKey)?.let { DocumentPath.parse(it) }
         if (selected != null) {
             async {
-//                imperativeModel = ClientContext.executionRepository.executionModel(
-//                        selected, graphDefinitionAttempt!!.graphStructure)
                 publishIfReady()
             }
         }
         else {
-//            val isScript = ScriptDocument.isScript(
-//                    graphDefinitionAttempt!!.successful.graphStructure.graphNotation.documents.values[documentPath]!!)
-//
-//            if (documentPath != null && isScript) {
-//                async {
-//                    ClientContext.executionRepository.executionModel(
-//                            documentPath, graphDefinitionAttempt!!.successful.graphStructure)
-//                    publishIfReady()
-//                }
-//            }
-//            else {
-                publishIfReady()
-//            }
+            publishIfReady()
         }
     }
-
-
-//    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
-//        // TODO
-//    }
-//
-//
-//    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel?) {
-////        console.log("^^ onExecutionModel - $host - $executionModel")
-//
-////        imperativeModels[host] = executionModel
-////        imperativeModel = executionModel
-//
-////        val modifiedActive =
-////            if (executionModel?.isActive() == true) {
-////                runningHosts + host
-////            }
-////            else {
-////                runningHosts - host
-////            }
-////
-////        runningHosts = modifiedActive
-//
-//        publishIfReady()
-//    }
 
 
     override suspend fun onCommandFailure(
@@ -115,26 +76,6 @@ class ClientStateGlobal:
     override suspend fun onCommandSuccess(
         event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
     ) {
-//        if ((event is DeletedDocumentEvent || event is RenamedDocumentRefactorEvent)) {
-//            runningHosts = runningHosts - event.documentPath
-//        }
-
-//        console.log("^^ onCommandSuccess - $event")
-
-//        when (event) {
-//            is RenamedDocumentRefactorEvent -> {
-//                if (event.removedUnderOldName.documentPath == state.value?.documentPath) {
-//                    val newLocation =
-//                            state.value!!.copy(documentPath = event.createdWithNewName.destination)
-//
-//                    setState {
-//                        value = newLocation
-//                        renaming = true
-//                    }
-//                }
-//            }
-//        }
-
         graphDefinitionAttempt = graphDefinition
         publishIfReady()
     }
@@ -177,8 +118,6 @@ class ClientStateGlobal:
 
         val logicState = clientLogicState
             ?: return
-
-//        val selected = navigation.requestParams.get(runningKey)?.let { DocumentPath.parse(it) }
 
         val nextSessionState = ClientState(
             definition,

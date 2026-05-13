@@ -4,7 +4,7 @@ import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.common.util.digest.Digestible
 
 
-data class HeaderListing(
+class HeaderListing(
     val values: List<HeaderLabel>
 ): Digestible {
     //-----------------------------------------------------------------------------------------------------------------
@@ -126,5 +126,10 @@ data class HeaderListing(
         other as HeaderListing
 
         return digest() == other.digest()
+    }
+
+
+    override fun toString(): String {
+        return "HeaderListing(values=$values)"
     }
 }

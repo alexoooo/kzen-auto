@@ -25,7 +25,6 @@ object CommonRestApi {
 
     private const val commandAttributePrefix = "${commandPrefix}attribute/"
     const val commandAttributeUpsert = "${commandAttributePrefix}upsert"
-//    const val commandAttributeClear = "${commandAttributePrefix}clear"
     const val commandAttributeUpdateIn = "${commandAttributePrefix}update-in"
     const val commandAttributeUpdateAllNestingsIn = "${commandAttributePrefix}update-nestings-in"
     const val commandAttributeUpdateAllValuesIn = "${commandAttributePrefix}update-values-in"

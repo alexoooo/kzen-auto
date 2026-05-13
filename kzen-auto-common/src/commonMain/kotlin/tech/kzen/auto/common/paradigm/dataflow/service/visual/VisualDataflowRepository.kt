@@ -10,7 +10,9 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.PersistentMap
+import tech.kzen.lib.platform.collect.PersistentSet
 import tech.kzen.lib.platform.collect.persistentMapOf
+import tech.kzen.lib.platform.collect.persistentSetOf
 import kotlin.time.Duration.Companion.milliseconds
 
 
@@ -27,13 +29,13 @@ class VisualDataflowRepository(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val observers = mutableSetOf<Observer>()
+    private var observers: PersistentSet<Observer> = persistentSetOf()
     private var models: PersistentMap<DocumentPath, VisualDataflowModel> = persistentMapOf()
 
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun observe(observer: Observer) {
-        observers.add(observer)
+        observers = observers.add(observer)
 
         for ((host, model) in models) {
             observer.onVisualDataflowModel(host, model)
@@ -42,7 +44,7 @@ class VisualDataflowRepository(
 
 
     fun unobserve(observer: Observer) {
-        observers.removeAll { it == observer }
+        observers = observers.remove(observer)
     }
 
 
@@ -119,24 +121,19 @@ class VisualDataflowRepository(
         return when (event) {
             is RemovedObjectEvent ->
                 currentModels.put(documentPath,
-                        model.remove(event.objectLocation))
+                    model.remove(event.objectLocation))
 
             is RenamedObjectEvent ->
                 currentModels.put(documentPath,
-                        model.rename(event.objectLocation, event.newName))
+                    model.rename(event.objectLocation, event.newName))
 
             is AddedObjectEvent ->
                 // Construct locally; calling provider.inspectVertex would race the parallel POST in MirroredGraphStore.apply (fresh vertex state is empty anyway).
                 currentModels.put(documentPath,
-                        model.put(event.objectLocation, VisualVertexModel.empty))
+                    model.put(event.objectLocation, VisualVertexModel.empty))
 
             is DeletedDocumentEvent ->
-                if (event.documentPath == documentPath) {
-                    currentModels.remove(documentPath)
-                }
-                else {
-                    currentModels
-                }
+                currentModels.remove(documentPath)
 
             else ->
                 currentModels

@@ -20,7 +20,7 @@ data class VisualVertexTransition(
         private const val stateChangeKey = "stateChange"
         private const val messageKey = "message"
         private const val hasNextKey = "hasNext"
-        private const val epochKey = "epoch"
+        private const val iterationKey = "iteration"
         private const val loopKey = "loop"
         private const val clearedKey = "cleared"
         private const val errorKey = "error"
@@ -31,7 +31,7 @@ data class VisualVertexTransition(
                 stateChangeKey to model.stateChange?.toJsonCollection(),
                 messageKey to model.message?.toJsonCollection(),
                 hasNextKey to model.hasNext,
-                epochKey to model.iteration,
+                iterationKey to model.iteration,
                 loopKey to model.loop.map { it.asString() },
                 clearedKey to model.cleared.map { it.asString() },
                 errorKey to model.error
@@ -51,7 +51,7 @@ data class VisualVertexTransition(
                     ExecutionValue.fromJsonCollection(it as Map<String, Any>)
                 },
                 collection[hasNextKey] as Boolean,
-                collection[epochKey] as Int,
+                collection[iterationKey] as Int,
                 (collection[loopKey] as List<String>).map { ObjectLocation.parse(it) },
                 (collection[clearedKey] as List<String>).map { ObjectLocation.parse(it) },
                 collection[errorKey] as? String

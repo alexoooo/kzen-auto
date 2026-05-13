@@ -334,7 +334,6 @@ class ModelTaskRepository(
             addTerminated(snapshot)
 
             completeLatch.countDown()
-            Thread.currentThread().interrupt()
         }
 
 

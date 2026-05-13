@@ -20,7 +20,6 @@ suspend fun httpGet(url: String): String = suspendCoroutine { c ->
     xhr.onreadystatechange = {
         if (xhr.readyState == XMLHttpRequest.DONE) {
             if (xhr.status / 100 == 2) {
-//                console.log("^^^ httpGet - xhr.response", xhr.response)
                 c.resume(xhr.response as String)
             }
             else {
@@ -107,7 +106,6 @@ suspend fun httpDelete(url: String): String = suspendCoroutine { c ->
     xhr.onreadystatechange = {
         if (xhr.readyState == XMLHttpRequest.DONE) {
             if (xhr.status / 100 == 2) {
-//                console.log("^^^ httpGet - xhr.response", xhr.response)
                 c.resume(xhr.response as String)
             }
             else {

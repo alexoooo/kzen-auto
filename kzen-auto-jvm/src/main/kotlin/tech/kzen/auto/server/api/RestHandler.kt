@@ -751,13 +751,7 @@ class RestHandler(
     //-----------------------------------------------------------------------------------------------------------------
     private fun applyCommand(command: NotationCommand): Digest {
         return runBlocking {
-            try {
-                graphStore.apply(command)
-            }
-            catch (e: Exception) {
-                e.printStackTrace()
-            }
-
+            graphStore.apply(command)
             graphStore.digest()
         }
     }
