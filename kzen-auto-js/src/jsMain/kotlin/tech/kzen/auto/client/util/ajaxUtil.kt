@@ -12,6 +12,9 @@ import kotlin.coroutines.*
 import kotlin.js.Promise
 
 
+class HttpStatusException(val status: Int) : RuntimeException("HTTP error: $status")
+
+
 suspend fun httpGet(url: String): String = suspendCoroutine { c ->
     val xhr = XMLHttpRequest()
     xhr.onreadystatechange = {
@@ -21,7 +24,7 @@ suspend fun httpGet(url: String): String = suspendCoroutine { c ->
                 c.resume(xhr.response as String)
             }
             else {
-                c.resumeWithException(RuntimeException("HTTP error: ${xhr.status}"))
+                c.resumeWithException(HttpStatusException(xhr.status.toInt()))
             }
         }
         null
@@ -40,7 +43,7 @@ suspend fun httpPutForm(url: String, vararg parameters: Pair<String, String>): S
                 c.resume(xhr.response as String)
             }
             else {
-                c.resumeWithException(RuntimeException("HTTP error: ${xhr.status}"))
+                c.resumeWithException(HttpStatusException(xhr.status.toInt()))
             }
         }
         null
@@ -70,7 +73,7 @@ suspend fun httpGetBytes(url: String): ByteArray = suspendCoroutine { c ->
                 c.resume(responseBytes)
             }
             else {
-                c.resumeWithException(RuntimeException("HTTP error: ${xhr.status}"))
+                c.resumeWithException(HttpStatusException(xhr.status.toInt()))
             }
         }
         null
@@ -89,7 +92,7 @@ suspend fun httpPostBytes(url: String, body: ByteArray): String = suspendCorouti
                 c.resume(xhr.response as String)
             }
             else {
-                c.resumeWithException(RuntimeException("HTTP error: ${xhr.status}"))
+                c.resumeWithException(HttpStatusException(xhr.status.toInt()))
             }
         }
         null
@@ -108,7 +111,7 @@ suspend fun httpDelete(url: String): String = suspendCoroutine { c ->
                 c.resume(xhr.response as String)
             }
             else {
-                c.resumeWithException(RuntimeException("HTTP error: ${xhr.status}"))
+                c.resumeWithException(HttpStatusException(xhr.status.toInt()))
             }
         }
         null

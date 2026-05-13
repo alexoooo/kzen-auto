@@ -176,7 +176,9 @@ private fun Routing.routeTask(
     get(CommonRestApi.taskQuery) {
         val response = restHandler.taskQuery(call.parameters)
         if (response == null) {
-            call.response.status(HttpStatusCode.NoContent)
+            call.respondText(
+                "Task not found",
+                status = HttpStatusCode.NotFound)
         }
         else {
             call.respond(response)
@@ -185,7 +187,9 @@ private fun Routing.routeTask(
     get(CommonRestApi.taskCancel) {
         val response = restHandler.taskCancel(call.parameters)
         if (response == null) {
-            call.response.status(HttpStatusCode.NoContent)
+            call.respondText(
+                "Task not found",
+                status = HttpStatusCode.NotFound)
         }
         else {
             call.respond(response)

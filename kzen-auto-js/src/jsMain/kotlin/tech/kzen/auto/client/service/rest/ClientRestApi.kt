@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.service.rest
 
+import tech.kzen.auto.client.util.HttpStatusException
 import tech.kzen.auto.client.util.httpGet
 import tech.kzen.auto.client.util.httpGetBytes
 import tech.kzen.auto.client.util.httpPostBytes
@@ -833,7 +834,15 @@ class ClientRestApi(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): Json? {
-        val response = getOrPut(commandPath, *parameters)
+        val response = try {
+            getOrPut(commandPath, *parameters)
+        }
+        catch (e: HttpStatusException) {
+            if (e.status == 404) {
+                return null
+            }
+            throw e
+        }
         return when {
             response.isEmpty() -> null
             else -> JSON.parse(response)
