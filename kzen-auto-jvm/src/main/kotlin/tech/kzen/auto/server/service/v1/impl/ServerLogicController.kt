@@ -410,8 +410,6 @@ class ServerLogicController(
 
         state.frame.control.close()
 
-        LogicTraceStore.evict(state.runId)
-
         stateOrNull = null
     }
 

@@ -39,8 +39,8 @@ class FormulaStep(
     companion object {
         private val logger = LoggerFactory.getLogger(FormulaStep::class.java)
 
-        private const val inferredTypePrefix = "inferred type is "
-        private const val inferredTypeSuffix = " but "
+        private const val inferredTypePrefix = "actual '"
+        private const val inferredTypeSuffix = "'"
 
         private const val literalTypePrefix = "The "
         private const val literalTypeSuffix = " literal "

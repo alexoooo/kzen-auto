@@ -1,0 +1,13 @@
+main:
+  is: Sequence
+  steps:
+    - main.steps/StringFormula
+    - main.steps/IntFormula
+
+main.steps/StringFormula:
+  is: FormulaStep
+  code: '"hello"'
+
+main.steps/IntFormula:
+  is: FormulaStep
+  code: '42'

@@ -77,6 +77,10 @@ object LogicTraceStore:
         runExecutionId: LogicRunExecutionId,
         objectLocation: ObjectLocation
     ): TraceBuffer {
+        val previous = objectLocationHistory[objectLocation]
+        if (previous != null && previous.logicRunId != runExecutionId.logicRunId) {
+            evict(previous.logicRunId)
+        }
         objectLocationHistory[objectLocation] = runExecutionId
 
         val runExecution = RunExecution(runExecutionId)
