@@ -6,17 +6,15 @@ import mui.material.InputAdornmentPosition
 import mui.material.Size
 import mui.material.TextField
 import mui.system.sx
-import react.*
-import tech.kzen.auto.client.wrap.react
-import react.dom.onChange
-import tech.kzen.auto.client.wrap.setState
+import react.ChildrenBuilder
+import react.Props
+import react.State
+import react.create
+import react.dom.onChange
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.FunctionWithDebounce
-import tech.kzen.auto.client.wrap.InputProps
-import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.lodash
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.SearchIcon
 import tech.kzen.auto.common.objects.document.report.spec.input.InputBrowserSpec
 import web.cssom.em
@@ -79,6 +77,12 @@ class InputBrowserFilterController(
             submitDebounce.cancel()
             submitEdit()
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun componentWillUnmount() {
+        submitDebounce.flush()
     }
 
 

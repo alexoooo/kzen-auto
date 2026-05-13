@@ -3,9 +3,8 @@ package tech.kzen.auto.client.objects.document.report.filter
 import emotion.react.css
 import mui.material.*
 import mui.material.Size
-import react.Key
-
 import react.ChildrenBuilder
+import react.Key
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.dom.html.ReactHTML.table
@@ -14,7 +13,6 @@ import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.th
 import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterStore
@@ -22,6 +20,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.material.ExpandLessIcon
 import tech.kzen.auto.client.wrap.material.ExpandMoreIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing

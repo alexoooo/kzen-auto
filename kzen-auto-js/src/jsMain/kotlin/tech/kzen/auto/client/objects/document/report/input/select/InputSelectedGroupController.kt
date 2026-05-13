@@ -80,6 +80,12 @@ class InputSelectedGroupController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun componentWillUnmount() {
+        submitDebounce.flush()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         TextField {
             size = Size.small

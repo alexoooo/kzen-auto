@@ -8,7 +8,6 @@ import mui.system.sx
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputState
@@ -20,6 +19,7 @@ import tech.kzen.auto.client.wrap.iconify.vaadinIconTable
 import tech.kzen.auto.client.wrap.iconify.vaadinIconUploadAlt
 import tech.kzen.auto.client.wrap.material.SaveAltIcon
 import tech.kzen.auto.client.wrap.material.SettingsIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus

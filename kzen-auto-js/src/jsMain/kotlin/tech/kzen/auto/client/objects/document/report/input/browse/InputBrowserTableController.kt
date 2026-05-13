@@ -3,9 +3,8 @@ package tech.kzen.auto.client.objects.document.report.input.browse
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.Checkbox
-import react.Key
-
 import react.ChildrenBuilder
+import react.Key
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.input
 import react.dom.html.ReactHTML.table
@@ -14,13 +13,13 @@ import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.th
 import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.input.ReportInputController
 import tech.kzen.auto.client.objects.document.report.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.CheckIcon
 import tech.kzen.auto.client.wrap.material.FolderOpenIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation

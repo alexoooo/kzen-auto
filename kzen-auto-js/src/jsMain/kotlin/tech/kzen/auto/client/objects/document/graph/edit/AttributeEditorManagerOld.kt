@@ -2,9 +2,9 @@ package tech.kzen.auto.client.objects.document.graph.edit
 
 import react.ChildrenBuilder
 import react.State
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata

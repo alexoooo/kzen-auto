@@ -183,6 +183,12 @@ class AttributePathValueEditorOld(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun componentWillUnmount() {
+        submitDebounce.flush()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun onValueChange(newValue: String) {
         setState {
             value = newValue

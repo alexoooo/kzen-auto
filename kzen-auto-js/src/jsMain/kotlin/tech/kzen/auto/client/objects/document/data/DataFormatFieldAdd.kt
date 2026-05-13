@@ -4,8 +4,10 @@ import emotion.react.css
 import mui.material.IconButton
 import mui.material.Size
 import mui.material.TextField
-import react.*
-import tech.kzen.auto.client.wrap.react
+import react.ChildrenBuilder
+import react.Props
+import react.ReactNode
+import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.onChange
 import tech.kzen.auto.client.objects.ProjectController
@@ -14,6 +16,7 @@ import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.data.spec.FieldFormatListSpec
 import tech.kzen.lib.common.model.location.ObjectLocation

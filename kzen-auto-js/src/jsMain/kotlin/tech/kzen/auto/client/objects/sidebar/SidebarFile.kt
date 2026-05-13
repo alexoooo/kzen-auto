@@ -7,9 +7,6 @@ import mui.material.Menu
 import mui.material.MenuItem
 import mui.system.sx
 import react.*
-
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.createRef
 import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -18,10 +15,12 @@ import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.material.EditIcon
 import tech.kzen.auto.client.wrap.material.MoreVertIcon
 import tech.kzen.auto.client.wrap.material.iconClassForName
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions

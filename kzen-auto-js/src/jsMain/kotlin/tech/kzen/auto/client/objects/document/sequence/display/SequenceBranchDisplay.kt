@@ -3,16 +3,12 @@ package tech.kzen.auto.client.objects.document.sequence.display
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.IconButton
-import react.Key
-
 import react.ChildrenBuilder
-
+import react.Key
 import react.Props
-
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.sequence.SequenceController
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.service.ClientContext
@@ -23,6 +19,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.material.ArrowDownwardIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation

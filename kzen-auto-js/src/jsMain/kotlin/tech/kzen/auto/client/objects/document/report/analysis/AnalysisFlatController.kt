@@ -3,12 +3,9 @@ package tech.kzen.auto.client.objects.document.report.analysis
 import csstype.PropertiesBuilder
 import emotion.react.css
 import js.objects.unsafeJso
-import react.Key
-
 import react.ChildrenBuilder
-
+import react.Key
 import react.Props
-
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.table
@@ -17,12 +14,12 @@ import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.th
 import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.CheckIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisFlatDataSpec
 import tech.kzen.lib.common.model.location.ObjectLocation

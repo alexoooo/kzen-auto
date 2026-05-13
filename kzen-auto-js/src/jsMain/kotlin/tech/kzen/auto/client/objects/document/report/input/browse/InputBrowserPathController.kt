@@ -6,15 +6,12 @@ import mui.material.IconButton
 import mui.material.Size
 import mui.material.TextField
 import mui.system.sx
-import react.Key
-
 import react.ChildrenBuilder
-
+import react.Key
 import react.ReactNode
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.dom.onChange
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -22,6 +19,7 @@ import tech.kzen.auto.client.wrap.material.ArrowForwardIosIcon
 import tech.kzen.auto.client.wrap.material.CancelIcon
 import tech.kzen.auto.client.wrap.material.EditIcon
 import tech.kzen.auto.client.wrap.material.SaveIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.location.ObjectLocation

@@ -5,9 +5,10 @@ import js.objects.unsafeJso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size
-import react.*
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.createRef
+import react.ChildrenBuilder
+import react.Props
+import react.RefObject
+import react.State
 import react.dom.html.ReactHTML.br
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.hr
@@ -19,11 +20,13 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.cropper.CropperDetail
 import tech.kzen.auto.client.wrap.cropper.CropperWrapper
 import tech.kzen.auto.client.wrap.material.CameraAltIcon
 import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.material.RefreshIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.lib.common.exec.BinaryExecutionValue

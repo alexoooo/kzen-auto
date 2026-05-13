@@ -2,12 +2,9 @@ package tech.kzen.auto.client.objects.document.report.input.select
 
 import emotion.react.css
 import mui.material.Checkbox
-import react.Key
-
 import react.ChildrenBuilder
-
+import react.Key
 import react.Props
-
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.input

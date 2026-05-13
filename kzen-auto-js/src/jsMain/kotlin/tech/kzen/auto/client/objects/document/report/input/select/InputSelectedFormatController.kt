@@ -5,18 +5,12 @@ import kotlinx.browser.document
 import mui.material.InputLabel
 import mui.system.sx
 import react.ChildrenBuilder
-
-import tech.kzen.auto.client.wrap.setState
 import react.State
-
-import tech.kzen.auto.client.wrap.setState
 import react.dom.html.ReactHTML.span
-
-import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.objects.document.report.input.select.model.InputSelectedState
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate

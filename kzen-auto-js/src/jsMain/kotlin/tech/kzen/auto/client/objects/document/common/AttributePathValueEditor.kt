@@ -95,6 +95,7 @@ class AttributePathValueEditor(
 
     override fun componentWillUnmount() {
         ClientContext.clientStateGlobal.unobserve(this)
+        submitDebounce.flush()
     }
 
 

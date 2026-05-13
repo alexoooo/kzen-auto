@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.model
 
 import kotlinx.coroutines.delay
-import kotlin.time.Instant
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterStore
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaStore
@@ -17,6 +16,7 @@ import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
+import kotlin.time.Instant
 
 
 class ReportStore: ClientStateGlobal.Observer {

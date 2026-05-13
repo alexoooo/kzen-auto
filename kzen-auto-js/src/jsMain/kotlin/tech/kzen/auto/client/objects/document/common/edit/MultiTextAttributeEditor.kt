@@ -3,16 +3,11 @@ package tech.kzen.auto.client.objects.document.common.edit
 import mui.material.InputBaseProps
 import mui.material.Size
 import mui.material.TextField
-import react.ChildrenBuilder
-import tech.kzen.auto.client.wrap.setState
-import react.Props
-import tech.kzen.auto.client.wrap.setState
-import react.ReactNode
-import tech.kzen.auto.client.wrap.setState
-import react.State
-import tech.kzen.auto.client.wrap.setState
-import react.dom.onChange
-import tech.kzen.auto.client.wrap.setState
+import react.ChildrenBuilder
+import react.Props
+import react.ReactNode
+import react.State
+import react.dom.onChange
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
@@ -94,6 +89,12 @@ class MultiTextAttributeEditor(
         if (state.pending) {
             submitEdit()
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun componentWillUnmount() {
+        submitDebounce.flush()
     }
 
 

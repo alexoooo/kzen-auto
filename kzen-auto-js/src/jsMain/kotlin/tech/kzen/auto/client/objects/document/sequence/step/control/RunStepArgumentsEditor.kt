@@ -5,13 +5,10 @@ import js.objects.unsafeJso
 import kotlinx.browser.document
 import mui.material.IconButton
 import mui.material.InputLabel
-import react.Key
-
 import react.ChildrenBuilder
-
+import react.Key
 import react.State
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.service.ClientContext
@@ -20,6 +17,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.RemoveCircleOutlineIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState

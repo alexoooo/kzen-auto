@@ -4,7 +4,6 @@ import emotion.react.css
 import react.ChildrenBuilder
 import react.Props
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.report.analysis.ReportAnalysisController
@@ -17,6 +16,7 @@ import tech.kzen.auto.client.objects.document.report.output.ReportOutputControll
 import tech.kzen.auto.client.objects.document.report.preview.ReportPreviewController
 import tech.kzen.auto.client.objects.document.report.run.ReportRunController
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.lib.common.model.location.ObjectLocation

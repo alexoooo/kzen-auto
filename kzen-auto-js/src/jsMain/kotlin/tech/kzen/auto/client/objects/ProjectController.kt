@@ -4,9 +4,10 @@ import emotion.react.css
 import kotlinx.browser.window
 import kotlinx.coroutines.delay
 import org.w3c.dom.events.Event
-import react.*
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.createRef
+import react.ChildrenBuilder
+import react.Props
+import react.RefObject
+import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.StageController
@@ -16,6 +17,8 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.createRef
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt

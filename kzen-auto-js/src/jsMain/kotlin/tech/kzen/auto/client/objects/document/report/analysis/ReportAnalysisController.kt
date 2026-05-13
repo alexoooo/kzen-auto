@@ -10,7 +10,6 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.objects.document.report.analysis.pivot.AnalysisPivotController
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
@@ -21,6 +20,7 @@ import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconLayout
 import tech.kzen.auto.client.wrap.iconify.vaadinIconTable
 import tech.kzen.auto.client.wrap.material.TableChartIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec

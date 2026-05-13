@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.objects.document.common.attribute
 
-import react.*
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.createRef
+import react.ChildrenBuilder
+import react.RefObject
+import react.State
 import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
@@ -11,6 +11,8 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.createRef
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation

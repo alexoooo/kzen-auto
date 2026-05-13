@@ -1,10 +1,7 @@
 package tech.kzen.auto.common.util
 
-import tech.kzen.auto.common.util.data.FilePath
-import tech.kzen.auto.common.util.data.FilePathType
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 
 class ExpressionUtilsTest {

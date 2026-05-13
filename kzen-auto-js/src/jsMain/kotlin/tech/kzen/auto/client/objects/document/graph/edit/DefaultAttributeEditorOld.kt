@@ -1,13 +1,15 @@
 package tech.kzen.auto.client.objects.document.graph.edit
 
 
-import react.*
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.createRef
+import react.ChildrenBuilder
+import react.RefObject
+import react.State
 import react.dom.html.ReactHTML.br
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.createRef
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName

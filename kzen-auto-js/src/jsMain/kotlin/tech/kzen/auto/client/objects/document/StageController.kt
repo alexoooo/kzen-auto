@@ -1,14 +1,17 @@
 package tech.kzen.auto.client.objects.document
 
 import emotion.react.css
-import react.*
-import tech.kzen.auto.client.wrap.react
+import react.ChildrenBuilder
+import react.Props
+import react.State
+import react.createContext
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions

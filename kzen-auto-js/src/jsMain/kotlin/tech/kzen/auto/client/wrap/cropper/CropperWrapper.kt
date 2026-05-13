@@ -1,7 +1,10 @@
 package tech.kzen.auto.client.wrap.cropper
 
 import emotion.react.css
-import react.*
+import react.ChildrenBuilder
+import react.PropsWithRef
+import react.RefObject
+import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
 import tech.kzen.auto.client.wrap.RPureComponent

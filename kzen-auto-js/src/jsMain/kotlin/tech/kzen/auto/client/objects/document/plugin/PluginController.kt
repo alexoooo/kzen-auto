@@ -1,17 +1,13 @@
 package tech.kzen.auto.client.objects.document.plugin
 
 import emotion.react.css
-import react.Key
-
 import react.ChildrenBuilder
-
+import react.Key
 import react.Props
-
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.h2
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.graph.edit.AttributePathValueEditorOld
@@ -20,6 +16,7 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.plugin.PluginConventions
 import tech.kzen.auto.common.objects.document.plugin.model.ReportDefinerDetail

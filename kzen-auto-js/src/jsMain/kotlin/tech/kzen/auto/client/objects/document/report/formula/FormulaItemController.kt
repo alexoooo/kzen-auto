@@ -14,15 +14,11 @@ import react.dom.html.ReactHTML.tbody
 import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.tr
 import react.dom.onChange
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaState
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaStore
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.FunctionWithDebounce
-import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.lodash
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.material.DeleteIcon
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
@@ -119,6 +115,12 @@ class FormulaItemController(
 
         submitDebounce.cancel()
         submitValue(newValue)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun componentWillUnmount() {
+        submitDebounce.flush()
     }
 
 

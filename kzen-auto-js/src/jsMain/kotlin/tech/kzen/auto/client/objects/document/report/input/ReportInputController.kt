@@ -10,7 +10,6 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.input.browse.InputBrowserController
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputState
@@ -22,6 +21,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.FadeTimeout
 import tech.kzen.auto.client.wrap.material.FolderOpenIcon
 import tech.kzen.auto.client.wrap.material.InputIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec

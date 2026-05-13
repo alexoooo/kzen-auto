@@ -3,19 +3,17 @@ package tech.kzen.auto.client.objects.document.report.formula
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.CircularProgress
-import react.Key
-
 import react.ChildrenBuilder
-
+import react.Key
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaState
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaStore
 import tech.kzen.auto.client.objects.document.report.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.FunctionsIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import web.cssom.*

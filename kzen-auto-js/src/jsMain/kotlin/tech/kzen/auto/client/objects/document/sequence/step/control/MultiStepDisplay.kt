@@ -2,13 +2,13 @@ package tech.kzen.auto.client.objects.document.sequence.step.control
 
 import react.ChildrenBuilder
 import react.State
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.sequence.command.SequenceCommander
 import tech.kzen.auto.client.objects.document.sequence.display.SequenceBranchDisplay
 import tech.kzen.auto.client.objects.document.sequence.display.SequenceStepDisplayProps
 import tech.kzen.auto.client.objects.document.sequence.display.SequenceStepDisplayWrapper
 import tech.kzen.auto.client.objects.document.sequence.display.StepDisplayManager
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation

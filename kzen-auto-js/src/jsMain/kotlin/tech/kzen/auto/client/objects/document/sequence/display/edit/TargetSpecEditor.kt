@@ -8,26 +8,20 @@ import mui.material.MenuItem
 import mui.material.Select
 import mui.material.Size
 import mui.material.TextField
-import react.Key
-
 import react.ChildrenBuilder
-
+import react.Key
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.onChange
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.FunctionWithDebounce
-import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.lodash
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
 import tech.kzen.auto.common.objects.document.feature.TargetType
@@ -209,6 +203,7 @@ class TargetSpecEditor(
     override fun componentWillUnmount() {
         ClientContext.mirroredGraphStore.unobserve(this)
         ClientContext.clientStateGlobal.unobserve(this)
+        submitDebounce.flush()
     }
 
 

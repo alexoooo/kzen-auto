@@ -8,13 +8,13 @@ import react.ChildrenBuilder
 import react.State
 import react.create
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.common.edit.SelectAttributeEditor
 import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconFile
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
 import web.cssom.Display
 import web.cssom.em

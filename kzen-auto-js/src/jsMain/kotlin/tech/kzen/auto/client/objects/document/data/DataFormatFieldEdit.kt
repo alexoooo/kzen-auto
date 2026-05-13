@@ -1,11 +1,8 @@
 package tech.kzen.auto.client.objects.document.data
 
-import react.Key
-
 import react.ChildrenBuilder
-
+import react.Key
 import react.Props
-
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.wrap.RPureComponent

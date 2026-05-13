@@ -1,10 +1,8 @@
 package tech.kzen.auto.client.objects.document.report.analysis.pivot
 
 import emotion.react.css
-import react.Key
-
 import react.ChildrenBuilder
-
+import react.Key
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -12,10 +10,10 @@ import react.dom.html.ReactHTML.table
 import react.dom.html.ReactHTML.tbody
 import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.tr
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 import web.cssom.LineStyle

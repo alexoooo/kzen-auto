@@ -4,10 +4,8 @@ import emotion.react.css
 import mui.material.Size
 import mui.material.ToggleButton
 import mui.material.ToggleButtonGroup
-import react.Key
-
 import react.ChildrenBuilder
-
+import react.Key
 import react.State
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
