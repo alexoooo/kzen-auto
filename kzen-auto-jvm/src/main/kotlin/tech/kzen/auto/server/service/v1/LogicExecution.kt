@@ -11,8 +11,7 @@ interface LogicExecution {
      * @return false if something went wrong
      */
     fun beforeStart(
-        arguments: TupleValue,
-//        topLevel: Boolean
+        arguments: TupleValue
     ): Boolean
 
 

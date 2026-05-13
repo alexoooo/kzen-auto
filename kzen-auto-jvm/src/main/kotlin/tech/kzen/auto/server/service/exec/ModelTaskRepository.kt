@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.service.exec
 
+import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.task.ManagedTask
 import tech.kzen.auto.common.paradigm.task.TaskHandle
 import tech.kzen.auto.common.paradigm.task.TaskRepository
@@ -37,6 +38,8 @@ class ModelTaskRepository(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val maxTerminated = 64
+
+        private val logger = LoggerFactory.getLogger(ModelTaskRepository::class.java)
     }
 
 
@@ -346,7 +349,10 @@ class ModelTaskRepository(
             try {
                 completeLatch.await()
             }
-            catch (ignored: InterruptedException) {}
+            catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                logger.warn("Interrupted while awaiting terminal state for task {}", model().taskId, e)
+            }
         }
     }
 }

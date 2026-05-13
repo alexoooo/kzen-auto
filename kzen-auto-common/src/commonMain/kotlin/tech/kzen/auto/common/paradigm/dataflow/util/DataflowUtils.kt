@@ -17,20 +17,12 @@ object DataflowUtils {
     val mainOutputAttributeName = AttributeName("output")
 
 
-//    private enum class LayerClassification {
-//        NotStarted,
-//        InProgress,
-//        Finished
-//    }
-
-
     fun next(
             host: DocumentPath,
             graphStructure: GraphStructure,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
         val vertexMatrix = DataflowMatrix.ofGraphDocument(host, graphStructure)
-//        println("^^^^^ next: vertexMatrix - $vertexMatrix")
 
         val dataflowDag = DataflowDag.of(vertexMatrix)
 
@@ -43,7 +35,6 @@ object DataflowUtils {
             dataflowDag: DataflowDag,
             visualDataflowModel: VisualDataflowModel
     ): ObjectLocation? {
-//        println("^^^^^ next: dataflowDag.layers - ${dataflowDag.layers}")
         var lastLayerInProgress: Int = -1
         var firstLayerReady: Int = -1
 
@@ -57,7 +48,6 @@ object DataflowUtils {
                 firstLayerReady = index
             }
         }
-//        println("^^^^^ next: dataflowDag - $lastLayerInProgress / $firstLayerReady")
 
         val nextLayerIndex = when {
             lastLayerInProgress != -1 ->
@@ -72,7 +62,6 @@ object DataflowUtils {
 
         val nextLayer = dataflowDag.layers[nextLayerIndex]
 
-//        println("^^^^^ got nextLayer: $nextLayer")
         return nextInLayer(
                 nextLayer,
                 dataflowMatrix,
@@ -109,8 +98,6 @@ object DataflowUtils {
             dataflowDag: DataflowDag
     ): Boolean {
         for (vertexLocation in layer) {
-//            println("^^^^^^ isLayerReady vertexLocation $vertexLocation")
-
             val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
                     ?: continue
 
@@ -129,8 +116,6 @@ object DataflowUtils {
                 continue
             }
 
-//            println("^^^^^^ isLayerReady $visualVertexModel - $predecessors")
-
             if (predecessors.isEmpty()) {
                 return true
             }
@@ -146,30 +131,6 @@ object DataflowUtils {
 
         return false
     }
-
-
-//    private fun classifyLayer(
-//            layer: List<ObjectLocation>,
-//            visualDataflowModel: VisualDataflowModel
-//    ): LayerClassification {
-//        val doneCount = layer.count {
-//            val visualVertexModel = visualDataflowModel.vertices[it]
-//                    ?: VisualVertexModel.empty
-//
-//            visualVertexModel.phase() == VisualVertexPhase.Done
-//        }
-//
-//        return when {
-//            doneCount == layer.size ->
-//                DataflowUtils.LayerClassification.Finished
-//
-//            doneCount >= 1 ->
-//                DataflowUtils.LayerClassification.InProgress
-//
-//            else ->
-//                DataflowUtils.LayerClassification.NotStarted
-//        }
-//    }
 
 
     private fun nextInLayer(
@@ -188,7 +149,6 @@ object DataflowUtils {
         var minEpoch = Int.MAX_VALUE
         var candidate: ObjectLocation? = null
 
-//        println("^^^############^^ nextInLayer: $layer")
         nextVertex@
         for (vertexLocation in layer) {
             val visualVertexModel = visualDataflowModel.vertices[vertexLocation]
@@ -201,7 +161,6 @@ object DataflowUtils {
                 continue
             }
 
-//            println("^^^^ Looking at ($minEpoch - ${visualVertexModel.epoch}): $vertexLocation")
             if (minEpoch <= visualVertexModel.epoch) {
                 continue
             }
@@ -212,13 +171,10 @@ object DataflowUtils {
             val vertexDescriptor = dataflowMatrix.verticesByLocation[vertexLocation]
                     ?: continue
 
-//            println("^^^^ Inputs: ${vertexDescriptor.inputNames.size} vs ${predecessors.size}")
             if (vertexDescriptor.inputNames.size != predecessors.size) {
                 // TODO: consider handling optional OptionalInput
                 continue
             }
-
-//            println("^^^^^&& predecessors - $predecessors")
 
             for (predecessor in predecessors) {
                 if (visualDataflowModel.vertices[predecessor]?.message == null) {
@@ -230,7 +186,6 @@ object DataflowUtils {
             candidate = vertexLocation
         }
 
-//        println("^^^^^ next is: $candidate")
         return candidate
     }
 }
