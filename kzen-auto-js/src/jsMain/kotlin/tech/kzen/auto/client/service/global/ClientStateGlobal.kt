@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.service.global
 
+import kotlinx.browser.window
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.util.NavigationRoute
@@ -192,8 +193,8 @@ class ClientStateGlobal:
                 observer.onClientState(nextSessionState)
             }
             catch (e: Throwable) {
-//                println("onClientState ERROR for $observer")
                 e.printStackTrace()
+                window.alert("Observer error in ${observer::class.simpleName}: ${e.message}")
             }
         }
     }
