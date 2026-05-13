@@ -124,7 +124,9 @@ private fun Routing.routeLogic(
     get(CommonRestApi.logicStartAndRun) {
         val response = restHandler.logicStart(call.parameters, false)
         if (response == null) {
-            call.response.status(HttpStatusCode.BadRequest)
+            call.respondText(
+                "Unable to start logic run",
+                status = HttpStatusCode.BadRequest)
         }
         else {
             call.respondText(response)
@@ -133,7 +135,9 @@ private fun Routing.routeLogic(
     get(CommonRestApi.logicStartAndStep) {
         val response = restHandler.logicStart(call.parameters, true)
         if (response == null) {
-            call.response.status(HttpStatusCode.BadRequest)
+            call.respondText(
+                "Unable to start logic run",
+                status = HttpStatusCode.BadRequest)
         }
         else {
             call.respondText(response)
@@ -394,19 +398,15 @@ private fun Routing.routeDetached(
         call.respond(response)
     }
     put(CommonRestApi.actionDetached) {
-        val formParameters: Parameters
-        val wrappedBytes: ImmutableByteArray?
-
         if (call.request.isMultipart()) {
-            TODO("Multipart not implemented (yet)")
-        }
-        else {
-            formParameters = call.receiveParameters()
-            wrappedBytes = null
+            call.respond(
+                HttpStatusCode.UnsupportedMediaType,
+                "Multipart PUT to actionDetached is not supported")
+            return@put
         }
 
-        @Suppress("KotlinConstantConditions")
-        val response = restHandler.actionDetached(formParameters, wrappedBytes)
+        val formParameters = call.receiveParameters()
+        val response = restHandler.actionDetached(formParameters, null)
         call.respond(response)
     }
     get(CommonRestApi.actionDetachedDownload) {

@@ -411,9 +411,6 @@ class ServerLogicController(
         state.frame.control.close()
 
         stateOrNull = null
-
-        // NB: hit to GCs to give memory back to the OS
-        System.gc()
     }
 
 

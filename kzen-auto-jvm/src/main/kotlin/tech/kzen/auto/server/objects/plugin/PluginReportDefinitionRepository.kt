@@ -159,6 +159,7 @@ class PluginReportDefinitionRepository(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @Synchronized
     override fun classLoaderHandle(
         coordinates: Set<PluginCoordinate>,
         parentClassLoader: ClassLoader
