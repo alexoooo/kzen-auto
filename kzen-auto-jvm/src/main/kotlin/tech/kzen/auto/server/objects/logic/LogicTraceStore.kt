@@ -176,4 +176,11 @@ object LogicTraceStore:
 
         return LogicTraceSnapshot(matchingValues)
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun evict(logicRunId: LogicRunId) {
+        history.keys.removeAll { it.runExecutionId.logicRunId == logicRunId }
+        objectLocationHistory.entries.removeAll { it.value.logicRunId == logicRunId }
+    }
 }

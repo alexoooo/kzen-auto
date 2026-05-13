@@ -127,7 +127,7 @@ fun <T> async(x: suspend () -> T): Promise<T> {
                     resolve(result.getOrThrow())
                 }
                 else {
-                    reject(result.exceptionOrNull()!!)
+                    reject(result.exceptionOrNull() ?: RuntimeException("Unknown failure"))
                 }
             }
 
