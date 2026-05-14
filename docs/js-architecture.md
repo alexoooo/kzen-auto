@@ -166,6 +166,8 @@ Other adapters in `wrap/`:
 - `wrap/lodash.kt` — lodash debounce / throttle bindings.
 - `wrap/select/reactSelectDsl.kt` — react-select adapter. Pre-migration this was the last live consumer of `kotlin-react-legacy` types; post-migration its legacy code is fully commented out and no active legacy imports remain anywhere in the JS client.
 
+**Gotcha — adding a new Material icon needs a dual registration.** Icons referenced from notation YAML `icon:` fields (e.g. `icon: Code` in `common-document.yaml`) are resolved by a hard-coded `when` block in `iconClassForName(name)` at `wrap/material/materialIconsDsl.kt`. Names not in the `when` fall through to `TextureIcon` — what looks like a "wrong icon" in the sidebar is usually a missing entry, not a bad YAML name. To register a new icon you need both: an `@JsName("<MuiName>") external class <Name>Icon: Component<IconProps, react.State>` declaration in `wrap/material/materialIcons.kt` (so the Kotlin/JS side knows about the `@mui/icons-material` export), AND a matching `"<Name>" -> <Name>Icon::class` arm in `materialIconsDsl.kt`. The TODO at the top of `materialIconsDsl.kt` flags this dual registration as a known maintenance burden; replacing it with the font-based `<Icon>name</Icon>` MUI pattern is unfinished work, not a deliberate design choice.
+
 ## 6. Worked example: opening a report
 
 1. **User clicks a report** — browser navigates to `/<sibling>/d/<path>`.

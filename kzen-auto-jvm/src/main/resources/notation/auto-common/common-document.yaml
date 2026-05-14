@@ -278,3 +278,14 @@ Plugin:
   meta:
     jarPath: String
     selfLocation: SelfLocation
+
+
+################################################################
+
+
+CustomDocument:
+  abstract: true
+  is: Document
+  class: tech.kzen.auto.server.objects.custom.CustomDocument
+  title: "Custom"
+  icon: Code

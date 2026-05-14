@@ -394,6 +394,12 @@ external class CropIcon: Component<IconProps, react.State> {
 }
 
 
+@JsName("Code")
+external class CodeIcon: Component<IconProps, react.State> {
+    override fun render(): ReactElement<IconProps>?
+}
+
+
 @JsName("CameraAlt")
 external class CameraAltIcon: Component<IconProps, react.State> {
     override fun render(): ReactElement<IconProps>?

@@ -48,6 +48,7 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, react.State>
         "AddBox" -> AddBoxIcon::class
         "Share" -> ShareIcon::class
         "Crop" -> CropIcon::class
+        "Code" -> CodeIcon::class
         "CameraAlt" -> CameraAltIcon::class
         "CancelPresentation" -> CancelPresentationIcon::class
         "TransitEnterexit" -> TransitEnterexitIcon::class
