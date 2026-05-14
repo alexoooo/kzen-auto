@@ -95,6 +95,45 @@ tasks.register<Copy>("copyDependencies") {
 }
 
 
+// Codegen — rewrites the three KzenAuto*Module.kt files by reflection over the source tree.
+// The generator mains live in src/test/kotlin and resolve their output paths relative to the
+// kzen-auto root, so workingDir is pinned to rootProject.rootDir.
+val codegenWorkingDir = rootProject.rootDir
+val codegenClasspath = sourceSets["test"].runtimeClasspath
+
+tasks.register<JavaExec>("runCommonCodegen") {
+    group = "codegen"
+    description = "Regenerate kzen-auto-common/.../codegen/KzenAutoCommonModule.kt"
+    mainClass.set("tech.kzen.auto.server.codegen.KzenAutoCommonCodegen")
+    classpath = codegenClasspath
+    workingDir = codegenWorkingDir
+}
+
+tasks.register<JavaExec>("runJsCodegen") {
+    group = "codegen"
+    description = "Regenerate kzen-auto-js/.../codegen/KzenAutoJsModule.kt"
+    mainClass.set("tech.kzen.auto.server.codegen.KzenAutoJsCodegen")
+    classpath = codegenClasspath
+    workingDir = codegenWorkingDir
+}
+
+tasks.register<JavaExec>("runJvmCodegen") {
+    group = "codegen"
+    description = "Regenerate kzen-auto-jvm/.../codegen/KzenAutoJvmModule.kt"
+    mainClass.set("tech.kzen.auto.server.codegen.KzenAutoJvmCodegen")
+    classpath = codegenClasspath
+    workingDir = codegenWorkingDir
+}
+
+tasks.register<JavaExec>("runAllCodegen") {
+    group = "codegen"
+    description = "Regenerate all three KzenAuto*Module.kt codegen files"
+    mainClass.set("tech.kzen.auto.server.codegen.KzenAutoAllCodegen")
+    classpath = codegenClasspath
+    workingDir = codegenWorkingDir
+}
+
+
 tasks.getByName<Jar>("jar") {
     val jvmProject = project(":kzen-auto-jvm")
     val copyDependenciesTask = jvmProject.tasks.getByName("copyDependencies") as Copy

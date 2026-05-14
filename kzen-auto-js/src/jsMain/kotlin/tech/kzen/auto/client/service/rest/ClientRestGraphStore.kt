@@ -24,6 +24,13 @@ class ClientRestGraphStore(
                         command.documentPath)
 
 
+            is SetDocumentObjectsCommand -> {
+                val unparsed = notationParser.unparseDocument(command.documentObjectNotation, "")
+                restClient.setDocumentObjects(
+                        command.documentPath, unparsed)
+            }
+
+
             is AddObjectCommand -> {
                 val unparsed = notationParser.unparseObject(command.body)
                 restClient.addObject(

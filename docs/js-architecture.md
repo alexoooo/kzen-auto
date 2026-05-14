@@ -14,7 +14,7 @@ Under `kzen-auto-js/src/jsMain/kotlin/tech/kzen/auto/client/`:
 | `service/` | Composition root (`ClientContext`); global observer hubs under `service/global/`; REST clients under `service/rest/`; client-side logic under `service/logic/`. |
 | `wrap/` | Custom React DSL wrapper (`wrap/React.kt` defines `RComponent`/`RPureComponent`) + adapters for MUI, Iconify, Lodash, react-select. **The layer most affected by wrappers upgrades.** |
 | `api/` | `ReactWrapper` interface — composable React-render bridge used by the dynamic `DocumentController` mount machinery. |
-| `codegen/` | Auto-generated module registration (`KzenAutoJsModule.kt`). Don't hand-edit. |
+| `codegen/` | Auto-generated module registration (`KzenAutoJsModule.kt`). Don't hand-edit — regenerate with `./gradlew :kzen-auto-jvm:runJsCodegen` (see [architecture.md § 8](architecture.md#8-module-registration)). |
 | `util/` | Misc client-side helpers. |
 
 ## 2. The Controller / Store / State / Observer quartet
