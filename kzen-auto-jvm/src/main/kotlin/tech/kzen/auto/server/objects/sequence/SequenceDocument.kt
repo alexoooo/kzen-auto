@@ -34,23 +34,6 @@ class SequenceDocument(
     SequenceStep
 {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-//        override fun newDocument(
-//            archetypeLocation: ObjectLocation
-//        ): DocumentObjectNotation {
-//            val mainObjectNotation = ObjectNotation.ofParent(archetypeLocation.objectPath.name)
-//
-//            val objectNotations = ObjectPathMap(
-//                persistentMapOf(
-//                NotationConventions.mainObjectPath to mainObjectNotation)
-//            )
-//
-//            return DocumentObjectNotation(objectNotations)
-//        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun define(): LogicDefinition {
         val inputs = parameters.map {
             TupleComponentDefinition(TupleComponentName(it), LogicType.any)
