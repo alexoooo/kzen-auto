@@ -211,6 +211,18 @@ class RestHandler(
     }
 
 
+    fun setDocumentObjects(parameters: Parameters): String {
+        val documentPath: DocumentPath = parameters.getParam(
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+
+        val documentObjectNotation = parameters.getParam(
+            CommonRestApi.paramRawObjectsYaml, yamlNotationParser::parseDocumentObjects)
+
+        val command = SetDocumentObjectsCommand(documentPath, documentObjectNotation)
+        return applyCommand(command).asString()
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun addObject(parameters: Parameters): String {
         val documentPath: DocumentPath = parameters.getParam(

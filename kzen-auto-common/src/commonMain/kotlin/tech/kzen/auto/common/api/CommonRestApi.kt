@@ -13,6 +13,7 @@ object CommonRestApi {
     private const val commandDocumentPrefix = "${commandPrefix}document/"
     const val commandDocumentCreate = "${commandDocumentPrefix}create"
     const val commandDocumentDelete = "${commandDocumentPrefix}delete"
+    const val commandDocumentSetObjects = "${commandDocumentPrefix}set-objects"
 
     private const val commandObjectPrefix = "${commandPrefix}object/"
     const val commandObjectAdd = "${commandObjectPrefix}add"
@@ -56,6 +57,7 @@ object CommonRestApi {
     const val paramObjectName = "name"
     const val paramDocumentName = "file"
     const val paramDocumentNotation = "document"
+    const val paramRawObjectsYaml = "raw-objects-yaml"
     const val paramAttributeName = "attribute"
     const val paramAttributePath = "in-attribute"
     const val paramAttributeNesting = "nest"

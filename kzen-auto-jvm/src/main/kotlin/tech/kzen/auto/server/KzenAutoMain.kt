@@ -249,6 +249,11 @@ private fun Routing.routeNotationCommands(
         val response = restHandler.deleteDocument(call.parameters)
         call.respondText(response)
     }
+    put(CommonRestApi.commandDocumentSetObjects) {
+        val parameters = call.receiveParameters()
+        val response = restHandler.setDocumentObjects(parameters)
+        call.respondText(response)
+    }
     post(CommonRestApi.commandResourceAdd) {
         val bytes = call.receive<ByteArray>()
         val wrappedBytes = ImmutableByteArray.wrap(bytes)
