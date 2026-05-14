@@ -67,7 +67,7 @@ Two-terminal pattern. **Open kzen-auto as its OWN IntelliJ project**, not via th
 | Path | What lives here |
 |----|----|
 | `Main.kt` | JS entry point |
-| `objects/document/` | React UIs per document type (e.g. `report/`) |
+| `objects/document/` | React UIs per document type (e.g. `report/`). `custom/` is the raw-YAML editor for `CustomDocument` — saves via `SetDocumentObjectsCommand` (bulk-replace), no archetype/schema enforcement; see [`docs/architecture.md` § 6](docs/architecture.md#6-document-types-in-the-ui). |
 | `wrap/` | kotlin-wrappers / React DSL glue |
 | `service/` | Client services (graph store, mirror, etc.) |
 

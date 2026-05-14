@@ -185,6 +185,10 @@ class CustomDocumentController(
             return
         }
 
+        if (! isEditorModified()) {
+            return
+        }
+
         val payload = state.editorValue
 
         setState {
@@ -280,6 +284,7 @@ class CustomDocumentController(
             YamlEditor::class.react {
                 value = state.editorValue
                 onChange = ::onEditorChange
+                onSave = ::onSave
                 error = state.lastError
                 disabled = state.saving
             }

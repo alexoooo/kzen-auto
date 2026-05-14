@@ -155,6 +155,7 @@ Each subdirectory under `kzen-auto-js/src/jsMain/kotlin/tech/kzen/auto/client/ob
 | `plugin/` | Plugin registry | Upload / register plugin JARs |
 | `registry/` | Object registry | Browse / add custom objects from the library |
 | `feature/` | Feature extraction | Screenshot regions, computer-vision targets |
+| `custom/` | CustomDocument | Free-form raw-YAML editor — power-user escape hatch for ad-hoc object definitions when no typed schema fits |
 | `common/` | *(not a document type)* | Shared attribute editors used by every controller above |
 
 When adding a new document type, expect to:
@@ -162,6 +163,10 @@ When adding a new document type, expect to:
 1. Define an `ObjectNotation` shape in `kzen-auto-common`.
 2. Add a `*Controller` in `kzen-auto-js/.../objects/document/<type>/`.
 3. Register the document type in the auto-generated module (regenerated, not hand-edited — see § 8).
+
+### `CustomDocument` — raw-YAML escape hatch
+
+`CustomDocument` is the only document type whose body is **not** a typed schema; its `main: { is: CustomDocument }` block is fixed, and everything below `main` is user-authored YAML edited as plain text. Saving parses the full document via `YamlNotationParser.parseDocumentObjects` on the client, then dispatches `SetDocumentObjectsCommand` (the only bulk-replace command in the notation CQRS — see [`../../kzen-lib/docs/architecture.md`](../../kzen-lib/docs/architecture.md)) through the same `MirroredGraphStore` pipeline as every other command. No archetype or schema enforcement on save — power-tool semantics; broken references surface at the definition layer on next reload. The editor is a plain `<textarea>` with a synced line-number gutter (`YamlEditor` under `objects/document/common/edit/`); Ctrl/Cmd+S triggers Save. Comments and key order are **not** preserved across the parse → deparse round trip.
 
 ## 7. Plugin SPI
 

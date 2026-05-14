@@ -84,6 +84,8 @@ objects/document/<type>/
 
 The `report/` document is the canonical example — seven sub-stores, deepest nesting. Other document types (graph/, sequence/, data/, plugin/, registry/, feature/) follow the same shape with fewer subdomains.
 
+`custom/` (the `CustomDocument` raw-YAML editor) is the exception to the layout — no sub-stores, no `model/` directory. The controller observes `ClientStateGlobal` directly, holds local `editorValue` / `serverNotation` state, and dispatches `SetDocumentObjectsCommand` through `MirroredGraphStore` on Save. The editor widget itself (`YamlEditor`) lives under `objects/document/common/edit/` because it's reusable; the doc-specific controller, `CustomConventions`, etc. live under `objects/document/custom/`. See [`architecture.md` § 6](architecture.md#6-document-types-in-the-ui) for the parse/save flow and power-tool semantics.
+
 ## 4. Service-layer plumbing
 
 `service/ClientContext.kt` is the **composition root**. It's a singleton `object` that constructs the entire client-side service graph at load time:

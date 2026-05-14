@@ -249,6 +249,10 @@ private fun Routing.routeNotationCommands(
         val response = restHandler.deleteDocument(call.parameters)
         call.respondText(response)
     }
+    get(CommonRestApi.commandDocumentSetObjects) {
+        val response = restHandler.setDocumentObjects(call.parameters)
+        call.respondText(response)
+    }
     put(CommonRestApi.commandDocumentSetObjects) {
         val parameters = call.receiveParameters()
         val response = restHandler.setDocumentObjects(parameters)

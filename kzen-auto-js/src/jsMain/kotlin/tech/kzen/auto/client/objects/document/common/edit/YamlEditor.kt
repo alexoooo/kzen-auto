@@ -3,18 +3,22 @@ package tech.kzen.auto.client.objects.document.common.edit
 import emotion.react.css
 import react.ChildrenBuilder
 import react.Props
+import react.RefObject
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.textarea
 import react.dom.onChange
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.createRef
 import web.cssom.*
+import web.html.HTMLDivElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface YamlEditorProps: Props {
     var value: String
     var onChange: (String) -> Unit
+    var onSave: (() -> Unit)?
     var error: String?
     var disabled: Boolean
 }
@@ -26,6 +30,10 @@ class YamlEditor(
 ):
     RPureComponent<YamlEditorProps, State>(props)
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    private val gutterRef: RefObject<HTMLDivElement> = createRef()
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         div {
@@ -40,6 +48,7 @@ class YamlEditor(
             }
 
             div {
+                ref = gutterRef
                 css {
                     padding = Padding(6.px, 8.px)
                     textAlign = TextAlign.right
@@ -48,6 +57,7 @@ class YamlEditor(
                     backgroundColor = Color("#f0f0f0")
                     minWidth = 2.5.em
                     whiteSpace = WhiteSpace.pre
+                    overflow = Overflow.hidden
                 }
 
                 +lineNumbers()
@@ -75,6 +85,24 @@ class YamlEditor(
 
                 onChange = {
                     props.onChange(it.target.value)
+                }
+
+                onScroll = {
+                    gutterRef.current?.scrollTop = it.currentTarget.scrollTop
+                }
+
+                onKeyDown = handler@ { event ->
+                    val isSave = (event.ctrlKey || event.metaKey) &&
+                            !event.altKey && !event.shiftKey &&
+                            (event.key == "s" || event.key == "S")
+                    if (! isSave) {
+                        return@handler
+                    }
+                    event.preventDefault()
+                    val onSave = props.onSave
+                    if (onSave != null && ! props.disabled) {
+                        onSave()
+                    }
                 }
             }
         }
