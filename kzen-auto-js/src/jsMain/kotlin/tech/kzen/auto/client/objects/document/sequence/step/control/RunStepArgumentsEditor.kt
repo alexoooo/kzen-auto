@@ -182,7 +182,7 @@ class RunStepArgumentsEditor(
         val instructionsParametersNotation =
             if (instructionsObjectLocation != null) {
                 graphNotation
-                    .firstAttribute(instructionsObjectLocation, LogicConventions.parametersAttributeName)
+                    .firstAttribute(instructionsObjectLocation, LogicConventions.parametersAttributePath)
                     as? ListAttributeNotation
             }
             else {

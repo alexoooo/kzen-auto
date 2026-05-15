@@ -289,3 +289,9 @@ CustomDocument:
   class: tech.kzen.auto.server.objects.custom.CustomDocument
   title: "Custom"
   icon: Code
+  logic: []
+  meta:
+    logic:
+      is: List
+      of: ObjectLocation
+      by: Nominal

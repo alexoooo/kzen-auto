@@ -16,13 +16,17 @@ import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
+import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
@@ -97,7 +101,7 @@ class SelectLogicEditor(
 
 
     private fun options(graphNotation: GraphNotation): List<ObjectLocation> {
-        val featureMains = mutableListOf<ObjectLocation>()
+        val candidates = mutableListOf<ObjectLocation>()
 
         for ((path, notation) in graphNotation.documents.map) {
             if (path == props.objectLocation.documentPath) {
@@ -105,15 +109,34 @@ class SelectLogicEditor(
                 continue
             }
 
-            val isLogic = AutoConventions.isLogic(notation)
-
-            if (isLogic) {
-                featureMains.add(ObjectLocation(
+            if (AutoConventions.isLogic(notation)) {
+                candidates.add(ObjectLocation(
                         path, NotationConventions.mainObjectPath))
+                continue
+            }
+
+            if (CustomConventions.isCustomDocument(notation)) {
+                candidates.addAll(customDocumentLogic(graphNotation, path, notation))
             }
         }
 
-        return featureMains
+        return candidates
+    }
+
+
+    private fun customDocumentLogic(
+            graphNotation: GraphNotation,
+            documentPath: DocumentPath,
+            documentNotation: DocumentNotation
+    ): List<ObjectLocation> {
+        val mainNotation = documentNotation.objects.notations[NotationConventions.mainObjectPath]!!
+        val logicAttribute = mainNotation.get(CustomConventions.logicAttributeName) as ListAttributeNotation
+        val host = ObjectReferenceHost.ofLocation(
+                ObjectLocation(documentPath, NotationConventions.mainObjectPath))
+        return logicAttribute.values.map { entry ->
+            val ref = ObjectReference.parse((entry as ScalarAttributeNotation).value)
+            graphNotation.coalesce.locate(ref, host)
+        }
     }
 
     //-----------------------------------------------------------------------------------------------------------------
