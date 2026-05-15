@@ -3,3 +3,4 @@ CustomDocumentController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.custom.CustomDocumentController$Wrapper
   archetype: CustomDocument
+  attributeEditorManager: AttributeEditorManager

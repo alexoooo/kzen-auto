@@ -79,6 +79,15 @@ kotlin {
 run {}
 
 
+// In watch mode the webpack output is re-emitted between Gradle's cache header read and the actual
+// tarball pack, which truncates kzen-auto-js.js.map mid-store. Skip caching this task while watching.
+if (devMode) {
+    tasks.matching { it.name == "jsBrowserProductionWebpack" }.configureEach {
+        outputs.cacheIf { false }
+    }
+}
+
+
 publishing {
     repositories {
         mavenLocal()
