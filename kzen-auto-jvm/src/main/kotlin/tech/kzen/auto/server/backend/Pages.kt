@@ -16,7 +16,7 @@ fun HTML.indexPage(
             charset = "UTF-8"
         }
 
-        link("$staticResourcePath/logo.png", "icon", "image/png")
+        link("$staticResourcePath/favicon.png", "icon", "image/png")
         link("$staticResourcePath/style.css", "stylesheet", "text/css")
         link("$staticResourcePath/normalize.css", "stylesheet", "text/css")
 
