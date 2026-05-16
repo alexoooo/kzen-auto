@@ -1,21 +1,13 @@
 package tech.kzen.auto.client.objects.document.custom
 
 import emotion.react.css
-import mui.material.Button
-import mui.material.ButtonVariant
-import mui.material.CardContent
-import mui.material.Paper
-import mui.material.Size
-import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
-import tech.kzen.auto.client.objects.document.common.edit.YamlEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -24,19 +16,15 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
-import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.obj.ObjectPath
-import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.common.model.structure.notation.DocumentObjectNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.SetDocumentObjectsCommand
 import tech.kzen.lib.common.reflect.Reflect
-import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphSuccess
-import web.cssom.*
+import web.cssom.Margin
+import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -297,162 +285,25 @@ class CustomDocumentController(
 
             when (state.viewMode) {
                 CustomDocumentViewMode.Raw ->
-                    renderRaw()
-
-                CustomDocumentViewMode.View ->
-                    renderView(documentPath, clientState)
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderRaw() {
-        val modified = isEditorModified()
-        val saveDisabled = !modified || state.saving
-
-        div {
-            css {
-                marginBottom = 0.5.em
-            }
-
-            Button {
-                variant = ButtonVariant.contained
-                size = Size.small
-                disabled = saveDisabled
-                onClick = { onSave() }
-                +(if (state.saving) "Saving..." else "Save")
-            }
-
-            if (modified && !state.saving) {
-                span {
-                    css {
-                        marginLeft = 1.em
-                        fontStyle = FontStyle.italic
-                        color = Color("rgb(128, 80, 0)")
+                    CustomDocumentRaw::class.react {
+                        editorValue = state.editorValue
+                        modified = isEditorModified()
+                        saving = state.saving
+                        lastError = state.lastError
+                        onEditorChange = ::onEditorChange
+                        onSave = ::onSave
                     }
-                    +"unsaved changes"
-                }
-            }
-        }
 
-        YamlEditor::class.react {
-            value = state.editorValue
-            onChange = ::onEditorChange
-            onSave = ::onSave
-            error = state.lastError
-            disabled = state.saving
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderView(documentPath: DocumentPath, clientState: ClientState) {
-        val serverNotation = state.serverNotation
-            ?: return
-
-        val graphStructure = clientState.graphStructure()
-        val graphMetadata = graphStructure.graphMetadata
-        val graphNotation = graphStructure.graphNotation
-
-        for ((objectPath, _) in serverNotation.notations.map) {
-            if (objectPath.name == ObjectName.main && objectPath.nesting.isRoot()) {
-                continue
-            }
-
-            val objectLocation = ObjectLocation(documentPath, objectPath)
-            val objectMetadata = graphMetadata.objectMetadata[objectLocation]
-            val isAbstract = graphNotation
-                .directAttribute(objectLocation, NotationConventions.abstractAttributePath)
-                ?.asBoolean()
-                ?: false
-
-            div {
-                css {
-                    marginBottom = 1.em
-                }
-
-                renderObjectCard(objectPath, objectLocation, objectMetadata, isAbstract)
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderObjectCard(
-        objectPath: ObjectPath,
-        objectLocation: ObjectLocation,
-        objectMetadata: ObjectMetadata?,
-        isAbstract: Boolean
-    ) {
-        Paper {
-            sx {
-                if (isAbstract) {
-                    backgroundColor = Color("rgb(240, 244, 250)")
-                    borderStyle = LineStyle.dashed
-                    borderWidth = 1.px
-                    borderColor = Color("rgb(160, 175, 200)")
-                }
-                else {
-                    backgroundColor = NamedColor.white
-                }
-            }
-
-            CardContent {
-                div {
-                    css {
-                        fontWeight = FontWeight.bold
-                        fontSize = 1.1.em
-                        marginBottom = 0.75.em
-                    }
-                    +objectPath.name.value
-
-                    if (isAbstract) {
-                        span {
-                            css {
-                                marginLeft = 0.5.em
-                                fontWeight = FontWeight.normal
-                                fontStyle = FontStyle.italic
-                                fontSize = 0.85.em
-                                color = Color("rgb(90, 110, 150)")
-                            }
-                            +"(abstract)"
+                CustomDocumentViewMode.View -> {
+                    val serverNotation = state.serverNotation
+                    if (serverNotation != null) {
+                        CustomDocumentView::class.react {
+                            this.documentPath = documentPath
+                            this.clientState = clientState
+                            this.serverNotation = serverNotation
+                            this.attributeEditorManager = props.attributeEditorManager
                         }
                     }
-                }
-
-                if (objectMetadata == null) {
-                    div {
-                        css {
-                            fontStyle = FontStyle.italic
-                            color = Color("rgb(128, 80, 0)")
-                        }
-                        +"(metadata unavailable)"
-                    }
-                }
-                else {
-                    renderAttributes(objectLocation, objectMetadata)
-                }
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderAttributes(
-        objectLocation: ObjectLocation,
-        objectMetadata: ObjectMetadata
-    ) {
-        for (entry in objectMetadata.attributes.map) {
-            val attributeName = entry.key
-            if (AutoConventions.isManaged(attributeName)) {
-                continue
-            }
-
-            div {
-                css {
-                    marginBottom = 0.5.em
-                }
-
-                props.attributeEditorManager.child(this) {
-                    this.objectLocation = objectLocation
-                    this.attributeName = attributeName
                 }
             }
         }
