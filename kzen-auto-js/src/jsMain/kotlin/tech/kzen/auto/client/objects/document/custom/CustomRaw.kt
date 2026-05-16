@@ -18,7 +18,7 @@ import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface CustomDocumentRawProps: Props {
+external interface CustomRawProps: Props {
     var editorValue: String
     var modified: Boolean
     var saving: Boolean
@@ -28,15 +28,15 @@ external interface CustomDocumentRawProps: Props {
 }
 
 
-external interface CustomDocumentRawState: State
+external interface CustomRawState: State
 
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
-class CustomDocumentRaw(
-    props: CustomDocumentRawProps
+class CustomRaw(
+    props: CustomRawProps
 ):
-    RPureComponent<CustomDocumentRawProps, CustomDocumentRawState>(props)
+    RPureComponent<CustomRawProps, CustomRawState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {

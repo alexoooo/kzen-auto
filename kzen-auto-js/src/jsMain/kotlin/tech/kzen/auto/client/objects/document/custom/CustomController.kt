@@ -28,30 +28,30 @@ import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface CustomDocumentControllerProps: Props {
+external interface CustomControllerProps: Props {
     var attributeEditorManager: AttributeEditorManager.Wrapper
 }
 
 
-external interface CustomDocumentControllerState: State {
+external interface CustomControllerState: State {
     var clientState: ClientState?
     var loadedFor: DocumentPath?
     var editorValue: String
     var serverNotation: DocumentObjectNotation?
     var saving: Boolean
     var lastError: String?
-    var viewMode: CustomDocumentViewMode
+    var viewMode: CustomViewMode
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
-class CustomDocumentController(
-    props: CustomDocumentControllerProps
+class CustomController(
+    props: CustomControllerProps
 ):
-    RPureComponent<CustomDocumentControllerProps, CustomDocumentControllerState>(props),
+    RPureComponent<CustomControllerProps, CustomControllerState>(props),
     ClientStateGlobal.Observer,
-    CustomDocumentGlobal.Observer
+    CustomGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -69,7 +69,7 @@ class CustomDocumentController(
         override fun header(): ReactWrapper<Props> {
             return object: ReactWrapper<Props> {
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
-                    CustomDocumentHeader::class.react {
+                    CustomHeader::class.react {
                         block()
                     }
                 }
@@ -80,7 +80,7 @@ class CustomDocumentController(
         override fun body(): ReactWrapper<Props> {
             return object: ReactWrapper<Props> {
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
-                    CustomDocumentController::class.react {
+                    CustomController::class.react {
                         this.attributeEditorManager = this@Wrapper.attributeEditorManager
                         block()
                     }
@@ -91,27 +91,27 @@ class CustomDocumentController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun CustomDocumentControllerState.init(props: CustomDocumentControllerProps) {
+    override fun CustomControllerState.init(props: CustomControllerProps) {
         clientState = null
         loadedFor = null
         editorValue = ""
         serverNotation = null
         saving = false
         lastError = null
-        viewMode = CustomDocumentGlobal.current().viewMode
+        viewMode = CustomGlobal.current().viewMode
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.clientStateGlobal.observe(this)
-        CustomDocumentGlobal.observe(this)
+        CustomGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
         ClientContext.clientStateGlobal.unobserve(this)
-        CustomDocumentGlobal.unobserve(this)
+        CustomGlobal.unobserve(this)
     }
 
 
@@ -124,7 +124,7 @@ class CustomDocumentController(
     }
 
 
-    override fun onCustomDocumentState(state: CustomDocumentState) {
+    override fun onCustomState(state: CustomState) {
         setState {
             viewMode = state.viewMode
         }
@@ -155,7 +155,7 @@ class CustomDocumentController(
                 serverNotation = newServerNotation
                 lastError = null
             }
-            CustomDocumentGlobal.setEditorModified(false)
+            CustomGlobal.setEditorModified(false)
             return
         }
 
@@ -168,7 +168,7 @@ class CustomDocumentController(
                 editorValue = ClientContext.notationParser.unparseDocument(newServerNotation, "")
                 serverNotation = newServerNotation
             }
-            CustomDocumentGlobal.setEditorModified(false)
+            CustomGlobal.setEditorModified(false)
         }
         else {
             setState {
@@ -202,7 +202,7 @@ class CustomDocumentController(
         setState {
             editorValue = newValue
         }
-        CustomDocumentGlobal.setEditorModified(isEditorModifiedFor(newValue))
+        CustomGlobal.setEditorModified(isEditorModifiedFor(newValue))
     }
 
 
@@ -246,7 +246,7 @@ class CustomDocumentController(
                         serverNotation = parsed
                         saving = false
                     }
-                    CustomDocumentGlobal.setEditorModified(false)
+                    CustomGlobal.setEditorModified(false)
                 }
 
                 is MirroredGraphError -> {
@@ -284,8 +284,8 @@ class CustomDocumentController(
             }
 
             when (state.viewMode) {
-                CustomDocumentViewMode.Raw ->
-                    CustomDocumentRaw::class.react {
+                CustomViewMode.Raw ->
+                    CustomRaw::class.react {
                         editorValue = state.editorValue
                         modified = isEditorModified()
                         saving = state.saving
@@ -294,10 +294,10 @@ class CustomDocumentController(
                         onSave = ::onSave
                     }
 
-                CustomDocumentViewMode.View -> {
+                CustomViewMode.View -> {
                     val serverNotation = state.serverNotation
                     if (serverNotation != null) {
-                        CustomDocumentView::class.react {
+                        CustomView::class.react {
                             this.documentPath = documentPath
                             this.clientState = clientState
                             this.serverNotation = serverNotation

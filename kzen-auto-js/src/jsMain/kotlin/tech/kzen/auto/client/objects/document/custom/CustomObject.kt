@@ -19,7 +19,7 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface CustomDocumentObjectProps: Props {
+external interface CustomObjectProps: Props {
     var objectPath: ObjectPath
     var objectLocation: ObjectLocation
     var objectMetadata: ObjectMetadata?
@@ -28,15 +28,15 @@ external interface CustomDocumentObjectProps: Props {
 }
 
 
-external interface CustomDocumentObjectState: State
+external interface CustomObjectState: State
 
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
-class CustomDocumentObject(
-    props: CustomDocumentObjectProps
+class CustomObject(
+    props: CustomObjectProps
 ):
-    RPureComponent<CustomDocumentObjectProps, CustomDocumentObjectState>(props)
+    RPureComponent<CustomObjectProps, CustomObjectState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {

@@ -1,31 +1,31 @@
 package tech.kzen.auto.client.objects.document.custom
 
 
-enum class CustomDocumentViewMode {
+enum class CustomViewMode {
     View,
     Raw
 }
 
 
-data class CustomDocumentState(
-    val viewMode: CustomDocumentViewMode,
+data class CustomState(
+    val viewMode: CustomViewMode,
     val editorModified: Boolean
 )
 
 
-object CustomDocumentGlobal {
+object CustomGlobal {
     interface Observer {
-        fun onCustomDocumentState(state: CustomDocumentState)
+        fun onCustomState(state: CustomState)
     }
 
 
     private val observers = mutableSetOf<Observer>()
-    private var state = CustomDocumentState(CustomDocumentViewMode.View, false)
+    private var state = CustomState(CustomViewMode.View, false)
 
 
     fun observe(observer: Observer) {
         observers.add(observer)
-        observer.onCustomDocumentState(state)
+        observer.onCustomState(state)
     }
 
 
@@ -34,12 +34,12 @@ object CustomDocumentGlobal {
     }
 
 
-    fun current(): CustomDocumentState {
+    fun current(): CustomState {
         return state
     }
 
 
-    fun setViewMode(viewMode: CustomDocumentViewMode) {
+    fun setViewMode(viewMode: CustomViewMode) {
         if (state.viewMode == viewMode) {
             return
         }
@@ -59,7 +59,7 @@ object CustomDocumentGlobal {
 
     private fun publish() {
         for (observer in observers.toList()) {
-            observer.onCustomDocumentState(state)
+            observer.onCustomState(state)
         }
     }
 }

@@ -9,7 +9,7 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorMa
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.common.objects.document.custom.PrototypeConventions
+import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -19,7 +19,7 @@ import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface CustomDocumentViewProps: Props {
+external interface CustomViewProps: Props {
     var documentPath: DocumentPath
     var clientState: ClientState
     var serverNotation: DocumentObjectNotation
@@ -27,15 +27,15 @@ external interface CustomDocumentViewProps: Props {
 }
 
 
-external interface CustomDocumentViewState: State
+external interface CustomViewState: State
 
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
-class CustomDocumentView(
-    props: CustomDocumentViewProps
+class CustomView(
+    props: CustomViewProps
 ):
-    RPureComponent<CustomDocumentViewProps, CustomDocumentViewState>(props)
+    RPureComponent<CustomViewProps, CustomViewState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
@@ -60,7 +60,7 @@ class CustomDocumentView(
                     marginBottom = 1.em
                 }
 
-                CustomDocumentObject::class.react {
+                CustomObject::class.react {
                     this.objectPath = objectPath
                     this.objectLocation = objectLocation
                     this.objectMetadata = objectMetadata
@@ -70,10 +70,10 @@ class CustomDocumentView(
             }
         }
 
-        CustomDocumentNew::class.react {
+        CustomNew::class.react {
             this.documentPath = props.documentPath
             this.documentNotation = props.serverNotation
-            this.prototypes = PrototypeConventions.listPrototypes(graphNotation)
+            this.prototypes = CustomConventions.listPrototypes(graphNotation)
         }
     }
 }

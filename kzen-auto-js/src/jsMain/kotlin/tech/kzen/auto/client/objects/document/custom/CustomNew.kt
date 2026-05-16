@@ -37,14 +37,14 @@ import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface CustomDocumentNewProps: Props {
+external interface CustomNewProps: Props {
     var documentPath: DocumentPath
     var documentNotation: DocumentObjectNotation
     var prototypes: List<ObjectLocation>
 }
 
 
-external interface CustomDocumentNewState: State {
+external interface CustomNewState: State {
     var expanded: Boolean
     var selectedPrototype: ObjectLocation?
     var dispatching: Boolean
@@ -54,13 +54,13 @@ external interface CustomDocumentNewState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
-class CustomDocumentNew(
-    props: CustomDocumentNewProps
+class CustomNew(
+    props: CustomNewProps
 ):
-    RPureComponent<CustomDocumentNewProps, CustomDocumentNewState>(props)
+    RPureComponent<CustomNewProps, CustomNewState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun CustomDocumentNewState.init(props: CustomDocumentNewProps) {
+    override fun CustomNewState.init(props: CustomNewProps) {
         expanded = false
         selectedPrototype = null
         dispatching = false

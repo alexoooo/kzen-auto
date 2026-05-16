@@ -16,39 +16,39 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface CustomDocumentHeaderState: State {
-    var viewMode: CustomDocumentViewMode
+external interface CustomHeaderState: State {
+    var viewMode: CustomViewMode
     var editorModified: Boolean
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
-class CustomDocumentHeader(
+class CustomHeader(
     props: Props
 ):
-    RPureComponent<Props, CustomDocumentHeaderState>(props),
-    CustomDocumentGlobal.Observer
+    RPureComponent<Props, CustomHeaderState>(props),
+    CustomGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun CustomDocumentHeaderState.init(props: Props) {
-        viewMode = CustomDocumentViewMode.View
+    override fun CustomHeaderState.init(props: Props) {
+        viewMode = CustomViewMode.View
         editorModified = false
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        CustomDocumentGlobal.observe(this)
+        CustomGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        CustomDocumentGlobal.unobserve(this)
+        CustomGlobal.unobserve(this)
     }
 
 
-    override fun onCustomDocumentState(state: CustomDocumentState) {
+    override fun onCustomState(state: CustomState) {
         setState {
             viewMode = state.viewMode
             editorModified = state.editorModified
@@ -57,11 +57,11 @@ class CustomDocumentHeader(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onModeChange(viewMode: CustomDocumentViewMode) {
-        if (viewMode == CustomDocumentViewMode.View && state.editorModified) {
+    private fun onModeChange(viewMode: CustomViewMode) {
+        if (viewMode == CustomViewMode.View && state.editorModified) {
             return
         }
-        CustomDocumentGlobal.setViewMode(viewMode)
+        CustomGlobal.setViewMode(viewMode)
     }
 
 
@@ -79,14 +79,14 @@ class CustomDocumentHeader(
                 asDynamic()["onChange"] = { _, v ->
                     val selected = v as? String
                     if (selected != null) {
-                        onModeChange(CustomDocumentViewMode.valueOf(selected))
+                        onModeChange(CustomViewMode.valueOf(selected))
                     }
                 }
 
                 renderViewButton()
 
                 ToggleButton {
-                    value = CustomDocumentViewMode.Raw.name
+                    value = CustomViewMode.Raw.name
                     size = Size.medium
 
                     css {
@@ -107,7 +107,7 @@ class CustomDocumentHeader(
 
         val button: ChildrenBuilder.() -> Unit = {
             ToggleButton {
-                value = CustomDocumentViewMode.View.name
+                value = CustomViewMode.View.name
                 size = Size.medium
                 this.disabled = disabled
 

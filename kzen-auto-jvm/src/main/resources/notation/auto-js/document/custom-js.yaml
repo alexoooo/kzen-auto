@@ -1,6 +1,6 @@
 
-CustomDocumentController:
+CustomController:
   is: DocumentController
-  class: tech.kzen.auto.client.objects.document.custom.CustomDocumentController$Wrapper
+  class: tech.kzen.auto.client.objects.document.custom.CustomController$Wrapper
   archetype: CustomDocument
   attributeEditorManager: AttributeEditorManager

@@ -7,7 +7,7 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorMa
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.DefaultAttributeEditor
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.auto.client.objects.document.custom.CustomDocumentController
+import tech.kzen.auto.client.objects.document.custom.CustomController
 import tech.kzen.auto.client.objects.document.data.DataFormatController
 import tech.kzen.auto.client.objects.document.feature.FeatureController
 import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
@@ -59,10 +59,10 @@ reflectionRegistry.put(
 }
 
 reflectionRegistry.put(
-    "tech.kzen.auto.client.objects.document.custom.CustomDocumentController\$Wrapper",
+    "tech.kzen.auto.client.objects.document.custom.CustomController\$Wrapper",
     listOf("archetype", "attributeEditorManager")
 ) { args ->
-    CustomDocumentController.Wrapper(args[0] as ObjectLocation, args[1] as AttributeEditorManager.Wrapper)
+    CustomController.Wrapper(args[0] as ObjectLocation, args[1] as AttributeEditorManager.Wrapper)
 }
 
 reflectionRegistry.put(
