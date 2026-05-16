@@ -9,6 +9,7 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorMa
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.common.objects.document.custom.PrototypeConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -67,6 +68,12 @@ class CustomDocumentView(
                     this.attributeEditorManager = props.attributeEditorManager
                 }
             }
+        }
+
+        CustomDocumentNew::class.react {
+            this.documentPath = props.documentPath
+            this.documentNotation = props.serverNotation
+            this.prototypes = PrototypeConventions.listPrototypes(graphNotation)
         }
     }
 }
