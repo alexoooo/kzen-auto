@@ -18,14 +18,14 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.obj.ObjectNesting
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.DocumentObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.AddObjectCommand
+import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphSuccess
 import web.cssom.Color
@@ -37,14 +37,14 @@ import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface CustomNewProps: Props {
+external interface CustomCreateProps: Props {
     var documentPath: DocumentPath
     var documentNotation: DocumentObjectNotation
     var prototypes: List<ObjectLocation>
 }
 
 
-external interface CustomNewState: State {
+external interface CustomCreateState: State {
     var expanded: Boolean
     var selectedPrototype: ObjectLocation?
     var dispatching: Boolean
@@ -54,13 +54,13 @@ external interface CustomNewState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
-class CustomNew(
-    props: CustomNewProps
+class CustomCreate(
+    props: CustomCreateProps
 ):
-    RPureComponent<CustomNewProps, CustomNewState>(props)
+    RPureComponent<CustomCreateProps, CustomCreateState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun CustomNewState.init(props: CustomNewProps) {
+    override fun CustomCreateState.init(props: CustomCreateProps) {
         expanded = false
         selectedPrototype = null
         dispatching = false
@@ -104,7 +104,9 @@ class CustomNew(
         }
 
         val newName = nextAvailableName(prototype.objectPath.name)
-        val newLocation = ObjectLocation(props.documentPath, ObjectPath(newName, ObjectNesting.root))
+        val newPath = NotationConventions.mainObjectPath.nest(
+            CustomConventions.objectsAttributePath, newName)
+        val newLocation = ObjectLocation(props.documentPath, newPath)
         val endOfDocument = PositionRelation.at(props.documentNotation.notations.map.size)
         val command = AddObjectCommand.ofParent(newLocation, endOfDocument, prototype.objectPath.name)
 
@@ -136,13 +138,21 @@ class CustomNew(
 
 
     private fun nextAvailableName(prototypeName: ObjectName): ObjectName {
-        val existing = props.documentNotation.notations.map.keys.map { it.name.value }.toSet()
-        if (prototypeName.value !in existing) {
+        val attributePath = CustomConventions.objectsAttributePath
+        val taken: Set<String> = props.documentNotation.notations.map.keys
+            .filter {
+                it.nesting.segments.size == 1 &&
+                    it.nesting.segments.first().objectName == ObjectName.main &&
+                    it.nesting.segments.first().attributePath == attributePath
+            }
+            .map { it.name.value }
+            .toSet()
+        if (prototypeName.value !in taken) {
             return prototypeName
         }
         for (i in 2..1000) {
             val candidate = "${prototypeName.value}$i"
-            if (candidate !in existing) {
+            if (candidate !in taken) {
                 return ObjectName(candidate)
             }
         }

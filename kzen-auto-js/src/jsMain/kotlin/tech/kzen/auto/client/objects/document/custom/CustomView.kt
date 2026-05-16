@@ -100,7 +100,7 @@ class CustomView(
                                     mainObjectLocation,
                                     CustomConventions.logicAttributePath,
                                     PositionRelation.at(logicListEntries.size),
-                                    ScalarAttributeNotation(objectPath.name.value))
+                                    ScalarAttributeNotation(objectPath.asString()))
                             }
                             ClientContext.mirroredGraphStore.apply(command)
                         }
@@ -125,7 +125,7 @@ class CustomView(
             }
         }
 
-        CustomNew::class.react {
+        CustomCreate::class.react {
             this.documentPath = props.documentPath
             this.documentNotation = props.serverNotation
             this.prototypes = CustomConventions.listPrototypes(graphNotation)

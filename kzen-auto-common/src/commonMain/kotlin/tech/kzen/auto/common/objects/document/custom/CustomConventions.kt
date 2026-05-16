@@ -18,10 +18,14 @@ object CustomConventions {
     val logicAttributeName = AttributeName("logic")
     val logicAttributePath = AttributePath.ofName(logicAttributeName)
 
+    val objectsAttributeName = AttributeName("objects")
+    val objectsAttributePath = AttributePath.ofName(objectsAttributeName)
+
 
     fun isManaged(attributeName: AttributeName): Boolean {
         return AutoConventions.isManaged(attributeName) ||
-            attributeName == logicAttributeName
+            attributeName == logicAttributeName ||
+            attributeName == objectsAttributeName
     }
 
 
