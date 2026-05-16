@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.custom
 
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -16,6 +17,12 @@ object CustomConventions {
 
     val logicAttributeName = AttributeName("logic")
     val logicAttributePath = AttributePath.ofName(logicAttributeName)
+
+
+    fun isManaged(attributeName: AttributeName): Boolean {
+        return AutoConventions.isManaged(attributeName) ||
+            attributeName == logicAttributeName
+    }
 
 
     fun isCustomDocument(documentNotation: DocumentNotation): Boolean {

@@ -2,16 +2,21 @@ package tech.kzen.auto.client.objects.document.custom
 
 import emotion.react.css
 import mui.material.CardContent
+import mui.material.Chip
+import mui.material.ChipColor
+import mui.material.ChipVariant
 import mui.material.Paper
+import mui.material.Size
 import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
+import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
@@ -24,6 +29,9 @@ external interface CustomObjectProps: Props {
     var objectLocation: ObjectLocation
     var objectMetadata: ObjectMetadata?
     var isAbstract: Boolean
+    var isLogic: Boolean
+    var isInLogicList: Boolean
+    var onToggleLogicMembership: (() -> Unit)?
     var attributeEditorManager: AttributeEditorManager.Wrapper
 }
 
@@ -74,6 +82,32 @@ class CustomObject(
                             +"(abstract)"
                         }
                     }
+
+                    if (props.isLogic) {
+                        Chip {
+                            css {
+                                marginLeft = 0.5.em
+                            }
+                            size = Size.small
+
+                            val handler = props.onToggleLogicMembership
+                            if (handler == null) {
+                                label = ReactNode("logic")
+                                variant = ChipVariant.outlined
+                            }
+                            else if (props.isInLogicList) {
+                                label = ReactNode("✓ logic")
+                                variant = ChipVariant.filled
+                                color = ChipColor.primary
+                                onClick = { handler() }
+                            }
+                            else {
+                                label = ReactNode("+ logic")
+                                variant = ChipVariant.outlined
+                                onClick = { handler() }
+                            }
+                        }
+                    }
                 }
 
                 val objectMetadata = props.objectMetadata
@@ -97,7 +131,7 @@ class CustomObject(
     private fun ChildrenBuilder.renderAttributes(objectMetadata: ObjectMetadata) {
         for (entry in objectMetadata.attributes.map) {
             val attributeName = entry.key
-            if (AutoConventions.isManaged(attributeName)) {
+            if (CustomConventions.isManaged(attributeName)) {
                 continue
             }
 
