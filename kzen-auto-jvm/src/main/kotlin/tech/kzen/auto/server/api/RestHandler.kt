@@ -188,6 +188,23 @@ class RestHandler(
     }
 
 
+    fun notationBatch(parameters: Parameters): Map<String, String> {
+        val rawPaths = parameters.getAll(CommonRestApi.paramDocumentPath)
+            ?: return emptyMap()
+
+        val paths = rawPaths.map { DocumentPath.parse(it) }
+
+        val documents = runBlocking {
+            notationMedia.readDocuments(paths)
+        }
+
+        return paths.associate { path ->
+            path.asRelativeFile() to (documents[path]
+                ?: throw IllegalStateException("Missing document: $path"))
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun createDocument(parameters: Parameters): String {
         val documentPath: DocumentPath = parameters.getParam(

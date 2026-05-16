@@ -45,6 +45,17 @@ class ClientRestNotationMedia(
     }
 
 
+    override suspend fun readDocuments(paths: Collection<DocumentPath>): Map<DocumentPath, String> {
+        val bulk = restClient.readNotationBatch(paths)
+
+        for (body in bulk.values) {
+            documentCache.put(Digest.ofUtf8(body), body)
+        }
+
+        return bulk
+    }
+
+
     override suspend fun writeDocument(documentPath: DocumentPath, contents: String) {
 //        httpGet("$baseUrl/notation/${location.relativeLocation}")
         TODO("not implemented")

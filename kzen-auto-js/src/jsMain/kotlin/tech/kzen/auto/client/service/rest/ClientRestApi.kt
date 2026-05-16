@@ -88,6 +88,24 @@ class ClientRestApi(
     }
 
 
+    suspend fun readNotationBatch(paths: Collection<DocumentPath>): Map<DocumentPath, String> {
+        if (paths.isEmpty()) {
+            return emptyMap()
+        }
+
+        val pathParams = paths
+            .map { CommonRestApi.paramDocumentPath to it.asRelativeFile() }
+            .toTypedArray()
+
+        val responseJson = getOrPutJson(CommonRestApi.notationBatch, *pathParams)
+        val responseMap = ClientJsonUtils.toMap(responseJson)
+
+        return responseMap.entries.associate { (key, value) ->
+            DocumentPath.parse(key) to (value as String)
+        }
+    }
+
+
     suspend fun readResource(location: ResourceLocation): ImmutableByteArray {
         val response = getBytes(
             CommonRestApi.resource,

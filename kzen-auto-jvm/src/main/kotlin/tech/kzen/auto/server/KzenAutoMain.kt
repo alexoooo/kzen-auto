@@ -231,6 +231,15 @@ private fun Routing.routeNotationQuery(
         val response = restHandler.notation(notationPath, false)
         call.respondText(response)
     }
+    get(CommonRestApi.notationBatch) {
+        val response = restHandler.notationBatch(call.parameters)
+        call.respond(response)
+    }
+    put(CommonRestApi.notationBatch) {
+        val parameters = call.receiveParameters()
+        val response = restHandler.notationBatch(parameters)
+        call.respond(response)
+    }
     get(CommonRestApi.resource) {
         val response = restHandler.resourceRead(call.parameters)
         call.respondBytes(response)

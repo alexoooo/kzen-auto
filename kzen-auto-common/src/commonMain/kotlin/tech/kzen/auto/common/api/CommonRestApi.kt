@@ -5,6 +5,7 @@ object CommonRestApi {
     // read document object model notation
     const val scan = "/scan"
     const val notationPrefix = "/notation/"
+    const val notationBatch = "/notation-batch"
     const val resource = "/resource"
 
     // modify document object model
