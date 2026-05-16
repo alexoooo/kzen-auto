@@ -19,11 +19,12 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class AdhocLogic: Logic {
+class AdhocLogic(
+    private val name: String
+): Logic {
     //-----------------------------------------------------------------------------------------------------------------
     fun hello(): String {
-        println("foo")
-        return "Hello World"
+        return "Hello, $name!"
     }
 
 
