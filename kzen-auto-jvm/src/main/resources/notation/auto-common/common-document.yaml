@@ -295,3 +295,7 @@ CustomDocument:
       is: List
       of: ObjectLocation
       by: Nominal
+
+
+Prototype:
+  abstract: true

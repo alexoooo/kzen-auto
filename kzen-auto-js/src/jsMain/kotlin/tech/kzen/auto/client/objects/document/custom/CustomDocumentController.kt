@@ -33,6 +33,7 @@ import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.common.model.structure.notation.DocumentObjectNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.SetDocumentObjectsCommand
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphSuccess
 import web.cssom.*
@@ -348,7 +349,9 @@ class CustomDocumentController(
         val serverNotation = state.serverNotation
             ?: return
 
-        val graphMetadata = clientState.graphStructure().graphMetadata
+        val graphStructure = clientState.graphStructure()
+        val graphMetadata = graphStructure.graphMetadata
+        val graphNotation = graphStructure.graphNotation
 
         for ((objectPath, _) in serverNotation.notations.map) {
             if (objectPath.name == ObjectName.main && objectPath.nesting.isRoot()) {
@@ -357,13 +360,17 @@ class CustomDocumentController(
 
             val objectLocation = ObjectLocation(documentPath, objectPath)
             val objectMetadata = graphMetadata.objectMetadata[objectLocation]
+            val isAbstract = graphNotation
+                .directAttribute(objectLocation, NotationConventions.abstractAttributePath)
+                ?.asBoolean()
+                ?: false
 
             div {
                 css {
                     marginBottom = 1.em
                 }
 
-                renderObjectCard(objectPath, objectLocation, objectMetadata)
+                renderObjectCard(objectPath, objectLocation, objectMetadata, isAbstract)
             }
         }
     }
@@ -372,11 +379,20 @@ class CustomDocumentController(
     private fun ChildrenBuilder.renderObjectCard(
         objectPath: ObjectPath,
         objectLocation: ObjectLocation,
-        objectMetadata: ObjectMetadata?
+        objectMetadata: ObjectMetadata?,
+        isAbstract: Boolean
     ) {
         Paper {
             sx {
-                backgroundColor = NamedColor.white
+                if (isAbstract) {
+                    backgroundColor = Color("rgb(240, 244, 250)")
+                    borderStyle = LineStyle.dashed
+                    borderWidth = 1.px
+                    borderColor = Color("rgb(160, 175, 200)")
+                }
+                else {
+                    backgroundColor = NamedColor.white
+                }
             }
 
             CardContent {
@@ -387,6 +403,19 @@ class CustomDocumentController(
                         marginBottom = 0.75.em
                     }
                     +objectPath.name.value
+
+                    if (isAbstract) {
+                        span {
+                            css {
+                                marginLeft = 0.5.em
+                                fontWeight = FontWeight.normal
+                                fontStyle = FontStyle.italic
+                                fontSize = 0.85.em
+                                color = Color("rgb(90, 110, 150)")
+                            }
+                            +"(abstract)"
+                        }
+                    }
                 }
 
                 if (objectMetadata == null) {
