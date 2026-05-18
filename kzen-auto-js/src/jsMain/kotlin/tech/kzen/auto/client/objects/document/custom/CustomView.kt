@@ -23,6 +23,7 @@ import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveListItemInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
 import web.cssom.em
 
@@ -107,6 +108,20 @@ class CustomView(
                     }
                 }
 
+            val onDelete: () -> Unit = {
+                async {
+                    val existingEntry = logicMembership[objectLocation]
+                    if (existingEntry != null) {
+                        ClientContext.mirroredGraphStore.apply(RemoveListItemInAttributeCommand(
+                            mainObjectLocation,
+                            CustomConventions.logicAttributePath,
+                            existingEntry,
+                            false))
+                    }
+                    ClientContext.mirroredGraphStore.apply(RemoveObjectCommand(objectLocation))
+                }
+            }
+
             div {
                 css {
                     marginBottom = 1.em
@@ -120,6 +135,7 @@ class CustomView(
                     this.isLogic = isLogic
                     this.isInLogicList = isInLogicList
                     this.onToggleLogicMembership = onToggleLogicMembership
+                    this.onDelete = onDelete
                     this.attributeEditorManager = props.attributeEditorManager
                 }
             }

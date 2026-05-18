@@ -18,6 +18,7 @@ import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.edit.ObjectNameEditor
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.material.EditIcon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -37,6 +38,7 @@ external interface CustomObjectProps: Props {
     var isLogic: Boolean
     var isInLogicList: Boolean
     var onToggleLogicMembership: (() -> Unit)?
+    var onDelete: () -> Unit
     var attributeEditorManager: AttributeEditorManager.Wrapper
 }
 
@@ -143,6 +145,21 @@ class CustomObject(
             }
 
             EditIcon::class.react {}
+        }
+
+        IconButton {
+            title = "Delete"
+            size = Size.small
+
+            css {
+                marginLeft = 0.25.em
+            }
+
+            onClick = {
+                props.onDelete()
+            }
+
+            DeleteIcon::class.react {}
         }
 
         if (props.isAbstract) {
