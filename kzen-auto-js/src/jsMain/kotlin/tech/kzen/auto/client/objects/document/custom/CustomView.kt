@@ -55,7 +55,7 @@ class CustomView(
 
         val mainObjectLocation = ObjectLocation(props.documentPath, NotationConventions.mainObjectPath)
         val mainNotation = props.serverNotation.notations[NotationConventions.mainObjectPath]
-        val logicListAttribute = mainNotation?.get(CustomConventions.logicAttributeName) as? ListAttributeNotation
+        val logicListAttribute = mainNotation?.get(CustomConventions.logicListAttributeName) as? ListAttributeNotation
         val logicListEntries: List<ScalarAttributeNotation> =
             logicListAttribute?.values.orEmpty().filterIsInstance<ScalarAttributeNotation>()
         val mainReferenceHost = ObjectReferenceHost.ofLocation(mainObjectLocation)
@@ -75,10 +75,7 @@ class CustomView(
                 .directAttribute(objectLocation, NotationConventions.abstractAttributePath)
                 ?.asBoolean()
                 ?: false
-            val isLogic = graphNotation
-                .mergeAttribute(objectLocation, CustomConventions.logicAttributePath)
-                ?.asBoolean()
-                ?: false
+            val isLogic = objectMetadata?.tags?.contains(CustomConventions.logicTag) ?: false
             val isInLogicList = objectLocation in logicMembership
 
             val onToggleLogicMembership: (() -> Unit)? =
@@ -92,14 +89,14 @@ class CustomView(
                             val command = if (existingEntry != null) {
                                 RemoveListItemInAttributeCommand(
                                     mainObjectLocation,
-                                    CustomConventions.logicAttributePath,
+                                    CustomConventions.logicListAttributePath,
                                     existingEntry,
                                     false)
                             }
                             else {
                                 InsertListItemInAttributeCommand(
                                     mainObjectLocation,
-                                    CustomConventions.logicAttributePath,
+                                    CustomConventions.logicListAttributePath,
                                     PositionRelation.at(logicListEntries.size),
                                     ScalarAttributeNotation(objectPath.asString()))
                             }
@@ -114,7 +111,7 @@ class CustomView(
                     if (existingEntry != null) {
                         ClientContext.mirroredGraphStore.apply(RemoveListItemInAttributeCommand(
                             mainObjectLocation,
-                            CustomConventions.logicAttributePath,
+                            CustomConventions.logicListAttributePath,
                             existingEntry,
                             false))
                     }

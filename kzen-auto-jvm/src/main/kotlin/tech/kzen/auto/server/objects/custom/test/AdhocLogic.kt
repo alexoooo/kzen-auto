@@ -20,10 +20,11 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Reflect
 class AdhocLogic(
-    private val name: String
+    private val named: AdhocNamed
 ): Logic {
     //-----------------------------------------------------------------------------------------------------------------
     fun hello(): String {
+        val name = named.name()
         return "Hello, $name!"
     }
 

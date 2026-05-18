@@ -20,13 +20,10 @@ import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
-import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
-import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
@@ -116,28 +113,14 @@ class SelectLogicEditor(
             }
 
             if (CustomConventions.isCustomDocument(notation)) {
-                candidates.addAll(customDocumentLogic(graphNotation, path, notation))
+                candidates.addAll(CustomConventions.customDocumentLogic(
+                    graphNotation, path, notation))
             }
         }
 
         return candidates
     }
 
-
-    private fun customDocumentLogic(
-            graphNotation: GraphNotation,
-            documentPath: DocumentPath,
-            documentNotation: DocumentNotation
-    ): List<ObjectLocation> {
-        val mainNotation = documentNotation.objects.notations[NotationConventions.mainObjectPath]!!
-        val logicAttribute = mainNotation.get(CustomConventions.logicAttributeName) as ListAttributeNotation
-        val host = ObjectReferenceHost.ofLocation(
-                ObjectLocation(documentPath, NotationConventions.mainObjectPath))
-        return logicAttribute.values.map { entry ->
-            val ref = ObjectReference.parse((entry as ScalarAttributeNotation).value)
-            graphNotation.coalesce.locate(ref, host)
-        }
-    }
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
