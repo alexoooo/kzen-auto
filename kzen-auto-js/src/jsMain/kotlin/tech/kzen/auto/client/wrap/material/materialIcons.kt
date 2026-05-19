@@ -29,6 +29,12 @@ external class DeleteIcon: Component<IconProps, react.State> {
 }
 
 
+@JsName("DragIndicator")
+external class DragIndicatorIcon: Component<IconProps, react.State> {
+    override fun render(): ReactElement<IconProps>?
+}
+
+
 @JsName("PlayArrow")
 external class PlayArrowIcon: Component<IconProps, react.State> {
     override fun render(): ReactElement<IconProps>?
