@@ -5,6 +5,7 @@ import mui.material.Size
 import mui.material.ToggleButton
 import mui.material.ToggleButtonGroup
 import mui.material.Tooltip
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -89,7 +90,7 @@ class CustomHeader(
                     value = CustomViewMode.Raw.name
                     size = Size.medium
 
-                    css {
+                    sx {
                         height = 34.px
                         color = NamedColor.black
                         borderWidth = 2.px

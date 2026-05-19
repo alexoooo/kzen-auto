@@ -234,10 +234,10 @@ class CustomCreate(
             }
 
             Select {
-                css {
-                    fontSize = 0.9.em
+                sx {
                     minWidth = 200.px
                 }
+                size = Size.small
                 value = state.selectedPrototype?.toReference()?.asString() ?: ""
 
                 onChange = { event, _ ->
@@ -271,7 +271,7 @@ class CustomCreate(
             }
 
             Button {
-                css {
+                sx {
                     marginLeft = 0.5.em
                 }
                 variant = ButtonVariant.contained

@@ -39,6 +39,7 @@ external interface CustomObjectHeaderProps: Props {
 
 external interface CustomObjectHeaderState: State {
     var editing: Boolean
+    var nameHovered: Boolean
 }
 
 
@@ -52,6 +53,7 @@ class CustomObjectHeader(
     //-----------------------------------------------------------------------------------------------------------------
     override fun CustomObjectHeaderState.init(props: CustomObjectHeaderProps) {
         editing = false
+        nameHovered = false
     }
 
 
@@ -79,6 +81,38 @@ class CustomObjectHeader(
                 marginBottom = 0.75.em
             }
 
+            renderNameArea()
+            renderRightCluster()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun ChildrenBuilder.renderNameArea() {
+        div {
+            css {
+                flexGrow = number(1.0)
+                minWidth = 0.px
+                display = Display.flex
+                alignItems = AlignItems.center
+            }
+
+            onMouseEnter = {
+                if (! state.nameHovered) {
+                    setState {
+                        nameHovered = true
+                    }
+                }
+            }
+
+            onMouseLeave = {
+                if (state.nameHovered) {
+                    setState {
+                        nameHovered = false
+                    }
+                }
+            }
+
             if (state.editing) {
                 renderEditor()
             }
@@ -102,8 +136,9 @@ class CustomObjectHeader(
             title = "Rename"
             size = Size.small
 
-            css {
+            sx {
                 marginLeft = 0.25.em
+                opacity = if (state.nameHovered) number(1.0) else number(0.0)
             }
 
             onClick = {
@@ -112,17 +147,28 @@ class CustomObjectHeader(
 
             EditIcon::class.react {}
         }
+    }
 
+
+    private fun ChildrenBuilder.renderEditor() {
+        ObjectNameEditor::class.react {
+            objectLocation = props.objectLocation
+            onClose = ::onCloseEdit
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun ChildrenBuilder.renderRightCluster() {
         div {
             css {
-                marginLeft = Auto.auto
                 display = Display.flex
                 alignItems = AlignItems.center
             }
 
             if (props.isAbstract) {
                 Chip {
-                    css {
+                    sx {
                         marginLeft = 0.5.em
                     }
                     size = Size.small
@@ -133,7 +179,7 @@ class CustomObjectHeader(
 
             if (props.isLogic) {
                 Chip {
-                    css {
+                    sx {
                         marginLeft = 0.5.em
                     }
                     size = Size.small
@@ -191,14 +237,6 @@ class CustomObjectHeader(
 
                 DeleteIcon::class.react {}
             }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderEditor() {
-        ObjectNameEditor::class.react {
-            objectLocation = props.objectLocation
-            onClose = ::onCloseEdit
         }
     }
 }
