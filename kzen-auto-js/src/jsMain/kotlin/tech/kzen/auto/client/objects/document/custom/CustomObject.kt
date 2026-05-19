@@ -44,10 +44,11 @@ class CustomObject(
         Paper {
             sx {
                 if (props.isAbstract) {
-                    backgroundColor = Color("rgb(240, 244, 250)")
+                    backgroundColor = Color("rgb(244, 244, 246)")
                     borderStyle = LineStyle.dashed
                     borderWidth = 1.px
-                    borderColor = Color("rgb(160, 175, 200)")
+                    borderColor = Color("rgb(175, 175, 180)")
+                    color = Color("rgb(110, 110, 115)")
                 }
                 else {
                     backgroundColor = NamedColor.white
