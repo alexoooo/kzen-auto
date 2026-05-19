@@ -3,11 +3,11 @@ package tech.kzen.auto.client.objects.document.custom
 import emotion.react.css
 import mui.material.CardContent
 import mui.material.Chip
-import mui.material.ChipColor
 import mui.material.ChipVariant
 import mui.material.IconButton
 import mui.material.Paper
 import mui.material.Size
+import mui.material.ToggleButton
 import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
@@ -20,6 +20,7 @@ import tech.kzen.auto.client.objects.document.common.edit.ObjectNameEditor
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.material.EditIcon
+import tech.kzen.auto.client.wrap.material.OpenInNewIcon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
@@ -94,6 +95,8 @@ class CustomObject(
             CardContent {
                 div {
                     css {
+                        display = Display.flex
+                        alignItems = AlignItems.center
                         marginBottom = 0.75.em
                     }
 
@@ -151,8 +154,8 @@ class CustomObject(
             title = "Delete"
             size = Size.small
 
-            css {
-                marginLeft = 0.25.em
+            sx {
+                marginLeft = Auto.auto
             }
 
             onClick = {
@@ -163,15 +166,13 @@ class CustomObject(
         }
 
         if (props.isAbstract) {
-            span {
+            Chip {
                 css {
                     marginLeft = 0.5.em
-                    fontWeight = FontWeight.normal
-                    fontStyle = FontStyle.italic
-                    fontSize = 0.85.em
-                    color = Color("rgb(90, 110, 150)")
                 }
-                +"(abstract)"
+                size = Size.small
+                label = ReactNode("abstract")
+                variant = ChipVariant.outlined
             }
         }
 
@@ -188,23 +189,20 @@ class CustomObject(
 
         val exportHandler = props.onToggleExport
         if (exportHandler != null) {
-            Chip {
-                css {
+            ToggleButton {
+                sx {
                     marginLeft = 0.5.em
+                    height = 24.px
+                    paddingTop = 0.px
+                    paddingBottom = 0.px
                 }
+                value = "export"
                 size = Size.small
+                selected = props.isExported
+                onChange = { _, _ -> exportHandler() }
+                title = if (props.isExported) "Exported (click to unexport)" else "Mark as exported"
 
-                if (props.isExported) {
-                    label = ReactNode("✓ export")
-                    variant = ChipVariant.filled
-                    color = ChipColor.primary
-                    onClick = { exportHandler() }
-                }
-                else {
-                    label = ReactNode("+ export")
-                    variant = ChipVariant.outlined
-                    onClick = { exportHandler() }
-                }
+                OpenInNewIcon::class.react {}
             }
         }
     }
