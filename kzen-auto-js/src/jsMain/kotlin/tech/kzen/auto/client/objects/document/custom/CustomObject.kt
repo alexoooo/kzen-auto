@@ -2,27 +2,15 @@ package tech.kzen.auto.client.objects.document.custom
 
 import emotion.react.css
 import mui.material.CardContent
-import mui.material.Chip
-import mui.material.ChipVariant
-import mui.material.IconButton
 import mui.material.Paper
-import mui.material.Size
-import mui.material.ToggleButton
 import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
-import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
-import tech.kzen.auto.client.objects.document.common.edit.ObjectNameEditor
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.DeleteIcon
-import tech.kzen.auto.client.wrap.material.EditIcon
-import tech.kzen.auto.client.wrap.material.OpenInNewIcon
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -44,39 +32,13 @@ external interface CustomObjectProps: Props {
 }
 
 
-external interface CustomObjectState: State {
-    var editing: Boolean
-}
-
-
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class CustomObject(
     props: CustomObjectProps
 ):
-    RPureComponent<CustomObjectProps, CustomObjectState>(props)
+    RPureComponent<CustomObjectProps, State>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun CustomObjectState.init(props: CustomObjectProps) {
-        editing = false
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun onStartEdit() {
-        setState {
-            editing = true
-        }
-    }
-
-
-    private fun onCloseEdit() {
-        setState {
-            editing = false
-        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         Paper {
@@ -90,22 +52,21 @@ class CustomObject(
                 else {
                     backgroundColor = NamedColor.white
                 }
+
+                if (props.isExported) {
+                    filter = dropShadow(0.px, 0.px, 4.px, Color("rgba(255, 193, 7, 0.55)"))
+                }
             }
 
             CardContent {
-                div {
-                    css {
-                        display = Display.flex
-                        alignItems = AlignItems.center
-                        marginBottom = 0.75.em
-                    }
-
-                    if (state.editing) {
-                        renderNameEditor()
-                    }
-                    else {
-                        renderNameReader()
-                    }
+                CustomObjectHeader::class.react {
+                    objectPath = props.objectPath
+                    objectLocation = props.objectLocation
+                    isAbstract = props.isAbstract
+                    isLogic = props.isLogic
+                    isExported = props.isExported
+                    onToggleExport = props.onToggleExport
+                    onDelete = props.onDelete
                 }
 
                 val objectMetadata = props.objectMetadata
@@ -122,96 +83,6 @@ class CustomObject(
                     renderAttributes(objectMetadata)
                 }
             }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderNameReader() {
-        span {
-            css {
-                fontWeight = FontWeight.bold
-                fontSize = 1.1.em
-            }
-            +props.objectPath.name.value
-        }
-
-        IconButton {
-            title = "Rename"
-            size = Size.small
-
-            css {
-                marginLeft = 0.25.em
-            }
-
-            onClick = {
-                onStartEdit()
-            }
-
-            EditIcon::class.react {}
-        }
-
-        IconButton {
-            title = "Delete"
-            size = Size.small
-
-            sx {
-                marginLeft = Auto.auto
-            }
-
-            onClick = {
-                props.onDelete()
-            }
-
-            DeleteIcon::class.react {}
-        }
-
-        if (props.isAbstract) {
-            Chip {
-                css {
-                    marginLeft = 0.5.em
-                }
-                size = Size.small
-                label = ReactNode("abstract")
-                variant = ChipVariant.outlined
-            }
-        }
-
-        if (props.isLogic) {
-            Chip {
-                css {
-                    marginLeft = 0.5.em
-                }
-                size = Size.small
-                label = ReactNode("logic")
-                variant = ChipVariant.outlined
-            }
-        }
-
-        val exportHandler = props.onToggleExport
-        if (exportHandler != null) {
-            ToggleButton {
-                sx {
-                    marginLeft = 0.5.em
-                    height = 24.px
-                    paddingTop = 0.px
-                    paddingBottom = 0.px
-                }
-                value = "export"
-                size = Size.small
-                selected = props.isExported
-                onChange = { _, _ -> exportHandler() }
-                title = if (props.isExported) "Exported (click to unexport)" else "Mark as exported"
-
-                OpenInNewIcon::class.react {}
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderNameEditor() {
-        ObjectNameEditor::class.react {
-            objectLocation = props.objectLocation
-            onClose = ::onCloseEdit
         }
     }
 

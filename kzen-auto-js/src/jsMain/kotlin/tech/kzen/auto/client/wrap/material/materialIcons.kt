@@ -124,6 +124,12 @@ external class OpenInNewIcon: Component<IconProps, react.State> {
 }
 
 
+@JsName("Public")
+external class PublicIcon: Component<IconProps, react.State> {
+    override fun render(): ReactElement<IconProps>?
+}
+
+
 @JsName("Http")
 external class HttpIcon: Component<IconProps, react.State> {
     override fun render(): ReactElement<IconProps>?
