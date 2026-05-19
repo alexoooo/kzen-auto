@@ -23,6 +23,7 @@ import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
+import tech.kzen.lib.common.model.structure.metadata.GraphMetadata
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
@@ -74,7 +75,9 @@ class SelectLogicEditor(
     override fun SelectLogicEditorState.init(props: AttributeEditorProps) {
 //        console.log("ParameterEditor | State.init - ${props.name}")
 
-        val graphNotation = ClientContext.clientStateGlobal.current()!!.graphStructure().graphNotation
+        val graphStructure = ClientContext.clientStateGlobal.current()!!.graphStructure()
+        val graphNotation = graphStructure.graphNotation
+        val graphMetadata = graphStructure.graphMetadata
 
         val attributeNotation = graphNotation.firstAttribute(props.objectLocation, props.attributeName)
 
@@ -92,12 +95,12 @@ class SelectLogicEditor(
 
 //        value = null
         renaming = false
-        options = options(graphNotation)
+        options = options(graphNotation, graphMetadata)
 //        initialized = false
     }
 
 
-    private fun options(graphNotation: GraphNotation): List<ObjectLocation> {
+    private fun options(graphNotation: GraphNotation, graphMetadata: GraphMetadata): List<ObjectLocation> {
         val candidates = mutableListOf<ObjectLocation>()
 
         for ((path, notation) in graphNotation.documents.map) {
@@ -113,8 +116,8 @@ class SelectLogicEditor(
             }
 
             if (CustomConventions.isCustomDocument(notation)) {
-                candidates.addAll(CustomConventions.customDocumentLogic(
-                    graphNotation, path, notation))
+                candidates.addAll(CustomConventions.customDocumentExportedLogic(
+                    graphNotation, graphMetadata, path, notation))
             }
         }
 
@@ -189,9 +192,11 @@ class SelectLogicEditor(
 
 
     private fun updateOptions() {
-        val graphNotation = ClientContext.clientStateGlobal.current()!!.graphStructure().graphNotation
+        val graphStructure = ClientContext.clientStateGlobal.current()!!.graphStructure()
+        val graphNotation = graphStructure.graphNotation
+        val graphMetadata = graphStructure.graphMetadata
         setState {
-            options = options(graphNotation)
+            options = options(graphNotation, graphMetadata)
         }
     }
 

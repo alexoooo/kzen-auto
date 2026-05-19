@@ -36,8 +36,8 @@ external interface CustomObjectProps: Props {
     var objectMetadata: ObjectMetadata?
     var isAbstract: Boolean
     var isLogic: Boolean
-    var isInLogicList: Boolean
-    var onToggleLogicMembership: (() -> Unit)?
+    var isExported: Boolean
+    var onToggleExport: (() -> Unit)?
     var onDelete: () -> Unit
     var attributeEditorManager: AttributeEditorManager.Wrapper
 }
@@ -181,22 +181,29 @@ class CustomObject(
                     marginLeft = 0.5.em
                 }
                 size = Size.small
+                label = ReactNode("logic")
+                variant = ChipVariant.outlined
+            }
+        }
 
-                val handler = props.onToggleLogicMembership
-                if (handler == null) {
-                    label = ReactNode("logic")
-                    variant = ChipVariant.outlined
+        val exportHandler = props.onToggleExport
+        if (exportHandler != null) {
+            Chip {
+                css {
+                    marginLeft = 0.5.em
                 }
-                else if (props.isInLogicList) {
-                    label = ReactNode("✓ logic")
+                size = Size.small
+
+                if (props.isExported) {
+                    label = ReactNode("✓ export")
                     variant = ChipVariant.filled
                     color = ChipColor.primary
-                    onClick = { handler() }
+                    onClick = { exportHandler() }
                 }
                 else {
-                    label = ReactNode("+ logic")
+                    label = ReactNode("+ export")
                     variant = ChipVariant.outlined
-                    onClick = { handler() }
+                    onClick = { exportHandler() }
                 }
             }
         }

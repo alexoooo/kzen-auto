@@ -55,12 +55,12 @@ class CustomView(
 
         val mainObjectLocation = ObjectLocation(props.documentPath, NotationConventions.mainObjectPath)
         val mainNotation = props.serverNotation.notations[NotationConventions.mainObjectPath]
-        val logicListAttribute = mainNotation?.get(CustomConventions.logicListAttributeName) as? ListAttributeNotation
-        val logicListEntries: List<ScalarAttributeNotation> =
-            logicListAttribute?.values.orEmpty().filterIsInstance<ScalarAttributeNotation>()
+        val exportsListAttribute = mainNotation?.get(CustomConventions.exportsListAttributeName) as? ListAttributeNotation
+        val exportsListEntries: List<ScalarAttributeNotation> =
+            exportsListAttribute?.values.orEmpty().filterIsInstance<ScalarAttributeNotation>()
         val mainReferenceHost = ObjectReferenceHost.ofLocation(mainObjectLocation)
-        val logicMembership: Map<ObjectLocation, ScalarAttributeNotation> =
-            logicListEntries.associateBy { entry ->
+        val exportMembership: Map<ObjectLocation, ScalarAttributeNotation> =
+            exportsListEntries.associateBy { entry ->
                 graphNotation.coalesce.locate(ObjectReference.parse(entry.value), mainReferenceHost)
             }
 
@@ -76,28 +76,28 @@ class CustomView(
                 ?.asBoolean()
                 ?: false
             val isLogic = objectMetadata?.tags?.contains(CustomConventions.logicTag) ?: false
-            val isInLogicList = objectLocation in logicMembership
+            val isExported = objectLocation in exportMembership
 
-            val onToggleLogicMembership: (() -> Unit)? =
-                if (! isLogic || isAbstract) {
+            val onToggleExport: (() -> Unit)? =
+                if (isAbstract) {
                     null
                 }
                 else {
                     {
                         async {
-                            val existingEntry = logicMembership[objectLocation]
+                            val existingEntry = exportMembership[objectLocation]
                             val command = if (existingEntry != null) {
                                 RemoveListItemInAttributeCommand(
                                     mainObjectLocation,
-                                    CustomConventions.logicListAttributePath,
+                                    CustomConventions.exportsListAttributePath,
                                     existingEntry,
                                     false)
                             }
                             else {
                                 InsertListItemInAttributeCommand(
                                     mainObjectLocation,
-                                    CustomConventions.logicListAttributePath,
-                                    PositionRelation.at(logicListEntries.size),
+                                    CustomConventions.exportsListAttributePath,
+                                    PositionRelation.at(exportsListEntries.size),
                                     ScalarAttributeNotation(objectPath.asString()))
                             }
                             ClientContext.mirroredGraphStore.apply(command)
@@ -107,11 +107,11 @@ class CustomView(
 
             val onDelete: () -> Unit = {
                 async {
-                    val existingEntry = logicMembership[objectLocation]
+                    val existingEntry = exportMembership[objectLocation]
                     if (existingEntry != null) {
                         ClientContext.mirroredGraphStore.apply(RemoveListItemInAttributeCommand(
                             mainObjectLocation,
-                            CustomConventions.logicListAttributePath,
+                            CustomConventions.exportsListAttributePath,
                             existingEntry,
                             false))
                     }
@@ -130,8 +130,8 @@ class CustomView(
                     this.objectMetadata = objectMetadata
                     this.isAbstract = isAbstract
                     this.isLogic = isLogic
-                    this.isInLogicList = isInLogicList
-                    this.onToggleLogicMembership = onToggleLogicMembership
+                    this.isExported = isExported
+                    this.onToggleExport = onToggleExport
                     this.onDelete = onDelete
                     this.attributeEditorManager = props.attributeEditorManager
                 }

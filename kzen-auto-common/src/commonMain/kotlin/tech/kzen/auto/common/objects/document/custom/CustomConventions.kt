@@ -8,6 +8,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.structure.metadata.GraphMetadata
 import tech.kzen.lib.common.model.structure.metadata.tag.ObjectTag
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -23,8 +24,8 @@ object CustomConventions {
 
     val logicTag = ObjectTag("logic")
 
-    val logicListAttributeName = AttributeName("logic")
-    val logicListAttributePath = AttributePath.ofName(logicListAttributeName)
+    val exportsListAttributeName = AttributeName("exports")
+    val exportsListAttributePath = AttributePath.ofName(exportsListAttributeName)
 
     val objectsAttributeName = AttributeName("objects")
     val objectsAttributePath = AttributePath.ofName(objectsAttributeName)
@@ -32,7 +33,7 @@ object CustomConventions {
 
     fun isManaged(attributeName: AttributeName): Boolean {
         return AutoConventions.isManaged(attributeName) ||
-            attributeName == logicListAttributeName ||
+            attributeName == exportsListAttributeName ||
             attributeName == objectsAttributeName
     }
 
@@ -60,18 +61,29 @@ object CustomConventions {
     }
 
 
-    fun customDocumentLogic(
+    fun customDocumentExports(
         graphNotation: GraphNotation,
         documentPath: DocumentPath,
         documentNotation: DocumentNotation
     ): List<ObjectLocation> {
         val mainNotation = documentNotation.objects.notations[NotationConventions.mainObjectPath]!!
-        val logicAttribute = mainNotation.get(logicListAttributeName) as ListAttributeNotation
+        val exportsAttribute = mainNotation.get(exportsListAttributeName) as ListAttributeNotation
         val host = ObjectReferenceHost.ofLocation(
             ObjectLocation(documentPath, NotationConventions.mainObjectPath))
-        return logicAttribute.values.map { entry ->
+        return exportsAttribute.values.map { entry ->
             val ref = ObjectReference.parse((entry as ScalarAttributeNotation).value)
             graphNotation.coalesce.locate(ref, host)
         }
+    }
+
+
+    fun customDocumentExportedLogic(
+        graphNotation: GraphNotation,
+        graphMetadata: GraphMetadata,
+        documentPath: DocumentPath,
+        documentNotation: DocumentNotation
+    ): List<ObjectLocation> {
+        return customDocumentExports(graphNotation, documentPath, documentNotation)
+            .filter { graphMetadata.objectMetadata[it]?.tags?.contains(logicTag) == true }
     }
 }
