@@ -241,9 +241,7 @@ class CustomCreate(
                 value = state.selectedPrototype?.toReference()?.asString() ?: ""
 
                 onChange = { event, _ ->
-                    val target: dynamic = event.target
-                    val value = target.value as String
-                    onPrototypeChange(value)
+                    onPrototypeChange(event.target.asDynamic().value as String)
                 }
 
                 for (prototype in props.prototypes) {

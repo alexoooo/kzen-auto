@@ -72,6 +72,24 @@ class CustomObjectHeader(
     }
 
 
+    private fun onNameAreaEnter() {
+        if (!state.nameHovered) {
+            setState {
+                nameHovered = true
+            }
+        }
+    }
+
+
+    private fun onNameAreaLeave() {
+        if (state.nameHovered) {
+            setState {
+                nameHovered = false
+            }
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         div {
@@ -97,21 +115,8 @@ class CustomObjectHeader(
                 alignItems = AlignItems.center
             }
 
-            onMouseEnter = {
-                if (! state.nameHovered) {
-                    setState {
-                        nameHovered = true
-                    }
-                }
-            }
-
-            onMouseLeave = {
-                if (state.nameHovered) {
-                    setState {
-                        nameHovered = false
-                    }
-                }
-            }
+            onMouseEnter = { onNameAreaEnter() }
+            onMouseLeave = { onNameAreaLeave() }
 
             if (state.editing) {
                 renderEditor()

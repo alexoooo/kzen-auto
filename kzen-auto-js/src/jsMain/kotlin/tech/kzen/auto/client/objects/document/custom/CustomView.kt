@@ -48,21 +48,70 @@ class CustomView(
     RPureComponent<CustomViewProps, CustomViewState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    private fun mainObjectLocation(): ObjectLocation =
+        ObjectLocation(props.documentPath, NotationConventions.mainObjectPath)
+
+
+    private fun exportsListEntries(): List<ScalarAttributeNotation> {
+        val mainNotation = props.serverNotation.notations[NotationConventions.mainObjectPath]
+        val exportsListAttribute = mainNotation?.get(CustomConventions.exportsListAttributeName) as? ListAttributeNotation
+        return exportsListAttribute?.values.orEmpty().filterIsInstance<ScalarAttributeNotation>()
+    }
+
+
+    private fun exportMembership(): Map<ObjectLocation, ScalarAttributeNotation> {
+        val graphNotation = props.clientState.graphStructure().graphNotation
+        val mainReferenceHost = ObjectReferenceHost.ofLocation(mainObjectLocation())
+        return exportsListEntries().associateBy { entry ->
+            graphNotation.coalesce.locate(ObjectReference.parse(entry.value), mainReferenceHost)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onToggleExport(objectLocation: ObjectLocation) {
+        async {
+            val existingEntry = exportMembership()[objectLocation]
+            val command = if (existingEntry != null) {
+                RemoveListItemInAttributeCommand(
+                    mainObjectLocation(),
+                    CustomConventions.exportsListAttributePath,
+                    existingEntry,
+                    false)
+            }
+            else {
+                InsertListItemInAttributeCommand(
+                    mainObjectLocation(),
+                    CustomConventions.exportsListAttributePath,
+                    PositionRelation.at(exportsListEntries().size),
+                    ScalarAttributeNotation(objectLocation.objectPath.asString()))
+            }
+            ClientContext.mirroredGraphStore.apply(command)
+        }
+    }
+
+
+    private fun onDeleteObject(objectLocation: ObjectLocation) {
+        async {
+            val existingEntry = exportMembership()[objectLocation]
+            if (existingEntry != null) {
+                ClientContext.mirroredGraphStore.apply(RemoveListItemInAttributeCommand(
+                    mainObjectLocation(),
+                    CustomConventions.exportsListAttributePath,
+                    existingEntry,
+                    false))
+            }
+            ClientContext.mirroredGraphStore.apply(RemoveObjectCommand(objectLocation))
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val graphStructure = props.clientState.graphStructure()
         val graphMetadata = graphStructure.graphMetadata
         val graphNotation = graphStructure.graphNotation
-
-        val mainObjectLocation = ObjectLocation(props.documentPath, NotationConventions.mainObjectPath)
-        val mainNotation = props.serverNotation.notations[NotationConventions.mainObjectPath]
-        val exportsListAttribute = mainNotation?.get(CustomConventions.exportsListAttributeName) as? ListAttributeNotation
-        val exportsListEntries: List<ScalarAttributeNotation> =
-            exportsListAttribute?.values.orEmpty().filterIsInstance<ScalarAttributeNotation>()
-        val mainReferenceHost = ObjectReferenceHost.ofLocation(mainObjectLocation)
-        val exportMembership: Map<ObjectLocation, ScalarAttributeNotation> =
-            exportsListEntries.associateBy { entry ->
-                graphNotation.coalesce.locate(ObjectReference.parse(entry.value), mainReferenceHost)
-            }
+        val membership = exportMembership()
 
         for ((objectPath, _) in props.serverNotation.notations.map) {
             if (objectPath.name == ObjectName.main && objectPath.nesting.isRoot()) {
@@ -76,48 +125,13 @@ class CustomView(
                 ?.asBoolean()
                 ?: false
             val isLogic = objectMetadata?.tags?.contains(CustomConventions.logicTag) ?: false
-            val isExported = objectLocation in exportMembership
+            val isExported = objectLocation in membership
 
-            val onToggleExport: (() -> Unit)? =
-                if (isAbstract) {
-                    null
-                }
-                else {
-                    {
-                        async {
-                            val existingEntry = exportMembership[objectLocation]
-                            val command = if (existingEntry != null) {
-                                RemoveListItemInAttributeCommand(
-                                    mainObjectLocation,
-                                    CustomConventions.exportsListAttributePath,
-                                    existingEntry,
-                                    false)
-                            }
-                            else {
-                                InsertListItemInAttributeCommand(
-                                    mainObjectLocation,
-                                    CustomConventions.exportsListAttributePath,
-                                    PositionRelation.at(exportsListEntries.size),
-                                    ScalarAttributeNotation(objectPath.asString()))
-                            }
-                            ClientContext.mirroredGraphStore.apply(command)
-                        }
-                    }
-                }
+            val toggleExportHandler: (() -> Unit)? =
+                if (isAbstract) null
+                else { { onToggleExport(objectLocation) } }
 
-            val onDelete: () -> Unit = {
-                async {
-                    val existingEntry = exportMembership[objectLocation]
-                    if (existingEntry != null) {
-                        ClientContext.mirroredGraphStore.apply(RemoveListItemInAttributeCommand(
-                            mainObjectLocation,
-                            CustomConventions.exportsListAttributePath,
-                            existingEntry,
-                            false))
-                    }
-                    ClientContext.mirroredGraphStore.apply(RemoveObjectCommand(objectLocation))
-                }
-            }
+            val deleteHandler: () -> Unit = { onDeleteObject(objectLocation) }
 
             div {
                 css {
@@ -131,8 +145,8 @@ class CustomView(
                     this.isAbstract = isAbstract
                     this.isLogic = isLogic
                     this.isExported = isExported
-                    this.onToggleExport = onToggleExport
-                    this.onDelete = onDelete
+                    this.onToggleExport = toggleExportHandler
+                    this.onDelete = deleteHandler
                     this.attributeEditorManager = props.attributeEditorManager
                 }
             }

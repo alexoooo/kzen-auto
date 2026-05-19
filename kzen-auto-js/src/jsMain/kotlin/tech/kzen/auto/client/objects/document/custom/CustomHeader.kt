@@ -78,10 +78,7 @@ class CustomHeader(
                 exclusive = true
 
                 asDynamic()["onChange"] = { _, v ->
-                    val selected = v as? String
-                    if (selected != null) {
-                        onModeChange(CustomViewMode.valueOf(selected))
-                    }
+                    (v as? String)?.let { onModeChange(CustomViewMode.valueOf(it)) }
                 }
 
                 renderViewButton()

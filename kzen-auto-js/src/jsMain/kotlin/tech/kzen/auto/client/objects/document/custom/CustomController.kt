@@ -214,7 +214,7 @@ class CustomController(
             return
         }
 
-        if (! isEditorModified()) {
+        if (!isEditorModified()) {
             return
         }
 
