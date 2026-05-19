@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.custom
+package tech.kzen.auto.client.objects.document.custom.view
 
 import react.ChildrenBuilder
 import react.Props

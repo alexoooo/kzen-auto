@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.custom
+package tech.kzen.auto.client.objects.document.custom.view
 
 import emotion.react.css
 import mui.material.Chip
