@@ -29,6 +29,7 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.CreateDocumentCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
+import tech.kzen.lib.common.util.naming.NextAvailableName
 import web.cssom.*
 import web.html.HTMLElement
 import kotlin.js.Date
@@ -206,46 +207,13 @@ class SidebarFolder(
             title: String,
             directory: Boolean
     ): DocumentPath {
-        val suffix = findSuffix(title, props.graphStructure, directory)
-        return resolve(title + suffix, directory)
-    }
-
-
-    private fun findSuffix(
-            prefix: String,
-            structure: GraphStructure?,
-            directory: Boolean
-    ): String {
-        if (structure == null) {
-            return "-" + Random.nextInt()
-        }
-        else {
-            if (testSuffix(structure, prefix, "", directory)) {
-                return ""
+        val documents = props.graphStructure.graphNotation.documents
+        val chosenName = NextAvailableName
+            .find(title, separator = "-", range = 1 .. 99) { candidate ->
+                resolve(candidate, directory) !in documents
             }
-
-            for (i in 1 .. 99) {
-                val candidateSuffix = "-$i"
-                if (!testSuffix(structure, prefix, candidateSuffix, directory)) {
-                    continue
-                }
-
-                return candidateSuffix
-            }
-
-            return "-" + Random.nextInt()
-        }
-    }
-
-
-    private fun testSuffix(
-            structure: GraphStructure,
-            prefix: String,
-            candidateSuffix: String,
-            directory: Boolean
-    ): Boolean {
-        val candidatePath = resolve(prefix + candidateSuffix, directory)
-        return candidatePath !in structure.graphNotation.documents
+            ?: "$title-${Random.nextInt()}"
+        return resolve(chosenName, directory)
     }
 
 

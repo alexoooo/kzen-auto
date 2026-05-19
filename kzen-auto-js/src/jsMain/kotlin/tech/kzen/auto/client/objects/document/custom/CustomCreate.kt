@@ -14,9 +14,12 @@ import react.Key
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -28,10 +31,13 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.AddObjectCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphSuccess
+import tech.kzen.lib.common.util.naming.NextAvailableName
+import web.cssom.AlignItems
 import web.cssom.Color
+import web.cssom.Display
 import web.cssom.FontStyle
 import web.cssom.FontWeight
-import web.cssom.NamedColor
+import web.cssom.LineStyle
 import web.cssom.em
 import web.cssom.px
 
@@ -103,7 +109,7 @@ class CustomCreate(
             return
         }
 
-        val newName = nextAvailableName(prototype.objectPath.name)
+        val newName = nextAvailableObjectName(prototype.objectPath.name)
         val newPath = NotationConventions.mainObjectPath.nest(
             CustomConventions.objectsAttributePath, newName)
         val newLocation = ObjectLocation(props.documentPath, newPath)
@@ -137,7 +143,7 @@ class CustomCreate(
     }
 
 
-    private fun nextAvailableName(prototypeName: ObjectName): ObjectName {
+    private fun nextAvailableObjectName(prototypeName: ObjectName): ObjectName {
         val attributePath = CustomConventions.objectsAttributePath
         val taken: Set<String> = props.documentNotation.notations.map.keys
             .filter {
@@ -147,16 +153,11 @@ class CustomCreate(
             }
             .map { it.name.value }
             .toSet()
-        if (prototypeName.value !in taken) {
-            return prototypeName
-        }
-        for (i in 2..1000) {
-            val candidate = "${prototypeName.value}$i"
-            if (candidate !in taken) {
-                return ObjectName(candidate)
-            }
-        }
-        return ObjectName("${prototypeName.value}${props.documentNotation.notations.map.size + 1}")
+
+        val chosen = NextAvailableName.find(prototypeName.value) { it !in taken }
+            ?: "${prototypeName.value}${props.documentNotation.notations.map.size + 1}"
+
+        return ObjectName(chosen)
     }
 
 
@@ -177,7 +178,14 @@ class CustomCreate(
                 variant = ButtonVariant.contained
                 size = Size.small
                 onClick = { onAddClick() }
-                +"+ Add"
+
+                AddCircleOutlineIcon::class.react {}
+                span {
+                    css {
+                        marginLeft = 0.3.em
+                    }
+                    +"Add"
+                }
             }
         }
     }
@@ -186,17 +194,30 @@ class CustomCreate(
     private fun ChildrenBuilder.renderForm() {
         Paper {
             sx {
-                backgroundColor = NamedColor.white
+                backgroundColor = Color("rgb(240, 247, 255)")
+                borderLeftStyle = LineStyle.solid
+                borderLeftWidth = 3.px
+                borderLeftColor = Color("rgb(25, 118, 210)")
             }
 
             CardContent {
                 div {
                     css {
+                        display = Display.flex
+                        alignItems = AlignItems.center
                         fontWeight = FontWeight.bold
                         fontSize = 1.1.em
                         marginBottom = 0.75.em
+                        color = Color("rgb(25, 118, 210)")
                     }
-                    +"New object"
+
+                    AddCircleOutlineIcon::class.react {}
+                    span {
+                        css {
+                            marginLeft = 0.3.em
+                        }
+                        +"New object"
+                    }
                 }
 
                 renderTypeSelect()

@@ -10,6 +10,7 @@ import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.util.naming.NextAvailableName
 
 
 @Reflect
@@ -29,9 +30,7 @@ class SequenceCommander(
                 ?.asString()
                 ?: archetypeObjectLocation.objectPath.name.value
 
-            val directObjectName = ObjectName(namePrefix)
-
-            val documentObjectNames = graphStructure
+            val documentObjectNames: Set<ObjectName> = graphStructure
                 .graphNotation
                 .documents[containingObjectLocation.documentPath]!!
                 .objects
@@ -41,19 +40,10 @@ class SequenceCommander(
                 .map { it.name }
                 .toSet()
 
-            if (directObjectName !in documentObjectNames) {
-                return directObjectName
-            }
-
-            for (i in 2 .. 1000) {
-                val numberedObjectName = ObjectName("$namePrefix $i")
-
-                if (numberedObjectName !in documentObjectNames) {
-                    return numberedObjectName
-                }
-            }
-
-            return AutoConventions.randomAnonymous()
+            return NextAvailableName
+                .find(namePrefix, separator = " ") { ObjectName(it) !in documentObjectNames }
+                ?.let { ObjectName(it) }
+                ?: AutoConventions.randomAnonymous()
         }
     }
 
