@@ -8,6 +8,7 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
+import tech.kzen.auto.client.objects.document.custom.view.CustomCommander
 import tech.kzen.auto.client.objects.document.custom.view.CustomView
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
@@ -89,6 +90,12 @@ class CustomController(
             }
         }
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private val customCommander = CustomCommander(
+        documentPathProvider = { state.loadedFor },
+        serverNotationProvider = { state.serverNotation })
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -302,6 +309,7 @@ class CustomController(
                             this.documentPath = documentPath
                             this.clientState = clientState
                             this.serverNotation = serverNotation
+                            this.customCommander = this@CustomController.customCommander
                             this.attributeEditorManager = props.attributeEditorManager
                         }
                     }

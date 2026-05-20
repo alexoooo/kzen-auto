@@ -47,6 +47,7 @@ class SequenceCommander(
         }
     }
 
+
     //-----------------------------------------------------------------------------------------------------------------
     private val byArchetype: Map<ObjectLocation, SequenceStepCommander>
 

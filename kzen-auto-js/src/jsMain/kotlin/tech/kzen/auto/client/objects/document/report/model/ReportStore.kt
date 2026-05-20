@@ -16,6 +16,7 @@ import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 
@@ -135,7 +136,7 @@ class ReportStore: ClientStateGlobal.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     private fun initAsync() {
         async {
-            delay(10)
+            delay(10.milliseconds)
             if (state == null) {
                 return@async
             }

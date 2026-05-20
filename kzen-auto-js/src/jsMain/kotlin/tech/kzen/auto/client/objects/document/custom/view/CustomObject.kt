@@ -7,43 +7,29 @@ import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
+import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.DragIndicatorIcon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
+import web.html.HTMLDivElement
 import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-enum class DropMarker {
-    Above,
-    Below
-}
-
-
 external interface CustomObjectProps: Props {
-    var objectPath: ObjectPath
     var objectLocation: ObjectLocation
-    var objectMetadata: ObjectMetadata?
-    var isAbstract: Boolean
-    var isLogic: Boolean
-    var isExported: Boolean
-    var onToggleExport: (() -> Unit)?
-    var onDelete: () -> Unit
+    var info: CustomObjectInfo
+    var customCommander: CustomCommander
     var attributeEditorManager: AttributeEditorManager.Wrapper
 
     var indexInDocument: Int
     var dropMarker: DropMarker?
-    var onDragStart: (Int) -> Unit
-    var onDragOver: (Int, Boolean) -> Unit
-    var onDragEnd: () -> Unit
-    var onDrop: () -> Unit
+    var dragHandlers: CustomDragHandlers
 }
 
 
@@ -66,6 +52,35 @@ class CustomObject(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onMouseEnter() {
+        if (!state.isHovering) {
+            setState { isHovering = true }
+        }
+    }
+
+
+    private fun onMouseLeave() {
+        if (state.isHovering) {
+            setState { isHovering = false }
+        }
+    }
+
+
+    private fun onDragOver(event: DragEvent<HTMLDivElement>) {
+        event.preventDefault()
+        val rect = event.currentTarget.getBoundingClientRect()
+        val dropAfter = event.clientY > rect.top + rect.height / 2
+        props.dragHandlers.onDragOver(props.indexInDocument, dropAfter)
+    }
+
+
+    private fun onDrop(event: DragEvent<HTMLDivElement>) {
+        event.preventDefault()
+        props.dragHandlers.onDrop()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         div {
             css {
@@ -73,33 +88,20 @@ class CustomObject(
                 marginBottom = 1.em
             }
 
-            onMouseEnter = {
-                if (!state.isHovering) {
-                    setState { isHovering = true }
-                }
-            }
-            onMouseLeave = {
-                if (state.isHovering) {
-                    setState { isHovering = false }
-                }
-            }
-            onDragOver = { event ->
-                event.preventDefault()
-                val rect = event.currentTarget.getBoundingClientRect()
-                val dropAfter = event.clientY > rect.top + rect.height / 2
-                props.onDragOver(props.indexInDocument, dropAfter)
-            }
-            onDrop = { event ->
-                event.preventDefault()
-                props.onDrop()
-            }
+            onMouseEnter = { onMouseEnter() }
+            onMouseLeave = { onMouseLeave() }
+            onDragOver = ::onDragOver
+            onDrop = ::onDrop
 
-            renderHandle()
-            renderDropIndicator()
+            customDragHandle(
+                isVisible = state.isHovering || props.dropMarker != null,
+                indexInDocument = props.indexInDocument,
+                handlers = props.dragHandlers)
+            customDropIndicator(props.dropMarker)
 
             Paper {
                 sx {
-                    if (props.isAbstract) {
+                    if (props.info.isAbstract) {
                         backgroundColor = Color("rgb(244, 244, 246)")
                         borderStyle = LineStyle.dashed
                         borderWidth = 1.px
@@ -110,23 +112,19 @@ class CustomObject(
                         backgroundColor = NamedColor.white
                     }
 
-                    if (props.isExported) {
+                    if (props.info.isExported) {
                         filter = dropShadow(0.px, 0.px, 4.px, Color("rgba(255, 193, 7, 0.55)"))
                     }
                 }
 
                 CardContent {
                     CustomObjectHeader::class.react {
-                        objectPath = props.objectPath
                         objectLocation = props.objectLocation
-                        isAbstract = props.isAbstract
-                        isLogic = props.isLogic
-                        isExported = props.isExported
-                        onToggleExport = props.onToggleExport
-                        onDelete = props.onDelete
+                        info = props.info
+                        customCommander = props.customCommander
                     }
 
-                    val objectMetadata = props.objectMetadata
+                    val objectMetadata = props.info.objectMetadata
                     if (objectMetadata == null) {
                         div {
                             css {
@@ -139,58 +137,6 @@ class CustomObject(
                     else {
                         renderAttributes(objectMetadata)
                     }
-                }
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun ChildrenBuilder.renderHandle() {
-        div {
-            css {
-                position = Position.absolute
-                top = 0.px
-                bottom = 0.px
-                left = (-1.25).em
-                width = 1.25.em
-                display = Display.flex
-                alignItems = AlignItems.center
-                justifyContent = JustifyContent.center
-                cursor = Cursor.grab
-                color = Color("rgb(110, 110, 115)")
-                opacity =
-                    if (state.isHovering || props.dropMarker != null) number(1.0)
-                    else number(0.0)
-            }
-
-            draggable = true
-            onDragStart = { event ->
-                event.dataTransfer.setData("text/plain", "")
-                props.onDragStart(props.indexInDocument)
-            }
-            onDragEnd = {
-                props.onDragEnd()
-            }
-
-            DragIndicatorIcon::class.react {}
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderDropIndicator() {
-        val marker = props.dropMarker ?: return
-        div {
-            css {
-                position = Position.absolute
-                left = 0.px
-                right = 0.px
-                height = 2.px
-                backgroundColor = Color("#649fff")
-                pointerEvents = None.none
-                when (marker) {
-                    DropMarker.Above -> top = (-0.5).em
-                    DropMarker.Below -> bottom = (-0.5).em
                 }
             }
         }

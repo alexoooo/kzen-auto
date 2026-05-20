@@ -21,19 +21,14 @@ import tech.kzen.auto.client.wrap.material.PublicIcon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectPath
 import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface CustomObjectHeaderProps: Props {
-    var objectPath: ObjectPath
     var objectLocation: ObjectLocation
-    var isAbstract: Boolean
-    var isLogic: Boolean
-    var isExported: Boolean
-    var onToggleExport: (() -> Unit)?
-    var onDelete: () -> Unit
+    var info: CustomObjectInfo
+    var customCommander: CustomCommander
 }
 
 
@@ -90,6 +85,16 @@ class CustomObjectHeader(
     }
 
 
+    private fun onToggleExport() {
+        props.customCommander.toggleExport(props.objectLocation)
+    }
+
+
+    private fun onDelete() {
+        props.customCommander.deleteObject(props.objectLocation)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         div {
@@ -134,7 +139,7 @@ class CustomObjectHeader(
                 fontWeight = FontWeight.bold
                 fontSize = 1.1.em
             }
-            +props.objectPath.name.value
+            +props.objectLocation.objectPath.name.value
         }
 
         IconButton {
@@ -146,9 +151,7 @@ class CustomObjectHeader(
                 opacity = if (state.nameHovered) number(1.0) else number(0.0)
             }
 
-            onClick = {
-                onStartEdit()
-            }
+            onClick = { onStartEdit() }
 
             EditIcon::class.react {}
         }
@@ -171,7 +174,7 @@ class CustomObjectHeader(
                 alignItems = AlignItems.center
             }
 
-            if (props.isAbstract) {
+            if (props.info.isAbstract) {
                 Chip {
                     sx {
                         marginLeft = 0.5.em
@@ -182,7 +185,7 @@ class CustomObjectHeader(
                 }
             }
 
-            if (props.isLogic) {
+            if (props.info.isLogic) {
                 Chip {
                     sx {
                         marginLeft = 0.5.em
@@ -193,8 +196,7 @@ class CustomObjectHeader(
                 }
             }
 
-            val exportHandler = props.onToggleExport
-            if (exportHandler != null) {
+            if (!props.info.isAbstract) {
                 ToggleButton {
                     sx {
                         marginLeft = 0.5.em
@@ -204,25 +206,9 @@ class CustomObjectHeader(
                     }
                     value = "export"
                     size = Size.small
-                    selected = props.isExported
-                    onChange = { _, _ -> exportHandler() }
-                    title = if (props.isExported) "Exported (click to unexport)" else "Mark as exported"
-
-                    PublicIcon::class.react {}
-                }
-            }
-            else if (props.isAbstract) {
-                ToggleButton {
-                    sx {
-                        marginLeft = 0.5.em
-                        height = 24.px
-                        paddingTop = 0.px
-                        paddingBottom = 0.px
-                        visibility = Visibility.hidden
-                    }
-                    value = "export"
-                    size = Size.small
-                    disabled = true
+                    selected = props.info.isExported
+                    onChange = { _, _ -> onToggleExport() }
+                    title = if (props.info.isExported) "Exported (click to unexport)" else "Mark as exported"
 
                     PublicIcon::class.react {}
                 }
@@ -236,9 +222,7 @@ class CustomObjectHeader(
                     marginLeft = 0.5.em
                 }
 
-                onClick = {
-                    props.onDelete()
-                }
+                onClick = { onDelete() }
 
                 DeleteIcon::class.react {}
             }
