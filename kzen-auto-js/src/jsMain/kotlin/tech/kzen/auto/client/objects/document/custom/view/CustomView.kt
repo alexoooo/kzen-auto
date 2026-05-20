@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.custom.view
 
 import react.ChildrenBuilder
+import react.Key
 import react.Props
 import react.State
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
@@ -56,6 +57,7 @@ class CustomView(
             val info = CustomObjectInfo.derive(objectLocation, graphStructure, exportsState.membership)
 
             CustomObject::class.react {
+                this.key = Key(objectPath.asString())
                 this.objectLocation = objectLocation
                 this.info = info
                 this.viewStore = props.viewStore
