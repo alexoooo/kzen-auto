@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.custom.view
+package tech.kzen.auto.client.objects.document.custom.view.obj
 
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.location.ObjectLocation

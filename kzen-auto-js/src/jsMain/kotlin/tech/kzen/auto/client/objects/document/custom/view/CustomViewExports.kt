@@ -12,19 +12,19 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 //---------------------------------------------------------------------------------------------------------------------
-data class CustomExportsState(
+data class CustomViewExportsState(
     val entries: List<ScalarAttributeNotation>,
     val membership: Map<ObjectLocation, ScalarAttributeNotation>
 )
 
 
 //---------------------------------------------------------------------------------------------------------------------
-object CustomExports {
+object CustomViewExports {
     fun current(
         serverNotation: DocumentObjectNotation,
         graphStructure: GraphStructure,
         mainObjectLocation: ObjectLocation
-    ): CustomExportsState {
+    ): CustomViewExportsState {
         val mainNotation = serverNotation.notations[NotationConventions.mainObjectPath]
         val exportsListAttribute = mainNotation?.get(CustomConventions.exportsListAttributeName) as? ListAttributeNotation
         val entries = exportsListAttribute?.values.orEmpty().filterIsInstance<ScalarAttributeNotation>()
@@ -34,6 +34,6 @@ object CustomExports {
             graphStructure.graphNotation.coalesce.locate(ObjectReference.parse(entry.value), mainReferenceHost)
         }
 
-        return CustomExportsState(entries, membership)
+        return CustomViewExportsState(entries, membership)
     }
 }

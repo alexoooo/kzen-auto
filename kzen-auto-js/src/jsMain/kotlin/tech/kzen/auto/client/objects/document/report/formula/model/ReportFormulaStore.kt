@@ -11,6 +11,7 @@ import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.service.store.MirroredGraphError
+import kotlin.time.Duration.Companion.milliseconds
 
 
 class ReportFormulaStore(
@@ -70,7 +71,7 @@ class ReportFormulaStore(
         beforeRequest()
 
         async {
-            delay(1)
+            delay(1.milliseconds)
             val error = submitFormulaRemove(columnName)
             validateAfterNotationChange(error)
 

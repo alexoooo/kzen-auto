@@ -1,8 +1,9 @@
-package tech.kzen.auto.client.objects.document.custom.view
+package tech.kzen.auto.client.objects.document.custom.view.obj
 
 import emotion.react.css
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.wrap.material.DragIndicatorIcon
 import tech.kzen.auto.client.wrap.react
 import web.cssom.AlignItems
@@ -24,16 +25,8 @@ enum class DropMarker {
 }
 
 
-data class CustomDragHandlers(
-    val onDragStart: (Int) -> Unit,
-    val onDragOver: (Int, Boolean) -> Unit,
-    val onDragEnd: () -> Unit,
-    val onDrop: () -> Unit
-)
-
-
 //---------------------------------------------------------------------------------------------------------------------
-object CustomDragDrop {
+object CustomObjectDragDrop {
     fun dropMarkerFor(
         dragSourceIndex: Int?,
         dragOverIndex: Int?,
@@ -58,7 +51,7 @@ object CustomDragDrop {
 fun ChildrenBuilder.customDragHandle(
     isVisible: Boolean,
     indexInDocument: Int,
-    handlers: CustomDragHandlers
+    viewStore: CustomViewStore
 ) {
     div {
         css {
@@ -78,10 +71,10 @@ fun ChildrenBuilder.customDragHandle(
         draggable = true
         onDragStart = { event ->
             event.dataTransfer.setData("text/plain", "")
-            handlers.onDragStart(indexInDocument)
+            viewStore.onDragStart(indexInDocument)
         }
         onDragEnd = {
-            handlers.onDragEnd()
+            viewStore.onDragEnd()
         }
 
         DragIndicatorIcon::class.react {}

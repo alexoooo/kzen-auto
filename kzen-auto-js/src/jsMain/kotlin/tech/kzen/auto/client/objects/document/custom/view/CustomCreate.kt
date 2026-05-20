@@ -15,23 +15,12 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.util.async
+import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.custom.CustomConventions
-import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.structure.notation.DocumentObjectNotation
-import tech.kzen.lib.common.model.structure.notation.PositionRelation
-import tech.kzen.lib.common.model.structure.notation.cqrs.AddObjectCommand
-import tech.kzen.lib.common.service.notation.NotationConventions
-import tech.kzen.lib.common.service.store.MirroredGraphError
-import tech.kzen.lib.common.service.store.MirroredGraphSuccess
-import tech.kzen.lib.common.util.naming.NextAvailableName
 import web.cssom.AlignItems
 import web.cssom.Color
 import web.cssom.Display
@@ -44,8 +33,8 @@ import web.cssom.px
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface CustomCreateProps: Props {
-    var documentPath: DocumentPath
-    var documentNotation: DocumentObjectNotation
+    var customState: CustomState
+    var viewStore: CustomViewStore
     var prototypes: List<ObjectLocation>
 }
 
@@ -109,55 +98,26 @@ class CustomCreate(
             return
         }
 
-        val newName = nextAvailableObjectName(prototype.objectPath.name)
-        val newPath = NotationConventions.mainObjectPath.nest(
-            CustomConventions.objectsAttributePath, newName)
-        val newLocation = ObjectLocation(props.documentPath, newPath)
-        val endOfDocument = PositionRelation.at(props.documentNotation.notations.map.size)
-        val command = AddObjectCommand.ofParent(newLocation, endOfDocument, prototype.objectPath.name)
-
         setState {
             dispatching = true
             lastError = null
         }
 
-        async {
-            val result = ClientContext.mirroredGraphStore.apply(command)
-            when (result) {
-                is MirroredGraphSuccess -> {
-                    setState {
-                        expanded = false
-                        selectedPrototype = null
-                        dispatching = false
-                    }
+        props.viewStore.createObject(prototype) { error ->
+            if (error == null) {
+                setState {
+                    expanded = false
+                    selectedPrototype = null
+                    dispatching = false
                 }
-
-                is MirroredGraphError -> {
-                    setState {
-                        dispatching = false
-                        lastError = result.error.message ?: result.error.toString()
-                    }
+            }
+            else {
+                setState {
+                    dispatching = false
+                    lastError = error
                 }
             }
         }
-    }
-
-
-    private fun nextAvailableObjectName(prototypeName: ObjectName): ObjectName {
-        val attributePath = CustomConventions.objectsAttributePath
-        val taken: Set<String> = props.documentNotation.notations.map.keys
-            .filter {
-                it.nesting.segments.size == 1 &&
-                    it.nesting.segments.first().objectName == ObjectName.main &&
-                    it.nesting.segments.first().attributePath == attributePath
-            }
-            .map { it.name.value }
-            .toSet()
-
-        val chosen = NextAvailableName.find(prototypeName.value) { it !in taken }
-            ?: "${prototypeName.value}${props.documentNotation.notations.map.size + 1}"
-
-        return ObjectName(chosen)
     }
 
 

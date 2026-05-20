@@ -8,18 +8,25 @@ import mui.material.Tooltip
 import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
+import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
+import tech.kzen.auto.client.objects.document.custom.model.CustomGlobal
+import tech.kzen.auto.client.objects.document.custom.model.CustomState
+import tech.kzen.auto.client.objects.document.custom.model.CustomStore
+import tech.kzen.auto.client.objects.document.custom.model.CustomViewMode
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
-import web.cssom.*
+import web.cssom.NamedColor
+import web.cssom.Padding
+import web.cssom.em
+import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface CustomHeaderState: State {
-    var viewMode: CustomViewMode
-    var editorModified: Boolean
+    var customState: CustomState?
 }
 
 
@@ -29,59 +36,61 @@ class CustomHeader(
     props: Props
 ):
     RPureComponent<Props, CustomHeaderState>(props),
-    CustomGlobal.Observer
+    CustomStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun CustomHeaderState.init(props: Props) {
-        viewMode = CustomViewMode.View
-        editorModified = false
+        customState = null
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        CustomGlobal.observe(this)
+        CustomGlobal.get().observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        CustomGlobal.unobserve(this)
+        CustomGlobal.get().unobserve(this)
     }
 
 
-    override fun onCustomState(state: CustomState) {
+    override fun onCustomState(customState: CustomState) {
         setState {
-            viewMode = state.viewMode
-            editorModified = state.editorModified
+            this.customState = customState
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onModeChange(viewMode: CustomViewMode) {
-        if (viewMode == CustomViewMode.View && state.editorModified) {
+        val editorModified = state.customState?.editorModified ?: false
+        if (viewMode == CustomViewMode.View && editorModified) {
             return
         }
-        CustomGlobal.setViewMode(viewMode)
+        CustomGlobal.get().setViewMode(viewMode)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
+        val customState = state.customState
+            ?: return
+
         div {
             css {
                 padding = Padding(0.5.em, 1.em)
             }
 
             ToggleButtonGroup {
-                value = state.viewMode.name
+                value = customState.viewMode.name
                 exclusive = true
 
                 asDynamic()["onChange"] = { _, v ->
                     (v as? String)?.let { onModeChange(CustomViewMode.valueOf(it)) }
                 }
 
-                renderViewButton()
+                renderViewButton(customState.editorModified)
 
                 ToggleButton {
                     value = CustomViewMode.Raw.name
@@ -100,14 +109,12 @@ class CustomHeader(
     }
 
 
-    private fun ChildrenBuilder.renderViewButton() {
-        val disabled = state.editorModified
-
+    private fun ChildrenBuilder.renderViewButton(editorModified: Boolean) {
         val button: ChildrenBuilder.() -> Unit = {
             ToggleButton {
                 value = CustomViewMode.View.name
                 size = Size.medium
-                this.disabled = disabled
+                this.disabled = editorModified
 
                 css {
                     height = 34.px
@@ -119,9 +126,9 @@ class CustomHeader(
             }
         }
 
-        if (disabled) {
+        if (editorModified) {
             Tooltip {
-                title = react.ReactNode("Save or discard Raw changes to switch to View")
+                title = ReactNode("Save or discard Raw changes to switch to View")
 
                 span {
                     button()

@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.custom.view
+package tech.kzen.auto.client.objects.document.custom.view.obj
 
 import emotion.react.css
 import mui.material.CardContent
@@ -10,6 +10,7 @@ import react.State
 import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
+import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -24,12 +25,11 @@ import web.cssom.*
 external interface CustomObjectProps: Props {
     var objectLocation: ObjectLocation
     var info: CustomObjectInfo
-    var customCommander: CustomCommander
+    var viewStore: CustomViewStore
     var attributeEditorManager: AttributeEditorManager.Wrapper
 
     var indexInDocument: Int
     var dropMarker: DropMarker?
-    var dragHandlers: CustomDragHandlers
 }
 
 
@@ -70,13 +70,13 @@ class CustomObject(
         event.preventDefault()
         val rect = event.currentTarget.getBoundingClientRect()
         val dropAfter = event.clientY > rect.top + rect.height / 2
-        props.dragHandlers.onDragOver(props.indexInDocument, dropAfter)
+        props.viewStore.onDragOver(props.indexInDocument, dropAfter)
     }
 
 
     private fun onDrop(event: DragEvent<HTMLDivElement>) {
         event.preventDefault()
-        props.dragHandlers.onDrop()
+        props.viewStore.onDrop()
     }
 
 
@@ -96,7 +96,7 @@ class CustomObject(
             customDragHandle(
                 isVisible = state.isHovering || props.dropMarker != null,
                 indexInDocument = props.indexInDocument,
-                handlers = props.dragHandlers)
+                viewStore = props.viewStore)
             customDropIndicator(props.dropMarker)
 
             Paper {
@@ -121,7 +121,7 @@ class CustomObject(
                     CustomObjectHeader::class.react {
                         objectLocation = props.objectLocation
                         info = props.info
-                        customCommander = props.customCommander
+                        viewStore = props.viewStore
                     }
 
                     val objectMetadata = props.info.objectMetadata

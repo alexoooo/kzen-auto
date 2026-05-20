@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.custom
+package tech.kzen.auto.client.objects.document.custom.raw
 
 import emotion.react.css
 import mui.material.Button
@@ -19,16 +19,13 @@ import web.cssom.em
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface CustomRawProps: Props {
-    var editorValue: String
-    var modified: Boolean
-    var saving: Boolean
-    var lastError: String?
-    var onEditorChange: (String) -> Unit
-    var onSave: () -> Unit
+    var rawStore: CustomRawStore
+    var rawState: CustomRawState
+    var editorModified: Boolean
 }
 
 
-external interface CustomRawState: State
+external interface CustomRawComponentState: State
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -36,12 +33,23 @@ external interface CustomRawState: State
 class CustomRaw(
     props: CustomRawProps
 ):
-    RPureComponent<CustomRawProps, CustomRawState>(props)
+    RPureComponent<CustomRawProps, CustomRawComponentState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onSave() {
+        props.rawStore.onSave()
+    }
+
+
+    private fun onEditorChange(newValue: String) {
+        props.rawStore.onEditorChange(newValue)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val saving = props.saving
-        val modified = props.modified
+        val saving = props.rawState.saving
+        val modified = props.editorModified
         val saveDisabled = !modified || saving
 
         div {
@@ -53,7 +61,7 @@ class CustomRaw(
                 variant = ButtonVariant.contained
                 size = Size.small
                 disabled = saveDisabled
-                onClick = { props.onSave() }
+                onClick = { onSave() }
                 +(if (saving) "Saving..." else "Save")
             }
 
@@ -70,11 +78,11 @@ class CustomRaw(
         }
 
         YamlEditor::class.react {
-            value = props.editorValue
-            onChange = props.onEditorChange
-            onSave = props.onSave
-            error = props.lastError
-            disabled = props.saving
+            value = props.rawState.editorValue
+            onChange = ::onEditorChange
+            onSave = ::onSave
+            error = props.rawState.lastError
+            disabled = props.rawState.saving
         }
     }
 }

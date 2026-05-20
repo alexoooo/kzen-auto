@@ -8,23 +8,17 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
-import tech.kzen.auto.client.objects.document.custom.view.CustomCommander
+import tech.kzen.auto.client.objects.document.custom.model.CustomGlobal
+import tech.kzen.auto.client.objects.document.custom.model.CustomState
+import tech.kzen.auto.client.objects.document.custom.model.CustomStore
+import tech.kzen.auto.client.objects.document.custom.model.CustomViewMode
+import tech.kzen.auto.client.objects.document.custom.raw.CustomRaw
 import tech.kzen.auto.client.objects.document.custom.view.CustomView
-import tech.kzen.auto.client.service.ClientContext
-import tech.kzen.auto.client.service.global.ClientState
-import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.custom.CustomConventions
-import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.notation.DocumentObjectNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.SetDocumentObjectsCommand
 import tech.kzen.lib.common.reflect.Reflect
-import tech.kzen.lib.common.service.store.MirroredGraphError
-import tech.kzen.lib.common.service.store.MirroredGraphSuccess
 import web.cssom.Margin
 import web.cssom.em
 
@@ -36,13 +30,7 @@ external interface CustomControllerProps: Props {
 
 
 external interface CustomControllerState: State {
-    var clientState: ClientState?
-    var loadedFor: DocumentPath?
-    var editorValue: String
-    var serverNotation: DocumentObjectNotation?
-    var saving: Boolean
-    var lastError: String?
-    var viewMode: CustomViewMode
+    var customState: CustomState?
 }
 
 
@@ -52,8 +40,7 @@ class CustomController(
     props: CustomControllerProps
 ):
     RPureComponent<CustomControllerProps, CustomControllerState>(props),
-    ClientStateGlobal.Observer,
-    CustomGlobal.Observer
+    CustomStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -93,227 +80,59 @@ class CustomController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val customCommander = CustomCommander(
-        documentPathProvider = { state.loadedFor },
-        serverNotationProvider = { state.serverNotation })
+    private val store = CustomStore().also { CustomGlobal.upsertWeak(it) }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun CustomControllerState.init(props: CustomControllerProps) {
-        clientState = null
-        loadedFor = null
-        editorValue = ""
-        serverNotation = null
-        saving = false
-        lastError = null
-        viewMode = CustomGlobal.current().viewMode
+        customState = null
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
-        CustomGlobal.observe(this)
+        store.observe(this)
+        store.didMount()
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.clientStateGlobal.unobserve(this)
-        CustomGlobal.unobserve(this)
+        store.unobserve(this)
+        store.willUnmount()
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun onClientState(clientState: ClientState) {
+    override fun onCustomState(customState: CustomState) {
         setState {
-            this.clientState = clientState
-        }
-        syncFromClientState(clientState)
-    }
-
-
-    override fun onCustomState(state: CustomState) {
-        setState {
-            viewMode = state.viewMode
-        }
-    }
-
-
-    private fun syncFromClientState(clientState: ClientState) {
-        val documentPath = clientState.navigationRoute.documentPath
-            ?: return
-
-        val documentNotation = clientState
-            .graphStructure()
-            .graphNotation
-            .documents[documentPath]
-            ?: return
-
-        if (!CustomConventions.isCustomDocument(documentNotation)) {
-            return
-        }
-
-        val newServerNotation = documentNotation.objects
-
-        if (state.loadedFor != documentPath || state.serverNotation == null) {
-            val freshEditorValue = ClientContext.notationParser.unparseDocument(newServerNotation, "")
-            setState {
-                loadedFor = documentPath
-                editorValue = freshEditorValue
-                serverNotation = newServerNotation
-                lastError = null
-            }
-            CustomGlobal.setEditorModified(false)
-            return
-        }
-
-        if (newServerNotation == state.serverNotation) {
-            return
-        }
-
-        if (!isEditorModified()) {
-            setState {
-                editorValue = ClientContext.notationParser.unparseDocument(newServerNotation, "")
-                serverNotation = newServerNotation
-            }
-            CustomGlobal.setEditorModified(false)
-        }
-        else {
-            setState {
-                serverNotation = newServerNotation
-            }
-        }
-    }
-
-
-    private fun isEditorModified(): Boolean {
-        return isEditorModifiedFor(state.editorValue)
-    }
-
-
-    private fun isEditorModifiedFor(editorValue: String): Boolean {
-        val serverNotation = state.serverNotation
-            ?: return false
-
-        return try {
-            val parsed = ClientContext.notationParser.parseDocumentObjects(editorValue)
-            parsed != serverNotation
-        }
-        catch (e: Throwable) {
-            true
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun onEditorChange(newValue: String) {
-        setState {
-            editorValue = newValue
-        }
-        CustomGlobal.setEditorModified(isEditorModifiedFor(newValue))
-    }
-
-
-    private fun onSave() {
-        val documentPath = state.loadedFor
-            ?: return
-
-        if (state.saving) {
-            return
-        }
-
-        if (!isEditorModified()) {
-            return
-        }
-
-        val payload = state.editorValue
-
-        setState {
-            saving = true
-            lastError = null
-        }
-
-        async {
-            val parsed = try {
-                ClientContext.notationParser.parseDocumentObjects(payload)
-            }
-            catch (e: Throwable) {
-                setState {
-                    saving = false
-                    lastError = e.message ?: e.toString()
-                }
-                return@async
-            }
-
-            val command = SetDocumentObjectsCommand(documentPath, parsed)
-            val result = ClientContext.mirroredGraphStore.apply(command)
-
-            when (result) {
-                is MirroredGraphSuccess -> {
-                    setState {
-                        serverNotation = parsed
-                        saving = false
-                    }
-                    CustomGlobal.setEditorModified(false)
-                }
-
-                is MirroredGraphError -> {
-                    setState {
-                        saving = false
-                        lastError = result.error.message ?: result.error.toString()
-                    }
-                }
-            }
+            this.customState = customState
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val clientState = state.clientState
+        val customState = state.customState
             ?: return
-
-        val documentPath = clientState.navigationRoute.documentPath
-            ?: return
-
-        val documentNotation = clientState
-            .graphStructure()
-            .graphNotation
-            .documents[documentPath]
-            ?: return
-
-        if (!CustomConventions.isCustomDocument(documentNotation)) {
-            return
-        }
 
         div {
             css {
                 margin = Margin(5.em, 2.em, 2.em, 2.em)
             }
 
-            when (state.viewMode) {
+            when (customState.viewMode) {
                 CustomViewMode.Raw ->
                     CustomRaw::class.react {
-                        editorValue = state.editorValue
-                        modified = isEditorModified()
-                        saving = state.saving
-                        lastError = state.lastError
-                        onEditorChange = ::onEditorChange
-                        onSave = ::onSave
+                        rawStore = store.raw
+                        rawState = customState.raw
+                        editorModified = customState.editorModified
                     }
 
-                CustomViewMode.View -> {
-                    val serverNotation = state.serverNotation
-                    if (serverNotation != null) {
-                        CustomView::class.react {
-                            this.documentPath = documentPath
-                            this.clientState = clientState
-                            this.serverNotation = serverNotation
-                            this.customCommander = this@CustomController.customCommander
-                            this.attributeEditorManager = props.attributeEditorManager
-                        }
+                CustomViewMode.View ->
+                    CustomView::class.react {
+                        this.customState = customState
+                        this.viewStore = store.view
+                        this.attributeEditorManager = props.attributeEditorManager
                     }
-                }
             }
         }
     }

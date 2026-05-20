@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.custom.view
+package tech.kzen.auto.client.objects.document.custom.view.obj
 
 import emotion.react.css
 import mui.material.Chip
@@ -14,6 +14,7 @@ import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.edit.ObjectNameEditor
+import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.DeleteIcon
 import tech.kzen.auto.client.wrap.material.EditIcon
@@ -28,7 +29,7 @@ import web.cssom.*
 external interface CustomObjectHeaderProps: Props {
     var objectLocation: ObjectLocation
     var info: CustomObjectInfo
-    var customCommander: CustomCommander
+    var viewStore: CustomViewStore
 }
 
 
@@ -86,12 +87,12 @@ class CustomObjectHeader(
 
 
     private fun onToggleExport() {
-        props.customCommander.toggleExport(props.objectLocation)
+        props.viewStore.toggleExport(props.objectLocation)
     }
 
 
     private fun onDelete() {
-        props.customCommander.deleteObject(props.objectLocation)
+        props.viewStore.deleteObject(props.objectLocation)
     }
 
 
