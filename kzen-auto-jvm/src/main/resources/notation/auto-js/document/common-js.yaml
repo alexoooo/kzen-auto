@@ -20,6 +20,11 @@ DefaultAttributeEditor:
   class: tech.kzen.auto.client.objects.document.common.attribute.DefaultAttributeEditor$Wrapper
 
 
+SelectObjectEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.common.edit.SelectObjectEditor$Wrapper
+
+
 ################################################################
 
 
