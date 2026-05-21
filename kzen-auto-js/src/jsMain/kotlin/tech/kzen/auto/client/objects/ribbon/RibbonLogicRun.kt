@@ -26,14 +26,11 @@ import web.html.HTMLElement
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface RibbonLogicRunState: State {
-    var mainObjectLocation: ObjectLocation?
     var runnable: Boolean
-
     var active: Boolean
     var executing: Boolean
-    var frame: LogicRunFrameInfo?
-
     var dropdownOpen: Boolean
+    var frame: LogicRunFrameInfo?
 }
 
 
@@ -58,17 +55,17 @@ class RibbonLogicRun (
     //-----------------------------------------------------------------------------------------------------------------
     private var dropdownAnchorRef: RefObject<HTMLElement> = createRef()
 
+    // Held outside React state — fresh instances per tick would otherwise defeat shallow shouldComponentUpdate.
+    private var mainObjectLocation: ObjectLocation? = null
+    private var latestFrame: LogicRunFrameInfo? = null
+
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RibbonLogicRunState.init(props: Props) {
-//        clientState = null
-        mainObjectLocation = null
         runnable = false
-
-        dropdownOpen = false
-
         active = false
         executing = false
+        dropdownOpen = false
         frame = null
     }
 
@@ -107,16 +104,20 @@ class RibbonLogicRun (
             ?: return
 
         val isLogic = AutoConventions.isLogic(documentNotation)
-
         val clientLogicState = clientState.clientLogicState
+        val nextFrame = clientLogicState.logicStatus?.active?.frame
 
+        mainObjectLocation = documentPath.toMainObjectLocation()
+        latestFrame = nextFrame
+
+        val dropdownWasOpen = state.dropdownOpen
         setState {
             runnable = isLogic
-            mainObjectLocation = documentPath.toMainObjectLocation()
-
             active = clientLogicState.isActive()
             executing = clientLogicState.isExecuting()
-            frame = clientState.clientLogicState.logicStatus?.active?.frame
+            if (dropdownWasOpen) {
+                frame = nextFrame
+            }
         }
     }
 
@@ -139,8 +140,10 @@ class RibbonLogicRun (
 
 
     private fun onOptionsOpen() {
+        val frameAtOpen = latestFrame
         setState {
             dropdownOpen = true
+            frame = frameAtOpen
         }
     }
 
@@ -153,7 +156,7 @@ class RibbonLogicRun (
 
 
     private fun onAction(action: String, active: Boolean, executing: Boolean) {
-        val mainObjectLocation = state.mainObjectLocation
+        val mainObjectLocation = this.mainObjectLocation
             ?: return
 
         when (action) {

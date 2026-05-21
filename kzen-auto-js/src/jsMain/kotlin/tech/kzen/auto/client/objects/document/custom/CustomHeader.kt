@@ -26,7 +26,8 @@ import web.cssom.px
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface CustomHeaderState: State {
-    var customState: CustomState?
+    var viewMode: CustomViewMode?
+    var editorModified: Boolean
 }
 
 
@@ -40,7 +41,8 @@ class CustomHeader(
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun CustomHeaderState.init(props: Props) {
-        customState = null
+        viewMode = null
+        editorModified = false
     }
 
 
@@ -57,15 +59,15 @@ class CustomHeader(
 
     override fun onCustomState(customState: CustomState) {
         setState {
-            this.customState = customState
+            viewMode = customState.viewMode
+            editorModified = customState.editorModified
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onModeChange(viewMode: CustomViewMode) {
-        val editorModified = state.customState?.editorModified ?: false
-        if (viewMode == CustomViewMode.View && editorModified) {
+        if (viewMode == CustomViewMode.View && state.editorModified) {
             return
         }
         CustomGlobal.get().setViewMode(viewMode)
@@ -74,8 +76,9 @@ class CustomHeader(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val customState = state.customState
+        val viewMode = state.viewMode
             ?: return
+        val editorModified = state.editorModified
 
         div {
             css {
@@ -83,14 +86,14 @@ class CustomHeader(
             }
 
             ToggleButtonGroup {
-                value = customState.viewMode.name
+                value = viewMode.name
                 exclusive = true
 
                 asDynamic()["onChange"] = { _, v ->
                     (v as? String)?.let { onModeChange(CustomViewMode.valueOf(it)) }
                 }
 
-                renderViewButton(customState.editorModified)
+                renderViewButton(editorModified)
 
                 ToggleButton {
                     value = CustomViewMode.Raw.name
