@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     kotlin("multiplatform")
+    id("com.google.devtools.ksp")
     `maven-publish`
 }
 
@@ -62,6 +63,30 @@ kotlin {
         jsTest.dependencies {}
     }
 }
+
+
+dependencies {
+    add("kspCommonMainMetadata", "tech.kzen.lib:kzen-lib-reflect-ksp:$kzenLibVersion")
+}
+
+
+ksp {
+    arg("kzen.reflect.moduleClassName", "tech.kzen.auto.common.codegen.KzenAutoCommonModule")
+}
+
+
+// KSP commonMain output isn't picked up by per-target compile tasks automatically — same wiring as
+// kzen-lib-common.
+kotlin.sourceSets.commonMain.configure {
+    kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
+}
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
+    if (name != "kspCommonMainKotlinMetadata") {
+        dependsOn("kspCommonMainKotlinMetadata")
+    }
+}
+tasks.matching { it.name == "sourcesJar" || it.name.endsWith("SourcesJar") }
+    .configureEach { dependsOn("kspCommonMainKotlinMetadata") }
 
 
 publishing {

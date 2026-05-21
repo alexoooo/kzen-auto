@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.targets.js.yarn.yarn
 
 plugins {
     kotlin("multiplatform")
+    id("com.google.devtools.ksp")
     `maven-publish`
 }
 
@@ -85,6 +86,16 @@ if (devMode) {
     tasks.matching { it.name == "jsBrowserProductionWebpack" }.configureEach {
         outputs.cacheIf { false }
     }
+}
+
+
+dependencies {
+    add("kspJs", "tech.kzen.lib:kzen-lib-reflect-ksp:$kzenLibVersion")
+}
+
+
+ksp {
+    arg("kzen.reflect.moduleClassName", "tech.kzen.auto.client.codegen.KzenAutoJsModule")
 }
 
 

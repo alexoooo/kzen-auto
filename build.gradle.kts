@@ -1,5 +1,6 @@
 plugins {
     kotlin("multiplatform") version kotlinVersion apply false
+    id("com.google.devtools.ksp") version kspVersion apply false
 }
 
 
