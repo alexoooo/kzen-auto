@@ -8,18 +8,14 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.reflect.Reflect
 import web.cssom.em
 
 
 //-----------------------------------------------------------------------------------------------------------------
 external interface SidebarControllerProps : react.Props {
-    var archetypeLocations: List<ObjectLocation>
-    var graphStructure: GraphStructure?
+    var sidebarModel: SidebarModel?
     var documentPath: DocumentPath?
 }
 
@@ -28,10 +24,9 @@ external interface SidebarControllerState : State
 
 
 //-----------------------------------------------------------------------------------------------------------------
-// State (graphStructure, documentPath) is owned by ProjectController and passed in as props.
-// Subscribing to global stores here caused the fiber to retain pending-work bits after initial
-// setState commits, which made React revisit this component on every hover-driven commit in
-// CustomController (RPureComponent bailed at SCU, but the visits still showed in DevTools).
+// SidebarModel is projected by ProjectController via SidebarModel.Builder, which preserves
+// reference identity across attribute-only Notation mutations. That lets RPureComponent's
+// default shallow SCU bail without any custom override here.
 class SidebarController(
     props: SidebarControllerProps
 ):
@@ -39,12 +34,9 @@ class SidebarController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
-    class Wrapper(
-        private val archetypes: List<ObjectLocation>
-    ): ReactWrapper<SidebarControllerProps> {
+    class Wrapper: ReactWrapper<SidebarControllerProps> {
         override fun ChildrenBuilder.child(block: SidebarControllerProps.() -> Unit) {
             SidebarController::class.react {
-                archetypeLocations = this@Wrapper.archetypes
                 block()
             }
         }
@@ -67,44 +59,22 @@ class SidebarController(
 
 
     private fun redirectToFirstMainIfNoSelection() {
-        val structure = props.graphStructure
+        val model = props.sidebarModel
             ?: return
 
         if (props.documentPath != null) {
             return
         }
 
-        val mainDocuments = AutoConventions.mainDocuments(structure.graphNotation)
-        if (mainDocuments.isNotEmpty()) {
-            ClientContext.navigationGlobal.goto(mainDocuments[0])
+        if (model.mainDocumentPaths.isNotEmpty()) {
+            ClientContext.navigationGlobal.goto(model.mainDocumentPaths[0])
         }
-    }
-
-
-    // Attribute-only Notation mutations produce a new GraphStructure ref but the same
-    // document-tree keys; render() depends only on the tree, so we bail in that case to
-    // avoid the fiber participating in the commit (which sticks scheduler bookkeeping bits
-    // and causes phantom revisits on subsequent hover-driven commits).
-    override fun shouldComponentUpdate(
-        nextProps: SidebarControllerProps,
-        nextState: SidebarControllerState
-    ): Boolean {
-        console.log("shouldComponentUpdate")
-        if (props.documentPath != nextProps.documentPath) return true
-        if (props.archetypeLocations !== nextProps.archetypeLocations) return true
-
-        val prev = props.graphStructure
-        val next = nextProps.graphStructure
-        if (prev === next) return false
-        if (prev == null || next == null) return true
-
-        return prev.graphNotation.documents.map.keys != next.graphNotation.documents.map.keys
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val structure = props.graphStructure
+        val model = props.sidebarModel
             ?: return
 
         div {
@@ -116,9 +86,8 @@ class SidebarController(
             }
 
             SidebarFolder::class.react {
-                this.graphStructure = structure
+                sidebarModel = model
                 selectedDocumentPath = props.documentPath
-                archetypeLocations = props.archetypeLocations
             }
         }
     }

@@ -22,13 +22,8 @@ import tech.kzen.auto.client.wrap.material.MoreVertIcon
 import tech.kzen.auto.client.wrap.material.iconClassForName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.DeleteDocumentCommand
 import web.cssom.*
 import web.html.HTMLElement
@@ -37,7 +32,7 @@ import kotlin.js.Date
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface SidebarFileProps: Props {
-    var structure: GraphStructure
+    var archetypeInfo: SidebarModel.ArchetypeInfo
     var documentPath: DocumentPath
     var selected: Boolean
 }
@@ -106,14 +101,12 @@ class SidebarFile(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onMouseOver(itemOrMenu: Boolean) {
         if (state.optionsOpen || processingOption) {
-//            console.log("^^^ onMouseOver hoverItem - skip due to optionsOpen")
             return
         }
 
         optionCompletedTime?.let {
             val now = Date.now()
             val elapsed = now - it
-//            console.log("^^^ onMouseOver hoverItem - elapsed", elapsed)
 
             if (elapsed < menuDanglingTimeout) {
                 return
@@ -167,7 +160,6 @@ class SidebarFile(
 
 
     private fun onOptionsCancel() {
-//        console.log("^^^^^^ onOptionsCancel")
         onOptionsClose()
         optionCompletedTime = Date.now()
     }
@@ -203,11 +195,7 @@ class SidebarFile(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-//        val documentArchetype = props.structure.graphNotation
-
-        val archetypeLocation = DocumentArchetype
-                .archetypeLocation(props.structure.graphNotation, props.documentPath)
-                ?: return
+        val archetype = props.archetypeInfo
 
         div {
             css {
@@ -225,7 +213,7 @@ class SidebarFile(
             }
 
             if (state.editing) {
-                renderIconAndName(archetypeLocation)
+                renderIconAndName(archetype)
             }
             else {
                 a {
@@ -241,7 +229,7 @@ class SidebarFile(
                         state.parameters
                     ).toFragment()
 
-                    renderIconAndName(archetypeLocation)
+                    renderIconAndName(archetype)
                 }
             }
 
@@ -261,12 +249,8 @@ class SidebarFile(
 
 
     private fun ChildrenBuilder.renderIconAndName(
-            archetypeLocation: ObjectLocation
+        archetype: SidebarModel.ArchetypeInfo
     ) {
-        val icon = (props.structure.graphNotation.coalesce[archetypeLocation]!!
-                .get(AutoConventions.iconAttributePath) as ScalarAttributeNotation
-                ).value
-
         div {
             css {
                 position = Position.absolute
@@ -276,8 +260,8 @@ class SidebarFile(
                 height = iconWidth
             }
 
-            iconClassForName(icon).react {
-                title = archetypeLocation.objectPath.name.value
+            iconClassForName(archetype.icon).react {
+                title = archetype.location.objectPath.name.value
             }
         }
 

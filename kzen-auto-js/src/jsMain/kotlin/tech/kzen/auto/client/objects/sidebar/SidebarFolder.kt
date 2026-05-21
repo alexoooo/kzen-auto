@@ -21,12 +21,8 @@ import tech.kzen.auto.client.wrap.material.iconClassForName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.DocumentCreator
-import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.CreateDocumentCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.util.naming.NextAvailableName
@@ -38,9 +34,8 @@ import kotlin.random.Random
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface SidebarFolderProps: react.Props {
-    var graphStructure: GraphStructure
+    var sidebarModel: SidebarModel
     var selectedDocumentPath: DocumentPath?
-    var archetypeLocations: List<ObjectLocation>
 }
 
 
@@ -48,7 +43,6 @@ external interface SidebarFolderState: react.State {
     var hoverItem: Boolean
     var hoverOptions: Boolean
     var optionsOpen: Boolean
-    var mainDocuments: List<DocumentPath>
 }
 
 
@@ -78,66 +72,18 @@ class SidebarFolder(
     //-----------------------------------------------------------------------------------------------------------------
     override fun SidebarFolderState.init(props: SidebarFolderProps) {
         optionsOpen = false
-        mainDocuments = mainDocuments(props.graphStructure)
-    }
-
-
-    override fun componentDidUpdate(
-            prevProps: SidebarFolderProps,
-            prevState: SidebarFolderState,
-            snapshot: Any
-    ) {
-        if (props.graphStructure != prevProps.graphStructure) {
-            setState {
-                mainDocuments = mainDocuments(props.graphStructure)
-            }
-        }
-    }
-
-
-    override fun shouldComponentUpdate(nextProps: SidebarFolderProps, nextState: SidebarFolderState): Boolean {
-        if (state.hoverItem != nextState.hoverItem ||
-                state.hoverOptions != nextState.hoverOptions ||
-                state.optionsOpen != nextState.optionsOpen ||
-                state.mainDocuments != nextState.mainDocuments
-        ) {
-            return true
-        }
-
-        if (props.selectedDocumentPath != nextProps.selectedDocumentPath ||
-                props.archetypeLocations != nextProps.archetypeLocations
-        ) {
-            return true
-        }
-
-        return props.graphStructure.graphNotation.documents.map.keys !=
-                nextProps.graphStructure.graphNotation.documents.map.keys
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun mainDocuments(structure: GraphStructure): List<DocumentPath> {
-        return structure
-                .graphNotation
-                .documents
-                .map
-                .keys
-                .filter { it.startsWith(documentBaseNesting) }
-                .sortedBy { it.asString().lowercase() }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onMouseOver(itemOrMenu: Boolean) {
         if (state.optionsOpen || processingOption) {
-//            console.log("^^^ onMouseOver hoverItem - skip due to", state.optionsOpen, processingOption)
             return
         }
 
         optionCompletedTime?.let {
             val now = Date.now()
             val elapsed = now - it
-//            console.log("^^^ onMouseOver hoverItem - elapsed", elapsed)
 
             if (elapsed < menuDanglingTimeout) {
                 return
@@ -148,13 +94,11 @@ class SidebarFolder(
         }
 
         if (itemOrMenu) {
-//            console.log("^^^ onMouseOver hoverItem")
             setState {
                 hoverItem = true
             }
         }
         else {
-//            console.log("^^^ onMouseOver hoverOptions")
             setState {
                 hoverOptions = true
             }
@@ -164,13 +108,11 @@ class SidebarFolder(
 
     private fun onMouseOut(itemOrMenu: Boolean) {
         if (itemOrMenu) {
-//            console.log("^^^ onMouseOut hoverItem")
             setState {
                 hoverItem = false
             }
         }
         else {
-//            console.log("^^^ onMouseOut hoverOptions")
             setState {
                 hoverOptions = false
             }
@@ -186,7 +128,6 @@ class SidebarFolder(
 
 
     private fun onOptionsClose() {
-//        console.log("^^^^^^ onOptionsClose")
         setState {
             optionsOpen = false
             hoverItem = false
@@ -196,7 +137,6 @@ class SidebarFolder(
 
 
     private fun onOptionsCancel() {
-//        console.log("^^^^^^ onOptionsCancel")
         onOptionsClose()
         optionCompletedTime = Date.now()
     }
@@ -204,13 +144,13 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun generateDocumentName(
-            title: String,
-            directory: Boolean
+        title: String,
+        directory: Boolean
     ): DocumentPath {
-        val documents = props.graphStructure.graphNotation.documents
+        val existing = props.sidebarModel.existingDocumentPaths
         val chosenName = NextAvailableName
             .find(title, separator = "-", range = 1 .. 99) { candidate ->
-                resolve(candidate, directory) !in documents
+                resolve(candidate, directory) !in existing
             }
             ?: "$title-${Random.nextInt()}"
         return resolve(chosenName, directory)
@@ -227,42 +167,23 @@ class SidebarFolder(
 
     private suspend fun createDocument(
         documentPath: DocumentPath,
-        archetypeLocation: ObjectLocation
+        archetype: SidebarModel.ArchetypeInfo
     ) {
-//        val directoryAttribute = props.graphStructure.graphNotation.transitiveAttribute(
-//                archetypeLocation, AutoConventions.directoryAttributePath
-//        ) as? ScalarAttributeNotation
-//
-//        val directory = directoryAttribute?.asBoolean() ?: false
-
-        val newDocument = DocumentCreator.newDocument(archetypeLocation)
-//        console.log("^^^^^ createDocument - creating", newDocument)
+        val newDocument = DocumentCreator.newDocument(archetype.location)
 
         ClientContext.mirroredGraphStore.apply(
-                CreateDocumentCommand(documentPath, newDocument))
-
-//        console.log("^^^^^ createDocument - created", newDocument)
+            CreateDocumentCommand(documentPath, newDocument))
     }
 
 
-    private fun onAdd(
-        archetypeLocation: ObjectLocation,
-        title: String
-    ) {
+    private fun onAdd(archetype: SidebarModel.ArchetypeInfo) {
         processingOption = true
         onOptionsClose()
 
-        val directoryAttribute = props.graphStructure.graphNotation.firstAttribute(
-                archetypeLocation, AutoConventions.directoryAttributePath
-        ) as? ScalarAttributeNotation
-
-        val directory = directoryAttribute?.asBoolean() ?: false
-
         async {
-            val newBundleName = generateDocumentName(title, directory)
-            createDocument(newBundleName, archetypeLocation)
+            val newBundleName = generateDocumentName(archetype.title, archetype.directory)
+            createDocument(newBundleName, archetype)
         }.then {
-//            console.log("Setting processingOption = false")
             optionCompletedTime = Date.now()
             processingOption = false
         }
@@ -271,7 +192,6 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-//        +"[Folder]"
         renderFolderItem()
         renderSubItems()
     }
@@ -376,61 +296,48 @@ class SidebarFolder(
 
 
     private fun ChildrenBuilder.renderMenuItems() {
-        for (archetypeLocation in props.archetypeLocations) {
-            val icon = props
-                    .graphStructure
-                    .graphNotation
-                    .coalesce[archetypeLocation]!!
-                    .get(AutoConventions.iconAttributePath)
-                    ?.asString()
-                    ?: ""
-
-            val title = props
-                    .graphStructure
-                    .graphNotation
-                    .coalesce[archetypeLocation]!!
-                    .get(AutoConventions.titleAttributePath)
-                    ?.asString()
-                    ?: archetypeLocation.objectPath.name.value
-
+        for (archetype in props.sidebarModel.archetypes) {
             MenuItem {
-                key = Key(archetypeLocation.objectPath.name.value)
+                key = Key(archetype.location.objectPath.name.value)
                 onClick = {
-                    onAdd(archetypeLocation, title)
+                    onAdd(archetype)
                 }
 
-                iconClassForName(icon).react {
+                iconClassForName(archetype.icon).react {
                     style = unsafeJso {
                         marginRight = 1.em
                     }
                 }
 
-                +"New $title..."
+                +"New ${archetype.title}..."
             }
         }
     }
 
 
     private fun ChildrenBuilder.renderSubItems() {
-        val mainDocuments = state.mainDocuments
+        val mainDocuments = props.sidebarModel.mainDocumentPaths
 
         if (mainDocuments.isEmpty()) {
             div {
                 css {
-                    marginLeft = SidebarFolder.indent
+                    marginLeft = indent
                 }
                 +"(Empty)"
             }
+            return
         }
-        else {
-            for (documentPath in mainDocuments) {
-                SidebarFile::class.react {
-                    key = Key(documentPath.asString())
 
-                    structure = props.graphStructure
-                    this.documentPath = documentPath
-                    selected = (documentPath == props.selectedDocumentPath)
-                }
+        for (documentPath in mainDocuments) {
+            val archetype = props.sidebarModel.archetypeOfDocument[documentPath]
+                ?: continue
+
+            SidebarFile::class.react {
+                key = Key(documentPath.asString())
+
+                archetypeInfo = archetype
+                this.documentPath = documentPath
+                selected = (documentPath == props.selectedDocumentPath)
             }
         }
     }

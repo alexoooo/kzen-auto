@@ -13,6 +13,7 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.StageController
 import tech.kzen.auto.client.objects.ribbon.HeaderController
 import tech.kzen.auto.client.objects.sidebar.SidebarController
+import tech.kzen.auto.client.objects.sidebar.SidebarModel
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
@@ -23,6 +24,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
@@ -38,11 +40,13 @@ external interface ProjectControllerProps: Props {
     var sidebarController: SidebarController.Wrapper
     var headerController: HeaderController.Wrapper
     var stageController: StageController.Wrapper
+    var archetypeLocations: List<ObjectLocation>
 }
 
 
 external interface ProjectControllerState: State {
     var structure: GraphStructure?
+    var sidebarModel: SidebarModel?
     var documentPath: DocumentPath?
     var commandErrorMessage: String?
     var commandErrorRequest: NotationCommand?
@@ -81,19 +85,23 @@ class ProjectController(
     //-----------------------------------------------------------------------------------------------------------------
     private var headerElement: RefObject<HTMLElement> = createRef()
 
+    private val sidebarModelBuilder = SidebarModel.Builder(props.archetypeLocations)
+
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
         private val sidebarController: SidebarController.Wrapper,
         private val headerController: HeaderController.Wrapper,
-        private val stageController: StageController.Wrapper
+        private val stageController: StageController.Wrapper,
+        private val archetypeLocations: List<ObjectLocation>
     ): ReactWrapper<Props> {
         override fun ChildrenBuilder.child(block: Props.() -> Unit) {
             ProjectController::class.react {
                 sidebarController = this@Wrapper.sidebarController
                 headerController = this@Wrapper.headerController
                 stageController = this@Wrapper.stageController
+                archetypeLocations = this@Wrapper.archetypeLocations
                 block()
             }
         }
@@ -103,7 +111,6 @@ class ProjectController(
     // TODO: is there a way to directly observe the headerElement height change?
     private val handleResize: (Event?) -> Unit = { _ ->
         val height = headerElement.current?.clientHeight ?: 0
-        console.log("Resizing $height")
         if (state.headerHeight != height) {
             setState {
                 headerHeight = height
@@ -151,8 +158,10 @@ class ProjectController(
         event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
     ) {
 //        console.log("^^^ onCommandSuccess", event)
+        val nextSidebarModel = sidebarModelBuilder.update(graphDefinition.graphStructure)
         setState {
             structure = graphDefinition.graphStructure
+            sidebarModel = nextSidebarModel
             commandErrorRequest = null
             commandErrorMessage = null
         }
@@ -180,8 +189,10 @@ class ProjectController(
 
     override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
 //        console.log("^^^ onStoreRefresh: " + graphDefinition.graphStructure)
+        val nextSidebarModel = sidebarModelBuilder.update(graphDefinitionAttempt.graphStructure)
         setState {
             structure = graphDefinitionAttempt.graphStructure
+            sidebarModel = nextSidebarModel
         }
     }
 
@@ -254,7 +265,7 @@ class ProjectController(
                 }
 
                 props.sidebarController.child(this) {
-                    graphStructure = state.structure
+                    sidebarModel = state.sidebarModel
                     documentPath = state.documentPath
                 }
             }

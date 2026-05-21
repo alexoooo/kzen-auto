@@ -4,9 +4,13 @@ ProjectController:
   abstract: true
   class: tech.kzen.auto.client.objects.ProjectController$Wrapper
   sidebarController: SidebarController
-#  ribbonController: RibbonController
   headerController: HeaderController
   stageController: StageController
+  meta:
+    archetypeLocations:
+      is: List
+      of: Document
+      by: AutowiredNominal
 
 
 ###########################################################
@@ -14,11 +18,6 @@ ProjectController:
 
 SidebarController:
   class: tech.kzen.auto.client.objects.sidebar.SidebarController$Wrapper
-  meta:
-    archetypes:
-      is: List
-      of: Document
-      by: AutowiredNominal
 
 
 ###########################################################
