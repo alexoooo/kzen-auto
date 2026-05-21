@@ -123,9 +123,9 @@ class HeaderController(
     ) {}
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
         setState {
-            structure = graphDefinition.graphStructure
+            structure = graphDefinitionAttempt.graphStructure
         }
     }
 

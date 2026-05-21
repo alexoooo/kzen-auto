@@ -186,9 +186,9 @@ class FeatureController(
     ) {}
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
         setState {
-            this.graphStructure = graphDefinition.graphStructure
+            this.graphStructure = graphDefinitionAttempt.graphStructure
         }
     }
 

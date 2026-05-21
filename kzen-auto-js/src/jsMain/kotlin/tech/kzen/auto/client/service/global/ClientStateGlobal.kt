@@ -81,8 +81,8 @@ class ClientStateGlobal:
     }
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
-        graphDefinitionAttempt = graphDefinition
+    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
+        this@ClientStateGlobal.graphDefinitionAttempt = graphDefinitionAttempt
         publishIfReady()
     }
 

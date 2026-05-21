@@ -55,7 +55,7 @@ class ActiveDataflowRepository(
         command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
     ) {}
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}
+    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {}
 
 
     private suspend fun apply(

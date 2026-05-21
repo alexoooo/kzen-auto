@@ -30,6 +30,7 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import web.cssom.*
 import web.html.HTMLElement
+import kotlin.time.Duration.Companion.milliseconds
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -42,6 +43,7 @@ external interface ProjectControllerProps: Props {
 
 external interface ProjectControllerState: State {
     var structure: GraphStructure?
+    var documentPath: DocumentPath?
     var commandErrorMessage: String?
     var commandErrorRequest: NotationCommand?
     var headerHeight: Int?
@@ -101,6 +103,7 @@ class ProjectController(
     // TODO: is there a way to directly observe the headerElement height change?
     private val handleResize: (Event?) -> Unit = { _ ->
         val height = headerElement.current?.clientHeight ?: 0
+        console.log("Resizing $height")
         if (state.headerHeight != height) {
             setState {
                 headerHeight = height
@@ -121,7 +124,6 @@ class ProjectController(
 
 
     override fun componentWillUnmount() {
-//        println("ProjectController - Un-subscribed")
         ClientContext.mirroredGraphStore.unobserve(this)
         ClientContext.navigationGlobal.unobserve(this)
 
@@ -176,10 +178,10 @@ class ProjectController(
     }
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
 //        console.log("^^^ onStoreRefresh: " + graphDefinition.graphStructure)
         setState {
-            structure = graphDefinition.graphStructure
+            structure = graphDefinitionAttempt.graphStructure
         }
     }
 
@@ -189,9 +191,13 @@ class ProjectController(
         documentPath: DocumentPath?,
         parameters: RequestParams
     ) {
+        setState {
+            this.documentPath = documentPath
+        }
+
         async {
             // NB: account for possible header resize
-            delay(1)
+            delay(1.milliseconds)
             handleResize.invoke(null)
         }
     }
@@ -247,7 +253,10 @@ class ProjectController(
                     overflow = Auto.auto
                 }
 
-                props.sidebarController.child(this) {}
+                props.sidebarController.child(this) {
+                    graphStructure = state.structure
+                    documentPath = state.documentPath
+                }
             }
         }
 

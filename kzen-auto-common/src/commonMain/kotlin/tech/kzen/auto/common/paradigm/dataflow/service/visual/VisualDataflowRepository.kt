@@ -89,7 +89,7 @@ class VisualDataflowRepository(
     ) {}
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {}
+    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {}
 
 
     private fun apply(

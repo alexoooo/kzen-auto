@@ -198,9 +198,9 @@ class RibbonController(
     }
 
 
-    override suspend fun onStoreRefresh(graphDefinition: GraphDefinitionAttempt) {
+    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
         setState {
-            notation = graphDefinition.graphStructure.graphNotation
+            notation = graphDefinitionAttempt.graphStructure.graphNotation
             updatePending = true
         }
     }
