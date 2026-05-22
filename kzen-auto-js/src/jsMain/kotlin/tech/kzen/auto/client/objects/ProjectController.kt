@@ -12,6 +12,7 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.StageController
 import tech.kzen.auto.client.objects.ribbon.HeaderController
+import tech.kzen.auto.client.objects.ribbon.HeaderModel
 import tech.kzen.auto.client.objects.sidebar.SidebarController
 import tech.kzen.auto.client.objects.sidebar.SidebarModel
 import tech.kzen.auto.client.service.ClientContext
@@ -46,6 +47,7 @@ external interface ProjectControllerProps: Props {
 
 external interface ProjectControllerState: State {
     var structure: GraphStructure?
+    var headerModel: HeaderModel?
     var sidebarModel: SidebarModel?
     var documentPath: DocumentPath?
     var commandErrorMessage: String?
@@ -85,6 +87,7 @@ class ProjectController(
     //-----------------------------------------------------------------------------------------------------------------
     private var headerElement: RefObject<HTMLElement> = createRef()
 
+    private val headerModelBuilder = HeaderModel.Builder()
     private val sidebarModelBuilder = SidebarModel.Builder(props.archetypeLocations)
 
 
@@ -158,9 +161,11 @@ class ProjectController(
         event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
     ) {
 //        console.log("^^^ onCommandSuccess", event)
+        val nextHeaderModel = headerModelBuilder.update(graphDefinition.graphStructure)
         val nextSidebarModel = sidebarModelBuilder.update(graphDefinition.graphStructure)
         setState {
             structure = graphDefinition.graphStructure
+            headerModel = nextHeaderModel
             sidebarModel = nextSidebarModel
             commandErrorRequest = null
             commandErrorMessage = null
@@ -190,8 +195,10 @@ class ProjectController(
     override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
 //        console.log("^^^ onStoreRefresh: " + graphDefinition.graphStructure)
         val nextSidebarModel = sidebarModelBuilder.update(graphDefinitionAttempt.graphStructure)
+        val nextHeaderModel = headerModelBuilder.update(graphDefinitionAttempt.graphStructure)
         setState {
             structure = graphDefinitionAttempt.graphStructure
+            headerModel = nextHeaderModel
             sidebarModel = nextSidebarModel
         }
     }
@@ -247,7 +254,9 @@ class ProjectController(
 
                 div {
                     ref = headerElement
-                    props.headerController.child(this) {}
+                    props.headerController.child(this) {
+                        headerModel = state.headerModel
+                    }
                 }
             }
 

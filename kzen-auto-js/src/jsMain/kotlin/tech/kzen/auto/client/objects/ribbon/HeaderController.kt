@@ -15,39 +15,42 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.api.staticResourcePath
-import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.platform.decodeURIComponent
 import tech.kzen.lib.common.exec.RequestParams
-import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.reflect.Reflect
-import tech.kzen.lib.common.service.store.LocalGraphStore
 import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface HeaderControllerProps: react.Props {
     var documentControllers: List<DocumentController>
+    var headerModel: HeaderModel?
 }
 
 
 external interface HeaderControllerState: react.State {
-    var structure: GraphStructure?
     var documentPath: DocumentPath?
     var transition: Boolean
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
+// HeaderModel is projected by ProjectController via HeaderModel.Builder, which preserves reference
+// identity across attribute-only Notation mutations. That lets RPureComponent's default shallow
+// SCU bail without any custom override here.
+//
+// NB: documentPath is observed locally rather than received as a prop. Synchronous prop delivery
+// from the parent's first observer-fired setState would mount the document's CustomHeader before
+// the sibling StageController had a chance to mount the matching CustomController — and
+// CustomHeader.componentDidMount calls CustomGlobal.get(), which CustomController.<init> sets.
+// Subscribing locally puts handleNavigation into the same async microtask batch as StageController's
+// subscribe, so both children render in one React phase and the global is wired before commit.
 class HeaderController(
     props: HeaderControllerProps
 ):
     RPureComponent<HeaderControllerProps, HeaderControllerState>(props),
-    LocalGraphStore.Observer,
     NavigationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -66,9 +69,20 @@ class HeaderController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun HeaderControllerState.init(props: HeaderControllerProps) {
-        structure = null
         documentPath = null
         transition = false
+    }
+
+
+    override fun componentDidMount() {
+        async {
+            ClientContext.navigationGlobal.observe(this)
+        }
+    }
+
+
+    override fun componentWillUnmount() {
+        ClientContext.navigationGlobal.unobserve(this)
     }
 
 
@@ -94,42 +108,7 @@ class HeaderController(
     }
 
 
-    override fun componentDidMount() {
-        async {
-            ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.navigationGlobal.observe(this)
-        }
-    }
-
-
-    override fun componentWillUnmount() {
-        ClientContext.mirroredGraphStore.unobserve(this)
-        ClientContext.navigationGlobal.unobserve(this)
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandSuccess(
-        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
-    ) {
-        setState {
-            structure = graphDefinition.graphStructure
-        }
-    }
-
-
-    override suspend fun onCommandFailure(
-        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
-    ) {}
-
-
-    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
-        setState {
-            structure = graphDefinitionAttempt.graphStructure
-        }
-    }
-
-
     override fun handleNavigation(
         documentPath: DocumentPath?,
         parameters: RequestParams
@@ -142,13 +121,13 @@ class HeaderController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun documentArchetypeName(): ObjectName? {
-        val notation = state.structure?.graphNotation
+        val model = props.headerModel
             ?: return null
 
         val path = state.documentPath
             ?: return null
 
-        return DocumentArchetype.archetypeName(notation, path)
+        return model.archetypeNameByDocument[path]
     }
 
 
