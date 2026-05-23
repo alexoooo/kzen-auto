@@ -14,6 +14,8 @@ import tech.kzen.auto.client.objects.document.custom.model.CustomStore
 import tech.kzen.auto.client.objects.document.custom.model.CustomViewMode
 import tech.kzen.auto.client.objects.document.custom.raw.CustomRaw
 import tech.kzen.auto.client.objects.document.custom.view.CustomView
+import tech.kzen.auto.client.objects.document.custom.view.CustomViewModel
+import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -31,6 +33,7 @@ external interface CustomControllerProps: Props {
 
 external interface CustomControllerState: State {
     var customState: CustomState?
+    var customViewModel: CustomViewModel?
 }
 
 
@@ -81,11 +84,13 @@ class CustomController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private val store = CustomStore().also { CustomGlobal.upsertWeak(it) }
+    private val viewModelBuilder = CustomViewModel.Builder()
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun CustomControllerState.init(props: CustomControllerProps) {
         customState = null
+        customViewModel = null
     }
 
 
@@ -103,8 +108,13 @@ class CustomController(
 
 
     override fun onCustomState(customState: CustomState) {
+        val graphStructure = ClientContext.clientStateGlobal.current()?.graphStructure()
+        val nextViewModel = graphStructure?.let {
+            viewModelBuilder.update(customState.documentPath, customState.serverNotation, it)
+        }
         setState {
             this.customState = customState
+            this.customViewModel = nextViewModel
         }
     }
 
@@ -130,6 +140,7 @@ class CustomController(
                 CustomViewMode.View ->
                     CustomView::class.react {
                         this.customState = customState
+                        this.customViewModel = state.customViewModel
                         this.viewStore = store.view
                         this.attributeEditorManager = props.attributeEditorManager
                     }
