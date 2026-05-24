@@ -104,6 +104,10 @@ class DefaultAttributeEditor(
             .graphNotation
             .mergeAttribute(props.objectLocation, props.attributeName)
 
+        if (state.attributeMetadata == attributeMetadata && state.attributeNotation == attributeNotation) {
+            return
+        }
+
         setState {
             this.attributeMetadata = attributeMetadata
             this.attributeNotation = attributeNotation
