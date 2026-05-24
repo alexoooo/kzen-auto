@@ -47,6 +47,7 @@ class CustomObject(
 {
     //-----------------------------------------------------------------------------------------------------------------
     private var detachedRunner: CustomObjectDetachedRunner? = null
+    private var taskRunner: CustomObjectTaskRunner? = null
 
 
     private fun detachedRunnerOrCreate(): CustomObjectDetachedRunner {
@@ -56,6 +57,17 @@ class CustomObject(
         }
         val created = CustomObjectDetachedRunner()
         detachedRunner = created
+        return created
+    }
+
+
+    private fun taskRunnerOrCreate(): CustomObjectTaskRunner {
+        val existing = taskRunner
+        if (existing != null) {
+            return existing
+        }
+        val created = CustomObjectTaskRunner()
+        taskRunner = created
         return created
     }
 
@@ -133,9 +145,17 @@ class CustomObject(
                 }
 
                 CardContent {
-                    val runner =
+                    val detached =
                         if (props.info.isDetached && !props.info.isAbstract) {
                             detachedRunnerOrCreate()
+                        }
+                        else {
+                            null
+                        }
+
+                    val task =
+                        if (props.info.isTask && !props.info.isAbstract) {
+                            taskRunnerOrCreate()
                         }
                         else {
                             null
@@ -145,21 +165,35 @@ class CustomObject(
                         objectLocation = props.objectLocation
                         info = props.info
                         viewStore = props.viewStore
-                        if (runner != null) {
+                        if (detached != null || task != null) {
                             headerExtra = { headerBuilder ->
                                 with(headerBuilder) {
-                                    CustomObjectDetachedHeader::class.react {
-                                        this.runner = runner
-                                        this.objectLocation = props.objectLocation
+                                    if (detached != null) {
+                                        CustomObjectDetachedHeader::class.react {
+                                            this.runner = detached
+                                            this.objectLocation = props.objectLocation
+                                        }
+                                    }
+                                    if (task != null) {
+                                        CustomObjectTaskHeader::class.react {
+                                            this.runner = task
+                                            this.objectLocation = props.objectLocation
+                                        }
                                     }
                                 }
                             }
                         }
                     }
 
-                    if (runner != null) {
+                    if (detached != null) {
                         CustomObjectDetachedBody::class.react {
-                            this.runner = runner
+                            this.runner = detached
+                        }
+                    }
+
+                    if (task != null) {
+                        CustomObjectTaskBody::class.react {
+                            this.runner = task
                         }
                     }
 

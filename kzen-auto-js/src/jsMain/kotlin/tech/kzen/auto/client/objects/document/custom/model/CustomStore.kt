@@ -56,7 +56,6 @@ class CustomStore: ClientStateGlobal.Observer {
         mounted = false
         state = null
         ClientContext.clientStateGlobal.unobserve(this)
-        observers.clear()
     }
 
 

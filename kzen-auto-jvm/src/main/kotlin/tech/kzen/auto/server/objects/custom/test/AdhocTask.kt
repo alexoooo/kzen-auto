@@ -1,0 +1,43 @@
+package tech.kzen.auto.server.objects.custom.test
+
+import tech.kzen.auto.common.paradigm.task.ManagedTask
+import tech.kzen.auto.common.paradigm.task.TaskHandle
+import tech.kzen.auto.common.paradigm.task.TaskRun
+import tech.kzen.lib.common.exec.ExecutionRequest
+import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.reflect.Reflect
+
+
+@Reflect
+class AdhocTask(
+    private val named: AdhocNamed
+): ManagedTask {
+    override suspend fun start(
+        request: ExecutionRequest,
+        handle: TaskHandle
+    ): TaskRun {
+        val run = Run(handle)
+        run.start()
+        return run
+    }
+
+
+    private inner class Run(
+        val handle: TaskHandle
+    ): TaskRun, Thread() {
+        override fun run() {
+            for (i in 1 .. 5) {
+                sleep(1_000)
+
+                val name = named.name()
+                handle.update(ExecutionSuccess.ofValue(
+                    ExecutionValue.of("hi $name - $i")))
+            }
+
+            handle.completeWithPartialResult()
+        }
+
+        override fun close(error: Boolean) {}
+    }
+}

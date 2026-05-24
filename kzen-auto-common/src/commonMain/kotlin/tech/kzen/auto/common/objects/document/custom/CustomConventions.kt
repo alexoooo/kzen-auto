@@ -24,6 +24,7 @@ object CustomConventions {
 
     val logicTag = ObjectTag("logic")
     val detachedTag = ObjectTag("detached")
+    val taskTag = ObjectTag("task")
 
     val exportsListAttributeName = AttributeName("exports")
     val exportsListAttributePath = AttributePath.ofName(exportsListAttributeName)

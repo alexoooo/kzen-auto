@@ -68,7 +68,7 @@ data class TaskModel(
 
 
     fun taskProgress(): TaskProgress? {
-        val result = finalOrPartialResult() as? ExecutionSuccess
+        val result = (finalResult ?: partialResult) as? ExecutionSuccess
             ?: return null
 
         @Suppress("UNCHECKED_CAST")
