@@ -83,6 +83,7 @@ class CustomController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // CustomHeader is mounted in a sibling slot and picks up this store via CustomGlobal — header and body share one store.
     private val store = CustomStore().also { CustomGlobal.upsertWeak(it) }
     private val viewModelBuilder = CustomViewModel.Builder()
 

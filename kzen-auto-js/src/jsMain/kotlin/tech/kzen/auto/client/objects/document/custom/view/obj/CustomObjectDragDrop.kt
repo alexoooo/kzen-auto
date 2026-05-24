@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.custom.view.obj
 import emotion.react.css
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.wrap.material.DragIndicatorIcon
 import tech.kzen.auto.client.wrap.react
@@ -64,7 +65,7 @@ fun ChildrenBuilder.customDragHandle(
             alignItems = AlignItems.center
             justifyContent = JustifyContent.center
             cursor = Cursor.grab
-            color = Color("rgb(110, 110, 115)")
+            color = CustomTheme.mutedText
             opacity = if (isVisible) number(1.0) else number(0.0)
         }
 

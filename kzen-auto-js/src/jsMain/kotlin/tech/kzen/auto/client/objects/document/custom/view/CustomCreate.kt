@@ -15,6 +15,7 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
+import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
@@ -157,7 +158,7 @@ class CustomCreate(
                 backgroundColor = Color("rgb(240, 247, 255)")
                 borderLeftStyle = LineStyle.solid
                 borderLeftWidth = 3.px
-                borderLeftColor = Color("rgb(25, 118, 210)")
+                borderLeftColor = CustomTheme.primary
             }
 
             CardContent {
@@ -168,7 +169,7 @@ class CustomCreate(
                         fontWeight = FontWeight.bold
                         fontSize = 1.1.em
                         marginBottom = 0.75.em
-                        color = Color("rgb(25, 118, 210)")
+                        color = CustomTheme.primary
                     }
 
                     AddCircleOutlineIcon::class.react {}
@@ -190,7 +191,7 @@ class CustomCreate(
                         css {
                             marginTop = 0.5.em
                             fontStyle = FontStyle.italic
-                            color = Color("rgb(128, 80, 0)")
+                            color = CustomTheme.warningText
                         }
                         +lastError
                     }

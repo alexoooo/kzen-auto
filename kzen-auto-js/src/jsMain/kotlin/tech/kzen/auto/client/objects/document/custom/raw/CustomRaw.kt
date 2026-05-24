@@ -10,9 +10,9 @@ import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.edit.YamlEditor
+import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
-import web.cssom.Color
 import web.cssom.FontStyle
 import web.cssom.em
 
@@ -70,7 +70,7 @@ class CustomRaw(
                     css {
                         marginLeft = 1.em
                         fontStyle = FontStyle.italic
-                        color = Color("rgb(128, 80, 0)")
+                        color = CustomTheme.warningText
                     }
                     +"unsaved changes"
                 }

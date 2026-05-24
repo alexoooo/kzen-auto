@@ -8,6 +8,7 @@ import react.ChildrenBuilder
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -58,7 +59,7 @@ class CustomObjectDetachedRunner {
 
 
     private fun notifyObservers() {
-        observers.toList().forEach { it() }
+        observers.forEach { it() }
     }
 }
 
@@ -176,7 +177,7 @@ class CustomObjectDetachedBody(
                 css {
                     marginBottom = 0.75.em
                     fontStyle = FontStyle.italic
-                    color = Color("rgb(110, 110, 115)")
+                    color = CustomTheme.mutedText
                 }
                 +"Running…"
             }
@@ -190,7 +191,7 @@ class CustomObjectDetachedBody(
                 div {
                     css {
                         marginBottom = 0.75.em
-                        color = Color("rgb(46, 125, 50)")
+                        color = CustomTheme.successText
                     }
                     +"✓ Result: ${result.value}"
                 }
@@ -200,7 +201,7 @@ class CustomObjectDetachedBody(
                 div {
                     css {
                         marginBottom = 0.75.em
-                        color = Color("rgb(198, 40, 40)")
+                        color = CustomTheme.danger
                     }
                     +"✗ ${result.errorMessage}"
                 }

@@ -9,6 +9,7 @@ import react.ChildrenBuilder
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -24,10 +25,12 @@ import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.*
+import kotlin.time.Duration.Companion.milliseconds
 
 
 //---------------------------------------------------------------------------------------------------------------------
 class CustomObjectTaskRunner {
+    private val taskPollIntervalMillis = 1_000.milliseconds
     private val observers = mutableSetOf<() -> Unit>()
 
     var submitting: Boolean = false
@@ -81,7 +84,7 @@ class CustomObjectTaskRunner {
 
     private suspend fun pollLoop() {
         while (taskModel?.state == TaskState.Running) {
-            delay(500)
+            delay(taskPollIntervalMillis)
             val current = taskModel ?: break
             if (current.state != TaskState.Running) {
                 break
@@ -156,7 +159,7 @@ class CustomObjectTaskHeader(
 
                 sx {
                     marginLeft = 0.5.em
-                    color = Color("rgb(198, 40, 40)")
+                    color = CustomTheme.danger
                 }
 
                 onClick = { props.runner.cancel() }
@@ -248,7 +251,7 @@ class CustomObjectTaskBody(
                         css {
                             marginBottom = 0.75.em
                             fontSize = 0.9.em
-                            color = Color("rgb(110, 110, 115)")
+                            color = CustomTheme.mutedText
                         }
                         +partialValue.toString()
                     }
@@ -265,7 +268,7 @@ class CustomObjectTaskBody(
                         div {
                             css {
                                 marginBottom = 0.75.em
-                                color = Color("rgb(46, 125, 50)")
+                                color = CustomTheme.successText
                             }
                             +"✓ Result: ${result.value}"
                         }
@@ -275,13 +278,14 @@ class CustomObjectTaskBody(
                         div {
                             css {
                                 marginBottom = 0.75.em
-                                color = Color("rgb(198, 40, 40)")
+                                color = CustomTheme.danger
                             }
                             +"✗ ${result.errorMessage}"
                         }
                     }
 
-                    null -> {}
+                    null ->
+                        error("FinishedOrFailed task has null finalResult: ${model.taskId}")
                 }
             }
         }
@@ -293,7 +297,7 @@ class CustomObjectTaskBody(
             css {
                 marginBottom = 0.75.em
                 fontStyle = FontStyle.italic
-                color = Color("rgb(110, 110, 115)")
+                color = CustomTheme.mutedText
             }
             +text
         }

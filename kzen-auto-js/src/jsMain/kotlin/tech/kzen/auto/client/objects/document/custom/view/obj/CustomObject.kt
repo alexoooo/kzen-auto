@@ -10,6 +10,7 @@ import react.State
 import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
+import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
@@ -129,11 +130,11 @@ class CustomObject(
             Paper {
                 sx {
                     if (props.info.isAbstract) {
-                        backgroundColor = Color("rgb(244, 244, 246)")
+                        backgroundColor = CustomTheme.abstractBackground
                         borderStyle = LineStyle.dashed
                         borderWidth = 1.px
-                        borderColor = Color("rgb(175, 175, 180)")
-                        color = Color("rgb(110, 110, 115)")
+                        borderColor = CustomTheme.abstractBorder
+                        color = CustomTheme.mutedText
                     }
                     else {
                         backgroundColor = NamedColor.white
@@ -202,7 +203,7 @@ class CustomObject(
                         div {
                             css {
                                 fontStyle = FontStyle.italic
-                                color = Color("rgb(128, 80, 0)")
+                                color = CustomTheme.warningText
                             }
                             +"(metadata unavailable)"
                         }
