@@ -1,0 +1,29 @@
+
+StartKzenAutoStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.test.server.sequence.step.StartKzenAutoStep
+  icon: PlayCircle
+  title: "Start SUT"
+  description: "Spawn a vanilla kzen-auto JVM as a system-under-test"
+  name: "main"
+  fixture: ""
+  port: 18082
+  meta:
+    name: String
+    fixture: String
+    port: Int
+    selfLocation: SelfLocation
+
+
+StopKzenAutoStep:
+  abstract: true
+  is: SequenceStep
+  class: tech.kzen.auto.test.server.sequence.step.StopKzenAutoStep
+  icon: StopCircle
+  title: "Stop SUT"
+  description: "Kill a previously-started kzen-auto SUT subprocess"
+  name: "main"
+  meta:
+    name: String
+    selfLocation: SelfLocation

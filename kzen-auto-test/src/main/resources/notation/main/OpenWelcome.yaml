@@ -1,0 +1,35 @@
+main:
+  is: Sequence
+  steps:
+    - main.steps/StartSut
+    - main.steps/Open
+    - main.steps/Navigate
+    - main.steps/Click
+    - main.steps/Close
+    - main.steps/StopSut
+
+main.steps/StartSut:
+  is: StartKzenAutoStep
+  name: main
+  fixture: fixtures/empty-project
+  port: 18082
+
+main.steps/Open:
+  is: BrowserOpenStep
+
+main.steps/Navigate:
+  is: BrowserGetStep
+  location: "http://127.0.0.1:18082/"
+
+main.steps/Close:
+  is: BrowserCloseStep
+
+main.steps/StopSut:
+  is: StopKzenAutoStep
+  name: main
+
+main.steps/Click:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Project

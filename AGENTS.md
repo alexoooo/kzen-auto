@@ -8,12 +8,13 @@ Read [`../kzen-lib/docs/architecture.md`](../kzen-lib/docs/architecture.md) firs
 
 ## Module layout
 
-Four Gradle subprojects:
+Five Gradle subprojects:
 
 - **`kzen-auto-common`** — Kotlin Multiplatform shared code (`commonMain`/`jvmMain`/`jsMain`/`commonTest`). Models, paradigms (e.g. reporting), and shared services consumed by both client and server.
 - **`kzen-auto-jvm`** — Ktor/Netty server. Hosts the backend, serves the JS bundle, owns server-side execution of automation tasks.
 - **`kzen-auto-js`** — Kotlin/JS browser frontend. React + kotlin-wrappers DSL.
 - **`kzen-auto-plugin`** — **the public SPI**. Downstream plugins (e.g. `../kzen-sample-plugin`) compile against this and only this. Pure JVM. Treat its API surface as a stable contract.
+- **`kzen-auto-test`** — blackbox end-to-end self-test harness. JVM-only; spawns two kzen-auto JVMs (tester + SUT) and drives them through Chrome via the Sequence/Script feature. Opt-in `selfTest` task, NOT bound to `check`. See [`kzen-auto-test/AGENTS.md`](kzen-auto-test/AGENTS.md).
 
 ## Entry points
 
@@ -39,6 +40,14 @@ Two-terminal pattern. **Open kzen-auto as its OWN IntelliJ project**, not via th
 # Terminal 2:
 ./gradlew -t :kzen-auto-js:build -x test -PjsWatch
 ```
+
+End-to-end self-test (opt-in, opens Chrome, spawns two kzen-auto JVMs):
+
+```powershell
+./gradlew :kzen-auto-test:selfTest
+```
+
+See [`kzen-auto-test/AGENTS.md`](kzen-auto-test/AGENTS.md) for harness details, port pinning, and adding tests.
 
 ## Key directories
 

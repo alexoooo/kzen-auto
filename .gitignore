@@ -2,6 +2,7 @@
 build/
 node_modules/
 .idea/
+!.idea/runConfigurations/
 *.iml
 .directory
 out/
