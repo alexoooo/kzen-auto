@@ -46,6 +46,21 @@ class CustomObject(
     RPureComponent<CustomObjectProps, CustomObjectState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    private var detachedRunner: CustomObjectDetachedRunner? = null
+
+
+    private fun detachedRunnerOrCreate(): CustomObjectDetachedRunner {
+        val existing = detachedRunner
+        if (existing != null) {
+            return existing
+        }
+        val created = CustomObjectDetachedRunner()
+        detachedRunner = created
+        return created
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun CustomObjectState.init(props: CustomObjectProps) {
         isHovering = false
     }
@@ -118,10 +133,34 @@ class CustomObject(
                 }
 
                 CardContent {
+                    val runner =
+                        if (props.info.isDetached && !props.info.isAbstract) {
+                            detachedRunnerOrCreate()
+                        }
+                        else {
+                            null
+                        }
+
                     CustomObjectHeader::class.react {
                         objectLocation = props.objectLocation
                         info = props.info
                         viewStore = props.viewStore
+                        if (runner != null) {
+                            headerExtra = { headerBuilder ->
+                                with(headerBuilder) {
+                                    CustomObjectDetachedHeader::class.react {
+                                        this.runner = runner
+                                        this.objectLocation = props.objectLocation
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (runner != null) {
+                        CustomObjectDetachedBody::class.react {
+                            this.runner = runner
+                        }
                     }
 
                     val objectMetadata = props.info.objectMetadata

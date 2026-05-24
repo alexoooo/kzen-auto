@@ -12,6 +12,7 @@ data class CustomObjectInfo(
     val objectMetadata: ObjectMetadata?,
     val isAbstract: Boolean,
     val isLogic: Boolean,
+    val isDetached: Boolean,
     val isExported: Boolean
 ) {
     companion object {
@@ -29,12 +30,14 @@ data class CustomObjectInfo(
         ): CustomObjectInfo {
             val objectMetadata = graphStructure.graphMetadata.objectMetadata[objectLocation]
             val isLogic = objectMetadata?.tags?.contains(CustomConventions.logicTag) ?: false
+            val isDetached = objectMetadata?.tags?.contains(CustomConventions.detachedTag) ?: false
             val isExported = objectLocation in exportMembership
 
             return CustomObjectInfo(
                 objectMetadata,
                 isAbstract(objectLocation, graphStructure),
                 isLogic,
+                isDetached,
                 isExported)
         }
     }

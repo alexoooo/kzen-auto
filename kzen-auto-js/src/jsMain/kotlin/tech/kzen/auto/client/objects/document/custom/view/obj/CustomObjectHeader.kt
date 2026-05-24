@@ -30,6 +30,7 @@ external interface CustomObjectHeaderProps: Props {
     var objectLocation: ObjectLocation
     var info: CustomObjectInfo
     var viewStore: CustomViewStore
+    var headerExtra: ((ChildrenBuilder) -> Unit)?
 }
 
 
@@ -196,6 +197,8 @@ class CustomObjectHeader(
                     variant = ChipVariant.outlined
                 }
             }
+
+            props.headerExtra?.invoke(this@renderRightCluster)
 
             if (!props.info.isAbstract) {
                 ToggleButton {

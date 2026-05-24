@@ -23,6 +23,7 @@ object CustomConventions {
     val prototypeObjectName: ObjectName = ObjectName("Prototype")
 
     val logicTag = ObjectTag("logic")
+    val detachedTag = ObjectTag("detached")
 
     val exportsListAttributeName = AttributeName("exports")
     val exportsListAttributePath = AttributePath.ofName(exportsListAttributeName)
