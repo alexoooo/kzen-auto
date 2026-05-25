@@ -6,6 +6,9 @@ main:
     - main.steps/Navigate
     - main.steps/Click
     - main.steps/Click 2
+    - main.steps/Click 3
+    - main.steps/Click 4
+    - main.steps/Click 5
     - main.steps/Close
     - main.steps/StopSut
 
@@ -41,3 +44,21 @@ main.steps/Click 2:
   target:
     type: Xpath
     value: "//button[@title='Project options...']"
+
+main.steps/Click 3:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: New Script...
+
+main.steps/Click 4:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Number range
+
+main.steps/Click 5:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//svg[@data-testid='AddCircleOutlineIcon']"

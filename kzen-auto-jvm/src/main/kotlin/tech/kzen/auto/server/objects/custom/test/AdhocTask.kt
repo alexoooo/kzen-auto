@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.custom.test
 import tech.kzen.auto.common.paradigm.task.ManagedTask
 import tech.kzen.auto.common.paradigm.task.TaskHandle
 import tech.kzen.auto.common.paradigm.task.TaskRun
+import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.ExecutionValue
@@ -27,15 +28,20 @@ class AdhocTask(
         val handle: TaskHandle
     ): TaskRun, Thread() {
         override fun run() {
-            for (i in 1 .. 5) {
-                sleep(1_000)
+            try {
+                for (i in 1 .. 5) {
+                    sleep(1_000)
 
-                val name = named.name()
-                handle.update(ExecutionSuccess.ofValue(
-                    ExecutionValue.of("hi $name - $i")))
+                    val name = named.name()
+                    handle.update(ExecutionSuccess.ofValue(
+                        ExecutionValue.of("hi $name - $i")))
+                }
+
+                handle.completeWithPartialResult()
             }
-
-            handle.completeWithPartialResult()
+            catch (t: Throwable) {
+                handle.terminalFailure(ExecutionFailure.ofException(t))
+            }
         }
 
         override fun close(error: Boolean) {}
