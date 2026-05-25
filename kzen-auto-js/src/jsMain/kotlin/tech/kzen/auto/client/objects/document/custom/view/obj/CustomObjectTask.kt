@@ -82,16 +82,21 @@ class CustomObjectTaskRunner {
 
 
     private suspend fun pollLoop() {
-        while (taskModel?.state == TaskState.Running) {
+        while (isActiveState(taskModel?.state)) {
             delay(taskPollIntervalMillis)
             val current = taskModel ?: break
-            if (current.state != TaskState.Running) {
+            if (!isActiveState(current.state)) {
                 break
             }
             val updated = ClientContext.clientRestTaskRepository.query(current.taskId) ?: break
             taskModel = updated
             notifyObservers()
         }
+    }
+
+
+    private fun isActiveState(state: TaskState?): Boolean {
+        return state == TaskState.Running || state == TaskState.CancelRequested
     }
 
 
@@ -149,36 +154,51 @@ class CustomObjectTaskHeader(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val isRunning = state.taskState == TaskState.Running
+        when (state.taskState) {
+            TaskState.Running -> {
+                IconButton {
+                    title = "Stop"
+                    size = Size.small
 
-        if (isRunning) {
-            IconButton {
-                title = "Stop"
-                size = Size.small
+                    sx {
+                        marginLeft = 0.5.em
+                        color = CustomTheme.danger
+                    }
 
-                sx {
-                    marginLeft = 0.5.em
-                    color = CustomTheme.danger
+                    onClick = { props.runner.cancel() }
+
+                    iconByName("Stop") {}
                 }
-
-                onClick = { props.runner.cancel() }
-
-                iconByName("Stop") {}
             }
-        }
-        else {
-            IconButton {
-                title = "Run"
-                size = Size.small
-                disabled = state.submitting
 
-                sx {
-                    marginLeft = 0.5.em
+            TaskState.CancelRequested -> {
+                IconButton {
+                    title = "Stopping…"
+                    size = Size.small
+                    disabled = true
+
+                    sx {
+                        marginLeft = 0.5.em
+                    }
+
+                    iconByName("Stop") {}
                 }
+            }
 
-                onClick = { props.runner.run(props.objectLocation) }
+            else -> {
+                IconButton {
+                    title = "Run"
+                    size = Size.small
+                    disabled = state.submitting
 
-                iconByName("PlayArrow") {}
+                    sx {
+                        marginLeft = 0.5.em
+                    }
+
+                    onClick = { props.runner.run(props.objectLocation) }
+
+                    iconByName("PlayArrow") {}
+                }
             }
         }
     }
@@ -244,21 +264,18 @@ class CustomObjectTaskBody(
         when (model.state) {
             TaskState.Running -> {
                 renderPending("Running…")
-                val partialValue = model.partialResult?.value?.get()
-                if (partialValue != null) {
-                    div {
-                        css {
-                            marginBottom = 0.75.em
-                            fontSize = 0.9.em
-                            color = CustomTheme.mutedText
-                        }
-                        +partialValue.toString()
-                    }
-                }
+                renderPartialValue(model.partialResult)
+            }
+
+            TaskState.CancelRequested -> {
+                renderPending("Stopping…")
+                renderPartialValue(model.partialResult)
             }
 
             TaskState.Cancelled -> {
                 renderPending("Cancelled")
+                val salvaged = (model.finalResult as? ExecutionSuccess) ?: model.partialResult
+                renderPartialValue(salvaged)
             }
 
             TaskState.FinishedOrFailed -> {
@@ -299,6 +316,19 @@ class CustomObjectTaskBody(
                 color = CustomTheme.mutedText
             }
             +text
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderPartialValue(partial: ExecutionSuccess?) {
+        val value = partial?.value?.get() ?: return
+        div {
+            css {
+                marginBottom = 0.75.em
+                fontSize = 0.9.em
+                color = CustomTheme.mutedText
+            }
+            +value.toString()
         }
     }
 }

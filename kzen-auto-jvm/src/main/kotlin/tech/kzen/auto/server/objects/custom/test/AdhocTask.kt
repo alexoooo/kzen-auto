@@ -29,7 +29,11 @@ class AdhocTask(
     ): TaskRun, Thread() {
         override fun run() {
             try {
-                for (i in 1 .. 5) {
+                for (i in 1 .. 60) {
+                    if (handle.stopRequested()) {
+                        handle.completeAsCancelled()
+                    }
+
                     sleep(1_000)
 
                     val name = named.name()
@@ -37,7 +41,7 @@ class AdhocTask(
                         ExecutionValue.of("hi $name - $i")))
                 }
 
-                handle.completeWithPartialResult()
+                handle.complete()
             }
             catch (t: Throwable) {
                 handle.terminalFailure(ExecutionFailure.ofException(t))

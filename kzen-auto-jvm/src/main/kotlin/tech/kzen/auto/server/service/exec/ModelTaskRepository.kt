@@ -45,8 +45,6 @@ class ModelTaskRepository(
 
     //-----------------------------------------------------------------------------------------------------------------
     private val active = Collections.synchronizedMap(mutableMapOf<TaskId, ActiveHandle>())
-
-    // TODO: is this necessary?
     private val terminated = Collections.synchronizedMap(mutableMapOf<TaskId, TaskModel>())
 
 
@@ -91,7 +89,7 @@ class ModelTaskRepository(
         val activeDeletedModel =
             active.values.find { it.model().taskLocation.documentPath == event.documentPath }
         if (activeDeletedModel != null) {
-            activeDeletedModel.requestStop()
+            activeDeletedModel.markCancelRequested()
             activeDeletedModel.awaitTerminal()
             terminated.remove(activeDeletedModel.model().taskId)
         }
@@ -168,11 +166,10 @@ class ModelTaskRepository(
 
 
     override suspend fun cancel(taskId: TaskId): TaskModel? {
-        val handle = active.remove(taskId)
+        val handle = active[taskId]
             ?: return terminated[taskId]
 
-        handle.requestStop()
-        handle.awaitTerminal()
+        handle.markCancelRequested()
 
         return handle.model()
     }
@@ -241,7 +238,7 @@ class ModelTaskRepository(
 
 
         fun updateModelNonTerminal(updater: (TaskModel) -> TaskModel) {
-            while (!stopRequested() && !isTerminated()) {
+            while (!errorReported.get() && !isTerminated()) {
                 val value = model.get()
                 val updated = updater(value)
                 val success = model.compareAndSet(value, updated)
@@ -253,25 +250,41 @@ class ModelTaskRepository(
         }
 
 
-        override fun completeWithPartialResult() {
-            if (isFailed()) {
-                terminate()
-            }
-            else {
-                val result = model().partialResult
-                    ?: error("partial result missing")
+//        override fun completeWithPartialResult() {
+//            if (isFailed()) {
+//                terminate()
+//            }
+//            else {
+//                val result = model().partialResult
+//                    ?: error("partial result missing")
+//
+//                complete(result)
+//            }
+//        }
 
-                complete(result)
-            }
+
+        override fun complete(result: ExecutionResult?) {
+            complete(TaskState.FinishedOrFailed, result)
         }
 
+        override fun completeAsCancelled(result: ExecutionResult?) {
+            complete(TaskState.Cancelled, result)
+        }
 
-        override fun complete(result: ExecutionResult) {
+        private fun complete(state: TaskState, result: ExecutionResult?) {
+            if (isTerminated()) {
+                return
+            }
+            if (isFailed()) {
+                terminate()
+                return
+            }
+
             updateModel { snapshot ->
                 snapshot.copy(
                     partialResult = null,
-                    finalResult = result,
-                    state = TaskState.FinishedOrFailed)
+                    finalResult = result ?: snapshot.partialResult,
+                    state = state)
             }
 
             terminate()
@@ -333,15 +346,23 @@ class ModelTaskRepository(
             run?.close(errorReported.get())
 
             val snapshot = model()
-            active.remove(snapshot.taskId)
             addTerminated(snapshot)
+            active.remove(snapshot.taskId)
 
             completeLatch.countDown()
         }
 
 
-        fun requestStop() {
+        fun markCancelRequested() {
             cancelRequested.set(true)
+            updateModel { snapshot ->
+                if (snapshot.state == TaskState.Running) {
+                    snapshot.copy(state = TaskState.CancelRequested)
+                }
+                else {
+                    snapshot
+                }
+            }
         }
 
 
