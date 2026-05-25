@@ -17,6 +17,7 @@ import tech.kzen.lib.common.reflect.Reflect
 @Reflect
 class BrowserGetStep(
     private val location: String,
+    private val screenshotDelayMilliseconds: Long,
     selfLocation: ObjectLocation
 ):
     TracingScriptStep(selfLocation)
@@ -33,6 +34,10 @@ class BrowserGetStep(
         val driver = KzenAutoContext.global().webDriverContext.get()
 
         driver.get(location)
+
+        if (screenshotDelayMilliseconds > 0) {
+            Thread.sleep(screenshotDelayMilliseconds)
+        }
 
         val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
         traceDetail(scriptExecutionContext, BinaryExecutionValue(screenshotPng))

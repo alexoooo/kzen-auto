@@ -41,6 +41,18 @@ external class PlayArrowIcon: Component<IconProps, react.State> {
 }
 
 
+@JsName("PlayCircle")
+external class PlayCircleIcon: Component<IconProps, react.State> {
+    override fun render(): ReactElement<IconProps>?
+}
+
+
+@JsName("StopCircle")
+external class StopCircleIcon: Component<IconProps, react.State> {
+    override fun render(): ReactElement<IconProps>?
+}
+
+
 @JsName("Replay")
 external class ReplayIcon: Component<IconProps, react.State> {
     override fun render(): ReactElement<IconProps>?

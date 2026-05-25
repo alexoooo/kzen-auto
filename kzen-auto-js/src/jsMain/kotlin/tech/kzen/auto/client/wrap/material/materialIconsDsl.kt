@@ -18,6 +18,8 @@ fun iconClassForName(name: String): KClass<out Component<IconProps, react.State>
         "PlusOne" -> PlusOneIcon::class
 
         "PlayArrow" -> PlayArrowIcon::class
+        "PlayCircle" -> PlayCircleIcon::class
+        "StopCircle" -> StopCircleIcon::class
         "OpenInNew" -> OpenInNewIcon::class
         "Http" -> HttpIcon::class
         "Keyboard" -> KeyboardIcon::class

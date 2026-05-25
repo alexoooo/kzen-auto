@@ -277,8 +277,10 @@ BrowserGetStep:
   title: "Browse to URL"
   description: "Navigate to a new URL"
   location: "https://www.google.com/"
+  screenshotDelayMilliseconds: 0
   meta:
     location: String
+    screenshotDelayMilliseconds: Long
     selfLocation: SelfLocation
 
 
