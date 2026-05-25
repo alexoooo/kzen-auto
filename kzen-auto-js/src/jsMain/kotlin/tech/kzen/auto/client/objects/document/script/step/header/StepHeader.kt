@@ -363,14 +363,6 @@ class StepHeader(
 //                ?: defaultRunIcon
         val icon = props.icon
 
-        val highlight =
-//                if (state.intentToRun && ! props.isRunning) {
-//                    Color("rgba(255, 215, 0, 0.5)")
-//                }
-//                else {
-                    Color("rgba(255, 255, 255, 0.5)")
-//                }
-
         IconButton {
             if (actionDescription.isNotEmpty()) {
                 title = actionDescription
@@ -381,8 +373,6 @@ class StepHeader(
                 marginLeft = overfill
                 width = runIconWidth.plus(overfill)
                 height = runIconWidth.plus(overfill)
-
-                backgroundColor = highlight
 
                 position = Position.relative
             }
@@ -397,8 +387,6 @@ class StepHeader(
 
                     fontSize = 1.75.em
                     borderRadius = 20.px
-
-                    backgroundColor = highlight
 
                     margin = Margin(0.em, 0.em, 0.em, 0.em)
                     padding = Padding(0.em, 0.em, 0.em, 0.em)

@@ -71,14 +71,10 @@ class ScriptBranchDisplay(
             return
         }
 
-//        println("^^^ ${props.attributeLocation.objectLocation}")
         val stepLocations = ScriptController.stepLocations(
             graphStructure, props.attributeLocation)
 
-//        println("^^^ stepLocations: $stepLocations")
-
         setState {
-//            this.documentPath = documentPath
             this.stepLocations = stepLocations
         }
     }
@@ -100,18 +96,12 @@ class ScriptBranchDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(index: Int) {
-//        println("onCreate(${props.} $index)")
-
         val graphStructure = ClientContext.clientStateGlobal.current()?.graphStructure()
             ?: return
 
         val archetypeObjectLocation = ClientContext.insertionGlobal
             .getAndClearSelection()
             ?: return
-
-//        val documentPath = state.documentPath
-//        val containingObjectLocation = ObjectLocation(
-//            documentPath, NotationConventions.mainObjectPath)
 
         val commands = props.scriptCommander.createCommands(
             props.attributeLocation,
@@ -153,15 +143,11 @@ class ScriptBranchDisplay(
                     }
                 }
 
-                insertionPoint(0)
+                endInsertionPoint(0)
             }
         }
         else {
             div {
-//                css {
-//                    paddingLeft = 1.em
-//                }
-
                 nonEmptySteps(stepLocations)
             }
         }
@@ -170,10 +156,9 @@ class ScriptBranchDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.nonEmptySteps(
-//        documentPath: DocumentPath,
         stepLocations: List<ObjectLocation>
     ) {
-        insertionPoint(0)
+        endInsertionPoint(0, reserveSpace = true)
 
         div {
             css {
@@ -181,88 +166,89 @@ class ScriptBranchDisplay(
             }
 
             for ((index, stepLocation) in stepLocations.withIndex()) {
-//                val objectPath = stepLocation.objectPath
-//                val keyLocation = ObjectLocation(documentPath, objectPath)
-
                 renderStep(
                     index,
-//                    keyLocation,
                     stepLocation,
                     stepLocations.size
                 )
 
                 if (index < stepLocations.size - 1) {
-                    downArrowWithInsertionPoint(index + 1)
+                    betweenStepsInsertionPoint(index + 1)
                 }
             }
         }
 
-        insertionPoint(stepLocations.size)
+        endInsertionPoint(stepLocations.size)
     }
 
 
-    private fun ChildrenBuilder.downArrowWithInsertionPoint(index: Int) {
+    private fun ChildrenBuilder.betweenStepsInsertionPoint(index: Int) {
         div {
             css {
                 position = Position.relative
-                height = 4.em
-                width = ScriptController.stepWidth.div(2).minus(1.em)
-            }
-
-            div {
-                css {
-                    marginTop = 0.5.em
-
-                    position = Position.absolute
-                    height = 1.em
-                    width = 1.em
-                    top = 0.em
-                    left = 0.em
-                }
-                insertionPoint(index)
+                height = 1.5.em
+                width = 100.pct
+                borderTopWidth = 1.px
+                borderTopStyle = LineStyle.solid
+                borderTopColor = Color("rgba(0, 0, 0, 0.08)")
             }
 
             div {
                 css {
                     position = Position.absolute
-                    height = 3.em
-                    width = 3.em
-                    top = 0.em
-                    left = ScriptController.stepWidth.div(2).minus(1.5.em)
-
-                    marginTop = 0.5.em
-                    marginBottom = 0.5.em
+                    top = (-12).px
+                    left = 50.pct
+                    marginLeft = (-12).px
                 }
 
-                iconByName("ArrowDownward") {
-                    style = unsafeJso {
-                        fontSize = 3.em
-                    }
-                }
+                insertionButton(index)
             }
         }
     }
 
 
-    private fun ChildrenBuilder.insertionPoint(index: Int) {
-        span {
-            if (state.creating) {
-                title = "Insert step here"
+    private fun ChildrenBuilder.endInsertionPoint(index: Int, reserveSpace: Boolean = false) {
+        div {
+//            if (reserveSpace) {
+                css {
+//                    display = Display.inlineBlock
+                    height = 26.px
+                    marginTop = 2.px
+                }
+//            }
+
+            insertionButton(index)
+        }
+    }
+
+
+    private fun ChildrenBuilder.insertionButton(index: Int) {
+        if (!state.creating) {
+            return
+        }
+
+        IconButton {
+            title = "Insert step here"
+
+            css {
+                width = 24.px
+                height = 24.px
+                padding = 0.px
+                backgroundColor = NamedColor.white
+
+                hover {
+                    backgroundColor = NamedColor.white
+                }
             }
 
-            IconButton {
-                css {
-                    if (!state.creating) {
-                        opacity = number(0.0)
-                        cursor = Cursor.default
-                    }
-                }
+            onClick = {
+                onCreate(index)
+            }
 
-                onClick = {
-                    onCreate(index)
+            iconByName("AddCircleOutline") {
+                style = unsafeJso {
+                    fontSize = 1.em
                 }
-
-                iconByName("AddCircleOutline") {}
             }
         }
     }
@@ -276,14 +262,12 @@ class ScriptBranchDisplay(
         span {
             key = Key(objectLocation.toReference().asString())
 
-//            +"[Step $index - $stepCount - $objectLocation]"
             props.stepDisplayManager.child(this) {
                 common = ScriptStepDisplayPropsCommon(
                     objectLocation,
                     index,
                     first = index == 0,
                     last = index == stepCount - 1,
-//                    props.common.scriptStore
                 )
             }
         }

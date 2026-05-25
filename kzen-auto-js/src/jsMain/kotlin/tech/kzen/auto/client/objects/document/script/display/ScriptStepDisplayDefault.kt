@@ -1,8 +1,7 @@
 package tech.kzen.auto.client.objects.document.script.display
 
 import emotion.react.css
-import mui.material.CardContent
-import mui.material.Paper
+import mui.material.IconButton
 import mui.system.sx
 import react.ChildrenBuilder
 import react.State
@@ -21,6 +20,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RComponent
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -30,7 +30,9 @@ import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.IoUtils
@@ -52,6 +54,9 @@ external interface ScriptStepDisplayDefaultState: State {
     var icon: String?
     var description: String?
     var title: String?
+    var summary: String?
+
+    var expanded: Boolean
 }
 
 
@@ -68,12 +73,29 @@ class ScriptStepDisplayDefault(
     companion object {
         private val successColour = Color("#00b467")
         private val errorColour = Color("#b40000")
+        private val idleBorderColour = Color("rgba(0, 0, 0, 0.12)")
+
+        fun statusBorderColor(
+            traceState: StepTrace.State,
+            error: String?,
+            nextToRun: Boolean
+        ): Color {
+            return activeStatusColor(traceState, error, nextToRun) ?: idleBorderColour
+        }
 
         fun backgroundColor(
             traceState: StepTrace.State,
             error: String?,
             nextToRun: Boolean
-        ): BackgroundColor {
+        ): Color {
+            return activeStatusColor(traceState, error, nextToRun) ?: NamedColor.white
+        }
+
+        private fun activeStatusColor(
+            traceState: StepTrace.State,
+            error: String?,
+            nextToRun: Boolean
+        ): Color? {
             return if (traceState == StepTrace.State.Running) {
                 NamedColor.gold
             }
@@ -92,7 +114,7 @@ class ScriptStepDisplayDefault(
                 EdgeController.goldLight50
             }
             else {
-                NamedColor.white
+                null
             }
         }
     }
@@ -181,6 +203,7 @@ class ScriptStepDisplayDefault(
         val icon = StepHeader.icon(graphStructure, props.common.objectLocation)
         val description = StepHeader.description(graphStructure, props.common.objectLocation)
         val title = StepNameEditor.title(graphStructure, props.common.objectLocation)
+        val summary = readSummary(graphStructure, props.common.objectLocation)
 
         setState {
             this.objectMetadata = objectMetadata
@@ -188,13 +211,29 @@ class ScriptStepDisplayDefault(
             this.icon = icon
             this.description = description
             this.title = title
+            this.summary = summary
         }
+    }
+
+
+    private fun readSummary(
+        graphStructure: GraphStructure,
+        objectLocation: ObjectLocation
+    ): String? {
+        val summaryAttributeName = graphStructure.graphNotation
+            .firstAttribute(objectLocation, ScriptConventions.summaryAttributePath)
+            ?.asString()
+            ?: return null
+
+        return graphStructure.graphNotation
+            .firstAttribute(objectLocation, AttributePath.ofName(AttributeName(summaryAttributeName)))
+            ?.asString()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ScriptStepDisplayDefaultState.init(props: ScriptStepDisplayDefaultProps) {
-//        hoverCard = false
+        expanded = false
     }
 
 
@@ -206,6 +245,14 @@ class ScriptStepDisplayDefault(
 
     private fun onMouseOut() {
         hoverSignal.triggerMouseOut()
+    }
+
+
+    private fun onToggleExpanded() {
+        val next = !state.expanded
+        setState {
+            this.expanded = next
+        }
     }
 
 
@@ -232,12 +279,52 @@ class ScriptStepDisplayDefault(
         val isNextToRun = state.isNextToRun ?: false
         val traceState = trace?.state ?: StepTrace.State.Idle
 
-        Paper {
-            sx {
-                backgroundColor = backgroundColor(traceState, trace?.error, isNextToRun)
+        div {
+            css {
+                borderLeftWidth = 4.px
+                borderLeftStyle = LineStyle.solid
+                borderLeftColor = statusBorderColor(traceState, trace?.error, isNextToRun)
+                backgroundColor = NamedColor.white
+                paddingLeft = 1.5.em
+                paddingRight = 0.5.em
+                paddingTop = 0.75.em
+                paddingBottom = 0.5.em
             }
 
-            CardContent {
+            renderRow()
+
+            if (state.expanded) {
+                div {
+                    css {
+                        paddingLeft = 1.em
+                        paddingTop = 0.5.em
+                    }
+
+                    renderBody(objectMetadata, trace)
+                    renderValidation()
+                }
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderRow() {
+        div {
+            css {
+                display = Display.flex
+                alignItems = AlignItems.center
+                width = 100.pct
+                height = StepHeader.headerHeight
+            }
+
+            div {
+                css {
+                    flexGrow = number(1.0)
+                    position = Position.relative
+                    height = 100.pct
+                    minWidth = 0.px
+                }
+
                 StepHeader::class.react {
                     hoverSignal = this@ScriptStepDisplayDefault.hoverSignal
 
@@ -252,15 +339,50 @@ class ScriptStepDisplayDefault(
                     title = state.title ?: ""
                 }
 
-                div {
-                    css {
-                        marginBottom = (-1.5).em
-                    }
-
-                    renderBody(objectMetadata, trace)
-                    renderValidation()
-                }
+                renderSummaryOverlay()
             }
+
+            IconButton {
+                title = if (state.expanded) "Collapse" else "Expand"
+
+                sx {
+                    width = 28.px
+                    height = 28.px
+                    padding = 0.px
+                }
+
+                onClick = { onToggleExpanded() }
+
+                iconByName(if (state.expanded) "KeyboardArrowUp" else "KeyboardArrowDown") {}
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderSummaryOverlay() {
+        val summary = state.summary
+        if (summary.isNullOrEmpty()) {
+            return
+        }
+
+        div {
+            css {
+                position = Position.absolute
+                top = 0.em
+                bottom = 0.em
+                left = 11.em
+                right = 2.5.em
+                display = Display.flex
+                alignItems = AlignItems.center
+                color = Color("rgba(0, 0, 0, 0.55)")
+                fontSize = 0.85.em
+                whiteSpace = WhiteSpace.nowrap
+                overflow = Overflow.hidden
+                textOverflow = TextOverflow.ellipsis
+                pointerEvents = None.none
+            }
+
+            +summary
         }
     }
 
@@ -271,7 +393,7 @@ class ScriptStepDisplayDefault(
         trace: StepTrace?
     ) {
         for (e in objectMetadata.attributes.map) {
-            if (AutoConventions.isManaged(e.key) /*|| props.common.managed*/) {
+            if (ScriptConventions.isManaged(e.key)) {
                 continue
             }
 
