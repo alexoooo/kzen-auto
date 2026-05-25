@@ -19,7 +19,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconLayout
 import tech.kzen.auto.client.wrap.iconify.vaadinIconTable
-import tech.kzen.auto.client.wrap.material.TableChartIcon
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
@@ -104,7 +104,7 @@ class ReportAnalysisController(
                     position = Position.relative
                 }
 
-                TableChartIcon::class.react {
+                iconByName("TableChart") {
                     style = unsafeJso {
                         position = Position.absolute
                         fontSize = 2.5.em

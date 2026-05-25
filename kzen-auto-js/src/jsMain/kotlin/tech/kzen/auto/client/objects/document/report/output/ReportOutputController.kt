@@ -17,8 +17,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconTable
 import tech.kzen.auto.client.wrap.iconify.vaadinIconUploadAlt
-import tech.kzen.auto.client.wrap.material.SaveAltIcon
-import tech.kzen.auto.client.wrap.material.SettingsIcon
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
@@ -137,7 +136,7 @@ class ReportOutputController(
                     position = Position.relative
                 }
 
-                SaveAltIcon::class.react {
+                iconByName("SaveAlt") {
                     style = unsafeJso {
                         position = Position.absolute
                         fontSize = 2.5.em
@@ -268,7 +267,7 @@ class ReportOutputController(
                 borderColor = Color("#777777")
             }
 
-            SettingsIcon::class.react {}
+            iconByName("Settings") {}
         }
     }
 

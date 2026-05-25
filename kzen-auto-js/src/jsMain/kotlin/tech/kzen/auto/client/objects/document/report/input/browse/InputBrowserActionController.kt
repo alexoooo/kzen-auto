@@ -13,9 +13,7 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.report.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
-import tech.kzen.auto.client.wrap.material.RemoveCircleOutlineIcon
-import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -113,7 +111,7 @@ class InputBrowserActionController(
                     title = "Disabled while running"
                 }
 
-                AddCircleOutlineIcon::class.react {
+                iconByName("AddCircleOutline") {
                     style = unsafeJso {
                         marginRight = 0.25.em
                     }
@@ -162,7 +160,7 @@ class InputBrowserActionController(
                     title = "Disabled while running"
                 }
 
-                RemoveCircleOutlineIcon::class.react {
+                iconByName("RemoveCircleOutline") {
                     style = unsafeJso {
                         marginRight = 0.25.em
                     }

@@ -18,8 +18,8 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
-import web.html.HTMLDivElement
 import web.cssom.*
+import web.html.HTMLDivElement
 
 
 //---------------------------------------------------------------------------------------------------------------------

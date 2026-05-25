@@ -16,7 +16,7 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.RemoveCircleOutlineIcon
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
@@ -439,7 +439,7 @@ class RunStepArgumentsEditor(
                 onRemove(parameterName)
             }
 
-            RemoveCircleOutlineIcon::class.react {
+            iconByName("RemoveCircleOutline") {
                 style = unsafeJso {
                     fontSize = 1.5.em
                 }

@@ -15,8 +15,7 @@ import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStor
 import tech.kzen.auto.client.objects.document.report.input.select.model.InputSelectedState
 import tech.kzen.auto.client.objects.document.report.run.model.ReportRunProgress
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.GroupWorkIcon
-import tech.kzen.auto.client.wrap.material.MoreHorizIcon
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
@@ -204,7 +203,7 @@ class InputSelectedController(
                     "Show: Group By"
                 }
 
-            GroupWorkIcon::class.react {
+            iconByName("GroupWork") {
                 style = unsafeJso {
                     marginRight = 0.25.em
                 }
@@ -242,7 +241,7 @@ class InputSelectedController(
                     "Show: Details"
                 }
 
-            MoreHorizIcon::class.react {
+            iconByName("MoreHoriz") {
                 style = unsafeJso {
                     marginLeft = (-0.25).em
                     marginRight = (-0.25).em

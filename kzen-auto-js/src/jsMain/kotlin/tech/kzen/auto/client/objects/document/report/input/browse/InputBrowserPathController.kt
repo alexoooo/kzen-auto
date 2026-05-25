@@ -15,11 +15,7 @@ import react.dom.onChange
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.ArrowForwardIosIcon
-import tech.kzen.auto.client.wrap.material.CancelIcon
-import tech.kzen.auto.client.wrap.material.EditIcon
-import tech.kzen.auto.client.wrap.material.SaveIcon
-import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -150,7 +146,7 @@ class InputBrowserPathController(
                     key = Key(part.asString())
 
                     if (index != 0) {
-                        ArrowForwardIosIcon::class.react {
+                        iconByName("ArrowForwardIos") {
                             style = unsafeJso {
                                 fontSize = 0.75.em
                                 marginLeft = 0.25.em
@@ -215,7 +211,7 @@ class InputBrowserPathController(
                             onEditToggle()
                         }
 
-                        EditIcon::class.react {}
+                        iconByName("Edit") {}
                     }
                 }
             }
@@ -250,7 +246,7 @@ class InputBrowserPathController(
                 }
                 title = "Cancel"
 
-                CancelIcon::class.react {
+                iconByName("Cancel") {
                     style = unsafeJso {
                         fontSize = 0.85.em
                     }
@@ -263,7 +259,7 @@ class InputBrowserPathController(
                 }
                 title = "Save"
 
-                SaveIcon::class.react {
+                iconByName("Save") {
                     style = unsafeJso {
                         fontSize = 0.85.em
                     }

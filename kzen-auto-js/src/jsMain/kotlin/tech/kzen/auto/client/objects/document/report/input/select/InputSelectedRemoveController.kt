@@ -12,8 +12,7 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.objects.document.report.input.select.model.InputSelectedState
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.RemoveCircleOutlineIcon
-import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.Color
 import web.cssom.Display
@@ -90,7 +89,7 @@ class InputSelectedRemoveController(
                     title = "Disabled while running"
                 }
 
-                RemoveCircleOutlineIcon::class.react {
+                iconByName("RemoveCircleOutline") {
                     style = unsafeJso {
                         marginRight = 0.25.em
                     }

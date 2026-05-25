@@ -16,10 +16,7 @@ import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
-import tech.kzen.auto.client.wrap.material.DeleteIcon
-import tech.kzen.auto.client.wrap.material.EditIcon
-import tech.kzen.auto.client.wrap.material.MoreVertIcon
-import tech.kzen.auto.client.wrap.material.iconClassForName
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.RequestParams
@@ -260,7 +257,7 @@ class SidebarFile(
                 height = iconWidth
             }
 
-            iconClassForName(archetype.icon).react {
+            iconByName(archetype.icon) {
                 title = archetype.location.objectPath.name.value
             }
         }
@@ -326,7 +323,7 @@ class SidebarFile(
                     marginRight = (-16).px
                 }
 
-                MoreVertIcon::class.react {}
+                iconByName("MoreVert") {}
             }
         }
 
@@ -346,7 +343,7 @@ class SidebarFile(
 
         MenuItem {
             onClick = { onRename() }
-            EditIcon::class.react {
+            iconByName("Edit") {
                 style = iconStyle
             }
             +"Rename"
@@ -354,7 +351,7 @@ class SidebarFile(
 
         MenuItem {
             onClick = { onRemove() }
-            DeleteIcon::class.react {
+            iconByName("Delete") {
                 style = iconStyle
             }
             +"Delete"

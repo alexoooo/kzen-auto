@@ -15,9 +15,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.createRef
-import tech.kzen.auto.client.wrap.material.FolderOpenIcon
-import tech.kzen.auto.client.wrap.material.MoreVertIcon
-import tech.kzen.auto.client.wrap.material.iconClassForName
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.DocumentCreator
@@ -224,7 +222,7 @@ class SidebarFolder(
                     height = iconWidth
                 }
 
-                FolderOpenIcon::class.react {}
+                iconByName("FolderOpen") {}
             }
 
             div {
@@ -282,7 +280,7 @@ class SidebarFolder(
                     marginRight = (-16).px
                 }
 
-                MoreVertIcon::class.react {}
+                iconByName("MoreVert") {}
             }
         }
 
@@ -303,7 +301,7 @@ class SidebarFolder(
                     onAdd(archetype)
                 }
 
-                iconClassForName(archetype.icon).react {
+                iconByName(archetype.icon) {
                     style = unsafeJso {
                         marginRight = 1.em
                     }

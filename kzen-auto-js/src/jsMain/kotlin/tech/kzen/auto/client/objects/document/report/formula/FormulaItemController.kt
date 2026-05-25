@@ -18,7 +18,7 @@ import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormula
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaStore
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.client.wrap.material.DeleteIcon
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
@@ -154,7 +154,7 @@ class FormulaItemController(
 
                             disabled = props.runningOrLoading
 
-                            DeleteIcon::class.react {}
+                            iconByName("Delete") {}
                         }
                     }
 

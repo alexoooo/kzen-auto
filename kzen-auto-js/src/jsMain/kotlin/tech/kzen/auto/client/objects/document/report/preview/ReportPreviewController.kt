@@ -25,8 +25,7 @@ import tech.kzen.auto.client.objects.document.report.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.iconify
 import tech.kzen.auto.client.wrap.iconify.vaadinIconInfoCircleO
-import tech.kzen.auto.client.wrap.material.RefreshIcon
-import tech.kzen.auto.client.wrap.material.VisibilityIcon
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -132,7 +131,7 @@ class ReportPreviewController(
                     position = Position.relative
                 }
 
-                VisibilityIcon::class.react {
+                iconByName("Visibility") {
                     style = unsafeJso {
                         position = Position.absolute
                         fontSize = 2.5.em
@@ -197,7 +196,7 @@ class ReportPreviewController(
                 borderColor = Color("#777777")
             }
 
-            RefreshIcon::class.react {
+            iconByName("Refresh") {
                 style = unsafeJso {
                     marginRight = 0.25.em
                 }

@@ -12,7 +12,7 @@ import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormula
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaStore
 import tech.kzen.auto.client.objects.document.report.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.FunctionsIcon
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
@@ -85,7 +85,7 @@ class ReportFormulaController(
                     position = Position.relative
                 }
 
-                FunctionsIcon::class.react {
+                iconByName("Functions") {
                     style = unsafeJso {
                         position = Position.absolute
                         fontSize = 2.5.em

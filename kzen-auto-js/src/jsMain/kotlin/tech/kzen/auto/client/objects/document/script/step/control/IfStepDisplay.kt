@@ -23,8 +23,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RComponent
-import tech.kzen.auto.client.wrap.material.ArrowForwardIcon
-import tech.kzen.auto.client.wrap.material.SubdirectoryArrowLeftIcon
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -368,7 +367,7 @@ class IfStepDisplay(
 
                 +"Then"
                 br {}
-                ArrowForwardIcon::class.react {
+                iconByName("ArrowForward") {
                     style = unsafeJso {
                         fontSize = 3.em
                     }
@@ -394,7 +393,7 @@ class IfStepDisplay(
             }
 
             div {
-                SubdirectoryArrowLeftIcon::class.react {
+                iconByName("SubdirectoryArrowLeft") {
                     style = unsafeJso {
                         fontSize = 3.em
                         marginBottom = 15.px
@@ -460,7 +459,7 @@ class IfStepDisplay(
 
                 +"Else"
                 br {}
-                ArrowForwardIcon::class.react {
+                iconByName("ArrowForward") {
                     style = unsafeJso {
                         fontSize = 3.em
                     }
@@ -486,7 +485,7 @@ class IfStepDisplay(
             }
 
             div {
-                SubdirectoryArrowLeftIcon::class.react {
+                iconByName("SubdirectoryArrowLeft") {
                     style = unsafeJso {
                         fontSize = 3.em
                         marginBottom = 15.px

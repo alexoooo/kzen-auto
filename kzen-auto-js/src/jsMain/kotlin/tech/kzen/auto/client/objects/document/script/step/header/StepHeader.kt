@@ -13,7 +13,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
-import tech.kzen.auto.client.wrap.material.*
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.AutoConventions
@@ -391,7 +391,7 @@ class StepHeader(
 //            onMouseOver = { onRunEnter() }
 //            onMouseOut = { onRunLeave() }
 
-            iconClassForName(icon).react {
+            iconByName(icon) {
                 style = unsafeJso {
                     color = NamedColor.black
 
@@ -430,7 +430,7 @@ class StepHeader(
             IconButton {
                 title = "Options..."
                 onClick = { onOptionsOpen() }
-                MoreVertIcon::class.react {}
+                iconByName("MoreVert") {}
             }
         }
 
@@ -451,7 +451,7 @@ class StepHeader(
         MenuItem {
             onClick = { onEditName() }
 
-            EditIcon::class.react {
+            iconByName("Edit") {
                 style = iconStyle
             }
             +"Rename"
@@ -465,7 +465,7 @@ class StepHeader(
             MenuItem {
                 onClick = { onShiftUp() }
 
-                KeyboardArrowUpIcon::class.react {
+                iconByName("KeyboardArrowUp") {
                     style = iconStyle
                 }
                 +"Move up"
@@ -475,7 +475,7 @@ class StepHeader(
         if (!props.last) {
             MenuItem {
                 onClick = { onShiftDown() }
-                KeyboardArrowDownIcon::class.react {
+                iconByName("KeyboardArrowDown") {
                     style = iconStyle
                 }
                 +"Move down"
@@ -485,7 +485,7 @@ class StepHeader(
         MenuItem {
             onClick = { onRemove() }
 
-            DeleteIcon::class.react {
+            iconByName("Delete") {
                 style = iconStyle
             }
             +"Delete"

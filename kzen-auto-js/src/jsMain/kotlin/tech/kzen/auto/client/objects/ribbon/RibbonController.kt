@@ -14,7 +14,7 @@ import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconClassForName
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.DocumentArchetype
@@ -311,7 +311,7 @@ class RibbonController(
                         ?.asString()
 
                 if (icon != null) {
-                    iconClassForName(icon).react {
+                    iconByName(icon) {
                         style = unsafeJso {
                             marginRight = 0.25.em
                         }

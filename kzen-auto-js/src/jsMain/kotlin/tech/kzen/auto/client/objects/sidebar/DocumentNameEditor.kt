@@ -17,9 +17,7 @@ import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
-import tech.kzen.auto.client.wrap.material.CancelIcon
-import tech.kzen.auto.client.wrap.material.SaveIcon
-import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -239,7 +237,7 @@ class DocumentNameEditor(
 
                 onClick = { onCancel() }
 
-                CancelIcon::class.react {}
+                iconByName("Cancel") {}
             }
 
             IconButton {
@@ -254,7 +252,7 @@ class DocumentNameEditor(
 
                 disabled = !isModified()
 
-                SaveIcon::class.react {}
+                iconByName("Save") {}
             }
         }
     }

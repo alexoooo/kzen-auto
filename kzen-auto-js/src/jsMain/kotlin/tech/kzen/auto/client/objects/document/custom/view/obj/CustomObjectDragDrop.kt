@@ -5,18 +5,8 @@ import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
-import tech.kzen.auto.client.wrap.material.DragIndicatorIcon
-import tech.kzen.auto.client.wrap.react
-import web.cssom.AlignItems
-import web.cssom.Color
-import web.cssom.Cursor
-import web.cssom.Display
-import web.cssom.JustifyContent
-import web.cssom.None
-import web.cssom.Position
-import web.cssom.em
-import web.cssom.number
-import web.cssom.px
+import tech.kzen.auto.client.wrap.material.iconByName
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -78,7 +68,7 @@ fun ChildrenBuilder.customDragHandle(
             viewStore.onDragEnd()
         }
 
-        DragIndicatorIcon::class.react {}
+        iconByName("DragIndicator") {}
     }
 }
 

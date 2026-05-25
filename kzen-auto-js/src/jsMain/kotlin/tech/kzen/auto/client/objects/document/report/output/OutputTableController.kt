@@ -24,8 +24,7 @@ import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputSt
 import tech.kzen.auto.client.objects.document.report.run.model.ReportRunProgress
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.CloudDownloadIcon
-import tech.kzen.auto.client.wrap.material.RefreshIcon
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
@@ -107,7 +106,7 @@ class OutputTableController(
                     onPreviewRefresh()
                 }
 
-                RefreshIcon::class.react {
+                iconByName("Refresh") {
                     style = unsafeJso {
                         marginRight = 0.25.em
                     }
@@ -137,7 +136,7 @@ class OutputTableController(
                         borderColor = Color("#777777")
                     }
 
-                    CloudDownloadIcon::class.react {
+                    iconByName("CloudDownload") {
                         style = unsafeJso {
                             marginRight = 0.25.em
                         }

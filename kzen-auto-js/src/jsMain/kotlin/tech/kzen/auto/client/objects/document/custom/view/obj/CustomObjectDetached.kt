@@ -12,14 +12,14 @@ import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.PlayArrowIcon
-import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.location.ObjectLocation
-import web.cssom.*
+import web.cssom.FontStyle
+import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -119,7 +119,7 @@ class CustomObjectDetachedHeader(
 
             onClick = { props.runner.run(props.objectLocation) }
 
-            PlayArrowIcon::class.react {}
+            iconByName("PlayArrow") {}
         }
     }
 }

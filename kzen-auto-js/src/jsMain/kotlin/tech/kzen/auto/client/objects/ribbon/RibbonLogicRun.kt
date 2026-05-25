@@ -12,8 +12,7 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
-import tech.kzen.auto.client.wrap.material.*
-import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunFrameInfo
 import tech.kzen.auto.common.util.AutoConventions
@@ -263,7 +262,7 @@ class RibbonLogicRun (
                     marginRight = 0.25.em
                     marginBottom = (-0.25).em
                 }
-                RedoIcon::class.react {}
+                iconByName("Redo") {}
             }
         }
     }
@@ -304,10 +303,10 @@ class RibbonLogicRun (
                     marginBottom = (-0.25).em
                 }
                 if (executing) {
-                    PauseIcon::class.react {}
+                    iconByName("Pause") {}
                 }
                 else {
-                    PlayArrowIcon::class.react {}
+                    iconByName("PlayArrow") {}
                 }
             }
         }
@@ -333,7 +332,7 @@ class RibbonLogicRun (
                     marginRight = 0.25.em
                     marginBottom = (-0.25).em
                 }
-                StopIcon::class.react {}
+                iconByName("Stop") {}
             }
         }
     }
@@ -367,7 +366,7 @@ class RibbonLogicRun (
                     onClick = { onOptionsOpen() }
                 }
 
-                ExpandMoreIcon::class.react {}
+                iconByName("ExpandMore") {}
             }
         }
     }

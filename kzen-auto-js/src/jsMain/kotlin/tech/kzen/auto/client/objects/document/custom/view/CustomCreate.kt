@@ -1,12 +1,7 @@
 package tech.kzen.auto.client.objects.document.custom.view
 
 import emotion.react.css
-import mui.material.Button
-import mui.material.ButtonVariant
-import mui.material.CardContent
-import mui.material.MenuItem
-import mui.material.Paper
-import mui.material.Select
+import mui.material.*
 import mui.material.Size
 import mui.system.sx
 import react.ChildrenBuilder
@@ -18,18 +13,10 @@ import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
-import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.ObjectLocation
-import web.cssom.AlignItems
-import web.cssom.Color
-import web.cssom.Display
-import web.cssom.FontStyle
-import web.cssom.FontWeight
-import web.cssom.LineStyle
-import web.cssom.em
-import web.cssom.px
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -140,7 +127,7 @@ class CustomCreate(
                 size = Size.small
                 onClick = { onAddClick() }
 
-                AddCircleOutlineIcon::class.react {}
+                iconByName("AddCircleOutline") {}
                 span {
                     css {
                         marginLeft = 0.3.em
@@ -172,7 +159,7 @@ class CustomCreate(
                         color = CustomTheme.primary
                     }
 
-                    AddCircleOutlineIcon::class.react {}
+                    iconByName("AddCircleOutline") {}
                     span {
                         css {
                             marginLeft = 0.3.em

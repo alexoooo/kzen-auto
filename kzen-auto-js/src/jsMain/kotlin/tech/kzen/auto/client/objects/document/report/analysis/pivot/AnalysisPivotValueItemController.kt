@@ -8,8 +8,7 @@ import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.DeleteIcon
-import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import web.cssom.Float
 import web.cssom.em
@@ -87,7 +86,7 @@ class AnalysisPivotValueItemController(
 
                 disabled = props.runningOrLoading
 
-                DeleteIcon::class.react {}
+                iconByName("Delete") {}
             }
         }
     }

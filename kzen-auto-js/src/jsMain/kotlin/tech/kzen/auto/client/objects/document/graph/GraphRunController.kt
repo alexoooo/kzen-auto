@@ -5,15 +5,16 @@ import js.objects.unsafeJso
 import mui.material.Fab
 import mui.material.IconButton
 import react.ChildrenBuilder
-import react.Component
+import react.ComponentType
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.*
-import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.material.IconProps
+import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.material.iconType
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
@@ -22,7 +23,6 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 import web.cssom.NamedColor
 import web.cssom.Visibility
 import web.cssom.em
-import kotlin.reflect.KClass
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -326,15 +326,15 @@ class GraphRunController(
                 height = 5.em
             }
 
-            val icon: KClass<out Component<IconProps, react.State>> = when {
+            val icon: ComponentType<IconProps> = when {
                 hasMoreToRun ->
-                    PlayArrowIcon::class
+                    iconType("PlayArrow")
 
                 looping ->
-                    PauseIcon::class
+                    iconType("Pause")
 
                 else ->
-                    ReplayIcon::class
+                    iconType("Replay")
             }
 
 //            styledDiv {
@@ -346,7 +346,7 @@ class GraphRunController(
 //                        console.log("&^%&^%&%&^% click !!")
 //                    }
 //                }
-                icon.react {
+                icon {
                     style = unsafeJso {
                         fontSize = 3.em
                     }
@@ -371,7 +371,7 @@ class GraphRunController(
 
             onClick = { onReset() }
 
-            ReplayIcon::class.react {
+            iconByName("Replay") {
                 style = unsafeJso {
                     fontSize = 1.5.em
                 }
@@ -392,7 +392,7 @@ class GraphRunController(
 
             onClick = { onRun() }
 
-            RedoIcon::class.react {
+            iconByName("Redo") {
                 style = unsafeJso {
                     fontSize = 1.5.em
                 }

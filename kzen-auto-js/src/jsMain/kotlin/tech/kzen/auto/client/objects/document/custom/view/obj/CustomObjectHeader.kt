@@ -1,11 +1,8 @@
 package tech.kzen.auto.client.objects.document.custom.view.obj
 
 import emotion.react.css
-import mui.material.Chip
-import mui.material.ChipVariant
-import mui.material.IconButton
+import mui.material.*
 import mui.material.Size
-import mui.material.ToggleButton
 import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
@@ -16,9 +13,7 @@ import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.edit.ObjectNameEditor
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.DeleteIcon
-import tech.kzen.auto.client.wrap.material.EditIcon
-import tech.kzen.auto.client.wrap.material.PublicIcon
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -155,7 +150,7 @@ class CustomObjectHeader(
 
             onClick = { onStartEdit() }
 
-            EditIcon::class.react {}
+            iconByName("Edit") {}
         }
     }
 
@@ -214,7 +209,7 @@ class CustomObjectHeader(
                     onChange = { _, _ -> onToggleExport() }
                     title = if (props.info.isExported) "Exported (click to unexport)" else "Mark as exported"
 
-                    PublicIcon::class.react {}
+                    iconByName("Public") {}
                 }
             }
 
@@ -228,7 +223,7 @@ class CustomObjectHeader(
 
                 onClick = { onDelete() }
 
-                DeleteIcon::class.react {}
+                iconByName("Delete") {}
             }
         }
     }

@@ -7,7 +7,6 @@ import react.RefObject
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.textarea
-import react.dom.onChange
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
 import web.cssom.*

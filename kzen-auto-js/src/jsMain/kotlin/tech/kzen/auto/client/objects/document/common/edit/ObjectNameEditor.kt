@@ -16,9 +16,7 @@ import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
-import tech.kzen.auto.client.wrap.material.CancelIcon
-import tech.kzen.auto.client.wrap.material.SaveIcon
-import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -158,7 +156,7 @@ class ObjectNameEditor(
                     onCancel()
                 }
 
-                CancelIcon::class.react {}
+                iconByName("Cancel") {}
             }
 
             IconButton {
@@ -175,7 +173,7 @@ class ObjectNameEditor(
                     onSave()
                 }
 
-                SaveIcon::class.react {}
+                iconByName("Save") {}
             }
         }
     }

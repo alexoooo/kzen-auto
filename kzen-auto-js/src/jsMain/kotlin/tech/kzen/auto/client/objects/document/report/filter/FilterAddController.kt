@@ -12,8 +12,7 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterState
 import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterStore
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
-import tech.kzen.auto.client.wrap.material.CancelIcon
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
@@ -149,7 +148,7 @@ class FilterAddController(
                     onAdd()
                 }
 
-                AddCircleOutlineIcon::class.react {}
+                iconByName("AddCircleOutline") {}
             }
         }
     }
@@ -168,7 +167,7 @@ class FilterAddController(
                     onCancel()
                 }
 
-                CancelIcon::class.react {}
+                iconByName("Cancel") {}
             }
         }
     }

@@ -17,9 +17,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.AddCircleOutlineIcon
-import tech.kzen.auto.client.wrap.material.ArrowDownwardIcon
-import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -236,7 +234,7 @@ class ScriptBranchDisplay(
                     marginBottom = 0.5.em
                 }
 
-                ArrowDownwardIcon::class.react {
+                iconByName("ArrowDownward") {
                     style = unsafeJso {
                         fontSize = 3.em
                     }
@@ -264,7 +262,7 @@ class ScriptBranchDisplay(
                     onCreate(index)
                 }
 
-                AddCircleOutlineIcon::class.react {}
+                iconByName("AddCircleOutline") {}
             }
         }
     }

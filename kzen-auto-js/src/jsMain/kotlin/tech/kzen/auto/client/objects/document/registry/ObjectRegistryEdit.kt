@@ -11,8 +11,7 @@ import tech.kzen.auto.client.objects.ProjectController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.DeleteIcon
-import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.registry.model.ObjectRegistryReflection
 import tech.kzen.auto.common.objects.document.registry.spec.ClassListSpec
@@ -136,7 +135,7 @@ class ObjectRegistryEdit(
                     onRemove()
                 }
 
-                DeleteIcon::class.react {}
+                iconByName("Delete") {}
             }
         }
     }

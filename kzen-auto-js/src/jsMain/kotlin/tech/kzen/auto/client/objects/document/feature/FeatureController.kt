@@ -23,9 +23,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.cropper.CropperDetail
 import tech.kzen.auto.client.wrap.cropper.CropperWrapper
-import tech.kzen.auto.client.wrap.material.CameraAltIcon
-import tech.kzen.auto.client.wrap.material.DeleteIcon
-import tech.kzen.auto.client.wrap.material.RefreshIcon
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
@@ -387,7 +385,7 @@ class FeatureController(
 
                 onClick = { onCapture() }
 
-                CameraAltIcon::class.react {
+                iconByName("CameraAlt") {
                     style = unsafeJso {
                         marginRight = 0.25.em
                     }
@@ -414,7 +412,7 @@ class FeatureController(
 
                 onClick = { onSave() }
 
-                CameraAltIcon::class.react {
+                iconByName("CameraAlt") {
                     style = unsafeJso {
                         marginRight = 0.25.em
                     }
@@ -440,7 +438,7 @@ class FeatureController(
 
                 onClick = { onRefresh() }
 
-                RefreshIcon::class.react {
+                iconByName("Refresh") {
                     style = unsafeJso {
                         marginRight = 0.25.em
                     }
@@ -472,7 +470,7 @@ class FeatureController(
 
                 title = "Delete"
 
-                DeleteIcon::class.react {
+                iconByName("Delete") {
                     style = unsafeJso {
                         marginRight = 0.25.em
                     }

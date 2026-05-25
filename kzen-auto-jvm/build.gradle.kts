@@ -1,6 +1,5 @@
 @file:Suppress("UnstableApiUsage")
 
-import org.gradle.kotlin.dsl.register
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
