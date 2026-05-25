@@ -143,7 +143,7 @@ class ScriptBranchDisplay(
                     }
                 }
 
-                endInsertionPoint(0)
+                firstOrLastInsertionPoint(0)
             }
         }
         else {
@@ -158,7 +158,7 @@ class ScriptBranchDisplay(
     private fun ChildrenBuilder.nonEmptySteps(
         stepLocations: List<ObjectLocation>
     ) {
-        endInsertionPoint(0, reserveSpace = true)
+        firstOrLastInsertionPoint(0)
 
         div {
             css {
@@ -178,7 +178,7 @@ class ScriptBranchDisplay(
             }
         }
 
-        endInsertionPoint(stepLocations.size)
+        firstOrLastInsertionPoint(stepLocations.size)
     }
 
 
@@ -207,15 +207,12 @@ class ScriptBranchDisplay(
     }
 
 
-    private fun ChildrenBuilder.endInsertionPoint(index: Int, reserveSpace: Boolean = false) {
+    private fun ChildrenBuilder.firstOrLastInsertionPoint(index: Int) {
         div {
-//            if (reserveSpace) {
-                css {
-//                    display = Display.inlineBlock
-                    height = 26.px
-                    marginTop = 2.px
-                }
-//            }
+            css {
+                height = 26.px
+                marginTop = 2.px
+            }
 
             insertionButton(index)
         }
