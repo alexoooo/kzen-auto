@@ -9,6 +9,7 @@ main:
     - main.steps/Click 3
     - main.steps/Click 4
     - main.steps/Click 5
+    - main.steps/Write
     - main.steps/Close
     - main.steps/StopSut
 
@@ -60,5 +61,12 @@ main.steps/Click 4:
 main.steps/Click 5:
   is: BrowserClickStep
   target:
+    value: "main/Plus Circle/~main.yaml#main"
+    type: Visual
+
+main.steps/Write:
+  is: BrowserWriteStep
+  target:
     type: Xpath
-    value: "//svg[@data-testid='AddCircleOutlineIcon']"
+    value: "//label[text()='To']/..//input"
+  text: 0
