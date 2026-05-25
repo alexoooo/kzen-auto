@@ -121,7 +121,7 @@ class ObjectRegistryController:
     class Wrapper(
         private val archetype: ObjectLocation,
 //        private val stepDisplayManager: StepDisplayManager.Wrapper,
-//        private val sequenceCommander: SequenceCommander,
+//        private val scriptCommander: ScriptCommander,
 //        private val ribbonController: RibbonController.Wrapper
     ):
         DocumentController
@@ -143,7 +143,7 @@ class ObjectRegistryController:
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     ObjectRegistryController::class.react {
 //                        this.stepDisplayManager = this@Wrapper.stepDisplayManager
-//                        this.sequenceCommander = this@Wrapper.sequenceCommander
+//                        this.scriptCommander = this@Wrapper.scriptCommander
                         block()
                     }
                 }

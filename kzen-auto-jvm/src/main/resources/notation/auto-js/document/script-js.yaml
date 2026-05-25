@@ -1,0 +1,272 @@
+
+#######################################################################################################################
+
+ScriptController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.script.ScriptController$Wrapper
+  archetype: Script
+  stepDisplayManager: StepDisplayManager
+  scriptCommander: ScriptCommander
+  ribbonController: RibbonController
+
+
+ScriptCommander:
+  class: tech.kzen.auto.client.objects.document.script.command.ScriptCommander
+  meta:
+    stepCommanders: ChildList
+
+
+ScriptStepCommander:
+  abstract: true
+  is: ParentPointer
+  class: tech.kzen.auto.client.objects.document.script.command.ScriptStepCommander
+
+
+################################################################
+
+StepDisplayManager:
+  class: tech.kzen.auto.client.objects.document.script.display.StepDisplayManager$Wrapper
+  handle: StepDisplayManagerHandle
+  meta:
+    stepDisplays:
+      is: List
+      of: ScriptStepDisplay
+      by: Autowired
+
+
+StepDisplayManagerHandle:
+  class: tech.kzen.auto.client.objects.document.script.display.StepDisplayManager$Handle
+
+
+ScriptStepDisplay:
+  abstract: true
+  class: tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayWrapper
+  meta:
+    objectLocation:
+      is: ObjectLocation
+      by: Self
+
+
+ScriptStepDisplayDefault:
+  is: ScriptStepDisplay
+  class: tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayDefault$Wrapper
+  attributeEditorManager: AttributeEditorManager
+
+
+MultiStepDisplay:
+  is: ScriptStepDisplay
+  class: tech.kzen.auto.client.objects.document.script.step.control.MultiStepDisplay$Wrapper
+  stepDisplayManager: StepDisplayManagerHandle
+  scriptCommander: ScriptCommander
+
+
+IfStepDisplay:
+  is: ScriptStepDisplay
+  class: tech.kzen.auto.client.objects.document.script.step.control.IfStepDisplay$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  stepDisplayManager: StepDisplayManagerHandle
+  scriptCommander: ScriptCommander
+
+#IfStepCommander:
+#  is: ScriptStepCommander
+#  class: tech.kzen.auto.client.objects.document.script.command.IfStepCommander
+#  parent: ScriptCommander
+#  stepArchetype: IfStep
+#  branchArchetype: MultiScriptStep
+#  meta:
+#    stepArchetype:
+#      is: ObjectLocation
+#      by: Nominal
+#    branchArchetype:
+#      is: ObjectLocation
+#      by: Nominal
+
+MappingStepDisplay:
+  is: ScriptStepDisplay
+  class: tech.kzen.auto.client.objects.document.script.step.control.mapping.MappingStepDisplay$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  stepDisplayManager: StepDisplayManagerHandle
+  scriptCommander: ScriptCommander
+
+MappingStepCommander:
+  is: ScriptStepCommander
+  class: tech.kzen.auto.client.objects.document.script.step.control.mapping.MappingStepCommander
+  parent: ScriptCommander
+  mappingStepArchetype: MappingStep
+  itemArchetype: MappingItemStep
+  meta:
+    mappingStepArchetype:
+      is: ObjectLocation
+      by: Nominal
+    itemArchetype:
+      is: ObjectLocation
+      by: Nominal
+
+#######################################################################################################################
+
+
+SelectStepEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.script.display.edit.SelectStepEditor$Wrapper
+
+
+SelectLogicEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.script.display.edit.SelectLogicEditor$Wrapper
+
+
+RunStepArgumentsEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.script.step.control.RunStepArgumentsEditor$Wrapper
+
+
+TargetSpecEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.script.display.edit.TargetSpecEditor$Wrapper
+
+
+#######################################################################################################################
+
+ScriptGroup_InputOutput:
+  is: RibbonGroup
+  title: "Input / Output"
+  archetype: Script
+
+
+ArgumentStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_InputOutput
+  delegate: ArgumentStep
+
+
+BooleanLiteralStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_InputOutput
+  delegate: BooleanLiteralStep
+
+
+TextLiteralStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_InputOutput
+  delegate: TextLiteralStep
+
+
+FormulaStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_InputOutput
+  delegate: FormulaStep
+
+
+NumberLiteralStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_InputOutput
+  delegate: NumberLiteralStep
+
+
+NumberRangeStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_InputOutput
+  delegate: NumberRangeStep
+
+
+DisplayValueStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_InputOutput
+  delegate: DisplayValueStep
+
+
+################################################################
+
+ScriptGroup_LogicControl:
+  is: RibbonGroup
+  title: "Logic / Control"
+  archetype: Script
+
+
+WaitStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_LogicControl
+  delegate: WaitStep
+
+
+RunTool:
+  is: RibbonTool
+  parent: ScriptGroup_LogicControl
+  delegate: RunStep
+
+
+IfTool:
+  is: RibbonTool
+  parent: ScriptGroup_LogicControl
+  delegate: IfStep
+
+
+MappingTool:
+  is: RibbonTool
+  parent: ScriptGroup_LogicControl
+  delegate: MappingStep
+
+
+DivisibleCheckStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_LogicControl
+  delegate: DivisibleCheckStep
+
+
+LogicalAndStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_LogicControl
+  delegate: LogicalAndStep
+
+################################################################
+
+ScriptGroup_Browser:
+  is: RibbonGroup
+  title: "Browser"
+  archetype: Script
+
+
+BrowserOpenStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_Browser
+  delegate: BrowserOpenStep
+
+
+BrowserCloseStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_Browser
+  delegate: BrowserCloseStep
+
+
+BrowserGetStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_Browser
+  delegate: BrowserGetStep
+
+
+BrowserWriteStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_Browser
+  delegate: BrowserWriteStep
+
+
+BrowserClickStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_Browser
+  delegate: BrowserClickStep
+
+
+BrowserSubmitStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_Browser
+  delegate: BrowserSubmitStep
+
+
+BrowserEscapeStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_Browser
+  delegate: BrowserEscapeStep
+
+
+
+

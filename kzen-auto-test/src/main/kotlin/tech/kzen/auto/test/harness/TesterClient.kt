@@ -38,7 +38,7 @@ class TesterClient(testerPort: Int):
 
 
     /**
-     * Start a logic-run on the given Sequence ObjectLocation. Returns the run id on success.
+     * Start a logic-run on the given Script ObjectLocation. Returns the run id on success.
      * Throws if the tester returns non-2xx (e.g. unknown ObjectLocation, graph errors).
      */
     fun startRun(documentPath: String, objectPath: String = "main"): String = runBlocking {

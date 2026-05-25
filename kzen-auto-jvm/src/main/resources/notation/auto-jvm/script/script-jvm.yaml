@@ -1,0 +1,347 @@
+
+
+# NB: referenced in FeatureDocument
+ScriptValidator:
+  class: tech.kzen.auto.server.objects.script.ScriptValidator
+
+
+#######################################################################################################################
+
+ArgumentStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.value.ArgumentStep
+  icon: ArrowForward
+  title: "Argument"
+  parameter: "main"
+  meta:
+    parameter: String
+    selfLocation: SelfLocation
+
+
+BooleanLiteralStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.value.BooleanLiteralStep
+  icon: ToggleOn
+  title: "True or false"
+  value: false
+  meta:
+    value: Boolean
+    selfLocation: SelfLocation
+
+
+TextLiteralStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.value.TextLiteralStep
+  icon: Textsms
+  title: "Text"
+  value: ""
+  meta:
+    value: String
+    selfLocation: SelfLocation
+
+
+FormulaStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.eval.FormulaStep
+  icon: Functions
+  title: "Formula"
+  code: ""
+  meta:
+    code:
+      is: String
+      multiline: true
+    selfLocation: SelfLocation
+
+
+NumberLiteralStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.value.NumberLiteralStep
+  icon: LooksOne
+  title: "Number"
+  value: 0
+  meta:
+    value: Double
+    selfLocation: SelfLocation
+
+
+NumberRangeStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.value.NumberRangeStep
+  icon: TripOrigin
+  title: "Number range"
+  from: 1
+  to: 10
+  meta:
+    from: Int
+    to: Int
+    selfLocation: SelfLocation
+
+
+DivisibleCheckStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.logic.DivisibleCheckStep
+  icon: FilterList
+  title: "Is divisible by"
+  number: ""
+  divisor: 1
+  meta:
+    number:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+    divisor: Int
+    selfLocation: SelfLocation
+
+
+LogicalAndStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.logic.LogicalAndStep
+  icon: AddBox
+  title: "Logical AND"
+  condition: ""
+  and: ""
+  meta:
+    condition:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+    and:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+    selfLocation: SelfLocation
+
+
+DisplayValueStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.value.DisplayValueStep
+  icon: Print
+  title: "Display"
+  text: ""
+  meta:
+    text:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+    selfLocation: SelfLocation
+
+
+#######################################################################################################################
+
+
+MultiScriptStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.control.MultiStep
+  display: MultiStepDisplay
+  icon: ToggleOn
+  title: "Sub-script"
+  steps: []
+  meta:
+    steps:
+      is: List
+      of: ScriptStep
+      by: Nominal
+
+
+RunStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.control.RunStep
+  icon: PlayArrow
+  title: "Run"
+  instructions: ""
+  arguments: {}
+  meta:
+    instructions:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectLogicEditor
+    arguments:
+      is: Map
+      of:
+        - String
+        - ObjectLocation
+      by: Nominal
+      editor: RunStepArgumentsEditor
+    selfLocation: SelfLocation
+
+
+WaitStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.control.WaitStep
+  icon: Timer
+  title: "Wait"
+  milliseconds: 1000
+  meta:
+    milliseconds: Long
+    selfLocation: SelfLocation
+
+
+IfStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.control.IfStep
+  display: IfStepDisplay
+  icon: Share
+  title: "If"
+  description: "Do one thing or another based on condition"
+  condition: ""
+  then: []
+  else: []
+  meta:
+    condition:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+    then:
+      is: List
+      of: ScriptStep
+      by: Nominal
+    else:
+      is: List
+      of: ScriptStep
+      by: Nominal
+
+
+MappingStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.control.mapping.MappingStep
+  display: MappingStepDisplay
+  icon: Forward
+  title: "Loop"
+  description: "Use each item in a list"
+  items: ""
+  steps: []
+  meta:
+    items:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+    steps:
+      is: List
+      of: ScriptStep
+      by: Nominal
+    selfLocation: SelfLocation
+
+MappingItemStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.control.mapping.MappingItemStep
+  icon: Share
+  title: "Item"
+  meta:
+    selfLocation: SelfLocation
+
+#######################################################################################################################
+
+
+BrowserOpenStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.browser.BrowserOpenStep
+  icon: OpenInNew
+  title: "Open browser"
+  description: "Open a new browser window (existing one will be closed)"
+  meta:
+    selfLocation: SelfLocation
+
+
+BrowserCloseStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.browser.BrowserCloseStep
+  icon: Close
+  title: "Close browser"
+  description: "Close the browser window"
+  meta:
+    selfLocation: SelfLocation
+
+
+BrowserGetStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.browser.BrowserGetStep
+  icon: Http
+  title: "Browse to URL"
+  description: "Navigate to a new URL"
+  location: "https://www.google.com/"
+  meta:
+    location: String
+    selfLocation: SelfLocation
+
+
+BrowserClickStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.browser.BrowserClickStep
+  icon: TouchApp
+  title: "Click"
+  target:
+    type: Focus
+  meta:
+    target: TargetSpec
+    selfLocation: SelfLocation
+
+
+BrowserWriteStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.browser.BrowserWriteStep
+  icon: Keyboard
+  title: "Write"
+  description: "Send text into input field"
+  text: ""
+  target:
+    type: Focus
+  meta:
+    text: String
+    target: TargetSpec
+    selfLocation: SelfLocation
+
+
+BrowserSubmitStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.browser.BrowserSubmitStep
+  icon: Send
+  title: "Submit"
+  target:
+    type: Focus
+  meta:
+    target: TargetSpec
+    selfLocation: SelfLocation
+
+
+BrowserEscapeStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.browser.BrowserEscapeStep
+  icon: CancelPresentation
+  title: "Escape"
+  meta:
+    selfLocation: SelfLocation
+
+
+#BrowserFocusStep:
+#  abstract: true
+#  is: ScriptStep
+#  class: tech.kzen.auto.server.objects.script.step.browser.BrowserEscapeStep
+#  icon: CancelPresentation
+#  title: "Focus"
+#  target:
+#    type: Focus
+#  meta:
+#    target: TargetSpec
+#    selfLocation: SelfLocation

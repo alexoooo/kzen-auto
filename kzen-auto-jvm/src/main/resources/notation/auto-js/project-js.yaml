@@ -30,7 +30,7 @@ RibbonController:
       is: List
       of: ObjectLocation
       by: AutowiredNominal
-      for: SequenceStep
+      for: ScriptStep
     ribbonGroups:
       is: List
       of: RibbonGroup

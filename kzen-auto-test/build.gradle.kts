@@ -76,7 +76,7 @@ tasks.register<JavaExec>("runTester") {
 
 
 val selfTest by tasks.registering(Test::class) {
-    description = "Blackbox end-to-end self-tests that spawn a tester kzen-auto JVM; the tester's Sequences spawn the SUT."
+    description = "Blackbox end-to-end self-tests that spawn a tester kzen-auto JVM; the tester's Scripts spawn the SUT."
     group = "verification"
     useJUnitPlatform()
     include("**/*SelfTest.class")

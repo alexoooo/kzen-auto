@@ -1,5 +1,5 @@
 main:
-  is: Sequence
+  is: Script
   steps:
     - main.steps/Formula
     - main.steps/Loop

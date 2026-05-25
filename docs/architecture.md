@@ -4,7 +4,7 @@ What kzen-auto adds on top of kzen-lib. Read [`../../kzen-lib/docs/architecture.
 
 ## What kzen-auto is
 
-A web-based RPA / office-automation platform. Users open kzen-auto in a browser, edit declarative documents (reports, dataflows, sequences, etc.) in a graph editor, and execute them server-side. Plugins drop in extra report definitions via a small JAR-based SPI.
+A web-based RPA / office-automation platform. Users open kzen-auto in a browser, edit declarative documents (reports, dataflows, scripts, etc.) in a graph editor, and execute them server-side. Plugins drop in extra report definitions via a small JAR-based SPI.
 
 The non-obvious parts — and what this doc covers — are:
 
@@ -32,7 +32,7 @@ The four paradigms:
 | Paradigm | Subpackage | Execution model | Typical document |
 |----------|-----------|-----------------|------------------|
 | **Dataflow** | `paradigm/dataflow/` | Lazy, pull-based pipeline. `Dataflow<State>` vertices have `RequiredInput`/`OptionalInput` and emit via `RequiredOutput`/`OptionalOutput`. Stateless, `StatelessDataflow`, and `StreamDataflow` variants exist. | Visual graph documents |
-| **Logic** | `paradigm/logic/` | Step-through, traceable execution. `LogicController` coordinates pause/resume/step. Produces a `LogicTrace`. | Sequence / procedural documents |
+| **Logic** | `paradigm/logic/` | Step-through, traceable execution. `LogicController` coordinates pause/resume/step. Produces a `LogicTrace`. | Script / procedural documents |
 | **Task** | `paradigm/task/` | Async, long-running, fire-and-forget. `ManagedTask` wraps `ExecutionRequest`; runs to completion under `TaskModel` tracking. | Background reports, automation runs |
 | **Detached** | `paradigm/detached/` | One-shot request/response. `DetachedAction` executes one `ExecutionRequest` and returns `ExecutionResult` synchronously. No state tracking. | Quick administrative actions (e.g. plugin upload) |
 
@@ -109,7 +109,7 @@ The companion-object `init` block registers SPI metadata with kzen-lib's `Reflec
 | `restHandler` | `RestHandler` | Dispatch target for every route in `KzenAutoMain` |
 | `cachedKotlinCompiler`, `calculatedColumnEval` | scripting | Embedded Kotlin scripting for report formula columns |
 | `definitionRepository` | `MultiDefinitionRepository` | Report-definer pool: built-in (`CsvReportDefiner` / `TsvReportDefiner` / `TextReportDefiner`) plus `PluginReportDefinitionRepository` for JAR-loaded plugins |
-| `webDriverContext` | `WebDriverContext` | Selenium / WebDriver lifecycle for browser-automation sequence steps |
+| `webDriverContext` | `WebDriverContext` | Selenium / WebDriver lifecycle for browser-automation script steps |
 
 `KzenAutoContext.init()` subscribes the dataflow/task repositories to the graph store via `graphStore.observe(...)` — the same observer mechanism described in § 2. The shutdown hook calls `context.close()`, which currently only quits the WebDriver pool.
 
@@ -150,7 +150,7 @@ Each subdirectory under `kzen-auto-js/src/jsMain/kotlin/tech/kzen/auto/client/ob
 |--------|---------------|---------------|
 | `report/` | Report | Interactive data queries: input selection, filtering, pivot, export |
 | `graph/` | Visual dataflow | Node-and-edge graph; each node is a `Dataflow` instance |
-| `sequence/` | Sequence | Step-by-step procedural execution; trace view |
+| `script/` | Script | Step-by-step procedural execution; trace view |
 | `data/` | Data schema | Field definitions / format |
 | `plugin/` | Plugin registry | Upload / register plugin JARs |
 | `registry/` | Object registry | Browse / add custom objects from the library |

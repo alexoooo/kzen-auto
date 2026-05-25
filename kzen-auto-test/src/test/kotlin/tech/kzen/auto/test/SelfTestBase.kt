@@ -12,7 +12,7 @@ import java.nio.file.Paths
 abstract class SelfTestBase {
     companion object {
         // Hardcoded port — BrowserGetStep.location is a static YAML field that cannot
-        // yet interpolate Sequence parameters, so the tester URL must match what the
+        // yet interpolate Script parameters, so the tester URL must match what the
         // test-suite YAMLs hard-code. Swap to FreePort once interpolation lands.
         const val TESTER_PORT = 18081
     }

@@ -1,5 +1,5 @@
 main:
-  is: Sequence
+  is: Script
   steps:
     - main.steps/StringFormula
     - main.steps/IntFormula

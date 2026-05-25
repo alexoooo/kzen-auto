@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.util
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.objects.document.sequence.SequenceConventions
+import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentNesting
@@ -73,7 +73,7 @@ object AutoConventions {
 
 
     fun isLogic(documentNotation: DocumentNotation): Boolean {
-        return SequenceConventions.isSequence(documentNotation) ||
+        return ScriptConventions.isScript(documentNotation) ||
             ReportConventions.isReport(documentNotation)
     }
 }

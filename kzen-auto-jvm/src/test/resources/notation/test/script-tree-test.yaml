@@ -8,7 +8,7 @@ main.steps/Mapping:
   items: main.steps/Formula
 
 main:
-  is: Sequence
+  is: Script
   steps:
     - main.steps/Formula
     - main.steps/Mapping

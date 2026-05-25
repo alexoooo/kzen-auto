@@ -1,13 +1,13 @@
 # kzen-auto-test — AI agent guide
 
-Blackbox end-to-end self-test for kzen-auto. Dogfoods kzen-auto's own Sequence (Script) browser-automation feature to drive a separate kzen-auto instance. Lives as a `kzen-auto` subproject (sibling of `kzen-auto-jvm`, `kzen-auto-js`, etc.), so all invocations below assume the working directory is `kzen-auto/`.
+Blackbox end-to-end self-test for kzen-auto. Dogfoods kzen-auto's own Script browser-automation feature to drive a separate kzen-auto instance. Lives as a `kzen-auto` subproject (sibling of `kzen-auto-jvm`, `kzen-auto-js`, etc.), so all invocations below assume the working directory is `kzen-auto/`.
 
 ## Architecture
 
 Two JVM processes participate; the tester's Script orchestrates the second.
 
-1. **Tester** — `tech.kzen.auto.test.TesterMain` (this module's entry point). Same Ktor surface as vanilla kzen-auto plus the SUT-lifecycle Step catalogue (Start/Stop). Runs with cwd = `kzen-auto/kzen-auto-test/`, hosting the test-suite Sequence YAMLs at `src/main/resources/notation/test-suite/`. Also hosts the Chrome WebDriver. Launched either from the **Tester (kzen-auto-test)** IntelliJ run config (interactive development) or by `SelfTestBase.startTester` inside the `selfTest` Gradle task (CI).
-2. **SUT (System Under Test)** — vanilla `kzen-auto-jvm-*.jar`, spawned by `StartKzenAutoStep` inside the tester's Sequence YAML. Cwd is a per-run temp dir copied from `fixtures/<name>/`. Killed by a matching `StopKzenAutoStep` (or the tester's JVM shutdown hook if the script aborts).
+1. **Tester** — `tech.kzen.auto.test.TesterMain` (this module's entry point). Same Ktor surface as vanilla kzen-auto plus the SUT-lifecycle Step catalogue (Start/Stop). Runs with cwd = `kzen-auto/kzen-auto-test/`, hosting the test-suite Script YAMLs at `src/main/resources/notation/test-suite/`. Also hosts the Chrome WebDriver. Launched either from the **Tester (kzen-auto-test)** IntelliJ run config (interactive development) or by `SelfTestBase.startTester` inside the `selfTest` Gradle task (CI).
+2. **SUT (System Under Test)** — vanilla `kzen-auto-jvm-*.jar`, spawned by `StartKzenAutoStep` inside the tester's Script YAML. Cwd is a per-run temp dir copied from `fixtures/<name>/`. Killed by a matching `StopKzenAutoStep` (or the tester's JVM shutdown hook if the script aborts).
 
 The tester sees the test suite via kzen-lib's cwd-relative `GradleLocator` (`kzen-lib-jvm/.../GradleLocator.kt`), which scans `./src/main/resources/notation/`. The SUT sees only its (initially empty) fixture project, alongside kzen-auto's classpath-bundled system notation.
 
@@ -35,8 +35,8 @@ The kzen-auto fat jar is wired as an automatic `:kzen-auto-jvm:jar` task depende
 
 1. Open kzen-auto in IntelliJ as its own project (not via the umbrella — composite breaks IDE run/debug; see umbrella AGENTS.md).
 2. Run the **Tester (kzen-auto-test)** run config (shared in `.idea/runConfigurations/`). It runs `tech.kzen.auto.test.TesterMain` with the `kzen-auto-test` module classpath, cwd = `kzen-auto-test/`, and `-DkzenAutoJar=$PROJECT_DIR$/kzen-auto-jvm/build/libs/kzen-auto-jvm-0.29.1-SNAPSHOT.jar`. The before-run task builds `:kzen-auto-jvm:jar`.
-3. Open `http://127.0.0.1:18081/` in a browser. Navigate to `test-suite/smoke/OpenWelcome.yaml` and Run the Sequence — Start spawns the SUT, the Browser steps drive it, Stop tears down.
-4. Edit the Sequence in the browser (add steps, change parameters). Saves write through to `kzen-auto-test/src/main/resources/notation/test-suite/.../`, so edits land in the source-controlled tree.
+3. Open `http://127.0.0.1:18081/` in a browser. Navigate to `test-suite/smoke/OpenWelcome.yaml` and Run the Script — Start spawns the SUT, the Browser steps drive it, Stop tears down.
+4. Edit the Script in the browser (add steps, change parameters). Saves write through to `kzen-auto-test/src/main/resources/notation/test-suite/.../`, so edits land in the source-controlled tree.
 
 ### CLI
 
@@ -56,11 +56,11 @@ Override the kzen-auto jar (e.g. point at a CI-cached jar to skip the local `:kz
 
 ## Port pinning
 
-`SelfTestBase.TESTER_PORT = 18081`. The SUT port is whatever the Sequence YAML's `StartKzenAutoStep` and the subsequent `BrowserGetStep.location` agree on — currently `18082` in the smoke test. Hardcoded because `BrowserGetStep.location` is a static YAML field with no Sequence-variable interpolation. If those ports are occupied locally, startup fails loudly (`ProcessAwaitUtil`-style HTTP poll times out after 90s). Free ports + variable injection is the deferred open issue.
+`SelfTestBase.TESTER_PORT = 18081`. The SUT port is whatever the Script YAML's `StartKzenAutoStep` and the subsequent `BrowserGetStep.location` agree on — currently `18082` in the smoke test. Hardcoded because `BrowserGetStep.location` is a static YAML field with no Script-variable interpolation. If those ports are occupied locally, startup fails loudly (`ProcessAwaitUtil`-style HTTP poll times out after 90s). Free ports + variable injection is the deferred open issue.
 
 ## Adding a test
 
-1. Add a Sequence YAML under `src/main/resources/notation/test-suite/<area>/<Name>.yaml`. Mirror `test-suite/smoke/OpenWelcome.yaml`: lead with `StartKzenAutoStep`, end with `StopKzenAutoStep`, put browser interactions in between.
+1. Add a Script YAML under `src/main/resources/notation/test-suite/<area>/<Name>.yaml`. Mirror `test-suite/smoke/OpenWelcome.yaml`: lead with `StartKzenAutoStep`, end with `StopKzenAutoStep`, put browser interactions in between.
 2. Add a `@Test` to a `*SelfTest` class that calls `testerClient.startRun("test-suite/<area>/<Name>.yaml", "main")` and `awaitCompletion()`. No Kotlin SUT plumbing — the script owns it.
 3. For a non-empty SUT, create `fixtures/<fixture-name>/src/main/resources/notation/...` and point `StartKzenAutoStep.fixture` at the new path.
 

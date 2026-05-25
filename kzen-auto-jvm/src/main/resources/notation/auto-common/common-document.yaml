@@ -17,22 +17,10 @@ Document:
 
 # TODO: factor out DocumentArchetype (concrete) vs DocumentRoot (concrete)?
 
-#Script:
-#  abstract: true
-#  is: Document
-#  class: tech.kzen.auto.common.objects.document.script.ScriptDocument
-#  icon: PlaylistPlay
-#  steps: []
-#  meta:
-#    steps:
-#      is: List
-#      of: Action
-
-
-Sequence:
+Script:
   abstract: true
   is: Document
-  class: tech.kzen.auto.server.objects.sequence.SequenceDocument
+  class: tech.kzen.auto.server.objects.script.ScriptDocument
   title: "Script"
   icon: PlaylistPlay
   steps: []
@@ -41,7 +29,7 @@ Sequence:
   meta:
     steps:
       is: List
-      of: SequenceStep
+      of: ScriptStep
       by: Nominal
     parameters:
       is: List
@@ -54,11 +42,11 @@ Sequence:
       by: Self
 
 
-SequenceStep:
+ScriptStep:
   abstract: true
-  class: tech.kzen.auto.server.objects.sequence.api.SequenceStep
+  class: tech.kzen.auto.server.objects.script.api.ScriptStep
   description: "Script step"
-  display: SequenceStepDisplayDefault
+  display: ScriptStepDisplayDefault
   meta:
     icon: String
     title: String
