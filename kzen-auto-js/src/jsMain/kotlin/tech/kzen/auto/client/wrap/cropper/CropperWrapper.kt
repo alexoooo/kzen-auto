@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.wrap.cropper
 
 import emotion.react.css
+import kotlinx.browser.document
 import react.ChildrenBuilder
 import react.PropsWithRef
 import react.RefObject
@@ -16,7 +17,7 @@ import web.events.CustomEvent
 import web.html.HTMLCanvasElement
 import web.html.HTMLImageElement
 import kotlin.js.Promise
-import kotlin.js.json
+import kotlin.math.roundToInt
 
 
 //-----------------------------------------------------------------------------------------------------------------
@@ -73,14 +74,46 @@ class CropperWrapper:
 
     //-----------------------------------------------------------------------------------------------------------------
     fun getCroppedCanvas(): Promise<HTMLCanvasElement> {
-        val options = json()
+        // Bit-exact pixel copy from the source img — template matchers (Script click targets) require
+        // that the saved bytes equal what a screenshot of the same region would contain.
+        // cropperjs's $toCanvas composes fractional ctx.transform + drawImage with the default
+        // imageSmoothingEnabled=true, so any non-integer alignment bilinearly filters the output.
+        val img = imageElement.current!!
+        val naturalW = img.naturalWidth.toDouble()
+        val naturalH = img.naturalHeight.toDouble()
 
-        // https://github.com/fengyuanchen/cropperjs/blob/main/packages/element-selection/README.md#tocanvasoptions
-        options["imageSmoothingEnabled"] = false
-        options["maxWidth"] = 4096
-        options["maxHeight"] = 4096
+        // Cropper-image matrix [a, 0, 0, d, tx, ty] is a CSS transform with default origin 50% 50%,
+        // which composes as translate(cx,cy) · matrix · translate(-cx,-cy). The net mapping
+        // source pixel (px, py) → canvas (a·px + effectiveTx, d·py + effectiveTy) collapses
+        // the origin into a single affine translation.
+        val matrix = cropper!!.getCropperImage()!!.asDynamic().`$getTransform`()
+        val a = (matrix[0] as Number).toDouble()
+        val d = (matrix[3] as Number).toDouble()
+        val tx = (matrix[4] as Number).toDouble()
+        val ty = (matrix[5] as Number).toDouble()
+        val effectiveTx = tx + (naturalW / 2.0) * (1.0 - a)
+        val effectiveTy = ty + (naturalH / 2.0) * (1.0 - d)
 
-        return cropper!!.getCropperSelection()!!.toCanvas(options)
+        val sel = cropper!!.getCropperSelection()!!.asDynamic()
+        val selX = (sel.x as Number).toDouble()
+        val selY = (sel.y as Number).toDouble()
+        val selW = (sel.width as Number).toDouble()
+        val selH = (sel.height as Number).toDouble()
+
+        val srcX = ((selX - effectiveTx) / a).roundToInt()
+        val srcY = ((selY - effectiveTy) / d).roundToInt()
+        val srcW = (selW / a).roundToInt()
+        val srcH = (selH / d).roundToInt()
+
+        val canvas = document.createElement("canvas").unsafeCast<HTMLCanvasElement>()
+        canvas.width = srcW
+        canvas.height = srcH
+
+        val ctx = canvas.asDynamic().getContext("2d")
+        ctx.imageSmoothingEnabled = false
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH)
+
+        return Promise.resolve(canvas)
     }
 
 

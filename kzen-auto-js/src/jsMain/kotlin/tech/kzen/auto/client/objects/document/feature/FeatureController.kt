@@ -102,7 +102,6 @@ class FeatureController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var cropperWrapper: RefObject<CropperWrapper> = createRef()
-    private var screenshotBytes: ByteArray? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -203,8 +202,6 @@ class FeatureController(
                 val base64 = IoUtils.base64Encode(screenshotPng.value)
                 val screenshotPngUrl = "data:png/png;base64,$base64"
 
-                screenshotBytes = screenshotPng.value
-
                 setState {
                     screenshotDataUrl = screenshotPngUrl
                     requestingScreenshot = false
@@ -214,38 +211,8 @@ class FeatureController(
     }
 
 
-    private fun doCropAndSave(detail: CropperDetail) {
-        async {
-            val result = ClientContext.restClient.performDetached(
-                FeatureDocument.screenshotCropperLocation,
-                screenshotBytes!!,
-                FeatureDocument.cropTopParam to detail.y.toInt().toString(),
-                FeatureDocument.cropLeftParam to detail.x.toInt().toString(),
-                FeatureDocument.cropWidthParam to detail.width.toInt().toString(),
-                FeatureDocument.cropHeightParam to detail.height.toInt().toString())
-
-            if (result !is ExecutionSuccess) {
-                return@async
-            }
-            val cropPng = result.value as BinaryExecutionValue
-
-            ClientContext.mirroredGraphStore.apply(AddResourceCommand(
-                ResourceLocation(
-                    state.documentPath!!,
-                    ResourcePath(
-                        ResourceName(DateTimeUtils.filenameTimestamp() + ".png"),
-                        ResourceNesting.empty)),
-                ImmutableByteArray.wrap(cropPng.value)
-            ))
-
-            onRefresh()
-        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRefresh() {
-        screenshotBytes = null
         setState {
             capturedDataUrl = null
             screenshotDataUrl = null
@@ -274,17 +241,30 @@ class FeatureController(
 
 
     private fun onSave() {
-        val detail = state.detail
-                ?: return
+        state.detail
+            ?: return
 
         cropperWrapper.current!!.getCroppedCanvas().then { canvas ->
-            setState {
-                capturedDataUrl = canvas.toDataURL()
+            val dataUrl = canvas.toDataURL("image/png")
+            val cropPng = IoUtils.base64Decode(dataUrl.substringAfter(","))
 
+            setState {
+                capturedDataUrl = dataUrl
                 requestingScreenshot = true
             }
 
-            doCropAndSave(detail)
+            async {
+                ClientContext.mirroredGraphStore.apply(AddResourceCommand(
+                    ResourceLocation(
+                        state.documentPath!!,
+                        ResourcePath(
+                            ResourceName(DateTimeUtils.filenameTimestamp() + ".png"),
+                            ResourceNesting.empty)),
+                    ImmutableByteArray.wrap(cropPng)
+                ))
+
+                onRefresh()
+            }
         }
     }
 

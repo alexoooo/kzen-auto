@@ -29,16 +29,6 @@ class FeatureDocument(
             ObjectPath(ObjectName("ScreenshotTaker"), ObjectNesting.root))
 
 
-        val screenshotCropperLocation = ObjectLocation(
-            featureJvmPath,
-            ObjectPath(ObjectName("ScreenshotCropper"), ObjectNesting.root))
-
-
-        val cropTopParam = "y"
-        val cropLeftParam = "x"
-        val cropWidthParam = "width"
-        val cropHeightParam = "height"
-
         val archetypeObjectName = ObjectName("Feature")
 
 

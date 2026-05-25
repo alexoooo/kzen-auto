@@ -250,19 +250,6 @@ class ModelTaskRepository(
         }
 
 
-//        override fun completeWithPartialResult() {
-//            if (isFailed()) {
-//                terminate()
-//            }
-//            else {
-//                val result = model().partialResult
-//                    ?: error("partial result missing")
-//
-//                complete(result)
-//            }
-//        }
-
-
         override fun complete(result: ExecutionResult?) {
             complete(TaskState.FinishedOrFailed, result)
         }
