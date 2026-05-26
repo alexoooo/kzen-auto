@@ -45,6 +45,7 @@ external interface StepListDisplayProps: Props {
 
 external interface StepListDisplayState: State {
     var stepLocations: List<ObjectLocation>?
+    var dependencyEdges: StepDependencyEdges?
 
     var creating: Boolean
 
@@ -99,8 +100,13 @@ class ScriptBranchDisplay(
         val stepLocations = ScriptController.stepLocations(
             graphStructure, props.attributeLocation)
 
+        val dependencyEdges = stepLocations?.let {
+            StepDependencyEdges.compute(it, clientState.graphDefinitionAttempt)
+        }
+
         setState {
             this.stepLocations = stepLocations
+            this.dependencyEdges = dependencyEdges
         }
     }
 
@@ -261,25 +267,45 @@ class ScriptBranchDisplay(
     ) {
         firstOrLastInsertionPoint(0)
 
-        div {
-            css {
-                width = ScriptController.stepWidth
-            }
+        val edges = state.dependencyEdges
+            ?: StepDependencyEdges.EMPTY
 
+        div {
             for ((index, stepLocation) in stepLocations.withIndex()) {
-                renderStep(
-                    index,
-                    stepLocation,
-                    stepLocations.size
-                )
+                renderRowWithGutter(
+                    gutter = { stepDependencyGutterCellForStep(index, edges) },
+                    body = { renderStep(index, stepLocation, stepLocations.size) })
 
                 if (index < stepLocations.size - 1) {
-                    betweenStepsInsertionPoint(index + 1)
+                    renderRowWithGutter(
+                        gutter = { stepDependencyGutterCellForBetween(index, edges) },
+                        body = { betweenStepsInsertionPoint(index + 1) })
                 }
             }
         }
 
         firstOrLastInsertionPoint(stepLocations.size)
+    }
+
+
+    private fun ChildrenBuilder.renderRowWithGutter(
+        gutter: ChildrenBuilder.() -> Unit,
+        body: ChildrenBuilder.() -> Unit
+    ) {
+        div {
+            css {
+                display = Display.flex
+                alignItems = AlignItems.stretch
+            }
+            gutter()
+            div {
+                css {
+                    width = ScriptController.stepWidth
+                    flexShrink = number(0.0)
+                }
+                body()
+            }
+        }
     }
 
 
