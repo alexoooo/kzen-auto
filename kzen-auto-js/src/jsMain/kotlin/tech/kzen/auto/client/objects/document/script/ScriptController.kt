@@ -9,6 +9,7 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEditor
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
+import tech.kzen.auto.client.objects.document.script.display.ScriptDependencyOverlay
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.model.ScriptGlobal
@@ -225,7 +226,12 @@ class ScriptController:
         div {
             css {
                 marginLeft = 2.em
+                position = Position.relative
             }
+
+            // NB: overlay is rendered BEFORE MultiStepDisplay so default stacking puts it behind
+            //     step cards; the cross-branch polylines visually pass behind the IfStep card.
+            ScriptDependencyOverlay::class.react {}
 
             renderMain(mainObjectLocation)
         }

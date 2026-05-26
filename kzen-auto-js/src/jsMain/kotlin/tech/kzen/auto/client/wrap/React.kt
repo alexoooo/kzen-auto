@@ -90,6 +90,14 @@ inline val <P : Props> KClass<out Component<P, *>>.react: ComponentType<P>
 fun <T : Any> createRef(): RefObject<T> = unsafeJso { current = null }
 
 
+// Bridges a Kotlin callback (element) -> Cleanup? to React's RefCallback shape without going
+// through `react.RefCallback`'s suspend/CleanupScope factory (which depends on a coroutines
+// runtime detail this codebase doesn't otherwise pull in). The returned function-typed object
+// is shape-compatible with React 19 callback refs that return a cleanup on mount.
+fun <T : Any> refCallback(block: (T) -> Cleanup?): RefCallback<T> =
+    unsafeCast(block)
+
+
 inline var TextFieldProps.InputProps: InputBaseProps
     get() = TODO("Prop is write-only!")
     set(value) {

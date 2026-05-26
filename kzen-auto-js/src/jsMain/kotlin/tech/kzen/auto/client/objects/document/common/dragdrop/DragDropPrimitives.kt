@@ -45,7 +45,8 @@ fun ChildrenBuilder.dragHandle(
     isVisible: Boolean,
     handleColor: Color,
     onStart: () -> Unit,
-    onEnd: () -> Unit
+    onEnd: () -> Unit,
+    floatOverGutter: Boolean = false
 ) {
     div {
         css {
@@ -60,6 +61,12 @@ fun ChildrenBuilder.dragHandle(
             cursor = Cursor.grab
             color = handleColor
             opacity = if (isVisible) number(1.0) else number(0.0)
+            if (floatOverGutter) {
+                backgroundColor = Color("rgba(255, 255, 255, 0.65)")
+                backdropFilter = blur(4.px)
+                borderRadius = 4.px
+                zIndex = integer(1)
+            }
         }
 
         draggable = true

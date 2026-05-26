@@ -110,7 +110,8 @@ class ScriptStepSlot(
                 isVisible = state.isHovered || props.isDragSource,
                 handleColor = props.handleColor,
                 onStart = props.onDragStart,
-                onEnd = props.onDragEnd)
+                onEnd = props.onDragEnd,
+                floatOverGutter = true)
             dropIndicator(props.dropMarker)
 
             props.stepDisplayManager.child(this) {

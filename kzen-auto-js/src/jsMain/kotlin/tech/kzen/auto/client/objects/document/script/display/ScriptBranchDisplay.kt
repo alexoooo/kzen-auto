@@ -21,6 +21,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.refCallback
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -273,11 +274,13 @@ class ScriptBranchDisplay(
         div {
             for ((index, stepLocation) in stepLocations.withIndex()) {
                 renderRowWithGutter(
+                    stepLocation = stepLocation,
                     gutter = { stepDependencyGutterCellForStep(index, edges) },
                     body = { renderStep(index, stepLocation, stepLocations.size) })
 
                 if (index < stepLocations.size - 1) {
                     renderRowWithGutter(
+                        stepLocation = null,
                         gutter = { stepDependencyGutterCellForBetween(index, edges) },
                         body = { betweenStepsInsertionPoint(index + 1) })
                 }
@@ -289,6 +292,7 @@ class ScriptBranchDisplay(
 
 
     private fun ChildrenBuilder.renderRowWithGutter(
+        stepLocation: ObjectLocation?,
         gutter: ChildrenBuilder.() -> Unit,
         body: ChildrenBuilder.() -> Unit
     ) {
@@ -296,6 +300,16 @@ class ScriptBranchDisplay(
             css {
                 display = Display.flex
                 alignItems = AlignItems.stretch
+            }
+            if (stepLocation != null) {
+                // NB: ref attaches to the OUTER row (gutter + body) so the overlay can compute the
+                //     polyline endpoint at row.left + laneWidth/2 — the phantom column's x.
+                //     React 19 invokes the returned Cleanup on unmount/ref-detach.
+                ref = refCallback<HTMLDivElement> { element ->
+                    StepRowRefRegistry.register(stepLocation, element)
+                    val cleanup: () -> Unit = { StepRowRefRegistry.unregister(stepLocation, element) }
+                    cleanup
+                }
             }
             gutter()
             div {
