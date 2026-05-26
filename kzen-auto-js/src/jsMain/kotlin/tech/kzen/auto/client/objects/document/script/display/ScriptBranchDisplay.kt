@@ -9,10 +9,7 @@ import react.Props
 import react.State
 import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.dragdrop.computeDropIndex
-import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
-import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
@@ -23,6 +20,7 @@ import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -50,7 +48,6 @@ external interface StepListDisplayState: State {
 
     var creating: Boolean
 
-    var hoveredIndex: Int?
     var dragSourceIndex: Int?
     var dragOverIndex: Int?
     var dropAfter: Boolean
@@ -147,20 +144,6 @@ class ScriptBranchDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onStepHover(index: Int, hovering: Boolean) {
-        if (hovering) {
-            if (state.hoveredIndex != index) {
-                setState { hoveredIndex = index }
-            }
-        }
-        else {
-            if (state.hoveredIndex == index) {
-                setState { hoveredIndex = null }
-            }
-        }
-    }
-
-
     private fun onDragStart(sourceIndex: Int) {
         setState {
             dragSourceIndex = sourceIndex
@@ -171,10 +154,11 @@ class ScriptBranchDisplay(
 
 
     private fun onDragOver(targetIndex: Int, event: DragEvent<HTMLDivElement>) {
+        event.preventDefault()
+
         if (state.dragSourceIndex == null) {
             return
         }
-        event.preventDefault()
 
         val rect = event.currentTarget.getBoundingClientRect()
         val nextDropAfter = event.clientY > rect.top + rect.height / 2
@@ -376,35 +360,25 @@ class ScriptBranchDisplay(
     ) {
         val marker = dropMarkerFor(
             state.dragSourceIndex, state.dragOverIndex, state.dropAfter, index)
-        val handleVisible = state.hoveredIndex == index || state.dragSourceIndex == index
 
-        div {
+        ScriptStepSlot::class.react {
             key = Key(objectLocation.toReference().asString())
 
-            css {
-                position = Position.relative
-            }
+            this.objectLocation = objectLocation
+            this.indexInParent = index
+            this.first = index == 0
+            this.last = index == stepCount - 1
 
-            onMouseEnter = { onStepHover(index, true) }
-            onMouseLeave = { onStepHover(index, false) }
-            onDragOver = { event -> onDragOver(index, event) }
-            onDrop = { event -> onDrop(event) }
+            this.dropMarker = marker
+            this.isDragSource = state.dragSourceIndex == index
 
-            dragHandle(
-                isVisible = handleVisible,
-                handleColor = dragHandleColor,
-                onStart = { onDragStart(index) },
-                onEnd = { onDragEnd() })
-            dropIndicator(marker)
+            this.stepDisplayManager = props.stepDisplayManager
+            this.handleColor = dragHandleColor
 
-            props.stepDisplayManager.child(this) {
-                common = ScriptStepDisplayPropsCommon(
-                    objectLocation,
-                    index,
-                    first = index == 0,
-                    last = index == stepCount - 1,
-                )
-            }
+            this.onDragStart = { onDragStart(index) }
+            this.onDragOver = { event -> onDragOver(index, event) }
+            this.onDrop = { event -> this@ScriptBranchDisplay.onDrop(event) }
+            this.onDragEnd = { this@ScriptBranchDisplay.onDragEnd() }
         }
     }
 }

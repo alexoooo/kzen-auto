@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.custom.view
 
+import tech.kzen.auto.client.objects.document.common.dragdrop.computeDropIndex
 import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.objects.document.custom.model.CustomStore
 import tech.kzen.auto.client.objects.document.custom.view.obj.CustomObjectInfo
@@ -8,6 +9,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
@@ -108,18 +110,46 @@ class CustomViewStore(
         val dropAfter = view.dropAfter
 
         if (source != null && target != null) {
-            val rawTarget = if (dropAfter) target + 1 else target
-            val newIndex = if (rawTarget > source) rawTarget - 1 else rawTarget
-            if (newIndex != source) {
-                val sourceObjectPath = snapshot.state.serverNotation.notations.map.keys.toList().getOrNull(source)
-                    ?: error("Drag source index $source out of range")
-                dispatch(listOf(ShiftObjectCommand(
-                    ObjectLocation(snapshot.state.documentPath, sourceObjectPath),
-                    PositionRelation.at(newIndex))))
+            // NB: drag indices are view-indices (orderedEntries skips the root 'main' object);
+            //     must translate to a doc-index against the unfiltered notation map before shifting.
+            val allDocPaths = snapshot.state.serverNotation.notations.map.keys.toList()
+            val viewPaths = allDocPaths.filterNot(::isFilteredFromView)
+
+            if (source in viewPaths.indices && target in viewPaths.indices) {
+                val newViewIndex = computeDropIndex(source, target, dropAfter)
+                if (newViewIndex != source) {
+                    val sourcePath = viewPaths[source]
+                    val anchorPath = anchorAfterMove(viewPaths, source, newViewIndex)
+                    val newDocPosition =
+                        if (anchorPath == null) {
+                            allDocPaths.size - 1
+                        }
+                        else {
+                            val sourceDocIndex = allDocPaths.indexOf(sourcePath)
+                            val anchorDocIndex = allDocPaths.indexOf(anchorPath)
+                            if (sourceDocIndex < anchorDocIndex) anchorDocIndex - 1 else anchorDocIndex
+                        }
+                    dispatch(listOf(ShiftObjectCommand(
+                        ObjectLocation(snapshot.state.documentPath, sourcePath),
+                        PositionRelation.at(newDocPosition))))
+                }
             }
         }
 
         parent.update { it.withView { CustomViewState() } }
+    }
+
+
+    private fun isFilteredFromView(objectPath: ObjectPath): Boolean {
+        return objectPath.name == ObjectName.main && objectPath.nesting.isRoot()
+    }
+
+
+    private fun anchorAfterMove(viewPaths: List<ObjectPath>, source: Int, newViewIndex: Int): ObjectPath? {
+        val reordered = viewPaths.toMutableList()
+        val moved = reordered.removeAt(source)
+        reordered.add(newViewIndex, moved)
+        return reordered.getOrNull(newViewIndex + 1)
     }
 
 

@@ -32,6 +32,7 @@ class AdhocTask(
                 for (i in 1 .. 60) {
                     if (handle.stopRequested()) {
                         handle.completeAsCancelled()
+                        return
                     }
 
                     sleep(1_000)

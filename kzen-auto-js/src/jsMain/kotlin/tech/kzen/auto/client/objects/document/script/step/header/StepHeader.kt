@@ -152,7 +152,7 @@ class StepHeader(
             }
 
             val summary = props.summary
-            if (!summary.isNullOrEmpty()) {
+            if (!summary.isNullOrEmpty() && props.expanded != true) {
                 div {
                     css {
                         color = Color("rgba(0, 0, 0, 0.55)")
