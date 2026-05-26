@@ -145,7 +145,7 @@ class CustomObject(
                     }
 
                     if (props.info.isExported) {
-                        filter = dropShadow(0.px, 0.px, 4.px, Color("rgba(255, 193, 7, 0.55)"))
+                        filter = dropShadow(0.px, 0.px, 4.px, CustomTheme.exportGlow)
                     }
                 }
 

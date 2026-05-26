@@ -11,6 +11,7 @@ import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.edit.ObjectNameEditor
+import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.iconByName
@@ -202,6 +203,11 @@ class CustomObjectHeader(
                         height = 24.px
                         paddingTop = 0.px
                         paddingBottom = 0.px
+                        if (props.info.isExported) {
+                            color = CustomTheme.exportAccent
+                            borderColor = CustomTheme.exportGlow
+                            filter = dropShadow(0.px, 0.px, 3.px, CustomTheme.exportGlow)
+                        }
                     }
                     value = "export"
                     size = Size.small

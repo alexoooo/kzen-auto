@@ -11,4 +11,6 @@ object CustomTheme {
     val abstractBackground = Color("rgb(244, 244, 246)")
     val abstractBorder = Color("rgb(175, 175, 180)")
     val primary = Color("rgb(25, 118, 210)")
+    val exportGlow = Color("rgba(255, 193, 7, 0.55)")
+    val exportAccent = Color("rgb(176, 122, 0)")
 }
