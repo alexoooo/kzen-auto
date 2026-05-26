@@ -3,21 +3,16 @@ package tech.kzen.auto.client.objects.document.script.display
 import emotion.react.css
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
-import tech.kzen.lib.common.model.definition.AttributeDefinition
-import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
-import tech.kzen.lib.common.model.definition.ListAttributeDefinition
-import tech.kzen.lib.common.model.definition.MapAttributeDefinition
-import tech.kzen.lib.common.model.definition.ObjectDefinition
-import tech.kzen.lib.common.model.definition.ReferenceAttributeDefinition
-import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
+import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.location.ObjectReferenceHost
-import tech.kzen.lib.common.model.structure.notation.AttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ObjectNotation
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import web.cssom.*
+import web.cssom.BoxSizing
+import web.cssom.Color
+import web.cssom.LineStyle
+import web.cssom.NamedColor
+import web.cssom.Position
+import web.cssom.number
+import web.cssom.pct
+import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -31,13 +26,16 @@ val stepDependencyTrunkLineWidth = stepDependencyTrunkLineWidthPx.px
 private val stepDependencyMarkerSize = stepDependencyMarkerSizePx.px
 private val stepDependencyMarkerBorderWidth = 2.px
 
+private val stepDependencyTrunkLineHalfMarginNeg = (-stepDependencyTrunkLineWidthPx / 2).px
+private val stepDependencyMarkerHalfMarginNeg = (-stepDependencyMarkerSizePx / 2).px
+
 
 //---------------------------------------------------------------------------------------------------------------------
 fun ChildrenBuilder.stepDependencyGutterCellForStep(index: Int, edges: StepDependencyEdges) {
     val hasCrossBranch = edges.crossBranchOutgoingSourceIndices.isNotEmpty() ||
         edges.crossBranchIncomingTargetIndices.isNotEmpty()
 
-    if (edges.numLanes == 0 && ! hasCrossBranch) {
+    if (edges.numLanes == 0 && !hasCrossBranch) {
         return
     }
 
@@ -59,7 +57,7 @@ fun ChildrenBuilder.stepDependencyGutterCellForStep(index: Int, edges: StepDepen
         val isTarget = index == cover.last
         // NB: trunkLine only inside pass-through rows. At endpoint rows the marker is the terminus —
         //     rendering a trunk would extend the line past the marker into the row's body area.
-        if (! isSource && ! isTarget) {
+        if (!isSource && !isTarget) {
             trunkLine()
         }
         if (isSource) {
@@ -137,7 +135,7 @@ private fun ChildrenBuilder.trunkLine() {
             top = 0.px
             bottom = 0.px
             left = 50.pct
-            marginLeft = (-1).px
+            marginLeft = stepDependencyTrunkLineHalfMarginNeg
             width = stepDependencyTrunkLineWidth
             backgroundColor = stepDependencyTrunkColor
         }
@@ -153,7 +151,7 @@ private fun ChildrenBuilder.sourceMarker() {
             position = Position.absolute
             bottom = 0.px
             left = 50.pct
-            marginLeft = (-5).px
+            marginLeft = stepDependencyMarkerHalfMarginNeg
             width = stepDependencyMarkerSize
             height = stepDependencyMarkerSize
             borderRadius = 50.pct
@@ -174,7 +172,7 @@ private fun ChildrenBuilder.targetMarker() {
             position = Position.absolute
             top = 0.px
             left = 50.pct
-            marginLeft = (-5).px
+            marginLeft = stepDependencyMarkerHalfMarginNeg
             width = stepDependencyMarkerSize
             height = stepDependencyMarkerSize
             borderRadius = 50.pct
@@ -200,95 +198,20 @@ data class StepDependencyEdges(
 
         fun compute(
             stepLocations: List<ObjectLocation>,
-            graphDefinitionAttempt: GraphDefinitionAttempt
+            analysis: ScriptDependencyAnalysis
         ): StepDependencyEdges {
             if (stepLocations.isEmpty()) {
                 return EMPTY
             }
 
-            val indexByLocation: Map<ObjectLocation, Int> = stepLocations
-                .withIndex()
-                .associate { (i, loc) -> loc to i }
-
-            val coalesce = graphDefinitionAttempt.graphStructure.graphNotation.coalesce
-            val scriptDocumentPath = stepLocations.first().documentPath
-
-            val locationByIdentifier: Map<String, ObjectLocation> = coalesce.map.keys
-                .asSequence()
-                .filter { it.documentPath == scriptDocumentPath }
-                .mapNotNull { location ->
-                    val name = location.objectPath.name.value
-                    if (isValidIdentifier(name)) name to location else null
-                }
-                .toMap()
-
-            val rawEdges = mutableSetOf<Pair<Int, Int>>()
-            val crossBranchOutgoingSourceIndices = mutableSetOf<Int>()
-            val crossBranchIncomingTargetIndices = mutableSetOf<Int>()
-
-            val documentLocations: List<ObjectLocation> = coalesce.map.keys
-                .filter { it.documentPath == scriptDocumentPath }
-
-            for (targetLocation in documentLocations) {
-                val objectDefinition = graphDefinitionAttempt.objectDefinitions[targetLocation]
-                    ?: continue
-                val host = ObjectReferenceHost.ofLocation(targetLocation)
-
-                fun classifyEdge(sourceLocation: ObjectLocation) {
-                    if (sourceLocation == targetLocation ||
-                        sourceLocation.documentPath != scriptDocumentPath) {
-                        return
-                    }
-                    // NB: structural containment (e.g. IfStep.then[*] → its child steps) is not a data dep;
-                    //     filter both directions so neither phantom markers nor in-branch edges spuriously fire.
-                    if (sourceLocation.objectPath.startsWith(targetLocation.objectPath) ||
-                        targetLocation.objectPath.startsWith(sourceLocation.objectPath)) {
-                        return
-                    }
-
-                    val sourceIdx = indexByLocation[sourceLocation]
-                    val targetIdx = indexByLocation[targetLocation]
-                    when {
-                        sourceIdx != null && targetIdx != null -> {
-                            if (sourceIdx < targetIdx) {
-                                rawEdges.add(sourceIdx to targetIdx)
-                            }
-                        }
-                        sourceIdx != null && targetIdx == null ->
-                            crossBranchOutgoingSourceIndices.add(sourceIdx)
-                        sourceIdx == null && targetIdx != null ->
-                            crossBranchIncomingTargetIndices.add(targetIdx)
-                    }
-                }
-
-                for ((_, definitionReference) in objectDefinition.attributeReferencesIncludingWeak()) {
-                    val resolved = coalesce.locateOptional(definitionReference.objectReference, host)
-                        ?: continue
-                    classifyEdge(resolved)
-                }
-
-                // NB: scan only value-typed scalar strings (catches code-attribute refs like FormulaStep.code).
-                //     Reference-typed subtrees are skipped to avoid matching identifier paths like
-                //     "main.steps/If.then/Formula 3" as the word "Formula".
-                val objectNotation = coalesce[targetLocation]
-                if (objectNotation != null) {
-                    forEachValueScalar(objectDefinition, objectNotation) { stringValue ->
-                        for ((identifier, sourceLocation) in locationByIdentifier) {
-                            if (sourceLocation == targetLocation) {
-                                continue
-                            }
-                            if (! containsWord(stringValue, identifier)) {
-                                continue
-                            }
-                            classifyEdge(sourceLocation)
-                        }
-                    }
-                }
-            }
+            val rawEdges = analysis.inBranchSourceTargetIndexPairs(stepLocations)
+            val crossBranchOutgoingSourceIndices = analysis.crossBranchOutgoingSourceIndices(stepLocations)
+            val crossBranchIncomingTargetIndices = analysis.crossBranchIncomingTargetIndices(stepLocations)
 
             if (rawEdges.isEmpty() &&
                 crossBranchOutgoingSourceIndices.isEmpty() &&
-                crossBranchIncomingTargetIndices.isEmpty()) {
+                crossBranchIncomingTargetIndices.isEmpty()
+            ) {
                 return EMPTY
             }
 
@@ -324,72 +247,6 @@ data class StepDependencyEdges(
             }
 
             return lanes.map { it.toList() }
-        }
-    }
-}
-
-
-//---------------------------------------------------------------------------------------------------------------------
-private val stepIdentifierNameRegex = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
-
-
-private fun isValidIdentifier(name: String): Boolean {
-    return stepIdentifierNameRegex.matches(name)
-}
-
-
-private fun containsWord(haystack: String, needle: String): Boolean {
-    return Regex("\\b" + Regex.escape(needle) + "\\b").containsMatchIn(haystack)
-}
-
-
-private fun forEachValueScalar(
-    objectDefinition: ObjectDefinition,
-    objectNotation: ObjectNotation,
-    action: (String) -> Unit
-) {
-    for ((name, attributeDefinition) in objectDefinition.attributeDefinitions.map) {
-        val attributeNotation = objectNotation.attributes.map[name]
-            ?: continue
-        walkValueScalar(attributeDefinition, attributeNotation, action)
-    }
-}
-
-
-private fun walkValueScalar(
-    attributeDefinition: AttributeDefinition,
-    attributeNotation: AttributeNotation,
-    action: (String) -> Unit
-) {
-    when (attributeDefinition) {
-        is ReferenceAttributeDefinition ->
-            return
-
-        is ValueAttributeDefinition -> {
-            if (attributeNotation is ScalarAttributeNotation) {
-                action(attributeNotation.value)
-            }
-        }
-
-        is ListAttributeDefinition -> {
-            if (attributeNotation is ListAttributeNotation) {
-                val children = attributeDefinition.values
-                attributeNotation.values.forEachIndexed { i, childNotation ->
-                    val childDef = children.getOrNull(i)
-                        ?: return@forEachIndexed
-                    walkValueScalar(childDef, childNotation, action)
-                }
-            }
-        }
-
-        is MapAttributeDefinition -> {
-            if (attributeNotation is MapAttributeNotation) {
-                for ((segment, childNotation) in attributeNotation.map) {
-                    val childDef = attributeDefinition.map[segment.asKey()]
-                        ?: continue
-                    walkValueScalar(childDef, childNotation, action)
-                }
-            }
         }
     }
 }

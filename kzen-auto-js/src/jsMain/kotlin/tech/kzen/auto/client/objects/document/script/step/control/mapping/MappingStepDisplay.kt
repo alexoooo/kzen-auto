@@ -14,15 +14,17 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorMa
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.*
-import tech.kzen.auto.client.objects.document.script.model.ScriptGlobal
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.objects.document.script.step.header.StepNameEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RComponent
+import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -68,14 +70,10 @@ class MappingStepDisplay(
     companion object {
         private val itemsAttributeName = AttributeName("items")
 
-//        val stepsAttributeName = AttributeName("steps")
-//        val stepsAttributePath = AttributePath.ofName(stepsAttributeName)
-
-//        private const val tableBorders = true
+        // NB: toggle to true when diagnosing MappingStep layout issues; reveals every cell border.
         private const val tableBorders = false
 
         private val stepWidth = ScriptController.stepWidth.minus(2.em)
-        private val overlapTop = 4.px
     }
 
 
@@ -102,15 +100,21 @@ class MappingStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(ScriptStoreContext)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.clientStateGlobal.observe(this)
-        ScriptGlobal.get().observe(this)
+        contextValue<ScriptStore?>()?.observe(this)
     }
 
 
     override fun componentWillUnmount() {
+        contextValue<ScriptStore?>()?.unobserve(this)
         ClientContext.clientStateGlobal.unobserve(this)
-        ScriptGlobal.get().unobserve(this)
     }
 
 
@@ -139,7 +143,7 @@ class MappingStepDisplay(
     }
 
 
-    override fun onScriptState(scriptState: ScriptState, changes: Set<ScriptStore.ChangeType>) {
+    override fun onScriptState(scriptState: ScriptState) {
         val traceValues: Map<LogicTracePath, ExecutionValue>? = scriptState
             .progress
             .logicTraceSnapshot
@@ -270,21 +274,9 @@ class MappingStepDisplay(
                 height = 100.pct
 
                 backgroundColor = NamedColor.white
-//                backgroundColor = when {
-//                    imperativeState?.previous is ExecutionSuccess ->
-//                        Color("#00b467")
-//
-//                    inThenBranch ->
-//                        EdgeController.goldLight75
-//
-//                    else ->
-//                        NamedColor.white
-//                }
             }
 
-//            +"[Condition]"
             props.attributeEditorManager.child(this) {
-//                this.clientState = props.common.clientState
                 this.objectLocation = props.common.objectLocation
                 this.attributeName = itemsAttributeName
             }
@@ -293,54 +285,10 @@ class MappingStepDisplay(
 
 
     private fun ChildrenBuilder.renderSteps() {
-        div {
-            css {
-                width = 100.pct
-                marginBottom = overlapTop
-            }
-
-            div {
-                css {
-                    display = Display.inlineBlock
-                    marginLeft = 3.px
-                }
-
-                +"Each"
-                br {}
-                iconByName("ArrowForward") {
-                    style = unsafeJso {
-                        fontSize = 3.em
-                    }
-                }
-            }
-
-            div {
-                css {
-                    width = 100.pct.minus(3.em)
-                    display = Display.inlineBlock
-                    marginTop = (-4.5).em
-                    marginLeft = 3.5.em
-                }
-
-                ScriptBranchDisplay::class.react {
-                    attributeLocation = AttributeLocation(
-                        props.common.objectLocation, ScriptConventions.stepsAttributePath)
-                    nested = true
-
-                    stepDisplayManager = props.stepDisplayManager
-                    scriptCommander = props.scriptCommander
-                }
-            }
-
-            div {
-                iconByName("SubdirectoryArrowLeft") {
-                    style = unsafeJso {
-                        fontSize = 3.em
-                        marginBottom = 15.px
-                        marginTop = (-40).px
-                    }
-                }
-            }
-        }
+        scriptBranchContainer(
+            label = "Each",
+            branchLocation = AttributeLocation(props.common.objectLocation, ScriptConventions.stepsAttributePath),
+            stepDisplayManager = props.stepDisplayManager,
+            scriptCommander = props.scriptCommander)
     }
 }

@@ -2,7 +2,6 @@ package tech.kzen.auto.client.objects.document.script.step.control
 
 import emotion.react.css
 import js.objects.unsafeJso
-import kotlinx.browser.document
 import mui.material.IconButton
 import mui.material.InputLabel
 import react.ChildrenBuilder
@@ -18,8 +17,8 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
+import tech.kzen.auto.client.wrap.select.reactSelectField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
@@ -43,8 +42,6 @@ import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.toPersistentList
 import tech.kzen.lib.platform.collect.toPersistentMap
 import web.cssom.em
-import kotlin.js.Json
-import kotlin.js.json
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -68,12 +65,6 @@ class RunStepArgumentsEditor(
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-//    companion object {
-//        val stepIdentifier = ObjectName("ScriptStep")
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
         objectLocation: ObjectLocation
@@ -90,25 +81,6 @@ class RunStepArgumentsEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RunStepArgumentsEditorState.init(props: AttributeEditorProps) {
-//        console.log("ParameterEditor | State.init - ${props.name}")
-
-//        val attributeNotation = props.clientState.graphStructure().graphNotation
-//            .firstAttribute(props.objectLocation, props.attributeName)
-////        console.log("SelectScriptStepEditorState.init | attributeNotation - $attributeNotation")
-//
-//        val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
-//
-//        if (attributeNotation is ScalarAttributeNotation) {
-//            val reference = ObjectReference.parse(attributeNotation.value)
-//            val objectLocation = props.clientState.graphStructure().graphNotation.coalesce
-//                .locateOptional(reference, objectReferenceHost)
-//
-//            if (objectLocation != null) {
-//                // NB: might be absent if e.g. it was deleted
-//                value = objectLocation
-//            }
-//        }
-
         initialized = false
         renaming = false
 
@@ -149,12 +121,6 @@ class RunStepArgumentsEditor(
         ClientContext.mirroredGraphStore.unobserve(this)
         ClientContext.clientStateGlobal.unobserve(this)
     }
-
-
-
-//    override fun onScriptState(scriptState: ScriptState) {
-//        scriptState.progress
-//    }
 
 
     override fun onClientState(clientState: ClientState) {
@@ -287,7 +253,6 @@ class RunStepArgumentsEditor(
 
 
     private fun onValueChange(parameterName: String, value: ObjectLocation) {
-//        console.log("onValueChange - $value")
         val values = state.values
             ?: return
 
@@ -325,27 +290,11 @@ class RunStepArgumentsEditor(
     }
 
 
-//    private fun predecessors(): List<ObjectLocation> {
-//        val host = props.objectLocation.documentPath
-//        val steps = ControlTree.readSteps(
-//                props.clientState.graphStructure(), host)
-//
-////        console.log("^^^^ steps", steps.toString())
-//
-//        val objectPaths = steps.predecessors(props.objectLocation.objectPath)
-//        return objectPaths.map { ObjectLocation(host, it) }
-//    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-//        +"[1 ${props.attributeName}]"
         val values = state.values ?: return
-//        +"[2 $values]"
         val predecessors = state.predecessors ?: return
-//        +"[3 $predecessors]"
         val parameterNames = state.parameterNames ?: return
-//        +"[4 $parameterNames]"
 
         val selectOptions: Array<ReactSelectOption> = predecessors
             .map { location ->
@@ -356,7 +305,6 @@ class RunStepArgumentsEditor(
                 option
             }
             .toTypedArray()
-//        +"^^ SELECT: ${selectOptions.map { it.value }}"
 
         for (parameterName in parameterNames) {
             div {
@@ -390,31 +338,10 @@ class RunStepArgumentsEditor(
 
             +parameterName
 
-            ReactSelect::class.react {
-//            id = selectId
-                value = selectedOption
-                options = selectOptions
-
-                onChange = {
-                    onValueChange(parameterName, ObjectLocation.parse(it.value))
-                }
-
-                // https://stackoverflow.com/a/51844542/1941359
-                val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                    val transformed = json()
-                    transformed.add(base)
-                    transformed["background"] = "transparent"
-                    transformed
-                }
-
-                val reactStyles = json()
-                reactStyles["control"] = styleTransformer
-                styles = reactStyles
-
-                // NB: this was causing clipping when used in ConditionalStepDisplay table,
-                //   see: https://react-select.com/advanced#portaling
-                menuPortalTarget = document.body!!
-            }
+            reactSelectField(
+                selectedOption = selectedOption,
+                options = selectOptions,
+                onSelect = { onValueChange(parameterName, ObjectLocation.parse(it.value)) })
         }
     }
 

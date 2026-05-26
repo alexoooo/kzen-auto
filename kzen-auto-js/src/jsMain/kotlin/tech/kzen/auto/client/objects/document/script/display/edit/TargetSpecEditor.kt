@@ -3,7 +3,6 @@ package tech.kzen.auto.client.objects.document.script.display.edit
 
 import emotion.react.css
 import js.objects.unsafeJso
-import kotlinx.browser.document
 import mui.material.MenuItem
 import mui.material.Select
 import mui.material.Size
@@ -20,8 +19,8 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
+import tech.kzen.auto.client.wrap.select.reactSelectField
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
 import tech.kzen.auto.common.objects.document.feature.TargetType
@@ -42,8 +41,6 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.platform.collect.toPersistentMap
 import web.cssom.em
 import web.html.HTMLInputElement
-import kotlin.js.Json
-import kotlin.js.json
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -85,9 +82,15 @@ class TargetSpecEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private const val submitDebounceMillis = 1000
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private var submitDebounce: FunctionWithDebounce = lodash.debounce({
         editAttributeCommandAsync()
-    }, 1000)
+    }, submitDebounceMillis)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -103,14 +106,12 @@ class TargetSpecEditor(
             .firstAttribute(props.objectLocation, props.attributeName)
                 as? MapAttributeNotation
             ?: return
-//        println("attributeNotation - $attributeNotation")
 
         val targetType = attributeNotation
             .get(TargetSpecDefiner.typeKey)
             ?.asString()
             ?.let { TargetType.valueOf(it) }
             ?: return
-//        println("targetType - $targetType")
 
         setState {
             this.targetType = targetType
@@ -235,17 +236,6 @@ class TargetSpecEditor(
 
 
     override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {}
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun flush() {
-//        println("ParameterEditor | flush")
-
-        submitDebounce.cancel()
-        if (state.targetTextPending) {
-            editAttributeCommand()
-        }
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -398,47 +388,9 @@ class TargetSpecEditor(
                 }
                 .toTypedArray()
 
-//        +"!! ${selectOptions.map { it.value }}"
-//        +"^^ SELECT: ${props.attributeName} - $attributeNotation - ${selectOptions.map { it.value }}"
-
-//        val selectId = "material-react-select-id"
-
-//        child(MaterialInputLabel::class) {
-//            attrs {
-//                htmlFor = selectId
-//
-//                style = reactStyle {
-//                    fontSize = 0.8.em
-//                }
-//            }
-//
-//            +"Select"
-//        }
-
-        ReactSelect::class.react {
-            value = selectOptions.find { it.value == state.targetLocation?.asString() }
-
-            options = selectOptions
-
-            onChange = {
-                onVisualFeatureChange(ObjectLocation.parse(it.value))
-            }
-
-            // https://stackoverflow.com/a/51844542/1941359
-            val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                val transformed = json()
-                transformed.add(base)
-                transformed["background"] = "transparent"
-                transformed
-            }
-
-            val reactStyles = json()
-            reactStyles["control"] = styleTransformer
-            styles = reactStyles
-
-            // NB: this was causing clipping when used in ConditionalStepDisplay table,
-            //   see: https://react-select.com/advanced#portaling
-            menuPortalTarget = document.body!!
-        }
+        reactSelectField(
+            selectedOption = selectOptions.find { it.value == state.targetLocation?.asString() },
+            options = selectOptions,
+            onSelect = { onVisualFeatureChange(ObjectLocation.parse(it.value)) })
     }
 }

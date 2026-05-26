@@ -17,20 +17,15 @@ import kotlin.time.Instant
 class ScriptStore: ClientStateGlobal.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val allChangeTypes = ChangeType.entries.toSet()
+        // NB: yields the event loop so cascading onClientState → updateIfChanged → onScriptState
+        //     settles before the network refresh kicks in.
+        private const val refreshYieldMillis = 10L
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
-        fun onScriptState(scriptState: ScriptState, changes: Set<ChangeType>)
-    }
-
-    enum class ChangeType {
-        Notation,
-        Progress,
-        Validation,
-        Error
+        fun onScriptState(scriptState: ScriptState)
     }
 
 
@@ -51,7 +46,7 @@ class ScriptStore: ClientStateGlobal.Observer {
         observers.add(observer)
 
         state?.let {
-            observer.onScriptState(it, allChangeTypes)
+            observer.onScriptState(it)
         }
     }
 
@@ -62,9 +57,9 @@ class ScriptStore: ClientStateGlobal.Observer {
     }
 
 
-    private fun publish(nextState: ScriptState, changes: Set<ChangeType>) {
+    private fun publish(nextState: ScriptState) {
         for (observer in observers) {
-            observer.onScriptState(nextState, changes)
+            observer.onScriptState(nextState)
         }
     }
 
@@ -152,7 +147,7 @@ class ScriptStore: ClientStateGlobal.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     private fun refreshProgressAsync() {
         async {
-            delay(10)
+            delay(refreshYieldMillis)
             if (state == null) {
                 return@async
             }
@@ -163,7 +158,7 @@ class ScriptStore: ClientStateGlobal.Observer {
 
     private fun refreshValidationAsync() {
         async {
-            delay(10)
+            delay(refreshYieldMillis)
             if (state == null) {
                 return@async
             }
@@ -174,8 +169,7 @@ class ScriptStore: ClientStateGlobal.Observer {
 
     //-----------------------------------------------------------------------------------------------------------------
     fun state(): ScriptState {
-        return state
-            ?: throw IllegalStateException("Get state before initialized")
+        return checkNotNull(state) { "Get state before initialized" }
     }
 
 
@@ -199,34 +193,8 @@ class ScriptStore: ClientStateGlobal.Observer {
             return
         }
 
-        val changes = detectChanges(nextState)
         state = nextState
-        publish(nextState, changes)
-    }
-
-
-    private fun detectChanges(nextState: ScriptState): Set<ChangeType> {
-        val changes = mutableSetOf<ChangeType>()
-
-        if (state?.mainLocation != nextState.mainLocation ||
-                state?.documentNotation != nextState.documentNotation
-        ) {
-            changes.add(ChangeType.Notation)
-        }
-
-        if (state?.progress != nextState.progress) {
-            changes.add(ChangeType.Progress)
-        }
-
-        if (state?.validationState != nextState.validationState) {
-            changes.add(ChangeType.Validation)
-        }
-
-        if (state?.globalError != nextState.globalError) {
-            changes.add(ChangeType.Error)
-        }
-
-        return allChangeTypes
+        publish(nextState)
     }
 
 

@@ -12,16 +12,15 @@ import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptDependencyOverlay
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
-import tech.kzen.auto.client.objects.document.script.model.ScriptGlobal
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
 import tech.kzen.auto.client.objects.document.script.progress.ScriptProgressController
 import tech.kzen.auto.client.objects.document.script.step.control.MultiStepDisplay
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -48,7 +47,6 @@ external interface ScriptControllerProps: Props {
 external interface ScriptControllerState: State {
     var clientState: ClientState?
     var scriptState: ScriptState?
-    var creating: Boolean
 }
 
 
@@ -56,7 +54,6 @@ external interface ScriptControllerState: State {
 class ScriptController:
     RPureComponent<ScriptControllerProps, ScriptControllerState>(),
     ScriptStore.Observer,
-    InsertionGlobal.Subscriber,
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -129,7 +126,6 @@ class ScriptController:
     override fun ScriptControllerState.init(props: ScriptControllerProps) {
         clientState = null
         scriptState = null
-        creating = false
     }
 
 
@@ -138,47 +134,20 @@ class ScriptController:
         store.didMount()
         store.observe(this)
         ClientContext.clientStateGlobal.observe(this)
-        ClientContext.insertionGlobal.subscribe(this)
-        ScriptGlobal.upsertWeak(store)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.insertionGlobal.unsubscribe(this)
         ClientContext.clientStateGlobal.unobserve(this)
         store.unobserve(this)
         store.willUnmount()
     }
 
 
-    override fun componentDidUpdate(
-        prevProps: ScriptControllerProps,
-        prevState: ScriptControllerState,
-        snapshot: Any
-    ) {
-//        val clientState = state.clientState
-//                ?: return
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onScriptState(scriptState: ScriptState, changes: Set<ScriptStore.ChangeType>) {
+    override fun onScriptState(scriptState: ScriptState) {
         setState {
             this.scriptState = scriptState
-        }
-    }
-
-
-    override fun onInsertionSelected(action: ObjectLocation) {
-        setState {
-            creating = true
-        }
-    }
-
-
-    override fun onInsertionUnselected() {
-        setState {
-            creating = false
         }
     }
 
@@ -210,33 +179,35 @@ class ScriptController:
             ?: return
 
         val mainObjectLocation = documentPath.toMainObjectLocation()
-        div {
-            css {
-                paddingTop = 1.em
-            }
-            renderSignature(mainObjectLocation)
-        }
-
-        if (scriptState.globalError != null) {
+        ScriptStoreContext.Provider(store) {
             div {
-                +"Error: ${scriptState.globalError}"
-            }
-        }
-
-        div {
-            css {
-                marginLeft = 2.em
-                position = Position.relative
+                css {
+                    paddingTop = 1.em
+                }
+                renderSignature(mainObjectLocation)
             }
 
-            // NB: overlay is rendered BEFORE MultiStepDisplay so default stacking puts it behind
-            //     step cards; the cross-branch polylines visually pass behind the IfStep card.
-            ScriptDependencyOverlay::class.react {}
+            if (scriptState.globalError != null) {
+                div {
+                    +"Error: ${scriptState.globalError}"
+                }
+            }
 
-            renderMain(mainObjectLocation)
+            div {
+                css {
+                    marginLeft = 2.em
+                    position = Position.relative
+                }
+
+                // NB: overlay is rendered BEFORE MultiStepDisplay so default stacking puts it behind
+                //     step cards; the cross-branch polylines visually pass behind the IfStep card.
+                ScriptDependencyOverlay::class.react {}
+
+                renderMain(mainObjectLocation)
+            }
+
+            renderRunController(clientState, scriptState)
         }
-
-        renderRunController(clientState, scriptState)
     }
 
 

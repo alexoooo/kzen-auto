@@ -103,3 +103,24 @@ inline var TextFieldProps.InputProps: InputBaseProps
     set(value) {
         asDynamic().InputProps = value
     }
+
+
+// Installs a React.Context subscription on a class component instance — sets the JS class's
+// static `contextType`, which React reads at render to expose the current context value as
+// `this.context`. Idempotent: re-running on the same class is cheap and a no-op after the
+// first instance. Class components can't call `useContext` (it's a hook), so this is how
+// they read context.
+fun Component<*, *>.installContextType(context: Context<*>) {
+    val ctor = this.asDynamic().constructor
+    if (ctor.contextType === undefined) {
+        ctor.contextType = context
+    }
+}
+
+
+// Reads the value currently provided by the context whose type was installed via
+// installContextType. Returns null-safe if no provider exists upstream and the
+// context's default is null.
+inline fun <reified T> Component<*, *>.contextValue(): T {
+    return this.asDynamic().context.unsafeCast<T>()
+}

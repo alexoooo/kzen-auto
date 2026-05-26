@@ -8,15 +8,17 @@ import react.dom.html.ReactHTML.img
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.graph.EdgeController
 import tech.kzen.auto.client.objects.document.script.ScriptController
-import tech.kzen.auto.client.objects.document.script.model.ScriptGlobal
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.objects.document.script.step.header.StepNameEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RComponent
+import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -133,19 +135,25 @@ class ScriptStepDisplayDefault(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(ScriptStoreContext)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.clientStateGlobal.observe(this)
-        ScriptGlobal.get().observe(this)
+        contextValue<ScriptStore?>()?.observe(this)
     }
 
 
     override fun componentWillUnmount() {
         ClientContext.clientStateGlobal.unobserve(this)
-        ScriptGlobal.get().unobserve(this)
+        contextValue<ScriptStore?>()?.unobserve(this)
     }
 
 
-    override fun onScriptState(scriptState: ScriptState, changes: Set<ScriptStore.ChangeType>) {
+    override fun onScriptState(scriptState: ScriptState) {
         val traceValues: Map<LogicTracePath, ExecutionValue>? = scriptState
             .progress
             .logicTraceSnapshot

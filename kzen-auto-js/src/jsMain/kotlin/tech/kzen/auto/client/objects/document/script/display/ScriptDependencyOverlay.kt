@@ -9,27 +9,12 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RComponent
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributePath
-import tech.kzen.lib.common.model.definition.AttributeDefinition
-import tech.kzen.lib.common.model.definition.ListAttributeDefinition
-import tech.kzen.lib.common.model.definition.MapAttributeDefinition
-import tech.kzen.lib.common.model.definition.ObjectDefinition
-import tech.kzen.lib.common.model.definition.ReferenceAttributeDefinition
-import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
-import tech.kzen.lib.common.model.location.AttributeLocation
-import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.location.ObjectReference
-import tech.kzen.lib.common.model.location.ObjectReferenceHost
-import tech.kzen.lib.common.model.structure.notation.AttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ObjectNotation
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
+import tech.kzen.auto.common.objects.document.script.model.ScriptStepDependency
 import web.animations.requestAnimationFrame
 import web.cssom.None
 import web.cssom.Position
@@ -57,23 +42,11 @@ data class OverlaySegment(
 )
 
 
-private data class CrossBranchEdge(
-    val source: ObjectLocation,
-    val target: ObjectLocation
-)
-
-
-private val branchAttributeNames = listOf(
-    ScriptConventions.stepsAttributeName,
-    AttributeName("then"),
-    AttributeName("else"))
-
-
 //---------------------------------------------------------------------------------------------------------------------
 class ScriptDependencyOverlay(
     props: ScriptDependencyOverlayProps
 ):
-    RComponent<ScriptDependencyOverlayProps, ScriptDependencyOverlayState>(props),
+    RPureComponent<ScriptDependencyOverlayProps, ScriptDependencyOverlayState>(props),
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -237,115 +210,19 @@ class ScriptDependencyOverlay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun computeCrossBranchEdges(clientState: ClientState): List<CrossBranchEdge> {
+    private fun computeCrossBranchEdges(clientState: ClientState): List<ScriptStepDependency> {
         val documentPath = clientState.navigationRoute.documentPath
             ?: return emptyList()
-        val graphDefinitionAttempt = clientState.graphDefinitionAttempt
-        val graphStructure = graphDefinitionAttempt.graphStructure
+        val graphStructure = clientState.graphDefinitionAttempt.graphStructure
         val documentNotation = graphStructure.graphNotation.documents[documentPath]
             ?: return emptyList()
-        if (! ScriptConventions.isScript(documentNotation)) {
+        if (!ScriptConventions.isScript(documentNotation)) {
             return emptyList()
         }
 
-        val coalesce = graphStructure.graphNotation.coalesce
-        val mainObjectLocation = documentPath.toMainObjectLocation()
-
-        // Walk all branches (root + nested) and assign each step to its branch's AttributeLocation.
-        val branchOfStep = mutableMapOf<ObjectLocation, AttributeLocation>()
-
-        fun walkBranch(branchAttrLocation: AttributeLocation) {
-            // NB: use the nullable firstAttribute(objectLocation, attributePath) form, not
-            //     ScriptController.stepLocations which delegates through the throwing 1-arg form
-            //     and would crash when probing attribute names a step doesn't have (e.g. Run.steps).
-            val listNotation = graphStructure.graphNotation.firstAttribute(
-                branchAttrLocation.objectLocation,
-                branchAttrLocation.attributePath
-            ) as? ListAttributeNotation
-                ?: return
-            val host = ObjectReferenceHost.ofLocation(branchAttrLocation.objectLocation)
-            val steps = listNotation.values.mapNotNull { value ->
-                val asString = value.asString()
-                    ?: return@mapNotNull null
-                val ref = try {
-                    ObjectReference.parse(asString)
-                } catch (_: Throwable) {
-                    return@mapNotNull null
-                }
-                coalesce.locateOptional(ref, host)
-            }
-            for (step in steps) {
-                branchOfStep[step] = branchAttrLocation
-            }
-            for (step in steps) {
-                for (nestedName in branchAttributeNames) {
-                    val nestedAttrLocation = AttributeLocation(step, AttributePath.ofName(nestedName))
-                    walkBranch(nestedAttrLocation)
-                }
-            }
-        }
-
-        walkBranch(AttributeLocation(mainObjectLocation, ScriptConventions.stepsAttributePath))
-
-        if (branchOfStep.isEmpty()) {
-            return emptyList()
-        }
-
-        val locationByIdentifier = coalesce.map.keys
-            .asSequence()
-            .filter { it.documentPath == documentPath }
-            .mapNotNull { location ->
-                val name = location.objectPath.name.value
-                if (validIdentifierRegex.matches(name)) name to location else null
-            }
-            .toMap()
-
-        val edges = mutableSetOf<CrossBranchEdge>()
-
-        fun classifyEdge(sourceLoc: ObjectLocation, targetLoc: ObjectLocation) {
-            if (sourceLoc == targetLoc || sourceLoc.documentPath != documentPath) {
-                return
-            }
-            if (sourceLoc.objectPath.startsWith(targetLoc.objectPath) ||
-                targetLoc.objectPath.startsWith(sourceLoc.objectPath)) {
-                return
-            }
-            val sourceBranch = branchOfStep[sourceLoc]
-                ?: return
-            val targetBranch = branchOfStep[targetLoc]
-                ?: return
-            if (sourceBranch != targetBranch) {
-                edges.add(CrossBranchEdge(sourceLoc, targetLoc))
-            }
-        }
-
-        val documentLocations = coalesce.map.keys.filter { it.documentPath == documentPath }
-        for (targetLoc in documentLocations) {
-            val objectDefinition = graphDefinitionAttempt.objectDefinitions[targetLoc]
-                ?: continue
-            val host = ObjectReferenceHost.ofLocation(targetLoc)
-
-            for ((_, definitionReference) in objectDefinition.attributeReferencesIncludingWeak()) {
-                val resolved = coalesce.locateOptional(definitionReference.objectReference, host)
-                    ?: continue
-                classifyEdge(resolved, targetLoc)
-            }
-
-            val objectNotation = coalesce[targetLoc]
-                ?: continue
-            walkValueScalars(objectDefinition, objectNotation) { stringValue ->
-                for ((identifier, sourceLoc) in locationByIdentifier) {
-                    if (sourceLoc == targetLoc) {
-                        continue
-                    }
-                    if (containsWord(stringValue, identifier)) {
-                        classifyEdge(sourceLoc, targetLoc)
-                    }
-                }
-            }
-        }
-
-        return edges.toList()
+        return ScriptDependencyAnalysis
+            .analyze(clientState.graphDefinitionAttempt, documentPath)
+            .crossBranchEdges()
     }
 
 
@@ -373,67 +250,6 @@ class ScriptDependencyOverlay(
                         height = segment.heightPx.px
                         backgroundColor = stepDependencyTrunkColor
                     }
-                }
-            }
-        }
-    }
-}
-
-
-//---------------------------------------------------------------------------------------------------------------------
-private val validIdentifierRegex = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
-
-
-private fun containsWord(haystack: String, needle: String): Boolean {
-    return Regex("\\b" + Regex.escape(needle) + "\\b").containsMatchIn(haystack)
-}
-
-
-private fun walkValueScalars(
-    objectDefinition: ObjectDefinition,
-    objectNotation: ObjectNotation,
-    action: (String) -> Unit
-) {
-    for ((name, attributeDefinition) in objectDefinition.attributeDefinitions.map) {
-        val attributeNotation = objectNotation.attributes.map[name]
-            ?: continue
-        walkValueScalar(attributeDefinition, attributeNotation, action)
-    }
-}
-
-
-private fun walkValueScalar(
-    attributeDefinition: AttributeDefinition,
-    attributeNotation: AttributeNotation,
-    action: (String) -> Unit
-) {
-    when (attributeDefinition) {
-        is ReferenceAttributeDefinition ->
-            return
-
-        is ValueAttributeDefinition -> {
-            if (attributeNotation is ScalarAttributeNotation) {
-                action(attributeNotation.value)
-            }
-        }
-
-        is ListAttributeDefinition -> {
-            if (attributeNotation is ListAttributeNotation) {
-                val children = attributeDefinition.values
-                attributeNotation.values.forEachIndexed { i, childNotation ->
-                    val childDef = children.getOrNull(i)
-                        ?: return@forEachIndexed
-                    walkValueScalar(childDef, childNotation, action)
-                }
-            }
-        }
-
-        is MapAttributeDefinition -> {
-            if (attributeNotation is MapAttributeNotation) {
-                for ((segment, childNotation) in attributeNotation.map) {
-                    val childDef = attributeDefinition.map[segment.asKey()]
-                        ?: continue
-                    walkValueScalar(childDef, childNotation, action)
                 }
             }
         }

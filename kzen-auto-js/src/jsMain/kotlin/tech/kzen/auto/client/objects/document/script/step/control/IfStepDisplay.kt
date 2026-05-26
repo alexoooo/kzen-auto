@@ -14,15 +14,17 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorMa
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.*
-import tech.kzen.auto.client.objects.document.script.model.ScriptGlobal
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.objects.document.script.step.header.StepNameEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RComponent
+import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -76,9 +78,8 @@ class IfStepDisplay(
         private val elseAttributePath = AttributePath.ofName(elseAttributeName)
 
         private val stepWidth = ScriptController.stepWidth.minus(2.em)
-        private val overlapTop = 4.px
 
-//        private const val tableBorders = true
+        // NB: toggle to true when diagnosing IfStep layout issues; reveals every cell border.
         private const val tableBorders = false
     }
 
@@ -106,14 +107,20 @@ class IfStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(ScriptStoreContext)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.clientStateGlobal.observe(this)
-        ScriptGlobal.get().observe(this)
+        contextValue<ScriptStore?>()?.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ScriptGlobal.get().unobserve(this)
+        contextValue<ScriptStore?>()?.unobserve(this)
         ClientContext.clientStateGlobal.unobserve(this)
     }
 
@@ -143,7 +150,7 @@ class IfStepDisplay(
     }
 
 
-    override fun onScriptState(scriptState: ScriptState, changes: Set<ScriptStore.ChangeType>) {
+    override fun onScriptState(scriptState: ScriptState) {
         val traceValues: Map<LogicTracePath, ExecutionValue>? = scriptState
             .progress
             .logicTraceSnapshot
@@ -243,13 +250,10 @@ class IfStepDisplay(
                             }
                         }
 
-//                        +"[Else]"
-//                        renderElseSegment(isNextToRun, imperativeState, isRunning)
                         renderElseSegment()
                     }
 
                     td {
-//                        +"[Else Branch]"
                         renderElseBranch()
                     }
                 }
@@ -288,16 +292,7 @@ class IfStepDisplay(
     }
 
 
-    private fun ChildrenBuilder.renderCondition(
-//            isNextToRun: Boolean,
-//            imperativeState: ImperativeState?,
-//            isRunning: Boolean
-    ) {
-//        val inThenBranch = ! isNextToRun &&
-//                ! isRunning &&
-//                imperativeState?.controlState is InternalControlState &&
-//                (imperativeState.controlState as InternalControlState).branchIndex == 0
-
+    private fun ChildrenBuilder.renderCondition() {
         div {
             css {
                 width = stepWidth
@@ -307,21 +302,9 @@ class IfStepDisplay(
                 height = 100.pct
 
                 backgroundColor = NamedColor.white
-//                backgroundColor = when {
-//                    imperativeState?.previous is ExecutionSuccess ->
-//                        Color("#00b467")
-//
-//                    inThenBranch ->
-//                        EdgeController.goldLight75
-//
-//                    else ->
-//                        NamedColor.white
-//                }
             }
 
-//            +"[Condition]"
             props.attributeEditorManager.child(this) {
-//                this.clientState = props.common.clientState
                 this.objectLocation = props.common.objectLocation
                 this.attributeName = conditionAttributeName
             }
@@ -330,68 +313,15 @@ class IfStepDisplay(
 
 
     private fun ChildrenBuilder.renderThenBranch() {
-        div {
-            css {
-                width = 100.pct
-                marginBottom = overlapTop
-            }
-
-            div {
-                css {
-                    display = Display.inlineBlock
-                    marginLeft = 3.px
-                }
-
-                +"Then"
-                br {}
-                iconByName("ArrowForward") {
-                    style = unsafeJso {
-                        fontSize = 3.em
-                    }
-                }
-            }
-
-            div {
-                css {
-                    width = 100.pct.minus(3.em)
-                    display = Display.inlineBlock
-                    marginTop = (-4.5).em
-                    marginLeft = 3.5.em
-                }
-
-                ScriptBranchDisplay::class.react {
-                    attributeLocation = AttributeLocation(
-                        props.common.objectLocation, thenAttributePath)
-                    nested = true
-
-                    stepDisplayManager = props.stepDisplayManager
-                    scriptCommander = props.scriptCommander
-                }
-            }
-
-            div {
-                iconByName("SubdirectoryArrowLeft") {
-                    style = unsafeJso {
-                        fontSize = 3.em
-                        marginBottom = 15.px
-                        marginTop = (-40).px
-                    }
-                }
-            }
-        }
+        scriptBranchContainer(
+            label = "Then",
+            branchLocation = AttributeLocation(props.common.objectLocation, thenAttributePath),
+            stepDisplayManager = props.stepDisplayManager,
+            scriptCommander = props.scriptCommander)
     }
 
 
-    private fun ChildrenBuilder.renderElseSegment(
-//            isNextToRun: Boolean,
-//            imperativeState: ImperativeState?,
-//            isRunning: Boolean
-    ) {
-//        val inElseBranch = ! isNextToRun &&
-//                ! isRunning &&
-//                imperativeState?.controlState is InternalControlState &&
-//                (imperativeState.controlState as InternalControlState).branchIndex == 1
-//
+    private fun ChildrenBuilder.renderElseSegment() {
         div {
             css {
                 padding = Padding(0.px, 1.em, 0.px, 1.em)
@@ -400,16 +330,6 @@ class IfStepDisplay(
                 filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
 
                 backgroundColor = NamedColor.white
-//                backgroundColor = when {
-//                    imperativeState?.previous is ExecutionSuccess ->
-//                        Color("#00b467")
-//
-//                    inElseBranch ->
-//                        EdgeController.goldLight75
-//
-//                    else ->
-//                        NamedColor.white
-//                }
 
                 height = 100.pct
             }
@@ -418,58 +338,13 @@ class IfStepDisplay(
     }
 
 
-    private fun ChildrenBuilder.renderElseBranch(
-//            imperativeState: ImperativeState
-    ) {
-        div {
-            css {
-                marginBottom = 2.times(overlapTop)
-                width = 100.pct
-            }
-
-            div {
-                css {
-                    width = 100.pct
-                    display = Display.inlineBlock
-                    marginLeft = 3.px
-                }
-
-                +"Else"
-                br {}
-                iconByName("ArrowForward") {
-                    style = unsafeJso {
-                        fontSize = 3.em
-                    }
-                }
-            }
-
-            div {
-                css {
-                    display = Display.inlineBlock
-                    marginTop = (-4.5).em
-                    width = 100.pct.minus(3.em)
-                    marginLeft = 3.5.em
-                }
-
-                ScriptBranchDisplay::class.react {
-                    attributeLocation = AttributeLocation(
-                        props.common.objectLocation, elseAttributePath)
-                    nested = true
-
-                    stepDisplayManager = props.stepDisplayManager
-                    scriptCommander = props.scriptCommander
-                }
-            }
-
-            div {
-                iconByName("SubdirectoryArrowLeft") {
-                    style = unsafeJso {
-                        fontSize = 3.em
-                        marginBottom = 15.px
-                        marginTop = (-40).px
-                    }
-                }
-            }
-        }
+    private fun ChildrenBuilder.renderElseBranch() {
+        scriptBranchContainer(
+            label = "Else",
+            branchLocation = AttributeLocation(props.common.objectLocation, elseAttributePath),
+            stepDisplayManager = props.stepDisplayManager,
+            scriptCommander = props.scriptCommander,
+            outerMarginBottom = 2.times(scriptBranchOverlapTop),
+            labelFullWidth = true)
     }
 }

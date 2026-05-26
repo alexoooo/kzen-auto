@@ -2,7 +2,6 @@ package tech.kzen.auto.client.objects.document.script.display.edit
 
 import emotion.react.css
 import js.objects.unsafeJso
-import kotlinx.browser.document
 import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.State
@@ -13,8 +12,8 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
+import tech.kzen.auto.client.wrap.select.reactSelectField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.auto.common.util.AutoConventions
@@ -34,8 +33,6 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import web.cssom.em
-import kotlin.js.Json
-import kotlin.js.json
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -44,7 +41,6 @@ external interface SelectLogicEditorState: State {
     var renaming: Boolean
 
     var options: List<ObjectLocation>?
-//    var initialized: Boolean
 }
 
 
@@ -73,8 +69,6 @@ class SelectLogicEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun SelectLogicEditorState.init(props: AttributeEditorProps) {
-//        console.log("ParameterEditor | State.init - ${props.name}")
-
         val graphStructure = ClientContext.clientStateGlobal.current()!!.graphStructure()
         val graphNotation = graphStructure.graphNotation
         val graphMetadata = graphStructure.graphMetadata
@@ -93,10 +87,8 @@ class SelectLogicEditor(
                 null
             }
 
-//        value = null
         renaming = false
         options = options(graphNotation, graphMetadata)
-//        initialized = false
     }
 
 
@@ -203,8 +195,6 @@ class SelectLogicEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onValueChange(value: ObjectLocation?) {
-//        console.log("onValueChange - $value")
-
         setState {
             this.value = value
         }
@@ -231,10 +221,6 @@ class SelectLogicEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-//        val attributeNotation = props.graphStructure.graphNotation.transitiveAttribute(
-//                props.objectLocation, props.attributeName)
-
-//        +"[Select Script]"
         val options = state.options
             ?: return
 
@@ -248,9 +234,6 @@ class SelectLogicEditor(
             }
             .toTypedArray()
 
-//        +"!! ${selectOptions.map { it.value }}"
-//        +"^^ SELECT: ${props.attributeName} - $attributeNotation - ${selectOptions.map { it.value }}"
-
         InputLabel {
             css {
                 fontSize = 0.8.em
@@ -258,30 +241,10 @@ class SelectLogicEditor(
 
             +formattedLabel()
 
-            ReactSelect::class.react {
-                value = selectOptions.find { it.value == state.value?.asString() }
-                this.options = selectOptions
-
-                onChange = {
-                    onValueChange(ObjectLocation.parse(it.value))
-                }
-
-                // https://stackoverflow.com/a/51844542/1941359
-                val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                    val transformed = json()
-                    transformed.add(base)
-                    transformed["background"] = "transparent"
-                    transformed
-                }
-
-                val reactStyles = json()
-                reactStyles["control"] = styleTransformer
-                styles = reactStyles
-
-                // NB: this was causing clipping when used in ConditionalStepDisplay table,
-                //   see: https://react-select.com/advanced#portaling
-                menuPortalTarget = document.body!!
-            }
+            reactSelectField(
+                selectedOption = selectOptions.find { it.value == state.value?.asString() },
+                options = selectOptions,
+                onSelect = { onValueChange(ObjectLocation.parse(it.value)) })
         }
     }
 

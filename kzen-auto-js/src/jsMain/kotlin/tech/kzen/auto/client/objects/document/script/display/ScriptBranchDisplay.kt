@@ -23,6 +23,8 @@ import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.refCallback
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.AttributeLocation
@@ -30,7 +32,16 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftInAttributeCommand
-import web.cssom.*
+import web.cssom.AlignItems
+import web.cssom.Color
+import web.cssom.Display
+import web.cssom.LineStyle
+import web.cssom.NamedColor
+import web.cssom.Position
+import web.cssom.em
+import web.cssom.number
+import web.cssom.pct
+import web.cssom.px
 import web.html.HTMLDivElement
 
 
@@ -101,8 +112,16 @@ class ScriptBranchDisplay(
         val stepLocations = ScriptController.stepLocations(
             graphStructure, props.attributeLocation)
 
-        val dependencyEdges = stepLocations?.let {
-            StepDependencyEdges.compute(it, clientState.graphDefinitionAttempt)
+        val dependencyEdges = stepLocations?.let { steps ->
+            val documentPath = props.attributeLocation.objectLocation.documentPath
+            val documentNotation = graphStructure.graphNotation.documents[documentPath]
+            if (documentNotation == null || !ScriptConventions.isScript(documentNotation)) {
+                StepDependencyEdges.EMPTY
+            }
+            else {
+                val analysis = ScriptDependencyAnalysis.analyze(clientState.graphDefinitionAttempt, documentPath)
+                StepDependencyEdges.compute(steps, analysis)
+            }
         }
 
         setState {

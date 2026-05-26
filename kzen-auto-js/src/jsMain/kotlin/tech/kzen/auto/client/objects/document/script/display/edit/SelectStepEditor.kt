@@ -2,24 +2,25 @@ package tech.kzen.auto.client.objects.document.script.display.edit
 
 import emotion.react.css
 import js.objects.unsafeJso
-import kotlinx.browser.document
 import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.State
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
-import tech.kzen.auto.client.objects.document.script.model.ScriptGlobal
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
+import tech.kzen.auto.client.wrap.select.reactSelectField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
@@ -34,8 +35,6 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import web.cssom.em
-import kotlin.js.Json
-import kotlin.js.json
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -83,6 +82,12 @@ class SelectStepEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(ScriptStoreContext)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
         prevProps: AttributeEditorProps,
         prevState: SelectStepEditorState,
@@ -103,7 +108,7 @@ class SelectStepEditor(
 
     override fun componentDidMount() {
         ClientContext.clientStateGlobal.observe(this)
-        ScriptGlobal.get().observe(this)
+        contextValue<ScriptStore?>()?.observe(this)
         async {
             ClientContext.mirroredGraphStore.observe(this)
         }
@@ -112,7 +117,7 @@ class SelectStepEditor(
 
     override fun componentWillUnmount() {
         ClientContext.mirroredGraphStore.unobserve(this)
-        ScriptGlobal.get().unobserve(this)
+        contextValue<ScriptStore?>()?.unobserve(this)
         ClientContext.clientStateGlobal.unobserve(this)
     }
 
@@ -144,11 +149,7 @@ class SelectStepEditor(
     }
 
 
-    override fun onScriptState(scriptState: ScriptState, changes: Set<ScriptStore.ChangeType>) {
-        if (ScriptStore.ChangeType.Notation !in changes) {
-            return
-        }
-
+    override fun onScriptState(scriptState: ScriptState) {
         val scriptTree = scriptState.scriptTree
 
         val predecessorObjectPaths = scriptTree.predecessors(props.objectLocation.objectPath)
@@ -191,8 +192,6 @@ class SelectStepEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onValueChange(value: ObjectLocation?) {
-//        console.log("onValueChange - $value")
-
         setState {
             this.value = value
         }
@@ -244,30 +243,10 @@ class SelectStepEditor(
 
             +formattedLabel()
 
-            ReactSelect::class.react {
-                value = selectedValue
-                options = selectOptions
-
-                onChange = {
-                    onValueChange(ObjectLocation.parse(it.value))
-                }
-
-                // https://stackoverflow.com/a/51844542/1941359
-                val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                    val transformed = json()
-                    transformed.add(base)
-                    transformed["background"] = "transparent"
-                    transformed
-                }
-
-                val reactStyles = json()
-                reactStyles["control"] = styleTransformer
-                styles = reactStyles
-
-                // NB: this was causing clipping when used in ConditionalStepDisplay table,
-                //   see: https://react-select.com/advanced#portaling
-                menuPortalTarget = document.body!!
-            }
+            reactSelectField(
+                selectedOption = selectedValue,
+                options = selectOptions,
+                onSelect = { onValueChange(ObjectLocation.parse(it.value)) })
         }
     }
 
