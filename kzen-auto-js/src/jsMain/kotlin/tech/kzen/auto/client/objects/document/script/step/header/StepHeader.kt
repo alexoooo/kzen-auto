@@ -2,56 +2,44 @@ package tech.kzen.auto.client.objects.document.script.step.header
 
 import emotion.react.css
 import js.objects.unsafeJso
+import mui.material.Chip
+import mui.material.ChipVariant
 import mui.material.IconButton
-import mui.material.Menu
-import mui.material.MenuItem
+import mui.material.Size
 import mui.system.sx
-import react.*
+import react.ChildrenBuilder
+import react.Props
+import react.ReactNode
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectInAttributeCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftInAttributeCommand
 import web.cssom.*
-import web.html.HTMLElement
-import kotlin.js.Date
 
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface StepHeaderProps: Props {
-    var hoverSignal: StepHeader.HoverSignal
-
     var objectLocation: ObjectLocation
     var indexInParent: Int
 
     var managed: Boolean
-    var first: Boolean
-    var last: Boolean
 
     var icon: String
     var description: String
     var title: String
-}
 
-
-external interface StepHeaderState: State {
-    var hoverCard: Boolean
-    var hoverMenu: Boolean
-//    var intentToRun: Boolean
-
-    var optionsOpen: Boolean
+    var summary: String?
+    var typeMetadata: String?
+    var expanded: Boolean?
+    var onToggleExpanded: (() -> Unit)?
 }
 
 
@@ -59,19 +47,15 @@ external interface StepHeaderState: State {
 class StepHeader(
     props: StepHeaderProps
 ):
-    RPureComponent<StepHeaderProps, StepHeaderState>(props)//,
-//    ExecutionIntentGlobal.Observer
+    RPureComponent<StepHeaderProps, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         const val defaultRunIcon = "PlayArrowIcon"
         const val defaultRunDescription = "Run"
 
-        val headerHeight = 2.5.em
-        private val runIconWidth = 40.px
-        private val menuIconOffset = 12.px
+        private val runIconSize = 40.px
 
-        private const val menuDanglingTimeout = 300
 
         fun icon(graphStructure: GraphStructure, objectLocation: ObjectLocation): String {
             return graphStructure.graphNotation
@@ -89,193 +73,14 @@ class StepHeader(
     }
 
 
-    class HoverSignal {
-        private var callback: StepHeader? = null
-
-
-        fun triggerMouseOver() {
-            check(callback != null)
-            callback!!.onMouseOver(true)
-        }
-
-
-        fun triggerMouseOut() {
-            check(callback != null)
-            callback!!.onMouseOut(true)
-        }
-
-
-        fun attach(callback: StepHeader) {
-            check(this.callback == null)
-            this.callback = callback
-        }
-
-
-        fun detach() {
-            this.callback = null
-        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
-    private var editSignal = StepNameEditor.EditSignal()
-    private var menuAnchorRef: RefObject<HTMLElement> = createRef()
-
-    private var processingOption: Boolean = false
-    private var optionCompletedTime: Double? = null
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun StepHeaderState.init(props: StepHeaderProps) {
-        hoverMenu = false
-//        intentToRun = false
-
-        optionsOpen = false
-    }
-
-
-    override fun componentDidMount() {
-        props.hoverSignal.attach(this)
-//        ClientContext.executionIntentGlobal.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        props.hoverSignal.detach()
-        optionCompletedTime = null
-//        ClientContext.executionIntentGlobal.unobserve(this)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun onMouseOver(cardOrActions: Boolean) {
-        if (state.optionsOpen || processingOption) {
-//            console.log("^^^ onMouseOver hoverItem - skip due to optionsOpen")
-            return
-        }
-
-        // TODO: bring back this workaround
-        optionCompletedTime?.let {
-            val now = Date.now()
-            val elapsed = now - it
-//            console.log("^^^ onMouseOver hoverItem - elapsed", elapsed)
-
-            if (elapsed < menuDanglingTimeout) {
-                return
-            }
-            else {
-                optionCompletedTime = null
-            }
-        }
-
-        if (cardOrActions) {
-            setState {
-                hoverCard = true
-            }
-        }
-        else {
-            setState {
-                hoverMenu = true
-            }
-        }
-    }
-
-
-    private fun onMouseOut(cardOrActions: Boolean) {
-        if (cardOrActions) {
-            setState {
-                hoverCard = false
-            }
-        }
-        else {
-            setState {
-                hoverMenu = false
-            }
-        }
-    }
-
-
-    private fun onOptionsOpen() {
-        setState {
-            optionsOpen = true
-        }
-    }
-
-
-    private fun onOptionsClose() {
-        setState {
-            optionsOpen = false
-            hoverMenu = false
-        }
-    }
-
-
-    private fun onOptionsCancel() {
-//        console.log("^^^^^^ onOptionsCancel")
-        onOptionsClose()
-        optionCompletedTime = Date.now()
-    }
-
-
     private fun onRemove() {
-        performOption {
-            val containingObjectLocation = props.objectLocation.parent()!!
-            val objectAttributePath = attributePathInContainer()
-
-            ClientContext.mirroredGraphStore.apply(RemoveObjectInAttributeCommand(
-                    containingObjectLocation, objectAttributePath))
-        }
-    }
-
-
-    private fun onEditName() {
-        performOption {
-            editSignal.trigger()
-        }
-    }
-
-    private fun onShiftUp() {
-        onShift(-1)
-    }
-
-
-    private fun onShiftDown() {
-        onShift(1)
-    }
-
-
-    private fun onShift(offset: Int) {
-        performOption {
-            // NB: makes onOptionsClose take effect faster
-//            delay(1)
-
-            val containingObjectLocation = props.objectLocation.parent()!!
-            val objectAttributePath = attributePathInContainer()
-
-//            val index = props.attributeNesting.segments.last().asIndex()!!
-            val index =
-//                    props.attributePath.nesting.segments.last().asIndex()!!
-//                    props.attributeNesting.segments.last().asIndex()!!
-                    props.indexInParent
-//            console.log("^^^^ onShift", index, offset, props.attributeNesting)
-
-            ClientContext.mirroredGraphStore.apply(ShiftInAttributeCommand(
-                containingObjectLocation,
-                objectAttributePath,
-                PositionRelation.at(index + offset)))
-        }
-    }
-
-
-    private fun performOption(action: suspend () -> Unit) {
-        processingOption = true
-        onOptionsClose()
+        val containingObjectLocation = props.objectLocation.parent()!!
+        val objectAttributePath = attributePathInContainer()
 
         async {
-            action.invoke()
-        }.then {
-            optionCompletedTime = Date.now()
-            processingOption = false
+            ClientContext.mirroredGraphStore.apply(RemoveObjectInAttributeCommand(
+                containingObjectLocation, objectAttributePath))
         }
     }
 
@@ -283,117 +88,47 @@ class StepHeader(
     private fun attributePathInContainer(): AttributePath {
         val containingAttribute = props.objectLocation.objectPath.nesting.segments.last().attributePath
         return AttributePath(
-                containingAttribute.attribute,
-                containingAttribute.nesting.push(AttributeSegment.ofIndex(props.indexInParent)))
+            containingAttribute.attribute,
+            containingAttribute.nesting.push(AttributeSegment.ofIndex(props.indexInParent)))
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-//        +"${parentObjectLocation}"
-//        +"state.intentToRun ${state.intentToRun}"
-
-//        val actionDescription = props.graphStructure.graphNotation
-//                .firstAttribute(props.objectLocation, AutoConventions.descriptionAttributePath)
-//                ?.asString()
-//                ?: defaultRunDescription
-
         div {
             css {
-                position = Position.relative
-                height = headerHeight
+                display = Display.flex
+                alignItems = AlignItems.center
                 width = 100.pct
+                minWidth = 0.px
             }
 
-            div {
-                css {
-                    position = Position.absolute
-                    height = headerHeight
-                    width = runIconWidth
-                    top = (-12).px
-                    left = (-20).px
-                }
-
-                renderRunIcon(props.description)
-            }
-
-            div {
-                css {
-                    position = Position.absolute
-                    height = headerHeight
-                    width = 100.pct.minus(runIconWidth).minus(menuIconOffset)
-                    top = (-13).px
-                    left = runIconWidth
-                }
-
-                StepNameEditor::class.react {
-                    objectLocation = props.objectLocation
-                    title = props.title
-                    description = props.description
-//                    intentToRun = state.intentToRun
-
-//                    runCallback = ::onRun
-                    editSignal = this@StepHeader.editSignal
-                }
-            }
-
-            div {
-                css {
-                    position = Position.absolute
-                    height = headerHeight
-                    width = 23.px
-                    top = (-16).px
-                    right = 9.px
-                }
-
-                ref = this@StepHeader.menuAnchorRef
-
-                renderOptionsMenu()
-            }
+            renderRunIcon()
+            renderNameArea()
+            renderRightCluster()
         }
     }
 
 
-    private fun ChildrenBuilder.renderRunIcon(
-            actionDescription: String
-    ) {
-//        val icon = props.graphStructure.graphNotation
-//                .firstAttribute(props.objectLocation, AutoConventions.iconAttributePath)
-//                ?.asString()
-//                ?: defaultRunIcon
-        val icon = props.icon
-
-        IconButton {
-            if (actionDescription.isNotEmpty()) {
-                title = actionDescription
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun ChildrenBuilder.renderRunIcon() {
+        div {
+            css {
+                width = runIconSize
+                height = runIconSize
+                flexShrink = number(0.0)
+                display = Display.flex
+                alignItems = AlignItems.center
+                justifyContent = JustifyContent.center
+                marginRight = 0.25.em
             }
 
-            val overfill = 8.px
-            sx {
-                marginLeft = overfill
-                width = runIconWidth.plus(overfill)
-                height = runIconWidth.plus(overfill)
+            title = props.description
 
-                position = Position.relative
-            }
-
-//            onClick = { onRun() }
-//            onMouseOver = { onRunEnter() }
-//            onMouseOut = { onRunLeave() }
-
-            iconByName(icon) {
+            iconByName(props.icon) {
                 style = unsafeJso {
                     color = NamedColor.black
-
                     fontSize = 1.75.em
-                    borderRadius = 20.px
-
-                    margin = Margin(0.em, 0.em, 0.em, 0.em)
-                    padding = Padding(0.em, 0.em, 0.em, 0.em)
-
-                    position = Position.absolute
-                    top = 3.px
-                    left = 3.px
                 }
             }
         }
@@ -401,82 +136,85 @@ class StepHeader(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun ChildrenBuilder.renderOptionsMenu() {
-        span {
+    private fun ChildrenBuilder.renderNameArea() {
+        div {
             css {
-                // NB: blinks in and out without this
-                backgroundColor = Color.transparent
+                flexGrow = number(1.0)
+                minWidth = 0.px
+                display = Display.flex
+                flexDirection = FlexDirection.column
+            }
 
-                if (!(state.hoverCard || state.hoverMenu)) {
-                    display = None.none
+            StepNameEditor::class.react {
+                objectLocation = props.objectLocation
+                title = props.title
+                description = props.description
+            }
+
+            val summary = props.summary
+            if (!summary.isNullOrEmpty()) {
+                div {
+                    css {
+                        color = Color("rgba(0, 0, 0, 0.55)")
+                        fontSize = 0.85.em
+                        whiteSpace = WhiteSpace.nowrap
+                        overflow = Overflow.hidden
+                        textOverflow = TextOverflow.ellipsis
+                        minWidth = 0.px
+                    }
+
+                    +summary
                 }
             }
-
-            onMouseOver = { onMouseOver(false) }
-            onMouseOut = { onMouseOut(false) }
-
-            IconButton {
-                title = "Options..."
-                onClick = { onOptionsOpen() }
-                iconByName("MoreVert") {}
-            }
-        }
-
-        Menu {
-            open = state.optionsOpen
-            onClose = ::onOptionsCancel
-            anchorEl = menuAnchorRef.current?.let { { _ -> it } }
-            renderMenuItems()
         }
     }
 
 
-    private fun ChildrenBuilder.renderMenuItems() {
-        val iconStyle: CSSProperties = unsafeJso {
-            marginRight = 1.em
-        }
-
-        MenuItem {
-            onClick = { onEditName() }
-
-            iconByName("Edit") {
-                style = iconStyle
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun ChildrenBuilder.renderRightCluster() {
+        div {
+            css {
+                display = Display.flex
+                alignItems = AlignItems.center
+                flexShrink = number(0.0)
+                marginLeft = 0.5.em
             }
-            +"Rename"
-        }
 
-        if (props.managed) {
-            return
-        }
-
-        if (!props.first) {
-            MenuItem {
-                onClick = { onShiftUp() }
-
-                iconByName("KeyboardArrowUp") {
-                    style = iconStyle
+            val typeMetadata = props.typeMetadata
+            if (!typeMetadata.isNullOrEmpty()) {
+                Chip {
+                    sx {
+                        marginRight = 0.5.em
+                    }
+                    size = Size.small
+                    label = ReactNode(typeMetadata)
+                    variant = ChipVariant.outlined
                 }
-                +"Move up"
             }
-        }
 
-        if (!props.last) {
-            MenuItem {
-                onClick = { onShiftDown() }
-                iconByName("KeyboardArrowDown") {
-                    style = iconStyle
+            if (!props.managed) {
+                IconButton {
+                    title = "Delete"
+                    size = Size.small
+
+                    onClick = { onRemove() }
+
+                    iconByName("Delete") {}
                 }
-                +"Move down"
             }
-        }
 
-        MenuItem {
-            onClick = { onRemove() }
+            val expanded = props.expanded
+            val onToggleExpanded = props.onToggleExpanded
+            if (expanded != null && onToggleExpanded != null) {
+                IconButton {
+                    title = if (expanded) "Collapse" else "Expand"
+                    size = Size.small
 
-            iconByName("Delete") {
-                style = iconStyle
+                    onClick = { onToggleExpanded() }
+
+                    iconByName(if (expanded) "KeyboardArrowUp" else "KeyboardArrowDown") {}
+                }
             }
-            +"Delete"
         }
     }
 }

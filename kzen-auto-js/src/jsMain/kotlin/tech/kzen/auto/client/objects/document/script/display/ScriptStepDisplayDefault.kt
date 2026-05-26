@@ -1,13 +1,10 @@
 package tech.kzen.auto.client.objects.document.script.display
 
 import emotion.react.css
-import mui.material.IconButton
-import mui.system.sx
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
-import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.graph.EdgeController
 import tech.kzen.auto.client.objects.document.script.ScriptController
@@ -20,14 +17,12 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RComponent
-import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.objects.document.script.model.StepValidation
 import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
-import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -138,10 +133,6 @@ class ScriptStepDisplayDefault(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var hoverSignal = StepHeader.HoverSignal()
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.clientStateGlobal.observe(this)
         ScriptGlobal.get().observe(this)
@@ -238,16 +229,6 @@ class ScriptStepDisplayDefault(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onMouseOver() {
-        hoverSignal.triggerMouseOver()
-    }
-
-
-    private fun onMouseOut() {
-        hoverSignal.triggerMouseOut()
-    }
-
-
     private fun onToggleExpanded() {
         val next = !state.expanded
         setState {
@@ -258,20 +239,6 @@ class ScriptStepDisplayDefault(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        span {
-            css {
-                width = ScriptController.stepWidth
-            }
-
-            onMouseOver = { onMouseOver() }
-            onMouseOut = { onMouseOut() }
-
-            renderCard()
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderCard() {
         val objectMetadata = state.objectMetadata
             ?: return
 
@@ -281,17 +248,32 @@ class ScriptStepDisplayDefault(
 
         div {
             css {
+                width = ScriptController.stepWidth
                 borderLeftWidth = 4.px
                 borderLeftStyle = LineStyle.solid
                 borderLeftColor = statusBorderColor(traceState, trace?.error, isNextToRun)
                 backgroundColor = NamedColor.white
-                paddingLeft = 1.5.em
+                paddingLeft = 1.em
                 paddingRight = 0.5.em
-                paddingTop = 0.75.em
+                paddingTop = 0.5.em
                 paddingBottom = 0.5.em
             }
 
-            renderRow()
+            StepHeader::class.react {
+                indexInParent = props.common.indexInParent
+                objectLocation = props.common.objectLocation
+
+                managed = false
+
+                icon = state.icon ?: ""
+                description = state.description ?: ""
+                title = state.title ?: ""
+
+                summary = state.summary
+                typeMetadata = state.stepValidation?.typeMetadata?.toSimple()
+                expanded = state.expanded
+                onToggleExpanded = ::onToggleExpanded
+            }
 
             if (state.expanded) {
                 div {
@@ -304,85 +286,6 @@ class ScriptStepDisplayDefault(
                     renderValidation()
                 }
             }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderRow() {
-        div {
-            css {
-                display = Display.flex
-                alignItems = AlignItems.center
-                width = 100.pct
-                height = StepHeader.headerHeight
-            }
-
-            div {
-                css {
-                    flexGrow = number(1.0)
-                    position = Position.relative
-                    height = 100.pct
-                    minWidth = 0.px
-                }
-
-                StepHeader::class.react {
-                    hoverSignal = this@ScriptStepDisplayDefault.hoverSignal
-
-                    indexInParent = props.common.indexInParent
-                    objectLocation = props.common.objectLocation
-
-                    first = props.common.first
-                    last = props.common.last
-
-                    icon = state.icon ?: ""
-                    description = state.description ?: ""
-                    title = state.title ?: ""
-                }
-
-                renderSummaryOverlay()
-            }
-
-            IconButton {
-                title = if (state.expanded) "Collapse" else "Expand"
-
-                sx {
-                    width = 28.px
-                    height = 28.px
-                    padding = 0.px
-                }
-
-                onClick = { onToggleExpanded() }
-
-                iconByName(if (state.expanded) "KeyboardArrowUp" else "KeyboardArrowDown") {}
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderSummaryOverlay() {
-        val summary = state.summary
-        if (summary.isNullOrEmpty()) {
-            return
-        }
-
-        div {
-            css {
-                position = Position.absolute
-                top = 0.em
-                bottom = 0.em
-                left = 11.em
-                right = 2.5.em
-                display = Display.flex
-                alignItems = AlignItems.center
-                color = Color("rgba(0, 0, 0, 0.55)")
-                fontSize = 0.85.em
-                whiteSpace = WhiteSpace.nowrap
-                overflow = Overflow.hidden
-                textOverflow = TextOverflow.ellipsis
-                pointerEvents = None.none
-            }
-
-            +summary
         }
     }
 
@@ -517,8 +420,6 @@ class ScriptStepDisplayDefault(
     private fun ChildrenBuilder.renderAttribute(
             attributeName: AttributeName
     ) {
-//        +"[Attribute - $attributeName - ${props.attributeEditorManager}]"
-
         props.attributeEditorManager.child(this) {
             this.objectLocation = props.common.objectLocation
             this.attributeName = attributeName
@@ -534,13 +435,6 @@ class ScriptStepDisplayDefault(
         if (errorMessage != null) {
             div {
                 +"Error: $errorMessage"
-            }
-        }
-
-        val typeMetadata = stepValidation.typeMetadata
-        if (typeMetadata != null) {
-            div {
-                +"Type: ${typeMetadata.toSimple()}"
             }
         }
     }

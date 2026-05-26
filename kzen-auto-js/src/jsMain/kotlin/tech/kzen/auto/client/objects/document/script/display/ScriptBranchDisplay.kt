@@ -7,8 +7,13 @@ import react.ChildrenBuilder
 import react.Key
 import react.Props
 import react.State
+import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
+import tech.kzen.auto.client.objects.document.common.dragdrop.computeDropIndex
+import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
+import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
+import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.service.ClientContext
@@ -19,10 +24,15 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.PositionRelation
+import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftInAttributeCommand
 import web.cssom.*
+import web.html.HTMLDivElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -39,6 +49,11 @@ external interface StepListDisplayState: State {
     var stepLocations: List<ObjectLocation>?
 
     var creating: Boolean
+
+    var hoveredIndex: Int?
+    var dragSourceIndex: Int?
+    var dragOverIndex: Int?
+    var dropAfter: Boolean
 }
 
 
@@ -50,6 +65,19 @@ class ScriptBranchDisplay(
     ClientStateGlobal.Observer,
     InsertionGlobal.Subscriber
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val dragHandleColor = Color("rgba(0, 0, 0, 0.45)")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun StepListDisplayState.init(props: StepListDisplayProps) {
+        creating = false
+        dropAfter = false
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.clientStateGlobal.observe(this)
@@ -119,8 +147,97 @@ class ScriptBranchDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onStepHover(index: Int, hovering: Boolean) {
+        if (hovering) {
+            if (state.hoveredIndex != index) {
+                setState { hoveredIndex = index }
+            }
+        }
+        else {
+            if (state.hoveredIndex == index) {
+                setState { hoveredIndex = null }
+            }
+        }
+    }
+
+
+    private fun onDragStart(sourceIndex: Int) {
+        setState {
+            dragSourceIndex = sourceIndex
+            dragOverIndex = null
+            dropAfter = false
+        }
+    }
+
+
+    private fun onDragOver(targetIndex: Int, event: DragEvent<HTMLDivElement>) {
+        if (state.dragSourceIndex == null) {
+            return
+        }
+        event.preventDefault()
+
+        val rect = event.currentTarget.getBoundingClientRect()
+        val nextDropAfter = event.clientY > rect.top + rect.height / 2
+
+        if (state.dragOverIndex == targetIndex && state.dropAfter == nextDropAfter) {
+            return
+        }
+
+        setState {
+            dragOverIndex = targetIndex
+            dropAfter = nextDropAfter
+        }
+    }
+
+
+    private fun onDragEnd() {
+        if (state.dragSourceIndex == null && state.dragOverIndex == null) {
+            return
+        }
+        setState {
+            dragSourceIndex = null
+            dragOverIndex = null
+            dropAfter = false
+        }
+    }
+
+
+    private fun onDrop(event: DragEvent<HTMLDivElement>) {
+        event.preventDefault()
+
+        val source = state.dragSourceIndex
+        val target = state.dragOverIndex
+        val dropAfterValue = state.dropAfter
+
+        setState {
+            dragSourceIndex = null
+            dragOverIndex = null
+            dropAfter = false
+        }
+
+        if (source == null || target == null) {
+            return
+        }
+        val newIndex = computeDropIndex(source, target, dropAfterValue)
+        if (newIndex == source) {
+            return
+        }
+
+        val sourceAttributePath = AttributePath(
+            props.attributeLocation.attributePath.attribute,
+            props.attributeLocation.attributePath.nesting.push(AttributeSegment.ofIndex(source)))
+
+        async {
+            ClientContext.mirroredGraphStore.apply(ShiftInAttributeCommand(
+                props.attributeLocation.objectLocation,
+                sourceAttributePath,
+                PositionRelation.at(newIndex)))
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-//        +"[StepListDisplay]"
         val stepLocations = state.stepLocations
             ?: return
 
@@ -251,13 +368,34 @@ class ScriptBranchDisplay(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderStep(
         index: Int,
         objectLocation: ObjectLocation,
         stepCount: Int
     ) {
-        span {
+        val marker = dropMarkerFor(
+            state.dragSourceIndex, state.dragOverIndex, state.dropAfter, index)
+        val handleVisible = state.hoveredIndex == index || state.dragSourceIndex == index
+
+        div {
             key = Key(objectLocation.toReference().asString())
+
+            css {
+                position = Position.relative
+            }
+
+            onMouseEnter = { onStepHover(index, true) }
+            onMouseLeave = { onStepHover(index, false) }
+            onDragOver = { event -> onDragOver(index, event) }
+            onDrop = { event -> onDrop(event) }
+
+            dragHandle(
+                isVisible = handleVisible,
+                handleColor = dragHandleColor,
+                onStart = { onDragStart(index) },
+                onEnd = { onDragEnd() })
+            dropIndicator(marker)
 
             props.stepDisplayManager.child(this) {
                 common = ScriptStepDisplayPropsCommon(

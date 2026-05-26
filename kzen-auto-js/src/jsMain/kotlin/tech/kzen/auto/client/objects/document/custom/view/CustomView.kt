@@ -5,9 +5,9 @@ import react.Key
 import react.Props
 import react.State
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
+import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
 import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.objects.document.custom.view.obj.CustomObject
-import tech.kzen.auto.client.objects.document.custom.view.obj.CustomObjectDragDrop
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
@@ -49,7 +49,7 @@ class CustomView(
                 this.attributeEditorManager = props.attributeEditorManager
 
                 this.indexInDocument = index
-                this.dropMarker = CustomObjectDragDrop.dropMarkerFor(
+                this.dropMarker = dropMarkerFor(
                     viewState.dragSourceIndex, viewState.dragOverIndex, viewState.dropAfter, index)
             }
         }

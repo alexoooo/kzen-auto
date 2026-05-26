@@ -1,10 +1,8 @@
-package tech.kzen.auto.client.objects.document.custom.view.obj
+package tech.kzen.auto.client.objects.document.common.dragdrop
 
 import emotion.react.css
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.objects.document.custom.CustomTheme
-import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.wrap.material.iconByName
 import web.cssom.*
 
@@ -17,32 +15,37 @@ enum class DropMarker {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-object CustomObjectDragDrop {
-    fun dropMarkerFor(
-        dragSourceIndex: Int?,
-        dragOverIndex: Int?,
-        dropAfter: Boolean,
-        index: Int
-    ): DropMarker? {
-        val source = dragSourceIndex ?: return null
-        if (dragOverIndex != index) {
-            return null
-        }
-        val rawTarget = if (dropAfter) index + 1 else index
-        val newIndex = if (rawTarget > source) rawTarget - 1 else rawTarget
-        if (newIndex == source) {
-            return null
-        }
-        return if (dropAfter) DropMarker.Below else DropMarker.Above
+fun dropMarkerFor(
+    dragSourceIndex: Int?,
+    dragOverIndex: Int?,
+    dropAfter: Boolean,
+    index: Int
+): DropMarker? {
+    val source = dragSourceIndex ?: return null
+    if (dragOverIndex != index) {
+        return null
     }
+    val rawTarget = if (dropAfter) index + 1 else index
+    val newIndex = if (rawTarget > source) rawTarget - 1 else rawTarget
+    if (newIndex == source) {
+        return null
+    }
+    return if (dropAfter) DropMarker.Below else DropMarker.Above
+}
+
+
+fun computeDropIndex(source: Int, target: Int, dropAfter: Boolean): Int {
+    val rawTarget = if (dropAfter) target + 1 else target
+    return if (rawTarget > source) rawTarget - 1 else rawTarget
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
-fun ChildrenBuilder.customDragHandle(
+fun ChildrenBuilder.dragHandle(
     isVisible: Boolean,
-    indexInDocument: Int,
-    viewStore: CustomViewStore
+    handleColor: Color,
+    onStart: () -> Unit,
+    onEnd: () -> Unit
 ) {
     div {
         css {
@@ -55,17 +58,17 @@ fun ChildrenBuilder.customDragHandle(
             alignItems = AlignItems.center
             justifyContent = JustifyContent.center
             cursor = Cursor.grab
-            color = CustomTheme.mutedText
+            color = handleColor
             opacity = if (isVisible) number(1.0) else number(0.0)
         }
 
         draggable = true
         onDragStart = { event ->
             event.dataTransfer.setData("text/plain", "")
-            viewStore.onDragStart(indexInDocument)
+            onStart()
         }
         onDragEnd = {
-            viewStore.onDragEnd()
+            onEnd()
         }
 
         iconByName("DragIndicator") {}
@@ -73,7 +76,7 @@ fun ChildrenBuilder.customDragHandle(
 }
 
 
-fun ChildrenBuilder.customDropIndicator(marker: DropMarker?) {
+fun ChildrenBuilder.dropIndicator(marker: DropMarker?) {
     if (marker == null) {
         return
     }

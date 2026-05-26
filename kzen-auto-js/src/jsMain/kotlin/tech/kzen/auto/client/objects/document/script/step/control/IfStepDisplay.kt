@@ -106,10 +106,6 @@ class IfStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var hoverSignal = StepHeader.HoverSignal()
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.clientStateGlobal.observe(this)
         ScriptGlobal.get().observe(this)
@@ -174,17 +170,6 @@ class IfStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onMouseOver() {
-        hoverSignal.triggerMouseOver()
-    }
-
-
-    private fun onMouseOut() {
-        hoverSignal.triggerMouseOut()
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         table {
             css {
@@ -212,9 +197,6 @@ class IfStepDisplay(
                         css {
                             padding = Padding(0.px, 0.px, 0.px, 0.px)
                         }
-
-                        onMouseOver = { onMouseOver() }
-                        onMouseOut = { onMouseOut() }
 
                         renderHeader()
                     }
@@ -293,15 +275,10 @@ class IfStepDisplay(
             }
 
             StepHeader::class.react {
-                hoverSignal = this@IfStepDisplay.hoverSignal
-
                 indexInParent = props.common.indexInParent
                 objectLocation = props.common.objectLocation
 
-//                managed = props.common.managed
                 managed = false
-                first = props.common.first
-                last = props.common.last
 
                 icon = state.icon ?: ""
                 description = state.description ?: ""

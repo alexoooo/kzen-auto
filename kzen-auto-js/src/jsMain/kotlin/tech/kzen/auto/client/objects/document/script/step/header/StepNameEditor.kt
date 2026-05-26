@@ -1,11 +1,15 @@
 package tech.kzen.auto.client.objects.document.script.step.header
 
 import emotion.react.css
+import mui.material.IconButton
+import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.edit.ObjectNameEditor
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.AutoConventions
@@ -20,13 +24,12 @@ external interface StepNameEditorProps: react.Props {
     var objectLocation: ObjectLocation
     var description: String
     var title: String
-
-    var editSignal: StepNameEditor.EditSignal
 }
 
 
 external interface StepNameEditorState: react.State {
     var editing: Boolean
+    var nameHovered: Boolean
 }
 
 
@@ -52,54 +55,42 @@ class StepNameEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    class EditSignal {
-        private var callback: (() -> Unit)? = null
-
-        fun trigger() {
-            check(callback != null)
-            callback!!.invoke()
-        }
-
-        fun attach(callback: () -> Unit) {
-            check(this.callback == null)
-            this.callback = callback
-        }
-
-        fun detach() {
-            this.callback = null
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun StepNameEditorState.init(props: StepNameEditorProps) {
         editing = false
+        nameHovered = false
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        this.props.editSignal.attach(::onEdit)
+    private fun onStartEdit() {
+        if (!state.editing) {
+            setState {
+                editing = true
+            }
+        }
     }
 
 
-    override fun componentWillUnmount() {
-        this.props.editSignal.detach()
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun onCancel() {
+    private fun onCloseEdit() {
         setState {
             editing = false
         }
     }
 
 
-    private fun onEdit() {
-        if (! state.editing) {
+    private fun onNameAreaEnter() {
+        if (!state.nameHovered) {
             setState {
-                editing = true
+                nameHovered = true
+            }
+        }
+    }
+
+
+    private fun onNameAreaLeave() {
+        if (state.nameHovered) {
+            setState {
+                nameHovered = false
             }
         }
     }
@@ -109,9 +100,13 @@ class StepNameEditor(
     override fun ChildrenBuilder.render() {
         div {
             css {
-                height = StepHeader.headerHeight
-                width = 100.pct
+                display = Display.flex
+                alignItems = AlignItems.center
+                minWidth = 0.px
             }
+
+            onMouseEnter = { onNameAreaEnter() }
+            onMouseLeave = { onNameAreaLeave() }
 
             if (state.editing) {
                 renderEditor()
@@ -124,36 +119,40 @@ class StepNameEditor(
 
 
     private fun ChildrenBuilder.renderReader() {
-        div {
+        span {
             css {
-                display = Display.inlineBlock
-                cursor = Cursor.pointer
-                height = StepHeader.headerHeight
-                width = 100.pct
-
-                marginTop = 10.px
+                fontSize = 1.5.em
+                fontWeight = FontWeight.bold
+                whiteSpace = WhiteSpace.nowrap
+                overflow = Overflow.hidden
+                textOverflow = TextOverflow.ellipsis
+                minWidth = 0.px
             }
 
             title = props.description
 
-            span {
-                css {
-                    width = 100.pct
-                    height = StepHeader.headerHeight
+            val objectName = props.objectLocation.objectPath.name
 
-                    fontSize = 1.5.em
-                    fontWeight = FontWeight.bold
-                }
-
-                val objectName = props.objectLocation.objectPath.name
-
-                if (AutoConventions.isAnonymous(objectName)) {
-                    +props.title
-                }
-                else {
-                    +objectName.value
-                }
+            if (AutoConventions.isAnonymous(objectName)) {
+                +props.title
             }
+            else {
+                +objectName.value
+            }
+        }
+
+        IconButton {
+            title = "Rename"
+            size = Size.small
+
+            sx {
+                marginLeft = 0.25.em
+                opacity = if (state.nameHovered) number(1.0) else number(0.0)
+            }
+
+            onClick = { onStartEdit() }
+
+            iconByName("Edit") {}
         }
     }
 
@@ -161,13 +160,13 @@ class StepNameEditor(
     private fun ChildrenBuilder.renderEditor() {
         div {
             css {
-                height = StepHeader.headerHeight
-                marginTop = 8.px
+                flexGrow = number(1.0)
+                minWidth = 0.px
             }
 
             ObjectNameEditor::class.react {
                 objectLocation = props.objectLocation
-                onClose = ::onCancel
+                onClose = ::onCloseEdit
             }
         }
     }

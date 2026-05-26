@@ -102,10 +102,6 @@ class MappingStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var hoverSignal = StepHeader.HoverSignal()
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         ClientContext.clientStateGlobal.observe(this)
         ScriptGlobal.get().observe(this)
@@ -170,17 +166,6 @@ class MappingStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onMouseOver() {
-        hoverSignal.triggerMouseOver()
-    }
-
-
-    private fun onMouseOut() {
-        hoverSignal.triggerMouseOut()
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         table {
             css {
@@ -208,9 +193,6 @@ class MappingStepDisplay(
                         css {
                             padding = Padding(0.px, 0.px, 0.px, 0.px)
                         }
-
-                        onMouseOver = { onMouseOver() }
-                        onMouseOut = { onMouseOut() }
 
                         renderHeader()
                     }
@@ -265,15 +247,10 @@ class MappingStepDisplay(
             }
 
             StepHeader::class.react {
-                hoverSignal = this@MappingStepDisplay.hoverSignal
-
                 indexInParent = props.common.indexInParent
                 objectLocation = props.common.objectLocation
 
-//                managed = props.common.managed
                 managed = false
-                first = props.common.first
-                last = props.common.last
 
                 icon = state.icon ?: ""
                 description = state.description ?: ""

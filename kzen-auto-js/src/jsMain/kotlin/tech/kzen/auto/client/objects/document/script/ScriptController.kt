@@ -60,7 +60,7 @@ class ScriptController:
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val stepWidth = 26.em
+        val stepWidth = 39.em
 
         fun stepLocations(
             graphStructure: GraphStructure,

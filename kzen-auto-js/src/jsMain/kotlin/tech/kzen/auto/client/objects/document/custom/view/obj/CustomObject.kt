@@ -10,6 +10,9 @@ import react.State
 import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
+import tech.kzen.auto.client.objects.document.common.dragdrop.DropMarker
+import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
+import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
 import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -121,11 +124,12 @@ class CustomObject(
             onDragOver = ::onDragOver
             onDrop = ::onDrop
 
-            customDragHandle(
+            dragHandle(
                 isVisible = state.isHovering || props.dropMarker != null,
-                indexInDocument = props.indexInDocument,
-                viewStore = props.viewStore)
-            customDropIndicator(props.dropMarker)
+                handleColor = CustomTheme.mutedText,
+                onStart = { props.viewStore.onDragStart(props.indexInDocument) },
+                onEnd = { props.viewStore.onDragEnd() })
+            dropIndicator(props.dropMarker)
 
             Paper {
                 sx {
