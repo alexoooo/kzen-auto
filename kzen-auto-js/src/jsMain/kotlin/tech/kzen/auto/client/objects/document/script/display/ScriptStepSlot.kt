@@ -99,6 +99,7 @@ class ScriptStepSlot(
         div {
             css {
                 position = Position.relative
+                height = 100.pct
             }
 
             onMouseEnter = { onMouseEnter() }

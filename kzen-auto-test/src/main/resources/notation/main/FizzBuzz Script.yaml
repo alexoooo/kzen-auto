@@ -4,7 +4,7 @@ main:
     - main.steps/StartSut
     - main.steps/Open
     - main.steps/Navigate
-    - main.steps/Click
+    - 'main.steps/Click "Project"'
     - main.steps/Click 2
     - main.steps/Click 3
     - main.steps/Click 4
@@ -34,7 +34,7 @@ main.steps/StopSut:
   is: StopKzenAutoStep
   name: main
 
-main.steps/Click:
+'main.steps/Click "Project"':
   is: BrowserClickStep
   target:
     type: Text

@@ -232,6 +232,8 @@ class ScriptStepDisplayDefault(
         div {
             css {
                 width = ScriptController.stepWidth
+                height = 100.pct
+                boxSizing = BoxSizing.borderBox
                 borderLeftWidth = 4.px
                 borderLeftStyle = LineStyle.solid
                 borderLeftColor = statusBorderColor(traceState, trace?.error, isNextToRun)
@@ -267,6 +269,19 @@ class ScriptStepDisplayDefault(
 
                     renderBody(objectMetadata, trace)
                     renderValidation()
+                }
+            }
+            else if (trace != null) {
+                div {
+                    css {
+                        paddingLeft = 1.em
+                        paddingTop = 0.5.em
+                    }
+
+                    renderValue(trace.displayValue)
+                    if (trace.detail !is BinaryExecutionValue) {
+                        renderDetail(trace.detail)
+                    }
                 }
             }
         }
