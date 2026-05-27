@@ -12,7 +12,6 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
-import tech.kzen.auto.client.objects.document.script.step.header.StepNameEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -24,7 +23,6 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.objects.document.script.model.StepValidation
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -148,29 +146,13 @@ class ScriptStepDisplayDefault(
 
 
     override fun componentWillUnmount() {
-        ClientContext.clientStateGlobal.unobserve(this)
         contextValue<ScriptStore?>()?.unobserve(this)
+        ClientContext.clientStateGlobal.unobserve(this)
     }
 
 
     override fun onScriptState(scriptState: ScriptState) {
-        val traceValues: Map<LogicTracePath, ExecutionValue>? = scriptState
-            .progress
-            .logicTraceSnapshot
-            ?.values
-
-        val stepTrace = traceValues
-            ?.get(LogicTracePath.ofObjectLocation(props.common.objectLocation))
-            ?.let { StepTrace.ofExecutionValue(it) }
-
-        val nextToRun = traceValues
-            ?.get(ScriptConventions.nextStepTracePath)
-            ?.get()
-            ?.let {
-                ObjectLocation.parse(it as String)
-            }
-
-        val isNextToRun = nextToRun == props.common.objectLocation
+        val traceInfo = computeStepTraceInfo(scriptState, props.common.objectLocation)
 
         val stepValidation = scriptState
             .validationState
@@ -179,37 +161,30 @@ class ScriptStepDisplayDefault(
             ?.get(props.common.objectLocation.objectPath)
 
         setState {
-            this.isNextToRun = isNextToRun
-            this.stepTrace = stepTrace
+            this.isNextToRun = traceInfo.isNextToRun
+            this.stepTrace = traceInfo.trace
             this.stepValidation = stepValidation
         }
     }
 
 
     override fun onClientState(clientState: ClientState) {
-        val graphStructure = clientState.graphStructure()
+        val headerInfo = computeStepHeaderInfo(clientState, props.common.objectLocation)
+            ?: return
 
+        val graphStructure = clientState.graphStructure()
         val objectMetadata = graphStructure
             .graphMetadata
-            .objectMetadata[props.common.objectLocation]
+            .objectMetadata[props.common.objectLocation]!!
 
-        @Suppress("FoldInitializerAndIfToElvis", "RedundantSuppression")
-        if (objectMetadata == null) {
-            // NB: this step has been deleted, but parent component hasn't re-rendered yet
-            return
-        }
-
-        val icon = StepHeader.icon(graphStructure, props.common.objectLocation)
-        val description = StepHeader.description(graphStructure, props.common.objectLocation)
-        val title = StepNameEditor.title(graphStructure, props.common.objectLocation)
         val summary = readSummary(graphStructure, props.common.objectLocation)
 
         setState {
             this.objectMetadata = objectMetadata
 
-            this.icon = icon
-            this.description = description
-            this.title = title
+            this.icon = headerInfo.icon
+            this.description = headerInfo.description
+            this.title = headerInfo.title
             this.summary = summary
         }
     }
@@ -332,33 +307,13 @@ class ScriptStepDisplayDefault(
             return
         }
 
-        div {
-            title = "Result"
-
-            css {
-                padding = Padding(0.em, 0.5.em, 0.5.em, 0.5.em)
-            }
-
+        traceSection("Result") {
             div {
                 css {
                     backgroundColor = Color("rgba(0, 0, 0, 0.04)")
                     padding = Padding(0.5.em, 0.5.em, 0.5.em, 0.5.em)
                 }
-
-                when (value) {
-                    is ScalarExecutionValue -> {
-                        +"${value.get()}"
-                    }
-
-                    is ListExecutionValue -> {
-                        val textValues = value.values.map { it.get().toString() }
-                        +"$textValues"
-                    }
-
-                    else -> {
-                        +"$value"
-                    }
-                }
+                formatExecutionValueText(value)
             }
         }
     }
@@ -369,13 +324,7 @@ class ScriptStepDisplayDefault(
             return
         }
 
-        div {
-            title = "Detail"
-
-            css {
-                padding = Padding(0.em, 0.5.em, 0.5.em, 0.5.em)
-            }
-
+        traceSection("Detail") {
             when (detail) {
                 is BinaryExecutionValue -> {
                     val screenshotPngUrl = detail.cache("img") {
@@ -391,16 +340,12 @@ class ScriptStepDisplayDefault(
                     }
                 }
 
-                is ScalarExecutionValue -> {
-                    +"${detail.get()}"
-                }
-
-                is ListExecutionValue -> {
-                    val valueStrings = detail.values.map { it.get().toString() }
-                    +"$valueStrings"
+                is ScalarExecutionValue, is ListExecutionValue -> {
+                    formatExecutionValueText(detail)
                 }
 
                 else -> {
+                    // NB: diverges from formatExecutionValueText's bare "$value" — Detail prefixes a label.
                     +"Detail: $detail"
                 }
             }
@@ -413,14 +358,31 @@ class ScriptStepDisplayDefault(
             return
         }
 
-        div {
-            title = "Error"
+        traceSection("Error") {
+            +"Error: $message"
+        }
+    }
 
+
+    private fun ChildrenBuilder.traceSection(
+        titleAttr: String,
+        content: ChildrenBuilder.() -> Unit
+    ) {
+        div {
+            title = titleAttr
             css {
                 padding = Padding(0.em, 0.5.em, 0.5.em, 0.5.em)
             }
+            content()
+        }
+    }
 
-            +"Error: $message"
+
+    private fun ChildrenBuilder.formatExecutionValueText(value: ExecutionValue) {
+        when (value) {
+            is ScalarExecutionValue -> +"${value.get()}"
+            is ListExecutionValue -> +"${value.values.map { it.get().toString() }}"
+            else -> +"$value"
         }
     }
 

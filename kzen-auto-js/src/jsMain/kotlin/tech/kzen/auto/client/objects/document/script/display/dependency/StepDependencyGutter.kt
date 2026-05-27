@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.script.display
+package tech.kzen.auto.client.objects.document.script.display.dependency
 
 import emotion.react.css
 import react.ChildrenBuilder
@@ -30,16 +30,16 @@ private val stepDependencyTrunkLineHalfMarginNeg = (-stepDependencyTrunkLineWidt
 private val stepDependencyMarkerHalfMarginNeg = (-stepDependencyMarkerSizePx / 2).px
 
 
+private enum class MarkerKind { Source, Target }
+
+
 //---------------------------------------------------------------------------------------------------------------------
 fun ChildrenBuilder.stepDependencyGutterCellForStep(index: Int, edges: StepDependencyEdges) {
-    val hasCrossBranch = edges.crossBranchOutgoingSourceIndices.isNotEmpty() ||
-        edges.crossBranchIncomingTargetIndices.isNotEmpty()
-
-    if (edges.numLanes == 0 && !hasCrossBranch) {
+    if (edges.numLanes == 0 && !edges.hasCrossBranch) {
         return
     }
 
-    if (hasCrossBranch) {
+    if (edges.hasCrossBranch) {
         // NB: phantom column is rendered FIRST so it sits at the row's leftmost gutter position.
         //     The overlay polyline endpoint is then at row.left + laneWidth/2, and the cross-branch
         //     horizontal segment terminates BEFORE reaching any in-branch lane column — preventing
@@ -61,20 +61,17 @@ fun ChildrenBuilder.stepDependencyGutterCellForStep(index: Int, edges: StepDepen
             trunkLine()
         }
         if (isSource) {
-            sourceMarker()
+            dependencyMarker(MarkerKind.Source)
         }
         if (isTarget) {
-            targetMarker()
+            dependencyMarker(MarkerKind.Target)
         }
     }
 }
 
 
 fun ChildrenBuilder.stepDependencyGutterCellForBetween(stepIndexAbove: Int, edges: StepDependencyEdges) {
-    val hasCrossBranch = edges.crossBranchOutgoingSourceIndices.isNotEmpty() ||
-        edges.crossBranchIncomingTargetIndices.isNotEmpty()
-
-    if (hasCrossBranch) {
+    if (edges.hasCrossBranch) {
         // NB: reserve phantom slot at leftmost, matching the step-row layout for body-x consistency.
         phantomMarkerLane(showSource = false, showTarget = false)
     }
@@ -89,6 +86,18 @@ fun ChildrenBuilder.stepDependencyGutterCellForBetween(stepIndexAbove: Int, edge
 
 
 //---------------------------------------------------------------------------------------------------------------------
+private fun ChildrenBuilder.laneBox(content: ChildrenBuilder.() -> Unit) {
+    div {
+        css {
+            position = Position.relative
+            width = stepDependencyLaneWidth
+            flexShrink = number(0.0)
+        }
+        content()
+    }
+}
+
+
 private fun ChildrenBuilder.laneContainer(
     edges: StepDependencyEdges,
     laneContent: ChildrenBuilder.(List<IntRange>) -> Unit
@@ -99,12 +108,7 @@ private fun ChildrenBuilder.laneContainer(
 
     // NB: lane 0 (shortest spans, allocated first) sits closest to the step content; larger-span lanes extend left.
     for (laneIdx in (edges.numLanes - 1) downTo 0) {
-        div {
-            css {
-                position = Position.relative
-                width = stepDependencyLaneWidth
-                flexShrink = number(0.0)
-            }
+        laneBox {
             laneContent(edges.laneEdges[laneIdx])
         }
     }
@@ -112,17 +116,12 @@ private fun ChildrenBuilder.laneContainer(
 
 
 private fun ChildrenBuilder.phantomMarkerLane(showSource: Boolean, showTarget: Boolean) {
-    div {
-        css {
-            position = Position.relative
-            width = stepDependencyLaneWidth
-            flexShrink = number(0.0)
-        }
+    laneBox {
         if (showSource) {
-            sourceMarker()
+            dependencyMarker(MarkerKind.Source)
         }
         if (showTarget) {
-            targetMarker()
+            dependencyMarker(MarkerKind.Target)
         }
     }
 }
@@ -143,41 +142,34 @@ private fun ChildrenBuilder.trunkLine() {
 }
 
 
-private fun ChildrenBuilder.sourceMarker() {
-    // NB: anchored at the bottom of the source row so the trunk emerges from the bottom edge
-    //     and the connecting line to the next-down target is minimized.
+// NB: source = hollow circle anchored at row bottom (trunk emerges downward).
+//     Target = filled circle anchored at row top (trunk terminates into it).
+//     Anchoring at opposite edges minimizes the vertical span of the connecting line.
+private fun ChildrenBuilder.dependencyMarker(kind: MarkerKind) {
     div {
         css {
             position = Position.absolute
-            bottom = 0.px
+            when (kind) {
+                MarkerKind.Source -> bottom = 0.px
+                MarkerKind.Target -> top = 0.px
+            }
             left = 50.pct
             marginLeft = stepDependencyMarkerHalfMarginNeg
             width = stepDependencyMarkerSize
             height = stepDependencyMarkerSize
             borderRadius = 50.pct
-            borderStyle = LineStyle.solid
-            borderWidth = stepDependencyMarkerBorderWidth
-            borderColor = stepDependencyTrunkColor
-            backgroundColor = NamedColor.white
             boxSizing = BoxSizing.borderBox
-        }
-    }
-}
-
-
-private fun ChildrenBuilder.targetMarker() {
-    // NB: anchored at the top of the target row, mirroring the source marker for minimum line span.
-    div {
-        css {
-            position = Position.absolute
-            top = 0.px
-            left = 50.pct
-            marginLeft = stepDependencyMarkerHalfMarginNeg
-            width = stepDependencyMarkerSize
-            height = stepDependencyMarkerSize
-            borderRadius = 50.pct
-            backgroundColor = stepDependencyTrunkColor
-            boxSizing = BoxSizing.borderBox
+            when (kind) {
+                MarkerKind.Source -> {
+                    borderStyle = LineStyle.solid
+                    borderWidth = stepDependencyMarkerBorderWidth
+                    borderColor = stepDependencyTrunkColor
+                    backgroundColor = NamedColor.white
+                }
+                MarkerKind.Target -> {
+                    backgroundColor = stepDependencyTrunkColor
+                }
+            }
         }
     }
 }
@@ -190,6 +182,10 @@ data class StepDependencyEdges(
     val crossBranchIncomingTargetIndices: Set<Int>
 ) {
     val numLanes: Int get() = laneEdges.size
+
+    val hasCrossBranch: Boolean
+        get() = crossBranchOutgoingSourceIndices.isNotEmpty() ||
+            crossBranchIncomingTargetIndices.isNotEmpty()
 
 
     companion object {

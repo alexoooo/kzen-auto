@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.script.display
+package tech.kzen.auto.client.objects.document.script.display.dependency
 
 import emotion.react.css
 import js.objects.unsafeJso
@@ -13,6 +13,8 @@ import tech.kzen.auto.client.objects.document.common.dragdrop.computeDropIndex
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
+import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot
+import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal

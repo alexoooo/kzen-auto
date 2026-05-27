@@ -7,10 +7,9 @@ import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.objects.document.common.signature.DummyComponent
 import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEditor
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
-import tech.kzen.auto.client.objects.document.script.display.ScriptDependencyOverlay
+import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptDependencyOverlay
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.model.ScriptState

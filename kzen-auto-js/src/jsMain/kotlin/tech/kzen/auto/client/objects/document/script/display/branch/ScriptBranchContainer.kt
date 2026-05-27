@@ -1,9 +1,11 @@
-package tech.kzen.auto.client.objects.document.script.display
+package tech.kzen.auto.client.objects.document.script.display.branch
 
 import emotion.react.css
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
+import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
+import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptBranchDisplay
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.lib.common.model.location.AttributeLocation
 import web.cssom.*

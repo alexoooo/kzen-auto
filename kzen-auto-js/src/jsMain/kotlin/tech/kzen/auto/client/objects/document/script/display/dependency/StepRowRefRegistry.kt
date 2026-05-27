@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.script.display
+package tech.kzen.auto.client.objects.document.script.display.dependency
 
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.html.HTMLElement

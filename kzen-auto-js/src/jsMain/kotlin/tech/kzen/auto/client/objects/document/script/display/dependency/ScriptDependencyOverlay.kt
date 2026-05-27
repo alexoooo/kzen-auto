@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.script.display
+package tech.kzen.auto.client.objects.document.script.display.dependency
 
 import emotion.react.css
 import react.ChildrenBuilder

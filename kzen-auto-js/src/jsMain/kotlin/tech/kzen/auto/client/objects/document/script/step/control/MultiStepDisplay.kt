@@ -3,10 +3,10 @@ package tech.kzen.auto.client.objects.document.script.step.control
 import react.ChildrenBuilder
 import react.State
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
-import tech.kzen.auto.client.objects.document.script.display.ScriptBranchDisplay
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayProps
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayWrapper
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
+import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptBranchDisplay
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
