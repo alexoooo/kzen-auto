@@ -3,7 +3,6 @@ package tech.kzen.auto.client.objects.document.script.step.header
 import emotion.react.css
 import mui.material.IconButton
 import mui.material.Size
-import mui.system.sx
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -34,6 +33,31 @@ external interface StepNameEditorState: react.State {
 
 
 //---------------------------------------------------------------------------------------------------------------------
+// NB: extracted as a pure component so that toggling the parent's nameHovered state doesn't cascade into the
+//     MUI IconButton subtree (~10 non-pure fibers — ButtonBase, ripple, SvgIcon, ownerState forwarding).
+//     Props must be stable references (use a class field for onAction, not ::method).
+external interface RenameButtonProps: react.Props {
+    var onAction: () -> Unit
+}
+
+
+class RenameButton(props: RenameButtonProps):
+    RPureComponent<RenameButtonProps, react.State>(props)
+{
+    override fun ChildrenBuilder.render() {
+        IconButton {
+            title = "Rename"
+            size = Size.small
+
+            onClick = { props.onAction() }
+
+            iconByName("Edit") {}
+        }
+    }
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 class StepNameEditor(
     props: StepNameEditorProps
 ):
@@ -59,6 +83,12 @@ class StepNameEditor(
         editing = false
         nameHovered = false
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // NB: stable reference — RenameButton (RPureComponent) bails out only if its onAction prop is referentially
+    //     equal across renders. ::onStartEdit would create a fresh bound reference per access.
+    private val onStartEditCallback: () -> Unit = { onStartEdit() }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -141,18 +171,19 @@ class StepNameEditor(
             }
         }
 
-        IconButton {
-            title = "Rename"
-            size = Size.small
-
-            sx {
+        // NB: the wrapper div carries the hover-driven opacity. Placing it on a plain element (not the IconButton's
+        //     sx) means re-rendering on hover doesn't cascade into MUI's IconButton subtree.
+        div {
+            css {
+                display = Display.inlineFlex
+                alignItems = AlignItems.center
                 marginLeft = 0.25.em
                 opacity = if (state.nameHovered) number(1.0) else number(0.0)
             }
 
-            onClick = { onStartEdit() }
-
-            iconByName("Edit") {}
+            RenameButton::class.react {
+                onAction = onStartEditCallback
+            }
         }
     }
 

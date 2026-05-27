@@ -7,6 +7,7 @@ import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.common.signature.DummyComponent
 import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEditor
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptDependencyOverlay
@@ -154,6 +155,11 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
+        // NB: ClientState is a data class — structural equality. Skip setState on no-op publishes so the entire
+        //     Script subtree isn't re-reconciled (which would flash every descendant in DevTools' overlay).
+        if (state.clientState == clientState) {
+            return
+        }
         setState {
             this.clientState = clientState
         }
@@ -213,9 +219,24 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderSignature(mainObjectLocation: ObjectLocation) {
-        LogicSignatureEditor::class.react {
-            objectLocation = mainObjectLocation
-        }
+//        div {
+//            div {
+//                +"foo4"
+//            }
+//            div {
+//                DummyComponent::class.react {
+//                    objectLocation = mainObjectLocation
+//                }
+//            }
+//            div {
+                LogicSignatureEditor::class.react {
+                    objectLocation = mainObjectLocation
+                }
+//            }
+//            div {
+//                +"bar"
+//            }
+//        }
     }
 
 

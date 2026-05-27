@@ -5,12 +5,10 @@ import react.ChildrenBuilder
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -21,23 +19,23 @@ import web.cssom.pct
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface LogicSignatureEditorProps: Props {
+external interface DummyComponentProps: Props {
     var objectLocation: ObjectLocation
 }
 
 
-external interface LogicSignatureEditorState: State {
+external interface DummyComponentState: State {
     var parameters: List<String>?
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
-class LogicSignatureEditor:
-    RPureComponent<LogicSignatureEditorProps, LogicSignatureEditorState>(),
+class DummyComponent:
+    RPureComponent<DummyComponentProps, DummyComponentState>(),
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun LogicSignatureEditorState.init(props: LogicSignatureEditorProps) {
+    override fun DummyComponentState.init(props: DummyComponentProps) {
         parameters = null
     }
 
@@ -47,11 +45,9 @@ class LogicSignatureEditor:
         ClientContext.clientStateGlobal.observe(this)
     }
 
-
     override fun componentWillUnmount() {
         ClientContext.clientStateGlobal.unobserve(this)
     }
-
 
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphStructure().graphNotation
@@ -62,7 +58,7 @@ class LogicSignatureEditor:
 
         val parametersNotation = graphNotation
             .firstAttribute(props.objectLocation, LogicConventions.parametersAttributeName)
-            as? ListAttributeNotation
+                as? ListAttributeNotation
         val newParameters = parametersNotation?.values?.mapNotNull { i -> i.asString() }
 
         // NB: mapNotNull produces a fresh List reference each fire — guard with structural equality to keep
@@ -79,27 +75,8 @@ class LogicSignatureEditor:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val parameters = state.parameters
-            ?: return
-
-//        +"[Parameters: $parameters]"
-
         div {
-            css {
-                width = 100.pct.minus(2.em)
-                paddingLeft = 1.em
-            }
-
-            MultiTextAttributeEditor::class.react {
-                labelOverride = "Parameters"
-                maxRows = 5
-
-                objectLocation = props.objectLocation
-                attributePath = LogicConventions.parametersAttributePath
-
-                value = parameters
-                unique = true
-            }
+            +"[${props.objectLocation} |z| ${state.parameters}]"
         }
     }
 }
