@@ -1,17 +1,10 @@
 package tech.kzen.auto.client.objects.document.script.step.control
 
 import emotion.react.css
-import js.objects.unsafeJso
 import react.ChildrenBuilder
 import react.State
-import react.dom.html.ReactHTML.br
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.table
-import react.dom.html.ReactHTML.tbody
-import react.dom.html.ReactHTML.td
-import react.dom.html.ReactHTML.tr
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
-import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.*
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
@@ -25,7 +18,6 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
-import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -76,11 +68,6 @@ class IfStepDisplay(
 
         val elseAttributeName = AttributeName("else")
         private val elseAttributePath = AttributePath.ofName(elseAttributeName)
-
-        private val stepWidth = ScriptController.stepWidth.minus(2.em)
-
-        // NB: toggle to true when diagnosing IfStep layout issues; reveals every cell border.
-        private const val tableBorders = false
     }
 
 
@@ -178,87 +165,51 @@ class IfStepDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        table {
+        div {
             css {
-                // https://stackoverflow.com/a/24594811/1941359
-                height = 100.pct
-
-                if (tableBorders) {
-                    borderWidth = 1.px
-                    borderStyle = LineStyle.solid
-                }
-
-                borderCollapse = BorderCollapse.collapse
+                backgroundColor = NamedColor.white
+                paddingBottom = 0.5.em
             }
 
-            tbody {
-                css {
-                    if (tableBorders) {
-                        borderWidth = 1.px
-                        borderStyle = LineStyle.solid
-                    }
-                }
+            renderHeader()
+            renderCondition()
+        }
 
-                tr {
-                    td {
-                        css {
-                            padding = Padding(0.px, 0.px, 0.px, 0.px)
-                        }
-
-                        renderHeader()
-                    }
-
-                    td {}
-                }
-
-                tr {
-                    td {
-                        css {
-                            verticalAlign = VerticalAlign.top
-                            height = 100.pct
-                            padding = Padding(0.px, 0.px, 0.px, 0.px)
-                            if (tableBorders) {
-                                borderWidth = 1.px
-                                borderStyle = LineStyle.solid
-                            }
-                        }
-
-                        renderCondition()
-                    }
-                    td {
-                        css {
-                            if (tableBorders) {
-                                borderWidth = 1.px
-                                borderStyle = LineStyle.solid
-                            }
-                        }
-
-                        renderThenBranch()
-                    }
-                }
-
-                tr {
-                    td {
-                        css {
-                            verticalAlign = VerticalAlign.top
-                            height = 100.pct
-                            padding = Padding(0.px, 0.px, 0.px, 0.px)
-
-                            if (tableBorders) {
-                                borderWidth = 1.px
-                                borderStyle = LineStyle.solid
-                            }
-                        }
-
-                        renderElseSegment()
-                    }
-
-                    td {
-                        renderElseBranch()
-                    }
-                }
+        // Full-width 1px gray seam separating the F's top arm (header+condition) from its body.
+        // Crosses the trunk on purpose — the user wants the "divider above Then" to go over the
+        // left margin too.
+        div {
+            css {
+                height = 1.px
+                backgroundColor = Color("rgba(0, 0, 0, 0.12)")
             }
         }
+
+        renderThenBranch()
+
+        // 1px gray seam above the white middle arm, mirroring the seam above Then's branch.
+        // Pattern: the seam sits at the TOP of the next white slab (here the arm; for Then it was
+        // the header+condition slab) so the slab + seam form a single "section header" unit.
+        div {
+            css {
+                height = 1.px
+                backgroundColor = Color("rgba(0, 0, 0, 0.12)")
+            }
+        }
+
+        // F's middle arm: in-flow 28px white horizontal slab. Width is parent-constrained to the
+        // step-body column (ScriptController.stepWidth = 39em — same as the header at the top of
+        // the If step), so the arm's right edge aligns with the header above. The 4em trunk
+        // strips of Then (above) and Else (below) extend past the arm on the left, keeping the
+        // trunk continuous.
+        div {
+            css {
+                height = 28.px
+                backgroundColor = NamedColor.white
+            }
+        }
+
+        renderElseBranch()
     }
 
 
@@ -269,12 +220,7 @@ class IfStepDisplay(
 
         div {
             css {
-                width = stepWidth
                 padding = Padding(16.px, 16.px, 0.px, 16.px)
-                borderTopLeftRadius = 3.px
-                borderTopRightRadius = 3.px
-                filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
-
                 backgroundColor = ScriptStepDisplayDefault.backgroundColor(traceState, trace?.error, isNextToRun)
             }
 
@@ -295,13 +241,7 @@ class IfStepDisplay(
     private fun ChildrenBuilder.renderCondition() {
         div {
             css {
-                width = stepWidth
                 padding = Padding(0.em, 1.em, 0.em, 1.em)
-                filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
-
-                height = 100.pct
-
-                backgroundColor = NamedColor.white
             }
 
             props.attributeEditorManager.child(this) {
@@ -321,30 +261,11 @@ class IfStepDisplay(
     }
 
 
-    private fun ChildrenBuilder.renderElseSegment() {
-        div {
-            css {
-                padding = Padding(0.px, 1.em, 0.px, 1.em)
-                borderBottomLeftRadius = 3.px
-                borderBottomRightRadius = 3.px
-                filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
-
-                backgroundColor = NamedColor.white
-
-                height = 100.pct
-            }
-            +"Otherwise"
-        }
-    }
-
-
     private fun ChildrenBuilder.renderElseBranch() {
         scriptBranchContainer(
             label = "Else",
             branchLocation = AttributeLocation(props.common.objectLocation, elseAttributePath),
             stepDisplayManager = props.stepDisplayManager,
-            scriptCommander = props.scriptCommander,
-            outerMarginBottom = 2.times(scriptBranchOverlapTop),
-            labelFullWidth = true)
+            scriptCommander = props.scriptCommander)
     }
 }

@@ -1,17 +1,10 @@
 package tech.kzen.auto.client.objects.document.script.step.control.mapping
 
 import emotion.react.css
-import js.objects.unsafeJso
 import react.ChildrenBuilder
 import react.State
-import react.dom.html.ReactHTML.br
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.table
-import react.dom.html.ReactHTML.tbody
-import react.dom.html.ReactHTML.td
-import react.dom.html.ReactHTML.tr
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
-import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.*
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
@@ -25,7 +18,6 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
-import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -58,7 +50,7 @@ external interface MappingStepDisplayState: State {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-@Suppress("unused", "ConstPropertyName")
+@Suppress("unused")
 class MappingStepDisplay(
     props: MappingStepDisplayProps
 ):
@@ -69,11 +61,6 @@ class MappingStepDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val itemsAttributeName = AttributeName("items")
-
-        // NB: toggle to true when diagnosing MappingStep layout issues; reveals every cell border.
-        private const val tableBorders = false
-
-        private val stepWidth = ScriptController.stepWidth.minus(2.em)
     }
 
 
@@ -171,66 +158,17 @@ class MappingStepDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        table {
+        div {
             css {
-                // https://stackoverflow.com/a/24594811/1941359
-                height = 100.pct
-
-                if (tableBorders) {
-                    borderWidth = 1.px
-                    borderStyle = LineStyle.solid
-                }
-
-                borderCollapse = BorderCollapse.collapse
+                backgroundColor = NamedColor.white
+                paddingBottom = 0.5.em
             }
 
-            tbody {
-                css {
-                    if (tableBorders) {
-                        borderWidth = 1.px
-                        borderStyle = LineStyle.solid
-                    }
-                }
-
-                tr {
-                    td {
-                        css {
-                            padding = Padding(0.px, 0.px, 0.px, 0.px)
-                        }
-
-                        renderHeader()
-                    }
-
-                    td {}
-                }
-
-                tr {
-                    td {
-                        css {
-                            verticalAlign = VerticalAlign.top
-                            height = 100.pct
-                            padding = Padding(0.px, 0.px, 0.px, 0.px)
-                            if (tableBorders) {
-                                borderWidth = 1.px
-                                borderStyle = LineStyle.solid
-                            }
-                        }
-
-                        renderItems()
-                    }
-                    td {
-                        css {
-                            if (tableBorders) {
-                                borderWidth = 1.px
-                                borderStyle = LineStyle.solid
-                            }
-                        }
-
-                        renderSteps()
-                    }
-                }
-            }
+            renderHeader()
+            renderItems()
         }
+
+        renderSteps()
     }
 
 
@@ -241,12 +179,7 @@ class MappingStepDisplay(
 
         div {
             css {
-                width = stepWidth
                 padding = Padding(16.px, 16.px, 0.px, 16.px)
-                borderTopLeftRadius = 3.px
-                borderTopRightRadius = 3.px
-                filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
-
                 backgroundColor = ScriptStepDisplayDefault.backgroundColor(traceState, trace?.error, isNextToRun)
             }
 
@@ -267,13 +200,7 @@ class MappingStepDisplay(
     private fun ChildrenBuilder.renderItems() {
         div {
             css {
-                width = stepWidth
                 padding = Padding(0.em, 1.em, 0.em, 1.em)
-                filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
-
-                height = 100.pct
-
-                backgroundColor = NamedColor.white
             }
 
             props.attributeEditorManager.child(this) {

@@ -1,64 +1,55 @@
 package tech.kzen.auto.client.objects.document.script.display
 
 import emotion.react.css
-import js.objects.unsafeJso
 import react.ChildrenBuilder
-import react.dom.html.ReactHTML.br
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
-import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.lib.common.model.location.AttributeLocation
 import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-val scriptBranchOverlapTop = 4.px
-
-
-//---------------------------------------------------------------------------------------------------------------------
-// NB: shared layout for IfStep.then / IfStep.else / MappingStep.steps branch containers.
-// The Else variant uses doubled outer marginBottom (it's the last row of the IfStep table) and a
-// full-width inline-block label; both are explicit parameters to preserve their long-standing
-// rendering rather than normalize them.
+// NB: shared branch-row layout for IfStep (Then/Else) and MappingStep (Each). Renders a narrow
+//     white "indent" column on the left holding just the label, paired with the branch's step list
+//     on the right. The strip stretches to the row's full height via flex `alignItems = stretch`
+//     plus 28px vertical padding — so the strip's white bg covers the right column's top/bottom
+//     28px placeholder reservations on the LEFT 4em, and adjacent branches' strips meet flush
+//     forming one continuous F-shape trunk that extends to the bottom of the last branch's row.
+//
+//     The right column is deliberately transparent (page gray shows through around the steps) so
+//     each step card reads as a discrete white card on gray, not as part of one solid slab.
+//
+//     Top decorations (full-width seam line, white middle arm) are rendered by the caller
+//     (IfStepDisplay), not by this helper — different branches want different top visuals.
 fun ChildrenBuilder.scriptBranchContainer(
     label: String,
     branchLocation: AttributeLocation,
     stepDisplayManager: StepDisplayManager.Wrapper,
-    scriptCommander: ScriptCommander,
-    outerMarginBottom: Length = scriptBranchOverlapTop,
-    labelFullWidth: Boolean = false
+    scriptCommander: ScriptCommander
 ) {
     div {
         css {
-            width = 100.pct
-            marginBottom = outerMarginBottom
+            display = Display.flex
+            alignItems = AlignItems.stretch
         }
 
         div {
             css {
-                if (labelFullWidth) {
-                    width = 100.pct
-                }
-                display = Display.inlineBlock
-                marginLeft = 3.px
+                backgroundColor = NamedColor.white
+                width = 4.em
+                flexShrink = number(0.0)
+                padding = Padding(28.px, 0.75.em)
+                color = Color("rgba(0, 0, 0, 0.7)")
             }
-
             +label
-            br {}
-            iconByName("ArrowForward") {
-                style = unsafeJso {
-                    fontSize = 3.em
-                }
-            }
         }
 
         div {
             css {
-                width = 100.pct.minus(3.em)
-                display = Display.inlineBlock
-                marginTop = (-4.5).em
-                marginLeft = 3.5.em
+                flexGrow = number(1.0)
+                marginLeft = 0.5.em
+                minHeight = 4.em
             }
 
             ScriptBranchDisplay::class.react {
@@ -66,16 +57,6 @@ fun ChildrenBuilder.scriptBranchContainer(
                 nested = true
                 this.stepDisplayManager = stepDisplayManager
                 this.scriptCommander = scriptCommander
-            }
-        }
-
-        div {
-            iconByName("SubdirectoryArrowLeft") {
-                style = unsafeJso {
-                    fontSize = 3.em
-                    marginBottom = 15.px
-                    marginTop = (-40).px
-                }
             }
         }
     }

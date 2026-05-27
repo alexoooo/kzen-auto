@@ -35,7 +35,6 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftInAttributeComman
 import web.cssom.AlignItems
 import web.cssom.Color
 import web.cssom.Display
-import web.cssom.LineStyle
 import web.cssom.NamedColor
 import web.cssom.Position
 import web.cssom.em
@@ -348,9 +347,6 @@ class ScriptBranchDisplay(
                 position = Position.relative
                 height = 1.5.em
                 width = 100.pct
-                borderTopWidth = 1.px
-                borderTopStyle = LineStyle.solid
-                borderTopColor = Color("rgba(0, 0, 0, 0.08)")
             }
 
             div {
@@ -368,6 +364,12 @@ class ScriptBranchDisplay(
 
 
     private fun ChildrenBuilder.firstOrLastInsertionPoint(index: Int) {
+        // NB: render the placeholder unconditionally so toggling insertion mode never shifts
+        //     layout. The 28px reservation also doubles as breathing room above/below the
+        //     step list. `insertionButton` itself is gated by `state.creating`, so the visible
+        //     "+" only appears when an archetype is selected. The branch-indent strip in
+        //     `scriptBranchContainer` uses `background-clip: content-box` with matching 28px
+        //     vertical padding so its white bg does NOT extend over these placeholder regions.
         div {
             css {
                 height = 26.px
