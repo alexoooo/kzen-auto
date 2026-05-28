@@ -10,6 +10,7 @@ import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import kotlin.time.Clock
 
 
@@ -49,7 +50,8 @@ class LogicExecutionFacadeImpl(
         logicRunId: LogicRunId,
         originalObjectLocation: ObjectLocation,
         logicHandle: LogicHandle,
-        graphCreator: GraphCreator
+        graphCreator: GraphCreator,
+        objectStableMapper: ObjectStableMapper
     ): LogicExecution {
         val dependencyGraphInstance = graphCreator.createGraph(
             graphDefinition.filterTransitive(originalObjectLocation))
@@ -61,13 +63,14 @@ class LogicExecutionFacadeImpl(
 
         val logicExecutionId = LogicExecutionId(arbitraryId())
         val runExecutionId = LogicRunExecutionId(logicRunId, logicExecutionId)
-        val logicTraceHandle = LogicTraceStore.handle(runExecutionId, originalObjectLocation)
+        val logicTraceHandle = LogicTraceStore.handle(runExecutionId, originalObjectLocation, objectStableMapper)
 
         val execution = dependencyInstance.execute(
             logicHandle,
             logicTraceHandle,
             runExecutionId,
-            logicControl)
+            logicControl,
+            objectStableMapper)
         logicExecution = execution
         return execution
     }

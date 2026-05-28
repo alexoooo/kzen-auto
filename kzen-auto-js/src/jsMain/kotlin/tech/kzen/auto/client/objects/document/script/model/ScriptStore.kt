@@ -132,12 +132,25 @@ class ScriptStore: ClientStateGlobal.Observer {
         }
         else {
             val logicTime: Instant = clientState.clientLogicState.logicStatus?.time ?: Instant.DISTANT_PAST
-            if (previousLogicTime != logicTime) {
+            val logicTimeChanged = previousLogicTime != logicTime
+            val documentNotationChanged = previousDocumentNotation != documentNotation
+
+            if (logicTimeChanged) {
                 previousLogicTime = logicTime
+            }
+            if (documentNotationChanged) {
+                previousDocumentNotation = documentNotation
+            }
+
+            // Refresh progress on document edits too: structural changes (rename / shift / insert)
+            // re-key the trace lookup by current ObjectLocation, so the existing snapshot misses
+            // until we pull a fresh one. Skip when no run has produced progress yet.
+            val hasProgress = previousState.progress.logicRunExecutionId != null
+            if (logicTimeChanged || (documentNotationChanged && hasProgress)) {
                 refreshProgressAsync()
             }
 
-            if (previousDocumentNotation != documentNotation) {
+            if (documentNotationChanged) {
                 refreshValidationAsync()
             }
         }

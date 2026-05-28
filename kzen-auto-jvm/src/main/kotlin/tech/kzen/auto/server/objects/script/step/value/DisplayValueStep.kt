@@ -26,7 +26,7 @@ class DisplayValueStep(
 
 
     override fun continueOrStart(scriptExecutionContext: ScriptExecutionContext): LogicResult {
-        val step = scriptExecutionContext.activeScriptModel.steps[text]
+        val step = scriptExecutionContext.stepModel(text)
         val value = step?.value?.mainComponentValue()
 
         val text = value?.toString() ?: "<null>"

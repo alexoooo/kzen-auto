@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.paradigm.logic.trace.model
 
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
 data class LogicTracePath(
@@ -8,16 +9,33 @@ data class LogicTracePath(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        const val segmentSeparator = "/"
+
+
+        // Marker prefix that distinguishes paths keyed by ObjectStableId (translated to the
+        // current ObjectLocation at lookup time) from paths keyed by current location or
+        // by fixed convention.
+        const val stableIdMarker = "\$stable"
+
+
         val root = LogicTracePath(listOf())
 
 
         fun parse(asString: String): LogicTracePath {
-            if (asString == "/") {
+            if (asString == segmentSeparator) {
                 return root
             }
 
-            val segments = asString.split('/').drop(1)
+            val segments = asString.split(segmentSeparator).drop(1)
             return LogicTracePath(segments)
+        }
+
+
+        fun ofObjectStableId(objectStableId: ObjectStableId): LogicTracePath {
+            // The id string is an ObjectLocation.asString(), which itself contains the
+            // segment separator (document nesting, object nesting). Split so each piece
+            // satisfies LogicTracePath's no-separator-in-segment invariant.
+            return LogicTracePath(listOf(stableIdMarker) + objectStableId.value.split(segmentSeparator))
         }
 
 
@@ -48,18 +66,28 @@ data class LogicTracePath(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        check(segments.none { it.contains('/') })
+        check(segments.none { it.contains(segmentSeparator) }) {
+            "Unexpected: $segments"
+        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun objectStableId(): ObjectStableId? {
+        if (segments.size < 2 || segments[0] != stableIdMarker) {
+            return null
+        }
+        return ObjectStableId(segments.drop(1).joinToString(segmentSeparator))
+    }
+
+
     fun append(segment: String): LogicTracePath {
         return LogicTracePath(segments + segment)
     }
 
 
     fun asString(): String {
-        return segments.joinToString("/", prefix = "/")
+        return segments.joinToString(segmentSeparator, prefix = segmentSeparator)
     }
 
 

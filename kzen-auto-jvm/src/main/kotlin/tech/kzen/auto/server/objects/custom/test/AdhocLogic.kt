@@ -16,6 +16,7 @@ import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
 @Reflect
@@ -43,7 +44,8 @@ class AdhocLogic(
         logicHandle: LogicHandle,
         logicTraceHandle: LogicTraceHandle,
         logicRunExecutionId: LogicRunExecutionId,
-        logicControl: LogicControl
+        logicControl: LogicControl,
+        objectStableMapper: ObjectStableMapper
     ): LogicExecution {
         return Execution()
     }

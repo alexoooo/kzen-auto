@@ -37,7 +37,7 @@ class MappingStep(
     //-----------------------------------------------------------------------------------------------------------------
     private val stepsDelegate = MultiStep(steps)
 
-    private val stepsPrefix = LogicTracePath
+    private val stepsLocationPrefix = LogicTracePath
         .ofObjectLocation(selfLocation)
         .append(ScriptConventions.stepsAttributeName.value)
 
@@ -70,7 +70,7 @@ class MappingStep(
 
     override fun continueOrStart(scriptExecutionContext: ScriptExecutionContext): LogicResult {
         if (iterator == null) {
-            val step = scriptExecutionContext.activeScriptModel.steps[items]
+            val step = scriptExecutionContext.stepModel(items)
 
             val value = step?.value?.mainComponentValue()
             check(value is Iterable<*>) {
@@ -139,7 +139,7 @@ class MappingStep(
 
 
     private fun resetSteps(stepContext: ScriptExecutionContext) {
-        stepContext.logicTraceHandle.clearAll(stepsPrefix)
-        stepContext.activeScriptModel.resetAll(selfLocation)
+        stepContext.logicTraceHandle.clearAll(stepsLocationPrefix)
+        stepContext.activeScriptModel.resetAll(selfLocation, stepContext.objectStableMapper)
     }
 }

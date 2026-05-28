@@ -292,7 +292,7 @@ class FormulaStep(
 
         val predecessorValues = nonUnitPredecessorTypes.map {
             val objectLocation = selfLocation.documentPath.toObjectLocation(it.key)
-            val step = scriptExecutionContext.activeScriptModel.steps[objectLocation]
+            val step = scriptExecutionContext.stepModel(objectLocation)
             step?.value?.mainComponentValue()
         }
 

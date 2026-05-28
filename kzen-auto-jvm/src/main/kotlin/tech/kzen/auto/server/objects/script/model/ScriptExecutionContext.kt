@@ -7,6 +7,8 @@ import tech.kzen.auto.server.service.v1.LogicControl
 import tech.kzen.auto.server.service.v1.LogicHandleFacade
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.instance.GraphInstance
+import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
 data class ScriptExecutionContext(
@@ -17,6 +19,16 @@ data class ScriptExecutionContext(
     val graphInstance: GraphInstance,
     val arguments: TupleValue,
     val scriptTree: ScriptTree,
-    val scriptValidation: ScriptValidation
-//    val topLevel: Boolean
-)
+    val scriptValidation: ScriptValidation,
+    val objectStableMapper: ObjectStableMapper
+) {
+    fun stepModel(objectLocation: ObjectLocation): ActiveStepModel? {
+        return activeScriptModel.steps[objectStableMapper.objectStableId(objectLocation)]
+    }
+
+    fun getOrPutStepModel(objectLocation: ObjectLocation): ActiveStepModel {
+        return activeScriptModel.steps.getOrPut(
+            objectStableMapper.objectStableId(objectLocation)
+        ) { ActiveStepModel() }
+    }
+}

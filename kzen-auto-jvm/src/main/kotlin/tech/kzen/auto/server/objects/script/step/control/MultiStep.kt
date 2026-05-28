@@ -6,7 +6,6 @@ import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
-import tech.kzen.auto.server.objects.script.model.ActiveStepModel
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
 import tech.kzen.auto.server.service.v1.model.*
@@ -60,11 +59,12 @@ class MultiStep(
                 executeNextIfPaused = false
             }
 
-            val stepModel = scriptExecutionContext.activeScriptModel.steps.getOrPut(nextToRun) { ActiveStepModel() }
+            val stepModel = scriptExecutionContext.getOrPutStepModel(nextToRun)
             val step = scriptExecutionContext.graphInstance[nextToRun]?.reference as? ScriptStep
                 ?: throw IllegalStateException("Next step not found: $nextToRun")
 
-            val logicTracePath = LogicTracePath.ofObjectLocation(nextToRun)
+            val logicTracePath = LogicTracePath.ofObjectStableId(
+                scriptExecutionContext.objectStableMapper.objectStableId(nextToRun))
             stepModel.traceState = StepTrace.State.Running
             scriptExecutionContext.logicTraceHandle.set(
                 logicTracePath,
@@ -140,7 +140,7 @@ class MultiStep(
             return null
         }
 
-        stepContext.activeScriptModel.next = nextToRun
+        stepContext.activeScriptModel.next = stepContext.objectStableMapper.objectStableId(nextToRun)
         stepContext.logicTraceHandle.set(
             ScriptConventions.nextStepTracePath,
             ExecutionValue.of(nextToRun.asString()))
@@ -151,7 +151,7 @@ class MultiStep(
 
     private fun nextToRun(stepContext: ScriptExecutionContext): ObjectLocation? {
         for (stepLocation in steps) {
-            val model = stepContext.activeScriptModel.steps.getOrPut(stepLocation) { ActiveStepModel() }
+            val model = stepContext.getOrPutStepModel(stepLocation)
             if (model.traceState == StepTrace.State.Done) {
                 continue
             }

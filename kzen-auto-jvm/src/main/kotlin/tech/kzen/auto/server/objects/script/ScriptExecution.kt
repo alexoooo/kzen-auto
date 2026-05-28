@@ -8,16 +8,15 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.logic.LogicTraceHandle
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.model.ActiveScriptModel
-import tech.kzen.auto.server.objects.script.model.ActiveStepModel
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
 import tech.kzen.auto.server.service.v1.*
 import tech.kzen.auto.server.service.v1.model.*
 import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.location.ObjectLocationMap
+import tech.kzen.lib.common.service.store.normal.ObjectStableId
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.common.util.ExceptionUtils
 
 
@@ -27,7 +26,8 @@ class ScriptExecution(
     private val objectLocation: ObjectLocation,
     private val logicHandle: LogicHandle,
     private val logicTraceHandle: LogicTraceHandle,
-    private val runExecutionId: LogicRunExecutionId
+    private val runExecutionId: LogicRunExecutionId,
+    private val objectStableMapper: ObjectStableMapper
 ):
     LogicExecution
 {
@@ -38,12 +38,11 @@ class ScriptExecution(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val logicHandleFacade = LogicHandleFacade(runExecutionId, logicHandle)
+    private val logicHandleFacade = LogicHandleFacade(runExecutionId, logicHandle, objectStableMapper)
 
     private var activeScriptModel = ActiveScriptModel()
-    private var previousGraphInstance = GraphInstance(ObjectLocationMap.empty())
+    private var previousStatefulElements = mutableMapOf<ObjectStableId, StatefulLogicElement<*>>()
     private var arguments = TupleValue.empty
-//    private var topLevel: Boolean = false
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -52,12 +51,12 @@ class ScriptExecution(
         logicControl: LogicControl
     ) {
         activeScriptModel = ActiveScriptModel()
-        previousGraphInstance = GraphInstance(ObjectLocationMap.empty())
+        previousStatefulElements = mutableMapOf()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun beforeStart(arguments: TupleValue/*, topLevel: Boolean*/): Boolean {
+    override fun beforeStart(arguments: TupleValue): Boolean {
         logger.info("{} - arguments - {}", documentPath, arguments)
         this.arguments = arguments
 //        this.topLevel = topLevel
@@ -79,16 +78,21 @@ class ScriptExecution(
         val graphInstance = KzenAutoContext.global().graphCreator.createGraph(
             graphDefinition.filterTransitive(documentPath))
 
-        // TODO: handle rename refactoring
-        activeScriptModel.steps.keys.retainAll(graphInstance.keys)
+        val liveStableIds = graphInstance.keys
+            .map { objectStableMapper.objectStableId(it) }
+            .toSet()
+        activeScriptModel.steps.keys.retainAll(liveStableIds)
 
-        for (objectLocation in graphInstance.keys) {
-            val previousInstance = previousGraphInstance[objectLocation]
-                ?.reference as? StatefulLogicElement<*>
+        val nextPreviousStatefulElements = mutableMapOf<ObjectStableId, StatefulLogicElement<*>>()
+        for (currentLocation in graphInstance.keys) {
+            val stableId = objectStableMapper.objectStableId(currentLocation)
+            val currentInstance = graphInstance[currentLocation]!!
+                .reference as? StatefulLogicElement<*>
                 ?: continue
 
-            val currentInstance = graphInstance[objectLocation]!!
-                .reference as? StatefulLogicElement<*>
+            nextPreviousStatefulElements[stableId] = currentInstance
+
+            val previousInstance = previousStatefulElements[stableId]
                 ?: continue
 
             if (previousInstance.javaClass != currentInstance.javaClass) {
@@ -97,7 +101,7 @@ class ScriptExecution(
 
             loadStateUnchecked(currentInstance, previousInstance)
         }
-        previousGraphInstance = graphInstance
+        previousStatefulElements = nextPreviousStatefulElements
 
         val graphNotation = graphDefinition.graphStructure.graphNotation
         val validation = ScriptValidator.validate(documentPath, graphNotation, graphDefinition, graphInstance)
@@ -111,11 +115,12 @@ class ScriptExecution(
             graphInstance,
             arguments,
             scriptTree,
-            validation
+            validation,
+            objectStableMapper
             /*topLevel*/)
 
         val step = graphInstance[objectLocation]!!.reference as ScriptStep
-        val stepModel = activeScriptModel.steps.getOrPut(objectLocation) { ActiveStepModel() }
+        val stepModel = stepContext.getOrPutStepModel(objectLocation)
 
         stepModel.traceState = StepTrace.State.Active
 

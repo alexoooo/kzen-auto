@@ -20,6 +20,7 @@ import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentName
 import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
 @Reflect
@@ -53,11 +54,12 @@ class ScriptDocument(
         logicHandle: LogicHandle,
         logicTraceHandle: LogicTraceHandle,
         logicRunExecutionId: LogicRunExecutionId,
-        logicControl: LogicControl
+        logicControl: LogicControl,
+        objectStableMapper: ObjectStableMapper
     ): LogicExecution {
         val scriptExecution = ScriptExecution(
             selfLocation.documentPath, selfLocation,
-            logicHandle, logicTraceHandle, logicRunExecutionId)
+            logicHandle, logicTraceHandle, logicRunExecutionId, objectStableMapper)
         scriptExecution.init(logicControl)
         return scriptExecution
     }

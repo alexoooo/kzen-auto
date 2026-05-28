@@ -29,7 +29,7 @@ class DivisibleCheckStep(
 
 
     override fun continueOrStart(scriptExecutionContext: ScriptExecutionContext): LogicResult {
-        val step = scriptExecutionContext.activeScriptModel.steps[number]
+        val step = scriptExecutionContext.stepModel(number)
 
         val value = step?.value?.mainComponentValue()
         check(value is Number) {

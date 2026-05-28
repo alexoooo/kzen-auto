@@ -18,6 +18,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -33,7 +34,9 @@ object LogicTraceStore:
     )
 
 
-    private class TraceBuffer {
+    private class TraceBuffer(
+        var objectStableMapper: ObjectStableMapper
+    ) {
         val values = ConcurrentHashMap<LogicTracePath, ExecutionValue>()
         val callbacks = CopyOnWriteArrayList<(LogicTraceQuery) -> Unit>()
     }
@@ -47,9 +50,10 @@ object LogicTraceStore:
     //-----------------------------------------------------------------------------------------------------------------
     fun handle(
         runExecutionId: LogicRunExecutionId,
-        objectLocation: ObjectLocation
+        objectLocation: ObjectLocation,
+        objectStableMapper: ObjectStableMapper
     ): LogicTraceHandle {
-        val buffer = getOrCreateBuffer(runExecutionId, objectLocation)
+        val buffer = getOrCreateBuffer(runExecutionId, objectLocation, objectStableMapper)
 
         return object: LogicTraceHandle {
             override fun register(callback: (LogicTraceQuery) -> Unit): AutoCloseable {
@@ -64,7 +68,9 @@ object LogicTraceStore:
             }
 
             override fun clearAll(prefix: LogicTracePath) {
-                val pathsToClear = buffer.values.keys.filter { it.startsWith(prefix) }
+                val pathsToClear = buffer.values.keys.filter { storedPath ->
+                    matchesPrefix(storedPath, prefix, buffer.objectStableMapper)
+                }
                 for (pathToClear in pathsToClear) {
                     buffer.values.remove(pathToClear)
                 }
@@ -75,7 +81,8 @@ object LogicTraceStore:
 
     private fun getOrCreateBuffer(
         runExecutionId: LogicRunExecutionId,
-        objectLocation: ObjectLocation
+        objectLocation: ObjectLocation,
+        objectStableMapper: ObjectStableMapper
     ): TraceBuffer {
         val previous = objectLocationHistory[objectLocation]
         if (previous != null && previous.logicRunId != runExecutionId.logicRunId) {
@@ -84,7 +91,36 @@ object LogicTraceStore:
         objectLocationHistory[objectLocation] = runExecutionId
 
         val runExecution = RunExecution(runExecutionId)
-        return history.getOrPut(runExecution) { TraceBuffer() }
+        return history.getOrPut(runExecution) { TraceBuffer(objectStableMapper) }
+            .also { it.objectStableMapper = objectStableMapper }
+    }
+
+
+    private fun matchesPrefix(
+        storedPath: LogicTracePath,
+        prefix: LogicTracePath,
+        objectStableMapper: ObjectStableMapper
+    ): Boolean {
+        return resolveStoredPath(storedPath, objectStableMapper)
+            ?.startsWith(prefix)
+            ?: false
+    }
+
+
+    private fun resolveStoredPath(
+        storedPath: LogicTracePath,
+        objectStableMapper: ObjectStableMapper
+    ): LogicTracePath? {
+        val stableId = storedPath.objectStableId()
+            ?: return storedPath
+        val currentLocation =
+            try {
+                objectStableMapper.objectLocation(stableId)
+            }
+            catch (_: IllegalArgumentException) {
+                return null
+            }
+        return LogicTracePath.ofObjectLocation(currentLocation)
     }
 
 
@@ -174,11 +210,16 @@ object LogicTraceStore:
 
         buffer.callbacks.forEach { it(logicTraceQuery) }
 
-        val matchingValues = buffer
-            .values
-            .filter { logicTraceQuery.match(it.key) }
+        val resolvedValues = mutableMapOf<LogicTracePath, ExecutionValue>()
+        for ((storedPath, value) in buffer.values) {
+            val resolvedPath = resolveStoredPath(storedPath, buffer.objectStableMapper)
+                ?: continue
+            if (logicTraceQuery.match(resolvedPath)) {
+                resolvedValues[resolvedPath] = value
+            }
+        }
 
-        return LogicTraceSnapshot(matchingValues)
+        return LogicTraceSnapshot(resolvedValues)
     }
 
 

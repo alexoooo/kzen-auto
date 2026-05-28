@@ -59,7 +59,7 @@ class IfStep(
 
     override fun continueOrStart(scriptExecutionContext: ScriptExecutionContext): LogicResult {
         if (state == State.Initial) {
-            val conditionStep = scriptExecutionContext.activeScriptModel.steps[condition]
+            val conditionStep = scriptExecutionContext.stepModel(condition)
 
             val conditionValue = conditionStep?.value?.mainComponentValue()
             check(conditionValue is Boolean) {

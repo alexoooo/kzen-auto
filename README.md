@@ -1,8 +1,7 @@
 
 # kzen-auto
 
-https://en.wikipedia.org/wiki/Robotic_process_automation
-
+https://en.wikipedia.org/wiki/Robotic_process_automation  
 
 To auto-reload backend:
 1) Run `tech.kzen.auto.server.dev.BackendDevelopment` from IDE
@@ -15,4 +14,3 @@ To auto-reload frontend:
 To build self-contained jar and executable it from CLI:
 1) Run `./gradlew jar`
 2) Run `java -jar kzen-auto-jvm/build/libs/kzen-auto-jvm-*.jar`
-

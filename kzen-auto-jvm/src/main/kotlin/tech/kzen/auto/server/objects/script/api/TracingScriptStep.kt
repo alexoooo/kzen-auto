@@ -12,10 +12,6 @@ abstract class TracingScriptStep(
     ScriptStep
 {
     //-----------------------------------------------------------------------------------------------------------------
-    private val logicTracePath = LogicTracePath.ofObjectLocation(selfLocation)
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     fun traceDetail(stepContext: ScriptExecutionContext, detail: Any?) {
         val detailValue =
             ExecutionValue.ofArbitrary(detail)
@@ -26,10 +22,10 @@ abstract class TracingScriptStep(
 
 
     fun traceDetail(stepContext: ScriptExecutionContext, detail: ExecutionValue) {
-        val activeModel = stepContext.activeScriptModel.steps[selfLocation]!!
+        val activeModel = stepContext.stepModel(selfLocation)!!
         activeModel.detail = detail
         stepContext.logicTraceHandle.set(
-            logicTracePath,
+            stableIdTracePath(stepContext),
             activeModel.trace().asExecutionValue())
     }
 
@@ -41,10 +37,16 @@ abstract class TracingScriptStep(
 
 
     fun traceValue(stepContext: ScriptExecutionContext, displayValue: ExecutionValue) {
-        val activeModel = stepContext.activeScriptModel.steps[selfLocation]!!
+        val activeModel = stepContext.stepModel(selfLocation)!!
         activeModel.displayValue = displayValue
         stepContext.logicTraceHandle.set(
-            logicTracePath,
+            stableIdTracePath(stepContext),
             activeModel.trace().asExecutionValue())
+    }
+
+
+    private fun stableIdTracePath(stepContext: ScriptExecutionContext): LogicTracePath {
+        return LogicTracePath.ofObjectStableId(
+            stepContext.objectStableMapper.objectStableId(selfLocation))
     }
 }
