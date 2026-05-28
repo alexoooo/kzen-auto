@@ -337,6 +337,10 @@ class ScriptBranchDisplay(
                 css {
                     width = ScriptController.stepWidth
                     flexShrink = number(0.0)
+                    // NB: dedicated strip for the absolute-positioned drag handle (left: -1.25em
+                    // off body's left edge). Without this margin, the handle overlaps the
+                    // rightmost dependency-gutter lane.
+                    marginLeft = 1.25.em
                 }
                 body()
             }

@@ -46,7 +46,7 @@ fun ChildrenBuilder.dragHandle(
     handleColor: Color,
     onStart: () -> Unit,
     onEnd: () -> Unit,
-    floatOverGutter: Boolean = false
+    frosted: Boolean = false
 ) {
     div {
         css {
@@ -61,11 +61,10 @@ fun ChildrenBuilder.dragHandle(
             cursor = Cursor.grab
             color = handleColor
             opacity = if (isVisible) number(1.0) else number(0.0)
-            if (floatOverGutter) {
-                backgroundColor = Color("rgba(255, 255, 255, 0.65)")
-                backdropFilter = blur(4.px)
+            if (frosted) {
+                backgroundColor = Color("rgba(255, 255, 255, 0.30)")
+                backdropFilter = blur(2.px)
                 borderRadius = 4.px
-                zIndex = integer(1)
             }
         }
 

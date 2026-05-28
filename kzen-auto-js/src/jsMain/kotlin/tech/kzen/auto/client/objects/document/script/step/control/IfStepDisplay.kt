@@ -154,24 +154,27 @@ class IfStepDisplay(
             }
         }
 
-        // Full-width 1px gray seam separating the F's top arm (header+condition) from its body.
+        // Full-width 2px gray seam separating the F's top arm (header+condition) from its body.
         // Crosses the trunk on purpose — the user wants the "divider above Then" to go over the
-        // left margin too.
+        // left margin too. Kept at 2px to render consistently against the seam above the middle
+        // arm; 1px renders inconsistently across the two seams due to sub-pixel y-positioning
+        // from em-based heights summing to fractional pixels above each seam.
         div {
             css {
-                height = 1.px
+                height = 2.px
                 backgroundColor = Color("rgba(0, 0, 0, 0.12)")
             }
         }
 
         renderThenBranch()
 
-        // 1px gray seam above the white middle arm, mirroring the seam above Then's branch.
-        // Pattern: the seam sits at the TOP of the next white slab (here the arm; for Then it was
-        // the header+condition slab) so the slab + seam form a single "section header" unit.
+        // 2px gray seam above the white middle arm; visually the divider above Else (the arm is a
+        // 28px white slab between Then's bottom and Else's top). Bumped from 1px to match the
+        // perceived thickness of the seam above Then, which against the header's tinted bg appears
+        // visually heavier than its raw 1px.
         div {
             css {
-                height = 1.px
+                height = 2.px
                 backgroundColor = Color("rgba(0, 0, 0, 0.12)")
             }
         }
