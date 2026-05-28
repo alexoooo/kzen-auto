@@ -51,12 +51,25 @@ class ScriptStepSlot(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        // NB: global registry of mounted slot root elements. mouseOver walks up from event.target
-        //     and asks "is any ancestor below me a registered slot root?". A JS-level Set keyed on
-        //     element references avoids relying on a marker className (which had emotion-css
-        //     interactions that silently broke `closest()` lookups) or data attribute spelling.
-        //     Lifetime is tied to componentDidMount/componentWillUnmount.
-        private val slotRoots = mutableSetOf<HTMLDivElement>()
+        // NB: global registry of "drag-hover yield zones" — DOM elements whose presence between the
+        //     event target and an enclosing slot's root means the enclosing slot's drag handle
+        //     should NOT light up. Two kinds register here:
+        //       - Nested ScriptStepSlot roots (so an inner step's handle takes priority over the
+        //         outer's; e.g. Text inside an If's Then branch).
+        //       - ScriptBranchDisplay roots (so the gap/padding inside a branch belongs to no step;
+        //         e.g. the gray area between two steps inside If's Then doesn't activate If's
+        //         handle).
+        //     A JS-level Set keyed on element references avoids the className/data-attribute
+        //     spelling and emotion-css conflicts that an earlier `.closest()` approach hit.
+        private val yieldZoneRoots = mutableSetOf<HTMLDivElement>()
+
+        internal fun registerYieldZone(element: HTMLDivElement) {
+            yieldZoneRoots.add(element)
+        }
+
+        internal fun unregisterYieldZone(element: HTMLDivElement) {
+            yieldZoneRoots.remove(element)
+        }
     }
 
 
@@ -75,12 +88,12 @@ class ScriptStepSlot(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        rootRef.current?.let { slotRoots.add(it) }
+        rootRef.current?.let { registerYieldZone(it) }
     }
 
 
     override fun componentWillUnmount() {
-        rootRef.current?.let { slotRoots.remove(it) }
+        rootRef.current?.let { unregisterYieldZone(it) }
     }
 
 
@@ -106,14 +119,14 @@ class ScriptStepSlot(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun hasNestedSlotInPath(event: react.dom.events.MouseEvent<HTMLDivElement, *>): Boolean {
+    private fun hasYieldZoneInPath(event: react.dom.events.MouseEvent<HTMLDivElement, *>): Boolean {
         val current = rootRef.current
             ?: return false
         var node: dynamic = event.target
         while (node != null && node !== current) {
             @Suppress("UNCHECKED_CAST")
             val asDiv = node.unsafeCast<HTMLDivElement>()
-            if (slotRoots.contains(asDiv)) {
+            if (yieldZoneRoots.contains(asDiv)) {
                 return true
             }
             node = node.parentElement
@@ -146,7 +159,7 @@ class ScriptStepSlot(
                 }
             }
             onMouseOver = { event ->
-                val effectivelyHovered = !hasNestedSlotInPath(event)
+                val effectivelyHovered = !hasYieldZoneInPath(event)
                 if (state.isHovered != effectivelyHovered) {
                     setState { isHovered = effectivelyHovered }
                 }

@@ -14,6 +14,8 @@ import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot
+import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot.Companion.registerYieldZone
+import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot.Companion.unregisterYieldZone
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.StepScreenshotPreview
 import tech.kzen.auto.client.service.ClientContext
@@ -80,6 +82,18 @@ class ScriptBranchDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val dragHandleColor = Color("rgba(0, 0, 0, 0.45)")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // NB: stable identity across renders so the ref callback doesn't re-fire register/unregister
+    //     on every render. Registers the rendered root with ScriptStepSlot's yield-zone registry —
+    //     so an enclosing slot (e.g. an If wrapping this branch) yields when the cursor sits in
+    //     this branch's gap/padding area, not just when it's directly over a nested step slot.
+    private val rootRefCallback = refCallback<HTMLDivElement> { element ->
+        registerYieldZone(element)
+        val cleanup: () -> Unit = { unregisterYieldZone(element) }
+        cleanup
     }
 
 
@@ -253,30 +267,32 @@ class ScriptBranchDisplay(
         val stepLocations = state.stepLocations
             ?: return
 
-        if (stepLocations.isEmpty()) {
-            div {
-                css {
-                    paddingTop = 2.em
-                }
+        div {
+            ref = rootRefCallback
 
+            if (stepLocations.isEmpty()) {
                 div {
                     css {
-                        fontSize = 1.5.em
+                        paddingTop = 2.em
                     }
 
-                    if (props.nested) {
-                        +"Add steps from the toolbar (above)"
+                    div {
+                        css {
+                            fontSize = 1.5.em
+                        }
+
+                        if (props.nested) {
+                            +"Add steps from the toolbar (above)"
+                        }
+                        else {
+                            +"Empty script, please add steps from the toolbar (above)"
+                        }
                     }
-                    else {
-                        +"Empty script, please add steps from the toolbar (above)"
-                    }
+
+                    firstOrLastInsertionPoint(0)
                 }
-
-                firstOrLastInsertionPoint(0)
             }
-        }
-        else {
-            div {
+            else {
                 nonEmptySteps(stepLocations)
             }
         }
