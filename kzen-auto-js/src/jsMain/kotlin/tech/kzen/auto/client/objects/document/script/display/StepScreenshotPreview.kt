@@ -90,14 +90,45 @@ class StepScreenshotPreview(
             css {
                 marginLeft = 1.em
                 flexShrink = number(0.0)
-                padding = Padding(0.5.em, 0.5.em, 0.5.em, 0.5.em)
+                padding = Padding(0.25.em, 0.25.em, 0.25.em, 0.25.em)
+
+                // NB: drive the hover-zoom from the wrapper (whose layout box never moves)
+                //     rather than from the <img> (which translates 11em off on hover and would
+                //     lose contact with the cursor, causing infinite expand/shrink ping-pong).
+                //     CSS :hover propagates up the DOM, so cursor over the wrapper OR over the
+                //     transformed <img> descendant keeps wrapper:hover true. translateX shifts
+                //     the expanded image past the thumbnail column (max 10em wide) so neighbours
+                //     stay clickable; scale(5) keeps the popped-out preview large enough to read.
+                "&:hover > img" {
+                    transform = "translateX(11em) scale(5)".unsafeCast<Transform>()
+                    zIndex = integer(50)
+                }
             }
 
             img {
                 css {
                     display = Display.block
-                    maxWidth = 24.em
-                    maxHeight = 10.em
+                    // NB: resting size sized to a Step row with trace (~5em tall after icon +
+                    //     paddings + small trace value); 10em wide cap accommodates typical 16:9
+                    //     browser screenshots (8.9em at 5em tall) plus headroom.
+                    maxWidth = 10.em
+                    maxHeight = 5.em
+
+                    // NB: visible boundary so the screenshot doesn't blend into surrounding white.
+                    //     Border is included at both rest and hover (same value, no transition).
+                    border = Border(1.px, LineStyle.solid, Color("rgba(0, 0, 0, 0.2)"))
+
+                    // NB: position: relative is required for z-index to apply on hover (the
+                    //     transform on hover creates a stacking context, but relative makes the
+                    //     intent explicit and consistent at rest too).
+                    position = Position.relative
+
+                    // NB: top-left anchor — scale grows down and right only, never upward, so the
+                    //     row above the hovered thumbnail is never visually covered.
+                    transformOrigin = TransformOrigin(GeometryPosition.left, GeometryPosition.top)
+
+                    // NB: animate only the `transform` property (not `z-index` — discrete lift).
+                    transition = "transform 100ms ease-out".unsafeCast<Transition>()
                 }
                 src = screenshotPngUrl
             }
