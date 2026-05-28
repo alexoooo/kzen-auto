@@ -31,7 +31,8 @@ import kotlin.time.Clock
 
 class ServerLogicController(
     private val graphStore: LocalGraphStore,
-    private val graphCreator: GraphCreator
+    private val graphCreator: GraphCreator,
+    private val objectStableMapper: ObjectStableMapper
 ):
     LogicController
 {
@@ -44,8 +45,7 @@ class ServerLogicController(
     //-----------------------------------------------------------------------------------------------------------------
     private data class LogicState(
         val runId: LogicRunId,
-        val frame: LogicFrame,
-        val objectStableMapper: ObjectStableMapper
+        val frame: LogicFrame
     ) {
         var cancelRequested: Boolean = false
         var pauseRequested: Boolean = false
@@ -92,7 +92,7 @@ class ServerLogicController(
                     LogicRunState.Running
                 }
 
-            val frame = it.frame.toInfo(it.objectStableMapper)
+            val frame = it.frame.toInfo(objectStableMapper)
 
             LogicRunInfo(
                 it.runId,
@@ -119,8 +119,6 @@ class ServerLogicController(
         val runId = LogicRunId(LogicExecutionFacadeImpl.arbitraryId())
         val executionId = LogicExecutionId(runId.value)
         val runExecutionId = LogicRunExecutionId(runId, executionId)
-
-        val objectStableMapper = ObjectStableMapper()
 
         val graphDefinition = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
 
@@ -182,46 +180,29 @@ class ServerLogicController(
             }
         }
 
-        runBlocking {
-                graphStore.observe(objectStableMapper)
-        }
-        var observerCommitted = false
-        try {
-            for (objectLocation in transitiveDefinition.objectDefinitions.map.keys) {
-                objectStableMapper.objectStableId(objectLocation)
+        val logicTraceHandle = LogicTraceStore.handle(runExecutionId, root, objectStableMapper)
+
+        val logic = rootInstance as Logic
+        val execution =
+            try {
+                logic.execute(logicHandle, logicTraceHandle, runExecutionId, commonMutableLogicControl, objectStableMapper)
+            }
+            catch (e: Exception) {
+                logger.warn("Execution error: {}", root, e)
+                return null
             }
 
-            val logicTraceHandle = LogicTraceStore.handle(runExecutionId, root, objectStableMapper)
-
-            val logic = rootInstance as Logic
-            val execution =
-                try {
-                    logic.execute(logicHandle, logicTraceHandle, runExecutionId, commonMutableLogicControl, objectStableMapper)
-                }
-                catch (e: Exception) {
-                    logger.warn("Execution error: {}", root, e)
-                    return null
-                }
-
-            stateOrNull = LogicState(
-                runId,
-                LogicFrame(
-                    objectStableMapper.objectStableId(root),
-                    executionId,
-                    execution,
-                    CopyOnWriteArrayList(),
-                    commonMutableLogicControl
-                ),
-                objectStableMapper
+        stateOrNull = LogicState(
+            runId,
+            LogicFrame(
+                objectStableMapper.objectStableId(root),
+                executionId,
+                execution,
+                CopyOnWriteArrayList(),
+                commonMutableLogicControl
             )
-            observerCommitted = true
-            return runId
-        }
-        finally {
-            if (!observerCommitted) {
-                graphStore.unobserve(objectStableMapper)
-            }
-        }
+        )
+        return runId
     }
 
 
@@ -425,12 +406,7 @@ class ServerLogicController(
             ?: return
 
         stateOrNull = null
-        try {
-            state.frame.control.close()
-        }
-        finally {
-            graphStore.unobserve(state.objectStableMapper)
-        }
+        state.frame.control.close()
     }
 
 
@@ -456,8 +432,8 @@ class ServerLogicController(
         }
 
         // Safety net: if the executor task didn't get to clearState() (e.g.
-        // shutdownNow interrupted it mid-execution), force the cleanup so the
-        // graph store observer doesn't outlive the controller.
+        // shutdownNow interrupted it mid-execution), force the frame control close
+        // so no LogicControl publisher hangs past controller shutdown.
         synchronized(this) {
             if (stateOrNull != null) {
                 clearState()

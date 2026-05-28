@@ -39,6 +39,7 @@ import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.notation.NotationReducer
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.common.service.store.DirectGraphStore
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.server.notation.ClasspathNotationMedia
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.GradleLocator
@@ -111,18 +112,16 @@ class KzenAutoContext(
         graphDefiner,
         notationReducer)
 
-//    val actionExecutor = ModelActionExecutor(
-//            graphStore, graphCreator)
-
     val detachedExecutor = ModelDetachedExecutor(
         graphStore, graphCreator)
 
-//    val executionRepository = ExecutionRepository(
-//            EmptyExecutionInitializer,
-//            actionExecutor)
-
     val modelTaskRepository = ModelTaskRepository(
         graphStore, graphCreator)
+
+    // Process-global stable-id ↔ location mapping. Observes graphStore from boot so
+    // identity survives renames across the entire server lifetime — including the gap
+    // between a run terminating and the user editing the notation afterward.
+    val objectStableMapper = ObjectStableMapper()
 
     private val graphInstanceCreator = GraphInstanceCreator(
         graphStore, graphCreator)
@@ -143,7 +142,6 @@ class KzenAutoContext(
     val workUtils = WorkUtils.sibling
     val reportWorkPool = ReportWorkPool(workUtils)
 
-//    val kotlinCompiler = EmbeddedKotlinCompiler()
     val kotlinCompiler = ScriptKotlinCompiler()
     val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workUtils)
     val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler)
@@ -166,13 +164,12 @@ class KzenAutoContext(
 
 
     val serverLogicController = ServerLogicController(
-        graphStore, graphCreator)
+        graphStore, graphCreator, objectStableMapper)
 
     val restHandler = RestHandler(
         notationMedia,
         yamlParser,
         graphStore,
-//        executionRepository,
         detachedExecutor,
         visualDataflowRepository,
         modelTaskRepository,
@@ -189,10 +186,17 @@ class KzenAutoContext(
     //-----------------------------------------------------------------------------------------------------------------
     fun init() {
         runBlocking {
-//            graphStore.observe(executionRepository)
             graphStore.observe(activeDataflowRepository)
             graphStore.observe(visualDataflowRepository)
             graphStore.observe(modelTaskRepository)
+            graphStore.observe(objectStableMapper)
+
+            // Pre-warm so stable ids reflect names-at-boot deterministically, independent
+            // of first-access order during run execution. Notation-level enumeration so
+            // a partially-broken graph (definition errors) still pre-warms.
+            for (location in graphStore.graphNotation().objectLocations) {
+                objectStableMapper.objectStableId(location)
+            }
         }
     }
 
