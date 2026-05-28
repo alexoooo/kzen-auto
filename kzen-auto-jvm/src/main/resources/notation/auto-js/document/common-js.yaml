@@ -28,6 +28,30 @@ SelectObjectEditor:
 ################################################################
 
 
+AttributeViewManager:
+  class: tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager$Wrapper
+  meta:
+    attributeViews:
+      is: List
+      of: AttributeView
+      by: Autowired
+
+AttributeView:
+  abstract: true
+  class: tech.kzen.auto.client.objects.document.common.attribute.AttributeView
+  meta:
+    objectLocation:
+      is: ObjectLocation
+      by: Self
+
+TextAttributeView:
+  is: AttributeView
+  class: tech.kzen.auto.client.objects.document.common.attribute.TextAttributeView$Wrapper
+
+
+################################################################
+
+
 AttributeEditorManagerOld:
   class: tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld$Wrapper
   meta:

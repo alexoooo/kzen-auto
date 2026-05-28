@@ -51,6 +51,7 @@ ScriptStepDisplayDefault:
   is: ScriptStepDisplay
   class: tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayDefault$Wrapper
   attributeEditorManager: AttributeEditorManager
+  attributeViewManager: AttributeViewManager
 
 
 MultiStepDisplay:
@@ -123,6 +124,11 @@ RunStepArgumentsEditor:
 TargetSpecEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.script.display.edit.TargetSpecEditor$Wrapper
+
+
+TargetAttributeView:
+  is: AttributeView
+  class: tech.kzen.auto.client.objects.document.script.display.view.TargetAttributeView$Wrapper
 
 
 #######################################################################################################################

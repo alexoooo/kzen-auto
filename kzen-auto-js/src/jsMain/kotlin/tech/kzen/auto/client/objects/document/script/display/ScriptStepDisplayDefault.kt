@@ -6,6 +6,7 @@ import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.graph.EdgeController
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
@@ -20,14 +21,12 @@ import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.objects.document.script.model.StepValidation
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.IoUtils
@@ -37,6 +36,7 @@ import web.cssom.*
 //---------------------------------------------------------------------------------------------------------------------
 external interface ScriptStepDisplayDefaultProps: ScriptStepDisplayProps {
     var attributeEditorManager: AttributeEditorManager.Wrapper
+    var attributeViewManager: AttributeViewManager.Wrapper
 }
 
 
@@ -49,7 +49,7 @@ external interface ScriptStepDisplayDefaultState: State {
     var icon: String?
     var description: String?
     var title: String?
-    var summary: String?
+    var summaryAttributeNames: List<AttributeName>?
 
     var expanded: Boolean
 }
@@ -119,13 +119,15 @@ class ScriptStepDisplayDefault(
     @Reflect
     class Wrapper(
         objectLocation: ObjectLocation,
-        private val attributeEditorManager: AttributeEditorManager.Wrapper
+        private val attributeEditorManager: AttributeEditorManager.Wrapper,
+        private val attributeViewManager: AttributeViewManager.Wrapper
     ):
         ScriptStepDisplayWrapper(objectLocation)
     {
         override fun ChildrenBuilder.child(block: ScriptStepDisplayProps.() -> Unit) {
             ScriptStepDisplayDefault::class.react {
                 this.attributeEditorManager = this@Wrapper.attributeEditorManager
+                this.attributeViewManager = this@Wrapper.attributeViewManager
                 block()
             }
         }
@@ -177,7 +179,7 @@ class ScriptStepDisplayDefault(
             .graphMetadata
             .objectMetadata[props.common.objectLocation]!!
 
-        val summary = readSummary(graphStructure, props.common.objectLocation)
+        val summaryAttributeNames = findSummaryAttributes(objectMetadata)
 
         setState {
             this.objectMetadata = objectMetadata
@@ -185,23 +187,25 @@ class ScriptStepDisplayDefault(
             this.icon = headerInfo.icon
             this.description = headerInfo.description
             this.title = headerInfo.title
-            this.summary = summary
+            this.summaryAttributeNames = summaryAttributeNames
         }
     }
 
 
-    private fun readSummary(
-        graphStructure: GraphStructure,
-        objectLocation: ObjectLocation
-    ): String? {
-        val summaryAttributeName = graphStructure.graphNotation
-            .firstAttribute(objectLocation, ScriptConventions.summaryAttributePath)
-            ?.asString()
-            ?: return null
+    private fun findSummaryAttributes(objectMetadata: ObjectMetadata): List<AttributeName> {
+        val result = mutableListOf<AttributeName>()
+        for ((attributeName, attributeMetadata) in objectMetadata.attributes.map) {
+            val summaryView = attributeMetadata
+                .attributeMetadataNotation
+                .get(AttributeViewManager.summaryAttributePath.toNesting())
+                ?.asString()
+                ?: continue
 
-        return graphStructure.graphNotation
-            .firstAttribute(objectLocation, AttributePath.ofName(AttributeName(summaryAttributeName)))
-            ?.asString()
+            if (summaryView.isNotEmpty()) {
+                result.add(attributeName)
+            }
+        }
+        return result
     }
 
 
@@ -254,7 +258,8 @@ class ScriptStepDisplayDefault(
                 description = state.description ?: ""
                 title = state.title ?: ""
 
-                summary = state.summary
+                summaryAttributeNames = state.summaryAttributeNames
+                attributeViewManager = props.attributeViewManager
                 typeMetadata = state.stepValidation?.typeMetadata?.toSimple()
                 expanded = state.expanded
                 onToggleExpanded = ::onToggleExpanded
@@ -294,7 +299,7 @@ class ScriptStepDisplayDefault(
         trace: StepTrace?
     ) {
         for (e in objectMetadata.attributes.map) {
-            if (ScriptConventions.isManaged(e.key)) {
+            if (AutoConventions.isManaged(e.key)) {
                 continue
             }
 

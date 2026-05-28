@@ -13,10 +13,11 @@ ArgumentStep:
   class: tech.kzen.auto.server.objects.script.step.value.ArgumentStep
   icon: ArrowForward
   title: "Argument"
-  summary: parameter
   parameter: "main"
   meta:
-    parameter: String
+    parameter:
+      is: String
+      summary: TextAttributeView
     selfLocation: SelfLocation
 
 
@@ -26,10 +27,11 @@ BooleanLiteralStep:
   class: tech.kzen.auto.server.objects.script.step.value.BooleanLiteralStep
   icon: ToggleOn
   title: "True or false"
-  summary: value
   value: false
   meta:
-    value: Boolean
+    value:
+      is: Boolean
+      summary: TextAttributeView
     selfLocation: SelfLocation
 
 
@@ -39,10 +41,11 @@ TextLiteralStep:
   class: tech.kzen.auto.server.objects.script.step.value.TextLiteralStep
   icon: Textsms
   title: "Text"
-  summary: value
   value: ""
   meta:
-    value: String
+    value:
+      is: String
+      summary: TextAttributeView
     selfLocation: SelfLocation
 
 
@@ -52,12 +55,12 @@ FormulaStep:
   class: tech.kzen.auto.server.objects.script.step.eval.FormulaStep
   icon: Functions
   title: "Formula"
-  summary: code
   code: ""
   meta:
     code:
       is: String
       multiline: true
+      summary: TextAttributeView
     selfLocation: SelfLocation
 
 
@@ -67,10 +70,11 @@ NumberLiteralStep:
   class: tech.kzen.auto.server.objects.script.step.value.NumberLiteralStep
   icon: LooksOne
   title: "Number"
-  summary: value
   value: 0
   meta:
-    value: Double
+    value:
+      is: Double
+      summary: TextAttributeView
     selfLocation: SelfLocation
 
 
@@ -187,10 +191,11 @@ WaitStep:
   class: tech.kzen.auto.server.objects.script.step.control.WaitStep
   icon: Timer
   title: "Wait"
-  summary: milliseconds
   milliseconds: 1000
   meta:
-    milliseconds: Long
+    milliseconds:
+      is: Long
+      summary: TextAttributeView
     selfLocation: SelfLocation
 
 
@@ -282,11 +287,12 @@ BrowserGetStep:
   icon: Http
   title: "Browse to URL"
   description: "Navigate to a new URL"
-  summary: location
   location: "https://www.google.com/"
   screenshotDelayMilliseconds: 0
   meta:
-    location: String
+    location:
+      is: String
+      summary: TextAttributeView
     screenshotDelayMilliseconds: Long
     selfLocation: SelfLocation
 
@@ -300,7 +306,9 @@ BrowserClickStep:
   target:
     type: Focus
   meta:
-    target: TargetSpec
+    target:
+      is: TargetSpec
+      summary: TargetAttributeView
     selfLocation: SelfLocation
 
 
@@ -311,13 +319,16 @@ BrowserWriteStep:
   icon: Keyboard
   title: "Write"
   description: "Send text into input field"
-  summary: text
   text: ""
   target:
     type: Focus
   meta:
-    text: String
-    target: TargetSpec
+    text:
+      is: String
+      summary: TextAttributeView
+    target:
+      is: TargetSpec
+      summary: TargetAttributeView
     selfLocation: SelfLocation
 
 
@@ -330,7 +341,9 @@ BrowserSubmitStep:
   target:
     type: Focus
   meta:
-    target: TargetSpec
+    target:
+      is: TargetSpec
+      summary: TargetAttributeView
     selfLocation: SelfLocation
 
 

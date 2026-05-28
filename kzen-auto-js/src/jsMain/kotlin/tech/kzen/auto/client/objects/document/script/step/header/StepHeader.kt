@@ -11,12 +11,14 @@ import react.ChildrenBuilder
 import react.Props
 import react.ReactNode
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -36,7 +38,8 @@ external interface StepHeaderProps: Props {
     var description: String
     var title: String
 
-    var summary: String?
+    var summaryAttributeNames: List<AttributeName>?
+    var attributeViewManager: AttributeViewManager.Wrapper?
     var typeMetadata: String?
     var expanded: Boolean?
     var onToggleExpanded: (() -> Unit)?
@@ -104,7 +107,7 @@ class StepHeader(
             }
 
             renderRunIcon()
-            renderNameArea()
+            renderNameAndSummary()
             renderRightCluster()
         }
     }
@@ -136,7 +139,7 @@ class StepHeader(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun ChildrenBuilder.renderNameArea() {
+    private fun ChildrenBuilder.renderNameAndSummary() {
         div {
             css {
                 flexGrow = number(1.0)
@@ -151,19 +154,28 @@ class StepHeader(
                 description = props.description
             }
 
-            val summary = props.summary
-            if (!summary.isNullOrEmpty() && props.expanded != true) {
-                div {
-                    css {
-                        color = Color("rgba(0, 0, 0, 0.55)")
-                        fontSize = 0.85.em
-                        whiteSpace = WhiteSpace.nowrap
-                        overflow = Overflow.hidden
-                        textOverflow = TextOverflow.ellipsis
-                        minWidth = 0.px
-                    }
+            renderSummary()
+        }
+    }
 
-                    +summary
+
+    private fun ChildrenBuilder.renderSummary() {
+        if (props.expanded == true) {
+            return
+        }
+
+        val summaryAttributeNames = props.summaryAttributeNames
+            ?: return
+        val attributeViewManager = props.attributeViewManager
+            ?: return
+
+        for (summaryAttributeName in summaryAttributeNames) {
+            div {
+                key = react.Key(summaryAttributeName.value)
+
+                attributeViewManager.child(this) {
+                    objectLocation = props.objectLocation
+                    attributeName = summaryAttributeName
                 }
             }
         }

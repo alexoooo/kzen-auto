@@ -6,13 +6,14 @@ StartKzenAutoStep:
   icon: PlayCircle
   title: "Start SUT"
   description: "Spawn a vanilla kzen-auto JVM as a system-under-test"
-  summary: fixture
   name: "main"
   fixture: ""
   port: 18082
   meta:
     name: String
-    fixture: String
+    fixture:
+      is: String
+      summary: TextAttributeView
     port: Int
     selfLocation: SelfLocation
 
@@ -24,8 +25,9 @@ StopKzenAutoStep:
   icon: StopCircle
   title: "Stop SUT"
   description: "Kill a previously-started kzen-auto SUT subprocess"
-  summary: name
   name: "main"
   meta:
-    name: String
+    name:
+      is: String
+      summary: TextAttributeView
     selfLocation: SelfLocation
