@@ -7,12 +7,12 @@ import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunId
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceQuery
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceSnapshot
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 
@@ -74,7 +74,7 @@ class ScriptProgressStore(
         logicTraceQuery: LogicTraceQuery
     ): ClientResult<LogicTraceSnapshot> {
         val result = ClientContext.restClient.performDetached(
-            LogicConventions.logicTraceStoreLocation,
+            LogicConventions.logicTraceEndpointLocation,
             CommonRestApi.paramAction to LogicConventions.actionLookup,
             CommonRestApi.paramRunId to logicRunId.value,
             CommonRestApi.paramExecutionId to logicExecutionId.value,
@@ -128,7 +128,7 @@ class ScriptProgressStore(
         val mainLocation = scriptStore.mainLocation()
 
         val result = ClientContext.restClient.performDetached(
-            LogicConventions.logicTraceStoreLocation,
+            LogicConventions.logicTraceEndpointLocation,
             CommonRestApi.paramAction to LogicConventions.actionMostRecent,
             LogicConventions.paramSubDocumentPath to mainLocation.documentPath.asString(),
             LogicConventions.paramSubObjectPath to mainLocation.objectPath.asString()
@@ -139,7 +139,7 @@ class ScriptProgressStore(
                 @Suppress("UNCHECKED_CAST")
                 val resultCollection = result.value.get() as Map<String, String>?
 
-                val resultValue = resultCollection?.let { LogicRunExecutionId.ofCollection(it) }
+                val resultValue = resultCollection?.let { LogicConventions.runExecutionFromCollection(it) }
                 ClientResult.ofSuccess(ScriptProgressState.MostRecentResult(resultValue))
             }
 
@@ -217,7 +217,7 @@ class ScriptProgressStore(
         val mainLocation = scriptStore.mainLocation()
 
         val result = ClientContext.restClient.performDetached(
-            LogicConventions.logicTraceStoreLocation,
+            LogicConventions.logicTraceEndpointLocation,
             CommonRestApi.paramAction to LogicConventions.actionReset,
             LogicConventions.paramSubDocumentPath to mainLocation.documentPath.asString(),
             LogicConventions.paramSubObjectPath to mainLocation.objectPath.asString()

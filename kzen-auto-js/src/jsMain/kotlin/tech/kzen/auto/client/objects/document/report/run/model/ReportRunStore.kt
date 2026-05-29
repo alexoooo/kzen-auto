@@ -8,12 +8,12 @@ import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunId
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceQuery
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceSnapshot
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 
@@ -106,7 +106,7 @@ class ReportRunStore(
         logicTraceQuery: LogicTraceQuery
     ): ClientResult<LogicTraceSnapshot> {
         val result = ClientContext.restClient.performDetached(
-            LogicConventions.logicTraceStoreLocation,
+            LogicConventions.logicTraceEndpointLocation,
             CommonRestApi.paramAction to LogicConventions.actionLookup,
             CommonRestApi.paramRunId to logicRunId.value,
             CommonRestApi.paramExecutionId to logicExecutionId.value,

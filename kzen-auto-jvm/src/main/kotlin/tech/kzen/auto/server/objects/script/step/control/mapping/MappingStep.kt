@@ -2,16 +2,16 @@ package tech.kzen.auto.server.objects.script.step.control.mapping
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
 import tech.kzen.auto.server.objects.script.step.control.MultiStep
-import tech.kzen.auto.server.service.v1.StatefulLogicElement
-import tech.kzen.auto.server.service.v1.model.*
-import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
-import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
+import tech.kzen.lib.common.exec.logic.StatefulLogicElement
+import tech.kzen.lib.common.exec.logic.model.*
+import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect

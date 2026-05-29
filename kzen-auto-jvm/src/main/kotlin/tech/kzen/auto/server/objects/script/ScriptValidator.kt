@@ -10,7 +10,7 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.registry.ObjectRegistryDocument
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
-import tech.kzen.auto.server.service.v1.model.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionSuccess

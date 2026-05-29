@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.script.progress
 
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceSnapshot
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
 
 
 data class ScriptProgressState(

@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.script.model
 
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
-import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
+import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 

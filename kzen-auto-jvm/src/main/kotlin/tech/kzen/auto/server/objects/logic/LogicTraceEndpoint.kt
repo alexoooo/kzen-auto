@@ -1,0 +1,85 @@
+package tech.kzen.auto.server.objects.logic
+
+import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.paradigm.detached.DetachedAction
+import tech.kzen.auto.common.paradigm.logic.LogicConventions
+import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.lib.common.exec.ExecutionRequest
+import tech.kzen.lib.common.exec.ExecutionResult
+import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.common.reflect.Reflect
+
+
+@Reflect
+object LogicTraceEndpoint: DetachedAction {
+    override suspend fun execute(request: ExecutionRequest): ExecutionResult {
+        val logicTraceStore = KzenAutoContext.global().logicTraceStore
+
+        val action = request.getSingle(CommonRestApi.paramAction)
+            ?: return ExecutionResult.failure("Action missing: '${CommonRestApi.paramAction}'")
+
+        return when (action) {
+            LogicConventions.actionMostRecent -> {
+                val documentPath: DocumentPath = request.getSingle(LogicConventions.paramSubDocumentPath)
+                    ?.let { DocumentPath.parse(it) }
+                    ?: return ExecutionResult.failure("Document path missing: '${LogicConventions.paramSubDocumentPath}'")
+
+                val objectPath: ObjectPath = request.getSingle(LogicConventions.paramSubObjectPath)
+                    ?.let { ObjectPath.parse(it) }
+                    ?: return ExecutionResult.failure("Object path missing: '${LogicConventions.paramSubObjectPath}'")
+
+                val objectLocation = ObjectLocation(documentPath, objectPath)
+                val mostRecent = logicTraceStore.mostRecent(objectLocation)
+
+                ExecutionSuccess.ofValue(ExecutionValue.of(
+                    mostRecent?.let { LogicConventions.runExecutionAsCollection(it) }
+                ))
+            }
+
+            LogicConventions.actionLookup -> {
+                val logicRunId = request.getSingle(CommonRestApi.paramRunId)?.let { LogicRunId(it) }
+                    ?: return ExecutionResult.failure("Logic Run ID missing: '${CommonRestApi.paramRunId}'")
+
+                val logicExecutionId = request.getSingle(CommonRestApi.paramExecutionId)?.let { LogicExecutionId(it) }
+                    ?: return ExecutionResult.failure("Logic Execution ID missing: '${CommonRestApi.paramExecutionId}'")
+
+                val logicTraceQuery = request.getSingle(LogicConventions.paramQuery)?.let { LogicTraceQuery.parse(it) }
+                    ?: return ExecutionResult.failure("Logic Trade Query missing")
+
+                val runExecutionId = LogicRunExecutionId(logicRunId, logicExecutionId)
+                val snapshot = logicTraceStore.lookup(runExecutionId, logicTraceQuery)
+                    ?: return ExecutionResult.failure(
+                        "Logic Trace not found: $logicRunId / $logicExecutionId / $logicTraceQuery")
+
+                ExecutionSuccess.ofValue(ExecutionValue.of(
+                    snapshot.asCollection()))
+            }
+
+            LogicConventions.actionReset -> {
+                val documentPath: DocumentPath = request.getSingle(LogicConventions.paramSubDocumentPath)
+                    ?.let { DocumentPath.parse(it) }
+                    ?: return ExecutionResult.failure("Document path missing: '${LogicConventions.paramSubDocumentPath}'")
+
+                val objectPath: ObjectPath = request.getSingle(LogicConventions.paramSubObjectPath)
+                    ?.let { ObjectPath.parse(it) }
+                    ?: return ExecutionResult.failure("Object path missing: '${LogicConventions.paramSubObjectPath}'")
+
+                val objectLocation = ObjectLocation(documentPath, objectPath)
+                val cleared = logicTraceStore.clear(objectLocation)
+
+                ExecutionSuccess.ofValue(ExecutionValue.of(cleared))
+            }
+
+            else ->
+                ExecutionResult.failure("Unknown logic trace action: '$action'")
+        }
+    }
+}

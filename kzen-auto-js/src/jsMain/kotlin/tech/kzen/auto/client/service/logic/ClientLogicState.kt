@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.service.logic
 
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicStatus
+import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
 
 
 data class ClientLogicState(

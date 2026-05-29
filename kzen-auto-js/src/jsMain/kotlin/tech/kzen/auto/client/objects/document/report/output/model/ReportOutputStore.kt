@@ -11,8 +11,8 @@ import tech.kzen.auto.common.objects.document.report.output.OutputInfo
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.location.ObjectLocation

@@ -4,12 +4,12 @@ import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.TracingScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
-import tech.kzen.auto.server.service.v1.model.LogicResult
-import tech.kzen.auto.server.service.v1.model.LogicResultFailed
-import tech.kzen.auto.server.service.v1.model.LogicResultSuccess
-import tech.kzen.auto.server.service.v1.model.LogicType
-import tech.kzen.auto.server.service.v1.model.tuple.TupleDefinition
-import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
+import tech.kzen.lib.common.exec.logic.model.LogicResult
+import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
+import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
+import tech.kzen.lib.common.exec.logic.model.LogicType
+import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 

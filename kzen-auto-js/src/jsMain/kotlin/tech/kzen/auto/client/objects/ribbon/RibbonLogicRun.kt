@@ -14,7 +14,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunFrameInfo
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.NamedColor

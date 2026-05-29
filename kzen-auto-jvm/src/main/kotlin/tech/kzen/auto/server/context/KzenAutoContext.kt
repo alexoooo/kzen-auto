@@ -26,7 +26,7 @@ import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import tech.kzen.auto.server.service.plugin.MultiDefinitionRepository
 import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
-import tech.kzen.auto.server.service.v1.impl.ServerLogicController
+import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
@@ -40,6 +40,7 @@ import tech.kzen.lib.common.service.notation.NotationReducer
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.common.service.store.DirectGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 import tech.kzen.lib.server.notation.ClasspathNotationMedia
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.GradleLocator
@@ -123,6 +124,8 @@ class KzenAutoContext(
     // between a run terminating and the user editing the notation afterward.
     val objectStableMapper = ObjectStableMapper()
 
+    val logicTraceStore = LogicTraceStore(objectStableMapper)
+
     private val graphInstanceCreator = GraphInstanceCreator(
         graphStore, graphCreator)
 
@@ -164,7 +167,7 @@ class KzenAutoContext(
 
 
     val serverLogicController = ServerLogicController(
-        graphStore, graphCreator, objectStableMapper)
+        graphStore, graphCreator, objectStableMapper, logicTraceStore)
 
     val restHandler = RestHandler(
         notationMedia,

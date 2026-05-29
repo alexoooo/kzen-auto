@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.objects.document.script
 
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation

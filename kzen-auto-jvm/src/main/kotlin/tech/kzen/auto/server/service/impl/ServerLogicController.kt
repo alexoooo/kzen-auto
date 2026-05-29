@@ -1,20 +1,20 @@
-package tech.kzen.auto.server.service.v1.impl
+package tech.kzen.auto.server.service.impl
 
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
-import tech.kzen.auto.common.paradigm.logic.run.LogicController
-import tech.kzen.auto.common.paradigm.logic.run.model.*
-import tech.kzen.auto.server.objects.logic.LogicTraceStore
-import tech.kzen.auto.server.service.v1.Logic
-import tech.kzen.auto.server.service.v1.LogicExecutionFacade
-import tech.kzen.auto.server.service.v1.LogicExecutionListener
-import tech.kzen.auto.server.service.v1.LogicHandle
-import tech.kzen.auto.server.service.v1.model.LogicCommand
-import tech.kzen.auto.server.service.v1.model.LogicResultFailed
-import tech.kzen.auto.server.service.v1.model.context.LogicFrame
-import tech.kzen.auto.server.service.v1.model.context.MutableLogicControl
-import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
+import tech.kzen.lib.common.exec.logic.run.LogicController
+import tech.kzen.lib.common.exec.logic.run.model.*
+import tech.kzen.lib.common.exec.logic.Logic
+import tech.kzen.lib.common.exec.logic.LogicExecutionFacade
+import tech.kzen.lib.common.exec.logic.LogicExecutionListener
+import tech.kzen.lib.common.exec.logic.LogicHandle
+import tech.kzen.lib.common.exec.logic.model.LogicCommand
+import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
+import tech.kzen.lib.server.exec.logic.context.LogicFrame
+import tech.kzen.lib.server.exec.logic.context.MutableLogicControl
+import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
+import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
@@ -32,7 +32,8 @@ import kotlin.time.Clock
 class ServerLogicController(
     private val graphStore: LocalGraphStore,
     private val graphCreator: GraphCreator,
-    private val objectStableMapper: ObjectStableMapper
+    private val objectStableMapper: ObjectStableMapper,
+    private val logicTraceStore: LogicTraceStore
 ):
     LogicController
 {
@@ -162,7 +163,7 @@ class ServerLogicController(
                 }
 
                 val logicExecutionFacadeImpl = LogicExecutionFacadeImpl(
-                    successfulGraphDefinition, commonMutableLogicControl, listener)
+                    successfulGraphDefinition, commonMutableLogicControl, listener, logicTraceStore)
 
                 val logicExecution = logicExecutionFacadeImpl.open(
                     runId, originalObjectLocation, this, graphCreator, objectStableMapper)
@@ -180,7 +181,7 @@ class ServerLogicController(
             }
         }
 
-        val logicTraceHandle = LogicTraceStore.handle(runExecutionId, root, objectStableMapper)
+        val logicTraceHandle = logicTraceStore.handle(runExecutionId, root)
 
         val logic = rootInstance as Logic
         val execution =

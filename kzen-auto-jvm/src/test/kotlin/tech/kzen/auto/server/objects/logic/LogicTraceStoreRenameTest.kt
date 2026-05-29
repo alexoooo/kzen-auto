@@ -1,13 +1,12 @@
 package tech.kzen.auto.server.objects.logic
 
-import org.junit.After
 import org.junit.Test
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunId
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -15,6 +14,7 @@ import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.DeletedDocumentEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedObjectEvent
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -24,6 +24,9 @@ import kotlin.test.assertNull
  * process-global mapper after the run has ended. Pre-Move A the per-run mapper
  * was unobserved on clearState, so post-stop renames went untracked and lookups
  * translated against a stale id → location map.
+ *
+ * Post-Move B: LogicTraceStore is a constructor-injected instance rather than a
+ * singleton, so each test owns its own store — no shared @After cleanup needed.
  */
 class LogicTraceStoreRenameTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -34,30 +37,24 @@ class LogicTraceStoreRenameTest {
     private val stepLocation = objectLocation("a.yaml", "Step1")
 
 
-    @After
-    fun cleanup() {
-        LogicTraceStore.evict(testRunId)
-        LogicTraceStore.clear(rootLocation)
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun `trace lookup resolves under new name after rename event arrives post-stop`() {
         val mapper = ObjectStableMapper()
+        val store = LogicTraceStore(mapper)
 
         // Simulate boot pre-warm
         mapper.objectStableId(rootLocation)
         val originalStableId = mapper.objectStableId(stepLocation)
 
         // Active run writes a trace entry under the step's stable id
-        val handle = LogicTraceStore.handle(runExecutionId, rootLocation, mapper)
+        val handle = store.handle(runExecutionId, rootLocation)
         handle.set(
             LogicTracePath.ofObjectStableId(originalStableId),
             ExecutionValue.of("done"))
 
-        // Run terminates — buffer stays in LogicTraceStore.history;
-        // mapper continues to observe (no unobserve in the Move-A model)
+        // Run terminates — buffer stays in the store; mapper keeps observing
+        // (no unobserve in the Move-A model)
 
         // Rename event arrives at the global mapper AFTER the run ended
         mapper.apply(RenamedObjectEvent(stepLocation, ObjectName("Step1Renamed")))
@@ -66,7 +63,7 @@ class LogicTraceStoreRenameTest {
         val renamedLocation = objectLocation("a.yaml", "Step1Renamed")
         val expectedPath = LogicTracePath.ofObjectLocation(renamedLocation)
 
-        val snapshot = LogicTraceStore.lookup(runExecutionId, LogicTraceQuery(LogicTracePath.root))
+        val snapshot = store.lookup(runExecutionId, LogicTraceQuery(LogicTracePath.root))
         checkNotNull(snapshot)
         assertEquals(ExecutionValue.of("done"), snapshot.values[expectedPath])
 
@@ -79,10 +76,11 @@ class LogicTraceStoreRenameTest {
     @Test
     fun `trace lookup follows a chain of renames after run-stop`() {
         val mapper = ObjectStableMapper()
+        val store = LogicTraceStore(mapper)
         mapper.objectStableId(rootLocation)
         val originalStableId = mapper.objectStableId(stepLocation)
 
-        val handle = LogicTraceStore.handle(runExecutionId, rootLocation, mapper)
+        val handle = store.handle(runExecutionId, rootLocation)
         handle.set(
             LogicTracePath.ofObjectStableId(originalStableId),
             ExecutionValue.of("done"))
@@ -94,7 +92,7 @@ class LogicTraceStoreRenameTest {
         val finalLocation = objectLocation("a.yaml", "Final")
         val expectedPath = LogicTracePath.ofObjectLocation(finalLocation)
 
-        val snapshot = LogicTraceStore.lookup(runExecutionId, LogicTraceQuery(LogicTracePath.root))
+        val snapshot = store.lookup(runExecutionId, LogicTraceQuery(LogicTracePath.root))
         checkNotNull(snapshot)
         assertEquals(ExecutionValue.of("done"), snapshot.values[expectedPath])
     }
@@ -103,10 +101,11 @@ class LogicTraceStoreRenameTest {
     @Test
     fun `trace entry drops when its object is deleted from the graph`() {
         val mapper = ObjectStableMapper()
+        val store = LogicTraceStore(mapper)
         mapper.objectStableId(rootLocation)
         val originalStableId = mapper.objectStableId(stepLocation)
 
-        val handle = LogicTraceStore.handle(runExecutionId, rootLocation, mapper)
+        val handle = store.handle(runExecutionId, rootLocation)
         handle.set(
             LogicTracePath.ofObjectStableId(originalStableId),
             ExecutionValue.of("done"))
@@ -114,7 +113,7 @@ class LogicTraceStoreRenameTest {
         // Whole document deleted — the step's id becomes unresolvable
         mapper.apply(DeletedDocumentEvent(DocumentPath.parse("a.yaml")))
 
-        val snapshot = LogicTraceStore.lookup(runExecutionId, LogicTraceQuery(LogicTracePath.root))
+        val snapshot = store.lookup(runExecutionId, LogicTraceQuery(LogicTracePath.root))
         checkNotNull(snapshot)
         assertEquals(emptyMap(), snapshot.values)
     }

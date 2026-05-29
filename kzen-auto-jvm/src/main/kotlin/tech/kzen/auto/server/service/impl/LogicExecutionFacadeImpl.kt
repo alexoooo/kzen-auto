@@ -1,12 +1,12 @@
-package tech.kzen.auto.server.service.v1.impl
+package tech.kzen.auto.server.service.impl
 
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunExecutionId
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunId
-import tech.kzen.auto.server.objects.logic.LogicTraceStore
-import tech.kzen.auto.server.service.v1.*
-import tech.kzen.auto.server.service.v1.model.LogicResult
-import tech.kzen.auto.server.service.v1.model.tuple.TupleValue
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.*
+import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
+import tech.kzen.lib.common.exec.logic.model.LogicResult
+import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
@@ -17,7 +17,8 @@ import kotlin.time.Clock
 class LogicExecutionFacadeImpl(
     private val graphDefinition: GraphDefinition,
     private val logicControl: LogicControl,
-    private val listener: LogicExecutionListener
+    private val listener: LogicExecutionListener,
+    private val logicTraceStore: LogicTraceStore
 ):
     LogicExecutionFacade
 {
@@ -63,7 +64,7 @@ class LogicExecutionFacadeImpl(
 
         val logicExecutionId = LogicExecutionId(arbitraryId())
         val runExecutionId = LogicRunExecutionId(logicRunId, logicExecutionId)
-        val logicTraceHandle = LogicTraceStore.handle(runExecutionId, originalObjectLocation, objectStableMapper)
+        val logicTraceHandle = logicTraceStore.handle(runExecutionId, originalObjectLocation)
 
         val execution = dependencyInstance.execute(
             logicHandle,

@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.script.api
 
-import tech.kzen.auto.common.paradigm.logic.trace.model.LogicTracePath
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation

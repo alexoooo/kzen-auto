@@ -5,10 +5,10 @@ import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicExecutionId
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunId
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicRunResponse
-import tech.kzen.auto.common.paradigm.logic.run.model.LogicStatus
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
+import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
 import tech.kzen.auto.common.paradigm.task.model.TaskId
 import tech.kzen.auto.common.paradigm.task.model.TaskModel
 import tech.kzen.auto.platform.encodeURIComponent
