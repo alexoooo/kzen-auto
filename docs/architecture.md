@@ -32,11 +32,13 @@ The four paradigms:
 | Paradigm | Subpackage | Execution model | Typical document |
 |----------|-----------|-----------------|------------------|
 | **Dataflow** | `paradigm/dataflow/` | Lazy, pull-based pipeline. `Dataflow<State>` vertices have `RequiredInput`/`OptionalInput` and emit via `RequiredOutput`/`OptionalOutput`. Stateless, `StatelessDataflow`, and `StreamDataflow` variants exist. | Visual graph documents |
-| **Logic** | `paradigm/logic/` | Step-through, traceable execution. `LogicController` coordinates pause/resume/step. Produces a `LogicTrace`. | Script / procedural documents |
-| **Task** | `paradigm/task/` | Async, long-running, fire-and-forget. `ManagedTask` wraps `ExecutionRequest`; runs to completion under `TaskModel` tracking. | Background reports, automation runs |
+| **Logic** | kzen-lib `exec/logic/` (was `paradigm/logic/`) | Step-through, traceable execution. `LogicController` coordinates pause/resume/step; produces a `LogicTrace`. | Script / procedural documents |
+| **Task** | kzen-lib `exec/task/` (was `paradigm/task/`) | Async, long-running, fire-and-forget. `ManagedTask` wraps `ExecutionRequest`; runs to completion under `TaskModel` tracking. | Background reports, automation runs |
 | **Detached** | `paradigm/detached/` | One-shot request/response. `DetachedAction` executes one `ExecutionRequest` and returns `ExecutionResult` synchronously. No state tracking. | Quick administrative actions (e.g. plugin upload) |
 
 **Rule of thumb when reading code:** if you see `TaskModel`, you're in the Task paradigm. `LogicTrace` / step controllers ⇒ Logic. `RequiredInput`/`RequiredOutput` ⇒ Dataflow. Plain `ExecutionRequest`/`ExecutionResult` with no wrapper ⇒ Detached.
+
+> **Relocation (2026-05-28).** The `Logic` / `Task` / `Trace` / `Tuple` *types* moved to kzen-lib `tech.kzen.lib.common.exec.*` — see [`../../kzen-lib/docs/architecture.md`](../../kzen-lib/docs/architecture.md#execution-model-logic--task--trace). What stays in kzen-auto is the paradigm *binding*: the REST wire surface (`paradigm/logic/LogicConventions`, the `/logic` and `/task` paths in `CommonRestApi`), the `ServerLogicController` / `ModelTaskRepository` server impls, and the documents themselves — e.g. a Script document implements kzen-lib's `Logic`. `paradigm/dataflow/` and `paradigm/detached/` did not move.
 
 ## 2. Client-server graph synchronization
 
@@ -90,7 +92,7 @@ Routes are declared in `KzenAutoMain.kt` (`routeNotationQuery`, `routeNotationCo
 
 Most endpoints are GET (idempotent commands carry their payload in the query string); large or text-heavy command bodies — notation upserts, list inserts, multi-value updates — also have PUT variants taking form parameters. There are no WebSocket or SSE channels.
 
-**Gotcha — Logic step/pause/resume is poll-based, not push-based.** The client drives a run by polling `/logic/status`; the server returns a `LogicStatus` containing the current `LogicRunInfo` whose `LogicRunState` is one of `Running` / `Pausing` / `Paused` / `Stepping` / `Cancelling`. The UI repaints when it sees a `Paused` (or `Cancelling`) state. Frame state lives in `ServerLogicController`'s synchronized `LogicState` (volatile `running` / `paused` / `stepping` flags plus `pauseRequested` / `cancelRequested`); execution thread runs in a plain `Thread`, not a coroutine. Trace values flow to a process-local `LogicTraceStore` (`ConcurrentHashMap`) keyed by `LogicRunExecutionId` + path — so traces are visible to the polling client but do not survive a JVM restart.
+**Gotcha — Logic step/pause/resume is poll-based, not push-based.** The client drives a run by polling `/logic/status`; the server returns a `LogicStatus` containing the current `LogicRunInfo` whose `LogicRunState` is one of `Running` / `Pausing` / `Paused` / `Stepping` / `Cancelling`. The UI repaints when it sees a `Paused` (or `Cancelling`) state. Frame state lives in `ServerLogicController`'s synchronized `LogicState` (volatile `running` / `paused` / `stepping` flags plus `pauseRequested` / `cancelRequested`); execution thread runs in a plain `Thread`, not a coroutine. Trace values flow to a process-local `LogicTraceStore` (now `tech.kzen.lib.server.exec.logic.trace`, a `ConcurrentHashMap`) keyed by `LogicRunExecutionId` + an `ObjectStableId`-based path — so traces are visible to the polling client and survive document / step renames during *and after* a run (via the process-global `ObjectStableMapper`, see [`../../kzen-lib/docs/architecture.md`](../../kzen-lib/docs/architecture.md#stable-identity-objectstablemapper)), but do not survive a JVM restart. `ServerLogicController` (the run state machine) stays in kzen-auto.
 
 ## 4. Server-side composition root
 
@@ -106,12 +108,14 @@ The companion-object `init` block registers SPI metadata with kzen-lib's `Reflec
 | `modelTaskRepository` | `ModelTaskRepository` | Task-paradigm registry + runner (observer on `graphStore`) |
 | `activeDataflowRepository`, `visualDataflowRepository` | dataflow paradigm | Server-side execution + visual-state model (observers on `graphStore`) |
 | `serverLogicController` | `ServerLogicController` | Logic-paradigm state machine (see § 3 gotcha) |
+| `objectStableMapper` | `ObjectStableMapper` (kzen-lib) | Process-global `ObjectLocation ↔ ObjectStableId` bimap; `graphStore.observe(...)` at boot + pre-warmed over the initial notation (see [`../../kzen-lib/docs/architecture.md`](../../kzen-lib/docs/architecture.md#stable-identity-objectstablemapper)) |
+| `logicTraceStore` | `LogicTraceStore` (kzen-lib) | In-memory, stable-id-keyed trace store; constructed with `objectStableMapper` |
 | `restHandler` | `RestHandler` | Dispatch target for every route in `KzenAutoMain` |
 | `cachedKotlinCompiler`, `calculatedColumnEval` | scripting | Embedded Kotlin scripting for report formula columns |
 | `definitionRepository` | `MultiDefinitionRepository` | Report-definer pool: built-in (`CsvReportDefiner` / `TsvReportDefiner` / `TextReportDefiner`) plus `PluginReportDefinitionRepository` for JAR-loaded plugins |
 | `webDriverContext` | `WebDriverContext` | Selenium / WebDriver lifecycle for browser-automation script steps |
 
-`KzenAutoContext.init()` subscribes the dataflow/task repositories to the graph store via `graphStore.observe(...)` — the same observer mechanism described in § 2. The shutdown hook calls `context.close()`, which currently only quits the WebDriver pool.
+`KzenAutoContext.init()` subscribes the dataflow/task repositories **and `objectStableMapper`** to the graph store via `graphStore.observe(...)` — the same observer mechanism described in § 2 — then pre-warms the mapper by iterating the boot notation. The shutdown hook calls `context.close()`, which currently only quits the WebDriver pool.
 
 ## 5. Backend execution model
 
@@ -227,7 +231,7 @@ reflectionRegistry.put(
 If you're new to kzen-auto, read these in order — they anchor the patterns above:
 
 1. `kzen-auto-common/.../paradigm/dataflow/Dataflow.kt` — the cleanest paradigm.
-2. `kzen-auto-common/.../paradigm/task/ManagedTask.kt` and `TaskModel.kt` — long-running execution.
+2. `kzen-lib-common/.../exec/task/ManagedTask.kt` and `exec/task/model/TaskModel.kt` — long-running execution (relocated from kzen-auto 2026-05-28).
 3. `kzen-auto-common/.../api/CommonRestApi.kt` — every wire endpoint as a constant; shared by client and server.
 4. `kzen-auto-js/.../service/rest/ClientRestGraphStore.kt` — the client-side REST proxy.
 5. `kzen-auto-jvm/.../server/KzenAutoMain.kt` — Ktor route declarations.
@@ -235,3 +239,4 @@ If you're new to kzen-auto, read these in order — they anchor the patterns abo
 7. `kzen-auto-jvm/.../server/api/RestHandler.kt` — the route-dispatch handler.
 8. `kzen-auto-jvm/.../server/objects/report/exec/ReportPipelineStage.kt` — Disruptor handler.
 9. `kzen-auto-plugin/.../ReportDefiner.kt` — plugin SPI entry point.
+10. `kzen-auto-jvm/.../server/objects/script/ScriptDocument.kt` — the reference `Logic` implementation (Script paradigm), built on kzen-lib `exec/logic` + the process-global `ObjectStableMapper`.

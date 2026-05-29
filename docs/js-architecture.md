@@ -84,6 +84,13 @@ objects/document/<type>/
 
 The `report/` document is the canonical example — seven sub-stores, deepest nesting. Other document types (graph/, script/, data/, plugin/, registry/, feature/) follow the same shape with fewer subdomains.
 
+**`script/` is the reference for two patterns `report/` doesn't exercise:**
+
+- **Keyed-map dynamic sub-state.** Report's sections are fixed (input / filter / formula / …), so each gets its own sub-store. A Script's *steps* are dynamic and unbounded, so per-step UI state can't be a fixed set of sub-stores. Instead `ScriptStepState` lives under `ScriptState.steps: Map<ObjectLocation, ScriptStepState>`, written through a single `ScriptStepStore` sub-store that prunes entries equal to the default (so the map holds only non-default steps and never accumulates orphans as steps are collapsed or deleted). Reach for this shape whenever per-entity UI state is keyed by a *dynamic collection* rather than a fixed layout — distinct from the network-backed `progressStore` / `validationStore` siblings, which are kept beside it precisely because they are server calls, not pure UI toggles.
+- **React-Context store propagation.** Rather than thread the store (or its sub-stores) down as props through every step-display layer the way Report does, `ScriptController` publishes the store via `ScriptStoreContext = createContext<ScriptStore?>(null)`, and class-component descendants read it with the `installContextType` / `contextValue<ScriptStore?>()` helpers in `wrap/React.kt`. This replaced an earlier module-level `WeakRef<ScriptStore>` global (`ScriptGlobal`): context scopes the store to the mounted controller subtree explicitly, with no deref-may-fail surface. Prefer context over a global when a store must reach deeply, dynamically-nested descendants.
+
+Both still follow the core quartet — `ScriptStore: ClientStateGlobal.Observer` owns `progressStore` / `validationStore` / `stepStore`; `ScriptController` observes the store and re-renders. (One wrinkle: `ScriptController` *also* observes `ClientStateGlobal` directly for `clientLogicState`, whereas the canonical `ReportController` folds that into `ReportState` and observes only its store — tracked in `audit/2026-05-29_script-refactor-review_4.8-xhigh.md` A01.)
+
 `custom/` (the `CustomDocument` raw-YAML editor) is the exception to the layout — no sub-stores, no `model/` directory. The controller observes `ClientStateGlobal` directly, holds local `editorValue` / `serverNotation` state, and dispatches `SetDocumentObjectsCommand` through `MirroredGraphStore` on Save. The editor widget itself (`YamlEditor`) lives under `objects/document/common/edit/` because it's reusable; the doc-specific controller, `CustomConventions`, etc. live under `objects/document/custom/`. See [`architecture.md` § 6](architecture.md#6-document-types-in-the-ui) for the parse/save flow and power-tool semantics.
 
 ## 4. Service-layer plumbing
@@ -121,6 +128,8 @@ Notable globals under `service/global/`:
 `ClientLogicGlobal` (under `service/logic/`) bridges the Logic paradigm — controllers that need step/pause/resume state subscribe through it.
 
 `mirroredGraphStore` is the bridge to kzen-lib's CQRS layer. See [`architecture.md` § 2](architecture.md#2-client-server-graph-synchronization).
+
+`objectStableMapper` (kzen-lib `service/store/normal/`) is the **client-side** half of the rename-survival identity model: constructed in `ClientContext`, `seed()`ed from the server's snapshot via `restClient.objectStableMapperSnapshot()` at connect, then observing `mirroredGraphStore`. It lets stores translate a stable-keyed trace path back to the current `ObjectLocation` locally — so `ScriptStore`, for instance, refreshes progress only on a new run (logic-time change), not on every rename / insert / shift. See [`../../kzen-lib/docs/architecture.md`](../../kzen-lib/docs/architecture.md#stable-identity-objectstablemapper).
 
 ## 5. React DSL wrapper layer (`wrap/React.kt`)
 
@@ -227,3 +236,4 @@ If you're starting work on the JS client cold:
 5. `objects/document/report/model/ReportState.kt` — canonical state composition.
 6. `objects/document/report/ReportController.kt` — canonical top-level controller (mount, observer, render, plus the inner `Wrapper: DocumentController` for dynamic mounting).
 7. `objects/ProjectController.kt` — top-level project orchestrator (where all document types get mounted via `DocumentController`s).
+8. `objects/document/script/model/ScriptStepStore.kt` + `model/ScriptStoreContext.kt` — reference for keyed-map dynamic sub-state and React-Context store propagation (see § 3).

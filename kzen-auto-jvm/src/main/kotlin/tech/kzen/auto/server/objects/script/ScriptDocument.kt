@@ -60,7 +60,6 @@ class ScriptDocument(
             selfLocation.documentPath, selfLocation,
             logicHandle, logicTraceHandle, logicRunExecutionId,
             KzenAutoContext.global().objectStableMapper)
-        scriptExecution.init(logicControl)
         return scriptExecution
     }
 

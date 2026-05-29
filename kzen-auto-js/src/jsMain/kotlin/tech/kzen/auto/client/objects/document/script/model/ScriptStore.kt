@@ -128,12 +128,18 @@ class ScriptStore: ClientStateGlobal.Observer {
 
         updateIfChanged(nextState)
 
+        val logicTime: Instant = clientState.clientLogicState.logicStatus?.time ?: Instant.DISTANT_PAST
+
         if (initial) {
+            // Seed the change-detection baselines so the first subsequent onClientState doesn't
+            // re-fire a refresh that this initial load already performed.
+            previousLogicTime = logicTime
+            previousDocumentNotation = documentNotation
+
             refreshProgressAsync()
             refreshValidationAsync()
         }
         else {
-            val logicTime: Instant = clientState.clientLogicState.logicStatus?.time ?: Instant.DISTANT_PAST
             val logicTimeChanged = previousLogicTime != logicTime
             val documentNotationChanged = previousDocumentNotation != documentNotation
 

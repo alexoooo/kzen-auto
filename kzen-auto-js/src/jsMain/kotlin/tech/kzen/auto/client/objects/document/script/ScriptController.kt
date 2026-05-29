@@ -218,24 +218,9 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderSignature(mainObjectLocation: ObjectLocation) {
-//        div {
-//            div {
-//                +"foo4"
-//            }
-//            div {
-//                DummyComponent::class.react {
-//                    objectLocation = mainObjectLocation
-//                }
-//            }
-//            div {
-                LogicSignatureEditor::class.react {
-                    objectLocation = mainObjectLocation
-                }
-//            }
-//            div {
-//                +"bar"
-//            }
-//        }
+        LogicSignatureEditor::class.react {
+            objectLocation = mainObjectLocation
+        }
     }
 
 

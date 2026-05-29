@@ -186,33 +186,6 @@ class ScriptProgressStore(
     }
 
 
-//    private suspend fun mostRecent(): LogicRunExecutionId? {
-//        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
-//        val mostRecentResult = mostRecentQuery()
-//
-//        return when (mostRecentResult) {
-//            is ClientError -> {
-//                scriptStore.update { state -> state
-//                    .withGlobalError(mostRecentResult.message)
-//                }
-//                null
-//            }
-//
-//            is ClientSuccess -> {
-//                scriptStore.update { state -> state
-//                    .withProgressSuccess {
-//                        it.copy(
-//                            logicRunExecutionId = mostRecentResult.value.logicRunExecutionId
-//                        )
-//                    }
-//                }
-//
-//                mostRecentResult.value.logicRunExecutionId
-//            }
-//        }
-//    }
-
-
     private suspend fun clearCommand(): ClientResult<Boolean> {
         val mainLocation = scriptStore.mainLocation()
 

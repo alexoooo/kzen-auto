@@ -40,26 +40,15 @@ class ScriptExecution(
     //-----------------------------------------------------------------------------------------------------------------
     private val logicHandleFacade = LogicHandleFacade(runExecutionId, logicHandle)
 
-    private var activeScriptModel = ActiveScriptModel()
+    private val activeScriptModel = ActiveScriptModel()
     private var previousStatefulElements = mutableMapOf<ObjectStableId, StatefulLogicElement<*>>()
     private var arguments = TupleValue.empty
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    fun init(
-        @Suppress("UNUSED_PARAMETER")
-        logicControl: LogicControl
-    ) {
-        activeScriptModel = ActiveScriptModel()
-        previousStatefulElements = mutableMapOf()
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun beforeStart(arguments: TupleValue): Boolean {
         logger.info("{} - arguments - {}", documentPath, arguments)
         this.arguments = arguments
-//        this.topLevel = topLevel
         return true
     }
 
@@ -116,8 +105,7 @@ class ScriptExecution(
             arguments,
             scriptTree,
             validation,
-            objectStableMapper
-            /*topLevel*/)
+            objectStableMapper)
 
         val step = graphInstance[objectLocation]!!.reference as ScriptStep
         val stepModel = stepContext.getOrPutStepModel(objectLocation)
