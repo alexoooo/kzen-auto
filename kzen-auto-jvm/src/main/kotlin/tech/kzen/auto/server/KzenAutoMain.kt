@@ -110,6 +110,18 @@ private fun Routing.routeRequests(
     routeLogic(context.restHandler)
 
     routeDataflow(context.restHandler)
+
+    routeObjectStable(context.restHandler)
+}
+
+
+private fun Routing.routeObjectStable(
+    restHandler: RestHandler
+) {
+    get(CommonRestApi.objectStableMapperSnapshot) {
+        val response = restHandler.objectStableMapperSnapshot()
+        call.respond(response)
+    }
 }
 
 

@@ -29,6 +29,7 @@ import tech.kzen.lib.common.model.structure.resource.ResourceListing
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.model.structure.scan.DocumentScan
 import tech.kzen.lib.common.model.structure.scan.NotationScan
+import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.platform.collect.toPersistentMap
@@ -743,6 +744,16 @@ class ClientRestApi(
             CommonRestApi.paramRunId to runId.value)
 
         return LogicRunResponse.valueOf(response)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun objectStableMapperSnapshot(): Map<ObjectStableId, ObjectLocation> {
+        val responseJson = getOrPutJson(CommonRestApi.objectStableMapperSnapshot)
+        val responseMap = ClientJsonUtils.toMap(responseJson)
+        return responseMap.entries.associate { (idString, locationString) ->
+            ObjectStableId(idString) to ObjectLocation.parse(locationString as String)
+        }
     }
 
 

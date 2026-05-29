@@ -25,6 +25,7 @@ import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.common.service.store.DirectGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
 object ClientContext {
@@ -99,6 +100,8 @@ object ClientContext {
     val clientLogicGlobal = ClientLogicGlobal(
         restClient)
 
+    val objectStableMapper = ObjectStableMapper()
+
     val clientStateGlobal = ClientStateGlobal()
 
 
@@ -123,6 +126,10 @@ object ClientContext {
 
         // NB: pre-load, otherwise can have race condition
         seededNotationMedia.scan()
+
+        // Seed before observe — observing first would let lazy id generation race with the seed
+        objectStableMapper.seed(restClient.objectStableMapperSnapshot())
+        mirroredGraphStore.observe(objectStableMapper)
 
         clientStateGlobal.postConstruct(
                 navigationGlobal, directGraphStore, clientLogicGlobal, /*restClient, executionRepository*/)

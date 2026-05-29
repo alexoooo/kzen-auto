@@ -17,16 +17,20 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 
 /**
- * Move A canary — the trace stays resolvable when a rename event arrives at the
- * process-global mapper after the run has ended. Pre-Move A the per-run mapper
- * was unobserved on clearState, so post-stop renames went untracked and lookups
- * translated against a stale id → location map.
+ * Rename-survival canary for LogicTraceStore.
  *
- * Post-Move B: LogicTraceStore is a constructor-injected instance rather than a
- * singleton, so each test owns its own store — no shared @After cleanup needed.
+ * Move A made the mapper process-global so post-stop renames stay tracked. The trace wire then
+ * moved to ObjectStableId keys (the client translates to the current location via its own mapper),
+ * so on the server side `lookup` keeps stable-id keys verbatim through a rename and only drops an
+ * entry once its object is deleted (id no longer resolves). The run↔root index used by
+ * `mostRecent`/`clear` is likewise keyed by stable id, so it follows a rename of the run root.
+ *
+ * Post-Move B: LogicTraceStore is a constructor-injected instance rather than a singleton, so each
+ * test owns its own store — no shared @After cleanup needed.
  */
 class LogicTraceStoreRenameTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -39,7 +43,7 @@ class LogicTraceStoreRenameTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun `trace lookup resolves under new name after rename event arrives post-stop`() {
+    fun `trace stays under its stable id after a rename event arrives post-stop`() {
         val mapper = ObjectStableMapper()
         val store = LogicTraceStore(mapper)
 
@@ -49,9 +53,8 @@ class LogicTraceStoreRenameTest {
 
         // Active run writes a trace entry under the step's stable id
         val handle = store.handle(runExecutionId, rootLocation)
-        handle.set(
-            LogicTracePath.ofObjectStableId(originalStableId),
-            ExecutionValue.of("done"))
+        val stablePath = LogicTracePath.ofObjectStableId(originalStableId)
+        handle.set(stablePath, ExecutionValue.of("done"))
 
         // Run terminates — buffer stays in the store; mapper keeps observing
         // (no unobserve in the Move-A model)
@@ -59,42 +62,37 @@ class LogicTraceStoreRenameTest {
         // Rename event arrives at the global mapper AFTER the run ended
         mapper.apply(RenamedObjectEvent(stepLocation, ObjectName("Step1Renamed")))
 
-        // Lookup should resolve under the new name
-        val renamedLocation = objectLocation("a.yaml", "Step1Renamed")
-        val expectedPath = LogicTracePath.ofObjectLocation(renamedLocation)
-
+        // The wire stays keyed by the (immutable) stable id — rename doesn't rewrite it; the client
+        // resolves it to the current location via its own mapper.
         val snapshot = store.lookup(runExecutionId, LogicTraceQuery(LogicTracePath.root))
         checkNotNull(snapshot)
-        assertEquals(ExecutionValue.of("done"), snapshot.values[expectedPath])
+        assertEquals(ExecutionValue.of("done"), snapshot.values[stablePath])
 
-        // And no entry under the old name
-        val originalPath = LogicTracePath.ofObjectLocation(stepLocation)
-        assertNull(snapshot.values[originalPath])
+        // Server no longer emits location-keyed paths (neither old nor new name)
+        assertNull(snapshot.values[LogicTracePath.ofObjectLocation(stepLocation)])
+        assertNull(snapshot.values[LogicTracePath.ofObjectLocation(objectLocation("a.yaml", "Step1Renamed"))])
     }
 
 
     @Test
-    fun `trace lookup follows a chain of renames after run-stop`() {
+    fun `trace stays retained through a chain of renames after run-stop`() {
         val mapper = ObjectStableMapper()
         val store = LogicTraceStore(mapper)
         mapper.objectStableId(rootLocation)
         val originalStableId = mapper.objectStableId(stepLocation)
 
         val handle = store.handle(runExecutionId, rootLocation)
-        handle.set(
-            LogicTracePath.ofObjectStableId(originalStableId),
-            ExecutionValue.of("done"))
+        val stablePath = LogicTracePath.ofObjectStableId(originalStableId)
+        handle.set(stablePath, ExecutionValue.of("done"))
 
         // A -> B -> C
         mapper.apply(RenamedObjectEvent(stepLocation, ObjectName("Mid")))
         mapper.apply(RenamedObjectEvent(objectLocation("a.yaml", "Mid"), ObjectName("Final")))
 
-        val finalLocation = objectLocation("a.yaml", "Final")
-        val expectedPath = LogicTracePath.ofObjectLocation(finalLocation)
-
+        // Still resolvable (object exists under "Final"), so still retained under its stable id
         val snapshot = store.lookup(runExecutionId, LogicTraceQuery(LogicTracePath.root))
         checkNotNull(snapshot)
-        assertEquals(ExecutionValue.of("done"), snapshot.values[expectedPath])
+        assertEquals(ExecutionValue.of("done"), snapshot.values[stablePath])
     }
 
 
@@ -116,6 +114,26 @@ class LogicTraceStoreRenameTest {
         val snapshot = store.lookup(runExecutionId, LogicTraceQuery(LogicTracePath.root))
         checkNotNull(snapshot)
         assertEquals(emptyMap(), snapshot.values)
+    }
+
+
+    @Test
+    fun `most recent and clear survive a rename of the run root`() {
+        val mapper = ObjectStableMapper()
+        val store = LogicTraceStore(mapper)
+        mapper.objectStableId(rootLocation)
+
+        // Run scoped to the root document's main object
+        store.handle(runExecutionId, rootLocation)
+
+        // Root object renamed after the run ended
+        mapper.apply(RenamedObjectEvent(rootLocation, ObjectName("MyScriptRenamed")))
+        val renamedRoot = objectLocation("a.yaml", "MyScriptRenamed")
+
+        // The run↔root index is keyed by stable id, so it follows the rename
+        assertEquals(runExecutionId, store.mostRecent(renamedRoot))
+        assertTrue(store.clear(renamedRoot))
+        assertNull(store.mostRecent(renamedRoot))
     }
 
 

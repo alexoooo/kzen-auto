@@ -10,6 +10,7 @@ import react.RefObject
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
+import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
@@ -97,7 +98,8 @@ class StepScreenshotPreview(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onScriptState(scriptState: ScriptState) {
-        val traceInfo = computeStepTraceInfo(scriptState, props.objectLocation)
+        val traceInfo = computeStepTraceInfo(
+            scriptState, props.objectLocation, ClientContext.objectStableMapper)
         val next = traceInfo.trace?.detail as? BinaryExecutionValue
 
         if (state.screenshot === next) {

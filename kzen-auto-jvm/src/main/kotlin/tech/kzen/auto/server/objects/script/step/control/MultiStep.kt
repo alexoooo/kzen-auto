@@ -140,10 +140,12 @@ class MultiStep(
             return null
         }
 
-        stepContext.activeScriptModel.next = stepContext.objectStableMapper.objectStableId(nextToRun)
+        val nextStableId = stepContext.objectStableMapper.objectStableId(nextToRun)
+        stepContext.activeScriptModel.next = nextStableId
+        // Stable id (not the current location) so the client's "next to run" highlight survives a rename
         stepContext.logicTraceHandle.set(
             ScriptConventions.nextStepTracePath,
-            ExecutionValue.of(nextToRun.asString()))
+            ExecutionValue.of(nextStableId.value))
 
         return nextToRun
     }

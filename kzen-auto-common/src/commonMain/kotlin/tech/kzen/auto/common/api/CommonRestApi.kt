@@ -103,4 +103,7 @@ object CommonRestApi {
     const val dataflowModel = "${dataflowPrefix}model"
     const val dataflowReset = "${dataflowPrefix}reset"
     const val dataflowPerform = "${dataflowPrefix}perform"
+
+    // stable object id mapping
+    const val objectStableMapperSnapshot = "/object-stable/snapshot"
 }

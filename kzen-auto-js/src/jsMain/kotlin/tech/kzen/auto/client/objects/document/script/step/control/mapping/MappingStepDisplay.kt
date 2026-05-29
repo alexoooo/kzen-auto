@@ -117,7 +117,8 @@ class MappingStepDisplay(
 
 
     override fun onScriptState(scriptState: ScriptState) {
-        val info = computeStepTraceInfo(scriptState, props.common.objectLocation)
+        val info = computeStepTraceInfo(
+            scriptState, props.common.objectLocation, ClientContext.objectStableMapper)
 
         setState {
             this.stepTrace = info.trace

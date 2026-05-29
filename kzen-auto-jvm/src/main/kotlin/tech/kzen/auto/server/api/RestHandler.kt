@@ -12,6 +12,7 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.task.model.TaskId
 import tech.kzen.lib.common.exec.task.model.TaskModel
+import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository
@@ -1193,6 +1194,15 @@ class RestHandler(
         }
 
         return response.name
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun objectStableMapperSnapshot(): Map<String, String> {
+        val snapshot = KzenAutoContext.global().objectStableMapper.snapshot()
+        return snapshot.entries.associate { (id, location) ->
+            id.value to location.asString()
+        }
     }
 
 

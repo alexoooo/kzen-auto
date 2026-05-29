@@ -11,6 +11,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 
@@ -19,7 +20,7 @@ class ScriptStore: ClientStateGlobal.Observer {
     companion object {
         // NB: yields the event loop so cascading onClientState → updateIfChanged → onScriptState
         //     settles before the network refresh kicks in.
-        private const val refreshYieldMillis = 10L
+        private val refreshYieldMillis = 10.milliseconds
     }
 
 
@@ -142,11 +143,10 @@ class ScriptStore: ClientStateGlobal.Observer {
                 previousDocumentNotation = documentNotation
             }
 
-            // Refresh progress on document edits too: structural changes (rename / shift / insert)
-            // re-key the trace lookup by current ObjectLocation, so the existing snapshot misses
-            // until we pull a fresh one. Skip when no run has produced progress yet.
-            val hasProgress = previousState.progress.logicRunExecutionId != null
-            if (logicTimeChanged || (documentNotationChanged && hasProgress)) {
+            // The trace snapshot is keyed by ObjectStableId and translated locally via the client
+            // mapper, so it survives document edits (rename / shift / insert) without a re-fetch —
+            // only a new run (logic time change) warrants pulling fresh progress.
+            if (logicTimeChanged) {
                 refreshProgressAsync()
             }
 

@@ -154,7 +154,8 @@ class ScriptStepDisplayDefault(
 
 
     override fun onScriptState(scriptState: ScriptState) {
-        val traceInfo = computeStepTraceInfo(scriptState, props.common.objectLocation)
+        val traceInfo = computeStepTraceInfo(
+            scriptState, props.common.objectLocation, ClientContext.objectStableMapper)
 
         val stepValidation = scriptState
             .validationState

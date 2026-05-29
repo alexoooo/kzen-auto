@@ -9,6 +9,8 @@ import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.store.normal.ObjectStableId
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
 data class StepHeaderInfo(
@@ -42,21 +44,26 @@ fun computeStepHeaderInfo(
 
 fun computeStepTraceInfo(
     scriptState: ScriptState,
-    objectLocation: ObjectLocation
+    objectLocation: ObjectLocation,
+    objectStableMapper: ObjectStableMapper
 ): StepTraceInfo {
     val traceValues: Map<LogicTracePath, ExecutionValue>? = scriptState
         .progress
         .logicTraceSnapshot
         ?.values
 
+    // The snapshot is keyed by ObjectStableId; translate the current location through the
+    // client mapper so the trace survives a rename without re-fetching from the server.
+    val stableId = objectStableMapper.objectStableId(objectLocation)
+
     val trace = traceValues
-        ?.get(LogicTracePath.ofObjectLocation(objectLocation))
+        ?.get(LogicTracePath.ofObjectStableId(stableId))
         ?.let { StepTrace.ofExecutionValue(it) }
 
-    val nextToRun = traceValues
+    val nextStableId = traceValues
         ?.get(ScriptConventions.nextStepTracePath)
         ?.get()
-        ?.let { ObjectLocation.parse(it as String) }
+        ?.let { ObjectStableId(it as String) }
 
-    return StepTraceInfo(trace, nextToRun == objectLocation)
+    return StepTraceInfo(trace, nextStableId == stableId)
 }
