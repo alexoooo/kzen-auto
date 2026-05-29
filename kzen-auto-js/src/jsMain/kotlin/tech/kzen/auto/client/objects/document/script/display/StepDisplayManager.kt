@@ -30,8 +30,7 @@ external interface StepDisplayManagerState: State {
 class StepDisplayManager(
     props: StepDisplayManagerProps
 ):
-    RPureComponent<StepDisplayManagerProps, StepDisplayManagerState>(props)//,
-//    LocalGraphStore.Observer
+    RPureComponent<StepDisplayManagerProps, StepDisplayManagerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

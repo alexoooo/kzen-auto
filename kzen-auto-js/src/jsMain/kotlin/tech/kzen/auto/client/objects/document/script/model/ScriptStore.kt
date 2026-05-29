@@ -40,6 +40,7 @@ class ScriptStore: ClientStateGlobal.Observer {
 
     val progressStore = ScriptProgressStore(this)
     val validationStore = ScriptValidationStore(this)
+    val stepStore = ScriptStepStore(this)
 
 
     //-----------------------------------------------------------------------------------------------------------------

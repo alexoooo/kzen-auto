@@ -4,7 +4,6 @@ import emotion.react.css
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.img
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.graph.EdgeController
@@ -29,7 +28,6 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.common.reflect.Reflect
-import tech.kzen.lib.platform.IoUtils
 import web.cssom.*
 
 
@@ -148,8 +146,13 @@ class ScriptStepDisplayDefault(
 
 
     override fun componentWillUnmount() {
-        contextValue<ScriptStore?>()?.unobserve(this)
+        val scriptStore = contextValue<ScriptStore?>()
+        // Unobserve first so clearing expansion below doesn't publish onScriptState back into this
+        // unmounting component; the still-mounted sibling preview collapses and the deleted step's
+        // map entry is pruned. Idempotent — no-ops when already collapsed.
+        scriptStore?.unobserve(this)
         ClientContext.clientStateGlobal.unobserve(this)
+        scriptStore?.stepStore?.setExpanded(props.common.objectLocation, false)
     }
 
 
@@ -163,10 +166,13 @@ class ScriptStepDisplayDefault(
             ?.stepValidations
             ?.get(props.common.objectLocation.objectPath)
 
+        val expanded = scriptState.isStepExpanded(props.common.objectLocation)
+
         setState {
             this.isNextToRun = traceInfo.isNextToRun
             this.stepTrace = traceInfo.trace
             this.stepValidation = stepValidation
+            this.expanded = expanded
         }
     }
 
@@ -218,10 +224,10 @@ class ScriptStepDisplayDefault(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onToggleExpanded() {
-        val next = !state.expanded
-        setState {
-            this.expanded = next
-        }
+        // Single source of truth: write expansion to ScriptState via the sub-store. Both this step
+        // body and its sibling StepScreenshotPreview (no prop path between them) re-render from the
+        // resulting onScriptState publish, so there's no local setState here.
+        contextValue<ScriptStore?>()?.stepStore?.setExpanded(props.common.objectLocation, !state.expanded)
     }
 
 
@@ -318,7 +324,11 @@ class ScriptStepDisplayDefault(
         }
 
         renderValue(trace.displayValue)
-        renderDetail(trace.detail)
+        // Screenshot (BinaryExecutionValue) details are shown by the floating StepScreenshotPreview
+        // to the right, so don't repeat them inline here (matches the collapsed branch's guard).
+        if (trace.detail !is BinaryExecutionValue) {
+            renderDetail(trace.detail)
+        }
         renderError(trace.error)
     }
 
@@ -347,20 +357,6 @@ class ScriptStepDisplayDefault(
 
         traceSection("Detail") {
             when (detail) {
-                is BinaryExecutionValue -> {
-                    val screenshotPngUrl = detail.cache("img") {
-                        val base64 = IoUtils.base64Encode(detail.value)
-                        "data:png/png;base64,$base64"
-                    }
-
-                    img {
-                        css {
-                            width = 100.pct
-                        }
-                        src = screenshotPngUrl
-                    }
-                }
-
                 is ScalarExecutionValue, is ListExecutionValue -> {
                     formatExecutionValueText(detail)
                 }

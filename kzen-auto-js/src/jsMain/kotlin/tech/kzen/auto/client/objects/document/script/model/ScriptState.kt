@@ -16,6 +16,7 @@ data class ScriptState(
 
     val progress: ScriptProgressState = ScriptProgressState(),
     val validationState: ScriptValidationState = ScriptValidationState(),
+    val steps: Map<ObjectLocation, ScriptStepState> = mapOf(),
 
     val globalError: String? = null
 ) {
@@ -60,5 +61,19 @@ data class ScriptState(
         return copy(
             validationState = updater(validationState),
             globalError = null)
+    }
+
+
+    fun isStepExpanded(objectLocation: ObjectLocation): Boolean {
+        return steps[objectLocation]?.expanded ?: false
+    }
+
+
+    // Thin plumbing (mirrors withValidation): ScriptStepStore owns the step-state management and
+    // passes the new map in. No globalError reset — step UI is unrelated to errors.
+    fun withSteps(
+        updater: (Map<ObjectLocation, ScriptStepState>) -> Map<ObjectLocation, ScriptStepState>
+    ): ScriptState {
+        return copy(steps = updater(steps))
     }
 }
