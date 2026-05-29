@@ -22,8 +22,10 @@ import web.cssom.*
 //     The right column is deliberately transparent (page gray shows through around the steps) so
 //     each step card reads as a discrete white card on gray, not as part of one solid slab.
 //
-//     Top decorations (full-width seam line, white middle arm) are rendered by the caller
-//     (IfStepDisplay), not by this helper — different branches want different top visuals.
+//     Top/edge decorations (seam line, down-shadow, vertical ledge) are rendered by the caller
+//     (IfStepDisplay / MappingStepDisplay) via the shared branchStage* helpers in
+//     BranchStageChrome.kt — not by this helper, since branches differ in their top visuals
+//     (e.g. the If's Then branch adds a bottom fade-to-white lip the others don't).
 fun ChildrenBuilder.scriptBranchContainer(
     label: String,
     branchLocation: AttributeLocation,
@@ -39,7 +41,10 @@ fun ChildrenBuilder.scriptBranchContainer(
         div {
             css {
                 backgroundColor = NamedColor.white
-                width = 4.em
+                // Trunk content width — sized to the short branch labels ("Then"/"Else"/"Each") with
+                // minimal slack. Content-box, so the outer right edge is width + 2×0.75em padding;
+                // IfStepDisplay's vertical ledge line is positioned to that outer edge (keep in sync).
+                width = 3.em
                 flexShrink = number(0.0)
                 padding = Padding(28.px, 0.75.em)
                 color = Color("rgba(0, 0, 0, 0.7)")

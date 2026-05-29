@@ -10,6 +10,9 @@ import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayPr
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayWrapper
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.branch.branchHeaderSlab
+import tech.kzen.auto.client.objects.document.script.display.branch.branchStageLedge
+import tech.kzen.auto.client.objects.document.script.display.branch.branchStageSeam
+import tech.kzen.auto.client.objects.document.script.display.branch.branchStageTopShadow
 import tech.kzen.auto.client.objects.document.script.display.branch.scriptBranchContainer
 import tech.kzen.auto.client.objects.document.script.display.computeStepHeaderInfo
 import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
@@ -32,7 +35,11 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import web.cssom.Color
 import web.cssom.NamedColor
+import web.cssom.Position
+import web.cssom.deg
+import web.cssom.linearGradient
 import web.cssom.px
+import web.cssom.stop
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -155,44 +162,43 @@ class IfStepDisplay(
             }
         }
 
-        // Full-width 2px gray seam separating the F's top arm (header+condition) from its body.
-        // Crosses the trunk on purpose — the user wants the "divider above Then" to go over the
-        // left margin too. Kept at 2px to render consistently against the seam above the middle
-        // arm; 1px renders inconsistently across the two seams due to sub-pixel y-positioning
-        // from em-based heights summing to fractional pixels above each seam.
+        // Recessed-stage chrome wrapper, mirroring the page-level header/sidebar casting a shadow
+        // onto the gray stage. The white condition slab above plays the "header" role, the white
+        // trunk the "sidebar". Decorations are the shared branchStage* helpers; the only If-specific
+        // piece is the Then branch's bottom fade-to-white lip (see below).
         div {
             css {
-                height = 2.px
-                backgroundColor = Color("rgba(0, 0, 0, 0.12)")
+                position = Position.relative
+            }
+
+            // Vertical ledge down the trunk's right edge, continuous through both branches.
+            branchStageLedge()
+
+            // Then: shared seam + top down-shadow (cast from the white condition above), wrapped in
+            // an If-specific fade up to white at the bottom. That bottom fade forms the white "lip"
+            // sitting just above the Else seam — standing in for a white slab there, the way the
+            // white condition sits above the Then seam — so both seams read the same (white above →
+            // 1px line → shadow below). Paint-only, masked by the white trunk. Outer div = bottom
+            // fade, inner branchStageTopShadow = top shadow (two anchors → two divs).
+            branchStageSeam()
+            div {
+                css {
+                    backgroundImage = linearGradient(
+                        0.deg,
+                        stop(NamedColor.white, 0.px),                 // white at the bottom (the Else seam)
+                        stop(Color("rgba(255, 255, 255, 0)"), 14.px)) // sharp fade up to transparent
+                }
+                branchStageTopShadow {
+                    renderThenBranch()
+                }
+            }
+
+            // Else: shared seam + top down-shadow, cast from the white lip formed above.
+            branchStageSeam()
+            branchStageTopShadow {
+                renderElseBranch()
             }
         }
-
-        renderThenBranch()
-
-        // 2px gray seam above the white middle arm; visually the divider above Else (the arm is a
-        // 28px white slab between Then's bottom and Else's top). Bumped from 1px to match the
-        // perceived thickness of the seam above Then, which against the header's tinted bg appears
-        // visually heavier than its raw 1px.
-        div {
-            css {
-                height = 2.px
-                backgroundColor = Color("rgba(0, 0, 0, 0.12)")
-            }
-        }
-
-        // F's middle arm: in-flow 28px white horizontal slab. Width is parent-constrained to the
-        // step-body column (ScriptController.stepWidth = 39em — same as the header at the top of
-        // the If step), so the arm's right edge aligns with the header above. The 4em trunk
-        // strips of Then (above) and Else (below) extend past the arm on the left, keeping the
-        // trunk continuous.
-        div {
-            css {
-                height = 28.px
-                backgroundColor = NamedColor.white
-            }
-        }
-
-        renderElseBranch()
     }
 
 

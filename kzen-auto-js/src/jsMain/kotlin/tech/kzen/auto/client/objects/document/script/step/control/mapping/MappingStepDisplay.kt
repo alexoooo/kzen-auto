@@ -1,13 +1,18 @@
 package tech.kzen.auto.client.objects.document.script.step.control.mapping
 
+import emotion.react.css
 import react.ChildrenBuilder
 import react.State
+import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayProps
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayWrapper
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.branch.branchHeaderSlab
+import tech.kzen.auto.client.objects.document.script.display.branch.branchStageLedge
+import tech.kzen.auto.client.objects.document.script.display.branch.branchStageSeam
+import tech.kzen.auto.client.objects.document.script.display.branch.branchStageTopShadow
 import tech.kzen.auto.client.objects.document.script.display.branch.scriptBranchContainer
 import tech.kzen.auto.client.objects.document.script.display.computeStepHeaderInfo
 import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
@@ -28,6 +33,7 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import web.cssom.Position
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -144,7 +150,21 @@ class MappingStepDisplay(
             }
         }
 
-        renderSteps()
+        // Recessed-stage chrome wrapper, mirroring the page-level header/sidebar casting a shadow
+        // onto the gray stage (same treatment as IfStepDisplay's branches). The white items slab
+        // above plays the "header" role, the white trunk the "sidebar". A single branch ("Each"),
+        // so just the shared seam + top down-shadow, plus the vertical ledge down the trunk's edge.
+        div {
+            css {
+                position = Position.relative
+            }
+
+            branchStageLedge()
+            branchStageSeam()
+            branchStageTopShadow {
+                renderSteps()
+            }
+        }
     }
 
 
